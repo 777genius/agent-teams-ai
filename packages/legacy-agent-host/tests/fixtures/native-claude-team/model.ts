@@ -1,3 +1,8 @@
+import { mixedSemanticText } from '../native-mixed-task-notifications.ts';
+import type {
+  MixedTaskNoticeReader,
+  ObservedMixedTaskNotice,
+} from '../native-mixed-task-notifications.ts';
 import {
   nativeCrossTeamScript,
   type NativeCrossTeamScenario,
@@ -141,6 +146,7 @@ export async function startNativeTeamModel(
     pdfAttachment?: boolean;
     groupChats?: boolean;
     mixedGroups?: boolean;
+    mixedTaskNotifications?: MixedTaskNoticeReader;
     crossTeam?: NativeCrossTeamScenario;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
@@ -170,6 +176,7 @@ export async function startNativeTeamModel(
       )
     : undefined;
   const observations: Observation[] = [];
+  const notificationObservations: (Observation & { notice: ObservedMixedTaskNotice })[] = [];
   const probes: { requestedModel?: string; requestedEffort?: string }[] = [];
   const unexpectedNoToolsRequests: {
     model?: string;
@@ -338,10 +345,11 @@ export async function startNativeTeamModel(
         });
       }
       assert.ok(
-        observations.length < (options.peerMessaging ? 48 : 16),
+        observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
         'finite native model request budget'
       );
       let turn = '';
+      let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       let turnText = '';
       for (const message of messages.toReversed()) {
@@ -357,6 +365,16 @@ export async function startNativeTeamModel(
         const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
         const match = /NATIVE_TEAM_(ONE|TWO)/.exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
+        if (options.mixedTaskNotifications) {
+          const currentText = text;
+          if (!mixedSemanticText(currentText)) continue;
+          notice = options.mixedTaskNotifications(currentText);
+          if (notice) {
+            turn = 'TEST_TASK_NOTICE:' + notice.inputId;
+            break;
+          }
+          assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
+        }
         if (group || peer || match) {
           mixedGroup = group;
           turn = group?.turn ?? peer ?? match![0];
@@ -366,6 +384,8 @@ export async function startNativeTeamModel(
       }
       assert.ok(turn, 'request is tied to a deliberate TEST input');
       const step = counters.get(turn) ?? 0;
+      if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
+        assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
       const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
       if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       const nativeAttachments =
@@ -421,7 +441,7 @@ export async function startNativeTeamModel(
         taskId = String(record(receipt.effects).taskId);
         assert.ok(taskId && taskId !== 'undefined');
       }
-      observations.push({
+      const observation = {
         ...(nativePdf ? { nativePdf } : {}),
         ...(nativeAttachments ? { nativeAttachments } : {}),
         ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
@@ -455,7 +475,9 @@ export async function startNativeTeamModel(
         ...(options.uiGeneratedMessageIds && incomingMessageId !== undefined
           ? { incomingMessageId }
           : {}),
-      });
+      };
+      if (notice) notificationObservations.push({ ...observation, notice });
+      else observations.push(observation);
       if (options.holdInitialTurnResponse) {
         assert.equal(turn, 'NATIVE_TEAM_ONE', 'queued input must never reach native inference');
         assert.equal(step, 0);
@@ -529,7 +551,7 @@ export async function startNativeTeamModel(
           input: { commandId: 'native-reply-two', to: 'user', text: 'REPLY_NATIVE_TWO' },
         },
       ];
-      const action = (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[
+      const action = notice ? undefined : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[
         step
       ];
       if (!action) {
@@ -575,6 +597,7 @@ export async function startNativeTeamModel(
       return compactionTokenRequests;
     },
     observations,
+    ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     ...(nativeMember ? { nativeMemberObservations: nativeMember.observations } : {}),
     ...(groupChats ? { groupRequests: groupChats.requests } : {}),
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),

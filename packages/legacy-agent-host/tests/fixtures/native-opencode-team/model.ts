@@ -1,3 +1,8 @@
+import { mixedNativeText, mixedSemanticText } from '../native-mixed-task-notifications.ts';
+import type {
+  MixedTaskNoticeReader,
+  ObservedMixedTaskNotice,
+} from '../native-mixed-task-notifications.ts';
 import { assertNativeMessageImage } from '../native-message-image.ts';
 import {
   readMixedGroupTurn,
@@ -41,6 +46,7 @@ export async function startOpenCodeModel(
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
+    mixedTaskNotifications?: MixedTaskNoticeReader;
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
@@ -71,6 +77,9 @@ export async function startOpenCodeModel(
     priorTurn: boolean;
     tools: string[];
   }[] = [];
+  const notificationObservations: ((typeof observations)[number] & {
+    notice: ObservedMixedTaskNotice;
+  })[] = [];
   const failures: string[] = [];
   const counts = new Map<string, number>();
   let taskId: string | undefined;
@@ -79,7 +88,7 @@ export async function startOpenCodeModel(
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
       assert.equal(request.method, 'POST');
       assert.match(request.url ?? '', /\/v1\/chat\/completions$/);
-      assert.ok(
+      if (!options.mixedTaskNotifications) assert.ok(
         observations.length < (options.peerMessaging ? 48 : 16),
         'finite model request budget'
       );
@@ -180,7 +189,9 @@ export async function startOpenCodeModel(
         response.end('data: [DONE]\n\n');
         return;
       }
+      if (options.mixedTaskNotifications) assert.ok(observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16), 'finite mixed inference budget');
       let turn = '';
+      let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of messages.toReversed()) {
         if (message.role !== 'user') continue;
@@ -193,6 +204,16 @@ export async function startOpenCodeModel(
         const peer = options.peerMessaging
           ? nativePeerTurn(JSON.stringify(message.content), 'carol')
           : undefined;
+        if (options.mixedTaskNotifications) {
+          const currentText = mixedNativeText(message.content);
+          if (!mixedSemanticText(currentText)) continue;
+          notice = options.mixedTaskNotifications(currentText);
+          if (notice) {
+            turn = 'TEST_TASK_NOTICE:' + notice.inputId;
+            break;
+          }
+          assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
+        }
         if (group || capture || peer || match) {
           mixedGroup = group;
           turn =
@@ -207,6 +228,8 @@ export async function startOpenCodeModel(
       }
       assert.ok(turn, 'native request retains deliberate TEST business input');
       const step = counts.get(turn) ?? 0;
+      if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
+        assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
       const nativeImage =
         options.nativeMessageImage && turn === 'OPENCODE_TEAM_TWO'
           ? assertNativeMessageImage(messages, 'opencode')
@@ -276,7 +299,7 @@ export async function startOpenCodeModel(
         taskId = String(record(receipt.effects).taskId);
         assert.ok(taskId && taskId !== 'undefined');
       }
-      observations.push({
+      const observation = {
         ...(nativeImage ? { nativeImage } : {}),
         ...(failedShellToolOutput ? { failedShellToolOutput } : {}),
         turn,
@@ -284,7 +307,9 @@ export async function startOpenCodeModel(
         contextEffective,
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
         tools,
-      });
+      };
+      if (notice) notificationObservations.push({ ...observation, notice });
+      else observations.push(observation);
       const first = [
         {
           name: 'task_create',
@@ -355,7 +380,7 @@ export async function startOpenCodeModel(
                 },
               ]
         : undefined;
-      const action = (groupActions ??
+      const action = notice ? undefined : (groupActions ??
         captureActions ??
         peerActions ??
         (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
@@ -381,7 +406,7 @@ export async function startOpenCodeModel(
       } else delta = { role: 'assistant', content: `DONE_${turn}` };
       counts.set(turn, step + 1);
       const event = (value: Record<string, unknown>, finish: string | null) => ({
-        id: `TEST-opencode-response-${observations.length}`,
+        id: `TEST-opencode-response-${observations.length + notificationObservations.length}`,
         object: 'chat.completion.chunk',
         created: 1700000000,
         model: 'TEST-model',
@@ -404,6 +429,7 @@ export async function startOpenCodeModel(
   return {
     url: `http://127.0.0.1:${address.port}`,
     observations,
+    ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,
     close: () =>

@@ -1,3 +1,8 @@
+import {
+  assertMixedInputAccounting,
+  initialMixedBusinessTurns,
+  mixedInputAccounting,
+} from './desktop-mixed-input-proof.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { readMixedCapturedPrincipal } from './desktop-mixed-native-fixture.ts';
 import assert from 'node:assert/strict';
@@ -54,11 +59,11 @@ export async function runDesktopMixedGroupUiSmoke(cdp: UiCdpPort, options: {
     options.assertOwnedRenderer();
     for (const model of [options.models.claude, options.models.codex, options.models.opencode]) assert.deepEqual(model.failures, []);
     sessions = (await readDesktopNativeStopSessions(options.root)).filter(value => row(value.binding).runId === options.launchId);
-    if (sessions.length === 3 && sessions.every(value => rows(value.inputs).length === 2 && rows(value.inputs).every(input => input.phase === 'terminal' && input.terminal === 'succeeded'))) break;
+    if (mixedInputAccounting(options.root, sessions, options.models, initialMixedBusinessTurns).ready) break;
     await new Promise<void>(resolve => setTimeout(resolve, 100));
   }
   assert.equal(sessions.length, 3);
-  assert.ok(sessions.every(value => rows(value.inputs).length === 2 && rows(value.inputs).every(input => input.phase === 'terminal' && input.terminal === 'succeeded')));
+  const inputAccounting = assertMixedInputAccounting(options.root, sessions, options.models, initialMixedBusinessTurns);
   assert.deepEqual([options.models.claude, options.models.codex, options.models.opencode].map(model => model.observations.length), [10, 12, 10]);
   const reactions = rows(row(await read(join(teamRoot, 'group-chat-reactions.json'))).entries);
   const logical = rows(await read(join(teamRoot, 'inboxes/user.json'))).filter(message => message.groupChatId === group.id && message.messageId === message.groupMessageId);
@@ -121,6 +126,6 @@ export async function runDesktopMixedGroupUiSmoke(cdp: UiCdpPort, options: {
     }
   }
   assert.equal(inputProofs.length, 3);
-  return { status: 'PASS', group, logical, reactions, groupCommands, inputProofs, sessions,
+  return { status: 'PASS', inputAccounting, group, logical, reactions, groupCommands, inputProofs, sessions,
     expectedObservations: [10, 12, 10], scope: 'Existing mixed Create group/directed Codex Send/native Bob ACK+reply/Claude and OpenCode ACK; exact input and inbox/outbox identity. No new restart or natural Quit claim.' };
 }

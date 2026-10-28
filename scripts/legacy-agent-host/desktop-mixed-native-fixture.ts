@@ -1,3 +1,4 @@
+import { createMixedTaskNoticeReader } from '../../packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
@@ -75,6 +76,7 @@ export function readMixedCapturedPrincipal(
 export async function startDesktopMixedModels(root: () => string) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
   const claude = await startNativeTeamModel({
+      mixedTaskNotifications: createMixedTaskNoticeReader(root, 'team-lead'),
     allowModelProbes: true,
     mixedGroups: true,
     uiGeneratedMessageIds: true,
@@ -85,12 +87,14 @@ export async function startDesktopMixedModels(root: () => string) {
   let opencode: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
   try {
     codex = await startCodexModel({
+      mixedTaskNotifications: createMixedTaskNoticeReader(root, 'bob'),
       allowModelProbes: true,
       modelProbeWorkspace: () => join(root(), 'workspace'),
       mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'codex'),
     });
     opencode = await startOpenCodeModel({
+      mixedTaskNotifications: createMixedTaskNoticeReader(root, 'carol'),
       allowModelProbes: true,
       mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'opencode'),
@@ -120,6 +124,7 @@ export async function startDesktopMixedModels(root: () => string) {
                       provider,
                       {
                         observations: model.observations,
+                        notificationObservations: model.notificationObservations,
                         probes: model.probes,
                         failures: model.failures,
                         ...('unexpectedNoToolsRequests' in model

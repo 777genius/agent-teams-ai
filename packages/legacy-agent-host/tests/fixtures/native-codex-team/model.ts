@@ -1,3 +1,8 @@
+import { mixedNativeText, mixedSemanticText } from '../native-mixed-task-notifications.ts';
+import type {
+  MixedTaskNoticeReader,
+  ObservedMixedTaskNotice,
+} from '../native-mixed-task-notifications.ts';
 import { assertNativeMessageImage } from '../native-message-image.ts';
 import {
   readMixedGroupTurn,
@@ -101,6 +106,7 @@ export async function startCodexModel(
   options: {
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
+    mixedTaskNotifications?: MixedTaskNoticeReader;
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
@@ -129,6 +135,9 @@ export async function startCodexModel(
     priorTurn: boolean;
     tools: Tool[];
   }[] = [];
+  const notificationObservations: ((typeof observations)[number] & {
+    notice: ObservedMixedTaskNotice;
+  })[] = [];
   const failures: string[] = [];
   const counts = new Map<string, number>();
   let taskId: string | undefined;
@@ -137,7 +146,7 @@ export async function startCodexModel(
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
       assert.equal(request.method, 'POST');
       assert.match(request.url ?? '', /\/v1\/responses$/);
-      assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
+      if (!options.mixedTaskNotifications) assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
       let bytes = 0;
       const chunks: Buffer[] = [];
       for await (const raw of request) {
@@ -195,7 +204,9 @@ export async function startCodexModel(
         );
         return;
       }
+      if (options.mixedTaskNotifications) assert.ok(observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16), 'finite mixed inference budget');
       let turn = '';
+      let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of input.toReversed()) {
         if (message.role !== 'user') continue;
@@ -206,6 +217,16 @@ export async function startCodexModel(
         const peer = options.peerMessaging
           ? nativePeerTurn(JSON.stringify(message.content), 'bob')
           : undefined;
+        if (options.mixedTaskNotifications) {
+          const currentText = mixedNativeText(message.content);
+          if (!mixedSemanticText(currentText)) continue;
+          notice = options.mixedTaskNotifications(currentText);
+          if (notice) {
+            turn = 'TEST_TASK_NOTICE:' + notice.inputId;
+            break;
+          }
+          assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
+        }
         if (group || capture || peer || match) {
           mixedGroup = group;
           turn =
@@ -220,6 +241,8 @@ export async function startCodexModel(
       }
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
+      if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
+        assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
       const nativeImage =
         options.nativeMessageImage && turn === 'CODEX_TEAM_TWO'
           ? assertNativeMessageImage(input, 'codex')
@@ -303,14 +326,16 @@ export async function startCodexModel(
         taskId = String(record(receipt.effects).taskId);
         assert.ok(taskId && taskId !== 'undefined');
       }
-      observations.push({
+      const observation = {
         ...(nativeImage ? { nativeImage } : {}),
         turn,
         step,
         contextEffective,
         priorTurn: JSON.stringify(input).includes('CODEX_TEAM_ONE'),
         tools,
-      });
+      };
+      if (notice) notificationObservations.push({ ...observation, notice });
+      else observations.push(observation);
       const one = [
         {
           name: 'task_create',
@@ -400,7 +425,7 @@ export async function startCodexModel(
                 },
               ]
         : undefined;
-      const action = (groupActions ??
+      const action = notice ? undefined : (groupActions ??
         captureActions ??
         peerActions ??
         (turn === 'CODEX_TEAM_ONE' ? one : two))[step];
@@ -428,7 +453,7 @@ export async function startCodexModel(
           content: [{ type: 'output_text', text: `DONE_${turn}` }],
         };
       counts.set(turn, step + 1);
-      const id = `TEST-codex-response-${observations.length}`;
+      const id = `TEST-codex-response-${observations.length + notificationObservations.length}`;
       const events = [
         { type: 'response.created', response: { id } },
         { type: 'response.output_item.done', item: output },
@@ -463,6 +488,7 @@ export async function startCodexModel(
   return {
     url: `http://127.0.0.1:${address.port}`,
     observations,
+    ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,
     close: () =>

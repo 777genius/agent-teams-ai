@@ -1,3 +1,8 @@
+import {
+  assertMixedInputAccounting,
+  initialMixedBusinessTurns,
+  mixedInputAccounting,
+} from './desktop-mixed-input-proof.ts';
 import { runDesktopMixedMemberRestartUiSmoke } from './desktop-mixed-member-restart-ui-smoke.ts';
 import { runMixedEditTeamUi, mixedEditedDescription } from './desktop-mixed-edit-team-ui.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
@@ -379,25 +384,18 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
       'actual native requests retain captured context'
     );
   }
+  const leadNotifications = models.claude.notificationObservations;
+  assert.ok(leadNotifications);
   assert.ok(
-    models.claude.observations.every(
+    [...models.claude.observations, ...leadNotifications].every(
       (row) => row.requestedModel === 'claude-opus-4-6' && row.requestedEffort === 'medium'
     ),
     'actual lead uses the selected model and effort'
   );
-  const terminalSessions = await sessions();
-  assert.ok(
-    terminalSessions.length === 3 &&
-      terminalSessions.every(
-        (row) =>
-          Array.isArray(row.inputs) &&
-          row.inputs.length === 1 &&
-          row.inputs
-            .map(record)
-            .every((input) => input.phase === 'terminal' && input.terminal === 'succeeded')
-      ),
-    'exactly one original succeeded input per provider, including the initial lead prompt'
-  );
+  const terminalSessions = await poll(sessions,
+    value => mixedInputAccounting(fixture.root, value, models, initialMixedBusinessTurns).ready,
+    'exact original business and receipt-bound notifications terminal');
+  proof.nativeInputAccounting = assertMixedInputAccounting(fixture.root, terminalSessions, models, initialMixedBusinessTurns);
   proof.nativeTerminalInputs = terminalSessions;
   proof.mixedGroup = await runDesktopMixedGroupUiSmoke(cdp, {
     root: fixture.root,

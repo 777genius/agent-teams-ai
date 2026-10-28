@@ -1,3 +1,9 @@
+import {
+  assertMixedInputAccounting,
+  continuedMixedBusinessTurns,
+  initialMixedBusinessTurns,
+  mixedInputAccounting,
+} from './desktop-mixed-input-proof.ts';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -63,9 +69,10 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   assert.ok(
     before.every(
       (value) =>
-        value.phase === 'allocated' && value.custody === 'owned' && rows(value.inputs).length === 2
+        value.phase === 'allocated' && value.custody === 'owned'
     )
   );
+  assertMixedInputAccounting(options.root, before, options.models, initialMixedBusinessTurns);
   const bob = one(rows(beforeOwner.members), (value) => value.name === 'bob');
   const source = one(before, (value) => row(value.binding).memberId === bob.memberId);
   const principalId = readMixedCapturedPrincipal(options.root, 'codex');
@@ -301,29 +308,12 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   while (Date.now() < finishedBy) {
     options.assertOwnedRenderer();
     continued = await current();
-    if (
-      continued.length === 3 &&
-      continued.every(
-        (value) =>
-          rows(value.inputs).length === (row(value.binding).memberId === bob.memberId ? 1 : 3) &&
-          rows(value.inputs).every(
-            (input) => input.phase === 'terminal' && input.terminal === 'succeeded'
-          )
-      )
-    )
+    if (mixedInputAccounting(options.root, continued, options.models, continuedMixedBusinessTurns, currentBindings).ready)
       break;
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
   }
   assert.equal(continued.length, 3);
-  assert.ok(
-    continued.every(
-      (value) =>
-        rows(value.inputs).length === (row(value.binding).memberId === bob.memberId ? 1 : 3) &&
-        rows(value.inputs).every(
-          (input) => input.phase === 'terminal' && input.terminal === 'succeeded'
-        )
-    )
-  );
+  const inputAccounting = assertMixedInputAccounting(options.root, continued, options.models, continuedMixedBusinessTurns, currentBindings);
   assert.deepEqual(
     [options.models.claude, options.models.codex, options.models.opencode].map(
       (model) => model.observations.length
@@ -344,7 +334,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
       (value) => row(value.intent).inputId === row(row(proof.input).intent).inputId
     );
   return {
-    status: 'PASS',
+    status: 'PASS', inputAccounting,
     action,
     beforeLaunch,
     afterLaunch,

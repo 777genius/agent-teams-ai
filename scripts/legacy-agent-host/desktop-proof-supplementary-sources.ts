@@ -1,5 +1,8 @@
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts',
+  'scripts/legacy-agent-host/desktop-mixed-input-proof.ts',
+  'scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts',
   'scripts/legacy-agent-host/desktop-owner-routing-epoch.ts',
   'scripts/legacy-agent-host/desktop-owner-routing-fixture.ts',
   'scripts/legacy-agent-host/desktop-owner-routing-product.test.ts',
