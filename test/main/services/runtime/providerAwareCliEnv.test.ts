@@ -26,6 +26,7 @@ const applyConfiguredConnectionEnvMock = vi.fn();
 const applyAllConfiguredConnectionEnvMock = vi.fn();
 const getConfiguredConnectionIssuesMock = vi.fn();
 const getConfiguredConnectionLaunchArgsMock = vi.fn();
+const preparePassiveOpenCodeRuntimeBinaryProjectionMock = vi.fn();
 const resolveAppManagedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
@@ -88,6 +89,8 @@ vi.mock('../../../../src/main/services/runtime/ProviderConnectionService', () =>
 }));
 
 vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService', () => ({
+  preparePassiveOpenCodeRuntimeBinaryProjection: () =>
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock(),
   isSupportedOpenCodeRuntimeBinaryPath: (...args: unknown[]) =>
     isSupportedOpenCodeRuntimeBinaryPathMock(...args),
   resolveAppManagedOpenCodeRuntimeBinaryPath: () =>
@@ -230,6 +233,8 @@ describe('buildProviderAwareCliEnv', () => {
     );
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([]);
     getConfiguredConnectionIssuesMock.mockResolvedValue({});
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock.mockReset();
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock.mockResolvedValue(undefined);
     resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
     resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
     resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
@@ -622,7 +627,7 @@ describe('buildProviderAwareCliEnv', () => {
     }
   });
 
-  it('projects existing app-managed OpenCode metadata into passive status env', async () => {
+  it('projects only captured verified app-managed OpenCode metadata into passive status env', async () => {
     const managedBinaryPath = path.join('/managed', 'opencode', 'bin', 'opencode');
     resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(managedBinaryPath);
     const { buildPassiveProviderStatusCliEnv } =
@@ -642,6 +647,19 @@ describe('buildProviderAwareCliEnv', () => {
     expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
     expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
     expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('prepares a cold OpenCode status selection before its passive projection', async () => {
+    const path = '/TEST/captured/opencode';
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock.mockImplementation(async () => {
+      resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(path);
+    });
+    const { preparePassiveProviderStatusCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await preparePassiveProviderStatusCliEnv({ providerId: 'opencode' });
+    expect(preparePassiveOpenCodeRuntimeBinaryProjectionMock).toHaveBeenCalledOnce();
+    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(path);
+    expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
 
   it.each([undefined, 'codex'] as const)(
