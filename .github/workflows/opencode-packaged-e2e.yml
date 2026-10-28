@@ -186,9 +186,10 @@ jobs:
             $receipt | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $evidence 'wer-receipt.json') -Encoding utf8
             $options = @('--packaged-executable', $env:QUALIFIED_EXECUTABLE, '--runtime-setup', 'app-install')
             node scripts/e2e/opencode-diagnostics/run-packaged.mjs @options 2>&1 |
-              Tee-Object -FilePath (Join-Path $evidence 'harness.log') -Variable qualificationOutput
+              Tee-Object -FilePath (Join-Path $evidence 'harness.log')
             $qualificationExit = $LASTEXITCODE
             $receipt.harnessExitCode = $qualificationExit
+            $qualificationOutput = Get-Content -LiteralPath (Join-Path $evidence 'harness.log')
             $roots = @($qualificationOutput | Where-Object { "$_" -match '^Packaged artifacts/profile: ' })
             if ($roots.Count -ne 1) { throw 'Expected one owned harness profile root' }
             $root = "$($roots[0])".Substring('Packaged artifacts/profile: '.Length)
