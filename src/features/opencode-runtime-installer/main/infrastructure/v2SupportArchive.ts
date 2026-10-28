@@ -173,7 +173,9 @@ export async function extractV2SupportArchive(
   await fs.chmod(path.join(root, descriptor.manifest.file), 0o644);
   const graphPath = await regularV2SupportFile(root, 'local-cli/opencode-v2-graphs.json');
   const graphBytes = (await fs.stat(graphPath)).size;
-  if (graphBytes > 64 * 1024) throw new Error('OpenCode V2 graph metadata is too large');
+  // Staging lists every package here; use the bounded inventory JSON budget, not package.json's cap.
+  if (graphBytes > V2_DELIVERY_LIMITS.manifest)
+    throw new Error('OpenCode V2 graph metadata is too large');
   const graphs = JSON.parse((await boundedRead(graphPath, graphBytes)).toString('utf8')) as {
     schema?: unknown;
     graphs?: { version?: unknown; server?: unknown }[];

@@ -23,7 +23,8 @@ function fixture(
   change?: (
     entries: { name: string; data: Buffer; symlink?: boolean }[],
     descriptor: OpenCodeV2DeliveryDescriptor
-  ) => void
+  ) => void,
+  graphMetadata?: string
 ) {
   const identity = {
     schemaVersion: 1 as const,
@@ -41,11 +42,12 @@ function fixture(
     ['local-cli/opencodeV2RunOwner.js', 'owner fixture'],
     [
       'local-cli/opencode-v2-graphs.json',
-      JSON.stringify({
-        schema: 2,
-        graphs: [{ version: '2.1.4', server: '@opencode/server-v2.1.4' }],
-        pty: '0.4.11',
-      }),
+      graphMetadata ??
+        JSON.stringify({
+          schema: 2,
+          graphs: [{ version: '2.1.4', server: '@opencode/server-v2.1.4' }],
+          pty: '0.4.11',
+        }),
     ],
     ['local-cli/node_modules/native/runtime.node', 'native fixture'],
   ]
@@ -137,6 +139,45 @@ describe('external OpenCode V2 support installation', () => {
       descriptor.archive.sha256
     );
   }
+
+  it('accepts producer-shaped graph package metadata above 64 KiB', async () => {
+    const graphMetadata =
+      JSON.stringify(
+        {
+          schema: 2,
+          graphs: [{ version: '2.1.4', server: '@opencode/server-v2.1.4' }],
+          pty: '0.4.11',
+          packages: Array.from({ length: 1800 }, (_, index) => ({
+            name: `@TEST/package-${index}`,
+            version: '2.1.4',
+            path: `node_modules/@TEST/package-${index}`,
+          })),
+        },
+        null,
+        2
+      ) + '\n';
+    expect(Buffer.byteLength(graphMetadata)).toBeGreaterThan(64 * 1024);
+    const { lock, archive } = fixture(undefined, graphMetadata);
+    download(archive);
+    const service = installer(lock);
+    await service.install(native.version!, () => {});
+    expect((await service.withStatus(native)).v2Support).toBe('ready');
+  });
+
+  it('refuses graph metadata above the 32 MiB inventory JSON budget without publishing', async () => {
+    const graphMetadata =
+      JSON.stringify({
+        schema: 2,
+        graphs: [{ version: '2.1.4', server: '@opencode/server-v2.1.4' }],
+        pty: '0.4.11',
+      }) + ' '.repeat(32 * 1024 ** 2);
+    const { lock, descriptor, archive } = fixture(undefined, graphMetadata);
+    download(archive);
+    await expect(installer(lock).install(native.version!, () => {})).rejects.toThrow(
+      'graph metadata is too large'
+    );
+    await expect(readFile(path.join(directory(descriptor), 'installed.json'))).rejects.toThrow();
+  }, 15_000);
 
   it('binds support Bun requirements and every base target to the staged build identity', async () => {
     const { lock, descriptor } = fixture();
