@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { projectV2TerminalFailure } from '../../scripts/e2e/opencode-diagnostics/v2-terminal-failure';
 const expected = { sessionId: 'ses_TEST', nativeInputId: 'msg_TEST' };
 function fixture() {
-  const event = (seq: number, type: string, data: Record<string, unknown>) => ({ id: `evt_${seq}`, seq, type, aggregateID: expected.sessionId, data: { sessionID: expected.sessionId, ...data } });
+  const event = (seq: number, type: string, data: Record<string, unknown>): { id: string; seq: number; type: string; aggregateID: string; data: Record<string, unknown> } => ({ id: `evt_${seq}`, seq, type, aggregateID: expected.sessionId, data: { sessionID: expected.sessionId, ...data } });
   return { messages: { previous: null, next: null, data: [{ id: 'msg_TEST', type: 'user' }] }, log: { synced: true, watermark: 3, events: [
     event(0, 'session.execution.started', {}), event(1, 'session.inbox.delivered', { inboxID: 'msg_TEST' }), event(2, 'session.step.ended', { finish: 'length' }),
     event(3, 'session.execution.failed', { error: { type: 'ContextOverflowError', message: 'SECRET/path/token', code: 'context_length_exceeded', statusCode: 400 } }),
