@@ -178,7 +178,7 @@ test('isolated shell fixture emits the actual framed environment and refuses she
   assert.deepEqual(calls.map(call => call.allowed), [true, true, true, false, false, false]);
 });
 
-function assignmentRuntime() {
+function assignmentRuntime(stage?: 'in-progress-comment') {
   const identity = {
     contextId: 'TEST-context',
     teamName: 'host-team:TEST-owner',
@@ -221,6 +221,7 @@ function assignmentRuntime() {
       return this.expanded;
     },
   };
+  const triggers = [trigger];
   const dialog = {
     __reactFiber$TEST: dialogFiber,
     getClientRects: () => [1],
@@ -228,7 +229,7 @@ function assignmentRuntime() {
       return selector === 'textarea'
         ? [input]
         : selector === 'button[role="combobox"]'
-          ? [trigger]
+          ? triggers
           : [];
     },
   };
@@ -253,7 +254,7 @@ function assignmentRuntime() {
     phase: 'ready',
     loading: false,
     refreshPending: false,
-    full: { id: identity.taskId, owner: 'alice' },
+    full: { id: identity.taskId, owner: 'alice', status: 'pending' },
   };
   const state = {
     activeContextId: identity.contextId,
@@ -266,7 +267,8 @@ function assignmentRuntime() {
   const expression = desktopTaskBoardAssignmentReadyExpression(
     'TEST-owner',
     identity.taskId,
-    captured
+    captured,
+    stage
   );
   assert.equal(
     expression.match(/await import\(/g)?.length,
@@ -313,8 +315,42 @@ function assignmentRuntime() {
         },
       }) as Promise<Record<string, unknown> | null>
     );
-  return { evaluate, imports, state, detail, controller, trigger, work };
+  return { evaluate, imports, state, detail, controller, trigger, triggers, work };
 }
+
+test('original in-progress Task comment prerequisite requires its exact stage without an assignment control', async () => {
+  const commentRuntime = () => {
+    const f = assignmentRuntime('in-progress-comment');
+    f.detail.full.status = 'in_progress';
+    f.triggers.length = 0; // The real in-progress header renders an owner badge.
+    return f;
+  };
+  const ready = await commentRuntime().evaluate();
+  assert.equal(ready?.surfaceId, 'TEST-original-surface');
+  for (const change of [
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.full.status = 'pending'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.full.status = 'completed'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.full.owner = 'bob'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.triggers.push(f.trigger); },
+    (f: ReturnType<typeof commentRuntime>) => { f.work.refreshPending = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.refreshPending = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.loading = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.phase = 'unavailable'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.work.teamUnavailable = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.state.activeContextId = 'foreign-context'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.state.selectedTeamName = 'host-team:foreign'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.identity.taskId = 'foreign-task'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.surfaceId = 'foreign-surface'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.isOwner = false; },
+  ]) {
+    const f = commentRuntime();
+    change(f);
+    assert.equal(await f.evaluate(), null);
+  }
+  const assignment = assignmentRuntime();
+  assignment.triggers.length = 0;
+  assert.equal(await assignment.evaluate(), null, 'default assignment still requires its control');
+});
 
 test('original Task assignment prerequisite refuses receipt-only, pending and stale renderer state', async () => {
   const f = assignmentRuntime();

@@ -208,7 +208,7 @@ export async function runDesktopTaskBoardAttachmentsUi(
   const readyCommentExpression = desktopTaskBoardAssignmentReadyExpression(options.handleId, options.taskId, {
     contextId: String(row(originalCommentOwner.identity).contextId),
     surfaceId: String(originalCommentOwner.surfaceId),
-  });
+  }, 'in-progress-comment');
   const commentInputObservations: Row = {};
   proof.commentInputObservations = commentInputObservations;
   const readCommentInput = async (stage: string) => {

@@ -6189,3 +6189,50 @@ execution is still needed; the original once-created group/input is not replayed
 Draft, Stage1/OpenCodeV1 scope and original root911 HOLD remain unchanged.
 Delivery source-size guard passed4,638 production files with the unchanged143
 frozen exceptions and800-line limit; no inventory path or cap changes were needed.
+
+
+### Taskboard in-progress comment-stage TEST readiness
+
+The Mixed membership correction was committed and immediately pushed as
+`709f123ac951ed07d986eee17e683a9c27501baa`. All11 original8471 Source rows are
+now terminal: eight scoped PASS and three INCOMPLETE (Mixed, Taskboard, Codex).
+The all-row immutable-source audit matched1,411 files; these are8471 results,
+not qualification of this later TEST source.
+
+Original8471 Taskboard receipt9bc7aa5b remains INCOMPLETE. The image add completed
+once; after Start, the later comment observer incorrectly required a pending-only
+assignment combobox that no longer exists. It stopped before focus, typing and
+Comment; no original input/submit is replayed. The bounded three-file correction
+opts only this later observer into `in-progress-comment`: exact in_progress status,
+owner alice and zero comboboxes, with unchanged context/surface/detail/refresh/
+authority guards. Default assignment remains exact. No product code, UI action,
+protocol or budget changes.
+
+Matching real-expression RED becomes GREEN for the valid state plus14 refusals
+and the original default-assignment control. The existing complete three-file
+prerequisite suite passed32/32,0 FAIL /0 SKIP, using selected Node24.21.0; strict
+scripts types, scoped lint and diff checks passed. C independently accepted exact
+helper SHA256 `689254e28efa7615422eebba09a6f0088425c720ec8e3834b87ab832608b94bb`,
+attachment observer `d15468611c476444e19aaa0faca598ce4fb6d2284fe7daa216669f7fe7dde514`,
+and existing test `b920aa813a59489e3c4f508c2da74ef790fd09dc6e02a2bc2a8db4d990f2e5f4`.
+Affected log SHA256 is
+`4486caf5d5c17f2f4ac9cb659fa6b58f37bdd815326946e671f4c6f322212b1c`.
+All three existing paths remain in the finite inventory; fresh Taskboard execution
+is still needed.
+
+The separate original8471 P7 chain on24G624/arm64 is independently accepted for
+kernel ancestry, normal SDK registration/Stop and unsigned packed Claude Opus4.6/
+medium Launch/Stop/close. Normal SDK Host exited0/null without harness signals;
+packed app exited0/null, its process group emptied and captured Host absence was
+observed. Core audit `checks/ci-40716971821-p7/core-audit.json` has SHA256
+`27837a4104beb73fa988e8bcdf77d1690d105d5239dd71aa4eeee221692968ad`.
+Artifact12830385448's complete3,054,226,202-byte stream/digest was verified; a
+selected180.5MB subset and full census are retained. The original archive's file
+census supports the boundary; no independent recomputation of packed renderer/
+terminal tree-concatenation hashes is claimed. Packed Codex Code Mode is not
+qualified. The source Codex failure is a missing code-mode sidecar ENOENT, with
+no TWO and H3 skipped; its official closure repair is separate. Future closure
+changes may require affected P7 requalification. None of these8471 proofs is
+promoted to the later HEAD; original root911 HOLD remains immutable/unresolved.
+Delivery source-size guard passed4,638 production files with the unchanged143
+frozen exceptions/800-line cap. No new paths or inventory/cap changes were made.

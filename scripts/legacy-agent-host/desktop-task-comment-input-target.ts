@@ -48,11 +48,12 @@ export function desktopTaskCommentInputExpression(handleId: string, taskId: stri
   })()`;
 }
 
-/** Observe completion of the original board assignment before another Task action. */
+/** Observe the original board assignment, or its later in-progress comment stage. */
 export function desktopTaskBoardAssignmentReadyExpression(
   handleId: string,
   taskId: string,
-  captured: { contextId: string; surfaceId: string }
+  captured: { contextId: string; surfaceId: string },
+  stage?: 'in-progress-comment'
 ): string {
   assert.ok(captured.contextId && captured.surfaceId);
   return `(async()=>{
@@ -69,7 +70,9 @@ export function desktopTaskBoardAssignmentReadyExpression(
       isTaskDetailTeamUnavailable(s,i.teamName,captureTaskDetailReadScope(i.teamName,i.contextId)))return null;
     const input=document.getElementById(owner.inputId),dialog=input?.closest('[role="dialog"]');
     const triggers=dialog?.querySelectorAll('button[role="combobox"]');
-    if(triggers?.length!==1||triggers[0].disabled||triggers[0].getAttribute('aria-expanded')!=='false'||triggers[0].textContent.trim()!=='alice')return null;
+    ${stage === 'in-progress-comment'
+      ? "if(detail.full.status!=='in_progress'||triggers?.length!==0)return null;"
+      : "if(triggers?.length!==1||triggers[0].disabled||triggers[0].getAttribute('aria-expanded')!=='false'||triggers[0].textContent.trim()!=='alice')return null;"}
     return owner;
   })()`;
 }
