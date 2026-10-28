@@ -5978,3 +5978,40 @@ Its retained log is `checks/taskboard-assignment-mock-full30.log`, SHA256
 Fresh Desktop and canonical results remain required; P7 workflow changes are
 excluded from this fixture-only delivery. Draft status and original root911 HOLD
 remain unchanged.
+
+
+### Prepared exact-tuple P7 execution chain
+
+The prerequisite fixture alignment was committed and immediately pushed as
+`7d4d6b08f`; its30-test result is a local prerequisite check, not Desktop acceptance.
+The separate default-false manual `stage1_process_qualification` input now wires
+one private24G624 TEST chain. Existing inputs/jobs/run bodies remain unchanged.
+The runner builds a genuine manifest-bound native artifact from pinned C,
+compiler/SDK/headers, then runs exactly two existing qualifier processes: rich
+live ancestry and ordinary SDK registration/Stop. Only their success permits
+unsigned candidate staging/build/capture and the existing original packed
+Launch/Stop/public-close controls, using the copied candidate-owned Node.
+
+No retry, native signal fallback, production stager change, shipping signing or
+publication is added. Locked Node/provider/SDK/terminal bytes stay exact. Native,
+source/dist and generated candidate/config/packed renderer/terminal pins are
+revalidated in finally, including failure paths. The runner joins the existing
+finite source inventory without raising a source cap or adding an exception.
+
+C independently accepted D's exact runner SHA256
+`a771b7e8d5b07235a18a5fcfcafffdcf5818581222a1d3f3b1d0637e7d286b1e`
+and workflow SHA256
+`9045b371825a5ca03c7c5ab64208f505dfd6199fbaf55d4d668d45762088a7ce`.
+Strict scripts types, scoped lint, Node/YAML/bash syntax, existing-workflow
+equality and diff checks passed; the finite-inventory source-size/provisioning
+guards are recorded below. No local build/native/packed execution was performed
+for this orchestration slice. Fresh Source11, final canonical and actual ancestry,
+normal SDK Stop and packed controls remain pending. Original root911 HOLD stays
+immutable and unresolved; Draft, Stage1-only and OpenCodeV1-only scope remain.
+
+Finite-inventory delivery gates passed: source-size guard checked4,638 production
+files with the same143 frozen exceptions/800-line cap; provisioning architecture
+passed unchanged. The exported source list contains the runner exactly once.
+Initial sandbox invocations stopped at git-child EPERM before validation; the
+same normal commands completed with exit0 under standard execution permission.
+No broad build/test rerun was added for the inventory/documentation change.

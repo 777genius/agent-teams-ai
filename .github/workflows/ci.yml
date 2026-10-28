@@ -35,6 +35,10 @@ on:
         description: Record an unqualified current macOS tuple diagnostic with one owned finite Node child
         type: boolean
         default: false
+      stage1_process_qualification:
+        description: Run fresh TEST kernel ancestry, normal SDK Stop and unsigned packed Launch on the exact prospective tuple
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -911,6 +915,87 @@ jobs:
           path: |
             ${{ runner.temp }}/process-tuple-diagnostic.log
             /private/tmp/TEST-process-tuple-*/**
+
+  stage1-process-qualification:
+    name: Stage 1 current-tuple process and packed qualification
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 45
+    env:
+      TMPDIR: /private/tmp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Verify and stage the existing pinned Node
+        run: |
+          set -euo pipefail
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          git rev-parse HEAD
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install Desktop dependencies including Electron
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build all existing prerequisites before qualification freeze
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          node node_modules/electron-vite/bin/electron-vite.js build
+      - name: Prepare the existing exact private TEST inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-process-qualification-setup.log") 2>&1
+          selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-p7-inputs-XXXXXX)"
+          printf 'STAGE1_P7_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
+          gh release download v0.3.3 --repo 777genius/terminal-platform --pattern terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz --dir "$selected_inputs"
+          printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
+          printf '%s  %s\n' b78da8494e2ee9b46b9bd2e002b7b6d27a2431fbac5f8bcd52d7940c408702cd "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz" | shasum -a 256 -c -
+          node scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 --archive "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz"
+          tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
+          archive="$selected_inputs/node-v24.21.0-headers.tar.gz"
+          curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          printf '%s  %s\n' 57c6bee2e30bbbee5bd51d6cc343eb992e174b56a2a1d0eab7a7510771c20ea2 "$archive" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$selected_inputs" node-v24.21.0/include/node
+      - name: Run the two existing native proofs and original packed controls once
+        env:
+          LEGACY_STAGE1_P7_GO: '1'
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/run-process-qualification.ts "$STAGE1_P7_INPUTS" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification.log"
+      - name: Preserve exact TEST inputs, original receipts and incomplete custody
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-qualification-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-process-qualification*.log
+            /private/tmp/TEST-stage1-p7-*/**
 
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required

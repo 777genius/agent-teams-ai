@@ -102,15 +102,20 @@ refs, gates и границы. Fresh Desktop/managed-MCP Resume и all-three nat
 
 **Node acquisition и cache seed уже подтверждены на macOS24G624:** diagnostic-only
 40694908161 получил точные official bytes и сохранил cache с полным locked SHA;
-будущий cache hit пока не заявлен. Это unqualified readonly kernel observation
+exact452b run40706671986 также подтвердил cache HIT и проверку locked SHA.
+Этот source run отменён после четырёх prerequisite fixture failures до UI;
+оставшиеся семь Desktop rows не начали steps, Full PASS не получен. Принятое
+пятистрочное дополнение TEST mock прошло тот же complete prerequisite30/30.
+Это unqualified readonly kernel observation
 с одним finite child, а не SDK/P7 qualification. Предыдущие acquisition failures
 сохранены как исторические и не объявлены native failures.
 
 [Prospective process candidate](progress/checkpoint-2026-10-27.md#prospective-process-artifact-tuple-binding)
 связывает selected manifest с actual native build для24G90/24G624. Historical90
-records читаются без переписывания, но не дают control на624. Новый normal SDK
-actor подготовлен; actual ancestry, обычный SDK registration/Stop и packed Launch
-ещё нужны до P7/support claim. Первоначальный M19 root911 HOLD остаётся явно
+records читаются без переписывания, но не дают control на624. Normal SDK actor и отдельный default-false manual P7 workflow подготовлены;
+он связывает genuine artifact, два native qualifier processes и последующий
+unsigned packed Launch через исходные controls. Actual ancestry, обычный SDK
+registration/Stop и packed Launch ещё нужны до P7/support claim. Первоначальный M19 root911 HOLD остаётся явно
 неразрешённым. Draft, Stage1-only и OpenCodeV1-only scope сохранены.
 
 **Исторические snapshots ниже сохраняют собственные source boundaries.**
