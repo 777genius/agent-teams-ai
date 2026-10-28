@@ -718,7 +718,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         : nativeStopMode || launchDialogMode || createConfigMode
         ? 'not exposed by main-owned transport; consult per-flow native custody and physical child observations'
         : readbackMode
-          ? 'saved closed Runtime readback; no new provider session allocated'
+          ? 'saved Runtime readback; consult per-flow custody and allocation evidence'
           : 'not exposed by main-owned transport; no separate Host exit code recorded',
     };
     if (cleanupFailure || remaining === null || remaining.length) evidence.status = 'INCOMPLETE';
