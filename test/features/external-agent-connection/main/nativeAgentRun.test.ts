@@ -1,5 +1,8 @@
 // @vitest-environment node
 import { EventEmitter } from 'node:events';
+import { lstat, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { PassThrough } from 'node:stream';
 
 import {
@@ -8,7 +11,7 @@ import {
 } from '@features/external-agent-connection/main/nativeAgentRun';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConnectionInfoV1 } from '@features/external-agent-connection/contracts';
 import type { ChildProcess } from 'node:child_process';
@@ -34,17 +37,19 @@ vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: vi.fn(async () => ({
-    env: { CLAUDECODE: 'nested', ELECTRON_RUN_AS_NODE: '1', TEST_PROVIDER_AUTH: 'retained' },
+    env: {
+      CLAUDECODE: 'nested',
+      ELECTRON_RUN_AS_NODE: '1',
+      TEST_PROVIDER_AUTH: 'retained',
+    },
     providerArgs: providerLaunch.args,
     connectionIssues: {},
   })),
 }));
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
-  providerConnectionService: { getConfiguredCodexCustomProviderModel: () => providerLaunch.model },
-}));
-vi.mock('node:fs/promises', () => ({
-  mkdtemp: async () => '/sandbox/native-run-temp',
-  rm: vi.fn(async () => {}),
+  providerConnectionService: {
+    getConfiguredCodexCustomProviderModel: () => providerLaunch.model,
+  },
 }));
 vi.mock('@main/utils/childProcess', () => ({
   spawnCli: vi.fn(),
@@ -107,7 +112,15 @@ const allowed = [
   'team_update',
   'team_trash',
 ];
-const desktop = { controlUrl: 'http://127.0.0.1:41001', claudeDir: '/sandbox/bound-root' };
+const mcpToken = 'sandbox-native-mcp-token-00000000000000000000';
+const controlToken = 'sandbox-native-control-token-00000000000000';
+const desktop = {
+  controlUrl: 'http://127.0.0.1:41001',
+  controlAuthToken: controlToken,
+  claudeDir: '/sandbox/bound-root',
+  userDataPath: '',
+  mcpHandle: { url: connection.mcp.url!, generation: 1, authToken: mcpToken },
+};
 const managementMcp = {
   command: '/sandbox/bin/mcp-node',
   args: ['/sandbox/mcp/index.js'],
@@ -115,6 +128,7 @@ const managementMcp = {
     ELECTRON_RUN_AS_NODE: '1',
     AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
     AGENT_TEAMS_BOUND_CONTROL_URL: desktop.controlUrl,
+    AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: controlToken,
     AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(connection.context),
     AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.claudeDir,
   },
@@ -122,7 +136,8 @@ const managementMcp = {
 
 describe('native one-shot provider transport', () => {
   let child: FakeChild;
-  beforeEach(() => {
+  beforeEach(async () => {
+    desktop.userDataPath = await mkdtemp(join(await realpath(tmpdir()), 'test-native-auth-'));
     vi.clearAllMocks();
     providerLaunch.args = [];
     providerLaunch.model = null;
@@ -135,6 +150,10 @@ describe('native one-shot provider transport', () => {
         child.close(null);
       }
     });
+  });
+
+  afterEach(async () => {
+    await rm(desktop.userDataPath, { recursive: true, force: true });
   });
 
   it('limits Codex to six management tools, read-only sandbox, no shell or user MCP config', () => {
@@ -152,13 +171,8 @@ describe('native one-shot provider transport', () => {
   });
 
   it('removes Claude built-ins and uses a bound management-only stdio MCP without broad skip', () => {
-    const args = nativeAgentRunArgs('anthropic', connection, managementMcp);
-    const config = JSON.parse(args[args.indexOf('--mcp-config') + 1]);
-    expect(config.mcpServers['agent-teams']).toEqual({
-      ...managementMcp,
-      type: 'stdio',
-      args: [...managementMcp.args, '--transport', 'stdio', '--tool-profile', 'management'],
-    });
+    const args = nativeAgentRunArgs('anthropic', connection, '/sandbox/private/mcp.json');
+    expect(args[args.indexOf('--mcp-config') + 1]).toBe('/sandbox/private/mcp.json');
     expect(() => nativeAgentRunArgs('anthropic', connection)).toThrow('Bound management MCP');
     expect(args[args.indexOf('--tools') + 1]).toBe('');
     expect(args).toContain('--strict-mcp-config');
@@ -186,26 +200,113 @@ describe('native one-shot provider transport', () => {
     expect(binary).toBe('/sandbox/bin/claude');
     expect(args).not.toContain('Private sandbox request');
     expect(args).not.toContain('--model');
-    expect(options?.cwd).toBe('/sandbox/native-run-temp');
+    expect(options?.cwd).toContain('agent-teams-native-prompt-');
     expect(options?.env?.TEST_PROVIDER_AUTH).toBe('retained');
     expect(options?.env?.CLAUDECODE).toBeUndefined();
     expect(options?.env?.ELECTRON_RUN_AS_NODE).toBeUndefined();
-    const config = JSON.parse(args[args.indexOf('--mcp-config') + 1]);
+    const configPath = args[args.indexOf('--mcp-config') + 1];
+    expect(configPath.startsWith(join(desktop.userDataPath, 'local-http-auth'))).toBe(true);
+    expect(args.join(' ')).not.toContain(controlToken);
+    if (process.platform !== 'win32') {
+      expect((await lstat(configPath)).mode & 0o777).toBe(0o600);
+      expect((await lstat(dirname(configPath))).mode & 0o777).toBe(0o700);
+    }
+    const config = JSON.parse(await readFile(configPath, 'utf8'));
     expect(config.mcpServers['agent-teams']).toEqual({
       ...managementMcp,
       type: 'stdio',
       args: [...managementMcp.args, '--transport', 'stdio', '--tool-profile', 'management'],
     });
     expect(child.stdin.read()?.toString()).toBe('Private sandbox request');
+    child.stderr.write(`Bound credential: ${controlToken}\n`);
     child.stdout.write('{"type":"result","subtype":"error_max_turns","is_error":true}\n');
     child.close(0);
     expect(await result).toEqual({ successful: false });
     expect(output.join('\n')).toContain('error_max_turns');
+    expect(output.join('\n')).not.toContain(controlToken);
+    expect(output.join('\n')).toContain('Bound credential: [REDACTED]');
+    await runtime.dispose();
+    await expect(lstat(configPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('gives Codex only the current MCP credential through child env and redacts echoed credentials', async () => {
+    const previous = process.env.AGENT_TEAMS_NATIVE_MCP_AUTH_TOKEN;
+    const runtime = await prepareNativeAgentRun('codex', connection, desktop);
+    const output: string[] = [];
+    const result = runtime.launch('Sandbox request', (text) => output.push(text));
+    const [, args, options] = vi.mocked(spawnCli).mock.calls[0];
+    expect(args).toContain(
+      'mcp_servers.agent-teams.bearer_token_env_var="AGENT_TEAMS_NATIVE_MCP_AUTH_TOKEN"'
+    );
+    expect(args.join(' ')).not.toContain(mcpToken);
+    expect(options?.env?.AGENT_TEAMS_NATIVE_MCP_AUTH_TOKEN).toBe(mcpToken);
+    expect(process.env.AGENT_TEAMS_NATIVE_MCP_AUTH_TOKEN).toBe(previous);
+    child.stderr.write(`Authorization: Bearer ${mcpToken.slice(0, 15)}`);
+    child.stderr.write(`${mcpToken.slice(15)}\n`);
+    child.stdout.write('{"type":"turn.completed"}\n');
+    child.close(0);
+    expect(await result).toEqual({ successful: true });
+    expect(output.join('\n')).toContain('Bearer [REDACTED]');
+    expect(output.join('\n')).not.toContain(mcpToken);
     await runtime.dispose();
   });
 
+  it.each([
+    { mcpHandle: null },
+    { mcpHandle: { ...desktop.mcpHandle, authToken: '' } },
+    { mcpHandle: { ...desktop.mcpHandle, generation: 2 } },
+    { mcpHandle: { ...desktop.mcpHandle, url: 'http://127.0.0.1:41002/mcp' } },
+  ])('rejects a missing or replaced parent MCP authority before spawn: %j', async (change) => {
+    await expect(
+      prepareNativeAgentRun('codex', connection, { ...desktop, ...change })
+    ).rejects.toThrow();
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('rejects URL credentials even when the supplied handle matches', async () => {
+    const url = `${connection.mcp.url}?access_token=${mcpToken}`;
+    await expect(
+      prepareNativeAgentRun(
+        'codex',
+        {
+          ...connection,
+          mcp: { ...connection.mcp, url },
+        },
+        { ...desktop, mcpHandle: { ...desktop.mcpHandle, url } }
+      )
+    ).rejects.toThrow('endpoint');
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('requires bound control credentials before publishing a Claude management config', async () => {
+    await expect(
+      prepareNativeAgentRun('anthropic', connection, {
+        ...desktop,
+        controlAuthToken: null,
+      })
+    ).rejects.toThrow('credential');
+    expect(spawnCli).not.toHaveBeenCalled();
+    await expect(lstat(join(desktop.userDataPath, 'local-http-auth'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('keeps the private Claude config when process termination cannot be verified', async () => {
+    const runtime = await prepareNativeAgentRun('anthropic', connection, desktop);
+    const result = runtime.launch('Sandbox request', () => {});
+    const args = vi.mocked(spawnCli).mock.calls[0][1];
+    const configPath = args[args.indexOf('--mcp-config') + 1];
+    vi.mocked(killProcessTreeAndWait).mockRejectedValueOnce(
+      new Error('Synthetic termination failure')
+    );
+    await expect(runtime.dispose()).rejects.toThrow('Synthetic termination failure');
+    expect(await readFile(configPath, 'utf8')).toContain(controlToken);
+    child.close(null);
+    await result;
+  });
+
   it('does not report success after a native error event followed by turn.completed', async () => {
-    const runtime = await prepareNativeAgentRun('codex', connection);
+    const runtime = await prepareNativeAgentRun('codex', connection, desktop);
     const result = runtime.launch('Sandbox request', () => {});
     child.stdout.write('{"type":"error","message":"request failed"}\n{"type":"turn.completed"}\n');
     child.close(0);
@@ -222,7 +323,7 @@ describe('native one-shot provider transport', () => {
       '-c',
       'model_providers.agent_teams_custom.base_url="https://sandbox-provider.invalid/v1"',
     ];
-    const runtime = await prepareNativeAgentRun('codex', connection);
+    const runtime = await prepareNativeAgentRun('codex', connection, desktop);
     expect(buildProviderAwareCliEnv).toHaveBeenCalledWith(
       expect.objectContaining({
         binaryPath: '/sandbox/bin/renamed-provider',
@@ -244,7 +345,7 @@ describe('native one-shot provider transport', () => {
   });
 
   it('bounds large tool output without failing an independently confirmed successful process', async () => {
-    const runtime = await prepareNativeAgentRun('codex', connection);
+    const runtime = await prepareNativeAgentRun('codex', connection, desktop);
     const output: string[] = [];
     const result = runtime.launch('Sandbox request', (text) => output.push(text));
     child.stdout.write(
@@ -258,7 +359,7 @@ describe('native one-shot provider transport', () => {
   });
 
   it('keeps fragmented UTF8 output intact and requires native completion plus successful exit', async () => {
-    const runtime = await prepareNativeAgentRun('codex', connection);
+    const runtime = await prepareNativeAgentRun('codex', connection, desktop);
     const output: string[] = [];
     const result = runtime.launch('Sandbox request', (text) => output.push(text));
     expect(vi.mocked(spawnCli).mock.calls[0][1]).not.toContain('--model');

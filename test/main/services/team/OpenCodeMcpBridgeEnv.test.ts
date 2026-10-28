@@ -77,7 +77,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
   });
 
   it('reads the current handle after delayed work and fences old revocation', async () => {
-    let handle: { url: string; port: number; urlHash: string } | null = null;
+    let handle: { url: string; port: number; urlHash: string; authToken: string } | null = null;
     const projection = createOpenCodeMcpAppContext(() => handle);
     const env = {
       AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/root',
@@ -94,18 +94,27 @@ describe('OpenCodeMcpBridgeEnv', () => {
     });
     const revokeNew = projection.bind({ ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'new' }, true);
     handle = {
-      url: 'http://127.0.0.1:41002/mcp?access_token=sandbox-mcp-token',
+      url: 'http://127.0.0.1:41002/mcp',
+      authToken: 'sandbox-mcp-token-0123456789abcdef',
       port: 41002,
       urlHash: 'new-hash',
     };
     finish();
-    expect((await delayed)?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain(
-      '41002/mcp?access_token=sandbox-mcp-token#agent-teams-app-instance=new'
+    const projected = await delayed;
+    expect(projected?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain(
+      '41002/mcp#agent-teams-app-instance=new'
     );
+    expect(projected?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).not.toContain(handle.authToken);
+    expect(JSON.parse(projected?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON ?? '{}')).toEqual({
+      Authorization: `Bearer ${handle.authToken}`,
+    });
     revokeNew();
     expect(projection.read('/sandbox/root')).toBeNull();
     projection.bind(env, false);
     expect(projection.read('/sandbox/root')?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(
+      projection.read('/sandbox/root')?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON
+    ).toBeUndefined();
   });
 
   it.each([
@@ -129,6 +138,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
   it('rejects foreign or malformed live transport without rewriting it', () => {
     const projection = createOpenCodeMcpAppContext(() => ({
       url: 'https://foreign.invalid/mcp#foreign',
+      authToken: 'sandbox-mcp-token-0123456789abcdef',
       port: 41001,
       urlHash: 'hash',
     }));
@@ -257,6 +267,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
     const target: NodeJS.ProcessEnv = {
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:4999/mcp',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'stale-hash',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON: '{"Authorization":"Bearer stale"}',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
     };
 
@@ -265,6 +276,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
         {
           CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: ' http://127.0.0.1:41001/mcp ',
           CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: ' current-hash ',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON: '{"Authorization":"Bearer current"}',
         },
         target
       )
@@ -272,6 +284,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
     expect(target).toMatchObject({
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:41001/mcp',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'current-hash',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON: '{"Authorization":"Bearer current"}',
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
     });
   });
@@ -279,6 +292,7 @@ describe('OpenCodeMcpBridgeEnv', () => {
   it('clears a stale HTTP MCP hash when the retained endpoint has no hash', () => {
     const target: NodeJS.ProcessEnv = {
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'stale-hash',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON: '{"Authorization":"Bearer stale"}',
     };
 
     expect(

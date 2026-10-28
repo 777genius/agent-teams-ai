@@ -8,28 +8,26 @@ import {
   getDesktopMcpChildEnvironment,
   isDesktopMcpEnvironmentBound,
 } from '@features/external-agent-connection';
+import {
+  readPrivateJson,
+  replacePrivateJson,
+  validatePrivatePath,
+} from '@features/local-http-auth/main';
 import { type RuntimeProcessTableRow } from '@features/tmux-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { killProcessTree, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
 import { ensureMinimumNodeOldSpaceEnv } from '@main/utils/nodeOptions';
-import { getAppDataPath, getClaudeBasePath, getMcpServerBasePath } from '@main/utils/pathDecoder';
-import { forceKillProcessByPidNoWait, killProcessByPid } from '@main/utils/processKill';
+import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
+import { prepareMcpStateDirectory } from './mcp/privateState';
 import { createOpenCodeMcpAppContext } from './opencode/bridge/OpenCodeMcpBridgeEnv';
 import { type FileLockOptions, withFileLock } from './fileLock';
 import {
   probeAuthenticatedLoopbackHealth,
   waitForAuthenticatedLoopbackHealth,
 } from './mcpHttpHealthClient';
-import {
-  assertNoLiveMcpConsumers,
-  canCleanupPriorDesktopMcpChild,
-  hasLiveMcpConsumers,
-  parseNativeProcessRows,
-  processDetailsIncludeMarker,
-} from './mcpProcessOwnership';
+import { assertNoLiveMcpConsumers, parseNativeProcessRows } from './mcpProcessOwnership';
 import { stopOwnedMcpChild, waitForOwnedMcpPortRelease } from './stopOwnedMcpChild';
 import { type McpLaunchSpec, resolveAgentTeamsMcpLaunchSpec } from './TeamMcpConfigBuilder';
 
@@ -58,7 +56,6 @@ const MCP_HTTP_STATE_LOCK_OPTIONS: FileLockOptions = {
   retryIntervalMs: 25,
 };
 const MCP_HTTP_CLEANUP_DISABLED_ENV = 'CLAUDE_TEAM_DISABLE_MCP_ORPHAN_CLEANUP';
-const MCP_HTTP_ORPHAN_TERMINATE_GRACE_MS = 250;
 
 export interface AgentTeamsMcpHttpTransportEvidence {
   schemaVersion: 1;
@@ -203,10 +200,6 @@ async function canListenOnLoopbackPort(host: string, port: number): Promise<bool
       server.close(() => resolve(true));
     });
   });
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -355,7 +348,7 @@ function buildTransportEvidence(
   authToken: string
 ): AgentTeamsMcpHttpTransportEvidence {
   const url = new URL(`http://${MCP_HTTP_HOST}:${port}${MCP_HTTP_ENDPOINT}`);
-  url.searchParams.set('access_token', authToken);
+  void authToken; // Credentials are delivered separately to managed clients.
   const urlString = url.toString();
   return {
     schemaVersion: 1,
@@ -371,7 +364,7 @@ function buildTransportEvidence(
 }
 
 function buildStatePath(): string {
-  return path.join(getAppDataPath(), MCP_HTTP_STATE_DIR, MCP_HTTP_STATE_FILE);
+  return path.join(getAppDataPath(), 'local-http-auth', MCP_HTTP_STATE_DIR, MCP_HTTP_STATE_FILE);
 }
 
 function buildLaunchSpecHash(launchSpec: McpLaunchSpec): string {
@@ -508,8 +501,7 @@ function stateMatchesExpected(
   expected: AgentTeamsMcpExpectedHttpIdentity
 ): boolean {
   return (
-    state.url ===
-      `http://${MCP_HTTP_HOST}:${state.port}${MCP_HTTP_ENDPOINT}?access_token=${encodeURIComponent(state.authToken)}` &&
+    state.url === `http://${MCP_HTTP_HOST}:${state.port}${MCP_HTTP_ENDPOINT}` &&
     state.urlHash === sha256Hex(state.url) &&
     identityMatchesExpected(state, expected, state.port)
   );
@@ -529,80 +521,8 @@ function emitDiagnostics(diagnostics: readonly string[]): void {
   }
 }
 
-function parseCommandArg(command: string, flag: string): string | null {
-  const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`(?:^|\\s)${escaped}(?:=|\\s+)(?:"([^"]+)"|'([^']+)'|(\\S+))`).exec(
-    command
-  );
-  return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
-}
-
-function parseCommandPort(command: string): number | null {
-  const raw = parseCommandArg(command, '--port');
-  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
-  return Number.isInteger(parsed) && parsed > 0 && parsed <= 65_535 ? parsed : null;
-}
-
-function commandArgEquals(command: string, flag: string, expected: string): boolean {
-  return parseCommandArg(command, flag) === expected;
-}
-
-function isMcpHttpServerCommand(command: string): boolean {
-  const normalized = command.trim();
-  const devBase = path.join(getMcpServerBasePath(), 'dev').replaceAll('\\', '/');
-  const escapedDevBase = devBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const devEntry = new RegExp(
-    `(?:^|\\s|["'])${escapedDevBase}/[1-9]\\d*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/index\\.js(?=["']?(?:\\s|$))`
-  );
-  return (
-    (/mcp-server[/\\](?:src[/\\]index\.ts|dist[/\\]index\.js|index\.js)(?=\s|$)/.test(normalized) ||
-      devEntry.test(normalized.replaceAll('\\', '/'))) &&
-    commandArgEquals(normalized, '--transport', 'httpStream') &&
-    commandArgEquals(normalized, '--host', MCP_HTTP_HOST) &&
-    commandArgEquals(normalized, '--endpoint', MCP_HTTP_ENDPOINT) &&
-    parseCommandPort(normalized) !== null
-  );
-}
-
-function hasManagedMcpDetails(details: string, port: number): boolean {
-  return (
-    processDetailsIncludeMarker(details, 'AGENT_TEAMS_MCP_TRANSPORT=httpStream') &&
-    processDetailsIncludeMarker(details, `AGENT_TEAMS_MCP_HTTP_HOST=${MCP_HTTP_HOST}`) &&
-    processDetailsIncludeMarker(details, `AGENT_TEAMS_MCP_HTTP_PORT=${port}`) &&
-    processDetailsIncludeMarker(details, `AGENT_TEAMS_MCP_HTTP_ENDPOINT=${MCP_HTTP_ENDPOINT}`) &&
-    processDetailsIncludeMarker(details, `AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()}`)
-  );
-}
-
-function parseManagedMcpAuthToken(details: string): string | undefined {
-  const marker = `${MCP_HTTP_AUTH_TOKEN_ENV}=`;
-  const token = details
-    .split(/\s+/)
-    .find((part) => part.startsWith(marker))
-    ?.slice(marker.length);
-  return token && token.length >= 32 && token.length <= 512 ? token : undefined;
-}
-
-function isNativeProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
-  }
-}
-
 async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
   return execFileText('ps', ['eww', '-p', String(pid), '-o', 'command='], 2_000, 2 * 1024 * 1024);
-}
-
-async function readNativeProcessStartTimeMs(pid: number): Promise<number | null> {
-  const output = await execFileText('ps', ['-p', String(pid), '-o', 'lstart='], 2_000, 64 * 1024);
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 async function listNativeProcessRows(
@@ -660,7 +580,6 @@ export class AgentTeamsMcpHttpServer {
   private generation = 0;
   private readonly expectedStopChildren = new WeakSet<ChildProcess>();
   private readonly ownerInstanceId = randomUUID();
-  private readonly startedAtMs = Date.now();
   private preventFutureStarts = false;
   private stopping = 0;
   constructor(private readonly deps: AgentTeamsMcpHttpServerDeps = {}) {}
@@ -671,9 +590,15 @@ export class AgentTeamsMcpHttpServer {
     }
     this.startPromise = (
       this.handle ? this.reuseOrRestartExistingHandle(this.handle) : this.startOnce()
-    ).finally(() => {
-      this.startPromise = null;
-    });
+    )
+      .catch(async (error: unknown) => {
+        if (this.child) await this.stopCurrentChild();
+        else this.handle = null;
+        throw error;
+      })
+      .finally(() => {
+        this.startPromise = null;
+      });
     return this.startPromise;
   }
 
@@ -775,7 +700,7 @@ export class AgentTeamsMcpHttpServer {
     diagnostics: string[]
   ): Promise<AgentTeamsMcpHttpState | null> {
     try {
-      const raw = await fs.promises.readFile(statePath, 'utf8');
+      const raw = JSON.stringify(await readPrivateJson(statePath));
       const parsed = parseState(raw);
       if (!parsed) {
         diagnostic('opencode_app_mcp_state_ignored:parse_failed', diagnostics);
@@ -798,12 +723,10 @@ export class AgentTeamsMcpHttpServer {
       return;
     }
     try {
-      await atomicWriteAsync(statePath, `${JSON.stringify(state, null, 2)}\n`, {
-        mode: 0o600,
-        directoryMode: 0o700,
-      });
+      await replacePrivateJson(statePath, state, validatePrivatePath);
     } catch {
       diagnostic('opencode_app_mcp_state_ignored:write_failed', diagnostics);
+      throw new Error('Cannot publish private MCP credentials');
     }
   }
 
@@ -823,7 +746,8 @@ export class AgentTeamsMcpHttpServer {
             state &&
             state.port === handle.port &&
             state.urlHash === handle.urlHash &&
-            state.ownerInstanceId === this.ownerInstanceId
+            state.ownerInstanceId === this.ownerInstanceId &&
+            state.authToken === handle.authToken
           ) {
             await fs.promises.rm(statePath, { force: true });
           }
@@ -1022,6 +946,7 @@ export class AgentTeamsMcpHttpServer {
       return startUnlocked(null, []);
     }
 
+    await prepareMcpStateDirectory(statePath);
     const lock = this.deps.withStateLock ?? withFileLock;
     try {
       return await lock(statePath, () => startUnlocked(statePath, []), MCP_HTTP_STATE_LOCK_OPTIONS);
@@ -1206,175 +1131,13 @@ export class AgentTeamsMcpHttpServer {
       return;
     }
 
-    const cleanupIdentity = { ...expectedIdentity, requireOwner: isDesktopMcpEnvironmentBound() };
-    void this.tryCleanupOwnedOrphans(cleanupIdentity, currentHandle).catch(() => {
-      logger.warn('Agent Teams MCP HTTP diagnostic: opencode_app_mcp_orphan_cleanup_failed');
-    });
-  }
-
-  private async tryCleanupOwnedOrphans(
-    expectedIdentity: AgentTeamsMcpExpectedHttpIdentity,
-    currentHandle: AgentTeamsMcpHttpServerHandle
-  ): Promise<void> {
-    const listRows = this.deps.listProcessRows ?? listNativeProcessRows;
-    const readDetails =
-      this.deps.readProcessDetails ??
-      (process.platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
-    const readStartTimeMs =
-      this.deps.readProcessStartTimeMs ??
-      (process.platform === 'win32' ? async () => null : readNativeProcessStartTimeMs);
-    const killProcess = this.deps.killProcess ?? killProcessByPid;
-    const forceKillProcess = this.deps.forceKillProcess ?? forceKillProcessByPidNoWait;
-    const isProcessAlive = this.deps.isProcessAlive ?? isNativeProcessAlive;
-    const sleepMs = this.deps.sleepMs ?? sleep;
-    const probeHealth = this.deps.probeHealth ?? probeLoopbackHealth;
-
-    const rows = await listRows();
-    for (const row of rows) {
-      if (row.pid === currentHandle.pid || row.pid === process.pid) {
-        continue;
-      }
-      if (!isMcpHttpServerCommand(row.command)) {
-        continue;
-      }
-      const port = parseCommandPort(row.command);
-      if (!port || port === currentHandle.port) {
-        continue;
-      }
-
-      const parentMayStillOwnProcess =
-        process.platform === 'win32' ? row.ppid > 0 && isProcessAlive(row.ppid) : row.ppid !== 1;
-      if (parentMayStillOwnProcess) {
-        continue;
-      }
-
-      const startedAtMs = await readStartTimeMs(row.pid);
-      if (
-        !Number.isFinite(startedAtMs) ||
-        startedAtMs === null ||
-        startedAtMs >= this.startedAtMs
-      ) {
-        continue;
-      }
-
-      const details = await readDetails(row.pid);
-      if (!details || !hasManagedMcpDetails(details, port)) {
-        continue;
-      }
-      const orphanAuthToken = parseManagedMcpAuthToken(details);
-
-      const canCleanup = () =>
-        expectedIdentity.requireOwner
-          ? canCleanupPriorDesktopMcpChild({
-              pid: row.pid,
-              startedAtMs,
-              profile: this.appContext.read(getClaudeBasePath())?.CLAUDE_TEAM_APP_PROFILE_SCOPE,
-              listRows,
-              readDetails,
-              readStartTimeMs,
-              isProcessAlive,
-              probe: () => probeHealth(MCP_HTTP_HOST, port, orphanAuthToken),
-              matchesIdentity: (identity) =>
-                identityMatchesExpected(
-                  identity,
-                  { ...expectedIdentity, requireOwner: false },
-                  port
-                ),
-              hasManagedDetails: (value) => hasManagedMcpDetails(value, port),
-            })
-          : probeHealth(MCP_HTTP_HOST, port, orphanAuthToken).then(
-              (probe) =>
-                probe.healthy &&
-                Boolean(
-                  !probe.identity || identityMatchesExpected(probe.identity, expectedIdentity, port)
-                )
-            );
-      if (!(await canCleanup())) continue;
-
-      const ownedPids = await this.collectOwnedMcpProcessTreePids(rows, row.pid, port, readDetails);
-      const ownedPidSet = new Set(ownedPids);
-
-      if (await hasLiveMcpConsumers(rows, ownedPidSet, port, readDetails)) {
-        this.recordCleanupDiagnostic(
-          currentHandle,
-          `opencode_app_mcp_legacy_orphan_kept_live_consumers:${port}`
-        );
-        continue;
-      }
-
-      try {
-        if (!(await canCleanup())) continue;
-        let cleanupFailed = false;
-        for (const pid of [...ownedPids].reverse()) {
-          if (!isProcessAlive(pid)) {
-            continue;
-          }
-          try {
-            killProcess(pid);
-          } catch {
-            cleanupFailed = cleanupFailed || isProcessAlive(pid);
-          }
-        }
-        await sleepMs(MCP_HTTP_ORPHAN_TERMINATE_GRACE_MS);
-        if ([...ownedPids].some(isProcessAlive) && !(await canCleanup())) continue;
-        for (const pid of [...ownedPids].reverse()) {
-          if (!isProcessAlive(pid)) {
-            continue;
-          }
-          try {
-            forceKillProcess(pid);
-          } catch {
-            cleanupFailed = true;
-          }
-        }
-        if (ownedPids.some((pid) => isProcessAlive(pid))) {
-          cleanupFailed = true;
-        }
-        if (cleanupFailed) {
-          this.recordCleanupDiagnostic(
-            currentHandle,
-            `opencode_app_mcp_state_ignored:cleanup_failed`
-          );
-          continue;
-        }
-        this.recordCleanupDiagnostic(
-          currentHandle,
-          `opencode_app_mcp_legacy_orphan_cleaned:${port}`
-        );
-      } catch {
-        this.recordCleanupDiagnostic(
-          currentHandle,
-          `opencode_app_mcp_state_ignored:cleanup_failed`
-        );
-      }
-    }
-  }
-
-  private async collectOwnedMcpProcessTreePids(
-    rows: readonly RuntimeProcessTableRow[],
-    rootPid: number,
-    port: number,
-    readDetails: (pid: number) => Promise<string | null>
-  ): Promise<number[]> {
-    const ownedPids = [rootPid];
-    const visited = new Set(ownedPids);
-    for (const parentPid of ownedPids) {
-      for (const row of rows) {
-        if (row.ppid !== parentPid || visited.has(row.pid)) {
-          continue;
-        }
-        if (!isMcpHttpServerCommand(row.command) || parseCommandPort(row.command) !== port) {
-          continue;
-        }
-        const details = await readDetails(row.pid);
-        if (!details || !hasManagedMcpDetails(details, port)) {
-          continue;
-        }
-        visited.add(row.pid);
-        ownedPids.push(row.pid);
-      }
-    }
-    return ownedPids;
+    void expectedIdentity;
+    // Recovered numeric PIDs, argv markers and ps environment cannot bind a stop
+    // to the process object originally launched. Keep such endpoints untouched.
+    this.recordCleanupDiagnostic(
+      currentHandle,
+      'opencode_app_mcp_recovered_cleanup_requires_process_handle'
+    );
   }
 
   private recordCleanupDiagnostic(

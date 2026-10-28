@@ -1,6 +1,11 @@
 import { createServer } from 'node:http';
+import { createHash, randomUUID } from 'node:crypto';
+import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { createRequire } from 'node:module';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ControlAuthority } from '../src/internal/controlApiAuth';
 
 const require = createRequire(import.meta.url);
 const bindingPath = require.resolve('../src/internal/desktopControlBinding.js');
@@ -9,6 +14,12 @@ const previousUrl = process.env.AGENT_TEAMS_BOUND_CONTROL_URL;
 const previousContext = process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON;
 const previousToken = process.env.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN;
 const previousRoot = process.env.AGENT_TEAMS_MCP_CLAUDE_DIR;
+const previousReference = process.env.CLAUDE_TEAM_CONTROL_AUTH_REF;
+const previousExternalReference = process.env.CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF;
+beforeEach(() => {
+  delete process.env.CLAUDE_TEAM_CONTROL_AUTH_REF;
+  delete process.env.CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF;
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -17,6 +28,8 @@ afterEach(() => {
     AGENT_TEAMS_BOUND_CONTEXT_JSON: previousContext,
     AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: previousToken,
     AGENT_TEAMS_MCP_CLAUDE_DIR: previousRoot,
+    CLAUDE_TEAM_CONTROL_AUTH_REF: previousReference,
+    CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF: previousExternalReference,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -179,4 +192,144 @@ describe('app-bound group chat transport', () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
+});
+
+async function boundReferenceFixture() {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'bound-control-ref-')));
+  const received: Array<{ authorization: string; context: string }> = [];
+  const server = createServer((request, response) => {
+    received.push({
+      authorization: String(request.headers.authorization),
+      context: String(request.headers['x-agent-teams-app-context']),
+    });
+    response.setHeader('content-type', 'application/json');
+    response.end('[]');
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Missing fixture address');
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const directory = path.join(root, 'local-http-auth');
+  await mkdir(directory, { mode: 0o700 });
+  const instanceId = randomUUID();
+  const reference = path.join(directory, `api-${instanceId}.ref.json`);
+  const appContext = {
+    appInstanceId: 'fixture-app',
+    dataRootFingerprint: 'fixture-root',
+    connectionGeneration: 1,
+  };
+  async function publish(token: string, overrides: Partial<ControlAuthority> = {}) {
+    const authority: ControlAuthority = {
+      schemaVersion: 1,
+      service: 'api',
+      instanceId,
+      generation: randomUUID(),
+      baseUrl,
+      token,
+      profileScope: createHash('sha256').update(root).digest('hex'),
+      ...overrides,
+    };
+    const descriptorPath = path.join(
+      directory,
+      `api-${authority.instanceId}-${authority.generation}.json`
+    );
+    await writeFile(descriptorPath, JSON.stringify(authority), { mode: 0o600 });
+    await writeFile(
+      reference,
+      JSON.stringify({
+        schemaVersion: 1,
+        service: 'api',
+        profileScope: authority.profileScope,
+        instanceId: authority.instanceId,
+        generation: authority.generation,
+        descriptorPath,
+      }),
+      { mode: 0o600 }
+    );
+    return descriptorPath;
+  }
+  process.env.AGENT_TEAMS_BOUND_CONTROL_URL = baseUrl;
+  process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON = JSON.stringify(appContext);
+  process.env.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN = 'stale-legacy-fallback-token-0123456789';
+  process.env.AGENT_TEAMS_MCP_CLAUDE_DIR = root;
+  process.env.CLAUDE_TEAM_CONTROL_AUTH_REF = reference;
+  const context = { teamName: 'sandbox', claudeDir: root };
+  return {
+    root,
+    reference,
+    baseUrl,
+    appContext,
+    received,
+    publish,
+    context,
+    api: () =>
+      require(groupPath) as { listGroupChats(context: unknown, flags: unknown): Promise<unknown> },
+    close: async () => {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await rm(root, { recursive: true, force: true });
+    },
+  };
+}
+
+it('refreshes a bound child bearer from its pinned instance reference after an API restart', async () => {
+  const fixture = await boundReferenceFixture();
+  const firstToken = 'first-generation-private-token-0123456789';
+  const secondToken = 'second-generation-private-token-0123456789';
+  try {
+    await fixture.publish(firstToken);
+    const api = fixture.api();
+    await api.listGroupChats(fixture.context, { from: 'alice' });
+    await fixture.publish(secondToken);
+    // Later hints cannot retarget the already bound child or override its key.
+    process.env.CLAUDE_TEAM_CONTROL_AUTH_REF = '/foreign/reference.json';
+    process.env.CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF = '/foreign/external.json';
+    process.env.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN = 'foreign-env-token-0123456789abcdef';
+    await api.listGroupChats(fixture.context, { from: 'alice' });
+    expect(fixture.received).toEqual([
+      { authorization: `Bearer ${firstToken}`, context: JSON.stringify(fixture.appContext) },
+      { authorization: `Bearer ${secondToken}`, context: JSON.stringify(fixture.appContext) },
+    ]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+it.each(['missing', 'unsafe', 'foreign-profile', 'foreign-instance', 'foreign-endpoint'])(
+  'does not send HTTP or fall back to an old bearer after the pinned reference becomes %s',
+  async (failure) => {
+    const fixture = await boundReferenceFixture();
+    try {
+      const descriptor = await fixture.publish('valid-private-reference-token-0123456789');
+      const api = fixture.api();
+      await api.listGroupChats(fixture.context, { from: 'alice' });
+      if (failure === 'missing') await rm(fixture.reference);
+      if (failure === 'unsafe') await chmod(descriptor, 0o644);
+      if (failure === 'foreign-profile')
+        await fixture.publish('foreign-profile-token-0123456789abcdef', {
+          profileScope: 'foreign',
+        });
+      if (failure === 'foreign-instance')
+        await fixture.publish('foreign-instance-token-0123456789abcdef', {
+          instanceId: randomUUID(),
+        });
+      if (failure === 'foreign-endpoint')
+        await fixture.publish('foreign-endpoint-token-0123456789abcdef', {
+          baseUrl: 'http://127.0.0.1:1',
+        });
+      await expect(api.listGroupChats(fixture.context, { from: 'alice' })).rejects.toThrow();
+      expect(fixture.received).toHaveLength(1);
+    } finally {
+      await fixture.close();
+    }
+  }
+);
+
+it('refuses an invalid captured reference before HTTP despite a usable legacy environment bearer', async () => {
+  const fixture = await boundReferenceFixture();
+  try {
+    expect(() => fixture.api()).toThrow('APP_CONTEXT_MISMATCH');
+    expect(fixture.received).toHaveLength(0);
+  } finally {
+    await fixture.close();
+  }
 });

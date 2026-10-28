@@ -28,8 +28,7 @@ function constantTimeEqual(left: string, right: string): boolean {
 function requestAuthToken(request: IncomingMessage): string | null {
   const authorization = request.headers.authorization;
   const bearer = typeof authorization === 'string' ? /^Bearer ([^\s]+)$/.exec(authorization) : null;
-  if (bearer?.[1]) return bearer[1];
-  return new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.get('access_token');
+  return bearer?.[1] ?? null;
 }
 
 export type AgentTeamsMcpStartOptions =
@@ -100,6 +99,45 @@ export function createServer(
                 'content-type': 'application/json',
               });
               response.end(JSON.stringify({ error: 'Request origin is not allowed' }));
+              return false;
+            }
+            const origin = request.headers.origin;
+            if (origin) {
+              response.setHeader('Access-Control-Allow-Origin', origin);
+              response.setHeader('Vary', 'Origin');
+            }
+            if (request.method === 'OPTIONS') {
+              const method = request.headers['access-control-request-method'];
+              const headers = request.headers['access-control-request-headers'];
+              if (
+                !origin ||
+                typeof method !== 'string' ||
+                !['GET', 'POST', 'DELETE'].includes(method) ||
+                (typeof headers === 'string' &&
+                  headers
+                    .split(',')
+                    .some(
+                      (name) =>
+                        ![
+                          'authorization',
+                          'content-type',
+                          'accept',
+                          'mcp-session-id',
+                          'mcp-protocol-version',
+                          'last-event-id',
+                        ].includes(name.trim().toLowerCase())
+                    ))
+              ) {
+                response.writeHead(403);
+                response.end();
+                return false;
+              }
+              response.writeHead(204, {
+                'Access-Control-Allow-Methods': method,
+                'Access-Control-Allow-Headers':
+                  'Authorization, Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-Id',
+              });
+              response.end();
               return false;
             }
             if (!constantTimeEqual(requestAuthToken(request) ?? '', httpAuthToken)) {

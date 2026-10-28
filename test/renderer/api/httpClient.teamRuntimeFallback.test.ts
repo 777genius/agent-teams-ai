@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { HttpAPIClient } from '../../../src/renderer/api/httpClient';
@@ -21,7 +22,10 @@ describe('HttpAPIClient team runtime browser fallback', () => {
 
   it('returns valid member spawn and runtime snapshots when diagnostic fields are absent', async () => {
     vi.stubGlobal('EventSource', MockEventSource);
-    const client = new HttpAPIClient('http://localhost:9999');
+    const client = new HttpAPIClient(
+      'http://localhost:9999',
+      fixtureBrowserAccess('http://localhost:9999')
+    );
 
     await expect(client.teams.getMemberSpawnStatuses('demo-team')).resolves.toEqual({
       statuses: {},

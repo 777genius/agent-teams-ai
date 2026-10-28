@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { AnnouncementHost } from '@features/announcements/renderer';
+import { BrowserAccessGate } from '@features/local-http-auth/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
@@ -12,7 +13,7 @@ import { type SplashSceneHandle, startSplashScene } from './components/splash/sp
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
 import { useThemeController } from './hooks/useTheme';
 import { loadDynamicFlags } from './utils/dynamicFlags';
-import { api } from './api';
+import { api, getHttpAccessSession, isElectronMode } from './api';
 import { useStore } from './store';
 
 declare global {
@@ -33,7 +34,16 @@ const SPLASH_REDUCED_FADE_MS = 180;
 const SPLASH_AVATAR_READY_MAX_WAIT_MS = 900;
 const SPLASH_REDUCED_AVATAR_READY_MAX_WAIT_MS = 160;
 
-export const App = (): React.JSX.Element => {
+export const App = (): React.JSX.Element =>
+  isElectronMode() ? (
+    <Application />
+  ) : (
+    <BrowserAccessGate session={getHttpAccessSession()}>
+      <Application />
+    </BrowserAccessGate>
+  );
+
+const Application = (): React.JSX.Element => {
   const [newsReady, setNewsReady] = useState(() => !document.getElementById('splash'));
   // Initialize theme on app load
   useThemeController();

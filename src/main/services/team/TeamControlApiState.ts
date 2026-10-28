@@ -1,74 +1,82 @@
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { randomUUID } from 'node:crypto';
+
+import { API_AUTH_REFERENCE_ENV,type ApiAuthority } from '@features/local-http-auth/contracts';
+import {
+  apiProfileScope,
+  publishApiAuthority,
+  removeApiAuthority,
+} from '@features/local-http-auth/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
-import { createLogger } from '@shared/utils/logger';
-import { rm } from 'fs/promises';
-import path from 'path';
 
-const logger = createLogger('Service:TeamControlApiState');
+const TOKEN_ENV = 'CLAUDE_TEAM_CONTROL_AUTH_TOKEN';
+const instanceId = randomUUID();
+let revision = 0;
+let tail: Promise<void> = Promise.resolve();
+let published: { root: string; authority: ApiAuthority } | null = null;
 
-const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
-const TEAM_CONTROL_API_AUTH_TOKEN_ENV = 'CLAUDE_TEAM_CONTROL_AUTH_TOKEN';
-let publicationGeneration = 0;
-let publicationTail: Promise<void> = Promise.resolve();
-
-// Host start/stop/root-change callers must order disk publication as well as env updates.
-function enqueuePublication(operation: () => Promise<void>): Promise<void> {
-  const result = publicationTail.then(operation);
-  publicationTail = result.catch(() => undefined);
+function enqueue(operation: () => Promise<void>): Promise<void> {
+  const result = tail.then(operation);
+  tail = result.catch(() => undefined);
   return result;
 }
 
-function normalizeBaseUrlHost(host: string): string {
-  if (host === '0.0.0.0' || host === '::') {
-    return '127.0.0.1';
-  }
-
-  return host;
-}
-
-export function buildTeamControlApiBaseUrl(port: number, host: string = '127.0.0.1'): string {
-  return `http://${normalizeBaseUrlHost(host)}:${port}`;
-}
-
-function getTeamControlApiStatePath(): string {
-  return path.join(getClaudeBasePath(), TEAM_CONTROL_API_STATE_FILE);
-}
-
-export async function writeTeamControlApiState(baseUrl: string, authToken: string): Promise<void> {
-  if (!/^\S{32,512}$/.test(authToken)) {
-    throw new Error('Team control API auth token must be 32 to 512 non-whitespace characters');
-  }
-  const generation = ++publicationGeneration;
+function revokeEnvironment(): void {
   delete process.env.CLAUDE_TEAM_CONTROL_URL;
-  delete process.env[TEAM_CONTROL_API_AUTH_TOKEN_ENV];
-  const statePath = getTeamControlApiStatePath();
-  await enqueuePublication(async () => {
-    await atomicWriteAsync(
-      statePath,
-      JSON.stringify(
-        {
-          baseUrl,
-          authToken,
-          pid: process.pid,
-          updatedAt: new Date().toISOString(),
-        },
-        null,
-        2
-      ),
-      { mode: 0o600, directoryMode: 0o700 }
+  delete process.env[TOKEN_ENV];
+  delete process.env[API_AUTH_REFERENCE_ENV];
+}
+
+export function buildTeamControlApiBaseUrl(port: number, host = '127.0.0.1'): string {
+  const normalized = host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
+  return `http://${normalized.includes(':') ? `[${normalized}]` : normalized}:${port}`;
+}
+
+/** Publish immutable credentials and switch discovery under the cross-process publication lock. */
+export function writeTeamControlApiState(baseUrl: string, authToken: string): Promise<void> {
+  if (!/^\S{32,512}$/.test(authToken)) {
+    return Promise.reject(
+      new Error('Team control API auth token must be 32 to 512 non-whitespace characters')
     );
-    // Publish only committed Host state, never a configured port or a late stopped endpoint.
-    if (generation !== publicationGeneration) return;
+  }
+  const root = getClaudeBasePath();
+  const generation = ++revision;
+  revokeEnvironment();
+  return enqueue(async () => {
+    const previous = published;
+    const authority: ApiAuthority =
+      previous?.root === root &&
+      previous.authority.baseUrl === baseUrl &&
+      previous.authority.token === authToken
+        ? previous.authority
+        : {
+            schemaVersion: 1,
+            service: 'api',
+            profileScope: apiProfileScope(root),
+            instanceId,
+            generation: randomUUID(),
+            baseUrl,
+            token: authToken,
+          };
+    const reference = await publishApiAuthority(root, authority);
+    published = { root, authority };
+    if (previous && previous.authority !== authority) {
+      await removeApiAuthority(previous.root, previous.authority);
+    }
+    if (generation !== revision) return;
     process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
-    process.env[TEAM_CONTROL_API_AUTH_TOKEN_ENV] = authToken;
-    logger.info(`Published team control API endpoint: ${baseUrl}`);
+    process.env[TOKEN_ENV] = authToken;
+    process.env[API_AUTH_REFERENCE_ENV] = reference;
   });
 }
 
-export async function clearTeamControlApiState(): Promise<void> {
-  publicationGeneration++;
-  delete process.env.CLAUDE_TEAM_CONTROL_URL;
-  delete process.env[TEAM_CONTROL_API_AUTH_TOKEN_ENV];
-  const statePath = getTeamControlApiStatePath();
-  await enqueuePublication(() => rm(statePath, { force: true }).catch(() => undefined));
+/** A stale instance may remove only the exact generation it published. */
+export function clearTeamControlApiState(): Promise<void> {
+  ++revision;
+  revokeEnvironment();
+  return enqueue(async () => {
+    const owned = published;
+    if (!owned) return;
+    await removeApiAuthority(owned.root, owned.authority);
+    if (published === owned) published = null;
+  });
 }

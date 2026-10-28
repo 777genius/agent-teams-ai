@@ -1,6 +1,5 @@
 const desktopBinding = require('./desktopControlBinding.js');
-const fs = require('fs');
-const path = require('path');
+const controlApiAuth = require('./controlApiAuth.ts');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const { buildMemberRosterContext } = require('./briefingProtocols.js');
 
@@ -27,11 +26,8 @@ const DEFAULT_WAIT_TIMEOUT_MS = 120000;
 const MIN_WAIT_TIMEOUT_MS = 1000;
 const MAX_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 const POLL_INTERVAL_MS = 1000;
-const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
 const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
-const BOOTSTRAP_CHECKIN_MAX_ATTEMPTS = 3;
 const BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS = 4000;
-const BOOTSTRAP_CHECKIN_RETRY_DELAYS_MS = [300, 900];
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -45,94 +41,9 @@ function normalizeTimeoutMs(rawValue) {
   return Math.min(MAX_WAIT_TIMEOUT_MS, Math.max(MIN_WAIT_TIMEOUT_MS, numeric));
 }
 
-function getControlApiStatePath(context) {
-  return path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE);
-}
-
-function readControlApiState(context) {
-  const filePath = getControlApiStatePath(context);
-  try {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim())
-      return {
-        baseUrl: parsed.baseUrl.trim(),
-        authToken:
-          typeof parsed.authToken === 'string' && parsed.authToken.trim()
-            ? parsed.authToken.trim()
-            : '',
-      };
-    return null;
-  } catch (error) {
-    if (error && error.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
-}
-
-function uniqueNonEmpty(items) {
-  return [...new Set(items.filter((item) => typeof item === 'string' && item.trim()))];
-}
-
-function describeControlApiLookup(context, flags, stateFileTarget, envUrl) {
-  const explicit =
-    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
-    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
-    '';
-  return [
-    `explicit=${explicit ? 'set' : 'missing'}`,
-    `stateFile=${stateFileTarget ? 'set' : `missing:${getControlApiStatePath(context)}`}`,
-    `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
-  ].join(', ');
-}
-
 function resolveControlBaseUrls(context, flags = {}) {
   const boundUrls = desktopBinding.boundControlBaseUrls(context, flags);
-  if (boundUrls) return boundUrls;
-  const explicit =
-    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
-    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
-    '';
-  const stateFileTarget = readControlApiState(context);
-  const envUrl =
-    (typeof process.env.CLAUDE_TEAM_CONTROL_URL === 'string' &&
-      process.env.CLAUDE_TEAM_CONTROL_URL.trim()) ||
-    '';
-  const explicitAuthToken =
-    (typeof flags.controlAuthToken === 'string' && flags.controlAuthToken.trim()) ||
-    (typeof flags['control-auth-token'] === 'string' && flags['control-auth-token'].trim()) ||
-    '';
-  const envAuthToken =
-    (typeof process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN === 'string' &&
-      process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN.trim()) ||
-    '';
-  const candidates = [];
-  const seen = new Set();
-  for (const target of [
-    explicit ? { baseUrl: explicit, authToken: explicitAuthToken || envAuthToken } : null,
-    stateFileTarget,
-    envUrl ? { baseUrl: envUrl, authToken: envAuthToken } : null,
-  ]) {
-    if (!target) continue;
-    const key = `${target.baseUrl}\0${target.authToken}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    candidates.push(target);
-  }
-
-  if (candidates.length === 0) {
-    throw new Error(
-      `Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL. Lookup: ${describeControlApiLookup(
-        context,
-        flags,
-        stateFileTarget,
-        envUrl
-      )}.`
-    );
-  }
-
-  return candidates;
+  return boundUrls || controlApiAuth.resolveControlAuthorities(context, flags);
 }
 
 function makeRetryableControlError(message, cause, metadata = {}) {
@@ -166,18 +77,27 @@ async function requestJson(target, pathname, options = {}) {
 
   try {
     const boundOptions = desktopBinding.boundRequestOptions(baseUrl);
-    const response = await fetch(`${baseUrl}${pathname}`, {
-      ...boundOptions,
-      method: options.method || 'GET',
-      headers: {
-        accept: 'application/json',
-        ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
-        ...boundOptions.headers,
-        ...(options.body ? { 'content-type': 'application/json' } : {}),
-      },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-      signal: controller.signal,
-    });
+    const response =
+      typeof target.read === 'function'
+        ? await controlApiAuth.authenticatedControlFetch(target, pathname, {
+            method: options.method || 'GET',
+            body: options.body,
+            signal: controller.signal,
+          })
+        : await fetch(`${baseUrl}${pathname}`, {
+            ...boundOptions,
+            redirect: 'error',
+            credentials: 'omit',
+            method: options.method || 'GET',
+            headers: {
+              accept: 'application/json',
+              ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
+              ...boundOptions.headers,
+              ...(options.body ? { 'content-type': 'application/json' } : {}),
+            },
+            ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+            signal: controller.signal,
+          });
 
     let payload = null;
     try {
@@ -238,56 +158,12 @@ async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
       return await requestJson(baseUrl, pathname, options);
     } catch (error) {
       lastError = error;
-      if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
+      if (
+        (options.method || 'GET').toUpperCase() !== 'GET' ||
+        !isRetryableControlError(error) ||
+        index === baseUrls.length - 1
+      ) {
         throw error;
-      }
-    }
-  }
-
-  throw lastError || new Error('Team control API request failed');
-}
-
-function isBootstrapCheckinRetryableControlError(error) {
-  if (!isRetryableControlError(error)) {
-    return false;
-  }
-
-  if (error.retryableKind === 'timeout' || error.retryableKind === 'network') {
-    return true;
-  }
-
-  if (error.retryableKind === 'status') {
-    return typeof error.statusCode === 'number' && error.statusCode >= 500;
-  }
-
-  return false;
-}
-
-async function requestJsonWithBoundedRetry(baseUrls, pathname, options = {}, retryOptions = {}) {
-  const maxAttempts = Math.max(1, retryOptions.maxAttempts || 1);
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      const result = await requestJsonWithFallback(baseUrls, pathname, options);
-      if (attempt > 1 && result && typeof result === 'object' && !Array.isArray(result)) {
-        return {
-          ...result,
-          diagnostics: uniqueNonEmpty([
-            ...(Array.isArray(result.diagnostics) ? result.diagnostics : []),
-            'opencode_bootstrap_checkin_retry',
-          ]),
-        };
-      }
-      return result;
-    } catch (error) {
-      lastError = error;
-      if (attempt >= maxAttempts || !isBootstrapCheckinRetryableControlError(error)) {
-        throw error;
-      }
-      const delayMs = retryOptions.delaysMs?.[attempt - 1] || 0;
-      if (delayMs > 0) {
-        await sleep(delayMs);
       }
     }
   }
@@ -650,7 +526,7 @@ async function runtimeBootstrapCheckin(context, flags = {}) {
     normalizeTimeoutMs(explicitTimeoutMs || BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS),
     BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS
   );
-  return requestJsonWithBoundedRetry(
+  return requestJsonWithFallback(
     baseUrls,
     `/api/teams/${encodeURIComponent(context.teamName)}/opencode/runtime/bootstrap-checkin`,
     {
@@ -664,10 +540,6 @@ async function runtimeBootstrapCheckin(context, flags = {}) {
         'metadata',
       ]),
       timeoutMs,
-    },
-    {
-      maxAttempts: BOOTSTRAP_CHECKIN_MAX_ATTEMPTS,
-      delaysMs: BOOTSTRAP_CHECKIN_RETRY_DELAYS_MS,
     }
   );
 }

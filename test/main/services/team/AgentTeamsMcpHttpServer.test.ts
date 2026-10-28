@@ -1,7 +1,7 @@
 import { type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
@@ -64,9 +64,11 @@ function buildLaunchSpecHash(launchSpec: TestLaunchSpec): string {
 }
 
 async function createTempStatePath(): Promise<{ root: string; statePath: string }> {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-http-state-test-'));
+  const root = await realpath(
+    await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-http-state-test-'))
+  );
   const statePath = path.join(root, 'mcp-http-server', 'state.json');
-  await mkdir(path.dirname(statePath), { recursive: true });
+  await mkdir(path.dirname(statePath), { recursive: true, mode: 0o700 });
   return { root, statePath };
 }
 
@@ -97,7 +99,7 @@ function buildState(input: {
 }) {
   const identity = buildIdentity(input);
   const authToken = input.authToken ?? TEST_MCP_AUTH_TOKEN;
-  const url = `http://127.0.0.1:${input.port}/mcp?access_token=${encodeURIComponent(authToken)}`;
+  const url = `http://127.0.0.1:${input.port}/mcp`;
   return {
     ...identity,
     url,
@@ -109,8 +111,8 @@ function buildState(input: {
   };
 }
 
-function protectedMcpUrl(port: number, authToken: string): string {
-  return `http://127.0.0.1:${port}/mcp?access_token=${encodeURIComponent(authToken)}`;
+function mcpUrl(port: number): string {
+  return `http://127.0.0.1:${port}/mcp`;
 }
 
 async function allocateLoopbackPort(): Promise<number> {
@@ -174,12 +176,16 @@ describe('AgentTeamsMcpHttpServer', () => {
     await vi.waitFor(() => expect(ready).toBeTypeOf('function'));
     expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
     ready!();
-    await starting;
+    const firstHandle = await starting;
+    expect(JSON.parse(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON ?? '{}')).toEqual({
+      Authorization: `Bearer ${firstHandle.authToken}`,
+    });
     expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toMatch(
-      /^http:\/\/127\.0\.0\.1:41001\/mcp\?access_token=[^#]+#/
+      /^http:\/\/127\.0\.0\.1:41001\/mcp#/
     );
     children[0].emit('exit', 1, null);
     expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON).toBeUndefined();
     ready = undefined;
     const restarting = server.ensureStarted();
     await vi.waitFor(() => expect(ready).toBeTypeOf('function'));
@@ -189,9 +195,13 @@ describe('AgentTeamsMcpHttpServer', () => {
     );
     revokeOld();
     ready!();
-    await restarting;
+    const restartedHandle = await restarting;
+    expect(restartedHandle.authToken).not.toBe(firstHandle.authToken);
+    expect(JSON.parse(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON ?? '{}')).toEqual({
+      Authorization: `Bearer ${restartedHandle.authToken}`,
+    });
     expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toMatch(
-      /41002\/mcp\?access_token=[^#]+#agent-teams-app-instance=reopen/
+      /41002\/mcp#agent-teams-app-instance=reopen/
     );
     children[1].emit('exit', 1, null);
     ready = undefined;
@@ -226,7 +236,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     revokeNew();
     expect(
       reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL
-    ).toMatch(/41004\/mcp\?access_token=[^#]+#agent-teams-app-instance=after-quit/);
+    ).toMatch(/41004\/mcp#agent-teams-app-instance=after-quit/);
     expect(read()).toBeNull();
     revokeReopened();
     reopenedChild.emit('exit', 1, null);
@@ -253,20 +263,23 @@ describe('AgentTeamsMcpHttpServer', () => {
     const handle = await server.ensureStarted();
 
     expect(handle).toMatchObject({
-      url: protectedMcpUrl(41001, handle.authToken),
+      url: mcpUrl(41001),
       port: 41001,
       pid: 43123,
       generation: 1,
       diagnostics: [],
     });
     expect(handle.urlHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(handle.authToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(handle.url).not.toContain(handle.authToken);
+    expect(handle.transportEvidence).not.toHaveProperty('authToken');
     expect(handle.transportEvidence).toMatchObject({
       schemaVersion: 1,
       transport: 'httpStream',
       host: '127.0.0.1',
       port: 41001,
       endpoint: '/mcp',
-      url: protectedMcpUrl(41001, handle.authToken),
+      url: mcpUrl(41001),
       urlHash: handle.urlHash,
       generation: 1,
     });
@@ -439,6 +452,62 @@ describe('AgentTeamsMcpHttpServer', () => {
     expect(spawnProcess).not.toHaveBeenCalled();
   });
 
+  it.skipIf(process.platform === 'win32')(
+    'rejects an existing non-private state directory before spawning a child',
+    async () => {
+      const { root, statePath } = await createTempStatePath();
+      await chmod(path.dirname(statePath), 0o755);
+      const spawnProcess = vi.fn();
+      const server = new AgentTeamsMcpHttpServer({
+        statePath,
+        resolveLaunchSpec: async () => ({ command: 'node', args: ['/sandbox/mcp.js'] }),
+        spawnProcess,
+      });
+      try {
+        await expect(server.ensureStarted()).rejects.toThrow('private');
+        expect(spawnProcess).not.toHaveBeenCalled();
+        expect(server.getCurrentHandle()).toBeNull();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each([false, true])(
+    'removes persisted state only for its own credential generation (replaced=%s)',
+    async (replaced) => {
+      const { root, statePath } = await createTempStatePath();
+      const child = new FakeChildProcess();
+      const port = await allocateLoopbackPort();
+      const server = new AgentTeamsMcpHttpServer({
+        statePath,
+        disableOrphanCleanup: true,
+        resolveLaunchSpec: async () => ({ command: 'node', args: ['/sandbox/mcp.js'] }),
+        allocatePort: async () => port,
+        spawnProcess: () => child as unknown as ChildProcess,
+        waitForPort: async () => undefined,
+      });
+      try {
+        const handle = await server.ensureStarted();
+        const original = JSON.parse(await readFile(statePath, 'utf8'));
+        const current = replaced
+          ? { ...original, authToken: 'new-generation-mcp-token-0123456789abcdef' }
+          : original;
+        if (replaced) await writeFile(statePath, JSON.stringify(current), { mode: 0o600 });
+        await server.stop({ preventRestart: true });
+        child.emit('exit', 0, null);
+        expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(child, 'SIGKILL');
+        if (replaced) {
+          expect(current.authToken).not.toBe(handle.authToken);
+          expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual(current);
+        } else await expect(readFile(statePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      } finally {
+        await server.stop({ preventRestart: true });
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('uses the persistent state lock so a concurrent second instance adopts the first', async () => {
     const { root, statePath } = await createTempStatePath();
     const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
@@ -515,6 +584,17 @@ describe('AgentTeamsMcpHttpServer', () => {
       expect(spawnProcess).toHaveBeenCalledTimes(1);
       expect(waitForPort).toHaveBeenCalledTimes(1);
       expect(maxActiveLocks).toBe(1);
+      expect(JSON.parse(await readFile(statePath, 'utf8'))).toMatchObject({
+        url: first.url,
+        urlHash: first.urlHash,
+        authToken: first.authToken,
+      });
+      expect(first.url).toBe(mcpUrl(first.port));
+      expect(first.transportEvidence).not.toHaveProperty('authToken');
+      if (process.platform !== 'win32') {
+        expect((await stat(statePath)).mode & 0o777).toBe(0o600);
+        expect((await stat(path.dirname(statePath))).mode & 0o777).toBe(0o700);
+      }
     } finally {
       releaseFirstReady();
       await lockTail;
@@ -534,7 +614,8 @@ describe('AgentTeamsMcpHttpServer', () => {
       process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = String(port);
       await writeFile(
         statePath,
-        `${JSON.stringify(buildState({ port, pid: 51234, launchSpec }), null, 2)}\n`
+        `${JSON.stringify(buildState({ port, pid: 51234, launchSpec }), null, 2)}\n`,
+        { mode: 0o600 }
       );
       const factory = vi.fn(() => ({ AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41023' }));
       const revokeBinding = desktopBound
@@ -563,7 +644,7 @@ describe('AgentTeamsMcpHttpServer', () => {
           expect(probeHealth).toHaveBeenCalledWith('127.0.0.1', port);
         } else {
           expect(handle).toMatchObject({
-            url: protectedMcpUrl(port, TEST_MCP_AUTH_TOKEN),
+            url: mcpUrl(port),
             port,
             pid: 51234,
             authToken: TEST_MCP_AUTH_TOKEN,
@@ -588,7 +669,7 @@ describe('AgentTeamsMcpHttpServer', () => {
   it('ignores corrupt persistent state and starts a fresh server', async () => {
     const { root, statePath } = await createTempStatePath();
     const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
-    await writeFile(statePath, '{not-json', 'utf8');
+    await writeFile(statePath, '{not-json', { encoding: 'utf8', mode: 0o600 });
     const child = new FakeChildProcess();
     const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
     const server = new AgentTeamsMcpHttpServer({
@@ -604,7 +685,7 @@ describe('AgentTeamsMcpHttpServer', () => {
       const handle = await server.ensureStarted();
 
       expect(handle.port).toBe(41022);
-      expect(handle.diagnostics).toContain('opencode_app_mcp_state_ignored:parse_failed');
+      expect(handle.diagnostics).toContain('opencode_app_mcp_state_ignored:read_failed');
       expect(spawnProcess).toHaveBeenCalledTimes(1);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -626,7 +707,8 @@ describe('AgentTeamsMcpHttpServer', () => {
         buildState({ port: 41029, pid: 51235, launchSpec: previousLaunchSpec }),
         null,
         2
-      )}\n`
+      )}\n`,
+      { mode: 0o600 }
     );
     const child = new FakeChildProcess();
     const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
@@ -752,18 +834,21 @@ describe('AgentTeamsMcpHttpServer', () => {
     const first = await server.ensureStarted();
     const second = await server.ensureStarted();
 
-    expect(first.url).toBe(protectedMcpUrl(41007, first.authToken));
+    expect(first.url).toBe(mcpUrl(41007));
     expect(second).toMatchObject({
-      url: protectedMcpUrl(41007, second.authToken),
+      url: mcpUrl(41007),
       port: 41007,
       pid: 43124,
       generation: 2,
     });
-    expect(second.diagnostics).toContain('opencode_app_mcp_public_url_changed');
+    expect(second.url).toBe(first.url);
+    expect(second.urlHash).toBe(first.urlHash);
+    expect(second.authToken).not.toBe(first.authToken);
+    expect(second.diagnostics).not.toContain('opencode_app_mcp_public_url_changed');
     expect(second.diagnostics).toContain('opencode_app_mcp_restart_reason:health_reuse_failed');
     expect(second.transportEvidence).toMatchObject({
       port: 41007,
-      url: protectedMcpUrl(41007, second.authToken),
+      url: mcpUrl(41007),
       urlHash: second.urlHash,
       generation: 2,
     });
@@ -818,9 +903,9 @@ describe('AgentTeamsMcpHttpServer', () => {
     const first = await server.ensureStarted();
     const second = await server.ensureStarted();
 
-    expect(first.url).toBe(protectedMcpUrl(blockedPort, first.authToken));
+    expect(first.url).toBe(mcpUrl(blockedPort));
     expect(second).toMatchObject({
-      url: protectedMcpUrl(fallbackPort, second.authToken),
+      url: mcpUrl(fallbackPort),
       port: fallbackPort,
       pid: 43124,
       generation: 2,
@@ -837,24 +922,23 @@ describe('AgentTeamsMcpHttpServer', () => {
   it.each([
     ...(
       [
-        { bound: false, identity: 'missing', shouldKill: true },
-        { bound: true, identity: 'missing', shouldKill: false },
-        { bound: true, identity: 'foreign', shouldKill: false },
-        { bound: true, identity: 'prior-owned', shouldKill: true },
-        { bound: true, identity: 'owner-live', shouldKill: false },
-        { bound: true, identity: 'owner-reappears', shouldKill: false },
-        { bound: true, identity: 'pid-reused', shouldKill: false },
+        { bound: false, identity: 'missing' },
+        { bound: true, identity: 'missing' },
+        { bound: true, identity: 'foreign' },
+        { bound: true, identity: 'prior-owned' },
+        { bound: true, identity: 'owner-live' },
+        { bound: true, identity: 'owner-reappears' },
+        { bound: true, identity: 'pid-reused' },
       ] as const
     ).flatMap((scenario) => (['legacy', 'dev'] as const).map((entry) => ({ ...scenario, entry }))),
     ...(['foreign-dev', 'bad-pid', 'bad-uuid'] as const).map((entry) => ({
       bound: false,
       identity: 'missing' as const,
-      shouldKill: false,
       entry,
     })),
   ])(
-    'cleans up an orphan entry=$entry bound=$bound identity=$identity only when ownership is proven',
-    async ({ bound, identity, shouldKill, entry }) => {
+    'leaves recovered entry=$entry bound=$bound identity=$identity untouched without a process handle',
+    async ({ bound, identity, entry }) => {
       const { root, statePath } = await createTempStatePath();
       const child = new FakeChildProcess(43123);
       const orphanPort = 41031;
@@ -897,20 +981,26 @@ describe('AgentTeamsMcpHttpServer', () => {
             AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41029',
           }))
         : () => undefined;
+      const listProcessRows = vi.fn(async () => rows);
+      const readProcessDetails = vi.fn(async (pid: number) => {
+        if (pid === 9001) reads++;
+        return pid === 9001 || pid === 9005 ? details : null;
+      });
+      const readProcessStartTimeMs = vi.fn(async () =>
+        identity === 'pid-reused' && reads > 1 ? 1 : 0
+      );
+      const forceKillProcess = vi.fn();
       const server = new AgentTeamsMcpHttpServer({
         statePath,
         resolveLaunchSpec: async () => launchSpec,
         allocatePort: async () => 41030,
         spawnProcess: vi.fn(() => child as unknown as ChildProcess),
         waitForPort: vi.fn(async () => undefined),
-        listProcessRows: async () => rows,
-        readProcessDetails: async (pid) => {
-          if (pid === 9001) reads++;
-          return pid === 9001 || pid === 9005 ? details : null;
-        },
-        readProcessStartTimeMs: async () => (identity === 'pid-reused' && reads > 1 ? 1 : 0),
+        listProcessRows,
+        readProcessDetails,
+        readProcessStartTimeMs,
         killProcess,
-        forceKillProcess: vi.fn(),
+        forceKillProcess,
         isProcessAlive: (pid) =>
           alivePids.has(pid) ||
           (pid === 8999 &&
@@ -942,16 +1032,15 @@ describe('AgentTeamsMcpHttpServer', () => {
         const handle = await server.ensureStarted();
         await flushAsyncCleanup();
 
-        if (shouldKill) {
-          expect(killProcess).toHaveBeenNthCalledWith(1, 9005);
-          expect(killProcess).toHaveBeenNthCalledWith(2, 9001);
-          expect(handle.diagnostics).toContain(
-            `opencode_app_mcp_legacy_orphan_cleaned:${orphanPort}`
-          );
-        } else {
-          expect(killProcess).not.toHaveBeenCalled();
-          expect(alivePids).toEqual(new Set([9001, 9005]));
-        }
+        expect(listProcessRows).not.toHaveBeenCalled();
+        expect(readProcessDetails).not.toHaveBeenCalled();
+        expect(readProcessStartTimeMs).not.toHaveBeenCalled();
+        expect(killProcess).not.toHaveBeenCalled();
+        expect(forceKillProcess).not.toHaveBeenCalled();
+        expect(alivePids).toEqual(new Set([9001, 9005]));
+        expect(handle.diagnostics).toContain(
+          'opencode_app_mcp_recovered_cleanup_requires_process_handle'
+        );
       } finally {
         revokeAuthority();
         revokeBinding();
@@ -963,7 +1052,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     }
   );
 
-  it('keeps a proven legacy orphan MCP HTTP process when live consumers still reference it', async () => {
+  it('leaves recovered endpoints untouched while preserving explicit live-consumer checks', async () => {
     const { root, statePath } = await createTempStatePath();
     const child = new FakeChildProcess(43123);
     const orphanPort = 41033;
@@ -976,6 +1065,13 @@ describe('AgentTeamsMcpHttpServer', () => {
       { pid: 43123, ppid: process.pid, command: 'current child' },
     ];
     const orphanDetails = `${command} AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()} AGENT_TEAMS_MCP_TRANSPORT=httpStream AGENT_TEAMS_MCP_HTTP_HOST=127.0.0.1 AGENT_TEAMS_MCP_HTTP_PORT=${orphanPort} AGENT_TEAMS_MCP_HTTP_ENDPOINT=/mcp`;
+    const listProcessRows = vi.fn(async () => {
+      if (snapshotUnknown) throw new Error('Process snapshot unavailable');
+      return rows;
+    });
+    const readProcessDetails = vi.fn(async (pid: number) =>
+      pid === 9002 ? orphanDetails : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`
+    );
     const killProcess = vi.fn();
     const server = new AgentTeamsMcpHttpServer({
       statePath,
@@ -986,12 +1082,8 @@ describe('AgentTeamsMcpHttpServer', () => {
       allocatePort: async () => 41032,
       spawnProcess: vi.fn(() => child as unknown as ChildProcess),
       waitForPort: vi.fn(async () => undefined),
-      listProcessRows: async () => {
-        if (snapshotUnknown) throw new Error('Process snapshot unavailable');
-        return rows;
-      },
-      readProcessDetails: async (pid) =>
-        pid === 9002 ? orphanDetails : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`,
+      listProcessRows,
+      readProcessDetails,
       readProcessStartTimeMs: async () => 0,
       killProcess,
       isProcessAlive: () => false,
@@ -1004,6 +1096,8 @@ describe('AgentTeamsMcpHttpServer', () => {
       await flushAsyncCleanup();
 
       expect(killProcess).not.toHaveBeenCalled();
+      expect(listProcessRows).not.toHaveBeenCalled();
+      expect(readProcessDetails).not.toHaveBeenCalled();
       url = handle.url;
       await expect(server.assertNoLiveConsumers()).rejects.toThrow('Stop teams');
       url = 'http://127.0.0.1:49999/mcp';
@@ -1011,7 +1105,7 @@ describe('AgentTeamsMcpHttpServer', () => {
       snapshotUnknown = true;
       await expect(server.assertNoLiveConsumers()).rejects.toThrow('Process snapshot unavailable');
       expect(handle.diagnostics).toContain(
-        `opencode_app_mcp_legacy_orphan_kept_live_consumers:${orphanPort}`
+        'opencode_app_mcp_recovered_cleanup_requires_process_handle'
       );
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -1025,6 +1119,12 @@ describe('AgentTeamsMcpHttpServer', () => {
     const orphanPort = 41035;
     const command = `node /repo/mcp-server/src/index.ts --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
     const killProcess = vi.fn();
+    const listProcessRows = vi.fn(async () => [
+      { pid: 9004, ppid: 1234, command },
+      { pid: 43123, ppid: process.pid, command: 'current child' },
+    ]);
+    const readProcessDetails = vi.fn();
+    const readProcessStartTimeMs = vi.fn();
     const server = new AgentTeamsMcpHttpServer({
       statePath,
       resolveLaunchSpec: async () => ({
@@ -1034,24 +1134,28 @@ describe('AgentTeamsMcpHttpServer', () => {
       allocatePort: async () => 41034,
       spawnProcess: vi.fn(() => child as unknown as ChildProcess),
       waitForPort: vi.fn(async () => undefined),
-      listProcessRows: async () => [
-        { pid: 9004, ppid: 1234, command },
-        { pid: 43123, ppid: process.pid, command: 'current child' },
-      ],
-      readProcessDetails: vi.fn(),
-      readProcessStartTimeMs: vi.fn(),
+      listProcessRows,
+      readProcessDetails,
+      readProcessStartTimeMs,
       killProcess,
       isProcessAlive: (pid) => pid === 1234,
       sleepMs: async () => undefined,
     });
 
     try {
-      await server.ensureStarted();
+      const handle = await server.ensureStarted();
       await flushAsyncCleanup();
 
       expect(killProcess).not.toHaveBeenCalled();
+      expect(listProcessRows).not.toHaveBeenCalled();
+      expect(readProcessDetails).not.toHaveBeenCalled();
+      expect(readProcessStartTimeMs).not.toHaveBeenCalled();
+      expect(handle.diagnostics).toContain(
+        'opencode_app_mcp_recovered_cleanup_requires_process_handle'
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
+      vi.mocked(console.warn).mockClear();
     }
   });
 
@@ -1151,7 +1255,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     try {
       const handle = await server.ensureStarted();
 
-      expect(handle.url).toBe(protectedMcpUrl(port, handle.authToken));
+      expect(handle.url).toBe(mcpUrl(port));
       expect(healthRequests).toBeGreaterThan(0);
     } finally {
       await new Promise<void>((resolve) => healthServer.close(() => resolve()));

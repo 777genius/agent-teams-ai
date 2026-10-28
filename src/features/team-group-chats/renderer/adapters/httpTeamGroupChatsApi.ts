@@ -2,15 +2,18 @@ import type { TeamGroupChatsAPI } from '../../contracts';
 
 export function createHttpTeamGroupChatsAPI(
   baseUrl: string,
-  authorizationHeaders: Record<string, string> = {}
+  authenticatedRequest: (pathname: string, options: RequestInit) => Promise<Response> = (
+    pathname,
+    options
+  ) => fetch(`${baseUrl}${pathname}`, { ...options, redirect: 'error', credentials: 'omit' })
 ): TeamGroupChatsAPI {
   const post = async <T>(operation: string, request: unknown): Promise<T> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
     try {
-      const response = await fetch(`${baseUrl}/api/team-group-chats/${operation}`, {
+      const response = await authenticatedRequest(`/api/team-group-chats/${operation}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authorizationHeaders },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
         signal: controller.signal,
       });

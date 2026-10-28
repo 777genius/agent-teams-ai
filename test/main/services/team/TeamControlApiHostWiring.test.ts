@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -89,9 +89,12 @@ function createHost(publish = writeTeamControlApiState) {
   };
   const code = ts.transpileModule(
     [
-      ...['getTeamControlApiBaseUrl', 'syncTeamControlApiState', 'startHttpServer'].map(
-        functionSource
-      ),
+      ...[
+        'getTeamControlApiBaseUrl',
+        'syncTeamControlApiState',
+        'currentHttpServices',
+        'startHttpServer',
+      ].map(functionSource),
       `const provisioning = ${resolverSource('provisioning')};`,
       `const memberWorkSync = ${resolverSource('memberWorkSync')};`,
     ].join('\n'),
@@ -109,6 +112,7 @@ function createHost(publish = writeTeamControlApiState) {
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
     writeTeamControlApiState: publish,
+    checkApiReadiness: vi.fn(async () => undefined),
     handleModeSwitch: () => Promise.resolve(),
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
@@ -139,10 +143,17 @@ function createHost(publish = writeTeamControlApiState) {
   };
 }
 
+async function publishedBaseUrl(root: string): Promise<string> {
+  const raw = await readFile(path.join(root, 'team-control-api.json'), 'utf8');
+  expect(raw).not.toContain('sandbox-control-token');
+  const reference = JSON.parse(raw);
+  return JSON.parse(await readFile(reference.descriptorPath, 'utf8')).baseUrl;
+}
+
 describe('existing app Host endpoint wiring', () => {
   let root: string;
   beforeEach(async () => {
-    root = await mkdtemp(path.join(os.tmpdir(), 'app-control-host-'));
+    root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'app-control-host-')));
     setClaudeBasePathOverride(root);
     vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', 'http://127.0.0.1:9999');
   });
@@ -168,9 +179,7 @@ describe('existing app Host endpoint wiring', () => {
     await host.start();
     expect(host.server.start).toHaveBeenCalledWith(expect.any(Object), expect.any(Function), 3456);
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
-    expect(
-      JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
-    ).toBe('http://127.0.0.1:4591');
+    expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
     await host.start();
     expect(host.server.start).toHaveBeenCalledOnce();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
@@ -190,12 +199,29 @@ describe('existing app Host endpoint wiring', () => {
     });
   });
 
+  it('closes a newly created listener when first credential publication fails, then retries fresh startup', async () => {
+    const publish = vi.fn(writeTeamControlApiState);
+    publish.mockRejectedValueOnce(new Error('disk unavailable'));
+    const host = createHost(publish);
+    await expect(host.start()).rejects.toThrow('disk unavailable');
+    expect(host.server.isRunning()).toBe(false);
+    expect(host.server.stop).toHaveBeenCalledOnce();
+    expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+    await expect(readFile(path.join(root, 'team-control-api.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await host.start();
+    expect(host.server.start).toHaveBeenCalledTimes(2);
+    expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
+  });
+
   it.each(['provisioning', 'memberWorkSync'] as const)(
     '%s retries failed publication even when the server is already listening',
     async (kind) => {
       const publish = vi.fn(writeTeamControlApiState);
-      publish.mockRejectedValueOnce(new Error('disk unavailable'));
       const host = createHost(publish);
+      await host.start(); // A genuinely already-running owned listener.
+      publish.mockRejectedValueOnce(new Error('disk unavailable'));
       await expect(host.start()).rejects.toThrow('disk unavailable');
       expect(host.server.isRunning()).toBe(true);
       expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
@@ -206,9 +232,7 @@ describe('existing app Host endpoint wiring', () => {
       await expect(host.resolve(kind)).resolves.toBe('http://127.0.0.1:4591');
       expect(host.server.start).toHaveBeenCalledOnce();
       expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
-      expect(
-        JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
-      ).toBe('http://127.0.0.1:4591');
+      expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
     }
   );
 

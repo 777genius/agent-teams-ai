@@ -3,20 +3,38 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
+const { createHash, randomUUID } = require('crypto');
 
 const { createController } = require('../src/index.js');
 
 describe('agent-teams-controller API', () => {
   const tempDirs = [];
+  const fixtureAuthToken = 'controller-private-fixture-auth-0123456789abcdef';
+  const authEnvironmentKeys = [
+    'CLAUDE_TEAM_CONTROL_URL',
+    'CLAUDE_TEAM_CONTROL_AUTH_TOKEN',
+    'CLAUDE_TEAM_CONTROL_AUTH_REF',
+    'CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF',
+  ];
+  let savedAuthEnvironment;
+
+  beforeEach(() => {
+    savedAuthEnvironment = Object.fromEntries(authEnvironmentKeys.map((key) => [key, process.env[key]]));
+    for (const key of authEnvironmentKeys) delete process.env[key];
+  });
 
   afterEach(() => {
+    for (const [key, value] of Object.entries(savedAuthEnvironment)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     for (const dir of tempDirs.splice(0)) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
   function makeClaudeDir() {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-controller-'));
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-controller-')));
     tempDirs.push(dir);
     fs.mkdirSync(path.join(dir, 'teams', 'my-team'), { recursive: true });
     fs.mkdirSync(path.join(dir, 'tasks', 'my-team'), { recursive: true });
@@ -50,12 +68,13 @@ describe('agent-teams-controller API', () => {
     );
   }
 
-  async function startControlServer(handler) {
+  async function startControlServer(claudeDir, handler) {
     const server = http.createServer(async (req, res) => {
       const chunks = [];
       req.on('data', (chunk) => chunks.push(chunk));
       req.on('end', async () => {
         try {
+          expect(req.headers.authorization).toBe(`Bearer ${fixtureAuthToken}`);
           const bodyText = Buffer.concat(chunks).toString('utf8');
           const body = bodyText ? JSON.parse(bodyText) : undefined;
           const result = await handler({
@@ -63,6 +82,10 @@ describe('agent-teams-controller API', () => {
             url: req.url,
             body,
           });
+          if (result.dropConnection) {
+            req.socket.destroy();
+            return;
+          }
           res.writeHead(result.statusCode || 200, { 'content-type': 'application/json' });
           res.end(JSON.stringify(result.body));
         } catch (error) {
@@ -74,8 +97,10 @@ describe('agent-teams-controller API', () => {
 
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    writeControlApiState(claudeDir, baseUrl);
     return {
-      baseUrl: `http://127.0.0.1:${address.port}`,
+      baseUrl,
       close: async () =>
         await new Promise((resolve, reject) =>
           server.close((error) => (error ? reject(error) : resolve()))
@@ -84,10 +109,29 @@ describe('agent-teams-controller API', () => {
   }
 
   function writeControlApiState(claudeDir, baseUrl) {
-    fs.writeFileSync(
-      path.join(claudeDir, 'team-control-api.json'),
-      JSON.stringify({ baseUrl, updatedAt: new Date().toISOString() }, null, 2)
-    );
+    const directory = path.join(claudeDir, 'local-http-auth');
+    fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const authority = {
+      schemaVersion: 1,
+      service: 'api',
+      profileScope: createHash('sha256').update(claudeDir).digest('hex'),
+      instanceId: randomUUID(),
+      generation: randomUUID(),
+      baseUrl,
+      token: fixtureAuthToken,
+    };
+    const descriptorPath = path.join(directory, `api-${authority.instanceId}-${authority.generation}.json`);
+    fs.writeFileSync(descriptorPath, JSON.stringify(authority), { mode: 0o600 });
+    const reference = {
+      schemaVersion: authority.schemaVersion,
+      service: authority.service,
+      profileScope: authority.profileScope,
+      instanceId: authority.instanceId,
+      generation: authority.generation,
+      descriptorPath,
+    };
+    fs.writeFileSync(path.join(directory, `api-${authority.instanceId}.ref.json`), JSON.stringify(reference), { mode: 0o600 });
+    fs.writeFileSync(path.join(claudeDir, 'team-control-api.json'), JSON.stringify(reference), { mode: 0o600 });
   }
 
   function runControllerMessageProcess(env) {
@@ -3631,7 +3675,7 @@ controller.messages.sendMessage({
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
 
       if (method === 'POST' && url === '/api/teams/my-team/launch') {
@@ -3721,7 +3765,7 @@ controller.messages.sendMessage({
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       await new Promise((resolve) => setTimeout(resolve, 1200));
       return { body: { runId: 'run-too-late' } };
@@ -3753,7 +3797,7 @@ controller.messages.sendMessage({
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       if (method === 'POST' && url === '/api/teams/my-team/opencode/runtime/bootstrap-checkin') {
         return { body: { ok: true, state: 'accepted' } };
@@ -3819,98 +3863,47 @@ controller.messages.sendMessage({
     }
   });
 
-  it('retries OpenCode bootstrap check-in on retryable control API failures', async () => {
+  it('does not replay OpenCode bootstrap check-in after a server failure', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
-
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
-      if (calls.length < 3) {
-        return { statusCode: 500, body: { error: 'temporary bootstrap failure' } };
-      }
-      return { body: { ok: true, state: 'accepted', diagnostics: [] } };
+      return { statusCode: 500, body: { error: 'bootstrap outcome uncertain' } };
     });
-
     try {
-      const result = await controller.runtime.runtimeBootstrapCheckin({
+      await expect(controller.runtime.runtimeBootstrapCheckin({
         controlUrl: server.baseUrl,
         runId: 'run-oc',
         memberName: 'bob',
         runtimeSessionId: 'ses-1',
-      });
-
-      expect(result).toMatchObject({
-        ok: true,
-        state: 'accepted',
-        diagnostics: expect.arrayContaining(['opencode_bootstrap_checkin_retry']),
-      });
-      expect(calls).toHaveLength(3);
-      expect(calls.map((call) => call.body)).toEqual([
-        {
-          teamName: 'my-team',
-          runId: 'run-oc',
-          memberName: 'bob',
-          runtimeSessionId: 'ses-1',
-        },
-        {
-          teamName: 'my-team',
-          runId: 'run-oc',
-          memberName: 'bob',
-          runtimeSessionId: 'ses-1',
-        },
-        {
-          teamName: 'my-team',
-          runId: 'run-oc',
-          memberName: 'bob',
-          runtimeSessionId: 'ses-1',
-        },
-      ]);
+      })).rejects.toThrow('bootstrap outcome uncertain');
+      expect(calls).toEqual([{
+        method: 'POST',
+        url: '/api/teams/my-team/opencode/runtime/bootstrap-checkin',
+        body: { teamName: 'my-team', runId: 'run-oc', memberName: 'bob', runtimeSessionId: 'ses-1' },
+      }]);
     } finally {
       await server.close();
     }
   });
 
-  it('accepts idempotent OpenCode bootstrap check-in after a timed-out committed request', async () => {
+  it('does not replay OpenCode bootstrap check-in when the effect commits before the connection drops', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const calls = [];
-    let committed = false;
-
-    const server = await startControlServer(async ({ method, url, body }) => {
-      calls.push({ method, url, body });
-      if (!committed) {
-        committed = true;
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-        return { body: { ok: true, state: 'accepted', diagnostics: [] } };
-      }
-      return {
-        body: {
-          ok: true,
-          state: 'accepted',
-          diagnostics: ['opencode_bootstrap_checkin_duplicate_accepted'],
-        },
-      };
+    let committedEffects = 0;
+    const server = await startControlServer(claudeDir, async () => {
+      committedEffects++;
+      return { dropConnection: true };
     });
-
     try {
-      const result = await controller.runtime.runtimeBootstrapCheckin({
+      await expect(controller.runtime.runtimeBootstrapCheckin({
         controlUrl: server.baseUrl,
-        waitTimeoutMs: 1000,
         runId: 'run-oc',
         memberName: 'bob',
         runtimeSessionId: 'ses-1',
-      });
-
-      expect(result).toMatchObject({
-        ok: true,
-        state: 'accepted',
-        diagnostics: expect.arrayContaining([
-          'opencode_bootstrap_checkin_duplicate_accepted',
-          'opencode_bootstrap_checkin_retry',
-        ]),
-      });
-      expect(calls).toHaveLength(2);
+      })).rejects.toThrow('Failed to reach team control API');
+      expect(committedEffects).toBe(1);
     } finally {
       await server.close();
     }
@@ -3921,7 +3914,7 @@ controller.messages.sendMessage({
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       return { statusCode: 400, body: { error: 'invalid bootstrap payload' } };
     });
@@ -3941,12 +3934,12 @@ controller.messages.sendMessage({
     }
   });
 
-  it('fails OpenCode bootstrap check-in clearly after bounded timeout retries', async () => {
+  it('fails OpenCode bootstrap check-in after one uncertain timeout', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       await new Promise((resolve) => setTimeout(resolve, 1200));
       return { body: { ok: true, state: 'accepted' } };
@@ -3962,7 +3955,7 @@ controller.messages.sendMessage({
           runtimeSessionId: 'ses-1',
         })
       ).rejects.toThrow('Timed out calling team control API');
-      expect(calls).toHaveLength(3);
+      expect(calls).toHaveLength(1);
     } finally {
       await server.close();
     }
@@ -3973,7 +3966,7 @@ controller.messages.sendMessage({
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       if (method === 'POST' && url === '/api/teams/my-team/member-work-sync/bob/refresh') {
         return {
@@ -4665,7 +4658,7 @@ controller.messages.sendMessage({
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
 
-    const server = await startControlServer(async () => ({
+    const server = await startControlServer(claudeDir, async () => ({
       statusCode: 400,
       body: { error: 'stale_fingerprint' },
     }));
@@ -4696,7 +4689,7 @@ controller.messages.sendMessage({
     const controller = createController({ teamName: 'my-team', claudeDir });
     const previousUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
 
-    const server = await startControlServer(async ({ method, url }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url }) => {
       if (method === 'POST' && url === '/api/teams/my-team/launch') {
         return { body: { runId: 'run-fresh' } };
       }
@@ -4735,93 +4728,48 @@ controller.messages.sendMessage({
     }
   });
 
-  it('falls back to the env endpoint when the published control file is stale', async () => {
+  it('does not send a mutation to an env endpoint after a stale published endpoint fails', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const previousUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
-
-    const server = await startControlServer(async ({ method, url }) => {
-      if (method === 'POST' && url === '/api/teams/my-team/launch') {
-        return { body: { runId: 'run-env' } };
-      }
-      if (method === 'GET' && url === '/api/teams/provisioning/run-env') {
-        return {
-          body: {
-            runId: 'run-env',
-            teamName: 'my-team',
-            state: 'ready',
-            message: 'Ready',
-            startedAt: '2026-03-12T00:00:00.000Z',
-            updatedAt: '2026-03-12T00:00:01.000Z',
-          },
-        };
-      }
-      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    let envEffects = 0;
+    const server = await startControlServer(claudeDir, async () => {
+      envEffects++;
+      return { body: { runId: 'must-not-launch' } };
     });
-
     try {
       process.env.CLAUDE_TEAM_CONTROL_URL = server.baseUrl;
+      process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN = fixtureAuthToken;
       writeControlApiState(claudeDir, 'http://127.0.0.1:1');
-
-      const launched = await controller.runtime.launchTeam({
-        cwd: '/tmp/project',
-      });
-
-      expect(launched.runId).toBe('run-env');
-      expect(launched.progress.state).toBe('ready');
+      await expect(controller.runtime.launchTeam({ cwd: '/tmp/project' }))
+        .rejects.toThrow('Failed to reach team control API');
+      expect(envEffects).toBe(0);
     } finally {
-      if (previousUrl === undefined) {
-        delete process.env.CLAUDE_TEAM_CONTROL_URL;
-      } else {
-        process.env.CLAUDE_TEAM_CONTROL_URL = previousUrl;
-      }
       await server.close();
     }
   });
 
-  it('falls back to the next control endpoint when the first one responds with 404', async () => {
+  it('does not replay a mutation to another endpoint after the published endpoint returns 404', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
-    const previousUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
-
-    const staleServer = await startControlServer(async () => {
+    let publishedEffects = 0;
+    let envEffects = 0;
+    const staleServer = await startControlServer(claudeDir, async () => {
+      publishedEffects++;
       return { statusCode: 404, body: { error: 'Not found' } };
     });
-    const liveServer = await startControlServer(async ({ method, url }) => {
-      if (method === 'POST' && url === '/api/teams/my-team/launch') {
-        return { body: { runId: 'run-live' } };
-      }
-      if (method === 'GET' && url === '/api/teams/provisioning/run-live') {
-        return {
-          body: {
-            runId: 'run-live',
-            teamName: 'my-team',
-            state: 'ready',
-            message: 'Ready',
-            startedAt: '2026-03-12T00:00:00.000Z',
-            updatedAt: '2026-03-12T00:00:01.000Z',
-          },
-        };
-      }
-      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    const liveServer = await startControlServer(claudeDir, async () => {
+      envEffects++;
+      return { body: { runId: 'must-not-launch' } };
     });
-
     try {
       writeControlApiState(claudeDir, staleServer.baseUrl);
       process.env.CLAUDE_TEAM_CONTROL_URL = liveServer.baseUrl;
-
-      const launched = await controller.runtime.launchTeam({
-        cwd: '/tmp/project',
-      });
-
-      expect(launched.runId).toBe('run-live');
-      expect(launched.progress.state).toBe('ready');
+      process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN = fixtureAuthToken;
+      await expect(controller.runtime.launchTeam({ cwd: '/tmp/project' }))
+        .rejects.toThrow('Not found');
+      expect(publishedEffects).toBe(1);
+      expect(envEffects).toBe(0);
     } finally {
-      if (previousUrl === undefined) {
-        delete process.env.CLAUDE_TEAM_CONTROL_URL;
-      } else {
-        process.env.CLAUDE_TEAM_CONTROL_URL = previousUrl;
-      }
       await staleServer.close();
       await liveServer.close();
     }

@@ -17,7 +17,10 @@ async function createFixture() {
   const server = Fastify({ logger: false });
   const executions = { count: 0 };
   servers.push(server);
-  registerHttpApiAuth(server, TOKEN);
+  registerHttpApiAuth(server, TOKEN, {
+    origins: ['http://localhost:5173'],
+    authorities: () => ['localhost:80'],
+  });
   server.get('/api/session-secret', async () => ({ session: 'private' }));
   server.post('/api/execute', async () => {
     executions.count += 1;
@@ -65,7 +68,7 @@ describe('HttpServerAuth', () => {
     expect(renderer.statusCode).toBe(200);
   });
 
-  it('allows the token query parameter only for the EventSource endpoint', async () => {
+  it('refuses query credentials for every endpoint including SSE', async () => {
     const { server } = await createFixture();
 
     const event = await server.inject({
@@ -77,20 +80,50 @@ describe('HttpServerAuth', () => {
       url: `/api/session-secret?access_token=${encodeURIComponent(TOKEN)}`,
     });
 
-    expect(event.statusCode).toBe(200);
+    expect(event.statusCode).toBe(401);
     expect(other.statusCode).toBe(401);
   });
 
-  it('creates high-entropy tokens and keeps browser credentials in the URL fragment', () => {
+  it('rejects foreign authorities and null origins even with the correct key', async () => {
+    const { server, executions } = await createFixture();
+    for (const headers of [
+      { host: 'localhost:5173', origin: 'http://localhost:5173' },
+      { host: 'foreign.test', origin: 'http://localhost' },
+      { host: 'localhost:80', origin: 'null' },
+      { host: 'localhost:80', origin: 'http://localhost:9999' },
+    ]) {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/execute',
+        headers: { ...headers, authorization: `Bearer ${TOKEN}` },
+      });
+      expect(response.statusCode).toBe(403);
+    }
+    expect(executions.count).toBe(0);
+    const allowed = await server.inject({
+      method: 'OPTIONS',
+      url: '/api/execute',
+      headers: {
+        host: 'localhost:80',
+        origin: 'http://localhost:5173',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'Authorization, X-Agent-Teams-App-Context',
+      },
+    });
+    expect(allowed.statusCode).toBe(204);
+    expect(executions.count).toBe(0);
+  });
+
+  it('creates high-entropy tokens and keeps credentials out of browser URLs', () => {
     const token = createHttpAuthToken({});
-    const url = new URL(buildHttpAccessUrl('0.0.0.0', 3456, token));
+    const url = new URL(buildHttpAccessUrl('0.0.0.0', 3456));
 
     expect(token.length).toBeGreaterThanOrEqual(43);
     expect(url.hostname).toBe('localhost');
     expect(url.search).toBe('');
-    expect(new URLSearchParams(url.hash.slice(1)).get('access_token')).toBe(token);
+    expect(url.hash).toBe('');
     expect(() =>
       createHttpAuthToken({ AGENT_TEAMS_HTTP_AUTH_TOKEN: 'contains whitespace token value' })
-    ).toThrow('between 32 and 512');
+    ).toThrow('unsupported');
   });
 });

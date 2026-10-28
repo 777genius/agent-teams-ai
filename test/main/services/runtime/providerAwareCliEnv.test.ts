@@ -244,7 +244,9 @@ describe('buildProviderAwareCliEnv', () => {
   });
 
   it('passes cold Host publication and changed-port reopen to direct provider catalog without provisioning', async () => {
-    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'app-catalog-context-'));
+    const root = await fs.promises.realpath(
+      await fs.promises.mkdtemp(path.join(os.tmpdir(), 'app-catalog-context-'))
+    );
     const { setClaudeBasePathOverride } = await import('@main/utils/pathDecoder');
     const { writeTeamControlApiState, clearTeamControlApiState } =
       await import('@main/services/team/TeamControlApiState');
@@ -293,6 +295,24 @@ describe('buildProviderAwareCliEnv', () => {
         });
         expect(Date.parse(freshUntil!)).toBeGreaterThanOrEqual(startedAt + 120_000);
         expect(Date.parse(freshUntil!)).toBeLessThanOrEqual(Date.now() + 120_000);
+        const authReference = process.env.CLAUDE_TEAM_CONTROL_AUTH_REF;
+        expect(authReference).toBeTypeOf('string');
+        expect(path.dirname(authReference!)).toBe(path.join(root, 'local-http-auth'));
+        expect(path.basename(authReference!)).toMatch(/^api-[a-f0-9-]{36}\.ref\.json$/);
+        const reference = JSON.parse(await fs.promises.readFile(authReference!, 'utf8'));
+        expect(reference).not.toHaveProperty('token');
+        expect(path.dirname(reference.descriptorPath)).toBe(path.join(root, 'local-http-auth'));
+        expect(path.basename(reference.descriptorPath)).toBe(
+          `api-${reference.instanceId}-${reference.generation}.json`
+        );
+        const descriptor = JSON.parse(await fs.promises.readFile(reference.descriptorPath, 'utf8'));
+        expect(descriptor).toMatchObject({
+          instanceId: reference.instanceId,
+          generation: reference.generation,
+          profileScope: reference.profileScope,
+          baseUrl: `http://127.0.0.1:${port}`,
+          token: 'sandbox-control-token-0123456789abcdef',
+        });
         const [command, args, options] = execCliMock.mock.calls.at(-1)!;
         expect(command).toBe('/sandbox/agent-teams-cli');
         expect(args).toEqual([
@@ -308,6 +328,7 @@ describe('buildProviderAwareCliEnv', () => {
         expect(options.env).toMatchObject({
           AGENT_TEAMS_MCP_CLAUDE_DIR: root,
           CLAUDE_TEAM_CONTROL_URL: `http://127.0.0.1:${port}`,
+          CLAUDE_TEAM_CONTROL_AUTH_REF: authReference,
           HOME: root,
           CLAUDE_CONFIG_DIR: path.join(root, 'auth-namespace'),
         });
@@ -315,9 +336,16 @@ describe('buildProviderAwareCliEnv', () => {
           ELECTRON_RUN_AS_NODE: '1',
           AGENT_TEAMS_MCP_CLAUDE_DIR: root,
           CLAUDE_TEAM_CONTROL_URL: `http://127.0.0.1:${port}`,
+          CLAUDE_TEAM_CONTROL_AUTH_REF: authReference,
         });
+        expect(options.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN).toBeUndefined();
+        expect(
+          JSON.parse(options.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)
+            .CLAUDE_TEAM_CONTROL_AUTH_TOKEN
+        ).toBeUndefined();
         await clearTeamControlApiState();
         expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+        expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_REF).toBeUndefined();
       }
       expect(execCliMock).toHaveBeenCalledTimes(2);
     } finally {
@@ -374,7 +402,7 @@ describe('buildProviderAwareCliEnv', () => {
         for (const port of [41001, 41002]) {
           const authToken = 'sandbox-mcp-auth-token-0123456789abcdef';
           handle.mockReturnValue({
-            url: `http://127.0.0.1:${port}/mcp?access_token=${authToken}`,
+            url: `http://127.0.0.1:${port}/mcp`,
             port,
             urlHash: 'hash',
             pid: 123,
@@ -387,7 +415,7 @@ describe('buildProviderAwareCliEnv', () => {
               host: '127.0.0.1',
               port,
               endpoint: '/mcp',
-              url: `http://127.0.0.1:${port}/mcp?access_token=${authToken}`,
+              url: `http://127.0.0.1:${port}/mcp`,
               urlHash: 'hash',
               generation: 1,
               observedAt: '2026-09-10T00:00:00.000Z',
@@ -400,8 +428,12 @@ describe('buildProviderAwareCliEnv', () => {
           const env = execCliMock.mock.calls.at(-1)![2].env;
           // Independent literal oracle: do not compute expected values with the production mapper.
           expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe(
-            `http://127.0.0.1:${port}/mcp?access_token=${authToken}#agent-teams-app-instance=sandbox-host&agent-teams-app-profile=${profile}`
+            `http://127.0.0.1:${port}/mcp#agent-teams-app-instance=sandbox-host&agent-teams-app-profile=${profile}`
           );
+          expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).not.toContain(authToken);
+          expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON)).toEqual({
+            Authorization: `Bearer ${authToken}`,
+          });
           expect(env.CLAUDE_CONFIG_DIR).toBe('/sandbox/selected-auth');
           expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe('/sandbox/host-node');
           expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)).toMatchObject({
@@ -434,6 +466,7 @@ describe('buildProviderAwareCliEnv', () => {
           },
         }).env;
         expect(revoked.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+        expect(revoked.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON).toBeUndefined();
         expect(revoked.CLAUDE_TEAM_APP_INSTANCE_ID).toBeUndefined();
         expect(revoked.CLAUDE_TEAM_APP_PROFILE_SCOPE).toBeUndefined();
         expect(start).not.toHaveBeenCalled();

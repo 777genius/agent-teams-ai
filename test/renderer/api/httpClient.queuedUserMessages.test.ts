@@ -1,3 +1,5 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
+import { BrowserAccessSession } from '@features/local-http-auth/renderer';
 import { HttpAPIClient } from '@renderer/api/httpClient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,7 +29,10 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
   });
 
   it('refuses the queued listing instead of answering with an empty queue', async () => {
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
 
     // Negative control for the discard confirmation: an empty snapshot means
     // "nothing queued for this member", which the renderer reports as already
@@ -41,7 +46,10 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
   });
 
   it('refuses to discard queued messages instead of pretending it worked', async () => {
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
 
     await expect(
       client.teams.discardQueuedUserMessages('demo team', 'bob/qa', ['message-1'])
@@ -51,23 +59,27 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
 
   it('sends the local API bearer token on sensitive browser requests', async () => {
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ connected: false }), {
+      new Response(JSON.stringify({ ready: true, service: 'api', connected: false }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })
     );
-    const client = new HttpAPIClient(
-      'http://127.0.0.1:53123',
-      'sandbox-http-auth-token-0123456789abcdef'
-    );
+    const session = new BrowserAccessSession('http://127.0.0.1:53123');
+    await session.enterKey('sandbox-http-auth-token-0123456789abcdef');
+    fetchMock.mockClear();
+    const client = new HttpAPIClient(session.baseUrl, session);
 
     await client.ssh.getState();
 
     expect(fetchMock).toHaveBeenCalledWith(
       'http://127.0.0.1:53123/api/ssh/state',
       expect.objectContaining({
-        headers: { Authorization: 'Bearer sandbox-http-auth-token-0123456789abcdef' },
+        headers: expect.any(Headers),
       })
     );
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe(
+      'Bearer sandbox-http-auth-token-0123456789abcdef'
+    );
+    client.dispose();
   });
 });

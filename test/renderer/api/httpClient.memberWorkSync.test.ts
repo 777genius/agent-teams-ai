@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { HttpAPIClient } from '@renderer/api/httpClient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,7 +26,10 @@ describe('HttpAPIClient memberWorkSync', () => {
   });
 
   it('maps browser-mode member work sync calls to the HTTP routes', async () => {
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ state: 'needs_sync' }))
       .mockResolvedValueOnce(jsonResponse({ state: 'still_working' }))
@@ -93,7 +97,10 @@ describe('HttpAPIClient memberWorkSync', () => {
   });
 
   it('rejects recovery commands that have no browser-mode HTTP route', async () => {
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
     await expect(
       client.memberWorkSync.stopAutoResume({ teamName: 'demo team', memberName: 'bob' })
     ).rejects.toThrow('not available in browser mode');

@@ -1,3 +1,7 @@
+import {
+  AuthenticatedEventStream,
+  getBrowserAccessSession,
+} from '@features/local-http-auth/renderer';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *
@@ -241,7 +245,9 @@ export class HttpAPIClient implements ElectronAPI {
     unbindGatewayMember: async () => gatewayUnavailable(),
   };
   get teamGroupChats() {
-    return createHttpTeamGroupChatsAPI(this.baseUrl, this.authorizationHeaders());
+    return createHttpTeamGroupChatsAPI(this.baseUrl, (path, options) =>
+      this.access.fetch(path, options)
+    );
   }
   externalAgentConnection: ExternalAgentConnectionApi = {
     getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
@@ -273,10 +279,8 @@ export class HttpAPIClient implements ElectronAPI {
   }
 
   private baseUrl: string;
-  private accessToken: string;
-  private eventSource: EventSource | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
-  private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
+  private readonly access: ReturnType<typeof getBrowserAccessSession>;
+  private readonly events: AuthenticatedEventStream;
   telemetry = {
     getSentryContext: async (): Promise<null> => null,
     getSentryStatus: async () => ({
@@ -295,43 +299,19 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
-  constructor(baseUrl: string, accessToken: string = '') {
+  constructor(baseUrl: string, access = getBrowserAccessSession(baseUrl)) {
     this.baseUrl = baseUrl;
-    this.accessToken = accessToken;
-    this.initEventSource();
+    this.access = access;
+    this.events = new AuthenticatedEventStream(this.access);
   }
 
-  // ---------------------------------------------------------------------------
-  // SSE event infrastructure
-  // ---------------------------------------------------------------------------
-
-  private initEventSource(): void {
-    const eventUrl = new URL('/api/events', this.baseUrl);
-    if (this.accessToken) eventUrl.searchParams.set('access_token', this.accessToken);
-    this.eventSource = new EventSource(eventUrl.toString());
-    this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
-    this.eventSource.onerror = () => {
-      // Auto-reconnect is built into EventSource
-      console.warn('[HttpAPIClient] SSE connection error, will reconnect...');
-    };
+  dispose(): void {
+    this.events.dispose();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private addEventListener(channel: string, callback: (...args: any[]) => void): () => void {
-    if (!this.eventListeners.has(channel)) {
-      this.eventListeners.set(channel, new Set());
-      // Register SSE listener for this channel once
-      this.eventSource?.addEventListener(channel, ((event: MessageEvent) => {
-        const data: unknown = JSON.parse(event.data as string);
-        const listeners = this.eventListeners.get(channel);
-        listeners?.forEach((cb) => cb(data));
-      }) as EventListener);
-    }
-    this.eventListeners.get(channel)!.add(callback);
-
-    return () => {
-      this.eventListeners.get(channel)?.delete(callback);
-    };
+    return this.events.subscribe(channel, callback);
   }
 
   // ---------------------------------------------------------------------------
@@ -367,16 +347,11 @@ export class HttpAPIClient implements ElectronAPI {
     ) as T;
   }
 
-  private authorizationHeaders(): Record<string, string> {
-    return this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {};
-  }
-
   private async get<T>(path: string, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, {
-        headers: this.authorizationHeaders(),
+      const res = await this.access.fetch(path, {
         signal: controller.signal,
       });
       return this.parseJson<T>(res, reviveDates);
@@ -389,9 +364,9 @@ export class HttpAPIClient implements ElectronAPI {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, {
+      const res = await this.access.fetch(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...this.authorizationHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -405,9 +380,9 @@ export class HttpAPIClient implements ElectronAPI {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, {
+      const res = await this.access.fetch(path, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', ...this.authorizationHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -421,9 +396,9 @@ export class HttpAPIClient implements ElectronAPI {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, {
+      const res = await this.access.fetch(path, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...this.authorizationHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });

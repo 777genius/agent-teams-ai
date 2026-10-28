@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { TOKEN_USAGE_BUDGET_STATUS_CHANGED } from '@features/token-usage/contracts';
 import { HttpAPIClient } from '@renderer/api/httpClient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -50,7 +51,10 @@ describe('Budget HTTP and SSE timestamp parity', () => {
       'fetch',
       vi.fn(() => Promise.resolve(new Response(JSON.stringify(status))))
     );
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
     const received: TokenUsageBudgetStatusDto[] = [];
     const unsubscribe = client.tokenUsage.onBudgetStatusChanged((value) => received.push(value));
     source.emit(TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
@@ -68,7 +72,10 @@ describe('Budget HTTP and SSE timestamp parity', () => {
       Promise.resolve(new Response(JSON.stringify({ updatedAt: revision })))
     );
     vi.stubGlobal('fetch', fetchMock);
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
     const loaded = await client.tokenUsage.getBudgetSettings();
     expect(loaded.updatedAt).toBe(revision);
     const saved = await client.tokenUsage.updateBudgetSettings({
@@ -91,7 +98,10 @@ describe('Budget HTTP and SSE timestamp parity', () => {
       Promise.resolve(new Response('{}'))
     );
     vi.stubGlobal('fetch', fetchMock);
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
     await client.tokenUsage.getSnapshot({
       teamIds: ['anonymous', 'team:unassigned'],
       teamName: 'ignored',

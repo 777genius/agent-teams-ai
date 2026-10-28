@@ -1,181 +1,76 @@
-// @vitest-environment node
-import { mkdtemp, readFile, rm as removeDirectory } from 'node:fs/promises';
-import os from 'node:os';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const { writeGate, removeGate, context } = vi.hoisted(() => ({
-  writeGate: vi.fn(),
-  removeGate: vi.fn(),
-  context: { root: '' },
-}));
-vi.mock('@main/utils/atomicWrite', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@main/utils/atomicWrite')>();
-  return {
-    ...original,
-    atomicWriteAsync: async (...args: Parameters<typeof original.atomicWriteAsync>) => {
-      await writeGate(...args);
-      return original.atomicWriteAsync(...args);
-    },
-  };
+const state = vi.hoisted(() => ({ root: '' }));
+vi.mock('@main/utils/pathDecoder', () => ({ getClaudeBasePath: () => state.root }));
+const envKeys = [
+  'CLAUDE_TEAM_CONTROL_URL',
+  'CLAUDE_TEAM_CONTROL_AUTH_TOKEN',
+  'CLAUDE_TEAM_CONTROL_AUTH_REF',
+];
+let previous: Array<string | undefined>;
+let root: string;
+const token = 'a'.repeat(64);
+
+beforeEach(async () => {
+  previous = envKeys.map((key) => process.env[key]);
+  root = await realpath(await mkdtemp(path.join(tmpdir(), 'api-publication-')));
+  state.root = root;
+  vi.resetModules();
 });
-vi.mock('fs/promises', async (importOriginal) => {
-  const original = await importOriginal<typeof import('fs/promises')>();
-  return {
-    ...original,
-    rm: async (...args: Parameters<typeof original.rm>) => {
-      await removeGate();
-      return original.rm(...args);
-    },
-  };
+afterEach(async () => {
+  await rm(root, { recursive: true, force: true });
+  envKeys.forEach((key, index) => {
+    if (previous[index] === undefined) delete process.env[key];
+    else process.env[key] = previous[index];
+  });
 });
-vi.mock('@main/utils/pathDecoder', () => ({ getClaudeBasePath: () => context.root }));
+const discovery = () => path.join(state.root, 'team-control-api.json');
 
-import {
-  buildTeamControlApiBaseUrl,
-  clearTeamControlApiState,
-  writeTeamControlApiState,
-} from '@main/services/team/TeamControlApiState';
-
-const AUTH_TOKEN = 'sandbox-control-token-0123456789abcdef';
-
-function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
-
-function statePath() {
-  return path.join(context.root, 'team-control-api.json');
-}
-
-async function expectPublished(baseUrl: string) {
-  expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe(baseUrl);
-  expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN).toBe(AUTH_TOKEN);
-  expect(JSON.parse(await readFile(statePath(), 'utf8'))).toMatchObject({
-    baseUrl,
-    authToken: AUTH_TOKEN,
-    pid: process.pid,
-  });
-}
-
-async function expectCleared() {
+it('publishes private token-free discovery and revokes the environment synchronously on clear', async () => {
+  const api = await import('@main/services/team/TeamControlApiState');
+  await api.writeTeamControlApiState('http://127.0.0.1:3456', token);
+  const raw = await readFile(discovery(), 'utf8');
+  expect(raw).not.toContain(token);
+  const reference = JSON.parse(raw);
+  const authority = JSON.parse(await readFile(reference.descriptorPath, 'utf8'));
+  expect(authority).toMatchObject({ service: 'api', token, baseUrl: 'http://127.0.0.1:3456' });
+  expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_REF).toBeTruthy();
+  const clearing = api.clearTeamControlApiState();
   expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
   expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN).toBeUndefined();
-  await expect(readFile(statePath(), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-}
+  await clearing;
+  await expect(readFile(discovery())).rejects.toMatchObject({ code: 'ENOENT' });
+});
 
-describe('Host control endpoint publication', () => {
-  beforeEach(async () => {
-    context.root = await mkdtemp(path.join(os.tmpdir(), 'app-control-publication-'));
-    writeGate.mockReset().mockResolvedValue(undefined);
-    removeGate.mockReset().mockResolvedValue(undefined);
-    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', 'http://127.0.0.1:9999');
-  });
-  afterEach(async () => {
-    vi.unstubAllEnvs();
-    await removeDirectory(context.root, { recursive: true, force: true });
-  });
+it('preserves another independently instantiated publisher when the older instance stops', async () => {
+  const first = await import('@main/services/team/TeamControlApiState');
+  await first.writeTeamControlApiState('http://127.0.0.1:3456', token);
+  vi.resetModules();
+  const second = await import('@main/services/team/TeamControlApiState');
+  await second.writeTeamControlApiState('http://127.0.0.1:3457', 'b'.repeat(64));
+  const current = await readFile(discovery(), 'utf8');
+  await first.clearTeamControlApiState();
+  expect(await readFile(discovery(), 'utf8')).toBe(current);
+  const reference = JSON.parse(current);
+  expect(JSON.parse(await readFile(reference.descriptorPath, 'utf8')).token).toBe('b'.repeat(64));
+  await second.clearTeamControlApiState();
+});
 
-  it('rejects missing or malformed control credentials before publication', async () => {
-    await expect(writeTeamControlApiState('http://127.0.0.1:4568', 'short')).rejects.toThrow(
-      '32 to 512'
-    );
-    expect(writeGate).not.toHaveBeenCalled();
-  });
-
-  it('publishes the actual listening endpoint only after disk publication succeeds', async () => {
-    const gate = deferred();
-    writeGate.mockReturnValueOnce(gate.promise);
-    const pending = writeTeamControlApiState(buildTeamControlApiBaseUrl(4569), AUTH_TOKEN);
-    expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
-    gate.resolve();
-    await pending;
-    await expectPublished('http://127.0.0.1:4569');
-    expect(writeGate).toHaveBeenLastCalledWith(
-      statePath(),
-      expect.any(String),
-      expect.objectContaining({ mode: 0o600, directoryMode: 0o700 })
-    );
-  });
-
-  it('revokes stale publication on failure and can subsequently restart on another port', async () => {
-    writeGate.mockRejectedValueOnce(new Error('disk unavailable'));
-    await expect(writeTeamControlApiState('http://127.0.0.1:4570', AUTH_TOKEN)).rejects.toThrow(
-      'disk unavailable'
-    );
-    await expectCleared();
-    await writeTeamControlApiState('http://127.0.0.1:4571', AUTH_TOKEN);
-    await expectPublished('http://127.0.0.1:4571');
-  });
-
-  it('revokes synchronously on stop, tolerates cleanup failure and repeated stop, and republishes on reopen', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4572', AUTH_TOKEN);
-    removeGate.mockRejectedValueOnce(new Error('file inaccessible'));
-    const stopping = clearTeamControlApiState();
-    expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
-    await stopping;
-    // Best-effort cleanup cannot promise disk removal when the filesystem rejects it.
-    expect(JSON.parse(await readFile(statePath(), 'utf8')).baseUrl).toBe('http://127.0.0.1:4572');
-    await clearTeamControlApiState();
-    await expectCleared();
-    await writeTeamControlApiState('http://127.0.0.1:4573', AUTH_TOKEN);
-    await expectPublished('http://127.0.0.1:4573');
-  });
-
-  it('orders write then clear so a late atomic write cannot restore the stopped file or env', async () => {
-    const gate = deferred();
-    writeGate.mockReturnValueOnce(gate.promise);
-    const pending = writeTeamControlApiState('http://127.0.0.1:4574', AUTH_TOKEN);
-    await vi.waitFor(() => expect(writeGate).toHaveBeenCalledOnce());
-    const stopping = clearTeamControlApiState();
-    // Give an incorrectly unqueued remove time to finish before releasing the write.
-    await vi.waitFor(() => expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined());
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
-    gate.resolve();
-    await Promise.all([pending, stopping]);
-    await expectCleared();
-  });
-
-  it('orders clear then write so a late remove cannot delete the restarted endpoint file', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4575', AUTH_TOKEN);
-    const gate = deferred();
-    removeGate.mockReturnValueOnce(gate.promise);
-    const stopping = clearTeamControlApiState();
-    await vi.waitFor(() => expect(removeGate).toHaveBeenCalledOnce());
-    const restarting = writeTeamControlApiState('http://127.0.0.1:4576', AUTH_TOKEN);
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
-    gate.resolve();
-    await Promise.all([stopping, restarting]);
-    await expectPublished('http://127.0.0.1:4576');
-  });
-
-  it('captures each root before queued writes and clears run across a root change', async () => {
-    const originalRoot = context.root;
-    const oldPath = statePath();
-    const gate = deferred();
-    writeGate.mockReturnValueOnce(gate.promise);
-    const pending = writeTeamControlApiState('http://127.0.0.1:4577', AUTH_TOKEN);
-    await vi.waitFor(() => expect(writeGate).toHaveBeenCalledOnce());
-    const clearingOldRoot = clearTeamControlApiState();
-    context.root = path.join(originalRoot, 'alternate-root');
-    const publishingNewRoot = writeTeamControlApiState('http://127.0.0.1:4578', AUTH_TOKEN);
-    try {
-      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
-    } finally {
-      gate.resolve();
-      await Promise.all([pending, clearingOldRoot, publishingNewRoot]);
-    }
-    try {
-      await expectPublished('http://127.0.0.1:4578');
-      await expect(readFile(oldPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-      await clearTeamControlApiState();
-      await expectCleared();
-    } finally {
-      context.root = originalRoot;
-    }
-  });
+it('serializes write/clear and clear/write without publishing a stopped generation', async () => {
+  const api = await import('@main/services/team/TeamControlApiState');
+  await Promise.all([
+    api.writeTeamControlApiState('http://127.0.0.1:3456', token),
+    api.clearTeamControlApiState(),
+  ]);
+  await expect(readFile(discovery())).rejects.toMatchObject({ code: 'ENOENT' });
+  await Promise.all([
+    api.clearTeamControlApiState(),
+    api.writeTeamControlApiState('http://127.0.0.1:3457', token),
+  ]);
+  expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:3457');
+  await api.clearTeamControlApiState();
 });

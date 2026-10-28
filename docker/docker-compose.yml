@@ -26,9 +26,11 @@ services:
       - CLAUDE_ROOT=/data/.claude
       - HOST=0.0.0.0
       - PORT=3456
-      # Optional stable bearer token (minimum 32 characters). If omitted, the
-      # authenticated URL is generated at startup and printed in container logs.
-      - AGENT_TEAMS_HTTP_AUTH_TOKEN=${AGENT_TEAMS_HTTP_AUTH_TOKEN:-}
+      # A fresh key is generated on every start, in an owner-only descriptor.
+      # Retrieve it inside the container using the private reference path in startup logs.
+      - AGENT_TEAMS_HTTP_AUTH_DIR=/root/.agent-teams-auth
+      # For LAN/reverse-proxy access, explicitly configure the external origin.
+      - AGENT_TEAMS_HTTP_PUBLIC_ORIGIN=${AGENT_TEAMS_HTTP_PUBLIC_ORIGIN:-}
     restart: unless-stopped
     # Uncomment for maximum network isolation (no outbound connections):
     # network_mode: "none"

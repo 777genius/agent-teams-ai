@@ -12,6 +12,8 @@
  * separately so failed launch attempts cannot pin unbounded logs in memory.
  */
 
+import { redactHttpBearerCredentials } from '@shared/utils/diagnosticsRedaction';
+
 import type { TeamLaunchDiagnosticItem } from '@shared/types';
 
 export const PROGRESS_LOG_TAIL_LINES = 200;
@@ -157,7 +159,7 @@ function boundRedactedText(
   if (!prepared) {
     return undefined;
   }
-  const redacted = prepared
+  const redacted = redactHttpBearerCredentials(prepared)
     .replace(PROVIDER_API_KEY_FLAG_PATTERN, '$1[redacted]')
     .replace(SECRET_FLAG_PATTERN, '$1[redacted]')
     .replace(SECRET_ENV_ASSIGNMENT_PATTERN, '$1[redacted]')

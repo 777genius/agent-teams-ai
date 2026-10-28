@@ -6,6 +6,7 @@ import {
   link,
   mkdir,
   mkdtemp,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -80,6 +81,11 @@ function isUnhealthy() {
 }
 
 const server = http.createServer((request, response) => {
+  if (request.headers.authorization !== 'Bearer ' + process.env.AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN) {
+    response.writeHead(401, { 'content-type': 'text/plain' });
+    response.end('authentication required');
+    return;
+  }
   if (request.url === '/health') {
     if (isUnhealthy()) {
       response.writeHead(503, { 'content-type': 'text/plain' });
@@ -121,14 +127,13 @@ function readArg(name) {
   return index >= 0 ? process.argv[index + 1] : null;
 }
 
-function readHealthStatus(url) {
+function readHealthStatus(url, headers) {
   return new Promise((resolve) => {
     if (!url) {
       resolve(null);
       return;
     }
     const target = new URL(url);
-    const authToken = target.searchParams.get('access_token');
     target.pathname = '/health';
     target.search = '';
     target.hash = '';
@@ -138,7 +143,7 @@ function readHealthStatus(url) {
         port: Number(target.port),
         path: target.pathname,
         timeout: 750,
-        ...(authToken ? { headers: { authorization: 'Bearer ' + authToken } } : {}),
+        headers,
       },
       (response) => {
         response.resume();
@@ -162,7 +167,8 @@ async function main() {
 
   const envelope = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
   const mcpUrl = process.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL || null;
-  const healthStatus = await readHealthStatus(mcpUrl);
+  const mcpHeaders = JSON.parse(process.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON || '{}');
+  const healthStatus = await readHealthStatus(mcpUrl, mcpHeaders);
   if (healthStatus !== 200) {
     console.error(
       JSON.stringify({
@@ -228,9 +234,8 @@ async function allocateLoopbackPort(excluded: Set<number> = new Set<number>()): 
   }
 }
 
-async function readHealthStatus(url: string, authenticate = true): Promise<number | null> {
+async function readHealthStatus(url: string, authToken?: string): Promise<number | null> {
   const target = new URL(url);
-  const authToken = authenticate ? target.searchParams.get('access_token') : null;
   target.pathname = '/health';
   target.search = '';
   target.hash = '';
@@ -257,10 +262,10 @@ async function readHealthStatus(url: string, authenticate = true): Promise<numbe
   });
 }
 
-async function waitForHealthDown(url: string): Promise<void> {
+async function waitForHealthDown(url: string, authToken: string): Promise<void> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 5_000) {
-    if ((await readHealthStatus(url)) !== 200) {
+    if ((await readHealthStatus(url, authToken)) !== 200) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -290,7 +295,9 @@ describe('packaged Agent Teams MCP launch integration', () => {
   let server: AgentTeamsMcpHttpServer | null = null;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-packaged-mcp-integration-'));
+    tempDir = await realpath(
+      await mkdtemp(path.join(os.tmpdir(), 'agent-teams-packaged-mcp-integration-'))
+    );
   });
 
   afterEach(async () => {
@@ -406,8 +413,8 @@ describe('packaged Agent Teams MCP launch integration', () => {
           }),
       });
       const fallbackHandle = await server.ensureStarted();
-      expect(fallbackHandle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp\?access_token=[A-Za-z0-9_-]{43}$/);
-      expect(await readHealthStatus(fallbackHandle.url)).toBe(200);
+      expect(fallbackHandle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+      expect(await readHealthStatus(fallbackHandle.url, fallbackHandle.authToken)).toBe(200);
       await server.stop();
       server = null;
 
@@ -443,8 +450,8 @@ describe('packaged Agent Teams MCP launch integration', () => {
       });
 
       const handle = await server.ensureStarted();
-      expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp\?access_token=[A-Za-z0-9_-]{43}$/);
-      expect(await readHealthStatus(handle.url)).toBe(200);
+      expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+      expect(await readHealthStatus(handle.url, handle.authToken)).toBe(200);
     } finally {
       clearResolvedNodePathForTests();
       setAppDataBasePath(null);
@@ -468,7 +475,9 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
   const servers: AgentTeamsMcpHttpServer[] = [];
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-http-integration-'));
+    tempDir = await realpath(
+      await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-http-integration-'))
+    );
     originalControlFileEnv = process.env.AGENT_TEAMS_MCP_TEST_CONTROL_FILE;
     originalMcpHttpPortEnv = process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT;
   });
@@ -523,10 +532,10 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
 
     const handle = await server.ensureStarted();
 
-    expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp\?access_token=[A-Za-z0-9_-]{43}$/);
+    expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
     expect(handle.pid).toEqual(expect.any(Number));
-    expect(await readHealthStatus(handle.url)).toBe(200);
-    expect(await readHealthStatus(handle.url, false)).toBe(401);
+    expect(await readHealthStatus(handle.url, handle.authToken)).toBe(200);
+    expect(await readHealthStatus(handle.url)).toBe(401);
   });
 
   it('reuses a healthy cached bridge URL after a real loopback health recheck', async () => {
@@ -540,7 +549,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const second = await server.ensureStarted();
 
     expect(second).toEqual(first);
-    expect(await readHealthStatus(first.url)).toBe(200);
+    expect(await readHealthStatus(first.url, first.authToken)).toBe(200);
     expect(vi.mocked(console.warn).mock.calls.slice(warnCountAfterFirstStart)).toEqual([]);
   });
 
@@ -558,7 +567,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     expect(second.port).toBe(first.port);
     expect(second.pid).toBe(first.pid);
     expect(second.diagnostics).toContain(`opencode_app_mcp_adopted_state_server:${first.port}`);
-    expect(await readHealthStatus(second.url)).toBe(200);
+    expect(await readHealthStatus(second.url, second.authToken)).toBe(200);
   });
 
   it('falls back from an unknown healthy stable-port server and leaves it alive', async () => {
@@ -619,7 +628,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
         `opencode_app_mcp_preferred_port_unavailable:${stablePort}`
       );
       expect(await readHealthStatus(`http://127.0.0.1:${stablePort}/mcp`)).toBe(200);
-      expect(await readHealthStatus(handle.url)).toBe(200);
+      expect(await readHealthStatus(handle.url, handle.authToken)).toBe(200);
     } finally {
       await new Promise<void>((resolve) => unknownServer?.close(() => resolve()));
       vi.mocked(console.warn).mockClear();
@@ -644,9 +653,13 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const second = await server.ensureStarted();
 
     expect(second.port).toBe(first.port);
-    expect(second.url).not.toBe(first.url);
+    expect(second.url).toBe(first.url);
+    expect(second.urlHash).toBe(first.urlHash);
+    expect(second.authToken).not.toBe(first.authToken);
+    expect(second.generation).toBe(first.generation + 1);
+    expect(await readHealthStatus(second.url, first.authToken)).toBe(401);
     expect(second.pid).not.toBe(first.pid);
-    expect(await readHealthStatus(second.url)).toBe(200);
+    expect(await readHealthStatus(second.url, second.authToken)).toBe(200);
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
     vi.mocked(console.warn).mockClear();
   });
@@ -665,13 +678,13 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const first = await server.ensureStarted();
     expect(first.pid).toEqual(expect.any(Number));
     process.kill(first.pid!, 'SIGTERM');
-    await waitForHealthDown(first.url);
+    await waitForHealthDown(first.url, first.authToken);
 
     const second = await server.ensureStarted();
 
     expect(second.port).not.toBe(first.port);
     expect(second.pid).not.toBe(first.pid);
-    expect(await readHealthStatus(second.url)).toBe(200);
+    expect(await readHealthStatus(second.url, second.authToken)).toBe(200);
   });
 
   it('passes a refreshed healthy MCP URL into a real bridge child process after cached health goes stale', async () => {
@@ -696,6 +709,9 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
       envProvider: async () => {
         const mcpHttpServer = await server.ensureStarted();
         bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON = JSON.stringify({
+          Authorization: `Bearer ${mcpHttpServer.authToken}`,
+        });
         return {
           ...bridgeEnv,
           CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: mcpHttpServer.url,
@@ -741,8 +757,17 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     if (!secondResult.ok) {
       throw new Error(secondResult.error.message);
     }
-    expect(secondResult.data.observedMcpUrl).not.toBe(firstResult.data.observedMcpUrl);
-    expect(await readHealthStatus(secondResult.data.observedMcpUrl)).toBe(200);
+    const secondHandle = server.getCurrentHandle();
+    expect(secondHandle).not.toBeNull();
+    expect(secondHandle?.authToken).not.toBe(firstHandle?.authToken);
+    expect(secondHandle?.generation).toBe(firstHandle!.generation + 1);
+    expect(secondResult.data.observedMcpUrl).toBe(firstResult.data.observedMcpUrl);
+    expect(
+      await readHealthStatus(secondResult.data.observedMcpUrl, secondHandle!.authToken)
+    ).toBe(200);
+    expect(
+      await readHealthStatus(secondResult.data.observedMcpUrl, firstHandle!.authToken)
+    ).toBe(401);
   });
 
   it('fails closed when a bridge child receives an unreachable MCP URL without env refresh', async () => {
@@ -754,7 +779,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
 
     const first = await server.ensureStarted();
     await server.stop();
-    await waitForHealthDown(first.url);
+    await waitForHealthDown(first.url, first.authToken);
 
     const client = new OpenCodeBridgeCommandClient({
       binaryPath: bridgeBinaryPath,
@@ -762,6 +787,9 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
       env: {
         PATH: process.env.PATH,
         CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: first.url,
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON: JSON.stringify({
+          Authorization: `Bearer ${first.authToken}`,
+        }),
       },
       requestIdFactory: () => 'req-stale-mcp',
     });
@@ -781,7 +809,8 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     }
     expect(result.error.kind).toBe('provider_error');
     expect(result.error.details?.stderr).toContain('mcp_unreachable');
-    expect(result.error.details?.stderr).toContain('access_token=[redacted]');
+    expect(result.error.details?.stderr).not.toContain('access_token');
+    expect(result.error.details?.stderr).toContain(first.url);
     expect(result.error.details?.stderr).not.toContain(first.authToken);
   });
 });

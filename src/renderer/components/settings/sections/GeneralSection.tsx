@@ -654,6 +654,16 @@ export const GeneralSection = ({
                 {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
                 {copied ? commonT('actions.copied') : commonT('actions.copyUrl')}
               </button>
+              {serverStatus.accessKey && (
+                <button
+                  onClick={() => {
+                    void navigator.clipboard.writeText(serverStatus.accessKey!);
+                  }}
+                  className="rounded-md border px-2.5 py-1 text-xs"
+                >
+                  Copy access key
+                </button>
+              )}
             </div>
           )}
         </>

@@ -69,7 +69,7 @@ export function removeHttpServerHandlers(ipcMain: IpcMain): void {
 
 function handleStart(): Promise<{
   success: boolean;
-  data?: { running: boolean; port: number | null; accessUrl?: string };
+  data?: { running: boolean; port: number | null; accessUrl?: string; accessKey?: string };
   error?: string;
 }> {
   return enqueueLifecycleOperation(async () => {
@@ -82,7 +82,7 @@ function handleStart(): Promise<{
         data: {
           running: true,
           port: httpServer.getPort(),
-          ...(accessUrl ? { accessUrl } : {}),
+          ...(accessUrl ? { accessUrl, accessKey: httpServer.getAuthToken() ?? undefined } : {}),
         },
       };
     } catch (error) {
@@ -118,7 +118,7 @@ function handleStop(): Promise<{
 
 function handleGetStatus(): {
   success: boolean;
-  data: { running: boolean; port: number | null; accessUrl?: string };
+  data: { running: boolean; port: number | null; accessUrl?: string; accessKey?: string };
 } {
   const accessUrl = httpServer.getAccessUrl?.();
   return {
@@ -126,7 +126,7 @@ function handleGetStatus(): {
     data: {
       running: httpServer.isRunning(),
       port: httpServer.getPort(),
-      ...(accessUrl ? { accessUrl } : {}),
+      ...(accessUrl ? { accessUrl, accessKey: httpServer.getAuthToken() ?? undefined } : {}),
     },
   };
 }

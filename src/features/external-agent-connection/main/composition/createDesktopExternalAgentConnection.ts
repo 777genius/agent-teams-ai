@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto';
 
+import {
+  applyApiAuthReference,
+  cancelApiProfileChanges,
+  configureApiProfileChanges,
+  scheduleApiProfileChange,
+} from '@features/local-http-auth/main';
 import { buildOpenCodeAppProfileScope } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 
 import {
@@ -15,7 +21,7 @@ import { registerBoundControlHttp } from '../registerBoundControlHttp';
 import type { AppConnectionContext, ExternalAgentConnectionApi } from '../../contracts';
 import type { NativeRendererCdp } from '../NativeRendererCdp';
 import type { WebContents } from 'electron';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 interface Dependencies {
   appInstanceId: string;
@@ -46,8 +52,8 @@ export interface DesktopExternalAgentConnection extends ExternalAgentConnectionA
   registerHttp(app: FastifyInstance): void;
   withExpectedContext<T>(expected: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   assertLaunchAdmission(): void;
-  updateRoot(applyConfig: () => void): Promise<void>;
-  changeContext(operation: () => Promise<void> | void): Promise<void>;
+  updateRoot(applyConfig: () => void, request?: FastifyRequest): Promise<void>;
+  changeContext(operation: () => Promise<void> | void, request?: FastifyRequest): Promise<void>;
   closeAdmission(): Promise<void>;
   shutdown(): Promise<void>;
 }
@@ -56,6 +62,7 @@ export interface DesktopExternalAgentConnection extends ExternalAgentConnectionA
 export function createDesktopExternalAgentConnection(
   deps: Dependencies
 ): DesktopExternalAgentConnection {
+  configureApiProfileChanges(() => undefined);
   const context = new BoundControlContext(deps.appInstanceId, deps.getRoot());
   const profileFingerprint = createHash('sha256').update(deps.userDataPath).digest('hex');
   let tail = Promise.resolve();
@@ -87,6 +94,7 @@ export function createDesktopExternalAgentConnection(
     () => {
       const controlUrl = deps.getControlUrl();
       const controlAuthToken = deps.getControlAuthToken();
+      const root = deps.getRoot();
       if (
         stopping ||
         !context.isOpen ||
@@ -98,7 +106,7 @@ export function createDesktopExternalAgentConnection(
       }
       // This factory is invoked only for a new owned child, never for discovery reads.
       boundControlUrl = controlUrl;
-      return Object.freeze({
+      const environment = {
         [BOUND_CONTROL_URL_ENV]: controlUrl,
         [BOUND_CONTROL_AUTH_TOKEN_ENV]: controlAuthToken,
         [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
@@ -109,7 +117,9 @@ export function createDesktopExternalAgentConnection(
           deps.userDataPath,
           deps.getRoot()
         ),
-      });
+      };
+      applyApiAuthReference(environment, root, controlUrl);
+      return Object.freeze(environment);
     },
     () =>
       !stopping &&
@@ -159,24 +169,17 @@ export function createDesktopExternalAgentConnection(
       if (stopping) throw new Error('App connection is shutting down');
       revokeAuthority?.();
       revokeAuthority = null;
-      try {
-        await operation();
-        if (rootChanged) await deps.reconfigureRoot();
-        if (stopping) throw new Error('App connection is shutting down');
-        bindAuthority();
-        if (deps.isLocalContext()) {
-          context.rebind(deps.getRoot());
-          await connection.retryConnection();
-        }
-      } catch (error) {
-        // Restore the actual local root only; a partial remote transition remains closed.
-        if (!stopping && deps.isLocalContext()) await restoreLocalContext().catch(() => undefined);
-        throw error;
-      }
+      await operation();
+      if (rootChanged) await deps.reconfigureRoot();
+      if (stopping) throw new Error('App connection is shutting down');
+      bindAuthority();
+      if (deps.isLocalContext()) context.rebind(deps.getRoot());
     });
   const closeAdmission = (): Promise<void> => {
     stopping = true;
-    shutdownDrain ??= context.closeAdmission();
+    shutdownDrain ??= Promise.all([context.closeAdmission(), cancelApiProfileChanges()]).then(
+      () => undefined
+    );
     return shutdownDrain;
   };
   return {
@@ -197,8 +200,24 @@ export function createDesktopExternalAgentConnection(
     closeAdmission,
     getConnectionInfo: () => connection.getConnectionInfo(),
     retryConnection,
-    updateRoot: (applyConfig) => change(applyConfig, true),
-    changeContext: (operation) => change(operation, false),
+    updateRoot: (applyConfig, request) => {
+      const transition = scheduleApiProfileChange(() => change(applyConfig, true), request, {
+        afterResume: async () => {
+          if (deps.isLocalContext()) await connection.retryConnection();
+        },
+      });
+      void transition.settled.catch(() => undefined);
+      return transition.result;
+    },
+    changeContext: (operation, request) => {
+      const transition = scheduleApiProfileChange(() => change(operation, false), request, {
+        afterResume: async () => {
+          if (deps.isLocalContext()) await connection.retryConnection();
+        },
+      });
+      void transition.settled.catch(() => undefined);
+      return transition.result;
+    },
     registerHttp(app) {
       registerBoundControlHttp(app, context);
       app.get('/api/app/connection', () => connection.getConnectionInfo());

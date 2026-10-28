@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readdir, rm } from 'node:fs/promises';
+import { stripTypeScriptTypes } from 'node:module';
+import { copyFile, mkdir, readdir, rm, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,7 +22,26 @@ async function copyRecursive(sourceDir, targetDir) {
     }
 
     if (entry.isFile()) {
-      await copyFile(sourcePath, targetPath);
+      if (entry.name.endsWith('.ts')) {
+        const source = await readFile(sourcePath, 'utf8');
+        await writeFile(
+          targetPath.replace(/\.ts$/, '.js'),
+          stripTypeScriptTypes(source).replaceAll(
+            './windowsPrivateAcl.ts',
+            './windowsPrivateAcl.js'
+          )
+        );
+      } else if (['runtime.js', 'workSync.js', 'desktopControlBinding.js'].includes(entry.name)) {
+        await writeFile(
+          targetPath,
+          (await readFile(sourcePath, 'utf8')).replaceAll(
+            './controlApiAuth.ts',
+            './controlApiAuth.js'
+          )
+        );
+      } else {
+        await copyFile(sourcePath, targetPath);
+      }
     }
   }
 }

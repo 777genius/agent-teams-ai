@@ -49,6 +49,7 @@ async function startControlServer(
     method?: string;
     url?: string;
     body?: unknown;
+    authorization?: string;
   }) => Promise<{ statusCode?: number; body: unknown }> | { statusCode?: number; body: unknown }
 ) {
   const server = http.createServer(async (req, res) => {
@@ -58,7 +59,12 @@ async function startControlServer(
       try {
         const bodyText = Buffer.concat(chunks).toString('utf8');
         const body = bodyText ? JSON.parse(bodyText) : undefined;
-        const result = await handler({ method: req.method, url: req.url, body });
+        const result = await handler({
+          method: req.method,
+          url: req.url,
+          body,
+          authorization: req.headers.authorization,
+        });
         res.writeHead(result.statusCode ?? 200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(result.body));
       } catch (error) {
@@ -306,7 +312,7 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   );
 
-  it('boots over stdio, lists task tools, and executes task lifecycle calls', async () => {
+  it('boots without an HTTP credential over stdio, lists task tools, and executes task lifecycle calls', async () => {
     await writeTeamConfig(claudeDir, 'e2e-team');
     const groupChatId = '11111111-1111-4111-8111-111111111111';
     const context = {
@@ -316,17 +322,19 @@ describe('agent-teams-mcp stdio e2e', () => {
     };
     const catalogRequests: unknown[] = [];
     // Controlled catalog HTTP fixture: this exercises the bundle, not a live desktop or team.
-    const control = await startControlServer(({ method, url, body }) => {
+    const control = await startControlServer(({ method, url, body, authorization }) => {
       expect(method).toBe('POST');
       expect(url).toBe('/api/teams/e2e-team/group-chats/list');
+      expect(authorization).toBe('Bearer sandbox-control-token-0123456789abcdef');
       catalogRequests.push(body);
       return { body: [{ id: groupChatId, archivedAt: null }] };
     });
-    const client = new McpStdIoClient(serverPath, workspaceRoot, [], {
+    const client = new McpStdIoClient(serverPath, workspaceRoot, ['--transport', 'stdio'], {
       AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
       AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
       AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
       AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+      AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: undefined,
     });
 
     try {

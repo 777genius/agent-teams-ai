@@ -1,3 +1,5 @@
+import { getBrowserAccessSession } from '@features/local-http-auth/renderer';
+
 /**
  * Unified API adapter.
  *
@@ -11,7 +13,6 @@
  * The instance is resolved lazily on first property access so that test code
  * can install mocks on `window.electronAPI` before the adapter resolves.
  */
-
 import { HttpAPIClient } from './httpClient';
 
 import type { ElectronAPI } from '@shared/types/api';
@@ -23,7 +24,7 @@ import type { ElectronAPI } from '@shared/types/api';
  * - Standalone/Docker (page served by the same server): use window.location.origin
  *   to avoid cross-origin issues (localhost vs 127.0.0.1)
  */
-function getHttpBaseUrl(): string {
+export function getHttpBaseUrl(): string {
   const params = new URLSearchParams(window.location.search);
   const explicitPort = params.get('port');
   if (explicitPort) {
@@ -32,22 +33,7 @@ function getHttpBaseUrl(): string {
   return window.location.origin;
 }
 
-function getHttpAccessToken(): string {
-  const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const fromUrl = fragment.get('access_token')?.trim();
-  if (fromUrl) {
-    window.sessionStorage.setItem('agent-teams-http-access-token', fromUrl);
-    fragment.delete('access_token');
-    const nextHash = fragment.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`
-    );
-    return fromUrl;
-  }
-  return window.sessionStorage.getItem('agent-teams-http-access-token')?.trim() ?? '';
-}
+export const getHttpAccessSession = () => getBrowserAccessSession(getHttpBaseUrl());
 
 let httpClient: HttpAPIClient | null = null;
 
@@ -56,7 +42,7 @@ function getImpl(): ElectronAPI {
   // Lazily create the HTTP client only when actually needed (browser mode).
   // Caching avoids creating multiple EventSource connections.
   if (!httpClient) {
-    httpClient = new HttpAPIClient(getHttpBaseUrl(), getHttpAccessToken());
+    httpClient = new HttpAPIClient(getHttpBaseUrl());
   }
   return httpClient;
 }
