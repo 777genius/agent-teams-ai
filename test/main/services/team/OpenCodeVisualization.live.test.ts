@@ -17,6 +17,7 @@ import {
 import {
   createOpenCodeLiveHarness,
   getRuntimeTranscript,
+  isOpenCodeLiveRelayComplete,
   type OpenCodeOriginalTranscriptBinding,
   waitForOpenCodeLanesStopped,
   waitForOpenCodeMemberIdle,
@@ -175,7 +176,7 @@ async function runCase(context: CaseContext, memberName: string, variants = fals
         ) {
           throw new Error(`OpenCode delivery failed: ${JSON.stringify(lastRelay)}`);
         }
-        return lastRelay.relayed === 1;
+        return isOpenCodeLiveRelayComplete(lastRelay);
       },
       180_000,
       1500
@@ -282,6 +283,7 @@ liveDescribe('OpenCode chat visualization live e2e', () => {
     const teamName = `openui-live-${Date.now()}`;
     const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || 'opencode/big-pickle';
     const progress: unknown[] = [];
+    const cleanupErrors: unknown[] = [];
     let harness: Harness | undefined;
     let passed = false;
     await fs.mkdir(projectPath, { recursive: true });
@@ -367,29 +369,40 @@ liveDescribe('OpenCode chat visualization live e2e', () => {
       });
       throw error;
     } finally {
-      await save(tempDir, 'result', {
-        passed,
-        teamName,
-        selectedModel,
-        progress,
-        scope:
-          'Real app main services/runtime/MCP and durable chat inbox; Electron renderer not launched.',
-      });
+      const cleanup = async (action: () => Promise<void>): Promise<void> => {
+        try {
+          await action();
+        } catch (error) {
+          cleanupErrors.push(error);
+        }
+      };
       try {
         if (harness) {
-          try {
-            await harness.svc.stopTeam(teamName);
-          } finally {
-            await harness.dispose();
-          }
-          await waitForOpenCodeLanesStopped(teamName);
+          const activeHarness = harness;
+          await cleanup(() => activeHarness.svc.stopTeam(teamName));
+          await cleanup(() => activeHarness.dispose());
+          await cleanup(() => waitForOpenCodeLanesStopped(teamName));
         }
+        await save(tempDir, 'result', {
+          passed: passed && cleanupErrors.length === 0,
+          teamName,
+          selectedModel,
+          progress,
+          cleanupErrors: cleanupErrors.map((error) =>
+            error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+          ),
+          scope:
+            'Real app main services/runtime/MCP and durable chat inbox; Electron renderer not launched.',
+        });
       } finally {
         setClaudeBasePathOverride(null);
         if (process.env.OPENCODE_E2E_KEEP_TEMP === '1')
           console.info(`[OpenCodeVisualization.live] preserved ${tempDir}`);
         else await fs.rm(tempDir, { recursive: true, force: true });
       }
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(cleanupErrors, 'OpenCode visualization live cleanup failed');
     }
   }, 900_000);
 });

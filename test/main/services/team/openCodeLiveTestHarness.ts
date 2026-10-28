@@ -41,6 +41,7 @@ import {
 } from '../../../../src/main/utils/pathDecoder';
 
 import type { HttpServices } from '../../../../src/main/http';
+import type { LiveInboxRelayResult } from '../../../../src/main/services/team/provisioning/TeamProvisioningLiveInboxRelayRouting';
 import type { TaskRef } from '../../../../src/shared/types';
 
 const DEFAULT_ORCHESTRATOR_CLI =
@@ -301,6 +302,19 @@ export async function waitUntil(
   const diagnostics = getDiagnostics ? await getDiagnostics() : null;
   throw new Error(
     `Timed out after ${timeoutMs}ms waiting for condition${diagnostics ? `\n${diagnostics}` : ''}`
+  );
+}
+
+export function isOpenCodeLiveRelayComplete(
+  relay: Pick<LiveInboxRelayResult, 'relayed' | 'lastDelivery'>
+): boolean {
+  // A watchdog can commit this exact inbox row between live-test polls. A
+  // subsequent scoped relay reports durable acceptance without relaying again.
+  return (
+    relay.relayed >= 1 ||
+    (relay.lastDelivery?.delivered === true &&
+      relay.lastDelivery.accepted === true &&
+      relay.lastDelivery.responsePending === false)
   );
 }
 
