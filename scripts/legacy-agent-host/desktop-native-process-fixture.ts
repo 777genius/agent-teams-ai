@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { copyFile, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   prepareDesktopBackendFixture,
@@ -66,18 +66,24 @@ export async function prepareProcessFixture(
   options: {
     pnpmEntry: string;
     nativeClaude: { path: string; sha256: string; modelUrl: string };
+    processArtifact?: { directory: string; manifestSha256: string };
   }
 ) {
+  const processArtifact = options.processArtifact ?? PROCESS_ARTIFACT;
+  if (options.processArtifact) {
+    assert.match(processArtifact.directory, /^\/private\/tmp\/TEST-[^/]+\//);
+    assert.equal(await realpath(processArtifact.directory), processArtifact.directory);
+  }
   assert.equal(
-    await fileDigest(join(PROCESS_ARTIFACT.directory, 'manifest.json')),
-    PROCESS_ARTIFACT.manifestSha256
+    await fileDigest(join(processArtifact.directory, 'manifest.json')),
+    processArtifact.manifestSha256
   );
   const fixture = await prepareDesktopBackendFixture(repo, {
     ...options,
     seedUiTask: false,
   });
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
-  profile.processCustody = PROCESS_ARTIFACT;
+  profile.processCustody = { ...processArtifact };
   const team = profile.teams[0]!;
   for (const grant of team.grants)
     if (!grant.permissions.includes('process.write')) grant.permissions.push('process.write');
@@ -158,7 +164,7 @@ export async function prepareProcessFixture(
         scripts,
         profileSha256: pins.profileSha256,
         descriptorSha256: pins.descriptorSha256,
-        processArtifact: PROCESS_ARTIFACT,
+        processArtifact,
       },
       null,
       2

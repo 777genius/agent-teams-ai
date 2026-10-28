@@ -2,6 +2,7 @@
 export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts',
   'packages/legacy-agent-host/tests/registered-process-build-selection.test.ts',
+  'scripts/legacy-agent-host/qualify-process-normal-sdk.ts',
   'src/renderer/store/team/taskDetailReadAuthority.ts',
   'src/renderer/components/ui/MemberSelect.tsx',
   'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts',

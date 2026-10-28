@@ -5831,3 +5831,40 @@ two-file fix. It is a reproduced source race; attribution of the original27f
 Claude UI failure to this race remains an inference until a fresh UI run.
 Unfinished Codex and P7 harness work is excluded from this commit. Current final
 canonical/native/SDK/packed acceptance remains required; no old run is relabelled.
+
+### Prepared normal SDK process qualification
+
+The exact earlier core+main source624a now has its own successful canonical
+[run40694908161](https://github.com/777genius/agent-teams-ai/actions/runs/40694908161),
+modeFull=true/reuse=false. Root suites24,011 PASS /98 SKIP /0 FAIL (2,046 passed
+files /37 skipped), controller423, MCP74, Host800, scripts179, feedback119,
+release9 and MCP E2E24 passed. Validate included workspace types and build PASS;
+this closes the resource-limited local type gap for624a. These results do not
+qualify the later Launch fix or subsequent Codex/P7 drafts.
+
+The Launch readiness correction was committed and immediately pushed as
+`d41609ef099e6ddb9757f16ddfa107a0d8ab98d3`, without unfinished harness work.
+A separate bounded P7 helper slice now prepares an ordinary SDK process
+registration/Stop proof. It extracts the existing registration prefix and adds
+one normal path: one terminate of the original saved processRef/stable command
+ID, then lookup of that same command until actual observed absence. The primary
+requires SIGTERM rather than a natural TTL exit; the neighbor remains healthy
+until ordinary Runtime Stop, after which both original lifecycles and Runtime
+release must close. EOF-only Host exit is observed before close(), so an
+unacknowledged fallback cannot masquerade as a clean original exit.
+
+The private entrypoint pins the captured Node/Host source+dist, exact SDK,
+private TEST Corepack and genuine process artifact manifest/binary/C. Generated
+profile, descriptor, copied service executable and seed join the before-native
+and final source-freeze pins. A secondary final pin failure remains visible even
+if an earlier lifecycle assertion failed. The existing crash path/default
+selection stays historical and unchanged; root911 is not adopted or released.
+Only explicit private artifact selection enables the new qualification actor.
+
+Independent review accepted the three helper files after the generated-input
+pinning correction. Strict legacy-host scripts typechecking, scoped lint, Node
+syntax and whitespace checks passed. The new entrypoint is included in the
+existing finite source inventory. This commit prepares the actor only; workflow
+wiring and actual ancestry/SDK/packed execution are still pending. No native
+PASS, P7/support claim, shipping activation or M19 debt closure follows from
+these local checks. Unfinished Codex changes are excluded from this slice.
