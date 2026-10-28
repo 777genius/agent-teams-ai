@@ -48,15 +48,28 @@ export function uiPalette(body: Row): UiPalette {
   return { tools, ...(executors[0] ? { exec: executors[0] } : {}) };
 }
 
+const literalEscapes: Readonly<Record<string, string>> = {
+  '<': '\\u003c',
+  '>': '\\u003e',
+  '\u2028': '\\u2028',
+  '\u2029': '\\u2029',
+};
+/** JSON data embedded in the fixed TEST script, including non-ASCII separators. */
+function codeModeLiteral(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  if (typeof serialized !== 'string') throw new TypeError('TEST Code Mode value is not JSON-serializable');
+  return serialized.replace(/[<>\u2028\u2029]/g, (char) => literalEscapes[char]!);
+}
+
 /** A single Code Mode call invokes exactly one original authoritative action. */
 export function codeModeCall(exec: UiTool, action: { name: string; input: Row }, callId: string): Row {
   assert.match(action.name, /^(?:exec_command|task_create|task_set_owner|task_start|task_add_comment|task_complete|message_send)$/);
   const names = action.name === 'exec_command' ? ['exec_command']
     : [`mcp__team__${action.name}`, `team__${action.name}`];
-  const input = `const allowed = ${JSON.stringify(names)};\n` +
+  const input = `const allowed = ${codeModeLiteral(names)};\n` +
     'const selected = ALL_TOOLS.filter(({ name }) => allowed.includes(name));\n' +
     'if (selected.length !== 1 || typeof tools[selected[0].name] !== "function") throw new Error("TEST exact native tool unavailable");\n' +
-    `text(JSON.stringify(await tools[selected[0].name](${JSON.stringify(action.input)})));`;
+    `text(JSON.stringify(await tools[selected[0].name](${codeModeLiteral(action.input)})));`;
   return { type: 'custom_tool_call', call_id: callId, name: exec.name,
     ...(exec.namespace === undefined ? {} : { namespace: exec.namespace }), input };
 }

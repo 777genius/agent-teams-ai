@@ -121,6 +121,24 @@ test('Code Mode output and exact linkage reject errors, yielding, duplicates, wr
   assert.throws(() => originalCallIds([{ ...call, call_id: 'native_CODEX_TEAM_ONE_0' }]));
 });
 
+test('Code Mode arguments preserve closing tags, quotes, controls and Unicode separators as data', async () => {
+  const exec = uiPalette({ input: [declaration()] }).exec!;
+  const input = { commandId: 'TEST-literal-fidelity', to: 'user',
+    text: '</script><script>TEST literal</script> "quote" \\ backslash \b\f\n\r\t\0\u2028\u2029' };
+  const call = codeModeCall(exec, { name: 'message_send', input }, 'TEST-original-literal');
+  assert.doesNotMatch(String(call.input), /[<\u2028\u2029]/u, 'embedded data uses escaped source characters');
+  assert.ok(String(call.input).includes('\\u003c/script\\u003e'), 'closing tag data escapes both brackets');
+  const invoked: Row[] = [], printed: string[] = [];
+  await new vm.Script(`(async()=>{${String(call.input)}\n})()`).runInNewContext({
+    ALL_TOOLS: [{ name: 'mcp__team__message_send' }],
+    tools: { mcp__team__message_send: async (args: Row) => { invoked.push(args); return receipt(); } },
+    text: (value: string) => printed.push(value),
+  });
+  assert.equal(invoked.length, 1, 'one original action receives literal data');
+  assert.deepEqual({ ...invoked[0]! }, input);
+  assert.deepEqual(printed, [JSON.stringify(receipt())], 'one original action result is printed');
+});
+
 test('documented non-prefixed MCP naming is selected only when unique; ambiguity invokes no tool', async () => {
   const exec = uiPalette({ input: [declaration()] }).exec!;
   const call = codeModeCall(exec, { name: 'message_send', input: { commandId: 'TEST-exact', text: 'TEST reply' } }, 'TEST-original');

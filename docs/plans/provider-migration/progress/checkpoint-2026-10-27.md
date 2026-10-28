@@ -6103,3 +6103,45 @@ old7fec/624a results are not transferred. Draft and original root911 HOLD remain
 Final delivery source-size guard passed4,638 files with the unchanged143 frozen
 exceptions and800-line limit. Affected log SHA256 is
 `273b881d3a3f4453407f6d442acf4c14249f1e7fb0a8261b22974c2b1fda49fb`.
+
+
+### CodeQL592 TEST literal serialization boundary
+
+The retained-rich product correction was committed and immediately pushed as
+`e9102971bbc4d0e5a35c3f6179e86f5ec361d3e1`. Actual CodeQL on older7fec reported
+189 open instances against188 shared with main;592 was the only branch-new
+candidate. The inherited permissions finding591 was separately corrected in
+47a52f36b; neither scanner resolution is inferred from local edits.
+
+Independent review of592 found no demonstrated Node VM injection: JSON.stringify
+already encodes quotes, backslashes and controls. The bounded TEST-only change
+adds one private serialization helper escaping raw angle brackets and Unicode
+line/paragraph separators at the two existing data insertions. No suppression,
+production/provider/archive change, extra authoritative action or budget change.
+One VM fidelity case verifies original payload bytes and exactly one original
+nested call/result. Baseline fidelity passed5/5 before this helper; that is not
+an exploit demonstration or a RED security regression. The first post-change
+focused run was13/14 because an overbroad new assertion also rejected the fixed
+script's static arrow token; the guard now scopes its check to embedded-data
+characters, preserving the action and literal-fidelity assertions.
+
+The independently source-accepted final helper hash is
+`f1e6115cd5e594f3901064ca6bd7bc928590a7303123a092df280e8ec98cde7f`,
+and test hash
+`633669abf4ff346d484ace1ab89c75645914b9dc627acd3f20610bb852478e55`.
+Both existing files already belong to the finite source/default test inventories.
+Final local gates and fresh scanner/native/canonical outcomes remain separate;
+Draft and original root911 HOLD are unchanged.
+
+Final sequential author gates completed with selected Node24.21.0: the same
+three focused protocol/default/UI files passed14/14,0 FAIL /0 SKIP; strict Host
+test types, strict legacy scripts types, two-file lint and scoped diff check all
+exited0. No new build/native/Desktop attempt was added. The handoff census is
+`checks/codeql592-handoff.json`, SHA256
+`b5f0577f410581eec4827d24f1f1905b08e62474bbd269442b4677ceddfcca27`;
+focused log SHA256 is
+`21c6fc0e7c74a6ae6ffca65ad6206c135fc80c41153e0ef70012e9af2ff98daa`.
+Delivery source-size guard passed4,638 files with the unchanged143 frozen
+exceptions/800-line cap. Both accepted source hashes remain exact.
+C independently rechecked the final hashes,14-test log and original sequential
+exit statuses and accepted the final source/gate boundary before delivery.
