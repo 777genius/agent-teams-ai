@@ -2377,6 +2377,18 @@ path rebuilds archives and replaces the draft, invalidating retained evidence.
 This exact-ID promotion applies only to runtime assets; publish the app through
 its updater-aware workflow in step 5.
 
+After the binary verification run succeeds, the orchestrator's
+`Promote Verified Source Releases` workflow publishes the matching source draft.
+It checks the public stable binary delivery, exact source commit, checksum metadata,
+and anonymous asset URLs. Source drafts whose binaries are still drafts or
+prereleases stay drafts. Source publication does not rebuild binaries or update
+`runtime.lock.json`; it can be retried with:
+
+```bash
+gh workflow run promote-source-releases.yml \
+  --repo 777genius/agent_teams_orchestrator --ref main
+```
+
 After publication succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
@@ -2392,11 +2404,17 @@ After publication succeeds, update this repo's `runtime.lock.json`:
   supported OpenCode V2 range and qualified versions). The app derives V2 recognition
   and eligibility only from it.
 
-Then verify the lock points at real uploaded assets:
+Then verify the lock points at public stable assets. An authenticated `gh`
+listing can see drafts and does not prove anonymous availability:
 
 ```bash
 RUNTIME_TAG="$(node scripts/runtime-lock.mjs release-tag)"
 RUNTIME_REPO="$(node scripts/runtime-lock.mjs release-repository)"
+
+# No Authorization header: this must work for a fresh user without GitHub login.
+curl --fail --silent --show-error \
+  "https://api.github.com/repos/$RUNTIME_REPO/releases/tags/$RUNTIME_TAG" \
+  | jq -e '.draft == false and .prerelease == false'
 
 gh release view "$RUNTIME_TAG" \
   --repo "$RUNTIME_REPO" \
@@ -2411,7 +2429,7 @@ node scripts/stage-runtime.mjs
 ```
 
 Do not create standalone runtime releases in the frontend repository. The source tag is in the
-private `777genius/agent_teams_orchestrator` repository, while the downloadable release is in
+`777genius/agent_teams_orchestrator` repository, while the downloadable release is in
 public `777genius/agent_teams_orchestrator_binaries`. The frontend release workflow stages those
 archives into packaged app installers.
 
