@@ -15,6 +15,63 @@ export const ownerRoutingRow = (value: unknown): OwnerRoutingRow => {
 export const ownerRoutingJson = async (path: string): Promise<OwnerRoutingRow> =>
   ownerRoutingRow(JSON.parse(await readFile(path, 'utf8')));
 
+/** Observe the original final startup target before taking byte-exact isolation baselines. */
+export async function waitForDesktopOwnerBackupStartup(options: {
+  root: string;
+  baseline: string;
+  binding: OwnerRoutingRow;
+  startedAtMs: number;
+  deadline: number;
+  assertCurrent(): void;
+}) {
+  const teamName = String(options.binding.teamName);
+  assert.match(teamName, /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/);
+  const manifestRelative = join('backups/teams', teamName, 'manifest.json');
+  const baselineManifest = await ownerRoutingJson(join(options.baseline, manifestRelative));
+  const baselineRegistry = await ownerRoutingJson(join(options.baseline, 'backups/registry.json'));
+  const baselineEntry = ownerRoutingRow(ownerRoutingRow(baselineRegistry.teams)[teamName]);
+  assert.equal(baselineManifest.teamName, teamName);
+  assert.equal(baselineManifest.identityId, options.binding.teamId);
+  assert.equal(baselineManifest.status, 'active');
+  assert.deepEqual(ownerRoutingRow(baselineManifest.hostOwner).binding, options.binding);
+  assert.deepEqual(ownerRoutingRow(baselineManifest.hostOwner).held, []);
+  assert.equal(baselineEntry.identityId, options.binding.teamId);
+  assert.equal(baselineEntry.status, 'active');
+  const manifestPath = join(options.root, 'hoststore', manifestRelative);
+  const registryPath = join(options.root, 'hoststore/backups/registry.json');
+  let observations = 0;
+  for (;;) {
+    options.assertCurrent();
+    assert.ok(Date.now() < options.deadline, 'original startup backup publication deadline');
+    const manifestBytes = await readFile(manifestPath);
+    const registryBytes = await readFile(registryPath);
+    const manifest = ownerRoutingRow(JSON.parse(manifestBytes.toString('utf8')));
+    const registry = ownerRoutingRow(JSON.parse(registryBytes.toString('utf8')));
+    const entry = ownerRoutingRow(ownerRoutingRow(registry.teams)[teamName]);
+    observations++;
+    assert.deepEqual(manifest, { ...baselineManifest, lastBackupAt: manifest.lastBackupAt });
+    assert.deepEqual(registry, {
+      ...baselineRegistry,
+      teams: {
+        ...ownerRoutingRow(baselineRegistry.teams),
+        [teamName]: { ...baselineEntry, lastBackupAt: entry.lastBackupAt },
+      },
+    });
+    const timestamp = Date.parse(String(manifest.lastBackupAt));
+    assert.ok(Number.isFinite(timestamp));
+    if (timestamp >= options.startedAtMs && entry.lastBackupAt === manifest.lastBackupAt)
+      return {
+        manifest: { path: manifestPath, sha256: digest(manifestBytes) },
+        registry: { path: registryPath, sha256: digest(registryBytes) },
+        baseline: options.baseline,
+        binding: structuredClone(options.binding),
+        lastBackupAt: manifest.lastBackupAt,
+        observations,
+      };
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 /** Original single-owner epoch only: save-only admission adds no Runtime or provider. */
 export async function prepareDesktopOwnerRoutingSource(fixture: Fixture): Promise<Fixture> {
   const profile = await ownerRoutingJson(fixture.profilePath);
@@ -120,6 +177,22 @@ export async function prepareDesktopOwnerRoutingContinuation(fixture: Fixture) {
     descriptor,
     switched,
     bOwner,
+    waitForPublishedBBackup(
+      published: OwnerRoutingRow,
+      startedAtMs: number,
+      deadline: number,
+      assertCurrent: () => void
+    ) {
+      const record = ownerRoutingRow(published.record);
+      return waitForDesktopOwnerBackupStartup({
+        root: bRoot,
+        baseline: join(proofRoot, 'unavailable-a-b-product'),
+        binding: { backendId: owner.ownerId, teamId: record.teamId, teamName: record.teamName },
+        startedAtMs,
+        deadline,
+        assertCurrent,
+      });
+    },
     async install(name: 'default-b' | 'unavailable-a' | 'rollback-a', value: OwnerRoutingRow) {
       const bytes = JSON.stringify(value);
       const path = join(proofRoot, name + '-descriptor.json');

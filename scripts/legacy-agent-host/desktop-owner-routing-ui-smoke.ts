@@ -449,6 +449,12 @@ export async function runDesktopOwnerRoutingContinuation(
               bPublic
             );
             assert.deepEqual(await readFile(bBindingPath!), bBindingBytes);
+            epoch.startupBackup = await prepared.waitForPublishedBBackup(
+              publishedB!,
+              Number(epoch.startedAtMs),
+              discoveryDeadline,
+              assertCurrent
+            );
           }
         }
         const select = async (handle: Row) => {
