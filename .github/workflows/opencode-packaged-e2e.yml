@@ -33,6 +33,7 @@ on:
         type: string
         default: ''
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - .github/workflows/opencode-packaged-e2e.yml
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
@@ -56,6 +57,11 @@ on:
 
 permissions:
   contents: read
+
+# Draft pushes cancel stale PR work; manual, push and scheduled runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate-native-inputs:
@@ -99,7 +105,7 @@ jobs:
       RUNTIME_BUILD_DISPATCH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   packaged-windows:
-    if: inputs.native_sdk_ref == '' && !inputs.native_source_only && !inputs.native_provider_only
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && inputs.native_sdk_ref == '' && !inputs.native_source_only && !inputs.native_provider_only
     runs-on: windows-latest
     timeout-minutes: 60
     steps:

@@ -143,7 +143,8 @@ function selectedWindowsV2PackageBinary(binaryPath: string): string | null {
 }
 
 const OPENCODE_V2_PACKAGE_VERSION = /^2\.\d+\.\d+$/;
-const OPENCODE_V2_NPM_WRAPPER_PACKAGE = '@opencode/cli';
+/** npm wrapper package whose `bin/opencode.exe` links to a platform package delivery. */
+export const OPENCODE_V2_NPM_WRAPPER_PACKAGE = '@opencode/cli';
 
 function readOpenCodePackageManifest(
   manifestPath: string
