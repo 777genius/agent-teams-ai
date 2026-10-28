@@ -37,6 +37,14 @@ let browser: ChildProcess | undefined;
 let browserObserved = false;
 let browserClosed = false;
 let chromePath = '';
+let chromeLauncherPath = '';
+let chromeBinaryObserved = false;
+let failureCode: string | null = null;
+let failureFrame: string | null = null;
+const chromeFileFacts: Record<
+  string,
+  { uid: number; mode: string; file: boolean; symlink: boolean }
+> = {};
 let chromeVersion = '';
 let display: ChildProcess | undefined;
 let succeeded = false;
@@ -219,25 +227,39 @@ try {
   await access(path.join(electronRoot, 'dist', 'electron'));
   // GitHub's Ubuntu image supplies Chrome. Use its canonical native executable,
   // never a downloaded browser or an existing user profile/session.
-  const chromeLauncher = await realpath(
+  phase = 'chrome-resolve-launcher';
+  chromeLauncherPath = await realpath(
     execFileSync('which', ['google-chrome'], { encoding: 'utf8' }).trim()
   );
-  chromePath = await realpath(path.join(path.dirname(chromeLauncher), 'chrome'));
+  phase = 'chrome-resolve-binary';
+  chromePath = await realpath(path.join(path.dirname(chromeLauncherPath), 'chrome'));
+  phase = 'chrome-binary-stat';
   const chromeBinary = await lstat(chromePath);
+  chromeFileFacts.binary = {
+    uid: chromeBinary.uid,
+    mode: (chromeBinary.mode & 0o7777).toString(8),
+    file: chromeBinary.isFile(),
+    symlink: chromeBinary.isSymbolicLink(),
+  };
+  phase = 'chrome-sandbox-stat';
   const chromeSandbox = await lstat(path.join(path.dirname(chromePath), 'chrome-sandbox'));
+  chromeFileFacts.sandbox = {
+    uid: chromeSandbox.uid,
+    mode: (chromeSandbox.mode & 0o7777).toString(8),
+    file: chromeSandbox.isFile(),
+    symlink: chromeSandbox.isSymbolicLink(),
+  };
+  phase = 'chrome-binary-ownership';
   assert(
     chromeBinary.isFile() && chromeBinary.uid === 0 && !(chromeBinary.mode & 0o022),
     'Installed Chrome binary is not root controlled'
   );
+  phase = 'chrome-sandbox-ownership';
   assert(
     chromeSandbox.isFile() && chromeSandbox.uid === 0 && (chromeSandbox.mode & 0o7777) === 0o4755,
     'Installed Chrome sandbox is not setuid'
   );
-  chromeVersion = execFileSync(chromePath, ['--version'], { encoding: 'utf8' }).trim();
-  assert(
-    /^Google Chrome(?: for Testing)? \d+\.\d+\.\d+\.\d+$/.test(chromeVersion),
-    'Unexpected installed Chrome version'
-  );
+  phase = 'source-binding-preflight';
   for (const relative of modulePaths) {
     if (!relative.startsWith('dist-electron/'))
       sourceHashes[relative] = hash(await readFile(path.join(checkout, relative)));
@@ -311,6 +333,20 @@ try {
       httpServer: { enabled: true, port: 3456 },
     }),
     { mode: 0o600, flag: 'wx' }
+  );
+  // The runner-image contract tests google-chrome, its supported launcher.
+  // Preserve its CHROME_WRAPPER/channel environment instead of invoking the inner
+  // binary directly. Even --version gets the owned synthetic HOME.
+  phase = 'chrome-version';
+  chromeVersion = execFileSync(chromeLauncherPath, ['--version'], {
+    encoding: 'utf8',
+    env,
+    timeout: 10_000,
+  }).trim();
+  phase = 'chrome-version-contract';
+  assert(
+    /^Google Chrome(?: for Testing)? \d+\.\d+\.\d+\.\d+$/.test(chromeVersion),
+    'Unexpected installed Chrome version'
   );
   phase = 'xvfb';
   display = spawn('Xvfb', ['-displayfd', '3', '-screen', '0', '1440x1000x24', '-nolisten', 'tcp'], {
@@ -396,7 +432,7 @@ try {
   const chromeProfile = path.join(home, 'chrome-profile');
   await mkdir(chromeProfile, { mode: 0o700 });
   browser = spawn(
-    chromePath,
+    chromeLauncherPath,
     [
       '--headless=new',
       '--remote-debugging-address=127.0.0.1',
@@ -413,6 +449,11 @@ try {
     assert(browser && isLive(browser), 'Owned Chrome exited before CDP');
     try {
       await ownedBrowserSocket();
+      assert(
+        browser?.pid && (await realpath(`/proc/${browser.pid}/exe`)) === chromePath,
+        'Owned Chrome process image differs from installed binary'
+      );
+      chromeBinaryObserved = true;
       browserObserved = true;
       return true;
     } catch {
@@ -436,8 +477,26 @@ try {
   await mkdir(artifactDir, { recursive: true });
   for (const name of ['BEFORE.json', 'RESULT.json'])
     await copyFile(path.join(out, name), path.join(artifactDir, name));
-} catch {
+} catch (error) {
   succeeded = false;
+  const code =
+    record(error) &&
+    typeof error.code === 'string' &&
+    ['ENOENT', 'EACCES', 'EPERM', 'ENOTDIR', 'ERR_ASSERTION', 'ETIMEDOUT', 'EADDRINUSE'].includes(
+      error.code
+    )
+      ? error.code
+      : 'OPERATION_FAILED';
+  const status =
+    record(error) && typeof error.status === 'number' && Number.isSafeInteger(error.status)
+      ? ':exit=' + error.status
+      : '';
+  failureCode = phase + ':' + code + status;
+  const frame =
+    error instanceof Error
+      ? error.stack?.match(/\/scripts\/e2e\/local-http-auth\/run\.mts:(\d+):(\d+)/)
+      : null;
+  failureFrame = frame ? 'run.mts:' + frame[1] + ':' + frame[2] : null;
 } finally {
   browserClosed = await closeBrowser();
   appClosed = await closeApp();
@@ -464,6 +523,8 @@ try {
   const result = {
     status: succeeded && appClosed && browserClosed && displayStopped ? 'PASS' : 'FAIL',
     phase,
+    failureCode,
+    failureFrame,
     checkout,
     commit: execFileSync('git', ['rev-parse', 'HEAD'], {
       cwd: checkout,
@@ -477,6 +538,9 @@ try {
     browserObserved,
     browserClosed,
     chromePath,
+    chromeLauncherPath,
+    chromeBinaryObserved,
+    chromeFileFacts,
     chromeVersion,
     appClosed,
     displayStopped,
@@ -491,7 +555,7 @@ try {
     await receipt.close();
   }
   process.stdout.write(
-    `local-http-auth-desktop: ${result.status}; phase=${phase}; appClosed=${appClosed}; browserClosed=${browserClosed}; displayStopped=${displayStopped}\n`
+    `local-http-auth-desktop: ${result.status}; phase=${phase}; code=${failureCode ?? 'none'}; appClosed=${appClosed}; browserClosed=${browserClosed}; displayStopped=${displayStopped}\n`
   );
   if (result.status !== 'PASS') process.exitCode = 1;
 }
