@@ -4342,3 +4342,259 @@ bytes; no further edit or optional test is requested. README/checkpoint claims
 are checked against all original447 receipts and retain9/10, partial Review,
 pending-open/active-input UNKNOWN, absent failed HTTP body and packed/M19 limits.
 The two TEST files and root-owned progress/README are the only pending changes.
+
+
+### a98 carrier candidate committed, immediately pushed and dispatched once
+
+The four reviewed paths are committed as
+`a98b4a10939f4d9bd72b2fd6b374ec63cc5a321c`
+(`test: recognize exact Task notices inside SDK reminders`) and immediately pushed
+normally. Lead and root both verify exact local/remote agreement and clean index/
+worktree; the two reviewed source hashes remain unchanged. Root preflight also
+checks Draft/MERGEABLE, exact c4c ancestry, the four-path commit and unchanged
+provider archive SHA2aa5d730d6ed8c237b3d94a84ea462c49f773a69b20344e04fa486a99fcfbaae.
+
+Root dispatches exactly one new combined ci.yml run with stage1_desktop=true at
+2026-10-28T03:56:51.939913Z:
+https://github.com/777genius/agent-teams-ai/actions/runs/40629530746 .
+Its reported head is exact a98b4a10939f4d9bd72b2fd6b374ec63cc5a321c. Initial
+native jobs are import-only122622403422, Resume122622403426,
+Member122622403437, Mixed122622403456, Create122622403458,
+pending Quit122622403490, Taskboard122622403509, active Quit122622403579,
+import Launch122622403636 and Review122622403643. These are pending results,
+not transferred447 PASS claims. Root owns original native artifacts; the
+implementation lead independently monitors canonical gates. No retry, cancellation
+or second dispatch is requested.
+
+
+### a98 final integrated source review accepted; current GitHub discussions clear
+
+The independent final whole-composition check verifies exact pushed a98 HEAD and
+the two frozen source hashes. The new private matcher has exactly one call inside
+the Mixed notice reader, installed only by existing lead/Bob/Carol Mixed closures.
+Nonmixed provider paths, independent model probes, business-step limits, cap16 and
+final input census remain unchanged. No production action, generation, readiness,
+Task-owner, import, backup, drain or custody authority changes. Prior accepted
+whole-source b533/447 reviews compose with this finite correction. No unresolved
+concrete source blocker or additional test/gate is identified; native qualification
+remains separate. A fresh gh read confirms Draft/MERGEABLE and both existing
+CodeQL review threads resolved/outdated, with no unresolved review thread.
+
+
+### a98 original macOS selected-Node gate and first two raw Desktop results
+
+The original import-only job122622403422 executes its selected-Node command at
+2026-10-28T03:58:49.542Z:30 tests,30 PASS /0 FAIL /0 SKIP, duration1,213.80ms.
+Its own sw_vers/uname at03:57:52Z records macOS15.7.5 /24G624 /arm64 immediately
+beside exact a98b4a10939f4d9bd72b2fd6b374ec63cc5a321c. All three typed lint jobs
+also complete SUCCESS: main122622714930, renderer122622715023 and features
+122622715061. Remaining canonical/native jobs are still pending at this entry.
+
+Create artifact12790926547/root9K7VnM has PASS receipt
+`12b6116a487c9f48435939b01d9f6c643fb84f03acedac2f72b0729ae4cea230`.
+Root recomputes both1,402-source lists against exact current a98 bytes, raw
+profile/descriptor, screenshot, both event journals and all four released
+management-record digests. Original input7114444e-dc40-5756-b5f5-91b8040dc4df
+succeeds and is unchanged in closed/sealed/released Runtime. Exact admitted
+outbox/inbox/fingerprint/operation, seven completed command fingerprints, physical
+completed Task, eight Opus4.6/medium business steps and exact ONE output verify.
+Three model-probe observations are distinct from business input. Original Stop
+captures native child4850 under Host3963 before release. Appgroup3864 uses
+SIGTERM and ends empty with captured Host absent. Six raw sentinels are allowed;
+one original post-Quit/cleanup Codex --version call is retained, zero refused.
+No natural-exit or zero-late claim is transferred from another attempt.
+
+Import-only artifact12790378812/rootyiPeSe has PASS receipt
+`9722c9a939e21da32c04663e42133c90e7c9f78c8aa297a91329deb7a75530bc`.
+Root recomputes snapshot/import fingerprints, seven included source payloads,
+eight destination byte images, unchanged source census, physical imported Task/
+origin and all four backup resource/archive entries. Four original source JSONs
+are separately packaged/rehashed; three original blob paths are not packaged,
+while embedded payload and destination bytes match. Both released model-probe
+records/digests verify. No Launch, target Runtime or business input occurs; base
+Runtime has null config/zero inputs. Both1,402-source lists, all five PNGs, event
+journal, raw profile/descriptor and six allowed sentinels verify, with zero late/
+refused calls. Appgroup3881 uses SIGTERM and ends empty; captured Host4027 is absent.
+These are own a98 receipts and raw checks, not inherited447 results.
+
+
+### Final bounded plan check: packed P7/M17 and original M19 remain separate
+
+The independent critic reads the existing P7/P8/DoD, compatibility matrix and
+retained handoffs, and finds no already-required safe available closure step
+omitted from this task. This is source/handoff review, not a fresh rehash of the
+historical external retention roots, which are not mounted here.
+
+Current packaged custody selection validates darwin/arm64/napi8/build24G90, and
+DarwinRegisteredProcess also checks the actual native osBuild and original identity.
+Candidate-native validates/copies that selected artifact. Merely rebuilding a
+manifest whose build literal remains24G90 on actual24G624 does not qualify the
+new tuple. Unsigned candidate construction is possible; current packed native
+qualification remains distinct. The historical packed existing Launch/Relaunch
+handoff belongs to source3b351f32474111bb9bd7943d1e6b5a06a3da5e84,
+jobfa0946d2084fee8c072bcb20baac7c82, capture
+cdb9e7476b45a90257d5ad02b78b62b9f2c7dedcc7a84aae247793bdb6e03145 and retention
+119d789b223085fbe57e853ef81e92e893b2bef045ee1625eaf799c08b655d8c.
+Its explicit exclusions prevent transfer to later production/other OS tuples or
+successor native-custody/natural-exit qualification.
+
+Original M19 job911fe6c78626b3f36b881133bd45bddc retains receipt
+8ae969880dfc553ee63c5a6a81112de66e43bbf8b301e484f5854391e03e375a and
+INCOMPLETE/custody HOLD. Scoped cold read-only job3de1d7349df4ecc51d56c2be60fae6c6,
+receipt9209c01a0e6223b554c4991a4e3bbdb54a3cf9a55116250fbb16e8752cf184e6,
+reads the same registered process reference: target absent/Kill0, original gen1
+sealed/detached/held unknown, one retained input, no new input/allocation/replay.
+The handoff explicitly keeps fullM19Qualified=false and kernelOracleNow=
+NOT_PERFORMED. Registered-target absence and a later cold Host's cleanup do not
+establish release of the original SDK root. The separate live Processes UI and
+fresh Quit/Resume receipts qualify their own identities and cannot discharge911.
+No tuple substitution, custody relaxation or new gate is introduced.
+
+
+### a98 canonical finds one concrete shutdown drain omission; original failure preserved
+
+Original root shard4/job122622714941 concludes FAILURE at2026-10-28T04:03:20Z:
+6,174 PASS /1 FAIL /18 SKIP. Its sole failure is TeamBackupService test
+`routes the actual public startup scan through separate original admissions for two ordinary Teams`:
+ENOTEMPTY while removing
+`/tmp/team-backup-service-PThIzQ/teams/test-startup-second/members`.
+No product assertion mismatch or retained competing syscall appears in the final
+failure block. Other root shards pass: shard1 5,810/26 skips, shard2 6,090/36,
+shard3 5,820/17. Original totals are **23,894 PASS /1 FAIL /97 SKIP**. Workspace
+controller421, MCP74, Host794, CI/scripts179 and feedback119 all pass. Validate
+122622714858 passes guard/architecture, downloader9 and MCP stdio24; Windows
+122622714865 passes110 app-lock tests plus1 skip, controller11, ledger/runtime1,247
+plus5 skips and cleanup25. The Full qualification gate is still pending at this
+entry. No original shard or workflow is rerun or cancelled.
+
+Root and two independent reviewers trace a specific production drain gap. The
+public startup scan awaits member materialization, then enqueues two items.
+Queue enqueue detaches its audit append and tracks the promise in the existing
+auditInFlightByTeam map. FileMemberWorkSyncAuditJournal subsequently ensures
+member/journal directories and appends. The test correctly awaits feature.dispose;
+that method drains schedulers and the operation gate, then awaits queue.stop.
+The existing stop loop joins only reconciliation inFlight/settling, omitting its
+already tracked audits. With queued2/running0 it can return before admitted audit
+publication finishes. startBackground=false disables schedulers, not enqueue audit.
+This concrete gap is consistent with ENOTEMPTY; the exact historical late writer
+is not separately captured and is not asserted as a recovered syscall trace.
+
+The prior source acceptance now has this concrete blocker. Both critics accept
+only the finite repair: include the existing audit map in the same stop loop and
+Promise.allSettled snapshot, preserving stopped/timer-clear/queue-clear ordering
+and rereading all collections until settled. No new API, state, lock, timeout,
+cleanup retry or test-only fence is needed. Existing audit finally removes tracked
+promises and empty Team entries; in-flight reconciliation may append its last
+audit while draining, so the loop must recheck. No wait cycle is identified because
+audit publication does not depend on stop completion or discarded queued work.
+The original public startup-scan test and recursive cleanup remain unchanged.
+A deterministic deferred-audit RED and focused GREEN validation are authorized
+before final review/commit. Current a98 native execution continues untouched;
+Taskboard has also completed PASS with its own raw audit pending.
+
+
+### a98 canonical final and two preparation-only Desktop failures
+
+Original Full qualification job122625248468 concludes FAILURE, started
+2026-10-28T04:06:47Z and completed04:07:14Z. Exact original root totals remain
+23,894 PASS /1 FAIL /97 SKIP; only the public startup-scan ENOTEMPTY fails.
+Canonical monitoring stops after this conclusion. All other canonical gates and
+the original macOS30/30 retain their own PASS counts above.
+
+Member job122622403437 starts04:06:05Z and completes failure04:08:04Z. Host,
+controller and MCP builds succeed. The pinned stage-node command starts
+04:07:01.262Z and throws DOMException TimeoutError at04:08:01.312Z. Pending-Quit
+job122622403490 starts04:08:06Z and completes failure04:10:05Z; its corresponding
+stage-node interval is04:09:02.159Z→04:10:02.222Z with the same error. The existing
+stage-node.ts fetch uses AbortSignal.timeout(60_000) against the selected pinned
+nodejs.org archive. TEST package/native preparation, original UI and cold steps
+are skipped in both jobs. Later receipt verification reports missing log files;
+no Member or Pending-Quit receipt/artifact or native business attempt exists.
+
+Root saves the original sanitized job logs, SHA256 respectively
+`a7f68de50fca571e8353178807a7942e6bf9d42d6abc1b4e105e0a16b76e71c4`
+and `94fc79e6554b9ee9a22fa4fa3ad2de821c164f074b7fd90642c01617d81bbcb5`.
+These prove preparation timeouts, not a global network cause or failed native
+custody. No archive checksum, timeout, source URL, acquisition retry or workflow
+is changed. Prior447 Member/Pending PASS is not transferred to these absent
+attempts. Remaining a98 native jobs continue without cancellation or rerun.
+
+
+### a98 full Taskboard own raw audit independently accepted
+
+Artifact12790324644/rootPRXHgs has PASS receipt
+`8a10e2bbacabe8ffeedba40a3a763fe386359f21f84af5f5ec71fb43fd493220`,
+with separately retained original epoch SHA
+`e5b810bace61d20f776655c2d236e5ef14161a1a99e3124db26b48f4924ff0e6`.
+The critic verifies all1,402 source hashes directly against exact a98 Git objects;
+all original/overall before/after lists agree despite the pending local queue fix.
+Original Task2d92a113 and surfacebec1f967 match the passive prerequisite. Exactly
+one Mark resolved click and one completed null commandded43dd4 occur; physical
+Task is Alice/cleared. Original Create/assign/clear receipts and all26 current-A
+Task fingerprints verify. Group/reciprocal dependencies/reload/blocked-Start
+refusal match. The drag receipt follows this actual execution's captured source
+seed133dc041 and dependent target2d92a113, with one gesture/drop announcement.
+
+All nine Review receipts/history prefixes, final completed/none state and four
+once-only inbox notices verify. Notification navigation/deletion preserves the
+same Task; mark-read remains explicitly already read/unavailable. Both71/39-byte
+attachment payloads/hash/metadata/comment/remove paths verify; owner-read/reload/
+retained download digests agree, while the downloaded local file is not packaged.
+F08 verifies all nine single physical calls and raw response JSON/hashes, only the
+explicit cursor omission, same-A stale-product/feed rejection, exact late-A→B
+view/cache preservation, response-loss/gap recovery and restored seam with no
+errors/violations/pending work. Trash/Restore retains immutable content,23 prior
+and two new receipt byte images and both peer Teams. Cross-Team receipts match
+one conversation and exactly-once inbox effects.
+
+All17 product censuses verify1,367 copied-file size/hash/set checks and manifest
+hashes. All original/B bindings, profiles and registry identities match. Unavailable
+A refuses without dispatch or A/B changes; rollback preserves all six B and136 A
+files. Two startup observations establish current-B publication04:05:24.357Z after
+epoch start04:05:15.591Z; entire baseline objects differ only in lastBackupAt,
+retaining exact B identity/active/held-empty/resource state. Twelve PNG hashes
+and24 raw allowed sentinels verify exact13→18→19→24 prefixes, zero late/refused,
+zero native allocation and unchanged provider archive.
+
+This attempt's cleanup differs from447: original wrapper3775 AND default-B8187
+receive SIGTERM; unavailable-A9011 and rollback-A9178 exit naturally0/no signal.
+All four final groups are empty and captured Hosts absent, with two/one/two cold
+Hosts. No all-three-natural-exit claim is transferred from447. This is an own a98
+Taskboard PASS, separate from the canonical drain blocker and absent Member /
+Pending-Quit executions.
+
+
+### Queue audit drain: deterministic RED→GREEN and final exact-diff review
+
+Only existing MemberWorkSyncEventQueue.ts and its existing unit test change.
+Production adds the already tracked auditInFlightByTeam promises to the existing
+stop-loop condition and Promise.allSettled snapshot. It retains stopped=true,
+timer cancellation, queue clearing and existing reconciliation/settling semantics.
+The source is788 lines; no source cap or pin-list expansion occurs. Its original
+1402-entry source pin already exists in desktop-proof-integrated-sources.ts.
+No rmdir, public startup-scan fixture, service lifecycle API, lock, new state,
+timeout, retry or audit-dropping behavior is added.
+
+Before production edit, the new deterministic two-Team queued-only regression
+fails because stop has already resolved while both admitted audit promises are
+held. After the eight-line production diff, the full queue suite passes27/27,
+including the prior timed-out-reconciliation settling test. The unchanged original
+TeamBackupService startup-scan case passes1/1 (71 unrelated tests filtered, not
+claimed as executed). The new50-line test also proves stop remains pending after
+the first append fulfills, completes after the second rejects, never reconciles
+queued work and refuses enqueue after stop; finally releases its own promises.
+Bounded strict queue/test closure TypeScript, scoped fastlint (two files, zero
+diagnostics), source/new-block formatting, diff check and source guard4,626/143/800
+all pass. Unrelated historical test line formatting is preserved.
+
+Frozen production SHA256:
+`630dd7a73bafc72e33acaf5e2136feb45a4378a7cf009da4afbd915104419f1d`.
+Frozen test SHA256:
+`19f7f8861f39254cbdaa1f63339892ec7d27362c8152319f3741c4aee30e327c`.
+Root and independent critic recompute both hashes and reread the final actual
+diff. FINAL ACCEPT: existing audit finally removes each promise/empty map, loop
+rechecking includes final audits from finishing reconciliation, fulfillment and
+rejection both drain, and no new wait cycle is identified. The concrete source
+blocker is resolved by this reviewed correction; original a98 failure remains
+retained. The corrected production candidate requires its own canonical/native
+qualification, separate from accepted a98 Taskboard and other original receipts.

@@ -397,8 +397,12 @@ export class MemberWorkSyncEventQueue {
     this.running.clear();
     this.activeKeys.clear();
     resetMemberWorkSyncLastSettlements();
-    while (this.inFlight.size > 0 || this.settling.size > 0) {
-      await Promise.allSettled([...this.inFlight, ...this.settling]);
+    while (this.inFlight.size > 0 || this.settling.size > 0 || this.auditInFlightByTeam.size > 0) {
+      await Promise.allSettled([
+        ...this.inFlight,
+        ...this.settling,
+        ...[...this.auditInFlightByTeam.values()].flatMap((promises) => [...promises]),
+      ]);
     }
   }
 

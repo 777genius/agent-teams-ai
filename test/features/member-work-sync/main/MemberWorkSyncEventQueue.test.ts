@@ -742,6 +742,56 @@ describe('MemberWorkSyncEventQueue', () => {
     await queue.stop();
   });
 
+  it('drains both queued-only Team audits before stop, including a rejected append', async () => {
+    let releaseFirst!: () => void;
+    let rejectSecond!: (error: Error) => void;
+    const reconcile = vi.fn(async () => undefined);
+    const append = vi.fn(
+      (event: { teamName: string }) =>
+        new Promise<void>((resolve, reject) => {
+          if (event.teamName === 'team-a') releaseFirst = resolve;
+          else rejectSecond = reject;
+        })
+    );
+    const queue = new MemberWorkSyncEventQueue({
+      reconcile,
+      isTeamActive: () => true,
+      auditJournal: { append },
+    });
+    for (const teamName of ['team-a', 'team-b'])
+      queue.enqueue({
+        teamName,
+        memberName: 'alice',
+        triggerReason: 'startup_scan',
+        runAfterMs: 30_000,
+      });
+    expect(queue.getDiagnostics()).toMatchObject({ queued: 2, running: 0 });
+    expect(append).toHaveBeenCalledTimes(2);
+    let stopped = false;
+    const stop = queue.stop().then(() => {
+      stopped = true;
+    });
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(stopped).toBe(false);
+      releaseFirst();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(stopped).toBe(false);
+      rejectSecond(new Error('TEST audit append rejected'));
+      await stop;
+      expect(stopped).toBe(true);
+      expect(reconcile).not.toHaveBeenCalled();
+      expect(
+        queue.enqueue({ teamName: 'team-c', memberName: 'alice', triggerReason: 'startup_scan' })
+      ).toBe(false);
+      expect(append).toHaveBeenCalledTimes(2);
+    } finally {
+      releaseFirst();
+      rejectSecond(new Error('TEST audit cleanup'));
+      await stop;
+    }
+  });
+
   it('waits for a timed-out reconcile to settle during stop', async () => {
     let releaseFirst!: () => void;
     let settled = false;
