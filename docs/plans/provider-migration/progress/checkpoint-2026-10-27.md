@@ -5387,3 +5387,26 @@ The frozen progress denominator and all outstanding native/packed/custody limits
 remain unchanged. A canonical source push and a selected, locally checked fix do
 not close M09/Stage1, the older Claude Resume evidence gap, P7/M17, original M19
 SDK HOLD or vendor-authentication qualification.
+
+### Current main integration before the Codex Resume UI variant
+
+The canonical provider/Host integration was committed as
+`37d29bccd563e82e37f9e84234c3c4d3f0166529` and immediately pushed to the existing
+PR branch. Authenticated PR metadata confirmed that exact remote head, OPEN /
+Draft and mergeable. Its tree is `02d90e06635734f7982aeb0d91620dedc6bd745b`.
+
+Main subsequently advanced to `3f52fdf40ea0b323f76dd1a526b6746a1f637b9e`, five
+commits beyond `c4c576ce`, with a net three-file diagnostics/test delta. A normal
+merge is prepared without conflicts while both Codex UI authors remain paused;
+no uncommitted author work is included. The two new files match main's exact Git
+blobs `f805c2e2` and `7b2942d2`. The merged Windows harness retains all main bytes
+plus the already existing PR-only `BoardTaskLogStreamResponse` import and native
+stream shape guard. Removing only that known prior delta for a read-only hash
+comparison yields main's exact `53d562ab` blob; the merged blob is `c53999ce`.
+
+The existing upstream `opencodeNativeV2TerminalFailure` regression passed8/8,
+exit0, and the staged whitespace check passed. This preserves upstream diagnostic
+code; it does not add a V2 Host driver or claim live V2 qualification. The
+selected Codex provider archive, public contracts and existing V1 scope are
+unchanged. The merge commit will be immediately pushed before either author
+starts the next existing-UI Codex Resume test slice.
