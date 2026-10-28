@@ -24,6 +24,7 @@ const INPUT_FILES = [
   'mcp-server/package.json',
   'mcp-server/tsconfig.json',
   'mcp-server/tsup.config.ts',
+  'mcp-server/deploymentManifest.ts',
   'agent-teams-controller/package.json',
 ];
 
@@ -116,7 +117,8 @@ async function buildCurrentBundle(
         'MCP_BUNDLE_INPUTS_CHANGED: MCP sources changed during the build; retry launch.'
       );
     }
-    await fs.writeFile(path.join(outputDirectory, 'package.json'), '{"type":"module"}\n');
+    // Keep the builder's genuine deployment identity. OpenCode V2 qualifies the
+    // selected MCP entry by its named/versioned package, even for dev bundles.
     const output = await outputHash(entry);
     if (!output) throw new Error('MCP_BUNDLE_MISSING: MCP build did not produce its entrypoint.');
     state.receipt = { inputs, entry, output };

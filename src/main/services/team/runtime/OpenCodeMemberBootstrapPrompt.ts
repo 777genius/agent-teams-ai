@@ -1,5 +1,6 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { protocols } from 'agent-teams-controller';
 
 import type { TeamRuntimeLaunchInput } from './TeamRuntimeAdapter';
 
@@ -57,6 +58,7 @@ export function buildMemberBootstrapPrompt(
     `When you need to message ${messageTargets}, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.`,
     `Always set from="${member.name}" when sending a team message from this ${senderRole}.`,
     'Do not answer team/app messages only as plain assistant text when agent-teams_message_send is available.',
+    protocols.buildChatVisualizationRefreshInstruction(),
     '</agent_teams_app_managed_bootstrap_briefing>',
   ]
     .filter((line): line is string => line !== null)

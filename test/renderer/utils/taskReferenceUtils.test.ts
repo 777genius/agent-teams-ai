@@ -1,15 +1,54 @@
 import {
   buildTaskLinkHref,
   createEncodedTaskReference,
+  extractTaskRefsFromText,
   linkifyTaskIdsInMarkdown,
   parseTaskLinkHref,
   resolveTaskReferenceCandidate,
+  stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
 import { describe, expect, it } from 'vitest';
 
 import type { TaskRef } from '@shared/types';
 
 describe('taskReferenceUtils', () => {
+  it.each(['~~~openui', '```openui-lang', '> ~~~openui'])(
+    'preserves composer task identities after code in %s',
+    (opener) => {
+      const first = createEncodedTaskReference('1', 'canonical-a', 'team-a');
+      const second = createEncodedTaskReference('1', 'canonical-b', 'team-b');
+      const prefix = opener.startsWith('>') ? '> ' : '';
+      const fence = opener.match(/[`~]+/)![0];
+      const raw = `${opener}\n${prefix}root = Stack([Card([TextContent("${first}")])]);\n${prefix}${fence}\n\nAfter ${second}`;
+      const refs = extractTaskRefsFromText(raw, []);
+      const stored = stripEncodedTaskReferenceMetadata(raw);
+
+      expect(refs.map((ref) => ref.taskId)).toEqual(['canonical-a', 'canonical-b']);
+      expect(linkifyTaskIdsInMarkdown(stored, refs)).toBe(
+        stored.replace('After #1', 'After [#1](task://canonical-b?team=team-b&display=1)')
+      );
+    }
+  );
+
+  it('keeps complete composer references aligned across literal code, link labels and trimmed inline chips', () => {
+    const refs = ['a', 'b', 'c', 'd'].map((name) =>
+      createEncodedTaskReference('1', `canonical-${name}`, `team-${name}`)
+    );
+    const raw = `~~~openui\n${refs[0]}\n~~~\n\n\`literal ${refs[1]}\` [task ${refs[2]}](task://1) \`  ${refs[3]}  \``;
+    const stored = stripEncodedTaskReferenceMetadata(raw);
+    expect(linkifyTaskIdsInMarkdown(stored, extractTaskRefsFromText(raw, []))).toBe(
+      '~~~openui\n#1\n~~~\n\n`literal #1` [task #1](task://canonical-c?team=team-c&display=1) [#1](task://canonical-d?team=team-d&display=1)'
+    );
+  });
+
+  it('keeps legacy prose-only pairing when raw task occurrence coverage is incomplete', () => {
+    const ref = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const text = '~~~openui\n#unknown\n~~~\n\n#1';
+    expect(linkifyTaskIdsInMarkdown(text, [ref])).toBe(
+      '~~~openui\n#unknown\n~~~\n\n[#1](task://canonical-a?team=team-a&display=1)'
+    );
+  });
+
   it('never resolves a canonical ID through another task display ID', () => {
     const tasks = [
       { id: 'other', displayId: '1' },
@@ -57,6 +96,17 @@ describe('taskReferenceUtils', () => {
     );
   });
 
+  it('keeps existing links intact when their labels also contain inline code', () => {
+    const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    expect(
+      linkifyTaskIdsInMarkdown('[see `code` #1](https://example.test) #1', [first, second])
+    ).toBe('[see `code` #1](https://example.test) [#1](task://canonical-b?team=team-b&display=1)');
+    expect(linkifyTaskIdsInMarkdown('[#1 and `code`](task://1) #1', [first, second])).toBe(
+      '[#1 and `code`](task://canonical-a?team=team-a&display=1) [#1](task://canonical-b?team=team-b&display=1)'
+    );
+  });
+
   it('keeps duplicate, encoded, escaped, fenced, and explicit label references paired correctly', () => {
     const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
     const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
@@ -66,15 +116,15 @@ describe('taskReferenceUtils', () => {
     expect(linkifyTaskIdsInMarkdown('[#1 #1](task://1) #1', [first, second, third])).toBe(
       '[#1 #1](task://canonical-a?team=team-a&display=1) [#1](task://canonical-c?team=team-c&display=1)'
     );
-    expect(
-      linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])
-    ).toBe(`[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`);
+    expect(linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])).toBe(
+      `[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`
+    );
     expect(linkifyTaskIdsInMarkdown('[\\#1](https://example.test) #1', [first])).toBe(
       '[\\#1](https://example.test) [#1](task://canonical-a?team=team-a&display=1)'
     );
-    expect(
-      linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])
-    ).toBe('```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)');
+    expect(linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])).toBe(
+      '```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)'
+    );
     expect(
       linkifyTaskIdsInMarkdown('[Task #1](task://canonical-a?team=team-a&display=1)', [first])
     ).toBe('[Task #1](task://canonical-a?team=team-a&display=1)');
@@ -131,6 +181,24 @@ describe('taskReferenceUtils', () => {
     it('does not linkify task-looking text in fenced code blocks', () => {
       const r = linkifyTaskIdsInMarkdown('```\n#aa5d608e\n```\n#bb7c9012');
       expect(r).toBe('```\n#aa5d608e\n```\n[#bb7c9012](task://bb7c9012)');
+    });
+
+    it.each([
+      '~~~openui\nroot = Stack([Card([TextContent("#1 is ready")])]);\n~~~',
+      '> ```openui-lang\n> #1\n> ```',
+      '````text\n```openui\n#1\n```\n````',
+      '- ~~~openui\n  #1\n  ~~~',
+    ])('does not consume task identities from a code block: %s', (block) => {
+      const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+      const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+      expect(linkifyTaskIdsInMarkdown(`#1\n\n${block}\n\n\`#1\``, [first, second])).toBe(
+        `[#1](task://canonical-a?team=team-a&display=1)\n\n${block}\n\n[#1](task://canonical-b?team=team-b&display=1)`
+      );
+    });
+
+    it('preserves task-looking data in an open fence', () => {
+      const text = '~~~openui-lang\nroot = Stack([Card([TextContent("#1';
+      expect(linkifyTaskIdsInMarkdown(text)).toBe(text);
     });
   });
 
