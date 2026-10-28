@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -137,6 +137,38 @@ describe('external OpenCode V2 support installation', () => {
       descriptor.archive.sha256
     );
   }
+
+  it('binds support Bun requirements and every base target to the staged build identity', async () => {
+    const { lock, descriptor } = fixture();
+    const platformKey = `${process.platform}-${process.arch}`;
+    await mkdir(path.join(root, 'local-cli'));
+    await mkdir(path.join(root, 'bun'));
+    await writeFile(path.join(root, 'local-cli/cli.js'), 'TEST base entry');
+    await writeFile(path.join(root, 'bun/bun'), 'TEST base Bun');
+    await writeFile(path.join(root, 'bun/bun.exe'), 'TEST base Windows Bun');
+    await writeFile(path.join(root, 'COMMIT_SHA'), descriptor.sourceCommit);
+    await writeFile(
+      path.join(root, 'opencode-delivery.json'),
+      JSON.stringify({ bunVersion: descriptor.requiredBunVersion })
+    );
+    expect(verifyExternalOpenCodeV2Base(root, lock, platformKey)).toBe(true);
+    descriptor.requiredBunVersion = '1.4.0'; // Valid semver must still match the actual base pin.
+    expect(() => verifyExternalOpenCodeV2Base(root, lock, platformKey)).toThrow(
+      'different base Bun version'
+    );
+    descriptor.requiredBunVersion = '1.3.11';
+    const baseOnlyKey = platformKey === 'win32-arm64' ? 'darwin-x64' : 'win32-arm64';
+    const baseOnly = {
+      ...lock,
+      assets: { ...lock.assets, [baseOnlyKey]: {} },
+      opencodeV2: { qualified: { ...lock.opencodeV2.qualified, [baseOnlyKey]: [] } },
+    };
+    expect(verifyExternalOpenCodeV2Base(root, baseOnly, baseOnlyKey)).toBe(true);
+    await writeFile(path.join(root, 'COMMIT_SHA'), 'b'.repeat(40));
+    expect(() => verifyExternalOpenCodeV2Base(root, baseOnly, baseOnlyKey)).toThrow(
+      'source identities differ'
+    );
+  });
 
   it('preserves native identity, installs verified support once and repairs corruption without in-place edits', async () => {
     const { lock, descriptor, archive } = fixture();

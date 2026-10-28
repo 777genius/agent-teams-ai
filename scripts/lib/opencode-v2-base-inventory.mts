@@ -12,11 +12,18 @@ export function verifyExternalOpenCodeV2Base(
   const descriptors = readOpenCodeV2DeliveryMap(lock);
   if (descriptors === null) return false;
   const descriptor = descriptors[platformKey];
+  // Even an unqualified/base-only target must belong to this same source build.
+  const sourceCommit = Object.values(descriptors)[0]?.sourceCommit;
   if (
-    descriptor &&
-    fs.readFileSync(path.join(runtime, 'COMMIT_SHA'), 'utf8').trim() !== descriptor.sourceCommit
+    !sourceCommit ||
+    fs.readFileSync(path.join(runtime, 'COMMIT_SHA'), 'utf8').trim() !== sourceCommit
   )
     throw new Error('OpenCode V2 support and base runtime source identities differ');
+  const baseDelivery = JSON.parse(
+    fs.readFileSync(path.join(runtime, 'opencode-delivery.json'), 'utf8')
+  ) as { bunVersion?: unknown };
+  if (descriptor && baseDelivery.bunVersion !== descriptor.requiredBunVersion)
+    throw new Error('OpenCode V2 support requires a different base Bun version');
   for (const required of [
     'local-cli/cli.js',
     platformKey.startsWith('win32-') ? 'bun/bun.exe' : 'bun/bun',

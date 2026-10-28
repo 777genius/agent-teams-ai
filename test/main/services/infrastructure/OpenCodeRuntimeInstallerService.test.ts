@@ -506,7 +506,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     ).rejects.toThrow('Could not verify the explicitly selected OpenCode binary');
 
-    expect(targetEnv).toEqual({ OPENCODE_BIN_PATH: binaryPath });
+    expect(targetEnv).toEqual({
+      OPENCODE_BIN_PATH: binaryPath,
+      CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT: path.join(
+        tempRoot!,
+        'data',
+        'runtimes',
+        'opencode-v2'
+      ),
+    });
     expect(bridgeEnv).toEqual(targetEnv);
     expect(resolver).not.toHaveBeenCalled();
     expect(onOverrideRejected).not.toHaveBeenCalled();
@@ -2132,6 +2140,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   }
 
   it('keeps the prior native selection when fresh V2 support acquisition fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await mockV2Download();
     const support = {
       withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => status),
@@ -2142,9 +2151,17 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const status = await new OpenCodeRuntimeInstallerService(support).install({ generation: 'v2' });
     expect(status).toMatchObject({ state: 'failed', error: 'TEST support acquisition failed' });
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(consoleError.mock.calls).toEqual([
+      [
+        '[OpenCodeRuntimeInstallerService]',
+        'Failed to install OpenCode runtime:',
+        'TEST support acquisition failed',
+      ],
+    ]);
   });
 
   it('refuses native activation when a new explicit selection appears during support acquisition', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await mockV2Download();
     const selected = path.join(tempRoot!, 'TEST-new-selection');
     await writeFile(selected, 'new explicit native selection');
@@ -2166,6 +2183,13 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       });
       expect(status.error).toContain('selection changed during installation');
       expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+      expect(consoleError.mock.calls).toEqual([
+        [
+          '[OpenCodeRuntimeInstallerService]',
+          'Failed to install OpenCode runtime:',
+          'OpenCode selection changed during installation; keeping the selected native runtime',
+        ],
+      ]);
     } finally {
       vi.unstubAllEnvs();
     }

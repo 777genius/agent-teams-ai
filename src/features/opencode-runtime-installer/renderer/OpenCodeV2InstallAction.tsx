@@ -15,7 +15,12 @@ export const OpenCodeV2InstallAction = ({
   onInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
-  if (status?.installed && status.version?.startsWith('2.') && status.v2Support) {
+  if (
+    status?.installed &&
+    status.version?.startsWith('2.') &&
+    status.v2Support &&
+    status.compatibleV2Version
+  ) {
     return (
       <Button
         variant="outline"
