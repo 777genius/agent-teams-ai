@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+
 import type { OpenCodeRuntimeInstallProgress } from '@shared/types';
 
 const MAX_TARBALL_BYTES = 250 * 1024 * 1024;

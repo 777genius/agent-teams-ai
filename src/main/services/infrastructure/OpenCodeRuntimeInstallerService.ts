@@ -8,11 +8,11 @@ import {
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
 import {
-  extractOpenCodePackage,
   downloadOpenCodePackage,
-  verifyOpenCodeRuntimePackageIntegrity,
+  extractOpenCodePackage,
   OpenCodeV2SupportInstaller,
   selectOpenCodeInstallPackage,
+  verifyOpenCodeRuntimePackageIntegrity,
 } from '@features/opencode-runtime-installer/main';
 import {
   type OpenCodeBinaryCandidateFailure,

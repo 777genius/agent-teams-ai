@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import runtimeLock from '../../../../../runtime.lock.json';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 
+import runtimeLock from '../../../../../runtime.lock.json';
 import {
   parseOpenCodeV2InstalledReceipt,
   readOpenCodeV2DeliveryMap,

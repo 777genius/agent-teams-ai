@@ -12,6 +12,7 @@ import {
   stopUnregisteredApp,
 } from '../e2e/anthropic-compatible-status/packaged-default-processes.ts';
 import { verifyExternalOpenCodeV2Base } from '../lib/opencode-v2-base-inventory.mts';
+import { smokeExternalOpenCodeV2Base } from './smokeExternalOpenCodeV2Base.ts';
 
 const require = createRequire(import.meta.url);
 const nativePolicy = require('./afterPack.cjs')._internal as {
@@ -663,6 +664,7 @@ export function smokeRuntimeWithoutOpenCodeV2(input: {
 
 export async function smokePackagedRuntime(bundle: string, platform: string) {
   assert.equal(platform, process.platform, 'Packaged runtime smoke must use the actual target OS');
+  const platformKey = `${process.platform}-${process.arch}`;
   const runtime = containedDirectory(
     bundle,
     path.join(
@@ -678,7 +680,7 @@ export async function smokePackagedRuntime(bundle: string, platform: string) {
     assets: Record<string, { sha256: string; binaryName: string }>;
     opencodeV2?: { qualified?: Record<string, unknown> };
   };
-  const asset = lock.assets[`${process.platform}-${process.arch}`];
+  const asset = lock.assets[platformKey];
   assert(asset && /^[a-f0-9]{64}$/.test(asset.sha256), 'Missing immutable runtime archive pin');
   assert.equal(
     fs.readFileSync(stagedFile(runtime, staged, 'VERSION').path, 'utf8').trim(),
@@ -689,54 +691,9 @@ export async function smokePackagedRuntime(bundle: string, platform: string) {
     .trim();
   assert.match(sourceCommit, /^[a-f0-9]{40}$/);
   const frontdoor = stagedFile(runtime, staged, asset.binaryName);
-  if (verifyExternalOpenCodeV2Base(runtime, lock, `${process.platform}-${process.arch}`)) {
-    verifyExternalOpenCodeV2Base(staged, lock, `${process.platform}-${process.arch}`);
-    const executable = stagedFile(
-      runtime,
-      staged,
-      process.platform === 'win32' ? 'bun/bun.exe' : 'bun/bun'
-    );
-    const entry = stagedFile(runtime, staged, 'local-cli/cli.js');
-    const deliveryFile = stagedFile(runtime, staged, 'opencode-delivery.json');
-    const delivery = deliveryIdentity(
-      JSON.parse(fs.readFileSync(deliveryFile.path, 'utf8')),
-      process.platform,
-      process.arch,
-      executable.sha256,
-      entry.sha256
-    );
-    await compatible(executable.path);
-    const project = fs.realpathSync(
-      fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-external-base-TEST-'))
-    );
-    try {
-      const env = runtimeEnvironment(process.env, project);
-      env.CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT = path.join(project, 'support-absent');
-      const status = spawnSync(
-        frontdoor.path,
-        ['runtime', 'status', '--provider', 'opencode', '--json'],
-        {
-          cwd: project,
-          env,
-          encoding: 'utf8',
-          timeout: 60_000,
-          maxBuffer: 4_194_304,
-          windowsHide: true,
-        }
-      );
-      assert.equal(status.status, 0, `Graph-free base runtime status failed: ${status.stderr}`);
-      assert.equal(
-        JSON.parse(status.stdout).schemaVersion,
-        2,
-        'Graph-free base did not answer runtime status'
-      );
-    } finally {
-      fs.rmSync(project, { recursive: true, force: true });
-    }
-    console.log(
-      `[smokePackagedRuntime] OK ${platform}: ${JSON.stringify({ runtimeVersion: lock.version, sourceCommit, frontdoor, delivery, openCodeV2: 'external support; base availability only, optional engine execution requires its separate smoke' })}`
-    );
-    return;
+  const externalSupport = verifyExternalOpenCodeV2Base(runtime, lock, platformKey);
+  if (externalSupport) {
+    verifyExternalOpenCodeV2Base(staged, lock, platformKey);
   }
   if (!fs.existsSync(path.join(runtime, 'opencode-delivery.json'))) {
     const evidence = smokeRuntimeWithoutOpenCodeV2({
@@ -750,11 +707,8 @@ export async function smokePackagedRuntime(bundle: string, platform: string) {
     );
     return;
   }
-  const executable = stagedFile(
-    runtime,
-    staged,
-    process.platform === 'win32' ? 'bun/bun.exe' : 'bun/bun'
-  );
+  const bunEntry = process.platform === 'win32' ? 'bun/bun.exe' : 'bun/bun';
+  const executable = stagedFile(runtime, staged, bunEntry);
   const entry = stagedFile(runtime, staged, 'local-cli/cli.js');
   const deliveryFile = stagedFile(runtime, staged, 'opencode-delivery.json');
   const delivery = deliveryIdentity(
@@ -765,6 +719,13 @@ export async function smokePackagedRuntime(bundle: string, platform: string) {
     entry.sha256
   );
   await compatible(executable.path);
+  if (externalSupport) {
+    smokeExternalOpenCodeV2Base(frontdoor.path, runtimeEnvironment);
+    console.log(
+      `[smokePackagedRuntime] OK ${platform}: ${JSON.stringify({ runtimeVersion: lock.version, sourceCommit, frontdoor, delivery, openCodeV2: 'external support; base availability only, optional engine execution requires its separate smoke' })}`
+    );
+    return;
+  }
   const project = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-runtime-TEST-')));
   let evidence: unknown;
   try {

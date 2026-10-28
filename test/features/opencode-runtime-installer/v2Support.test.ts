@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { zipFixture } from '../../../scripts/lib/runtime-zip.test-fixture.mts';
 import { verifyExternalOpenCodeV2Base } from '../../../scripts/lib/opencode-v2-base-inventory.mts';
+import { zipFixture } from '../../../scripts/lib/runtime-zip.test-fixture.mts';
 import {
   readOpenCodeV2DeliveryMap,
   V2_MANIFEST_FILE,
