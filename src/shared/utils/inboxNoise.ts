@@ -116,11 +116,12 @@ const TEAMMATE_MESSAGE_BLOCK_RE = /<teammate-message\s[^>]*>[\s\S]*?<\/teammate-
  * Removes `<teammate-message>` XML blocks from text.
  * Used to clean protocol artifacts that leak into lead thoughts.
  */
-export function stripTeammateMessageBlocks(text: string): string {
-  return text
-    .replace(TEAMMATE_MESSAGE_BLOCK_RE, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+export function stripTeammateMessageBlocks(
+  text: string,
+  { normalizeWhitespace = true }: { normalizeWhitespace?: boolean } = {}
+): string {
+  const stripped = text.replace(TEAMMATE_MESSAGE_BLOCK_RE, '\n');
+  return normalizeWhitespace ? stripped.replace(/\n{3,}/g, '\n\n').trim() : stripped;
 }
 
 /**

@@ -48,64 +48,39 @@ function readLanguage(code: HastElementLike): string | null {
   return languageClass ? languageClass.slice('language-'.length).toLowerCase() : null;
 }
 
-const CONTAINER_MARKER = /^(?:>[ \t]?|[-+*][ \t]+|\d+[.)][ \t]+)/;
 const FENCE_LINE = /^(?<delimiter>`{3,}|~{3,})[ \t]*(?<info>[^\r\n]*)$/;
-const CLOSING_FENCE_LINE = /^(?<delimiter>`{3,}|~{3,})[ \t]*$/;
-
-function stripContainerPrefix(line: string): string {
-  let body = line.replace(/^[ \t]{0,3}/, '');
-  let marker = CONTAINER_MARKER.exec(body);
-  while (marker) {
-    body = body.slice(marker[0].length);
-    marker = CONTAINER_MARKER.exec(body);
-  }
-  return body.replace(/^[ \t]{0,3}/, '');
-}
-
-function findLineStart(source: string, offset: number): number {
-  return source.lastIndexOf('\n', Math.max(0, offset - 1)) + 1;
-}
+const CLOSING_FENCE_SUFFIX = /(?<delimiter>`{3,}|~{3,})[ \t]*$/;
+const lineBreakCount = (value: string): number => (value.match(/\r\n|\r|\n/g) ?? []).length;
 
 function fenceStateFromMarkdown(
   source: string,
   startOffset: number,
   expectedLanguage: string | null,
-  endOffset: number
+  endOffset: number,
+  codeSource: string
 ): 'open' | 'closed' | null {
-  source = source.slice(0, endOffset);
-  const lineStart = findLineStart(source, startOffset);
-  const firstLineEnd = source.indexOf('\n', lineStart);
-  const openerEnd = firstLineEnd === -1 ? source.length : firstLineEnd;
-  const opener = FENCE_LINE.exec(
-    stripContainerPrefix(source.slice(lineStart, openerEnd).replace(/\r$/, ''))
-  );
+  // The Markdown AST starts at the delimiter even inside deeply nested containers.
+  const block = source.slice(startOffset, endOffset);
+  const firstLineEnd = block.search(/[\r\n]/);
+  const opener = FENCE_LINE.exec(block.slice(0, firstLineEnd === -1 ? block.length : firstLineEnd));
   if (!opener?.groups?.delimiter) return null;
 
   const delimiter = opener.groups.delimiter;
   const info = opener.groups.info.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
   if (expectedLanguage && info && info !== expectedLanguage) return null;
 
-  let lineStartOffset = openerEnd;
-  while (lineStartOffset < source.length) {
-    const nextLineStart = source.startsWith('\n', lineStartOffset)
-      ? lineStartOffset + 1
-      : lineStartOffset;
-    const nextLineEnd = source.indexOf('\n', nextLineStart);
-    const lineEnd = nextLineEnd === -1 ? source.length : nextLineEnd;
-    const closing = CLOSING_FENCE_LINE.exec(
-      stripContainerPrefix(source.slice(nextLineStart, lineEnd).replace(/\r$/, ''))
-    );
-    if (
-      closing?.groups?.delimiter &&
-      closing.groups.delimiter.startsWith(delimiter[0]) &&
-      closing.groups.delimiter.length >= delimiter.length
-    ) {
-      return 'closed';
-    }
-    if (nextLineEnd === -1) break;
-    lineStartOffset = nextLineEnd;
-  }
-  return 'open';
+  const finalLineStart = Math.max(block.lastIndexOf('\n'), block.lastIndexOf('\r')) + 1;
+  const closing = CLOSING_FENCE_SUFFIX.exec(block.slice(finalLineStart));
+  // A real closer is the AST's final source line and is absent from the emitted
+  // HAST code text. An unclosed node retains fence-looking data such as "- ```".
+  // HAST appends a newline to nonempty code, so closure leaves one extra source
+  // line break (or more for an empty body), independent of container indentation.
+  return closing?.groups?.delimiter &&
+    closing.groups.delimiter.startsWith(delimiter[0]) &&
+    closing.groups.delimiter.length >= delimiter.length &&
+    lineBreakCount(block) > lineBreakCount(codeSource)
+    ? 'closed'
+    : 'open';
 }
 
 export function readMarkdownFence(originalMarkdown: string, node: unknown): MarkdownFence | null {
@@ -118,7 +93,7 @@ export function readMarkdownFence(originalMarkdown: string, node: unknown): Mark
   const endOffset = isHastElementLike(node) ? node.position?.end?.offset : undefined;
   const state =
     typeof startOffset === 'number' && typeof endOffset === 'number'
-      ? fenceStateFromMarkdown(originalMarkdown, startOffset, language, endOffset)
+      ? fenceStateFromMarkdown(originalMarkdown, startOffset, language, endOffset, source)
       : null;
 
   return {

@@ -1,6 +1,9 @@
+import {
+  mapMarkdownOutsideCode,
+  stripAgentBlocksForMarkdown,
+} from '@renderer/utils/markdownCodeRanges';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { stripTeammateMessageBlocks } from '@shared/utils/inboxNoise';
 
 import {
@@ -38,12 +41,14 @@ export function buildThoughtDisplayContent(
   ]);
 
   return getCachedString(thoughtDisplayContentCache, cacheKey, () => {
-    let text = stripTeammateMessageBlocks(thought.text);
+    let text = stripTeammateMessageBlocks(thought.text, { normalizeWhitespace: false });
     if (stripAgentOnlyBlocks) {
-      text = stripAgentBlocks(text);
+      text = stripAgentBlocksForMarkdown(text);
+    } else {
+      text = mapMarkdownOutsideCode(text, (prose) => prose.replace(/\n{3,}/g, '\n\n')).trim();
     }
     if (preserveLineBreaks) {
-      text = text.replace(/\n/g, '  \n');
+      text = mapMarkdownOutsideCode(text, (prose) => prose.replace(/\n/g, '  \n'));
     }
     text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
     if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {

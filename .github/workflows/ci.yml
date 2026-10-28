@@ -69,7 +69,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
-        run: node scripts/ci/ci-feedback.mts plan
+        run: |
+          node --test test/scripts/ciOptionalWorkflows.test.mts
+          node scripts/ci/ci-feedback.mts plan
 
   feedback:
     name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback' }}

@@ -3,6 +3,7 @@ name: Anthropic compatible status packaged Windows E2E
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - .github/workflows/anthropic-compatible-status-e2e.yml
       - scripts/e2e/anthropic-compatible-status/**
@@ -16,6 +17,10 @@ on:
       - src/main/services/runtime/anthropicCompatibleEndpoint.ts
       - src/main/services/runtime/buildRuntimeBaseEnv.ts
       - src/main/services/runtime/providerRuntimeEnv.ts
+      - src/main/utils/shellEnv.ts
+      - src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts
+      - src/renderer/store/slices/cliInstallerSlice.ts
+      - src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx
       - src/main/services/team/provisioning/TeamProvisioningAnthropicDiagnosticModel.ts
       - src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts
       - src/renderer/components/runtime/ConnectionMethodCards.tsx
@@ -32,8 +37,14 @@ on:
 permissions:
   contents: read
 
+# Draft pushes cancel stale PR work; manual, push and scheduled runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   packaged-windows:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     runs-on: windows-latest
     timeout-minutes: 45
     steps:

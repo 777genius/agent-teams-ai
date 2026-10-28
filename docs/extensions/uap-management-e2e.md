@@ -6,6 +6,22 @@ the vendored TypeScript SDK and the staged native Go executable. It uses the
 existing `dev:mcp` entry point and raw CDP harness. It does not replace the
 renderer, engine, runtime or installed inventory with fixtures.
 
+## Last completed qualification
+
+[Electron run 40400598247](https://github.com/777genius/agent-teams-ai/actions/runs/40400598247)
+passed for App `42c1c2a90773af39cfaf272b93079cf2084f061f`, tested merge
+`efbc3fb7cb2e7cff7f983557656f0c593b82a2be`, and UAP
+`1d2769d99f5f2408c1801b1c6be9c7c1225aa09f`.
+[Artifact 12689840569](https://github.com/777genius/agent-teams-ai/actions/runs/40400598247/artifacts/12689840569)
+contains the completed receipt, 30 screenshots and 15 native CLI observations.
+It covers all three plugin install/update/targeted-removal journeys, local Skill
+recovery, desktop HTTP authority, native OpenCode MCP use and S27 active-team
+admission. The model boundary is scripted; per-member Skill-body and plugin-MCP
+use are not qualified. A changed App/UAP pair requires its own completed run;
+this receipt does not qualify a later source pin.
+
+## Workflow boundary
+
 The workflow runs in the pull-request trust context. It has no privileged
 manual-dispatch entry point; existing runs can be rerun through GitHub. Its job
 sets `cache-mode: none` and verifies the runner's effective `ACTIONS_CACHE_MODE`
@@ -27,12 +43,12 @@ dirty checkout.
 
 The CI lane checks out the exact UAP source pin, builds its engine, and imports
 the existing `provision` helper from UAP's `scripts/run-native-client-matrix.py`.
-That helper downloads the pinned real OpenCode binary and verifies the archive
-digest without running npm scripts. The current reviewed native fixtures are
-OpenCode 1.18.34 and Claude 2.1.263 on Linux x64. The app's existing runtime bootstrap provisions the
-real orchestration runtime from `runtime.lock.json`; the existing terminal
-bootstrap provisions the terminal runtime. Go is a build prerequisite, not a
-requirement for installed app users.
+That helper downloads the pinned real native clients and verifies their archive
+digests without running npm scripts. The reviewed native fixtures are OpenCode
+1.18.34, Claude 2.1.263 and Codex 0.153.4 on Linux x64. The app's existing runtime
+bootstrap provisions the real orchestration runtime from `runtime.lock.json`;
+the existing terminal bootstrap provisions the terminal runtime. Go is a build
+prerequisite, not a requirement for installed app users.
 
 ## Run locally
 
@@ -44,15 +60,16 @@ source pin:
 node scripts/stage-uap-runtime.ts --source /absolute/path/to/pinned-uap-checkout
 ```
 
-Set `UAP_E2E_OPENCODE` and `UAP_E2E_CLAUDE` to the verified native executables and
-`CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH` to the real runtime executable returned
-by `node scripts/dev-with-runtime.mjs --print-runtime-path`. Then run:
+Set `UAP_E2E_OPENCODE`, `UAP_E2E_CLAUDE` and `UAP_E2E_CODEX` to the verified native
+executables and `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH` to the real runtime
+executable returned by `node scripts/dev-with-runtime.mjs --print-runtime-path`.
+Then run:
 
 ```sh
 UAP_E2E_REQUIRE_CLEAN=1 xvfb-run -a pnpm exec tsx scripts/e2e/uap-management-desktop.ts
 ```
 
-The fixture adds both verified native binary directories to its isolated PATH.
+The fixture adds all three verified native binary directories to its isolated PATH.
 This keeps ordinary native discovery available after the dev launcher removes
 the ambient `CLAUDE_CLI_PATH` override.
 
@@ -77,6 +94,7 @@ paths are stopped during cleanup. Evidence remains available after cleanup.
 
 | Scenario                | Actual boundary and assertion                                                                                                                                        |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Installation targets    | Require available Claude Code, Codex and OpenCode targets to start checked; passively discover the additional Cursor fixture unchecked and require its execution witness to remain absent. |
 | Empty installation      | Open Extensions and select the available native OpenCode target; the authoritative environment starts empty.                                                         |
 | Source discovery        | Serve a disposable HTTPS Skill index with trusted test TLS and text/binary files; discover it through the UI.                                                        |
 | Preview and keyboard    | Read acquired SKILL.md with metadata separated from Markdown; Escape returns to the same discovery dialog, and Tab navigates source fields.                          |
@@ -97,6 +115,9 @@ paths are stopped during cleanup. Evidence remains available after cleanup.
 | Active profile admission | Create a real idle Anthropic lead/worker team through the ordinary app API; verify current run, live member PIDs, owned CWD and exact runtime executable. Reject five retained Apply requests, fresh Prepare and a real UI action for its Claude extension profile. |
 | Unaffected client       | Keep that team alive through the OpenCode plugin installation, actual MCP invocation and removal sequence above; verify its native member identities are still live afterward. |
 | Stop and mutate         | Stop through the ordinary team API, wait for the observed OS process identities to exit, then perform a fresh Claude update and verify changed Skill bytes and preserved binary content. |
+| Three-client plugin install | Select Claude Code, Codex and OpenCode, review exactly those targets and install one real HTTPS archive through the UI; inspect each native registration and delivered files. |
+| Three-client plugin update | Advance the HTTPS archive to version 2, update through one UI review and require changed native bytes with stable plugin identity and source for all three clients. |
+| Targeted plugin removals | Remove each client binding through its selected view, retaining exact surviving sibling identities, sources and file digests. Perform Codex's required native uninstall before acknowledging it in the UI; the final removal clears the declaration. |
 
 The reviewed registry fixture is `cloudflare-docs` version `0.4.13-uap.1`, from the
 active `777genius/cloudflare-docs-bridge` distribution. It contains a remote public
@@ -187,7 +208,9 @@ scanner-controlled raw messages or paths are not needed for this assertion.
 ## Evidence and limitations
 
 The disposable fixture contains `evidence.json`, screenshots and desktop logs,
-plus `active-profile-evidence.json` and the isolated model-request log.
+plus `active-profile-evidence.json` and the isolated model-request log. Its
+`pluginClientMatrix` records each fresh operation ID, all three native observations
+before and after update, and sibling-preserving targeted removals.
 The CI lane uploads those files plus native-client provenance. A completed
 receipt requires all assertions and no unexpected renderer exceptions. An early
 failure preserves its screenshot and error; an exploratory screenshot alone is
@@ -230,11 +253,11 @@ client platforms and authenticated model execution retain their separate
 qualification gates. Local project Skill authoring does not establish native
 project activation; the master scenario matrix records their evidence separately.
 
-The current desktop journey does not exercise moving-range multi-selection,
-real cancellation, an in-flight multi-project context switch, or a live
-authenticated team run. Their separate engine/renderer/admission evidence must
-be reported at its actual layer; passing this journey does not turn those cases
-into desktop E2E results.
+The current desktop journey does not exercise separate same-client profiles,
+moving-range multi-selection or update-all, real cancellation, a complete offline
+run, an in-flight multi-project context switch, or a live authenticated team run.
+Their separate engine/renderer/admission evidence must be reported at its actual
+layer; passing this journey does not turn those cases into desktop E2E results.
 
 Unit regressions cover delayed observations during acceptance, active-profile
 admission, lost-reply request identity, stale/local delete retries, native removal
@@ -243,31 +266,36 @@ replace native execution or UI evidence.
 
 ## Agent selection and lifecycle coverage
 
-The current panel offers Claude Code, Codex and OpenCode in a single-select
-view/context control, initially Claude Code. Installation, removal and local
-copy currently bind to that selected context. It does not preselect all three
-installation destinations and does not discover additional native agents.
-The separate signed UAP Directory supplies Universal plugins; global runtime
-catalog badges do not determine UAP availability.
+The view/context control remains single-select, initially Claude Code; removal
+and editable-copy actions use that context. Installation has a separate checkbox
+group. Available captured Claude Code, Codex and OpenCode targets start checked,
+and the exact selection is retained in the Go review. Additional targets come
+from passive Go discovery and start unchecked; unsupported observations remain
+disabled with a reason. The inert Cursor fixture proves Go-to-SDK-to-host-to-UI
+detection and checks that its executable is never run. It does not qualify Cursor
+installation or team execution. The signed UAP Directory supplies Universal
+plugins; global runtime catalog badges do not determine UAP availability.
 
-The owner proposed default selection of the three supported agents. Go already
-accepts multiple captured target IDs. A minimal future UI change needs a
-separate installation-destination checkbox group, preserving the current view,
-removal and copy context. Only available captured targets should be selected;
-unavailable ones should retain their reason. The explicit selection must be
-frozen into the reviewed plan and preserved during attestation/reprepare.
-Adding other detected agents also needs trusted host discovery, profile capture
-and activity admission; adding labels alone would not establish that support.
-These selection changes are not part of the CodeQL correction.
+`uap-management-plugin-matrix.ts` runs after the active team stops. It installs a
+moving HTTPS archive into all three native profiles, advances the publisher to
+version 2, updates, then removes each binding. Every step requires a distinct
+completed operation. Reviews contain exactly the requested mutations and expected
+unchanged siblings. Each targeted removal preserves every surviving native
+identity, source and observed file digest; Codex additionally requires its
+documented external-uninstall acknowledgment.
 
-| Client | Existing desktop journey | Separate native UAP CLI matrix |
+| Client | Completed Linux desktop coverage | Remaining team-use boundary |
 | --- | --- | --- |
-| Claude Code | Local Skill copy, edit, delete and restart-visible restore under the captured Claude root; no native Claude plugin lifecycle. | Actual pinned client install/update/remove qualification on macOS arm64 and Windows x64. |
-| Codex | Native plugin install/update/remove is not exercised by this desktop journey. | Actual pinned client install/update/remove qualification on macOS arm64 and Windows x64. |
-| OpenCode | Plugin install and removal with actual MCP invocation/absence; standalone Skill install, changed-content update and removal. Plugin update is not exercised through the desktop. | Actual pinned client install/update/remove qualification on macOS arm64 and Windows x64. |
+| Claude Code | Plugin install, version-2 update and targeted removal with native observations; managed Skill copy source; local copy/edit/delete/restart-visible restore; S27 active-profile refusal and post-stop update. | The official native listing and real idle team do not prove that each orchestrator member loads the managed original Skill or calls its plugin MCP. |
+| Codex | Plugin install, version-2 update and targeted removal after the native uninstall prerequisite; exact surviving sibling checks. | No actual Codex team-member Skill-body or plugin-MCP invocation is claimed. |
+| OpenCode | Plugin install, version-2 update and targeted removal; standalone Skill install/update/removal; separate installed-plugin MCP invocation and fresh-session absence after removal. | The standalone native MCP proof does not qualify every app-launched OpenCode team member. |
 
-The CLI matrix and desktop journey cross different boundaries. Each receipt
-must name its actual source and completed assertions; neither is evidence for
-the missing desktop cases. Native fixtures use a scripted local provider,
-without live-model or OAuth qualification. New source pins require fresh runs.
+Separate UAP CLI platform receipts retain their own source/version identities.
+The [master S01–S30 matrix](https://github.com/777genius/universal-agent-plugins/blob/1d2769d99f5f2408c1801b1c6be9c7c1225aa09f/docs/plans/management-sdk-and-agent-teams.md)
+records engine, renderer, native and desktop evidence at their actual layers.
+S25/S26 project/worktree preparation and the separate
+[team launch-readiness proposals](team-extension-launch-readiness-options.md)
+remain unimplemented here. Native `@skills-dir` loading, effective-profile
+alignment and per-member consumption are separate from this management receipt.
+Live-model and OAuth qualification remain outside the scripted-provider proof.
 

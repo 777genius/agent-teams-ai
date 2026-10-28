@@ -742,7 +742,9 @@ controller.messages.sendMessage({
     );
     expect(briefing).toContain('OpenCode visible messaging rule: call agent-teams_message_send');
     expect(briefing).toContain('OpenCode bootstrap silence rule');
-    expect(briefing).toContain('If it shows no actionable tasks, stop and wait silently.');
+    expect(briefing).toContain(
+      'During bootstrap or reconnect, if it shows no actionable tasks and there is no new actionable app message, stop and wait silently.'
+    );
     expect(briefing).toContain(
       'agent-teams_message_send { teamName: "my-team", to: "alice", from: "bob"'
     );
@@ -776,6 +778,42 @@ controller.messages.sendMessage({
     expect(briefing).toContain('mcp__agent-teams__task_get');
     expect(briefing).not.toContain('notify your team lead via SendMessage');
   });
+
+  it.each(['opencode', 'codex'])(
+    'keeps an empty-board %s visualization refresh actionable without removing bootstrap silence',
+    async (providerId) => {
+      const claudeDir = makeClaudeDir();
+      const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      config.members = [
+        { name: 'alice', role: 'team-lead' },
+        { name: 'bob', role: 'developer', providerId },
+      ];
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+      const controller = createController({ teamName: 'my-team', claudeDir });
+      const briefing = await controller.taskBoard.memberBriefing('bob', {
+        includeActiveProcesses: false,
+      });
+
+      expect(briefing).toContain('No actionable or awareness tasks for bob.');
+      expect(briefing).toContain('CHAT VISUALIZATION PROTOCOL v1');
+      expect(briefing).toContain(
+        'During bootstrap or reconnect, if it shows no actionable tasks and there is no new actionable app message, stop and wait silently.'
+      );
+      expect(briefing).toContain(
+        'If you refreshed this briefing to handle a current app request (including a chat visualization), continue that request under its existing reply and visibility rules even when the task queue is empty.'
+      );
+      expect(briefing).toContain(
+        'A briefing refresh does not require a reply to an informational notice.'
+      );
+      expect(briefing).toContain(
+        'do not send readiness, understood, idle, or no-task acknowledgements to the user, lead, or teammates.'
+      );
+      expect(briefing).toContain('Never send a group reply through message_send or private user DM.');
+      expect(briefing).not.toContain('If it shows no actionable tasks, stop and wait silently.');
+    }
+  );
 
   it('rejects OpenCode idle acknowledgements without explicit delivery context', () => {
     const claudeDir = makeClaudeDir();

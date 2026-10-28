@@ -293,10 +293,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     'forwards exact launch model and approval scope to the handshake (%s)',
     async (skipPermissions) => {
       const input = buildLaunchInput();
-      input.body = { ...(input.body as object), selectedModel: 'openai/gpt-5.4', skipPermissions };
+      input.body = { ...(input.body as object), selectedModel: 'openai/gpt-5.4', skipPermissions, effort: 'low' };
+      expect(manifestReader.manifest.highWatermark).toBeGreaterThan(0);
       await createService().execute(input);
       expect(handshakePort.calls[0]).toMatchObject({
         selectedModel: 'openai/gpt-5.4',
+        effort: 'low',
+        expectedManifestHighWatermark: null,
+        executionProofIdentity: stableHash((input.body as Record<string, unknown>).executionProof ?? null),
         toolApprovalMode: skipPermissions ? 'auto' : 'manual',
         teamId: 'team-a',
         laneId: null,

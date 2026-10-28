@@ -36,6 +36,8 @@ interface OpenCodeReadinessIdentity {
   selectedModel: string | null;
   requireExecutionProbe: boolean;
   skipPermissions?: boolean;
+  effort?: string;
+  freshExecutionProofRequestId?: string;
 }
 
 export function openCodeReadinessArtifactKey(input: OpenCodeReadinessIdentity): string {
@@ -44,6 +46,8 @@ export function openCodeReadinessArtifactKey(input: OpenCodeReadinessIdentity): 
     input.selectedModel?.trim() ?? null,
     input.requireExecutionProbe,
     input.skipPermissions === false ? 'manual' : 'auto',
+    input.effort ?? 'default',
+    input.freshExecutionProofRequestId ?? null,
   ]);
 }
 

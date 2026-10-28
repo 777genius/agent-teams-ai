@@ -16,6 +16,7 @@ import type {
   OpenCodeBridgeHandshake,
   OpenCodeBridgePeerIdentity,
 } from './OpenCodeBridgeCommandContract';
+import type { OpenCodeReadinessHandshake } from './OpenCodeReadinessHandshake';
 import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
@@ -309,6 +310,7 @@ export interface OpenCodeBridgeCommandHandshakePortOptions {
   bridge: OpenCodeBridgeCommandExecutor;
   clientIdentity: OpenCodeBridgePeerIdentity;
   timeoutMs?: number;
+  readinessHandshake?: OpenCodeReadinessHandshake;
 }
 
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 120_000;
@@ -340,8 +342,10 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
   private readonly bridge: OpenCodeBridgeCommandExecutor;
   private readonly clientIdentity: OpenCodeBridgePeerIdentity;
   private readonly timeoutMs: number;
+  private readonly readinessHandshake?: OpenCodeReadinessHandshake;
 
   constructor(options: OpenCodeBridgeCommandHandshakePortOptions) {
+    this.readinessHandshake = options.readinessHandshake;
     this.bridge = options.bridge;
     this.clientIdentity = options.clientIdentity;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_HANDSHAKE_TIMEOUT_MS;
@@ -356,12 +360,17 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     cwd?: string;
     allowEmptyLaneStop?: boolean;
     selectedModel?: string | null;
+    effort?: string;
+    expectedBehaviorFingerprint?: string | null;
+    executionProofIdentity?: string;
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
     teamName?: string;
     memberName?: string;
     laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake> {
+    const inline = this.readinessHandshake?.take(input);
+    if (inline) return inline;
     // A per-call command budget only tightens the port ceiling: a stop attempt
     // must settle inside its caller's escalation race.
     const timeoutMs =
@@ -377,6 +386,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
           expectedManifestHighWatermark: number | null;
           allowEmptyLaneStop?: boolean;
           selectedModel?: string | null;
+          effort?: string;
           toolApprovalMode?: 'auto' | 'manual';
           teamId?: string;
           teamName?: string;
@@ -393,6 +403,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
           expectedCapabilitySnapshotId: input.expectedCapabilitySnapshotId,
           expectedManifestHighWatermark: input.expectedManifestHighWatermark,
           ...(input.allowEmptyLaneStop === true ? { allowEmptyLaneStop: true } : {}),
+          ...(input.effort === undefined ? {} : { effort: input.effort }),
           ...(input.selectedModel === undefined ? {} : { selectedModel: input.selectedModel }),
           ...(input.toolApprovalMode === undefined
             ? {}

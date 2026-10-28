@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v29; the preceding app 0f967c5/UAP 86d source completes real Electron verification, including all three native-client plugin lifecycles, S27 and 30 screenshots. Current main's additional OpenCode fixture coverage is incorporated and independently verified. This follow-up pins the test-only UAP 1d2769d correction; fresh hosted qualification belongs to this exact new pair. Security disposition and per-member Skill use remain separate; the proposed profile/worktree architecture is still unapproved.
+Status: implementation plan v30; complete the existing user-scope management E2E against current main and matched UAP source 53a4332. The preceding App 42c/UAP 1d pair passed Electron, Full, bootstrap, packaging and the App findings gate. Fresh qualification belongs to the new pair. UAP security disposition and per-member Skill use remain separate; the proposed profile/worktree architecture is still unapproved.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,31 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v29 (2026-10-26)
+## Current checkpoint — v30 (2026-10-28)
+
+The integration incorporates App main
+`805003575a8bf3d0790ed15c9cae8998b29a9392` and pins UAP
+`53a433298e626d9831adb55bd6fca422cedd5d89`, engine
+`0.1.91+agentteams.53a433298e62`. UAP reconciles current main, preserves selected
+Skill targets across Management review/Apply and corrects macOS zombie-process
+cleanup without ignoring persistent permission failures or surviving descendants.
+The SDK was rebuilt and packed from that committed source. Its 25,338 bytes are
+unchanged: SHA-256 `570d947dd47766ea52613432dc4615b32df1ea390936f22e94b71bed6bcc79c5`.
+SDK tests (43), typecheck and the clean packed consumer pass; new native and
+desktop evidence remains required for this source.
+
+The App merge preserves main's equivalent MCP output-directory handling and its
+runtime 0.0.145 pin. It introduces no runtime loading, profile, admission or
+project-scope design change. The E2E procedure now reflects the already implemented
+multi-target selector, passive extra-target discovery and all three native plugin
+lifecycles. Its [last completed receipt](uap-management-e2e.md#last-completed-qualification)
+is explicitly tied to App 42c/UAP 1d and is not transferred to this revision.
+
+Fresh Full, Electron, bootstrap, packaging and security checks must qualify the
+new pair. Per-member managed Skill/plugin-MCP use and S25/S26 retain the recorded
+architecture boundary; native `@skills-dir` support is not supplied by a pin change.
+
+## Previous checkpoint — v29 (2026-10-26)
 
 The published app merge `0bdbb0225292d93d16aeceea53b89cdf1e0d55a3`
 incorporates main `dc66ae9e3dbe8ad50221c6f0857762c105660b1f`.
