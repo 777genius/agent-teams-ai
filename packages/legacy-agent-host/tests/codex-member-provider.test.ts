@@ -67,6 +67,10 @@ class ControlledChild extends ChildProcess {
               },
             };
           if (frame.method === 'thread/start') result = { thread: { id: 'TEST-thread' } };
+          if (frame.method === 'thread/resume') {
+            assert.equal(params.threadId, 'TEST-thread');
+            result = { thread: { id: 'TEST-thread' } };
+          }
           if (frame.method === 'mcpServerStatus/list') {
             assert.equal(params.threadId, 'TEST-thread');
             assert.equal(params.serverName, this.mcpConfiguration ? undefined : 'team');
@@ -177,6 +181,10 @@ function fixture(
     missingTools?: boolean;
     failInitialize?: boolean;
     checkpoint?: boolean;
+    checkpointData?: unknown;
+    endpointUrl?: string;
+    generation?: number;
+    previousTurns?: number;
     codexEvidence?: NonNullable<MemberProviderContext['codexEvidence']>;
   } = {}
 ) {
@@ -189,7 +197,7 @@ function fixture(
     memberId: 'bob',
     principalId: 'bob-session',
     sessionId: 'TEST-session',
-    generation: 1,
+    generation: options.generation ?? 1,
     configRevision: 'TEST-config',
     protocolRevision: '0.162.0',
     cwd: '/TEST-workspace',
@@ -225,6 +233,7 @@ function fixture(
   const launches: CapturedProcessLaunch[] = [];
   let captured: CodexMemberProfile | undefined;
   const child = new ControlledChild();
+  child.turns = options.previousTurns ?? 0;
   child.failInitialize = !!options.failInitialize;
   const context: MemberProviderContext = {
     profile,
@@ -235,10 +244,12 @@ function fixture(
       generation: profile.generation,
       configRevision: profile.configRevision,
       requiredCapabilities: ['text', 'tools'],
-      ...(options.checkpoint ? { checkpointRef: 'TEST-missing' } : {}),
+      ...(options.checkpoint || options.checkpointData !== undefined
+        ? { checkpointRef: 'TEST-checkpoint' }
+        : {}),
     },
     endpoint: {
-      url: 'http://127.0.0.1:12345/TEST-private',
+      url: options.endpointUrl ?? 'http://127.0.0.1:12345/TEST-private',
       bearerToken: 'TEST-private-bearer',
       binding: {
         backendId: 'TEST-backend',
@@ -246,7 +257,7 @@ function fixture(
         teamName: 'test-team',
         runId: 'TEST-run',
         memberId: 'bob',
-        generation: '1',
+        generation: String(profile.generation),
       },
       revoke() {},
       async close() {},
@@ -265,7 +276,7 @@ function fixture(
     ...(options.codexEvidence ? { codexEvidence: options.codexEvidence } : {}),
     isCurrent: () => current,
     canAllocate: () => allocate,
-    readCheckpoint: async () => undefined,
+    readCheckpoint: async () => options.checkpointData,
     onProgress() {},
   };
   child.required = options.missingTools
@@ -716,6 +727,138 @@ const policyCatalog: CodexConfiguredMcpCatalog = {
     },
   ],
 };
+for (const mode of ['appOnly', 'inherited'] as const)
+  test(
+    `managed Codex ${mode} cold restore keeps its original thread across Host endpoint rotation`,
+    { timeout: 5000 },
+    async () => {
+      const catalog: CodexConfiguredMcpCatalog = {
+        ...policyCatalog,
+        servers: [
+          ...policyCatalog.servers,
+          {
+            name: 'Docs',
+            enabled: true,
+            transport: { type: 'streamable_http', url: 'https://example.invalid/Docs' },
+          },
+        ],
+      };
+      const selected: NonNullable<CodexMemberProfile['capturedMcpServers']> =
+        mode === 'appOnly' ? {} : { Docs: { type: 'http', url: 'https://example.invalid/Docs' } };
+      const options = {
+        capturedMcpServers: selected,
+        capturedMcpCatalog: catalog,
+        readCatalog: async () => catalog,
+      };
+      const original = fixture(options);
+      const opened = await original.provider.factory.open(original.context.request);
+      let checkpoint: unknown;
+      try {
+        assert.ok(
+          (
+            await opened.driver.submit({
+              inputId: 'TEST-before-cold',
+              operationRef: 'TEST-operation-before-cold',
+              content: 'TEST original input',
+            })
+          ).ok
+        );
+        for (let count = 0; count < 100; count++) {
+          const captured = await opened.driver.checkpoint();
+          if (captured.ok) {
+            checkpoint = captured.value;
+            break;
+          }
+          await tick();
+        }
+        assert.ok(checkpoint, 'original completed native thread supplies its own checkpoint');
+        assert.equal(original.child.turns, 1);
+      } finally {
+        assert.equal((await opened.driver.close()).cleanup, 'confirmed');
+        await original.provider.cleanup();
+      }
+      const resumed = fixture({
+        ...options,
+        endpointUrl: 'http://127.0.0.1:54321/TEST-new-private',
+        generation: 2,
+        previousTurns: 1,
+        checkpointData: checkpoint,
+      });
+      const restored = await resumed.provider.factory.open(resumed.context.request);
+      try {
+        assert.ok((await restored.driver.checkReadiness()).ok);
+        assert.equal(
+          resumed.child.frames.filter((frame) => frame.method === 'thread/resume').length,
+          1
+        );
+        assert.equal(
+          resumed.child.frames.some((frame) => frame.method === 'thread/start'),
+          false
+        );
+        assert.equal(
+          resumed.child.frames.some((frame) => frame.method === 'turn/start'),
+          false
+        );
+        assert.equal(
+          record(resumed.child.mcpConfiguration!.team).url,
+          resumed.context.endpoint.url
+        );
+        assert.ok(
+          (
+            await restored.driver.submit({
+              inputId: 'TEST-after-cold',
+              operationRef: 'TEST-operation-after-cold',
+              content: 'TEST next original input',
+            })
+          ).ok
+        );
+        let continuation: unknown;
+        for (let count = 0; count < 100; count++) {
+          const captured = await restored.driver.checkpoint();
+          if (captured.ok) {
+            continuation = captured.value;
+            break;
+          }
+          await tick();
+        }
+        assert.equal(record(continuation).nativeThreadId, 'TEST-thread');
+        assert.equal(resumed.child.turns, 2);
+        assert.equal(
+          resumed.child.frames.filter((frame) => frame.method === 'turn/start').length,
+          1
+        );
+        assert.equal(
+          record(resumed.child.frames.find((frame) => frame.method === 'turn/start')!.params)
+            .threadId,
+          'TEST-thread'
+        );
+        assert.equal(resumed.launches.length, 1);
+      } finally {
+        assert.equal((await restored.driver.close()).cleanup, 'confirmed');
+        await resumed.provider.cleanup();
+      }
+      if (mode === 'inherited') {
+        const foreign = fixture({
+          ...options,
+          capturedMcpServers: { Docs: { type: 'http', url: 'https://example.invalid/changed' } },
+          checkpointData: checkpoint,
+          generation: 2,
+          previousTurns: 1,
+        });
+        await assert.rejects(
+          foreign.provider.factory.open(foreign.context.request),
+          /Codex member unavailable/u
+        );
+        assert.equal(
+          foreign.child.frames.length,
+          0,
+          'changed foreign policy never resumes or starts a thread'
+        );
+        assert.equal(foreign.running(), false);
+        assert.ok(foreign.cleanupCalls() > 0);
+      }
+    }
+  );
 test('captured appOnly launches veto original plugin names and exact native gate precedes thread allocation', async () => {
   let reads = 0;
   const f = fixture({
@@ -754,7 +897,10 @@ test('captured appOnly launches veto original plugin names and exact native gate
   await assert.rejects(rejected.provider.factory.open(rejected.context.request));
   assert.equal(rejected.launches.length, 1);
   assert.ok(rejected.child.frames.some((frame) => frame.method === 'config/read'));
-  assert.equal(rejected.child.frames.some((frame) => frame.method === 'thread/start'), false);
+  assert.equal(
+    rejected.child.frames.some((frame) => frame.method === 'thread/start'),
+    false
+  );
   await rejected.provider.cleanup();
 });
 test('changed original native census refuses before app-server allocation and without a thread', async () => {

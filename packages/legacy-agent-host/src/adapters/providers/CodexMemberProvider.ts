@@ -187,7 +187,9 @@ export function createCodexMemberProvider(
             .join('\n\n'),
         },
         requiredMcpTools: { team: required },
-        ...(policy ? { mcpPolicy: policy, verifyMcpCatalog: verifyCatalog } : {}),
+        ...(policy
+          ? { mcpPolicy: policy, verifyMcpCatalog: verifyCatalog, runtimeMcpServer: 'team' }
+          : {}),
         limits: { ...profile.limits },
         probe: async () => current(),
         confirmStopped: async () => {

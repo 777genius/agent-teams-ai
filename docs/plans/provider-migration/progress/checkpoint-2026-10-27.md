@@ -5157,3 +5157,233 @@ a98 Resume evidence gap, unqualified Mixed notification/group/Restart
 continuation, packed24G90 versus source24G624 qualification and original M19 SDK
 custody HOLD remain open. Earlier scoped passes are never transferred or used to
 release original UNKNOWN obligations. Draft/no merge/release/activation remains.
+
+### 28 October local continuation: Codex managed MCP restore candidate
+
+**Historical interim snapshot before GitHub authentication recovered.** The next
+canonical-selection checkpoint supersedes its blocked/unselected delivery state;
+the exact test and artifact provenance below remains unchanged.
+
+Fresh public Git refs were read again after the local checks. PR head and its
+source branch remain `26d17c73b8bf2199448f387b714e84cd0338ae43`; main remains
+`c4c576cea864dc5d8bf36ea1e989d28793076e2f`; the generated PR merge remains
+`570fd9ece363070b45f8e331371981d1dca0449d`. Main is already an ancestor of the
+PR head, and that merge has those exact main/head parents. The isolated checkout
+has no merge conflicts; no additional merge was needed.
+
+The stale current-selection description in `vendor/provider-migration/README.md`
+is corrected to the actually selected `readonly-probe-metadata-v1` provider at
+standalone source `8a5759ec1d33edb29109a2193bc98ee24d7bd064`. The original
+`7aa779d` / `dad39edf` extraction remains explicitly historical. Counts distinguish
+209 provider regular files / 206 emitted dist files and 12 SPI regular files /
+10 emitted dist files. The archives and package/lock selections are unchanged.
+
+Local baseline checks on Linux x64, using pinned Host Node 24.21.0 and
+frontend pnpm 11.22.0 where applicable, all completed with exit 0:
+
+- Frozen install with the existing `node-ci` profile, Host/task-ledger build and
+  complete `pnpm typecheck:workspace` (`GOMAXPROCS=2`). The initial install used
+  the available Node 24.22.1; Host checks then used the checksum-pinned 24.21.0.
+- Source-size guard: 4,626 production files / 143 frozen exceptions; Team
+  Provisioning architecture guard passed. The source guard's first sandbox
+  `spawnSync git EPERM` was resolved by running the unchanged guard with the
+  normal execution approval; no source workaround was added.
+- Complete existing Host unit suite: 794/794 PASS, 0 FAIL, 0 SKIP.
+- Five focused Vitest files: 133/133 PASS: TeamBackupService 72, work-sync queue 27,
+  selected Resume 17, readiness 8 and Host roster 9.
+- Existing mixed HTTP/oracle fixture: 14/14 PASS, 0 SKIP. These are controlled
+  fixtures and local supplemental checks, not fresh native/Desktop qualification.
+
+The continuation found a separate, reproducible **Codex managed-MCP cold Resume
+defect**. Production captures `capturedMcpServers`, including the empty appOnly
+selection. Its policy also includes the Host-generated Team MCP HTTP endpoint.
+The complete policy was hashed into checkpoint compatibility, so a new ephemeral
+endpoint URL rejected the original native thread after cold restore. Ordinary
+same-session messages already use one app-server/thread; this finding concerns
+the selected cold checkpoint path. It does not establish the cause of the older
+Claude Resume evidence gap.
+
+Two independent reviews accepted a narrow paired candidate. Provider D adds an
+optional `runtimeMcpServer` selector, requiring an existing selected HTTP server
+and corresponding required tools. Only that server's URL is normalized for
+checkpoint compatibility; the explicit selector and existing stable trusted
+binding remain hashed. Catalog, foreign servers, auth fields, tools, timeouts,
+account and other configuration retain exact compatibility. The live/native MCP
+policy is unchanged and still verifies the current URL. Without the selector,
+old digest behavior is unchanged: old checkpoints remain compatible for unchanged
+unmarked consumers. Introducing the new Host opt-in during restore does not adopt
+old unmarked managed checkpoints; there is no implicit checkpoint migration or
+fallback. Host opts in only for its generated `team` endpoint when a captured
+managed policy exists.
+
+The exact prepared changes are identified below. After authentication recovered,
+the owning source was published as the canonical commit linked here; its original
+raw review-diff hash remains recorded rather than duplicating that source patch
+in the frontend. The exact frontend patch remains a visible evidence file.
+
+| Input | Exact provenance / SHA-256 |
+| --- | --- |
+| [Canonical provider source](https://github.com/agent-teams-ai/old-provider-implementations/commit/7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9) | Standalone base `8a5759ec1d33edb29109a2193bc98ee24d7bd064` plus original reviewed raw diff `b63bb3c98df6154723ee30966a55f68867e69b2f2d3775e3ade373d1e9cfff05` |
+| [Frontend Host/test patch](../evidence/codex-runtime-mcp-frontend-host.patch) | Frontend base `26d17c73b8bf2199448f387b714e84cd0338ae43` plus patch `2f8fd41fc68cd137fac304c9259787c03c5f4615926ab388342155447aa23649` |
+| Unpublished local packed provider candidate | `e3a45cde75062840a74ac0b036b0ccc074654adfd5b46bf19e384eb62c34f3f3` |
+| Still-selected provider archive | `2aa5d730d6ed8c237b3d94a84ea462c49f773a69b20344e04fa486a99fcfbaae` |
+| Unchanged selected Session SPI | `2a6e0e2cc61d7513b6de352d5cc7e2dba6ade8749e76fb4558520b1ea99bbf2e` |
+
+At this interim point, source and candidate were identified by base plus patch,
+without inventing an owning commit; the later canonical commit contains those
+exact source changes. Both provider archives have the same 209-file
+census and exact package metadata/dependencies/exports. An independent byte
+comparison finds only `codex-protocol/driver-config.js` and its `.d.ts` changed;
+all Claude/OpenCode bytes and SPI are unchanged.
+
+Candidate verification completed with exit 0 unless explicitly marked RED:
+
+- The new actual-Host/public-D appOnly and inherited-MCP cold-restore cases
+  reproduce RED on the unchanged selected provider:0 PASS /2 FAIL, exit 1 at the
+  restored open after their own completed original input/checkpoint.
+- With the isolated packed candidate and Host opt-in, the focused Codex,
+  checkpoint and MCP-authority selection passed 59/59, 0 FAIL, 0 SKIP. Both new
+  cases resume exactly `TEST-thread` after endpoint/generation rotation, submit
+  no automatic turn, and complete one explicitly submitted next input on that
+  thread. A changed foreign MCP URL still refuses before thread protocol and
+  confirms cleanup.
+- The **complete Host candidate unit gate passed 796/796, 0 FAIL, 0 SKIP**, using
+  the same full test glob and concurrency2 as the baseline. Host build, test
+  typecheck, focused fast lint and whitespace checks passed.
+- In the owning repository, full `pnpm check` with pnpm 11.18.0 passed on each
+  exact CI runtime, Node 24.21.0 and 26.11.1:355/355 source tests plus both packed
+  consumers on each runtime, with 0 FAIL / 0 SKIP. All five added source
+  regressions are included. A fresh final critic independently accepted the
+  complete changed boundary, guards, tests and exact paired patch bytes.
+- A separate artifact-to-artifact compatibility check passed 2/2, exit 0:
+  old `2aa5d730` checkpoints for unchanged unmarked managed and unmanaged configs
+  are accepted by candidate `e3a45cde` at generation 2 with identical compatibility
+  digests. Its retained log is `codex-runtime-mcp-backward-compatibility.log`.
+  This is a bounded configuration/checkpoint proof, not a native thread run.
+
+Reproduction now uses a clean owning checkout at canonical `7573a50`, equivalent
+to base `8a5759e` plus the recorded original review diff. Use Node 24.21.0 or
+26.11.1 with pnpm 11.18.0, frozen-install the owning repository, and run `pnpm check`. From its
+`packages/provider-implementations` directory, `pnpm pack --pack-destination
+<new-candidate-directory>` produces a new local candidate. In the frontend,
+apply the Host patch after its pnpm 11.22.0 frozen install. Extract the candidate
+into a separate directory and bind its dependencies to the original frozen
+frontend graph; save and replace only the Host package's own provider symlink.
+Never unpack over the pnpm store or the original selected package. Build the
+Host and run its existing test typecheck. The complete Host test command, from
+`packages/legacy-agent-host` with the pinned Node 24.21.0, is:
+
+```sh
+node --test --test-concurrency=2 tests/*.test.ts \
+  tests/fixtures/native-claude-team/model.test.ts \
+  tests/fixtures/native-opencode-team/model.test.ts \
+  tests/fixtures/native-codex-team/model.test.ts
+```
+
+This is an isolated controlled candidate check, not a new selected dependency or
+a substitute for native acceptance.
+
+After verification, only our temporary frontend Host source/test patch was
+reversed, the exact original provider symlink restored, and the baseline Host
+rebuilt. An offline frozen install passed; source/tests/package/lock are exactly
+HEAD; generated Host output no longer contains `runtimeMcpServer`; the original
+archive hashes above still match. The small restored-baseline Codex adapter/probe
+suite passed 26/26, 0 FAIL, 0 SKIP, and Host test typechecking passed. The provider
+owning checkout still had its three reviewed dirty source/test files at this
+interim boundary, without a commit. Frontend product files were coherent with its
+unchanged frozen dependency selection; the prepared fix was not active in source
+or package pins. The next checkpoint records the later canonical delivery.
+
+**Delivery and remaining acceptance are blocked, not complete.** Standard
+`gh auth status` has no authenticated host, token variables are absent, and a
+non-mutating HTTPS push dry-run to the existing PR branch failed with exit 128
+(`unable to get password from user`). No active standard SSH agent socket is
+available. Public Git reads work, but authenticated API/CI dispatch and immediate
+push are unavailable; no commit, push, PR comment, state change or merge was made.
+The requested Draft-only scope, Stage1 denominator and frozen percentages remain
+unchanged. After authentication, delivery still needs the owning source
+commit/push, a new provenance-bound immutable archive/pin, frozen consumer checks
+and the appropriate original native/UI qualification.
+
+The Stage1 Desktop entrypoint explicitly requires Darwin and macOS process
+evidence; this Linux run does not replace the recorded macOS arm64 tuple. Fresh
+native qualification, the original Claude Resume evidence gap, Mixed native
+continuation, packed/installed P7/M17 and original M19 SDK custody HOLD remain
+open. Earlier canonical/native/packaged results retain their original exact
+source and tuple; none qualifies this unselected candidate. No deadline, TTL,
+readiness, authority, cleanup or replay guard was relaxed. Stage2 and OpenCodeV2
+remain excluded; merge, release, publication and activation remain outside scope.
+
+### Authentication recovery and canonical provider selection
+
+A subsequent standard GitHub CLI check with normal network approval succeeded
+as repository owner `777genius`. The earlier authentication diagnosis is retained
+as an interim observation, not the current blocker. Authenticated PR metadata
+confirms #982 is OPEN and Draft, head `26d17c73`, mergeable, with no unresolved
+review threads. Draft is preserved; no merge, release or activation is requested.
+
+The owning provider correction was committed and immediately pushed as
+[`7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`](https://github.com/agent-teams-ai/old-provider-implementations/commit/7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9)
+to the existing Draft PR#1. Its sole parent is `8a5759e`; the published tree is
+`5b7738f72a1daafcca3480764f9d1c94f440df01`. An independent authenticated Git API
+read confirms that exact commit/tree/parent, and its committed diff matches the
+reviewed `b63bb3c9` provider patch. Its own
+[CI40668064198](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/40668064198)
+completed SUCCESS on Node24.21.0 and26.11.1. The package is not published to npm,
+and PR#1 is not merged.
+
+The frontend now selects the immutable
+[`codex-runtime-mcp-v1` archive](../../../../vendor/provider-migration/codex-runtime-mcp-v1/README.md),
+SHA-256 `e3a45cde75062840a74ac0b036b0ccc074654adfd5b46bf19e384eb62c34f3f3`,
+from that exact canonical source. These are the already reviewed/tested candidate
+bytes, now tied to a published owning commit and selected by package/lock. Old
+archives are not overwritten. A single exact `.gitignore` exception admits this
+new artifact. pnpm11.22.0 regenerated only this provider's importer, package and
+snapshot keys/integrity; all other dependency resolutions, including Session SPI,
+SDKs and OpenCode, are unchanged.
+
+The saved Host/test patch is reapplied unchanged: `runtimeMcpServer:'team'` is
+supplied only with a captured managed policy. Both existing exact archive guards
+are repinned to the same new path/SHA: Desktop's
+`desktop-native-stop-fixture.ts` and the package's native OpenCode shared-server
+test. Each still compares every installed provider JavaScript file with the
+selected archive before its actual workflow. The guards are not bypassed or
+relaxed; the OpenCode implementation itself is byte-identical.
+
+Current selected-composition verification is separate from the interim results:
+
+- A fresh offline frozen install with the existing `node-ci` profile passed,
+  exit0. All209 installed regular provider files were compared with the new
+  immutable archive and matched exactly; no temporary dependency override or
+  candidate symlink remains.
+- Host/task-ledger build, Host test typechecking and legacy-host script
+  typechecking passed. The six affected Codex/checkpoint/MCP files passed59/59,
+  0 FAIL /0 SKIP, using pinned Host Node24.21.0.
+- The existing Desktop selected-artifact verifier passed unchanged against the
+  new pin and installed JavaScript. It was invoked only as a byte-verification
+  helper on Linux; no Electron/provider/native/UI launch or acceptance is claimed.
+- Fast lint passed for the Host source, its Codex regressions and the Desktop
+  artifact fixture. Expanding that manual lint to the OpenCode native test finds
+  an existing `prefer-const` error at292 and `no-unsafe-finally` warning at587.
+  The unchanged HEAD file reproduces the exact same diagnostics through stdin;
+  the new diff there changes only the archive path/SHA. No unrelated semantic
+  cleanup was included, and no whole-file fast-lint PASS is claimed for that file.
+- The complete796-test Host candidate gate above remains tied to the exact same
+  source/test and provider bytes; the new frozen-selection check does not relabel
+  it as a third full run. The complete canonical `pnpm typecheck:workspace` then
+  passed again on this now-selected composition, exit0, before the production
+  TypeScript commit. Source-size and Team Provisioning guards also passed.
+
+The first frontend delivery boundary contains the canonical archive/pin, narrow
+Host correction, two regressions, exact native fixture pins and this evidence.
+Fresh exact-head frontend CI is still required. Manual full/Desktop dispatch is
+deferred until the necessary existing Codex Resume UI coverage is ready; automatic
+checks from the push are not cancelled or substituted. The existing Resume UI
+scenario currently exercises Claude, so its older result cannot qualify managed
+Codex cold restore. The planned Codex variant must use that same existing UI and
+the actual managed catalog, with no new product form or direct-API substitute.
+
+The frozen progress denominator and all outstanding native/packed/custody limits
+remain unchanged. A canonical source push and a selected, locally checked fix do
+not close M09/Stage1, the older Claude Resume evidence gap, P7/M17, original M19
+SDK HOLD or vendor-authentication qualification.

@@ -102,6 +102,7 @@ remotion/*
 !/vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz
 !/vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz
 !/vendor/provider-migration/readonly-probe-metadata-v1/agent-teams-provider-implementations-0.0.0.tgz
+!/vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz
 
 # Deterministic announcement build output (edit landing/content/announcements).
 /landing/public/announcements/

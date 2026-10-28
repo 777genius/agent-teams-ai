@@ -11,8 +11,8 @@ const object = (value: unknown): Record<string, unknown> => {
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
 export const desktopNativeProviderArtifact = Object.freeze({
-  path: 'vendor/provider-migration/readonly-probe-metadata-v1/agent-teams-provider-implementations-0.0.0.tgz',
-  sha256: '2aa5d730d6ed8c237b3d94a84ea462c49f773a69b20344e04fa486a99fcfbaae',
+  path: 'vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz',
+  sha256: 'e3a45cde75062840a74ac0b036b0ccc074654adfd5b46bf19e384eb62c34f3f3',
 });
 export async function verifyDesktopNativeStopArtifact(
   repo: string,

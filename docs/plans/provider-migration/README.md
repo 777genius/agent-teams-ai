@@ -5,17 +5,20 @@
 Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;
 merge не выполнялся. Зависимости от движка старого `agent-runtime` у этих пакетов нет.
 Host/Team/Runtime owner и адаптеры Desktop остаются во frontend. Текущий provider-архив
-`readonly-probe-metadata-v1` (`2aa5d730…`) собран из отдельного репозитория на
-[`8a5759e`](https://github.com/agent-teams-ai/old-provider-implementations/commit/8a5759ec1d33edb29109a2193bc98ee24d7bd064).
-От прежнего `readiness-recovery-v1` отличается только private Codex
-`model-probe.js`: распознавание readonly metadata/previews в model probe.
+`codex-runtime-mcp-v1` (`e3a45cde…`) собран из отдельного репозитория на
+[`7573a50`](https://github.com/agent-teams-ai/old-provider-implementations/commit/7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9).
+От сохранённого `readonly-probe-metadata-v1` (`2aa5d730…`, source `8a5759e`)
+отличаются только private Codex `driver-config.js` и его declaration: явный
+`runtimeMcpServer` разрешает смену принадлежащего consumer HTTP URL при cold
+restore, сохраняя точную live/native MCP policy и остальные compatibility fields.
 OpenCode, public exports, metadata/dependencies и Session SPI сохранены;
 состав из 209 файлов не меняется. Прежние локальные архивы остаются неизменны.
-Локальный `pnpm check` прошёл: 350 source tests и оба packed consumers.
-[CI этого commit](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/40231251996)
-прошёл на Node 24.21.0 и 26.11.1. Отдельный public-D readonly model probe с
-actual Codex CLI 0.162.0 и localhost inference вернул true: один captured child,
-один запрос, подтверждённая остановка, без Team/Runtime/business input.
+Локальный `pnpm check` прошёл: 355 source tests и оба packed consumers на каждом
+из exact Node 24.21.0 и 26.11.1 с pnpm 11.18.0.
+[CI этого commit](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/40668064198)
+также прошёл на обеих версиях Node. Прежний actual Codex 0.162.0 readonly probe
+относится к архиву `2aa5d730…`; новый native/UI PASS из неизменности probe-кода
+не переносится автоматически.
 PR #1 остаётся Draft; новый runtime/native/UI PASS из локального check не следует.
 Этап 2 по-прежнему не входит в работу.
 
@@ -62,6 +65,23 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 поддержке native questions всеми тремя providers и не удаление прежнего UI.
 
 ## Текущий checkpoint интеграции — 28 октября
+
+**Дополнение после свежей проверки `26d17c7`: исправлен отдельный дефект
+холодного Codex Resume с managed MCP.** Новый случайный URL принадлежащего Host
+Team endpoint менял checkpoint compatibility и отклонял исходную native thread.
+Canonical provider fix `7573a50` запушен и прошёл собственный CI на Node24.21.0/
+26.11.1. Новый immutable `codex-runtime-mcp-v1` (`e3a45cde…`) выбран в package/lock
+вместе с узким Host opt-in; source-код consumer и native MCP policy сохраняют
+прежнюю thread при смене этого URL, не ослабляя foreign MCP policy. Полный
+контролируемый Host candidate gate прошёл 796/796, focused граница — 59/59.
+Точный [canonical provider commit](https://github.com/agent-teams-ai/old-provider-implementations/commit/7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9)
+и [Host/test patch](evidence/codex-runtime-mcp-frontend-host.patch)
+описаны в [canonical delivery checkpoint](progress/checkpoint-2026-10-27.md#authentication-recovery-and-canonical-provider-selection).
+GitHub auth восстановлена; прежний blocked/unselected handoff в истории больше
+не является текущим delivery status. Свежая exact-head frontend/native/UI
+квалификация остаётся отдельным обязательством. Прежний Claude Resume evidence
+gap, packed P7/M17 и M19 HOLD этой отдельной Codex-проверкой не закрываются.
+Исторические CI/review ниже сохраняют собственные точные source bytes и границы.
 
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/
