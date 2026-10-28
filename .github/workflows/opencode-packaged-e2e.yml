@@ -1,109 +1,23 @@
-name: OpenCode packaged Windows E2E
+name: OpenCode native cold diagnostic (exact qualified app)
 
+# Temporary diagnostic branch only. No product rebuild, release or qualification
+# claim: even a successful observation does not explain the original native crash.
 on:
   workflow_dispatch:
-    inputs:
-      native_sdk_ref:
-        description: 'Exact reviewed SDK SHA required for native tasks, source-only and provider-only; empty with both flags off keeps diagnostics'
-        type: string
-        default: ''
-      native_model:
-        description: 'Explicit openrouter/provider-model required for native tasks and source-only startup; it must be in the newest V2 catalog; unused for provider-only'
-        type: string
-        default: ''
-      native_versions:
-        description: 'Run the newest V2 only, V1 and the newest V2, or V1 only; reuse compatible completed proofs'
-        type: choice
-        options: [current, all, v1]
-        default: current
-      native_provider_only:
-        description: Compare verified published V1 provider commands only; no native startup or packaging
-        type: boolean
-        default: false
-      native_source_only:
-        description: 'Requires native_sdk_ref and native_model; real startup/stop only, no packaging or model prompts'
-        type: boolean
-        default: false
-      runtime_candidate_run:
-        description: 'Optional runtime CI run with a successful complete Windows packaged-delivery job'
-        type: string
-        default: ''
-      runtime_candidate_sha:
-        description: 'Exact runtime source SHA (required with candidate run)'
-        type: string
-        default: ''
-  pull_request:
-    paths:
-      - .github/workflows/opencode-packaged-e2e.yml
-      - scripts/e2e/opencode-diagnostics/packaged*.mjs
-      - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
-      - scripts/e2e/opencode-diagnostics/run-packaged.mjs
-      - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
-      - scripts/e2e/opencode-diagnostics/native-test-pin.mts
-      - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
-      - scripts/e2e/opencode-diagnostics-desktop.mjs
-      - scripts/e2e/opencode-diagnostics/platform.mjs
-      - scripts/e2e/opencode-diagnostics/catalog.mjs
-      - runtime.lock.json
-      - scripts/stage-runtime.mjs
-      - scripts/lib/github-release-download-error.mjs
-      - scripts/lib/runtime-archive-checksum.mjs
-      - scripts/lib/runtime-payload-cache.mjs
-      - scripts/lib/runtime-payload-inventory.mts
-      - scripts/lib/runtime-windows-zip-extraction.mts
-      - scripts/lib/runtime-windows-zip-extraction.test.mts
-      - scripts/lib/runtime-archive-extraction.mts
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  validate-native-inputs:
-    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - name: Require exact native dispatch inputs before Windows allocation
-        shell: bash
-        env:
-          SDK_REF: ${{ inputs.native_sdk_ref }}
-          SELECTED_MODEL: ${{ inputs.native_model }}
-          PROVIDER_ONLY: ${{ inputs.native_provider_only }}
-          VERSIONS: ${{ inputs.native_versions }}
-        run: |
-          case "$VERSIONS" in
-            all|v1|current) ;;
-            *) echo '::error::Unknown Windows version selection'; exit 1 ;;
-          esac
-          if [[ ! "$SDK_REF" =~ ^[a-f0-9]{40}$ ]]; then
-            echo '::error::native_sdk_ref must be an exact reviewed SDK SHA for native, source-only and provider-only runs'
-            exit 1
-          fi
-          if [[ "$PROVIDER_ONLY" != 'true' && ! "$SELECTED_MODEL" =~ ^openrouter/[a-zA-Z0-9_./:~-]+$ ]]; then
-            echo '::error::native_model is required for native and source-only startup; source-only submits no model prompts'
-            exit 1
-          fi
-  native-real-tasks:
-    needs: validate-native-inputs
-    if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)
-    uses: ./.github/workflows/opencode-native-windows-e2e.yml
-    with:
-      sdk_ref: ${{ inputs.native_sdk_ref }}
-      model: ${{ inputs.native_model }}
-      source_only: ${{ inputs.native_source_only }}
-      provider_only: ${{ inputs.native_provider_only }}
-      versions: ${{ inputs.native_versions }}
-      runtime_candidate_run: ${{ inputs.runtime_candidate_run }}
-      runtime_candidate_sha: ${{ inputs.runtime_candidate_sha }}
-    secrets:
-      RUNTIME_BUILD_DISPATCH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-  packaged-windows:
-    if: inputs.native_sdk_ref == '' && !inputs.native_source_only && !inputs.native_provider_only
+  native-cold-diagnostic:
+    if: github.ref == 'refs/heads/debug/codex-continuity-native-cold-diag'
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Enable long paths
         run: git config --global core.longpaths true
       - uses: pnpm/action-setup@v6
@@ -114,172 +28,269 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
-      - name: Verify harness contracts
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify unchanged harness contracts
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
-      - name: Typecheck admission diagnostic
-        run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
-      - name: Stage pinned runtime
-        env:
-          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-        run: node scripts/stage-runtime.mjs --platform win32-x64
-      - name: Stage verified test-only runtime candidate
-        if: inputs.runtime_candidate_run != '' || inputs.runtime_candidate_sha != ''
-        env:
-          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
-          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
-          RUNTIME_CANDIDATE_BUN_VERSION: '1.4.3'
-        run: node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
-      - name: Stage pinned terminal runtime
+      - name: Retrieve and verify the exact qualified app
+        id: candidate
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
-      - name: Build application
-        env:
-          NODE_OPTIONS: --max-old-space-size=8192
-        run: pnpm build
-      - name: Stage native OpenCode wrapper
-        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
-      - name: Verify wrapper native handle and job isolation
-        shell: pwsh
         run: |
-          $compiler = Join-Path $env:SystemRoot 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-          $fixture = Join-Path $env:RUNNER_TEMP 'TEST-wrapper-native-fixture.exe'
-          $fixtureSource = (Resolve-Path 'tools/opencode-console-wrapper/WrapperNativeFixture.cs').Path
-          & $compiler /nologo /target:exe /optimize "/out:$fixture" $fixtureSource
-          if ($LASTEXITCODE -ne 0) { throw 'Native wrapper fixture compilation failed' }
-          & $fixture (Resolve-Path resources/runtime/opencode-console/opencode.exe).Path
-          if ($LASTEXITCODE -ne 0) { throw 'Native wrapper handle/job isolation failed' }
-      - name: Package without publishing
-        run: pnpm pack:win:x64 --dir --publish never
-      - name: Verify packaged candidate identity
-        if: inputs.runtime_candidate_run != ''
-        shell: pwsh
-        run: |
-          $candidate = Get-Content runtime-candidate-evidence.json | ConvertFrom-Json
-          $env:PACKAGED_CANDIDATE_ROOT = (Resolve-Path 'release/win-unpacked/resources/runtime').Path
-          node --input-type=module -e "import {readFile} from 'node:fs/promises'; import {verifyCandidatePayload} from './scripts/e2e/opencode-diagnostics/stage-candidate.mjs'; await verifyCandidatePayload(process.env.PACKAGED_CANDIDATE_ROOT, JSON.parse(await readFile('runtime-candidate-evidence.json','utf8')), {packaged:true});"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Validate bundle
-        run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
-      - name: Prove compiled legacy Windows saved-file read and native image on loopback model
-        if: inputs.runtime_candidate_run != ''
-        shell: pwsh
-        run: |
-          $env:TMPDIR = $env:RUNNER_TEMP
-          $env:TEMP = $env:RUNNER_TEMP
-          $env:TMP = $env:RUNNER_TEMP
-          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
-          pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Qualify cold and warm packaged starts
-        id: qualify
-        env:
-          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
-        shell: pwsh
-        run: |
-          $env:TMPDIR = $env:RUNNER_TEMP
-          $env:TEMP = $env:RUNNER_TEMP
-          $env:TMP = $env:RUNNER_TEMP
-          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          $options = @('--packaged-executable', $executable, '--runtime-setup', 'app-install')
-          if ($env:RUNTIME_CANDIDATE_RUN) { $options += @('--candidate-evidence', (Resolve-Path 'runtime-candidate-evidence.json').Path) }
-          node scripts/e2e/opencode-diagnostics/run-packaged.mjs @options | Tee-Object -Variable qualificationOutput
-          $qualificationExit = $LASTEXITCODE
-          $roots = @($qualificationOutput | Where-Object { $_ -match '^Packaged artifacts/profile: ' })
-          if ($roots.Count -eq 1) { "root=$($roots[0].Substring('Packaged artifacts/profile: '.Length))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append }
-          if ($qualificationExit -ne 0) { exit $qualificationExit }
-      - name: Checkout exact SDK admission source
-        id: sdk_source
-        if: always() && failure() && steps.qualify.outcome == 'failure'
-        continue-on-error: true
-        timeout-minutes: 5
-        env:
-          GIT_CONFIG_COUNT: '1'
-          GIT_CONFIG_KEY_0: core.autocrlf
-          GIT_CONFIG_VALUE_0: 'false'
-        uses: actions/checkout@v6
-        with:
-          repository: 777genius/agent_teams_orchestrator
-          ref: d6361e0f50821ffc31cc5a9efd0dcaf6643c850d
-          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-          path: .test-tmp/sdk-admission
-          persist-credentials: false
-          fetch-depth: 1
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            src/services/opencode/OpenCodeBinaryResolver.ts
-            src/services/opencode/OpenCodeCursorAgentTreeKill.ts
-            src/services/opencode/compatibility/OpenCodeGenerationPolicy.ts
-            src/services/opencode/compatibility/OpenCodeNativeIdentity.ts
-            src/services/opencode/compatibility/OpenCodeVersionProbe.ts
-            src/services/opencode/profile/OpenCodeV2ManagedConfig.ts
-            src/services/opencode/transport/OpenCodeBoundedFetch.ts
-            src/utils/portableCli.ts
-            src/utils/processKill.ts
-      - name: Record selected identity admission failure evidence
-        if: always() && failure() && steps.qualify.outcome == 'failure'
-        timeout-minutes: 2
-        shell: pwsh
-        env:
-          QUALIFICATION_ROOT: ${{ steps.qualify.outputs.root }}
-          SDK_CHECKOUT_OUTCOME: ${{ steps.sdk_source.outcome }}
-        run: |
-          $sdk = Join-Path $env:GITHUB_WORKSPACE '.test-tmp/sdk-admission'
-          $packaged = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked'
-          $bun = Join-Path $packaged 'resources/runtime/bun/bun.exe'
-          $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
-          if (!(Test-Path $bun)) {
-            '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"packaged_bun_missing","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
-          } else {
-            '{"schemaVersion":1,"outcome":"NOT_RUN","phase":"process_start","admissionCalls":0,"physicalRetirement":"unproven"}' | Set-Content $receipt -Encoding utf8
-            & $bun --no-install scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts $sdk "$env:QUALIFICATION_ROOT" $packaged $receipt
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'opencode-native-cold-diagnostic'
+          $inputRoot = Join-Path $env:RUNNER_TEMP 'opencode-native-cold-input'
+          New-Item -ItemType Directory -Path $evidence, $inputRoot | Out-Null
+          $artifactId = 12780251101
+          $sourceRun = 40597203392
+          $sourceHead = '1be2310e7f23c1635f975e5c5bc49d9e91d4aa95'
+          $sourceMerge = 'a245e8b863e924243e9fb10cbd368993df3f12a7'
+          $outerSha = '4ce366bbc7b95a9591ee163636ad0677febf9f251f40d5e5a83229181c7d08e8'
+          $api = 'https://api.github.com/repos/777genius/agent-teams-ai/actions'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
           }
-      - name: Archive qualified Windows test build
+          $receipt = [ordered]@{
+            schemaVersion = 1
+            artifactId = $artifactId
+            sourceRun = $sourceRun
+            sourceAttempt = 2
+            sourceHead = $sourceHead
+            sourceMerge = $sourceMerge
+            validated = $false
+          }
+          try {
+            $artifact = Invoke-RestMethod -Uri "$api/artifacts/$artifactId" -Headers $headers
+            $run = Invoke-RestMethod -Uri "$api/runs/$sourceRun/attempts/2" -Headers $headers
+            if ($artifact.id -ne $artifactId -or $artifact.expired -or
+                $artifact.name -ne "opencode-windows-test-build-$sourceMerge" -or
+                $artifact.digest -ne "sha256:$outerSha" -or
+                $artifact.workflow_run.id -ne $sourceRun -or
+                $artifact.workflow_run.head_sha -ne $sourceHead -or
+                $artifact.workflow_run.repository_id -ne 1163183284 -or
+                $artifact.workflow_run.head_repository_id -ne 1163183284) {
+              throw 'Qualified input artifact metadata does not match the pinned provenance'
+            }
+            if ($run.id -ne $sourceRun -or $run.run_attempt -ne 2 -or
+                $run.head_sha -ne $sourceHead -or $run.status -ne 'completed' -or
+                $run.conclusion -ne 'success' -or
+                [DateTimeOffset]::Parse($artifact.created_at) -lt [DateTimeOffset]::Parse($run.run_started_at)) {
+              throw 'Qualified source run attempt is not the expected completed success'
+            }
+            $receipt.metadata = $artifact | Select-Object id, name, size_in_bytes, digest, created_at, workflow_run
+            $outer = Join-Path $inputRoot 'qualified-artifact.zip'
+            Invoke-WebRequest -Uri "$api/artifacts/$artifactId/zip" -Headers $headers -OutFile $outer
+            $actualOuterSha = (Get-FileHash -LiteralPath $outer -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actualOuterSha -ne $outerSha) { throw 'Qualified artifact outer ZIP SHA256 mismatch' }
+            $receipt.outerSha256 = $actualOuterSha
+            $outerRoot = Join-Path $inputRoot 'outer'
+            Expand-Archive -LiteralPath $outer -DestinationPath $outerRoot
+            $checksums = @(Get-ChildItem -LiteralPath $outerRoot -Recurse -File -Filter 'test-build-SHA256SUMS.txt')
+            if ($checksums.Count -ne 1) { throw 'Expected exactly one inner bundle checksum file' }
+            $lines = @(Get-Content -LiteralPath $checksums[0].FullName | Where-Object { $_.Trim() -ne '' })
+            if ($lines.Count -ne 1) { throw 'Expected exactly one qualified bundle checksum' }
+            $pattern = '^([a-fA-F0-9]{64})\s+\*?(AgentTeamsAI-windows-test-' + $sourceMerge + '\.zip)\s*$'
+            $checksum = [regex]::Match($lines[0], $pattern)
+            if (!$checksum.Success) { throw 'Qualified inner bundle checksum has an unexpected filename or format' }
+            $bundle = Join-Path $checksums[0].DirectoryName $checksum.Groups[2].Value
+            $innerSha = (Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($innerSha -ne $checksum.Groups[1].Value.ToLowerInvariant()) { throw 'Qualified inner bundle SHA256 mismatch' }
+            $receipt.innerBundle = @{ name = $checksum.Groups[2].Value; sha256 = $innerSha }
+            $bundleRoot = Join-Path $inputRoot 'bundle'
+            Expand-Archive -LiteralPath $bundle -DestinationPath $bundleRoot
+            $appRoot = Join-Path $bundleRoot 'win-unpacked'
+            $expected = [ordered]@{
+              'AgentTeamsAI.exe' = '469e32a1cf8b6691019c48a70a72ca41c7800ac7dc86a800ee9c724537c05c9f'
+              'resources/app.asar' = '0e24643afcdd7612eb3788b8cc1c677ad1e014325361de42e47c9146348df6ac'
+              'resources/runtime/claude-multimodel.exe' = 'e83c2b3326926262acd4bf861be0462d6d5c666ee0b2700da3f3eb4f637d28f0'
+            }
+            $receipt.payloadSha256 = [ordered]@{}
+            foreach ($relative in $expected.Keys) {
+              $digest = (Get-FileHash -LiteralPath (Join-Path $appRoot $relative) -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($digest -ne $expected[$relative]) { throw "Qualified payload SHA256 mismatch: $relative" }
+              $receipt.payloadSha256[$relative] = $digest
+            }
+            $executable = (Resolve-Path (Join-Path $appRoot 'AgentTeamsAI.exe')).Path
+            $receipt.validated = $true
+            $receipt.executable = $executable
+            "executable=$executable" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          } catch {
+            $receipt.error = $_.Exception.Message
+            throw
+          } finally {
+            $receipt | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $evidence 'input-provenance.json') -Encoding utf8
+          }
+      - name: Observe exact app beyond the original cold crash uptime
         shell: pwsh
+        env:
+          OPENCODE_NATIVE_COLD_DIAGNOSTIC: '1'
+          QUALIFIED_EXECUTABLE: ${{ steps.candidate.outputs.executable }}
         run: |
-          $archive = "AgentTeamsAI-windows-test-$env:GITHUB_SHA.zip"
-          Compress-Archive -Path release/win-unpacked -DestinationPath "release/$archive"
-          $digest = (Get-FileHash "release/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$digest  $archive" | Set-Content release/test-build-SHA256SUMS.txt
-          @"
-          Windows test build, not an installer or an updater release.
-          Source commit: $env:GITHUB_SHA
-          Runtime payload version: $((Get-Content runtime.lock.json | ConvertFrom-Json).version)
-          Runtime candidate source (empty for published pin): ${{ inputs.runtime_candidate_sha }}
-          If a candidate source is present this is an unreleased test runtime. See runtime-candidate-evidence.json.
-          Extract the ZIP. Do not launch AgentTeamsAI.exe directly with your everyday profile.
-          Use the separate disposable-profile instructions supplied with this test build.
-          Do not launch teams in real projects.
-          Qualification reports and screenshots are in opencode-packaged-windows-$env:GITHUB_SHA.
-          "@ | Set-Content release/test-build-README.txt
-      - name: Preserve qualified Windows test build
-        uses: actions/upload-artifact@v4
-        with:
-          name: opencode-windows-test-build-${{ github.sha }}
-          retention-days: 14
-          if-no-files-found: error
-          compression-level: 0
-          path: |
-            release/AgentTeamsAI-windows-test-*.zip
-            release/test-build-SHA256SUMS.txt
-            release/test-build-README.txt
-            runtime-candidate-evidence.json
-      - name: Preserve qualification evidence
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $env:TMPDIR = $env:RUNNER_TEMP
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $evidence = Join-Path $env:RUNNER_TEMP 'opencode-native-cold-diagnostic'
+          $dumpFolder = Join-Path $evidence 'dumps'
+          New-Item -ItemType Directory -Path $dumpFolder | Out-Null
+          $relativeKey = 'SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\AgentTeamsAI.exe'
+          $werKey = "HKLM:\$relativeKey"
+          $ownedKey = $false
+          $observationsPassed = $false
+          $receipt = [ordered]@{
+            schemaVersion = 1
+            purpose = 'Bounded observation; original native crash cause remains unresolved'
+            harnessSource = $env:GITHUB_SHA
+            startedAt = [DateTimeOffset]::UtcNow.ToString('o')
+            key = $werKey
+            preexisting = $false
+            created = $false
+            removed = $false
+            diagnosticPassed = $false
+          }
+          try {
+            $existing = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($relativeKey)
+            if ($null -ne $existing) {
+              $existing.Dispose()
+              $receipt.preexisting = $true
+              throw 'Refusing to modify an existing per-image WER LocalDumps key'
+            }
+            $key = [Microsoft.Win32.Registry]::LocalMachine.CreateSubKey($relativeKey)
+            if ($null -eq $key) { throw 'Could not create the diagnostic per-image WER key' }
+            $ownedKey = $true
+            $receipt.created = $true
+            try {
+              $key.SetValue('DumpFolder', $dumpFolder, [Microsoft.Win32.RegistryValueKind]::ExpandString)
+              $key.SetValue('DumpType', 1, [Microsoft.Win32.RegistryValueKind]::DWord)
+              $key.SetValue('DumpCount', 3, [Microsoft.Win32.RegistryValueKind]::DWord)
+              $receipt.readback = [ordered]@{
+                DumpFolder = $key.GetValue('DumpFolder')
+                DumpType = $key.GetValue('DumpType')
+                DumpCount = $key.GetValue('DumpCount')
+                DumpFolderKind = $key.GetValueKind('DumpFolder').ToString()
+                DumpTypeKind = $key.GetValueKind('DumpType').ToString()
+                DumpCountKind = $key.GetValueKind('DumpCount').ToString()
+              }
+              if ($receipt.readback.DumpFolder -ne $dumpFolder -or $receipt.readback.DumpType -ne 1 -or
+                  $receipt.readback.DumpCount -ne 3 -or $receipt.readback.DumpFolderKind -ne 'ExpandString' -or
+                  $receipt.readback.DumpTypeKind -ne 'DWord' -or $receipt.readback.DumpCountKind -ne 'DWord') {
+                throw 'Per-image WER LocalDumps readback mismatch'
+              }
+            } finally {
+              $key.Dispose()
+            }
+            $receipt | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $evidence 'wer-receipt.json') -Encoding utf8
+            $options = @('--packaged-executable', $env:QUALIFIED_EXECUTABLE, '--runtime-setup', 'app-install')
+            node scripts/e2e/opencode-diagnostics/run-packaged.mjs @options 2>&1 |
+              Tee-Object -FilePath (Join-Path $evidence 'harness.log') -Variable qualificationOutput
+            $qualificationExit = $LASTEXITCODE
+            $receipt.harnessExitCode = $qualificationExit
+            $roots = @($qualificationOutput | Where-Object { "$_" -match '^Packaged artifacts/profile: ' })
+            if ($roots.Count -ne 1) { throw 'Expected one owned harness profile root' }
+            $root = "$($roots[0])".Substring('Packaged artifacts/profile: '.Length)
+            $receipt.harnessRoot = $root
+            if ($qualificationExit -ne 0) { throw "Existing packaged harness failed with exit $qualificationExit" }
+            $cold = Get-Content -LiteralPath (Join-Path $root 'cold/native-cold-observation.json') -Raw | ConvertFrom-Json
+            if ($cold.passed -ne $true -or $cold.phase -ne 'after-two-settings-reads-before-manage-click' -or
+                $cold.minimumUptimeMs -ne 180000 -or $cold.uptimeMs -lt 180000 -or
+                $cold.originalApp.executable -ne $env:QUALIFIED_EXECUTABLE) {
+              throw 'Cold diagnostic receipt did not prove the required owned-process observation'
+            }
+            $receipt.coldObservation = $cold
+            $lifecycleFiles = @(Get-ChildItem -LiteralPath $root -File -Filter 'child-lifecycle-*.json')
+            if ($lifecycleFiles.Count -ne 3) { throw 'Expected one original app lifecycle receipt per run' }
+            $lifecycles = @($lifecycleFiles | ForEach-Object {
+              @{ name = $_.Name; data = (Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json) }
+            })
+            $receipt.nativeLifecycles = @()
+            foreach ($runName in @('cold', 'warm-1', 'warm-2')) {
+              $runRoot = Join-Path $root $runName
+              $manifest = Get-Content -LiteralPath (Join-Path $runRoot 'manifest.json') -Raw | ConvertFrom-Json
+              $runEvidence = Get-Content -LiteralPath (Join-Path $runRoot 'evidence.json') -Raw | ConvertFrom-Json
+              if ($manifest.run -ne $runName -or $manifest.root -ne $root -or
+                  $manifest.artifact.app.path -ne $env:QUALIFIED_EXECUTABLE -or $manifest.launcher.pid -le 0 -or
+                  $runEvidence.run -ne $runName -or $runEvidence.passed -ne $true) {
+                throw "Missing immutable app run identity: $runName"
+              }
+              $apps = @($manifest.observedProcesses | Where-Object {
+                $_.parent -eq $manifest.launcher.pid -and $_.executable -eq $manifest.artifact.app.path
+              })
+              if ($apps.Count -ne 1 -or $apps[0].pid -le 0) { throw "Ambiguous original app identity: $runName" }
+              $app = $apps[0]
+              $appBirth = ([DateTimeOffset]$app.birth).ToUnixTimeMilliseconds()
+              $launcherBirth = ([DateTimeOffset]$manifest.launcher.birth).ToUnixTimeMilliseconds()
+              $startedAt = ([DateTimeOffset]$runEvidence.startedAt).ToUnixTimeMilliseconds()
+              $completedAt = ([DateTimeOffset]$runEvidence.completedAt).ToUnixTimeMilliseconds()
+              if ($appBirth -lt $launcherBirth -or $appBirth -gt $startedAt -or $completedAt -lt $startedAt) {
+                throw "Invalid original app identity timeline: $runName"
+              }
+              $matching = @($lifecycles | Where-Object { $_.data.run -eq $runName })
+              if ($matching.Count -ne 1) { throw "Missing or duplicate app lifecycle: $runName" }
+              $lifecycle = $matching[0].data
+              if ($matching[0].name -ne "child-lifecycle-$($manifest.launcher.pid)-$($lifecycle.createdAt).json" -or
+                  $lifecycle.createdAt -lt $launcherBirth -or $lifecycle.createdAt -gt $startedAt -or
+                  @($lifecycle.events).Count -ne 2) {
+                throw "App lifecycle is not bound to the original launcher: $runName"
+              }
+              foreach ($eventName in @('exit', 'close')) {
+                $events = @($lifecycle.events | Where-Object { $_.event -eq $eventName })
+                if ($events.Count -ne 1 -or $events[0].pid -ne $app.pid -or
+                    $null -eq $events[0].code -or $events[0].code -ne 0 -or
+                    $null -ne $events[0].signal -or $events[0].at -lt $completedAt) {
+                  throw "Original app did not finish normally after verification: $runName/$eventName"
+                }
+              }
+              if ($runName -eq 'cold' -and ($cold.originalApp.pid -ne $app.pid -or
+                  $cold.originalApp.birth -ne $app.birth -or $cold.originalApp.executable -ne $app.executable)) {
+                throw 'Cold observation and lifecycle do not describe the same original app identity'
+              }
+              $receipt.nativeLifecycles += @{ run = $runName; originalApp = $app; lifecycle = $lifecycle }
+            }
+            $observationsPassed = $true
+          } catch {
+            $receipt.error = $_.Exception.Message
+            throw
+          } finally {
+            $cleanupError = $null
+            if ($ownedKey) {
+              try {
+                Remove-Item -LiteralPath $werKey -Recurse -ErrorAction Stop
+                if (Test-Path -LiteralPath $werKey) { throw 'Diagnostic per-image WER key still exists' }
+                $receipt.removed = $true
+              } catch {
+                $cleanupError = $_.Exception.Message
+                $receipt.cleanupError = $cleanupError
+              }
+            }
+            $receipt.dumps = @(Get-ChildItem -LiteralPath $dumpFolder -File -Filter '*.dmp' | ForEach-Object {
+              @{ name = $_.Name; bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+            })
+            $receipt.diagnosticPassed = $observationsPassed -and $receipt.removed -and $receipt.dumps.Count -eq 0
+            if ($receipt.dumps.Count -gt 0) {
+              $receipt.nativeDumpFound = $true
+              $receipt.dumpError = 'WER captured a native dump; absence of a dump would not prove native stability'
+            }
+            $receipt.completedAt = [DateTimeOffset]::UtcNow.ToString('o')
+            $receipt | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $evidence 'wer-receipt.json') -Encoding utf8
+            if ($cleanupError) { throw "Diagnostic WER key cleanup failed: $cleanupError" }
+            if ($receipt.dumps.Count -gt 0) { throw 'Native dump captured during the diagnostic observation' }
+          }
+      - name: Preserve diagnostic evidence and bounded minidumps
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-packaged-windows-${{ github.sha }}
-          retention-days: 14
+          name: opencode-native-cold-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
           if-no-files-found: warn
           path: |
-            ${{ runner.temp }}/selected-identity-diagnostic.json
+            ${{ runner.temp }}/opencode-native-cold-diagnostic/*.json
+            ${{ runner.temp }}/opencode-native-cold-diagnostic/harness.log
+            ${{ runner.temp }}/opencode-native-cold-diagnostic/dumps/*.dmp
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
-            scripts/e2e/opencode-diagnostics/windows-attachments.mts
-            runtime-candidate-evidence.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.txt

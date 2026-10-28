@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { isDeepStrictEqual } from 'node:util';
 import { clickControl, correlateReport } from './catalog.mjs';
+import { sameIdentity } from './platform.mjs';
 import {
   runtimeProvenance,
   packagedEnvironment,
@@ -1076,6 +1077,62 @@ export async function verifyPackaged({
         95000
       );
       evidence.settings.push(qualifySettings(response, catalogExpectation));
+    }
+    // Temporary diagnostic branch only: replay the exact qualified app through
+    // the prior cold-crash uptime before exercising the same Settings transition.
+    if (process.env.OPENCODE_NATIVE_COLD_DIAGNOSTIC === '1' && data.run === 'cold') {
+      assert.equal(process.platform, 'win32');
+      const candidates = (data.observedProcesses ?? []).filter(
+        (p) => p.parent === data.launcher.pid &&
+          p.executable?.toLowerCase() === data.artifact.app.path.toLowerCase()
+      );
+      assert.equal(candidates.length, 1, 'Original cold app identity unavailable or ambiguous');
+      const originalApp = { ...candidates[0] };
+      const birth = Date.parse(originalApp.birth);
+      assert(Number.isSafeInteger(originalApp.pid) && originalApp.pid > 0);
+      assert(Number.isFinite(birth) && birth <= Date.now(), 'Invalid original app birth');
+      const observation = evidence.nativeColdObservation = {
+        phase: 'after-two-settings-reads-before-manage-click',
+        originalApp,
+        minimumUptimeMs: 180000,
+        startedAt: new Date().toISOString(),
+        passed: false,
+        samples: [],
+      };
+      const receipt = () => save('native-cold-observation.json', JSON.stringify(observation, null, 2));
+      const deadline = performance.now() + 190000;
+      const sample = async () => {
+        assert(performance.now() <= deadline, 'Cold diagnostic observation exceeded its bound');
+        const current = await installerPublicationSnapshot(data);
+        sameIdentity(originalApp, current.app);
+        assert.equal(current.app.executable.toLowerCase(), originalApp.executable.toLowerCase());
+        assert.equal(current.app.parent, originalApp.parent);
+        assert.equal(await evaluate('document.readyState'), 'complete', 'Original CDP target is not ready');
+        assert(performance.now() <= deadline, 'Cold diagnostic observation exceeded its bound');
+        const uptimeMs = Date.now() - birth;
+        assert(uptimeMs >= 0, 'Cold diagnostic clock moved before app birth');
+        observation.samples.push({ at: new Date().toISOString(), uptimeMs });
+        assert(observation.samples.length <= 50, 'Cold diagnostic sample bound exceeded');
+        return uptimeMs;
+      };
+      await receipt();
+      try {
+        let uptimeMs = await sample();
+        while (uptimeMs < observation.minimumUptimeMs) {
+          await pause(Math.min(5000, observation.minimumUptimeMs - uptimeMs));
+          uptimeMs = await sample();
+          await receipt();
+        }
+        assert(uptimeMs >= observation.minimumUptimeMs);
+        observation.completedAt = new Date().toISOString();
+        observation.uptimeMs = uptimeMs;
+        observation.passed = true;
+      } catch (error) {
+        observation.error = String(error);
+        throw error;
+      } finally {
+        await receipt();
+      }
     }
     await observe(
       'globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = true'
