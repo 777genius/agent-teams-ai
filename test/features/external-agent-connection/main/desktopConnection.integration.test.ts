@@ -247,14 +247,21 @@ describe('desktop connection bound HTTP lifecycle', () => {
       for (const url of ['/api/app/connection/retry', '/api/ssh/connect', '/api/ssh/disconnect']) {
         expect((await request(url, newHeaders)).status).toBe(409);
       }
-      // A failed local switch must resume native launches against the actual root.
+      // An incomplete mutation keeps launch/child admission closed until explicit recovery.
       await expect(
         connection.changeContext(() => {
           throw new Error('SSH connect failed');
         })
       ).rejects.toThrow('SSH connect failed');
+      expect(() => connection.assertLaunchAdmission()).toThrow('changing context');
+      expect(handle).toBeNull();
+      expect(() => getDesktopMcpChildEnvironment()).toThrow('unavailable');
+      const recovered = await connection.retryConnection();
+      expect(recovered.mcp.status).toBe('ready');
+      expect(recovered.context.connectionGeneration).toBeGreaterThan(
+        after.context.connectionGeneration
+      );
       expect(() => connection.assertLaunchAdmission()).not.toThrow();
-      expect((await connection.getConnectionInfo()).mcp.status).toBe('ready');
       expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(root);
       await expect(
         connection.updateRoot(() => {
@@ -262,6 +269,17 @@ describe('desktop connection bound HTTP lifecycle', () => {
           throw new Error('Config write failed');
         })
       ).rejects.toThrow('Config write failed');
+      expect(() => connection.assertLaunchAdmission()).toThrow('changing context');
+      expect(handle).toBeNull();
+      expect(() => getDesktopMcpChildEnvironment()).toThrow('unavailable');
+      const recoveredUpdate = await connection.retryConnection();
+      expect(recoveredUpdate.mcp.status).toBe('ready');
+      expect(recoveredUpdate.context.connectionGeneration).toBeGreaterThan(
+        recovered.context.connectionGeneration
+      );
+      expect(recoveredUpdate.context.dataRootFingerprint).not.toBe(
+        recovered.context.dataRootFingerprint
+      );
       expect(() => connection.assertLaunchAdmission()).not.toThrow();
       expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(
         '/sandbox/connection-failed-update'

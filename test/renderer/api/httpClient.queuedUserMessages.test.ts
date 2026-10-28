@@ -1,7 +1,8 @@
-import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { BrowserAccessSession } from '@features/local-http-auth/renderer';
 import { HttpAPIClient } from '@renderer/api/httpClient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 
 class MockEventSource {
   onopen: (() => void) | null = null;
@@ -58,8 +59,14 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
   });
 
   it('sends the local API bearer token on sensitive browser requests', async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ready: true, service: 'api', connected: false }), {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ready: true, service: 'api' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ connected: false }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })
@@ -69,8 +76,9 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
     fetchMock.mockClear();
     const client = new HttpAPIClient(session.baseUrl, session);
 
-    await client.ssh.getState();
+    await expect(client.ssh.getState()).resolves.toEqual({ connected: false });
 
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith(
       'http://127.0.0.1:53123/api/ssh/state',
       expect.objectContaining({

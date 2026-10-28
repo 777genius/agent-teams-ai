@@ -816,23 +816,6 @@ export class AgentTeamsMcpHttpServer {
     });
   }
 
-  private async tryAdoptPortHandle(
-    port: number,
-    expectedIdentity: AgentTeamsMcpExpectedHttpIdentity,
-    diagnostics: string[]
-  ): Promise<AgentTeamsMcpHttpServerHandle | null> {
-    const classification = await this.classifyPort(port, expectedIdentity);
-    if (classification.kind === 'available') {
-      return null;
-    }
-    if (classification.kind === 'owned') {
-      diagnostic(`opencode_app_mcp_port_auth_unavailable:${port}`, diagnostics);
-      return null;
-    }
-    diagnostic(`opencode_app_mcp_port_occupied_unknown:${port}`, diagnostics);
-    return null;
-  }
-
   private async adoptHandle(input: {
     identity: AgentTeamsMcpHttpIdentity;
     pid: number | null;
@@ -874,25 +857,24 @@ export class AgentTeamsMcpHttpServer {
   private async resolveStartTarget(
     preferredPort: number | null | undefined,
     expectedIdentity: AgentTeamsMcpExpectedHttpIdentity,
-    statePath: string | null,
     diagnostics: string[]
-  ): Promise<
-    { kind: 'port'; port: number } | { kind: 'handle'; handle: AgentTeamsMcpHttpServerHandle }
-  > {
+  ): Promise<number> {
     const canListen = this.deps.canListenOnPort ?? canListenOnLoopbackPort;
     if (preferredPort) {
       if (await canListen(MCP_HTTP_HOST, preferredPort)) {
-        return { kind: 'port', port: preferredPort };
+        return preferredPort;
       }
-      const adopted = await this.tryAdoptPortHandle(preferredPort, expectedIdentity, diagnostics);
-      if (adopted) {
-        return { kind: 'handle', handle: adopted };
+      const classification = await this.classifyPort(preferredPort, expectedIdentity);
+      if (classification.kind === 'owned') {
+        diagnostic(`opencode_app_mcp_port_auth_unavailable:${preferredPort}`, diagnostics);
+      } else if (classification.kind === 'occupied_unknown') {
+        diagnostic(`opencode_app_mcp_port_occupied_unknown:${preferredPort}`, diagnostics);
       }
       diagnostic(`opencode_app_mcp_preferred_port_unavailable:${preferredPort}`, diagnostics);
     }
 
     if (this.deps.allocatePort && (!preferredPort || diagnostics.length > 0)) {
-      return { kind: 'port', port: await this.deps.allocatePort() };
+      return this.deps.allocatePort();
     }
 
     const stablePort = resolveDefaultStablePort();
@@ -910,7 +892,7 @@ export class AgentTeamsMcpHttpServer {
         if (candidate !== stablePort || stablePortUnavailable) {
           diagnostic(`opencode_app_mcp_preferred_port_unavailable:${stablePort}`, diagnostics);
         }
-        return { kind: 'port', port: candidate };
+        return candidate;
       }
       if (classification.kind === 'owned') {
         diagnostic(`opencode_app_mcp_port_auth_unavailable:${candidate}`, diagnostics);
@@ -923,7 +905,7 @@ export class AgentTeamsMcpHttpServer {
     const allocatePort = this.deps.allocatePort ?? allocateLoopbackPort;
     const port = await allocatePort();
     diagnostic('opencode_app_mcp_stable_port_range_unavailable', diagnostics);
-    return { kind: 'port', port };
+    return port;
   }
 
   private async startOnce(
@@ -982,18 +964,12 @@ export class AgentTeamsMcpHttpServer {
       }
     }
 
-    const selectedTarget = await this.resolveStartTarget(
+    const port = await this.resolveStartTarget(
       input.preferredPort ?? null,
       expectedIdentity,
-      statePath,
       diagnostics
     );
     this.throwIfStartsPrevented();
-    if (selectedTarget.kind === 'handle') {
-      return selectedTarget.handle;
-    }
-
-    const port = selectedTarget.port;
     const authToken = randomBytes(32).toString('base64url');
     const args = buildHttpServerArgs(launchSpec, port);
     const childIdentity: AgentTeamsMcpHttpIdentity = {

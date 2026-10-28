@@ -1,13 +1,7 @@
-import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { HttpAPIClient } from '@renderer/api/httpClient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-class FakeEventSource {
-  onopen: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  addEventListener = vi.fn();
-  close = vi.fn();
-}
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 
 describe('HttpAPIClient memberWorkSync', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -15,7 +9,7 @@ describe('HttpAPIClient memberWorkSync', () => {
 
   beforeEach(() => {
     fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
-    eventSourceMock = vi.fn(() => new FakeEventSource());
+    eventSourceMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('EventSource', eventSourceMock);
   });
@@ -56,7 +50,9 @@ describe('HttpAPIClient memberWorkSync', () => {
       })
     ).resolves.toEqual({ accepted: true });
 
-    expect(eventSourceMock).toHaveBeenCalledWith('http://127.0.0.1:53123/api/events');
+    // Request-only clients do not open an event stream without a subscriber.
+    expect(eventSourceMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       'http://127.0.0.1:53123/api/teams/demo%20team/member-work-sync/bob%2Fqa',
@@ -67,7 +63,7 @@ describe('HttpAPIClient memberWorkSync', () => {
       'http://127.0.0.1:53123/api/teams/demo%20team/member-work-sync/bob%2Fqa/refresh',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.any(Headers),
         body: JSON.stringify({}),
         signal: expect.any(AbortSignal),
       })
@@ -82,7 +78,7 @@ describe('HttpAPIClient memberWorkSync', () => {
       'http://127.0.0.1:53123/api/teams/demo%20team/member-work-sync/report',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.any(Headers),
         body: JSON.stringify({
           teamName: 'demo team',
           memberName: 'bob/qa',
@@ -94,6 +90,12 @@ describe('HttpAPIClient memberWorkSync', () => {
         signal: expect.any(AbortSignal),
       })
     );
+    for (const [, options] of fetchMock.mock.calls) {
+      const headers = new Headers(options.headers);
+      expect(headers.get('Authorization')).toMatch(/^Bearer [a-f0-9]{64}$/);
+      if (options.method === 'POST') expect(headers.get('Content-Type')).toBe('application/json');
+    }
+    client.dispose();
   });
 
   it('rejects recovery commands that have no browser-mode HTTP route', async () => {

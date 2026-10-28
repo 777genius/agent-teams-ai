@@ -81,7 +81,7 @@ const hostEnv = () => ({
   }),
 });
 const handle: NonNullable<ReturnType<typeof server.getCurrentHandle>> = {
-  url: 'http://127.0.0.1:41001/mcp?access_token=sandbox-mcp-auth-token-0123456789abcdef',
+  url: 'http://127.0.0.1:41001/mcp',
   port: 41001,
   urlHash: 'review-hash',
   pid: 123,
@@ -94,7 +94,7 @@ const handle: NonNullable<ReturnType<typeof server.getCurrentHandle>> = {
     host: '127.0.0.1',
     port: 41001,
     endpoint: '/mcp',
-    url: 'http://127.0.0.1:41001/mcp?access_token=sandbox-mcp-auth-token-0123456789abcdef',
+    url: 'http://127.0.0.1:41001/mcp',
     urlHash: 'review-hash',
     generation: 1,
     observedAt: '2026-09-10T00:00:00.000Z',
@@ -432,7 +432,7 @@ describe('shutdown MCP transport authority', () => {
     const resolveEnv = bridgeResolver(env) as () => Promise<NodeJS.ProcessEnv>;
     const accepted = new Error('authorized Stop intercepted; no subprocess');
     let acceptedStops = 0;
-    const expectedUrl = `http://127.0.0.1:41001/mcp?access_token=sandbox-mcp-auth-token-0123456789abcdef#agent-teams-app-instance=review-host&agent-teams-app-profile=${profile}`;
+    const expectedUrl = `http://127.0.0.1:41001/mcp#agent-teams-app-instance=review-host&agent-teams-app-profile=${profile}`;
     const client = new OpenCodeBridgeCommandClient({
       binaryPath: '/sandbox/cli',
       tempDirectory: directory,
@@ -447,6 +447,8 @@ describe('shutdown MCP transport authority', () => {
             server.getCurrentHandle() !== handle ||
             input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL !== expectedUrl ||
             input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH !== handle.urlHash ||
+            input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON !==
+              JSON.stringify({ Authorization: `Bearer ${handle.authToken}` }) ||
             input.env.CLAUDE_TEAM_APP_INSTANCE_ID !== 'review-host' ||
             input.env.CLAUDE_TEAM_APP_PROFILE_SCOPE !== profile ||
             child.CLAUDE_TEAM_APP_INSTANCE_ID !== 'review-host' ||
@@ -551,6 +553,7 @@ describe('shutdown MCP transport authority', () => {
       expect(teardown).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
       const after = await resolveEnv();
       expect(after.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+      expect(after.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON).toBeUndefined();
       expect(after.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
       expect(after.CLAUDE_TEAM_APP_INSTANCE_ID).toBeUndefined();
       expect(after.CLAUDE_TEAM_APP_PROFILE_SCOPE).toBeUndefined();
