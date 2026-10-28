@@ -90,15 +90,19 @@ describe('createCustomTeamTemplatesFeature', () => {
     const save = feature.saveTemplate.execute({
       previewToken: prepared.preview.previewToken,
     });
-    // An unknown interruption must wait for the failed writer to settle before
-    // any reconciliation read; without the classifying gateway the raw error
-    // would skip that wait and reconcile immediately.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(gateway.customTeamTemplateGetById).not.toHaveBeenCalled();
-    settleWriter();
-
     const create = vi.mocked(gateway.customTeamTemplateCreate);
     const getById = vi.mocked(gateway.customTeamTemplateGetById);
+    // The pre-write identity probe is an ordinary read. What matters is that no
+    // reconciliation read follows before the failed writer settles: without the
+    // classifying gateway the raw error would skip that wait and reconcile
+    // immediately.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const readsBeforeSettlement = getById.mock.calls.length;
+    expect(readsBeforeSettlement).toBe(1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getById).toHaveBeenCalledTimes(readsBeforeSettlement);
+    settleWriter();
+
     const attemptedTemplateId = create.mock.calls[0][0].template.templateId;
 
     // The write may have reached the database, so the outcome stays unresolved
@@ -154,7 +158,9 @@ describe('createCustomTeamTemplatesFeature', () => {
       feature.saveTemplate.execute({ previewToken: prepared.preview.previewToken })
     ).resolves.toEqual({ status: 'created', template: stored });
     expect(gateway.customTeamTemplateCreate).toHaveBeenCalledTimes(2);
-    expect(gateway.customTeamTemplateGetById).not.toHaveBeenCalled();
+    // Only the pre-write identity probe read: a not-started interruption is
+    // retried with the identical request and never reconciled.
+    expect(gateway.customTeamTemplateGetById).toHaveBeenCalledTimes(1);
   });
 
   it('reports a missing worker backend as unavailable storage instead of degrading', async () => {

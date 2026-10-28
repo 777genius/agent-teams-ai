@@ -39,6 +39,17 @@ import type {
  */
 const TEMPLATE_CREATE_MAX_ATTEMPTS = 2;
 
+/**
+ * Ids one save may consider when the content-derived id is owned by another
+ * record.
+ *
+ * A stored record keeps its id for life, so renaming a template leaves the id
+ * its former name derives owned by that renamed record. One displaced candidate
+ * is therefore the expected case; the small bound only guards against a
+ * pathological library.
+ */
+const TEMPLATE_ID_CANDIDATE_LIMIT = 8;
+
 export interface SaveCustomTeamTemplateUseCaseDeps {
   /** Null when the SQLite worker bundle is unavailable in this environment. */
   gateway: CustomTeamTemplateStorageGateway | null;
@@ -142,12 +153,32 @@ export class SaveCustomTeamTemplateUseCase {
     // The stable id is derived from the confirmed identity and the reviewed
     // content, never from the request. Recording it on the retained operation is
     // what lets a later re-check reconcile this exact write rather than a new one.
-    const identity = {
+    const writeIdentity: CustomTeamTemplateWriteIdentity = {
       templateId: this.deps.hasher.deriveTemplateId({
         contentHash: confirmed.contentHash,
         nameKey: resolved.nameKey,
         description: resolved.description ?? null,
       }),
+      name: resolved.name,
+      ...(resolved.description === undefined ? {} : { description: resolved.description }),
+      contentHash: confirmed.contentHash,
+    };
+
+    // A token that already froze its operation identity keeps that exact id:
+    // the recorded write may already have been dispatched, so it is never
+    // rebound. Only a first confirmation allocates, because the derived id can
+    // legitimately belong to another record (see `resolveSaveTemplateId`).
+    const templateId =
+      state.confirmedSave?.templateId ?? (await this.resolveSaveTemplateId(gateway, writeIdentity));
+    if (!templateId) {
+      // Every candidate id is owned by a different record. Reporting the
+      // derived id keeps the conflict honest: nothing was written, and the user
+      // can delete the record that holds that identity and save again.
+      return { status: 'templateIdConflict', templateId: writeIdentity.templateId };
+    }
+
+    const identity = {
+      templateId,
       name: resolved.name,
       nameKey: resolved.nameKey,
       ...(resolved.description === undefined ? {} : { description: resolved.description }),
@@ -292,6 +323,39 @@ export class SaveCustomTeamTemplateUseCase {
   private stale(state: CustomTeamTemplatePreviewState): ConfirmCustomTeamTemplateSaveResult {
     this.deps.previewStore.invalidate(state.token);
     return { status: 'stalePreview', sourceTeamName: state.sourceTeamName };
+  }
+
+  /**
+   * Allocates the stable id this save will write under.
+   *
+   * The content-derived id is the identity of the reviewed write, so it is used
+   * whenever it is free or already holds exactly this write. It can, however,
+   * belong to a different record: a stored record keeps its id for life, so
+   * renaming a template leaves the id its former name derives owned by the
+   * renamed record. Writing that id would either overwrite a record the user
+   * never reviewed or report a conflict that blocks a legitimate save, so the
+   * first free (or equivalent) candidate is used instead.
+   *
+   * Only a definitive conflict advances to the next candidate. A failed or
+   * unreadable probe keeps the candidate and lets the create decide, so the
+   * probe can never invent absence and the create stays authoritative.
+   */
+  private async resolveSaveTemplateId(
+    gateway: CustomTeamTemplateStorageGateway,
+    identity: CustomTeamTemplateWriteIdentity
+  ): Promise<string | null> {
+    for (let index = 0; index < TEMPLATE_ID_CANDIDATE_LIMIT; index++) {
+      const templateId = index === 0 ? identity.templateId : `${identity.templateId}-${index}`;
+      const check = await checkStoredTemplate(
+        gateway,
+        { ...identity, templateId },
+        this.deps.hasher
+      );
+      if (check.status !== 'conflict') {
+        return templateId;
+      }
+    }
+    return null;
   }
 
   private async createWithRecovery(
