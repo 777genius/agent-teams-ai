@@ -8,6 +8,7 @@ import { digest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { captureReadiness } from './desktop-launch-ui-smoke.ts';
 import { readNativeReviewSeed, assertNativeReviewBackgroundCompletion } from './desktop-native-review-fixture.ts';
 import {
   REVIEW_BOOTSTRAP,
@@ -187,7 +188,25 @@ export async function runDesktopNativeReviewUiSmoke(
     'deliberate generic bootstrap retained'
   );
   await ui.scrollTo('[role="dialog"] button', 'original Launch team ready', 'Launch team');
-  await ui.click('[role="dialog"] button', 'original Launch once', 'Launch team');
+  await captureReadiness(
+    cdp,
+    fixture.handleId,
+    proof,
+    options.assertOwnedRenderer,
+    'before-original-submit'
+  );
+  try {
+    await ui.click('[role="dialog"] button', 'original Launch once', 'Launch team');
+  } catch (error) {
+    await captureReadiness(
+      cdp,
+      fixture.handleId,
+      proof,
+      options.assertOwnedRenderer,
+      'original-submit-failed'
+    );
+    throw error;
+  }
   await ui.waitRead(
     `!document.querySelector('[role="dialog"] #dialog-prompt')`,
     'Launch dialog closes',

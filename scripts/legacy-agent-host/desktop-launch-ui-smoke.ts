@@ -18,32 +18,21 @@ const record = (raw: unknown): Record<string, unknown> => {
 };
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8')) as unknown;
 
-/** All launch effects originate from the original dialog's CDP Input controls. */
-export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
-  fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
-  seed: { taskId: string; subject: string; commandId: string };
-  evidence: Record<string, unknown>;
-  model: Awaited<ReturnType<typeof startNativeTeamModel>>;
-  assertOwnedRenderer(): void;
-  restartAfterStop?(): Promise<UiCdpPort>;
-}): Promise<void> {
-  const { fixture, evidence, model } = options;
-  const steps: Record<string, unknown>[] = [];
-  const proof: Record<string, unknown> = {
-    status: 'INCOMPLETE', steps,
-    scope: `Original LaunchTeamDialog controls, fresh saved capture, actual SDK/MCP task/message/native effect, Stop and original-dialog settings after ${evidence.mode === 'native-resume-ui' ? 'same-profile cold startup' : 'reload'}`,
-    excluded: [evidence.mode === 'native-resume-ui' ? 'Create controls' : 'Create/Resume controls', 'real vendor authentication/inference', 'all advanced settings', 'full Stage1'],
-  };
-  evidence.launchDialogProof = proof;
-  // Private React-layout-dependent TEST diagnosis only; never a workflow qualification.
-  const captureReadiness = async (phase: 'before-original-submit' | 'original-submit-failed') => {
-    const diagnostics = (proof.readinessDiagnostics ??= []) as unknown[];
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      options.assertOwnedRenderer();
-      const snapshot = await Promise.race([
-        cdp.evaluate(`(() => {
-          const teamName=${JSON.stringify('host-team:' + encodeURIComponent(fixture.handleId))};
+/** Private React-layout-dependent TEST diagnosis only; never a workflow qualification. */
+export async function captureReadiness(
+  cdp: UiCdpPort,
+  handleId: string,
+  proof: Record<string, unknown>,
+  assertOwnedRenderer: () => void,
+  phase: 'before-original-submit' | 'original-submit-failed'
+): Promise<void> {
+  const diagnostics = (proof.readinessDiagnostics ??= []) as unknown[];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    assertOwnedRenderer();
+    const snapshot = await Promise.race([
+      cdp.evaluate(`(() => {
+          const teamName=${JSON.stringify('host-team:' + encodeURIComponent(handleId))};
           const prompt=document.querySelector('[role="dialog"] #dialog-prompt'),dialog=prompt?.closest('[role="dialog"]');
           if(!prompt||!dialog)return {unavailable:'original-launch-dialog-unavailable',now:Date.now()};
           const field=(value,key)=>value&&(typeof value==='object'||typeof value==='function')
@@ -113,17 +102,35 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
           }
           return {...result,hookCount:count,...(hook?{unavailable:'hook-traversal-truncated'}:{})};
         })()`),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error('Readiness diagnostic timed out')), 3000);
-        }),
-      ]);
-      diagnostics.push({ phase, snapshot });
-    } catch {
-      diagnostics.push({ phase, unavailable: 'readiness-diagnostic-read-failed' });
-    } finally {
-      clearTimeout(timer);
-    }
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Readiness diagnostic timed out')), 3000);
+      }),
+    ]);
+    diagnostics.push({ phase, snapshot });
+  } catch {
+    diagnostics.push({ phase, unavailable: 'readiness-diagnostic-read-failed' });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** All launch effects originate from the original dialog's CDP Input controls. */
+export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
+  fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
+  seed: { taskId: string; subject: string; commandId: string };
+  evidence: Record<string, unknown>;
+  model: Awaited<ReturnType<typeof startNativeTeamModel>>;
+  assertOwnedRenderer(): void;
+  restartAfterStop?(): Promise<UiCdpPort>;
+}): Promise<void> {
+  const { fixture, evidence, model } = options;
+  const steps: Record<string, unknown>[] = [];
+  const proof: Record<string, unknown> = {
+    status: 'INCOMPLETE', steps,
+    scope: `Original LaunchTeamDialog controls, fresh saved capture, actual SDK/MCP task/message/native effect, Stop and original-dialog settings after ${evidence.mode === 'native-resume-ui' ? 'same-profile cold startup' : 'reload'}`,
+    excluded: [evidence.mode === 'native-resume-ui' ? 'Create controls' : 'Create/Resume controls', 'real vendor authentication/inference', 'all advanced settings', 'full Stage1'],
   };
+  evidence.launchDialogProof = proof;
   const step = (value: Record<string, unknown>) => steps.push({ monotonicMs: Math.round(performance.now()), ...value });
   let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
   const teamRoot = join(fixture.root, 'hoststore/teams/test-desktop-backend');
@@ -186,11 +193,23 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
   await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
-  await captureReadiness('before-original-submit');
+  await captureReadiness(
+    cdp,
+    fixture.handleId,
+    proof,
+    options.assertOwnedRenderer,
+    'before-original-submit'
+  );
   try {
     await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
   } catch (error) {
-    await captureReadiness('original-submit-failed');
+    await captureReadiness(
+      cdp,
+      fixture.handleId,
+      proof,
+      options.assertOwnedRenderer,
+      'original-submit-failed'
+    );
     throw error;
   }
   await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);

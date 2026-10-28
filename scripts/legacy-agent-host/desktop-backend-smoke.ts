@@ -719,7 +719,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         ? 'not exposed by main-owned transport; consult per-flow native custody and physical child observations'
         : readbackMode
           ? 'saved closed Runtime readback; no new provider session allocated'
-          : 'not exposed by main-owned transport; no provider sessions were configured',
+          : 'not exposed by main-owned transport; no separate Host exit code recorded',
     };
     if (cleanupFailure || remaining === null || remaining.length) evidence.status = 'INCOMPLETE';
     try {
