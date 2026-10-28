@@ -1,10 +1,17 @@
 import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
+import {
+  preparePrivateFileDirectory,
+  privateDirectory,
+  replacePrivateJson,
+  validatePrivatePath,
+  validateProfileRoot,
+} from '@features/local-http-auth/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { ensureMinimumNodeOldSpaceOptions } from '@main/utils/nodeOptions';
 import {
+  getAppDataBasePath,
   getClaudeBasePath,
-  getMcpConfigsBasePath,
   getMcpServerBasePath,
 } from '@main/utils/pathDecoder';
 import { collectRuntimePathBinaryCandidates } from '@main/utils/runtimePathBinaryResolver';
@@ -17,7 +24,7 @@ import * as path from 'path';
 
 import { McpConfigStateReader } from '../extensions/runtime/McpConfigStateReader';
 
-import { atomicWriteAsync, renamePathWithRetry } from './atomicWrite';
+import { renamePathWithRetry } from './atomicWrite';
 import {
   assertSupportedMcpNodeRuntime,
   clearPackagedElectronNodeRuntimeProbe,
@@ -55,16 +62,10 @@ const MCP_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
 const MCP_CONTROL_URL_ENV = 'CLAUDE_TEAM_CONTROL_URL';
 const logger = createLogger('Service:TeamMcpConfigBuilder');
 const MCP_CONFIG_PREFIX = 'agent-teams-mcp-';
+// Exact files published in this process only: PID/age alone never establish ownership.
+const ownedGeneratedConfigs = new Map<string, Pick<fs.Stats, 'dev' | 'ino'>>();
 const MCP_CONFIG_REMOVE_RETRY_DELAYS_MS = [25, 75, 150] as const;
 const NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
-/**
- * Stale configs older than this are removed on startup (best-effort).
- * 7 days is intentionally long: respawnAfterAuthFailure() reuses saved
- * --mcp-config paths, so shorter TTLs risk deleting configs still needed
- * by long-running or retrying sessions in other app instances.
- */
-const MCP_CONFIG_STALE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
 type McpServerConfig = Record<string, unknown>;
 
 const MCP_CONFIG_SCOPE_PRECEDENCE: readonly TeamMemberMcpScope[] = ['user', 'project', 'local'];
@@ -549,7 +550,7 @@ export class TeamMcpConfigBuilder {
     optionsOrPolicy?: WriteMcpConfigOptions | TeamMemberMcpPolicy
   ): Promise<string> {
     const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
-    const configDir = getMcpConfigsBasePath();
+    const configDir = path.join(await privateDirectory(getAppDataBasePath()), 'mcp-configs');
     const configPath = path.join(
       configDir,
       `${MCP_CONFIG_PREFIX}${process.pid}-${Date.now()}-${randomUUID()}.json`
@@ -586,17 +587,9 @@ export class TeamMcpConfigBuilder {
       }
     }
 
-    await fs.promises.mkdir(configDir, { recursive: true });
-    await atomicWriteAsync(
-      configPath,
-      JSON.stringify(
-        {
-          mcpServers: generatedServers,
-        },
-        null,
-        2
-      )
-    );
+    await preparePrivateFileDirectory(configPath);
+    await replacePrivateJson(configPath, { mcpServers: generatedServers }, validatePrivatePath);
+    ownedGeneratedConfigs.set(configPath, await validatePrivatePath(configPath));
 
     return configPath;
   }
@@ -644,13 +637,24 @@ export class TeamMcpConfigBuilder {
 
   /** Delete a single MCP config file (best-effort). */
   async removeConfigFile(configPath: string): Promise<void> {
+    const owned = ownedGeneratedConfigs.get(configPath);
+    if (!owned) return;
     for (let attempt = 0; attempt <= MCP_CONFIG_REMOVE_RETRY_DELAYS_MS.length; attempt += 1) {
       try {
+        await validateProfileRoot(path.dirname(configPath));
+        await validatePrivatePath(path.dirname(configPath), true);
+        const current = await validatePrivatePath(configPath);
+        if (current.dev !== owned.dev || current.ino !== owned.ino) {
+          ownedGeneratedConfigs.delete(configPath);
+          return;
+        }
         await fs.promises.unlink(configPath);
+        ownedGeneratedConfigs.delete(configPath);
         return;
       } catch (error) {
         const err = error as NodeJS.ErrnoException;
         if (err.code === 'ENOENT') {
+          ownedGeneratedConfigs.delete(configPath);
           return;
         }
         if (
@@ -670,54 +674,13 @@ export class TeamMcpConfigBuilder {
     }
   }
 
-  /** Remove config files owned by current process (shutdown best-effort). */
+  /** Remove only exact config files published by this process (shutdown best-effort). */
   async gcOwnConfigs(): Promise<void> {
-    const configDir = getMcpConfigsBasePath();
-    const ownPrefix = `${MCP_CONFIG_PREFIX}${process.pid}-`;
-    try {
-      const entries = await fs.promises.readdir(configDir);
-      await Promise.all(
-        entries
-          .filter((n) => n.startsWith(ownPrefix) && n.endsWith('.json'))
-          .map((n) => fs.promises.unlink(path.join(configDir, n)).catch(() => {}))
-      );
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (err.code !== 'ENOENT') {
-        logger.warn(`Failed to GC own MCP configs: ${err.message}`);
-      }
-    }
+    await Promise.all([...ownedGeneratedConfigs.keys()].map((file) => this.removeConfigFile(file)));
   }
 
-  /**
-   * Remove stale config files older than maxAgeMs (startup GC, best-effort).
-   * Risk is reduced but not eliminated for multi-instance scenarios:
-   * respawnAfterAuthFailure() has its own recovery to regenerate deleted configs.
-   */
-  async gcStaleConfigs(maxAgeMs = MCP_CONFIG_STALE_MAX_AGE_MS): Promise<void> {
-    const configDir = getMcpConfigsBasePath();
-    try {
-      const entries = await fs.promises.readdir(configDir);
-      await Promise.all(
-        entries
-          .filter((n) => n.startsWith(MCP_CONFIG_PREFIX) && n.endsWith('.json'))
-          .map(async (n) => {
-            const fullPath = path.join(configDir, n);
-            try {
-              const stat = await fs.promises.stat(fullPath);
-              if (Date.now() - stat.mtimeMs > maxAgeMs) {
-                await fs.promises.unlink(fullPath);
-              }
-            } catch {
-              /* ignore per-file errors */
-            }
-          })
-      );
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (err.code !== 'ENOENT') {
-        logger.warn(`Failed to GC stale MCP configs: ${err.message}`);
-      }
-    }
+  /** Compatibility entrypoint: age cannot prove that a config consumer has stopped. */
+  gcStaleConfigs(_maxAgeMs?: number): Promise<void> {
+    return Promise.resolve();
   }
 }
