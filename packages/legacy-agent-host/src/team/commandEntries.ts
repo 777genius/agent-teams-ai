@@ -15,6 +15,7 @@ import { isReviewWriterMethod } from '@agent-teams/task-change-ledger/review-tra
 import { TeamOwnerError } from './contracts.js';
 import { digest } from './identity.js';
 import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js';
+import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import type { CommandReceipt } from './contracts.js';
 import type { ReviewCommandReceipt } from './reviewCommandContracts.js';
 import type { TeamStore } from './ports.js';
@@ -129,6 +130,8 @@ export function validateCommandEntry(value: TeamCommandEntry): TeamCommandEntry 
     if (!['prepared', 'applying', 'completed', 'rejected', 'held'].includes(value.phase))
       throw new TeamOwnerError('hold');
     validateTeamCommand(value.command);
+    if (value.commandId !== value.command.commandId ||
+      value.fingerprint !== teamCommandFingerprint(value)) throw new TeamOwnerError('hold');
     return value;
   } catch {
     throw new TeamOwnerError('hold');
@@ -168,7 +171,9 @@ export function readProductCommand(
   store: TeamStore,
   commandId: string
 ): CommandReceipt | undefined {
-  return productCommandReceipt(store.read(teamCommandPath(commandId)));
+  const receipt = productCommandReceipt(store.read(teamCommandPath(commandId)));
+  if (receipt && receipt.commandId !== commandId) throw new TeamOwnerError('hold');
+  return receipt;
 }
 
 /** Caller holds the original Team read authority fence. */

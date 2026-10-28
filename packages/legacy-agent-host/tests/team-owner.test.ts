@@ -17,6 +17,8 @@ import { test } from 'node:test';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createFilesystemTeamOwner as createOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
+import { teamCommandPath } from '../dist/team/commandEntries.js';
+import { teamCommandFingerprint } from '../dist/team/teamCommandFingerprint.js';
 
 import type { FilesystemTeamOwnerOptions as TeamOwnerOptions } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import type { CommandReceipt, TeamCommand } from '../dist/team/contracts.js';
@@ -85,6 +87,16 @@ function taskBytes(root: string, taskId: string): string {
   return readFileSync(join(root, 'tasks', 'test-team', `${taskId}.json`), 'utf8');
 }
 
+function storedBytes(root: string) {
+  return readdirSync(root, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const path = join(entry.parentPath, entry.name);
+      return [path, readFileSync(path, 'utf8')] as const;
+    })
+    .sort(([left], [right]) => left.localeCompare(right));
+}
+
 test('actual canonical Task create persists stable identity, conflict and completed replay after lost response', (t) => {
   const f = fixture(t);
   const command = create('create-A');
@@ -139,6 +151,70 @@ test('current authority covers completed replay, lookup, execution and revoke ac
     () => f.owner.connect('bob-session').lookup(command.commandId),
     expectCode('forbidden')
   );
+});
+
+for (const corruption of ['copied command', 'nested command ID', 'owner binding', 'payload fingerprint'] as const) {
+  test(`cold product lookup holds malformed retained ${corruption} without rewriting or replay`, (t) => {
+    const f = fixture(t);
+    const command = create('TEST-lookup-original');
+    const original = f.human.execute(command);
+    let retained = structuredClone(original);
+    if (corruption === 'copied command') {
+      retained = f.human.execute(create('TEST-lookup-other', 'Other committed task'));
+    } else if (corruption === 'nested command ID') {
+      retained.command.commandId = 'TEST-other-nested-ID';
+      retained.fingerprint = teamCommandFingerprint(retained);
+    } else if (corruption === 'owner binding') {
+      retained.binding = { backendId: 'OTHER-backend', teamId: 'OTHER-team', teamName: 'other-team' };
+      retained.fingerprint = teamCommandFingerprint(retained);
+    } else {
+      assert.equal(retained.command.operation, 'task.create');
+      if (retained.command.operation === 'task.create')
+        retained.command.payload.subject = 'Changed without the original fingerprint';
+    }
+    const path = join(f.root, 'teams', 'test-team', '.host-owner', teamCommandPath(command.commandId));
+    writeFileSync(path, JSON.stringify(retained));
+    const before = storedBytes(f.root);
+    const restarted = createOwner(f.options).connect('human');
+    assert.throws(() => restarted.lookup(command.commandId), expectCode('hold'));
+    assert.throws(() => restarted.execute(command), expectCode(corruption === 'owner binding' ? 'conflict' : 'hold'));
+    assert.deepEqual(storedBytes(f.root), before, 'lookup and refused replay preserve all original product/command bytes');
+  });
+}
+
+test('valid cold product lookup preserves the original receipt, missing result and expected-command conflict', (t) => {
+  const f = fixture(t);
+  const command = create('TEST-valid-lookup');
+  const original = f.human.execute(command);
+  const before = storedBytes(f.root);
+  const restarted = createOwner(f.options).connect('human');
+  assert.deepEqual(restarted.lookup(command.commandId), original);
+  assert.deepEqual(restarted.lookup(command.commandId, command), original);
+  assert.equal(restarted.lookup('TEST-missing-lookup'), undefined);
+  assert.throws(() => restarted.lookup(command.commandId, create(command.commandId, 'Changed expected payload')), expectCode('conflict'));
+  assert.deepEqual(storedBytes(f.root), before);
+});
+
+test('revoked product lookup refuses current authority before reading a malformed retained receipt', (t) => {
+  class ReadSpy extends TeamOwnerStore {
+    commandReads = 0;
+    override read<T>(name: string): T | undefined {
+      if (name.startsWith('commands/')) this.commandReads++;
+      return super.read<T>(name);
+    }
+  }
+  let store: ReadSpy | undefined;
+  const f = fixture(t, (root) => (store = new ReadSpy(root, 'test-team')));
+  const original = f.alice.execute(create('TEST-revoked-lookup'));
+  f.human.revoke('alice-session');
+  const path = join(f.root, 'teams', 'test-team', '.host-owner', teamCommandPath(original.commandId));
+  writeFileSync(path, JSON.stringify({ ...original, fingerprint: '0'.repeat(64) }));
+  const before = storedBytes(f.root);
+  assert.ok(store);
+  store.commandReads = 0;
+  assert.throws(() => f.alice.lookup(original.commandId), expectCode('forbidden'));
+  assert.equal(store.commandReads, 0);
+  assert.deepEqual(storedBytes(f.root), before);
 });
 
 test('real canonical lifecycle keeps work intervals/history and deleted tasks do not resurrect on old replay', (t) => {

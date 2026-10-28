@@ -5868,3 +5868,21 @@ existing finite source inventory. This commit prepares the actor only; workflow
 wiring and actual ancestry/SDK/packed execution are still pending. No native
 PASS, P7/support claim, shipping activation or M19 debt closure follows from
 these local checks. Unfinished Codex changes are excluded from this slice.
+
+### Retained product lookup validation
+
+The prepared P7 actor slice was committed and immediately pushed as
+`4ef298da6427530078b6b79d7473b580986f5189`; no actual SDK/P7 result is claimed.
+A separate narrow product lookup fix now validates retained outer/nested command
+IDs, the unchanged canonical fingerprint, requested pathname ID and current
+Team binding inside the existing read-authority/principal fence. Expected-command
+recovery remains unchanged; lookup adds no replay, mutation or schema migration.
+
+Matching in-process RED demonstrates four corrupted-receipt failures with two
+controls intact; GREEN is6/6. The exact selected Node24.21 affected six-suite gate
+passed68/68,0 FAIL /0 SKIP, exit0 in175.234seconds, without a signal or retry.
+Build, strict Host test types, scoped lint and whitespace checks passed. C's
+independent exact-source review accepted D's frozen three-file correction.
+Opaque initial isolated startup failures are not the claimed RED. The successful
+624a canonical run remains scoped to its earlier bytes; current final CI is still
+required. Unfinished Codex/Taskboard/workflow changes are excluded from this slice.

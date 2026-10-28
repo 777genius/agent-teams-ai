@@ -458,6 +458,7 @@ export class TeamOwner {
     if (expected) validateTeamCommand(expected);
     return this.withLaunchAuthority(principalId, 'read', () => {
       const receipt = lookupOwnedProductCommand(this.store, principalId, commandId);
+      if (receipt && digest(receipt.binding) !== digest(this.binding)) throw new TeamOwnerError('hold');
       if (!expected || !receipt) return receipt;
       const grant = this.authorize(principalId, expected.operation === 'message.send' ? 'message.write' : 'task.write');
       if (requiresHumanTaskActor(expected) && grant.memberName !== 'user') throw new TeamOwnerError('forbidden');
