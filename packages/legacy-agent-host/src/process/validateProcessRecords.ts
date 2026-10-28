@@ -4,6 +4,7 @@ import type {
   RegisteredProcessCapture,
   TeamProcessRow,
 } from './registeredProcessContracts.js';
+import { isQualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
 const hold = (): never => {
   throw new Error('process:hold');
 };
@@ -21,7 +22,7 @@ function identity(value: DarwinProcessIdentity) {
     value.sessionId <= 1 ||
     !text(value.bootId) ||
     !/^[a-f0-9-]{36}$/i.test(value.bootId) ||
-    value.osBuild !== '24G90'
+    !isQualifiedDarwinBuild(value.osBuild)
   )
     hold();
 }

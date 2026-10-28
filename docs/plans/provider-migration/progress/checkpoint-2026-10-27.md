@@ -5704,3 +5704,72 @@ will first run the existing diagnostic-only route on this same branch to seed
 and verify a successful save before dispatching another eleven-row matrix.
 Uncommitted prospective process-tuple source work is excluded from this CI-only
 commit and does not acquire acceptance from the retained27f runs.
+
+### Prospective process artifact tuple binding
+
+The exact archive cache/order slice was committed and immediately pushed as
+`ceefeb40b6db41b2245d405921357b3680313a00`, without the then-uncommitted process
+source. The retained27f diagnostic above is empirical evidence for one finite
+readonly child on24G624; it is not an SDK or packaged support qualification.
+A prospective Draft candidate now permits exactly24G90 and24G624 for subsequent
+explicit TEST qualification, without default activation, release or all-OS policy.
+
+The artifact reader carries its selected manifest osBuild into the private
+Darwin factory. The actual loaded native build must equal that selected value
+on every existing current check. Fresh root and target identities must match it;
+observe/signal validate both saved identities before invoking a native operation.
+A90 manifest cannot authorize a624 native module merely because both builds are
+known. Unknown manifests/current builds fail closed. Historical90 capsules retain
+their original bytes and remain readable; on624 their observation is UNKNOWN and
+signal throws before native.signalOriginal (and observe returns UNKNOWN before
+native.observeOriginal); the current-build check still reads native.osBuild.
+Existing boot/token/session/ancestry,
+original-handle, authority and binary/manifest race/hash guards are retained.
+
+The packaging-only builder reads the actual host kernel build, validates the
+finite candidate set and rechecks that same build in its original before/after
+input-validation fence. It emits the actual build rather than writing90 on624.
+All compiler/SDK/header/source pins, fresh output-directory and manifest
+publication guards remain. One tiny private shared predicate avoids drifting
+allowlists; its source and the new regression file are added to the existing
+supplementary source inventory, with no file cap or exception increase.
+
+Direct callers were mapped: processCustody consumes reader→factory; candidate
+copy/runtime-path readers retain manifest selection; the existing raw-library
+native ancestry TEST fixture supplies its validated actual build to the now
+explicit private factory argument. That component fixture is not a production
+manifest admission shortcut. The older owned-Node qualifier reports the captured
+actual build truthfully instead of a hardcoded90 label. No public DTO, SPI,
+capture schema or native C change is introduced.
+
+Three new synthetic regressions exercise exact selected/native mismatch,
+unknown and changed tuples, fresh/saved root/target mismatch, historical capsule
+readability, zero native observe/signal effects on rejected control, and truthful
+builder output/no manifest publication for refused builds. They mock only their
+own TEST addon load/compiler/host census; no native admission is inferred.
+The focused tests including the existing historical-record case pass4/4.
+
+The first broad validation attempt overlapped two commands which both rebuild
+shared Host dist. It retained an unchanged-module import failure and existing
+TEST timeouts, while workspace types were killed137 in the8GiB environment.
+Those runs are not PASS evidence. Both original logs remain retained; selected
+owned runner IDs had already exited before cleanup, so no cleanup signal was
+sent. A clean build followed by the complete unchanged test inventory with two
+workers completed800/800 PASS,0 FAIL /0 SKIP /0 CANCEL, exit0 in198.716seconds.
+No assertion, deadline or source workaround was applied. Canonical workspace
+types were attempted separately afterward to avoid sharing generated-output
+writes: the2GiB soft limit sat below the compiler's live heap, so only that
+verified owned compiler was selected for interruption; its retained run ended137.
+The one coordinated4GiB/2-worker repeat also ended137 without TypeScript
+diagnostics. The local broad type gate remains unresolved; it is not reported as
+PASS and requires fresh current-source remote CI. No third experimental run or
+source/deadline/assertion workaround is introduced. The affected strict Host
+build/test-type gates and complete800-test gate above are genuine PASS evidence.
+
+Scoped lint, strict Host test types, source-size guard4,635files/143 frozen
+exceptions and provisioning architecture guard passed. Native C remains exact
+SHA256`310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b`.
+Independent exact source review accepted the binding and bounded negative tests.
+Actual native ancestry, normal SDK registration/Stop and packed proof are still
+required on the new source before any P7/support claim. The original M19
+root911 HOLD is untouched; no older receipt or run is promoted to close it.

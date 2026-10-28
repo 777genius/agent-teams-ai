@@ -109,6 +109,13 @@ bounds; helper переведён в MTS и включён в существую
 Local transfer подтвердил точные байты, но Mac setup/native PASS ещё не следует.
 Следующий remote запуск сначала проверяет diagnostic route без11 Desktop rows.
 
+Отдельный [prospective process candidate](progress/checkpoint-2026-10-27.md#prospective-process-artifact-tuple-binding)
+сохраняет явную связь selected manifest → actual native build для24G90/24G624.
+Historical24G90 records читаются без переписывания, но не дают control на24G624.
+Host unit gate прошёл800/800; actual ancestry, нормальный SDK registration/Stop
+и packed proof остаются обязательны до любого P7/support claim. Это не закрывает
+первоначальный M19 root911 HOLD и не включает новый путь по умолчанию.
+
 **Исторические snapshots ниже сохраняют собственные source boundaries.**
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/

@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { isQualifiedDarwinBuild } from '../src/process/qualifiedDarwinBuild.ts';
 const hash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const file = (path: string, expected: string) => {
   const info = lstatSync(path);
@@ -34,6 +35,11 @@ export function buildProcessNativeArtifact(input: {
 }) {
   if (process.platform !== 'darwin' || process.arch !== 'arm64')
     throw new Error('Unsupported build tuple');
+  const hostBuild = () => execFileSync('/usr/sbin/sysctl', ['-n', 'kern.osversion'], {
+    encoding: 'utf8', timeout: 5_000, maxBuffer: 1024,
+  }).trim();
+  const osBuild = hostBuild();
+  if (!isQualifiedDarwinBuild(osBuild)) throw new Error('Unsupported build tuple');
   const required = ['node_api.h', 'node_api_types.h', 'js_native_api.h', 'js_native_api_types.h'];
   if (
     new Set(input.headers.map((row) => row.file)).size !== input.headers.length ||
@@ -41,6 +47,7 @@ export function buildProcessNativeArtifact(input: {
   )
     throw new Error('Complete NAPI header pins required');
   const validate = () => {
+    if (hostBuild() !== osBuild) throw new Error('Process artifact build tuple changed');
     file(input.compiler, input.compilerSha256);
     file(join(input.sdkRoot, 'SDKSettings.json'), input.sdkSettingsSha256);
     file(input.source, input.sourceSha256);
@@ -87,7 +94,7 @@ export function buildProcessNativeArtifact(input: {
     abi: 'napi-8',
     platform: 'darwin',
     architecture: 'arm64',
-    osBuild: '24G90',
+    osBuild,
     library: 'registered-process.node',
     sourceSha256: input.sourceSha256,
     binarySha256: hash(library),

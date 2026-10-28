@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { isQualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
+import type { QualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
 
 import type { ChildProcess } from 'node:child_process';
 import type {
@@ -20,7 +22,7 @@ interface NativeApi {
 const hold = (): never => {
   throw new Error('Registered process custody unavailable');
 };
-function identity(value: unknown): DarwinProcessIdentity {
+function identity(value: unknown, osBuild: QualifiedDarwinBuild): DarwinProcessIdentity {
   if (!value || typeof value !== 'object') return hold();
   const row = value as DarwinProcessIdentity;
   if (
@@ -33,7 +35,7 @@ function identity(value: unknown): DarwinProcessIdentity {
     row.sessionId <= 1 ||
     typeof row.bootId !== 'string' ||
     !/^[A-Fa-f0-9-]{36}$/.test(row.bootId) ||
-    row.osBuild !== '24G90'
+    row.osBuild !== osBuild
   )
     return hold();
   return {
@@ -41,10 +43,13 @@ function identity(value: unknown): DarwinProcessIdentity {
   };
 }
 /** Load once in trusted Host composition. Binary is compiled/packaged at build time, never at startup. */
-export function createQualifiedDarwinProcessApi(artifact: { path: string; sha256: string }) {
+export function createQualifiedDarwinProcessApi(artifact: {
+  path: string; sha256: string; osBuild: QualifiedDarwinBuild;
+}) {
   if (
     process.platform !== 'darwin' ||
     process.arch !== 'arm64' ||
+    !isQualifiedDarwinBuild(artifact.osBuild) ||
     !/^[a-f0-9]{64}$/.test(artifact.sha256) ||
     !artifact.path.endsWith('.node')
   )
@@ -74,7 +79,11 @@ export function createQualifiedDarwinProcessApi(artifact: { path: string; sha256
   assertBinary();
   const assertCurrent = () => {
     assertBinary();
-    if (native.osBuild() !== '24G90') hold();
+    if (native.osBuild() !== artifact.osBuild) hold();
+  };
+  const original = (capture: RegisteredProcessCapture) => {
+    identity(capture.root, artifact.osBuild);
+    return identity(capture.target, artifact.osBuild);
   };
   assertCurrent();
   return {
@@ -83,7 +92,7 @@ export function createQualifiedDarwinProcessApi(artifact: { path: string; sha256
       if (!current() || !child.pid || child.exitCode !== null || child.signalCode !== null)
         return hold();
       assertCurrent();
-      const root = identity(native.captureRoot(child.pid));
+      const root = identity(native.captureRoot(child.pid), artifact.osBuild);
       if (root.auditToken[5] !== child.pid || root.sessionId !== child.pid || !current())
         return hold();
       let alive = true;
@@ -96,7 +105,7 @@ export function createQualifiedDarwinProcessApi(artifact: { path: string; sha256
             return hold();
           assertCurrent();
           const captured = native.captureDescendant(root.bootId, root.auditToken, pid);
-          const target = identity(captured);
+          const target = identity(captured, artifact.osBuild);
           const admission = captured && typeof captured === 'object' && 'admission' in captured
             ? captured.admission : undefined;
           const ancestry = admission === 'live-ancestry-v1';
@@ -123,7 +132,7 @@ export function createQualifiedDarwinProcessApi(artifact: { path: string; sha256
     observe(capture: RegisteredProcessCapture): ProcessObservation {
       try {
         assertCurrent();
-        const target = identity(capture.target);
+        const target = original(capture);
         const result = native.observeOriginal(target.bootId, target.auditToken, target.sessionId);
         return ['same-live', 'absent', 'stale', 'unknown'].includes(result)
           ? (result as ProcessObservation)
@@ -134,7 +143,7 @@ export function createQualifiedDarwinProcessApi(artifact: { path: string; sha256
     },
     signal(capture: RegisteredProcessCapture): 'accepted' | 'refused' {
       assertCurrent();
-      const target = identity(capture.target);
+      const target = original(capture);
       // Throw after requested is persisted remains unknown; no false signalled:false result.
       const code = native.signalOriginal(target.bootId, target.auditToken, target.sessionId);
       if (!Number.isSafeInteger(code) || code < 0) return hold();

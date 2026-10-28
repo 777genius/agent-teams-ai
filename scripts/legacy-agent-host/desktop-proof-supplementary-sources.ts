@@ -1,5 +1,7 @@
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts',
+  'packages/legacy-agent-host/tests/registered-process-build-selection.test.ts',
   'src/renderer/store/team/taskDetailReadAuthority.ts',
   'src/renderer/components/ui/MemberSelect.tsx',
   'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts',

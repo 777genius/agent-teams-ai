@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createQualifiedDarwinProcessApi } from '../dist/process/DarwinRegisteredProcess.js';
 import type { RegisteredProcessCapture } from '../dist/process/registeredProcessContracts.js';
+import { isQualifiedDarwinBuild } from '../dist/process/qualifiedDarwinBuild.js';
 assert.equal(process.env.LEGACY_REGISTERED_PROCESS_NATIVE_GO, '1');
 assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
 assert.ok(process.env.HOME?.startsWith('/private/tmp/TEST-') && process.env.TMPDIR?.startsWith('/private/tmp/TEST-'));
@@ -19,7 +20,9 @@ for (const [path, hash] of [[artifactPath, artifactHash], [actorPath, actorHash]
 }
 const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-ancestry-')));
 console.log(JSON.stringify({ root, scope: 'Private native proof; audit tokens retained only in its0600 proof.ndjson' }));
-const api = createQualifiedDarwinProcessApi({ path: artifactPath, sha256: artifactHash });
+const osBuild = execFileSync('/usr/sbin/sysctl', ['-n', 'kern.osversion'], { encoding: 'utf8' }).trim();
+assert.ok(isQualifiedDarwinBuild(osBuild));
+const api = createQualifiedDarwinProcessApi({ path: artifactPath, sha256: artifactHash, osBuild });
 const registrar = { backendId: 'TEST-native', teamId: 'TEST-team', runId: 'TEST-run', memberId: 'TEST-member', generation: '1' };
 const log = (fact: unknown) => appendFileSync(join(root, 'proof.ndjson'), JSON.stringify(fact) + '\n', { mode: 0o600 });
 async function until(check: () => Promise<boolean>) {

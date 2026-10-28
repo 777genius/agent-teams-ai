@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { isQualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
 
 /** Private selected build tuple. Never populated from public request payload, argv or ambient env. */
 export interface PackagedProcessArtifactSelection {
@@ -42,11 +43,12 @@ export function readPackagedProcessArtifact(selected: PackagedProcessArtifactSel
     row.abi !== 'napi-8' ||
     row.platform !== 'darwin' ||
     row.architecture !== 'arm64' ||
-    row.osBuild !== '24G90' ||
+    !isQualifiedDarwinBuild(row.osBuild) ||
     row.library !== 'registered-process.node' ||
     typeof row.binarySha256 !== 'string' ||
     !/^[a-f0-9]{64}$/.test(row.binarySha256)
   )
     return unavailable();
-  return { path: join(selected.directory, 'registered-process.node'), sha256: row.binarySha256 };
+  return { path: join(selected.directory, 'registered-process.node'), sha256: row.binarySha256,
+    osBuild: row.osBuild };
 }

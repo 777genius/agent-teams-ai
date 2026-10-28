@@ -119,7 +119,7 @@ export async function qualifyRegisteredProcessNative(input: {
       signalCalls,
     });
     return {
-      qualifiedTuple: 'darwin-arm64-24G90-owned-node-session-only',
+      qualifiedTuple: `darwin-arm64-${captured.target.osBuild}-owned-node-session-only`,
       signalCalls,
       rootExit: root.exitCode,
       sentinelExit: sentinel.exitCode,
