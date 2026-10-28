@@ -47,6 +47,57 @@ const teamA = 'test-desktop-backend';
 const teamB = 'test-owner-routing-b';
 const pause = () => new Promise<void>((done) => setTimeout(done, 100));
 
+/** TEST product bytes only; process leases are qualified separately by the epoch cleanup. */
+export async function captureDesktopOwnerRoutingProduct(source: string, destination: string) {
+  await mkdir(destination, { mode: 0o700 });
+  const files: { path: string; sha256: string; sizeBytes: number }[] = [];
+  let entries = 0;
+  const walk = async (directory: string): Promise<void> => {
+    const authority = /^teams\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}\/\.host-owner$/.test(
+      directory.slice(source.length + 1)
+    );
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      assert.ok(++entries <= 2048, 'bounded offline owner product census');
+      assert.ok(!entry.isSymbolicLink());
+      if (
+        authority &&
+        /^authority\.lock(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
+          entry.name
+        )
+      ) {
+        assert.ok(entry.isFile(), 'original authority lock is a regular file');
+        continue;
+      }
+      if (
+        authority &&
+        /^authority\.lock-transition-v2(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
+          entry.name
+        )
+      ) {
+        assert.ok(entry.isDirectory(), 'original authority gate is a directory');
+        continue;
+      }
+      const path = join(directory, entry.name);
+      assert.ok(path.startsWith(source + '/'));
+      if (entry.isDirectory()) {
+        await walk(path);
+        continue;
+      }
+      if (!entry.isFile() || entry.name === '.legacy-agent-host-writer.lock') continue;
+      const relative = path.slice(source.length + 1);
+      const bytes = await readFile(path);
+      assert.ok(bytes.length <= 1024 * 1024);
+      const target = join(destination, relative);
+      await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+      await writeFile(target, bytes, { flag: 'wx', mode: 0o600 });
+      files.push({ path: relative, sha256: digest(bytes), sizeBytes: bytes.length });
+    }
+  };
+  await walk(source);
+  files.sort((a, b) => a.path.localeCompare(b.path));
+  return files;
+}
+
 /** Three finite cold epochs after the original Taskboard epoch has fully cleaned up. */
 export async function runDesktopOwnerRoutingContinuation(
   context: DesktopOwnerRoutingContinuation
@@ -178,24 +229,7 @@ export async function runDesktopOwnerRoutingContinuation(
   const snapshot = async (label: string, root: string) => {
     const source = join(root, 'hoststore');
     const destination = join(proofRoot, label);
-    await mkdir(destination, { mode: 0o700 });
-    const entries = await readdir(source, { recursive: true, withFileTypes: true });
-    assert.ok(entries.length <= 2048, 'bounded offline owner product census');
-    const files: { path: string; sha256: string; sizeBytes: number }[] = [];
-    for (const entry of entries) {
-      assert.ok(!entry.isSymbolicLink());
-      if (!entry.isFile() || entry.name === '.legacy-agent-host-writer.lock') continue;
-      const path = join(entry.parentPath, entry.name);
-      assert.ok(path.startsWith(source + '/'));
-      const relative = path.slice(source.length + 1);
-      const bytes = await readFile(path);
-      assert.ok(bytes.length <= 1024 * 1024);
-      const target = join(destination, relative);
-      await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-      await writeFile(target, bytes, { flag: 'wx', mode: 0o600 });
-      files.push({ path: relative, sha256: digest(bytes), sizeBytes: bytes.length });
-    }
-    files.sort((a, b) => a.path.localeCompare(b.path));
+    const files = await captureDesktopOwnerRoutingProduct(source, destination);
     const manifestPath = join(proofRoot, label + '.json');
     await writeFile(manifestPath, JSON.stringify(files, null, 2), { flag: 'wx', mode: 0o600 });
     return { directory: destination, manifestPath, sha256: await fileDigest(manifestPath), files };

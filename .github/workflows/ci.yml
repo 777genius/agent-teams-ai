@@ -671,7 +671,7 @@ jobs:
         run: |
           set -euo pipefail
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
-          "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+          "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/desktop-owner-routing-product.test.ts
           if [ -n "$STAGE1_QUIT_SCENARIO" ]; then
             export LEGACY_DESKTOP_QUIT_SCENARIO="$STAGE1_QUIT_SCENARIO"
           fi
