@@ -5795,3 +5795,39 @@ whitespace checks passed. This preserves diagnostic observations and original
 assertions; it does not add an OpenCodeV2 Host driver or a liveV2 qualification.
 No unchanged Host800 test rerun is attributed to this TEST-only merge. Current
 native/SDK/packed and final canonical source qualifications remain explicit work.
+
+### Exact archive save and captured Launch readiness race
+
+The diagnostic-only cache seed on exact624a,
+[run40694908161](https://github.com/777genius/agent-teams-ai/actions/runs/40694908161),
+completed successfully. Job122838980056 recorded an initial cache MISS and a
+successful post-job save at13:21:02Z. GitHub cache metadata confirms id9643153820,
+branch`refs/heads/feat/provider-migration-stage-1`, the exact platform/version/full
+locked-SHA key and52,486,575 stored bytes. Artifact12818812965 remains the original
+unqualified diagnostic evidence. This is an actual save, not proof of a future
+cache hit, SDK custody or P7 support. The earlier ceef seed was cancelled with
+steps[] and supplies no cache proof; its cancellation cause is not established.
+
+The original27f eleven-row run is terminal with seven Desktop PASS and four
+FAIL. These retain their original exact source and individual scopes. Pending
+open Quit deliberately retains UNKNOWN custody/debt, despite process/Host/group
+absence and writer release; it is not labelled released. Taskboard stopped before
+its later cross-Team exercise, which is therefore unexercised. Codex stopped on
+its first inference protocol mismatch before Resume/TWO; none is retried in place.
+
+A fresh renderer regression reproduced a specific captured Launch readiness
+race: passive synchronization of prepareChecksRef could overwrite the deep result
+published between a ready-progress render and passive effects. The same final
+regression is RED on the old source and GREEN after removing that stale passive
+sync and synchronously clearing the ref at its three existing state-reset sites.
+No ready/TTL/provider predicate or captured authority/signature is relaxed.
+
+The complete affected Launch/Create test file passed128/128 in72.76seconds.
+The regression keeps global teamLaunch=false, uses the real scoped preparation
+helper and exact captured selection proof, then permits one onLaunch after two
+read-only preparation stages. Scoped fast lint has0 errors and five pre-existing
+warnings; whitespace checks pass. Independent exact-source review accepted the
+two-file fix. It is a reproduced source race; attribution of the original27f
+Claude UI failure to this race remains an inference until a fresh UI run.
+Unfinished Codex and P7 harness work is excluded from this commit. Current final
+canonical/native/SDK/packed acceptance remains required; no old run is relabelled.

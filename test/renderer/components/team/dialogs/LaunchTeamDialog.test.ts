@@ -747,6 +747,7 @@ import {
   isTeamProviderModelVerificationPending,
 } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { capturedTeamSelectionSignature } from '@shared/utils/capturedTeamReadiness';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
@@ -6688,6 +6689,117 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('retains exact captured Launch proof when deep completion arrives between ready progress render and passive checks effects', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    prepareHelperFixture.real = true;
+    const teamName = 'host-team:TEST-owner';
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName,
+      savedSettingsFingerprint: 'b'.repeat(64),
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'claude-opus-4-6',
+      effort: 'medium',
+      members: [],
+    });
+    const provider = createAuthoritativeProviderStatus('anthropic', ['claude-opus-4-6']);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [{ ...provider, capabilities: { ...provider.capabilities, teamLaunch: false } }],
+    };
+    vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+      (_id, status) => status?.modelCatalogRefreshState === 'loading'
+    );
+    const diagnostics = await vi.importActual<
+      typeof import('@renderer/components/team/dialogs/providerPrepareDiagnostics')
+    >('@renderer/components/team/dialogs/providerPrepareDiagnostics');
+    vi.mocked(runProviderPrepareDiagnostics).mockImplementation(
+      diagnostics.runProviderPrepareDiagnostics
+    );
+    const originalPrepare = vi.mocked(api.teams.prepareProvisioning).getMockImplementation()!;
+    const compatibility: (() => void)[] = [],
+      deep: (() => void)[] = [];
+    let layoutCompletions = 0;
+    vi.mocked(api.teams.prepareProvisioning).mockImplementation((...args) => {
+      const context = args[7];
+      if (context?.kind !== 'team' || context.teamName !== teamName || !context.preparationId)
+        throw new Error('Expected captured Launch context');
+      const result = {
+        ready: true,
+        message: 'TEST current exact Host ready',
+        capturedTeamReadiness: {
+          handleId: 'TEST-owner',
+          preparationId: context.preparationId,
+          launchId: 'TEST-original-launch',
+          rosterRevision: 'TEST-original-roster',
+          selectionSignature: capturedTeamSelectionSignature({
+            cwd: args[0],
+            limitContext: args[4],
+            selectedModelChecks: context.selectedModelChecks ?? [],
+          }),
+          expiresAt: Date.now() + 60_000,
+        },
+      };
+      return new Promise((resolve) =>
+        (args[5] === 'deep' ? deep : compatibility).push(() => resolve(result))
+      );
+    });
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () => root.render(React.createElement(LaunchTeamDialog, {
+      mode: 'launch',
+      open: true,
+      teamName,
+      members: [],
+      defaultProjectPath: '/tmp/project',
+      provisioningError: null,
+      clearProvisioningError: vi.fn(),
+      activeTeams: [],
+      onClose: vi.fn(),
+      onLaunch,
+    }));
+    const turn = () => new Promise<void>((resolve) => setTimeout(resolve, 10));
+    const submit = () => Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent === 'Launch team')!;
+    try {
+      await act(async () => {
+        render();
+        await flush();
+      });
+      for (let attempt = 0; attempt < 20 && compatibility.length === 0; attempt++) await act(turn);
+      expect(compatibility.length).toBeGreaterThan(0);
+      prepareHelperFixture.onLayout = () => {
+        if (deep.length) {
+          layoutCompletions += deep.length;
+          for (const finish of deep.splice(0)) finish();
+        }
+      };
+      // The native deep reply settles after ready progress renders but before its passive effects.
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', false);
+      for (const finish of compatibility.splice(0)) finish();
+      for (let attempt = 0; attempt < 40 && layoutCompletions === 0; attempt++) await turn();
+      for (let attempt = 0; attempt < 4; attempt++) await turn();
+      expect(layoutCompletions).toBeGreaterThan(0);
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      await flushCustomFolderProbe();
+      expect(submit().disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        submit().click();
+        await flush();
+      });
+      expect(onLaunch).toHaveBeenCalledTimes(1);
+      expect(api.teams.prepareProvisioning).toHaveBeenCalledTimes(2);
+    } finally {
+      prepareHelperFixture.onLayout = null;
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.prepareProvisioning).mockImplementation(originalPrepare);
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 
   it('retains exact Create proof when deep completion arrives between ready progress render and passive checks effects', async () => {

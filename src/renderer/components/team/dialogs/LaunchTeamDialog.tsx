@@ -548,9 +548,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
   useEffect(() => {
-    prepareChecksRef.current = prepareChecks;
-  }, [prepareChecks]);
-  useEffect(() => {
     prepareMessageRef.current = prepareMessage;
   }, [prepareMessage]);
   const invalidatePrepareProvider = useCallback(
@@ -765,6 +762,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setPrepareState('idle');
     setPrepareMessage(null);
     setPrepareWarnings([]);
+    prepareChecksRef.current = [];
     setPrepareChecks([]);
     setAllowExperimentalLocalModels(false);
     setCwdMode('project');
@@ -1521,6 +1519,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         setPrepareState('idle');
         setPrepareMessage(null);
         setPrepareWarnings([]);
+        prepareChecksRef.current = [];
         setPrepareChecks([]);
       }
       return;
@@ -1538,6 +1537,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareWarningsByProviderIdRef.current.clear();
       setPrepareState('failed');
       setPrepareWarnings([]);
+      prepareChecksRef.current = [];
       setPrepareChecks([]);
       setPrepareMessage(t('launch.prepare.unsupportedPreload'));
       return;
