@@ -453,8 +453,9 @@ export function createTeamHost(
               command.operation === 'message.send'
             )
               throw error;
+            if (!connection.lookup(input.commandId, command)) throw error;
             await runtime.settleTeamCommands(selected.definition.binding.teamId);
-            const saved = connection.lookup(input.commandId);
+            const saved = connection.lookup(input.commandId, command);
             if (!saved || (saved.phase !== 'completed' && saved.phase !== 'rejected')) throw error;
             receipt = saved;
           } finally {

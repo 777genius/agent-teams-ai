@@ -31,6 +31,10 @@ on:
         description: Run existing Stage 1 source Desktop controls with isolated localhost fixtures
         type: boolean
         default: false
+      stage1_process_diagnostic:
+        description: Record an unqualified current macOS tuple diagnostic with one owned finite Node child
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -557,6 +561,10 @@ jobs:
             readback: native-quit-readback-ui
           - mode: native-resume-ui
             label: cold selected Resume
+          - mode: native-resume-ui
+            variant: native-codex-resume-ui
+            label: cold selected Codex Resume
+            resume_provider: codex
           - mode: native-review-ui
             label: native review and cold readback
             readback: native-review-readback-ui
@@ -570,6 +578,7 @@ jobs:
       STAGE1_QUIT_SCENARIO: ${{ matrix.quit_scenario || '' }}
       LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
       LEGACY_DESKTOP_NATIVE_MEMBER_CREATE: ${{ matrix.native_member_create || '' }}
+      LEGACY_DESKTOP_RESUME_PROVIDER: ${{ matrix.resume_provider || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -647,6 +656,7 @@ jobs:
             ...(process.env.STAGE1_MODE === 'native-mixed-create-launch-ui' ? {
               LEGACY_DESKTOP_CODEX_PATH: codex, LEGACY_DESKTOP_OPENCODE_PATH: opencode,
             } : {}),
+            ...(process.env.LEGACY_DESKTOP_RESUME_PROVIDER === 'codex' ? { LEGACY_DESKTOP_CODEX_PATH: codex } : {}),
             LEGACY_DESKTOP_NODE_SHA256: digest(node),
             LEGACY_DESKTOP_HOST_ENTRY_SHA256: digest(host),
             LEGACY_DESKTOP_PNPM_PATH: pnpm,
@@ -660,7 +670,9 @@ jobs:
             appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           }
           writeFileSync(join(selected, 'input-pins.json'), JSON.stringify({
-            mode: process.env.STAGE1_MODE, node: { path: node, sha256: digest(node) },
+            mode: process.env.STAGE1_MODE,
+            ...(process.env.STAGE1_MODE === 'native-resume-ui' ? { resumeProvider: process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude' } : {}),
+            node: { path: node, sha256: digest(node) },
             host: { path: host, sha256: digest(host) },
             native: [claude, codex, opencode].map(path => ({ path, sha256: digest(path) })),
             corepackVersion: JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version,
@@ -672,6 +684,9 @@ jobs:
           set -euo pipefail
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
           "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/desktop-owner-routing-product.test.ts scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts
+          if [ "$LEGACY_DESKTOP_RESUME_PROVIDER" = codex ]; then
+            "$selected_node" --test scripts/legacy-agent-host/desktop-codex-resume-fixture.test.ts
+          fi
           if [ -n "$STAGE1_QUIT_SCENARIO" ]; then
             export LEGACY_DESKTOP_QUIT_SCENARIO="$STAGE1_QUIT_SCENARIO"
           fi
@@ -725,6 +740,28 @@ jobs:
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
           assert.equal(receipt.mode, expectedMode);
           assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          if (phase === 'desktop' && expectedMode === 'native-resume-ui') {
+            const provider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude';
+            assert.equal(receipt.resumeProvider, provider);
+            assert.equal(receipt.resumeNativeProfile?.provider, provider);
+            assert.equal(receipt.launchDialogProof?.provider, provider);
+            assert.equal(receipt.resumeDialogProof?.provider, provider);
+            assert.equal(receipt.coldResumeBoundary?.provider, provider);
+            const pins = JSON.parse(readFileSync(join(process.env.STAGE1_INPUTS, 'input-pins.json'), 'utf8'));
+            assert.equal(pins.resumeProvider, provider);
+            if (provider === 'codex') {
+              assert.equal(receipt.resumeNativeProfile.managedMcp, true);
+              const selected = receipt.codexResumeCatalog;
+              assert.ok(selected?.catalog.models.some(row => row.id === selected.modelId && row.model === selected.model && !row.hidden));
+              assert.equal(receipt.launchDialogProof.savedSettings.model, selected.model);
+              const resumed = receipt.resumeDialogProof;
+              assert.equal(resumed.status, 'PASS');
+              assert.equal(resumed.source.nativeSession, resumed.secondStop.nativeSession);
+              assert.match(resumed.runtimeMcpEndpoints.originalSha256, /^[a-f0-9]{64}$/);
+              assert.match(resumed.runtimeMcpEndpoints.resumedSha256, /^[a-f0-9]{64}$/);
+              assert.notEqual(resumed.runtimeMcpEndpoints.originalSha256, resumed.runtimeMcpEndpoints.resumedSha256);
+            }
+          }
           if (phase === 'desktop' && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1') {
             const added = receipt.createLaunchDialogProof?.nativeMemberCreationProof;
             assert.equal(added?.status, 'PASS', 'ordinary solo Create alone does not qualify native addition');
@@ -750,6 +787,46 @@ jobs:
           verify('desktop', process.env.STAGE1_MODE);
           if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
           NODE
+      - name: Verify current native mixed history restore after Codex Desktop acceptance
+        if: ${{ success() && matrix.resume_provider == 'codex' }}
+        env:
+          LEGACY_NATIVE_MIXED_HOST_GO: '1'
+          LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: e3a45cde75062840a74ac0b036b0ccc074654adfd5b46bf19e384eb62c34f3f3
+        run: |
+          set -euo pipefail
+          unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO
+          export LEGACY_NATIVE_CODEX_PATH="$STAGE1_INPUTS/codex/codex-aarch64-apple-darwin"
+          export LEGACY_NATIVE_OPENCODE_PATH="$STAGE1_INPUTS/opencode/opencode"
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          export LEGACY_NATIVE_HOST_SOURCE_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/src", ".ts"));')"
+          export LEGACY_NATIVE_HOST_DIST_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/dist", ".js"));')"
+          "$selected_node" --test packages/legacy-agent-host/tests/native-mixed-host.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-native-restore.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore.log'), 'utf8');
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-mixed-host-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'one original native restore attempt');
+          const path = realpathSync(matches[0][1]);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.exerciseRestore, true);
+          assert.equal(receipt.exercisePeers, false); assert.equal(receipt.exerciseCrossTeam, false);
+          assert.equal(receipt.cleanupConfirmed, true);
+          assert.deepEqual(Object.keys(receipt.restoreSelections).sort(), ['alice', 'bob', 'carol']);
+          assert.equal(receipt.artifacts.providerSha256, process.env.LEGACY_NATIVE_PROVIDER_SHA256);
+          assert.equal(receipt.artifacts.executables.opencode.sha256, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b');
+          assert.ok(receipt.excluded.includes('Desktop controls'));
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore-inputs.json'), JSON.stringify({
+            receipt: path, providerScope: 'Claude/Codex/OpenCode V1 1.19.4 native history only; Desktop controls separate',
+            sourceSha256: process.env.LEGACY_NATIVE_HOST_SOURCE_SHA256,
+            distSha256: process.env.LEGACY_NATIVE_HOST_DIST_SHA256,
+            artifacts: receipt.artifacts,
+          }, null, 2));
+          NODE
       - name: Preserve original source Desktop diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -762,6 +839,8 @@ jobs:
             ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-readback-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-native-restore.log
+            ${{ runner.temp }}/stage1-native-restore-inputs.json
             /private/tmp/TEST-stage1-inputs-*/input-pins.json
             /private/tmp/TEST-desktop-backend-*/*.json
             /private/tmp/TEST-desktop-backend-*/*.png
@@ -773,6 +852,46 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-native-mixed-host-*/**
+
+  stage1-process-diagnostic:
+    name: Stage 1 process tuple diagnostic (unqualified)
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_diagnostic
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 10
+    env:
+      TMPDIR: /private/tmp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Record current tuple without production qualification or signals
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/process-tuple-diagnostic.log") 2>&1
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+          headers="$(mktemp -d /private/tmp/TEST-process-tuple-headers-XXXXXX)"
+          archive="$headers/node-v24.21.0-headers.tar.gz"
+          curl --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/dist/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          tar -xzf "$archive" -C "$headers" node-v24.21.0/include/node
+          LEGACY_PROCESS_TUPLE_DIAGNOSTIC_GO=1 resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/diagnose-process-tuple.ts /private/tmp "$headers/node-v24.21.0/include/node" "$archive"
+      - name: Preserve unqualified tuple inputs and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-tuple-diagnostic-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/process-tuple-diagnostic.log
+            /private/tmp/TEST-process-tuple-*/**
 
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required

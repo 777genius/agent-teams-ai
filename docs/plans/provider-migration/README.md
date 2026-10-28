@@ -83,6 +83,13 @@ GitHub auth восстановлена; прежний blocked/unselected handof
 gap, packed P7/M17 и M19 HOLD этой отдельной Codex-проверкой не закрываются.
 Исторические CI/review ниже сохраняют собственные точные source bytes и границы.
 
+Последующее [frozen продолжение](progress/checkpoint-2026-10-27.md#frozen-recovery-correction-and-current-native-acceptance-routes)
+добавляет проверку точного command fingerprint при recovery и один Codex-вариант
+прежнего Resume UI. Полный local Host gate прошёл797/797, связанные fixtures45/45
+и canonical workspace types прошли. Текущие native/UI и OpenCode1.19.4 restore
+ещё требуют собственных результатов; дополнительный tuple diagnostic остаётся
+unqualified и не закрывает P7/M19. Новые формы, OpenCode V2 и этап2 не добавляются.
+
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/
 import/backup путей и точные результаты каждого запуска. Последний коммит

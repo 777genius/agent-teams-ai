@@ -30,6 +30,31 @@ import type {
 import type { TestContext } from 'node:test';
 
 const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+test('task recovery never returns a prior receipt for a changed command with unavailable attachments', async t => {
+  const f = await fixture(t);
+  const original = { operation: 'task.create', payload: { subject: 'TEST exact retained command' } };
+  const created = await f.rpc('team.execute', original, { commandId: 'TEST-retained-create' }) as { ok: boolean; value: CommandReceipt };
+  assert.equal(created.ok, true); assert.equal(created.value.phase, 'completed');
+  assert.deepEqual(await f.rpc('team.execute', original, { commandId: 'TEST-retained-create' }), created);
+  const taskId = created.value.effects.taskId;
+  const comment = { operation: 'task.comment', payload: { taskId, text: 'TEST original comment' } };
+  const commented = await f.rpc('team.execute', comment, { commandId: 'TEST-retained-comment' }) as { ok: boolean; value: CommandReceipt };
+  assert.equal(commented.ok, true); assert.equal(commented.value.phase, 'completed');
+  const before = await f.rpc('team.task.get', { taskId });
+  const attachment = { artifactId: 'TEST-unavailable-artifact', mimeType: 'text/plain', byteLength: 1, digest: 'd'.repeat(64) };
+  for (const commandId of ['TEST-retained-create', 'TEST-retained-comment']) {
+    const changed = await f.rpc('team.execute', { operation: 'task.comment',
+      payload: { taskId, text: 'TEST changed request must never borrow success', attachments: [attachment] } }, { commandId });
+    assert.deepEqual(changed, { ok: false, code: 'conflict', outcome: 'rejected' });
+    assert.deepEqual(await f.rpc('team.task.get', { taskId }), before);
+  }
+  assert.deepEqual(await f.rpc('team.execute', original, { commandId: 'TEST-retained-create' }), created);
+  assert.deepEqual(await f.rpc('team.execute', comment, { commandId: 'TEST-retained-comment' }), commented);
+  assert.equal(f.opens(), 0); assert.equal(f.contexts.length, 0, 'recovery cannot allocate a provider');
+  const tasks = await f.rpc('team.tasks.list', {}) as { ok: boolean; value: unknown[] };
+  assert.equal(tasks.ok, true); assert.equal(tasks.value.length, 1);
+});
+
 test('two captured teams may share an original run ID without sharing launch ownership', async (t) => {
   const f = await fixture(t, {
     changeProfile(profile) {

@@ -1,4 +1,7 @@
 import { executeTeamCommand } from './executeTeamCommand.js';
+import { captureCommandSelection } from './captureCommandSelection.js';
+import { teamCommandFingerprint } from './teamCommandFingerprint.js';
+import { validateCommandAttachments } from './validateCommandAttachments.js';
 import { readGroupInputSource } from '../group-chats/readGroupInputSource.js';
 import type { NativeMcpAuthorityProof } from './NativeMcpAuthority.js';
 import { groupTargetCommand, canonicalGroupMessages } from '../group-chats/groupDelivery.js';
@@ -37,7 +40,7 @@ import { TeamRuntimeRegistration } from './TeamRuntimeRegistration.js';
 import type { RegisterTeamRuntime } from './runtimeRegistrationContracts.js';
 import { TeamRosterTransitions } from './TeamRosterTransitions.js';
 import { teamRosterRevision } from './rosterSchema.js';
-import { validateTeamText } from './validateTeamCommand.js';
+import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js';
 
 import type {
   TaskMutationPort,
@@ -422,10 +425,7 @@ export class TeamOwner {
     validateTeamText(principalId);
     return Object.freeze({
       execute: (command: TeamCommand) => this.execute(principalId, command),
-      lookup: (commandId: string) =>
-        this.withLaunchAuthority(principalId, 'read', () =>
-          lookupOwnedProductCommand(this.store, principalId, commandId)
-        ),
+      lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
       readSnapshot: () => this.readSnapshot(principalId),
@@ -450,6 +450,30 @@ export class TeamOwner {
       replaceRoster: (input: ReplaceTeamRoster) => this.roster.replace(principalId, input),
       lookupRoster: (commandId: string, expected?: Omit<ReplaceTeamRoster, 'commandId'>) =>
         this.roster.lookup(principalId, commandId, expected),
+    });
+  }
+
+  /** Recovery reads verify the exact original command; they never execute or recapture it. */
+  private lookupCommand(principalId: string, commandId: string, expected?: TeamCommand) {
+    if (expected) validateTeamCommand(expected);
+    return this.withLaunchAuthority(principalId, 'read', () => {
+      const receipt = lookupOwnedProductCommand(this.store, principalId, commandId);
+      if (!expected || !receipt) return receipt;
+      const grant = this.authorize(principalId, expected.operation === 'message.send' ? 'message.write' : 'task.write');
+      if (requiresHumanTaskActor(expected) && grant.memberName !== 'user') throw new TeamOwnerError('forbidden');
+      if (expected.commandId !== commandId || digest(receipt.binding) !== digest(this.binding) ||
+        digest(receipt.command) !== digest(expected)) throw new TeamOwnerError('conflict');
+      if (teamCommandFingerprint(receipt) !== receipt.fingerprint) throw new TeamOwnerError('hold');
+      const selection = captureCommandSelection(expected, receipt, this.state().members, grant);
+      if (teamCommandFingerprint({ binding: this.binding, principalId, command: expected,
+        deliveryBinding: selection.deliveryBinding, taskRecipients: selection.taskRecipients,
+        messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName }) !== receipt.fingerprint)
+        throw new TeamOwnerError('conflict');
+      if (receipt.messageRecipientRole !== undefined && receipt.messageRecipientRole !== selection.messageRecipient?.role)
+        throw new TeamOwnerError('hold');
+      // Exact recovery still requires the current original attachment and authority checks.
+      validateCommandAttachments(expected, this.policy.attachments);
+      return receipt;
     });
   }
 

@@ -109,9 +109,7 @@ test(
     );
     assert.equal(
       executables.opencode.sha256,
-      exerciseCrossTeam
-        ? '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'
-        : '8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82'
+      '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'
     );
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-mixed-host-')));
     t.diagnostic(`TEST receipt: ${join(root, 'receipt.json')}`);
@@ -329,7 +327,7 @@ stream_max_retries = 0
           {
             ...common('carol'),
             provider: 'opencode',
-            protocolRevision: '1.18.35',
+            protocolRevision: '1.19.4',
             model: 'TEST-model',
             executable: executables.opencode,
             endpoint,

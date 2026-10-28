@@ -79,9 +79,9 @@ export function isCodexModelProbeInput(input: readonly RecordValue[], workspace?
     lines.length === 7 &&
     lines[0] === '<environment_context>' &&
     lines[1] === `  <cwd>${workspace}</cwd>` &&
-    /^  <shell>[A-Za-z0-9_/.+-]+<\/shell>$/.test(lines[2]!) &&
-    /^  <current_date>\d{4}-\d{2}-\d{2}<\/current_date>$/.test(lines[3]!) &&
-    /^  <timezone>[A-Za-z0-9_/+-]+<\/timezone>$/.test(lines[4]!) &&
+    /^ {2}<shell>[A-Za-z0-9_/.+-]+<\/shell>$/.test(lines[2]!) &&
+    /^ {2}<current_date>\d{4}-\d{2}-\d{2}<\/current_date>$/.test(lines[3]!) &&
+    /^ {2}<timezone>[A-Za-z0-9_/+-]+<\/timezone>$/.test(lines[4]!) &&
     lines[5] ===
       `  <filesystem><workspace_roots><root>${workspace}</root></workspace_roots><permission_profile type="managed"><file_system type="restricted"><entry access="read"><special>:root</special></entry></file_system></permission_profile></filesystem>` &&
     lines[6] === '</environment_context>'
@@ -112,9 +112,15 @@ export async function startCodexModel(
     allowModelProbes?: boolean;
     modelProbeWorkspace?: () => string;
     principalId?: () => string;
+    memberName?: 'alice';
+    uiGeneratedMessageIds?: boolean;
+    captureHistoryMarkers?: boolean;
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
+  if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers)
+    assert.ok(!options.mixedGroups && !options.mixedTaskNotifications && !options.peerMessaging &&
+      !options.captureFileUpdate && !options.nativeMessageImage, 'one original single-member UI scenario');
   if (options.captureFileUpdate)
     assert.match(
       options.captureFileUpdate.workspace,
@@ -134,6 +140,12 @@ export async function startCodexModel(
     contextEffective: boolean;
     priorTurn: boolean;
     tools: Tool[];
+    requestedModel?: string;
+    requestedEffort?: string;
+    priorNativeToolIds?: string[];
+    toolResultError?: boolean;
+    visibleReplyContract?: boolean;
+    incomingMessageId?: string;
   }[] = [];
   const notificationObservations: ((typeof observations)[number] & {
     notice: ObservedMixedTaskNotice;
@@ -205,7 +217,7 @@ export async function startCodexModel(
         return;
       }
       if (options.mixedTaskNotifications) assert.ok(observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16), 'finite mixed inference budget');
-      let turn = '';
+      let turn = '', turnText = '';
       let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of input.toReversed()) {
@@ -228,6 +240,7 @@ export async function startCodexModel(
           assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
         }
         if (group || capture || peer || match) {
+          turnText = messageText(message) ?? '';
           mixedGroup = group;
           turn =
             group?.turn ??
@@ -241,8 +254,14 @@ export async function startCodexModel(
       }
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
-      if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
+      if ((options.mixedTaskNotifications || options.uiGeneratedMessageIds) && /_TEAM_(ONE|TWO)$/.test(turn))
         assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
+      const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
+      const visibleReplyContract = turnText.includes('message_send tool to="user", including commandId and text') &&
+        turnText.includes('Do not reuse the incoming messageId as a reply commandId') &&
+        typeof incomingMessageId === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(incomingMessageId);
+      if (options.uiGeneratedMessageIds && turn === 'CODEX_TEAM_TWO')
+        assert.ok(visibleReplyContract, 'original Composer reply contract reaches the actual native request');
       const nativeImage =
         options.nativeMessageImage && turn === 'CODEX_TEAM_TWO'
           ? assertNativeMessageImage(input, 'codex')
@@ -276,7 +295,7 @@ export async function startCodexModel(
           } else if (capture.failedShell) {
             const result = codexToolReceipt(last.output);
             assert.equal(result.phase, 'completed');
-            assert.equal(result.principalId, options.principalId?.() ?? 'bob-session');
+            assert.equal(result.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
           } else if (step === 2) {
             assert.ok(
               JSON.stringify(last.output).includes(CAPTURE_BEFORE.trim().replaceAll('\n', '\\n')),
@@ -316,13 +335,13 @@ export async function startCodexModel(
           'completed',
           'native MCP action must succeed before scripted continuation'
         );
-        assert.equal(completed.principalId, options.principalId?.() ?? 'bob-session');
+        assert.equal(completed.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
       }
       if (turn === 'CODEX_TEAM_ONE' && step === 1) {
         const result = input.filter((item) => item.type === 'function_call_output').at(-1);
         const receipt = codexToolReceipt(result?.output);
         assert.equal(receipt.phase, 'completed');
-        assert.equal(receipt.principalId, options.principalId?.() ?? 'bob-session');
+        assert.equal(receipt.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
         taskId = String(record(receipt.effects).taskId);
         assert.ok(taskId && taskId !== 'undefined');
       }
@@ -333,6 +352,15 @@ export async function startCodexModel(
         contextEffective,
         priorTurn: JSON.stringify(input).includes('CODEX_TEAM_ONE'),
         tools,
+        ...(options.uiGeneratedMessageIds ? {
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof record(body.reasoning).effort === 'string' ? { requestedEffort: String(record(body.reasoning).effort) } : {}),
+          toolResultError: /Process exited with code [1-9]\d*/.test(JSON.stringify(input.filter(item => item.type === 'function_call_output').at(-1)?.output)),
+          visibleReplyContract,
+          ...(incomingMessageId === undefined ? {} : { incomingMessageId }),
+        } : {}),
+        ...(options.captureHistoryMarkers ? { priorNativeToolIds: input.filter(item => item.type === 'function_call' &&
+          typeof item.call_id === 'string' && /^native_CODEX_TEAM_ONE_[0-6]$/.test(item.call_id)).map(item => String(item.call_id)) } : {}),
       };
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
@@ -341,7 +369,7 @@ export async function startCodexModel(
           name: 'task_create',
           input: { commandId: 'codex-task-create', subject: 'Native Codex TEST task' },
         },
-        { name: 'task_set_owner', input: { commandId: 'codex-task-assign', taskId, owner: 'bob' } },
+        { name: 'task_set_owner', input: { commandId: 'codex-task-assign', taskId, owner: options.memberName ?? 'bob' } },
         { name: 'task_start', input: { commandId: 'codex-task-start', taskId } },
         {
           name: 'exec_command',

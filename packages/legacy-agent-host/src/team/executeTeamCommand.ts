@@ -14,6 +14,7 @@ import { digest, effectId } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
 import { TaskPolicyRejected } from './ports.js';
 import { validateTeamCommand } from './validateTeamCommand.js';
+import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { OwnerState } from './ownerState.js';
@@ -91,7 +92,7 @@ export function executeTeamCommand(
       taskRecipients,
       taskStartLeadName,
     } = captureCommandSelection(command, receipt, options.state().members, grant);
-    const fingerprint = digest({
+    const fingerprint = teamCommandFingerprint({
       binding: options.binding,
       principalId,
       command,

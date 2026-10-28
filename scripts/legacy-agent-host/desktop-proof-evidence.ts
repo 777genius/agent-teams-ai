@@ -1,11 +1,14 @@
 import { desktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 export async function desktopProofEvidence(options: {
   mode: string;
-  fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
   pnpm: string;
   pnpmSha256: string;
   electron: string;
@@ -14,6 +17,7 @@ export async function desktopProofEvidence(options: {
   nativeStopMode: boolean;
   uiMode: boolean;
   conversationModel?: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
+  codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>> | undefined;
 }): Promise<Record<string, unknown>> {
   const {
     mode,
@@ -25,10 +29,37 @@ export async function desktopProofEvidence(options: {
     nativeStopMode,
     uiMode,
     conversationModel,
+    codexResumeModel,
   } = options;
+  const resumeEvidence: Record<string, unknown> = {};
+  if (mode === 'native-resume-ui') {
+    const provider = codexResumeModel ? 'codex' : 'claude';
+    const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8'));
+    const members = profile.runtime?.members;
+    assert.ok(Array.isArray(members) && members.length === 1);
+    const member = members[0];
+    assert.equal(member.memberId, 'alice-id'); assert.equal(member.provider, provider);
+    if (codexResumeModel) {
+      assert.ok(fixture.codexResume);
+      assert.deepEqual(member.capturedMcpServers, {});
+      assert.match(String(member.capturedMcpCatalog?.digest), /^[a-f0-9]{64}$/);
+      assert.equal(member.model, fixture.codexResume.model);
+      resumeEvidence.codexResumeCatalog = fixture.codexResume;
+    }
+    resumeEvidence.resumeProvider = provider;
+    resumeEvidence.resumeNativeProfile = { provider, memberId: member.memberId, model: member.model,
+      executableSha256: member.executable?.sha256,
+      ...(codexResumeModel ? { managedMcp: true, catalogDigest: member.capturedMcpCatalog.digest } : {}) };
+  }
   return {
     status: 'INCOMPLETE',
     mode,
+    ...resumeEvidence,
+    ...(codexResumeModel ? { model: {
+      observations: codexResumeModel.observations, probes: codexResumeModel.probes,
+      failures: codexResumeModel.failures,
+      inference: 'Local scripted model only; actual native Codex app-server executes all tools',
+    } } : {}),
     ...(conversationModel
       ? {
           model: {

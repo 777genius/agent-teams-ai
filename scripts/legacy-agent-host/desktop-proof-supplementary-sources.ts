@@ -113,6 +113,9 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/desktop-proof-mode.ts',
   'scripts/legacy-agent-host/desktop-proof-sources.ts',
   'scripts/legacy-agent-host/desktop-readback-fixture.ts',
+  'scripts/legacy-agent-host/desktop-codex-resume-fixture.ts',
+  'scripts/legacy-agent-host/desktop-codex-resume-fixture.test.ts',
+  'packages/legacy-agent-host/src/team/teamCommandFingerprint.ts',
   'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
   'scripts/legacy-agent-host/fixtures/process-service.ts',
 ];

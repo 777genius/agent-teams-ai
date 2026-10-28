@@ -16,6 +16,7 @@ import {
   startNativeTeamModel,
   record,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 
 /** TEST proof composition only; original modes retain their inference/setup semantics. */
 export async function prepareDesktopProofMode(
@@ -137,6 +138,10 @@ export async function prepareDesktopProofMode(
     );
   const relaunchMode = mode === 'native-relaunch-ui';
   const resumeMode = mode === 'native-resume-ui';
+  const resumeProvider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER;
+  assert.ok(resumeProvider === undefined || resumeProvider === '' || resumeProvider === 'codex', 'explicit supported Resume provider');
+  const codexResumeMode = resumeProvider === 'codex';
+  if (codexResumeMode) assert.ok(resumeMode, 'Codex variant extends only the original Resume UI mode');
   const launchDialogMode =
     mode === 'native-launch-ui' ||
     relaunchMode ||
@@ -218,7 +223,22 @@ export async function prepareDesktopProofMode(
           },
         }
       : undefined;
-  const model = processUiMode
+  const codexResumeModel = codexResumeMode ? await startCodexModel({
+    memberName: 'alice', uiGeneratedMessageIds: true, captureHistoryMarkers: true,
+    allowModelProbes: true,
+    modelProbeWorkspace: () => join(fixtureRoot(), 'workspace'),
+    principalId: () => {
+      const state = record(JSON.parse(readFileSync(join(fixtureRoot(), 'hoststore/teams/test-desktop-backend/.host-owner/state.json'), 'utf8')));
+      assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
+      const members = record(state.runtimeCaptures[0]).members;
+      assert.ok(Array.isArray(members) && members.length === 1);
+      const member = record(members[0]);
+      assert.equal(member.memberId, 'alice-id');
+      assert.ok(typeof member.principalId === 'string' && member.principalId.startsWith('agent:'));
+      return member.principalId;
+    },
+  }) : undefined;
+  const model = codexResumeMode ? undefined : processUiMode
     ? processModel
     : mode === 'native-quit-ui'
       ? await startNativeTeamModel({
@@ -396,5 +416,7 @@ export async function prepareDesktopProofMode(
     nativeStopMode,
     uiMode,
     model,
+    codexResumeMode,
+    codexResumeModel,
   };
 }

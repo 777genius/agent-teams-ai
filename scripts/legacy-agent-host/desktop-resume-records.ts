@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { lstat, readFile, readdir } from 'node:fs/promises';
+import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export const record = (raw: unknown): Record<string, unknown> => {
@@ -21,7 +21,7 @@ export async function rows(path: string): Promise<Record<string, unknown>[]> {
 }
 
 /** Private TEST evidence only. Reads the exact published payload, never creates a checkpoint. */
-export async function checkpoint(root: string, session: Record<string, unknown>) {
+export async function checkpoint(root: string, session: Record<string, unknown>, provider: 'claude' | 'codex' = 'claude') {
   const published = (session.checkpoints as unknown[]).map(record).filter(row => row.status === 'published');
   assert.equal(published.length, 1, 'one explicit original Stop checkpoint');
   const attempt = published[0]!;
@@ -42,8 +42,15 @@ export async function checkpoint(root: string, session: Record<string, unknown>)
   assert.deepEqual(payload.completedOperations, operations);
   assert.equal(payload.historyDigest, jsonDigest({ baseline: record(session.config).checkpointRef ?? null, operations }));
   assert.equal(payload.reference, `cp1-${jsonDigest({ binding: session.binding, checkpointId: payload.checkpointId })}`);
-  const nativeSession = record(payload.opaque).nativeSession;
+  const opaque = record(payload.opaque);
+  const nativeSession = provider === 'codex' ? opaque.nativeThreadId : opaque.nativeSession;
   assert.match(String(nativeSession), /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
+  if (provider === 'codex') {
+    assert.equal(opaque.engine, 'codex-app-server'); assert.equal(opaque.version, 2);
+    const { historyPath, history } = await codexHistory(root, session, String(nativeSession));
+    return { attempt, payload, path, nativeSession, historyPath, history,
+      historySha256: digest(history), payloadFileSha256: digest(await readFile(path)) };
+  }
   // Native backing is read strictly below this fixture's private captured Claude config.
   const projects = join(root, 'native-claude/config/projects');
   const directories = await readdir(projects, { withFileTypes: true });
@@ -67,7 +74,54 @@ export async function checkpoint(root: string, session: Record<string, unknown>)
     historySha256: digest(history), payloadFileSha256: digest(await readFile(path)) };
 }
 
-export function originalHistoryMarker(toolIds: readonly string[]): string {
-  assert.deepEqual(toolIds, Array.from({ length: 7 }, (_, index) => `native_NATIVE_TEAM_ONE_${index}`));
+export function originalHistoryMarker(toolIds: readonly string[], provider: 'claude' | 'codex' = 'claude'): string {
+  assert.deepEqual(toolIds, Array.from({ length: 7 }, (_, index) => `native_${provider === 'codex' ? 'CODEX' : 'NATIVE'}_TEAM_ONE_${index}`));
   return jsonDigest(toolIds);
+}
+
+/** Exact private captured namespace and native metadata identity; never a filename-only fallback. */
+async function codexHistory(root: string, session: Record<string, unknown>, nativeThreadId: string) {
+  assert.match(root, /\/TEST-desktop-backend-[^/]+$/);
+  assert.equal(await realpath(root), root);
+  const profile = await json(join(root, 'host-profile.json'));
+  const binding = record(session.binding);
+  const members = (record(profile.runtime).members as unknown[]).map(record).filter(member =>
+    member.provider === 'codex' && member.teamId === binding.teamId && member.memberId === binding.memberId);
+  assert.equal(members.length, 1, 'one exact captured Codex member namespace');
+  const member = members[0]!, config = join(root, 'native-codex/config'), cwd = join(root, 'workspace');
+  assert.equal(record(member.environment).CODEX_HOME, config);
+  assert.equal(member.cwd, cwd); assert.equal(await realpath(config), config);
+  assert.equal(await realpath(cwd), cwd);
+  let directories = 0, files = 0;
+  const matches: { historyPath: string; history: Buffer }[] = [];
+  const walk = async (parent: string, depth: number): Promise<void> => {
+    assert.equal(await realpath(parent), parent);
+    assert.ok(++directories <= 32, 'bounded captured native session directories');
+    const children = await readdir(parent, { withFileTypes: true });
+    assert.ok(children.length <= 128);
+    for (const child of children) {
+      assert.equal(child.isSymbolicLink(), false);
+      const path = join(parent, child.name);
+      if (child.isDirectory()) {
+        assert.ok(depth < 3 && (depth === 0 ? /^\d{4}$/ : /^\d{2}$/).test(child.name));
+        await walk(path, depth + 1);
+      } else {
+        assert.ok(child.isFile() && ++files <= 128);
+        if (!child.name.endsWith(`-${nativeThreadId}.jsonl`)) continue;
+        const info = await lstat(path);
+        assert.ok(info.isFile() && !info.isSymbolicLink() && info.size <= 16 * 1024 * 1024);
+        const history = await readFile(path);
+        const first = history.toString('utf8').split('\n', 1)[0]!;
+        assert.ok(Buffer.byteLength(first) <= 512 * 1024);
+        const metadata = record(JSON.parse(first));
+        assert.equal(metadata.type, 'session_meta');
+        assert.equal(record(metadata.payload).id, nativeThreadId);
+        assert.equal(record(metadata.payload).cwd, cwd);
+        matches.push({ historyPath: path, history });
+      }
+    }
+  };
+  await walk(join(config, 'sessions'), 0);
+  assert.equal(matches.length, 1, 'one exact original native Codex history backing');
+  return matches[0]!;
 }

@@ -9,6 +9,7 @@ import { prepareProcessFixture } from './desktop-native-process-fixture.ts';
 import { prepareDesktopCrossTeamUiFixture } from './desktop-cross-team-ui-smoke.ts';
 import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
+import { prepareDesktopCodexResumeFixture } from './desktop-codex-resume-fixture.ts';
 
 /** TEST fixture composition; no app or provider process starts here. */
 export async function prepareDesktopProofFixture(
@@ -32,10 +33,12 @@ export async function prepareDesktopProofFixture(
     createConfigMode: boolean;
     nativeStopMode: boolean;
     modelUrl?: string;
+    codexResumeMode?: boolean;
   }
 ): Promise<
   Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
     activitySource?: CapturedActivitySource;
+    codexResume?: Awaited<ReturnType<typeof prepareDesktopCodexResumeFixture>>['codexResume'];
   }
 > {
   if (mode === 'native-activity-readback-ui') {
@@ -83,7 +86,7 @@ export async function prepareDesktopProofFixture(
           },
         }
       : {}),
-    seedUiTask: options.uiMode,
+    seedUiTask: options.uiMode && !options.codexResumeMode,
     ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode)
       ? { taskBoardGroup: true }
       : {}),
@@ -125,6 +128,14 @@ export async function prepareDesktopProofFixture(
         }
       : {}),
   });
+  if (options.codexResumeMode) {
+    assert.equal(mode, 'native-resume-ui');
+    assert.ok(options.modelUrl && process.env.LEGACY_DESKTOP_CODEX_PATH);
+    return prepareDesktopCodexResumeFixture(fixture, {
+      executable: process.env.LEGACY_DESKTOP_CODEX_PATH,
+      modelUrl: options.modelUrl,
+    });
+  }
   if (mode === 'skills-ui') return prepareDesktopSkillsFixture(fixture);
   if (mode === 'task-board-cross-team-ui' || mode === 'cross-team-ui') {
     const overlay = await prepareDesktopCrossTeamUiFixture(fixture.root);

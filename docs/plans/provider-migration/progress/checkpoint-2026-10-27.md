@@ -5410,3 +5410,91 @@ code; it does not add a V2 Host driver or claim live V2 qualification. The
 selected Codex provider archive, public contracts and existing V1 scope are
 unchanged. The merge commit will be immediately pushed before either author
 starts the next existing-UI Codex Resume test slice.
+
+### Frozen recovery correction and current native acceptance routes
+
+The main integration was committed and immediately pushed as
+`5c803e4e3affdedc6e80f070085db80716b612cc`, with parents `37d29bccd` and exact
+main `3f52fdf40`. Its tree is `24b6b3be7b0fe5843d4c9fb94620e268f21de8da`.
+Subsequent contradictory GitHub mergeability metadata did not cause another
+merge/reset/force push: the actual local and remote Git objects prove that base
+is already an ancestor. Fresh PR metadata will be checked after the next push.
+
+An actual public-Host regression then confirmed a separate command-recovery
+defect: a changed request reusing an old command ID could fail attachment
+validation with HOLD and receive a different prior completed receipt. Recovery
+now checks the exact expected command under current authority before settlement
+and again afterward. The existing fingerprint formula is extracted unchanged
+into one shared helper; binding, principal, command, retained selection and
+attachments must match. Recovery never executes or recaptures the request.
+The original RED is retained; its new regression passes and checks both changed
+operation and changed same-operation payload, unchanged product data, valid exact
+replays and zero provider allocation. Independent exact-source review accepted it.
+
+The existing `native-resume-ui` flow has one explicit Codex variant. It uses the
+same LaunchTeamDialog, model/effort controls, Stop, public Quit, cold startup,
+explicit original checkpoint selection, Composer/Send and second Stop. Claude
+remains the default with its original oracle and constants. The Codex TEST recipe
+captures the actual finite native model catalog, selects a visible text model
+supporting low/medium, and seeds the ordinary canonical owner once with those
+settings. It does not invent a catalog, replace a roster or bypass the dialog.
+
+Receipts and workflow input pins bind the provider, actual model/profile and
+native executable. The source ONE input has eight model observations; no input
+is released by Stop/Quit/restart/Resume itself. One ordinary TWO send has three
+observations on the same original native thread, retains its exact prior tool
+history and original history-file prefix, and releases custody on the second
+Stop. Read-only inspection of the exact owned Codex app-server argv records only
+the original/resumed Team-URL hashes and requires rotation. This endpoint
+observation retains no raw URL or token; the numeric census grants no process
+authority.
+
+The workflow retains eleven uniquely named Desktop variants, including the new
+`native-codex-resume-ui` label/artifact. After that variant's original Desktop
+receipt is verified PASS, one step reuses the existing native mixed-host restore
+harness on the same Node/binaries and selected `e3a45cde` archive. Only its OpenCode
+binary pin and declared V1 revision change to actual1.19.4. Existing all-three
+history/identity, generation, empty-queue, duplicate/stale/replay and 240-second
+guards are unchanged. The step requires one original PASS receipt and retains
+the raw log/full fresh TEST root. An earlier UI failure skips this step without
+claiming native restore acceptance. This component proof excludes Desktop
+controls; OpenCode UI Resume is not separately claimed, and the old1.18.35
+handoff remains historical.
+
+An additional optional `stage1_process_diagnostic` input defaults false. Its
+separate unqualified macOS-arm64 job records the actual tuple, pinned Node,
+compiler/SDK/headers/source census and one newly owned finite detached Node
+child's read-only native capture/observation and natural exit. It emits
+`qualification:false` and `signals:0`; it creates no production admission manifest,
+does not run an SDK or change a selector, and is absent from required gate needs.
+Setup logs are always retained even if failure precedes any diagnostic receipt.
+Neither P7 nor the original M19 SDK HOLD is closed by this diagnostic route.
+
+All local frozen-source gates completed successfully before commit:
+
+- Host/task-ledger build and the complete Host unit gate:797/797 PASS,0 FAIL /
+  0 SKIP, exit0 (263.33seconds), including the recovery regression.
+- Complete relevant Desktop/startup/owner/mixed/new-Codex fixtures plus both
+  default provider oracles:45/45 PASS,0 SKIP, exit0.
+- Canonical `pnpm typecheck:workspace`:exit0 on the complete P2/UI/diagnostic
+  source. After the final two native-fixture literal pins and workflow step,
+  focused Host test typechecking also passed.
+- Source-size guard:4,629 production files /143 frozen exceptions; provisioning
+  architecture guard passed. Both capped existing harness/inventory files remain
+  at800 lines; new entries use the existing supplementary inventory, with no
+  cap/exception increase or artificial source compression.
+- Fast lint of17 affected source/test files:exit0,0 errors and two preserved
+  `no-unsafe-finally` warnings in existing cleanup/recovery blocks. Whitespace
+  checks passed. Final YAML/static checks covered11 unique Desktop variants,
+  ten shell steps and four embedded JavaScript blocks; required gate needs are
+  unchanged and no retry/continue-on-error/deadline increase was introduced.
+
+The provider archive `e3a45cde…`, Session SPI `2a6e0e2c…`, SDK and other dependency
+pins remain immutable. Fresh current-head canonical/native/Desktop/restore and
+tuple results are still pending the original remote run; local synthetic tests
+do not count as native PASS. Draft, Stage1-only and OpenCodeV1-only scope remain.
+
+A fresh plan census gives only an informal engineering orientation: about90%
+code and75%overall, with broad ranges87–96/67–83 using the original weights and
+no credit for future CI. This does not replace the frozen23October79/57 snapshot,
+create a new dashboard or declare completion of any open acceptance/custody gate.

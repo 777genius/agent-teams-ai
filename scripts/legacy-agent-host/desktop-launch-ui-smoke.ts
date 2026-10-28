@@ -7,10 +7,11 @@ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts'
 import { command, processTable } from './desktop-backend-observations.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
-import { runDesktopResumeUiSmoke } from './desktop-resume-ui-smoke.ts';
+import { codexRuntimeEndpointHash, runDesktopResumeUiSmoke } from './desktop-resume-ui-smoke.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
-import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 
 const record = (raw: unknown): Record<string, unknown> => {
   assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
@@ -116,17 +117,28 @@ export async function captureReadiness(
 
 /** All launch effects originate from the original dialog's CDP Input controls. */
 export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
-  fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
   seed: { taskId: string; subject: string; commandId: string };
   evidence: Record<string, unknown>;
-  model: Awaited<ReturnType<typeof startNativeTeamModel>>;
+  model?: Awaited<ReturnType<typeof startNativeTeamModel>>;
+  codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>>;
   assertOwnedRenderer(): void;
   restartAfterStop?(): Promise<UiCdpPort>;
 }): Promise<void> {
-  const { fixture, evidence, model } = options;
+  const { fixture, evidence } = options;
+  const model = options.codexResumeModel ?? options.model;
+  assert.ok(model);
+  const codex = fixture.codexResume;
+  assert.equal(Boolean(codex), Boolean(options.codexResumeModel));
+  if (codex) assert.equal(evidence.mode, 'native-resume-ui');
+  const provider = codex ? 'codex' : 'claude';
+  const firstPrompt = codex ? 'CODEX_TEAM_ONE' : 'NATIVE_TEAM_ONE';
+  const firstReply = codex ? 'REPLY_CODEX_ONE' : 'REPLY_NATIVE_ONE';
+  const selectedModel = codex?.model ?? 'claude-opus-4-6';
+  const modelLabel = codex ? codex.displayName.replace(/^GPT-/i, '') : 'Opus 4.6';
   const steps: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
-    status: 'INCOMPLETE', steps,
+    status: 'INCOMPLETE', provider, steps,
     scope: `Original LaunchTeamDialog controls, fresh saved capture, actual SDK/MCP task/message/native effect, Stop and original-dialog settings after ${evidence.mode === 'native-resume-ui' ? 'same-profile cold startup' : 'reload'}`,
     excluded: [evidence.mode === 'native-resume-ui' ? 'Create controls' : 'Create/Resume controls', 'real vendor authentication/inference', 'all advanced settings', 'full Stage1'],
   };
@@ -167,29 +179,32 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
       .filter(e=>e.textContent.includes('Optional launch settings'));
     if(rows.length!==1||rows[0].getAttribute('aria-expanded')!=='false')return null;
     const chips=[...rows[0].querySelectorAll('span')].map(e=>e.textContent.trim());
-    return chips.includes('Sonnet 4.6')&&chips.includes('low')
-      ? {id:rows[0].getAttribute('aria-controls'),model:'Sonnet 4.6',effort:'low'} : null;
+    return chips.includes('low')&&(${Boolean(codex)}||chips.includes('Sonnet 4.6'))
+      ? {id:rows[0].getAttribute('aria-controls'),chips,effort:'low'} : null;
   })()`, 'original saved launch summary hydrates before expansion');
   step({ observation: 'original saved launch summary before expansion', value: hydratedSummary });
   await expandSettings();
   await ui.waitRead(`(() => {
     const row=document.querySelector('[role="dialog"] button[aria-label*=" provider,"]');
-    return row?.textContent.trim()==='Sonnet 4.6';
+    return ${Boolean(codex)} ? /^Codex provider,/i.test(row?.getAttribute('aria-label')??'') : row?.textContent.trim()==='Sonnet 4.6';
   })()`, 'original saved lead settings hydrate before editing');
   // Opening the real lead model row is a normal user action, not form setup.
   if (!(await cdp.evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="team-model-selector-model-option"]'))`))) {
     await ui.scrollTo('[role="dialog"] button[aria-label*=" provider,"]', 'visible original lead row');
     await ui.click('[role="dialog"] button[aria-label*=" provider,"]', 'expand original lead model row');
   }
-  await ui.scrollTo('[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]', 'visible Opus 4.6 option');
-  await ui.click('[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]', 'select Opus 4.6 in original model selector');
+  const modelOption = codex
+    ? `[role="dialog"] [data-testid="team-model-selector-model-option"]:is([aria-label=${JSON.stringify(modelLabel)}],[aria-label^=${JSON.stringify(modelLabel + '. ')}])`
+    : '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]';
+  await ui.scrollTo(modelOption, `visible ${modelLabel} option from actual provider catalog`);
+  await ui.click(modelOption, `select ${modelLabel} in original model selector`);
   await ui.scrollTo('[role="dialog"] button', 'visible original Medium effort', 'Medium');
   await ui.click('[role="dialog"] button', 'choose original Medium effort', 'Medium');
   await ui.waitRead(`document.querySelector('[role="dialog"] #lead-effort')?.textContent.trim()==='Medium'`, 'selected medium effort');
   await ui.scrollTo('[role="dialog"] #dialog-prompt', 'visible original launch prompt');
   await ui.click('[role="dialog"] #dialog-prompt', 'focus original launch prompt');
-  await cdp.send('Input.insertText', { text: 'NATIVE_TEAM_ONE' });
-  await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value==='NATIVE_TEAM_ONE'`, 'typed original prompt');
+  await cdp.send('Input.insertText', { text: firstPrompt });
+  await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===${JSON.stringify(firstPrompt)}`, 'typed original prompt');
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
   await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
@@ -222,13 +237,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(capturedMember.memberId, 'alice-id');
   assert.notEqual(capturedMember.principalId, 'alice-session');
   const saved = record(state.savedSettings);
-  assert.equal(saved.prompt, 'NATIVE_TEAM_ONE');
+  assert.equal(saved.prompt, firstPrompt);
   assert.equal(saved.cwd, join(fixture.root, 'workspace'));
-  assert.equal(saved.model, 'claude-opus-4-6');
+  assert.equal(saved.model, selectedModel);
+  if (codex) assert.equal(saved.providerId, 'codex');
   assert.equal(saved.effort, 'medium');
   assert.equal(saved.fastMode, 'off');
   assert.equal(saved.skipPermissions, true);
-  assert.equal(saved.limitContext, true);
+  if (!codex) assert.equal(saved.limitContext, true);
   proof.savedSettings = saved;
   proof.capture = capture;
   const capturedSessions = async () => (await readDesktopNativeStopSessions(fixture.root))
@@ -243,7 +259,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   proof.nativeSessionBeforeStop = sessions[0];
   assert.equal(model.observations.length, 8);
   assert.ok(model.probes.length >= 1 && model.probes.length <= 8);
-  assert.ok(model.observations.every(row => row.requestedModel === 'claude-opus-4-6' && row.requestedEffort === 'medium' && row.contextEffective));
+  assert.ok(model.observations.every(row => row.requestedModel === selectedModel && row.requestedEffort === 'medium' && row.contextEffective));
   assert.ok(model.observations.some(row => row.toolResultError), 'actual Bash exit7 observed');
   assert.equal(await readFile(join(fixture.root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
   const tasksDirectory = join(fixture.root, 'hoststore/tasks/test-desktop-backend');
@@ -256,7 +272,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(nativeTask.owner, 'alice');
   proof.nativeTask = nativeTask;
   await ui.click('button[aria-label^="alice,"]', 'open original alice chat');
-  await ui.waitRead(`document.body.innerText.includes('REPLY_NATIVE_ONE')`, 'native reply visible in original thread');
+  await ui.waitRead(`document.body.innerText.includes(${JSON.stringify(firstReply)})`, 'native reply visible in original thread');
   const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
   assert.ok(typeof screenshot.data === 'string');
   const screenshotPath = join(fixture.root, 'ui-original-launch-native.png');
@@ -267,6 +283,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const hostPid = hostRows[0]!.pid;
   const children = processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
+  if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture);
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');
   await poll(capturedSessions, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
@@ -288,7 +305,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   await ui.scrollTo('button', 'visible original Launch after reload', 'Launch');
   await ui.click('button', 'reopen original Launch after reload', 'Launch');
   await expandSettings();
-  await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value==='NATIVE_TEAM_ONE'`, 'same saved prompt after reload');
+  await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===${JSON.stringify(firstPrompt)}`, 'same saved prompt after reload');
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   assert.deepEqual(record((await ownerState()).savedSettings), saved, 'opening/reloading does not rewrite saved settings');
   assert.equal(model.observations.length, 8, 'opening the original dialog cannot dispatch another agent input');
@@ -298,7 +315,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   if (options.restartAfterStop) proof.settingsRetainedAfterColdStartup = true;
   else proof.settingsRetainedAfterReload = true;
   if (evidence.mode === 'native-resume-ui')
-    await runDesktopResumeUiSmoke(cdp, { ...options, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
-  if (evidence.mode === 'native-relaunch-ui')
-    await runDesktopRelaunchUiSmoke(cdp, { ...options, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
+    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
+  if (evidence.mode === 'native-relaunch-ui') {
+    assert.ok(options.model && !codex);
+    await runDesktopRelaunchUiSmoke(cdp, { ...options, model: options.model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
+  }
 }

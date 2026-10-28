@@ -9,14 +9,33 @@ import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { checkpoint, digest, json, jsonDigest, originalHistoryMarker, record, rows } from './desktop-resume-records.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
-import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
+
+/** Read only the current captured TEST Host's exact native child; never signal or adopt it. */
+export async function codexRuntimeEndpointHash(fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>): Promise<string> {
+  assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
+  const profile = await json(fixture.profilePath), members = record(profile.runtime).members;
+  assert.ok(Array.isArray(members) && members.length === 1);
+  const member = record(members[0]); assert.equal(member.provider, 'codex'); assert.equal(member.memberId, 'alice-id');
+  const executable = record(member.executable);
+  assert.equal(await fileDigest(String(executable.path)), executable.sha256);
+  const table = processTable(), hosts = table.filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  assert.equal(hosts.length, 1);
+  const native = table.filter(row => row.ppid === hosts[0]!.pid).map(row => command(row.pid))
+    .filter(value => value.startsWith(`${executable.path} `) && value.includes(' app-server --listen stdio://'));
+  assert.equal(native.length, 1, 'one captured direct Codex app-server child');
+  const urls = [...native[0]!.matchAll(/"team"=\{"url"="(http:\/\/127\.0\.0\.1:\d+\/[^"\s]+)"/g)];
+  assert.equal(urls.length, 1, 'one exact managed Team HTTP URL in native argv');
+  return digest(urls[0]![1]!);
+}
 
 /** Starts only after the real Launch/Stop/reload/reopen-prefill proof. No setup effect APIs. */
 export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
-  fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
   evidence: Record<string, unknown>;
-  model: Awaited<ReturnType<typeof startNativeTeamModel>>;
+  model: Awaited<ReturnType<typeof startNativeTeamModel>> | Awaited<ReturnType<typeof startCodexModel>>;
   firstCapture: Record<string, unknown>;
   firstSession: Record<string, unknown>;
   savedSettings: Record<string, unknown>;
@@ -24,9 +43,16 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   assertOwnedRenderer(): void;
 }): Promise<void> {
   const { fixture, evidence, model, firstCapture } = options;
+  const codex = fixture.codexResume;
+  const provider = codex ? 'codex' : 'claude';
+  assert.equal(evidence.resumeProvider, provider);
+  const firstPrompt = codex ? 'CODEX_TEAM_ONE' : 'NATIVE_TEAM_ONE';
+  const firstReply = codex ? 'REPLY_CODEX_ONE' : 'REPLY_NATIVE_ONE';
+  const secondPrompt = codex ? 'CODEX_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+  const secondReply = codex ? 'REPLY_CODEX_TWO' : 'REPLY_NATIVE_TWO';
   assert.equal(evidence.mode, 'native-resume-ui');
   const steps: Record<string, unknown>[] = [];
-  const proof: Record<string, unknown> = { status: 'INCOMPLETE', phase: 'source-released', steps,
+  const proof: Record<string, unknown> = { status: 'INCOMPLETE', provider, phase: 'source-released', steps,
     scope: 'Original Launch/Stop/reload/Resume checkpoint controls; same product launch, exact native history, ordinary Composer/Send and second Stop',
     excluded: ['vendor inference/authentication', 'multi-member Resume', 'legacy namespace import', 'full Stage1'] };
   evidence.resumeDialogProof = proof;
@@ -67,10 +93,10 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   assert.deepEqual(source.binding, options.firstSession.binding);
   assert.equal(source.phase, 'closed');
   assert.equal(source.custody, 'released');
-  const originalCheckpoint = await checkpoint(fixture.root, source);
-  assert.ok(originalCheckpoint.history.includes(Buffer.from('NATIVE_TEAM_ONE')));
-  assert.ok(originalCheckpoint.history.includes(Buffer.from('REPLY_NATIVE_ONE')));
-  const marker = originalHistoryMarker(model.observations[7]!.priorNativeToolIds ?? []);
+  const originalCheckpoint = await checkpoint(fixture.root, source, provider);
+  assert.ok(originalCheckpoint.history.includes(Buffer.from(firstPrompt)));
+  assert.ok(originalCheckpoint.history.includes(Buffer.from(firstReply)));
+  const marker = originalHistoryMarker(model.observations[7]!.priorNativeToolIds ?? [], provider);
   const sourceBinding = record(source.binding);
   const staticPredecessors = (await allSessions()).filter(row => record(row.binding).runId !== firstCapture.launchId);
   assert.ok(staticPredecessors.length <= 1);
@@ -148,6 +174,13 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   const readyLaunch = await query('team.launch.read', {});
   assert.equal(readyLaunch.launchId, sourceLaunch.launchId); assert.equal(readyLaunch.status, 'ready');
   assert.equal(record((readyLaunch.members as unknown[])[0]).generation, selectedBinding.generation);
+  if (codex) {
+    const original = record(evidence.launchDialogProof).runtimeMcpEndpointSha256;
+    assert.match(String(original), /^[a-f0-9]{64}$/);
+    const resumed = await codexRuntimeEndpointHash(fixture);
+    assert.notEqual(resumed, original, 'cold Host exposes a new managed MCP URL while resuming the same native thread');
+    proof.runtimeMcpEndpoints = { originalSha256: original, resumedSha256: resumed };
+  }
   const launchPath = join(ownerRoot, 'launches', `${jsonDigest(firstCapture.launchId)}.json`);
   const journal = await json(launchPath);
   const journalPreparation = record((journal.resumePreparations as unknown[])[0]);
@@ -156,21 +189,21 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   proof.phase = 'restored-ready'; proof.preparedResumeMap = restoration; proof.launchJournal = { path: launchPath, sha256: await fileDigest(launchPath), record: journal }; proof.readyLaunch = readyLaunch;
   if (!(await cdp.evaluate(`Boolean(document.querySelector('.message-composer-flat-layout textarea'))`)))
     await ui.click('button[aria-label^="alice,"]', 'open original alice chat after Resume');
-  await ui.waitRead(`document.body.innerText.includes('REPLY_NATIVE_ONE')`, 'original native reply retained after Resume');
+  await ui.waitRead(`document.body.innerText.includes(${JSON.stringify(firstReply)})`, 'original native reply retained after Resume');
   await ui.click('.message-composer-flat-layout textarea', 'focus existing MessageComposer');
-  await cdp.send('Input.insertText', { text: 'NATIVE_TEAM_TWO' });
-  await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value==='NATIVE_TEAM_TWO'`, 'deliberate second message retained');
+  await cdp.send('Input.insertText', { text: secondPrompt });
+  await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value===${JSON.stringify(secondPrompt)}`, 'deliberate second message retained');
   proof.phase = 'second-send-attempted';
   await ui.click('button.message-composer-send-button', 'ordinary Send exactly once after Resume', 'Send');
   await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value===''`, 'Composer clears after admitted Send');
-  await ui.waitRead(`document.body.innerText.includes('REPLY_NATIVE_TWO')`, 'resumed native reply visible', 60000);
-  await revealDesktopReply(cdp, 'REPLY_NATIVE_TWO', { assertOwnedRenderer: options.assertOwnedRenderer, step });
+  await ui.waitRead(`document.body.innerText.includes(${JSON.stringify(secondReply)})`, 'resumed native reply visible', 60000);
+  await revealDesktopReply(cdp, secondReply, { assertOwnedRenderer: options.assertOwnedRenderer, step });
   const terminal = await poll(sessions, values => values.length === 2 && values.some(row => record(row.binding).generation === selectedBinding.generation &&
     Array.isArray(row.inputs) && row.inputs.length === 1 && record(row.inputs[0]).phase === 'terminal'), 'one resumed input terminal');
   const finished = terminal.find(row => record(row.binding).generation === selectedBinding.generation)!;
   const input = record((finished.inputs as unknown[])[0]); assert.equal(input.terminal, 'succeeded');
   const sent = (await rows(join(ownerRoot, 'commands'))).filter(row => row.principalId === 'TEST-human' &&
-    record(row.command).operation === 'message.send' && record(record(row.command).payload).text === 'NATIVE_TEAM_TWO');
+    record(row.command).operation === 'message.send' && record(record(row.command).payload).text === secondPrompt);
   assert.equal(sent.length, 1); const receipt = sent[0]!; assert.equal(receipt.phase, 'completed');
   const messageId = String(receipt.commandId); assert.match(messageId, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
   assert.equal(record(record(receipt.command).payload).messageId, messageId); assert.equal(record(receipt.effects).messageId, messageId);
@@ -180,19 +213,19 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   const { teamName: outboxTeamName, ...outboxBinding } = record(outbox.binding);
   assert.equal(outboxTeamName, 'test-desktop-backend'); assert.deepEqual(outboxBinding, selectedBinding);
   assert.equal(model.observations.length, 11);
-  const second = model.observations.filter(row => row.turn === 'NATIVE_TEAM_TWO'); assert.equal(second.length, 3);
+  const second = model.observations.filter(row => row.turn === secondPrompt); assert.equal(second.length, 3);
   assert.deepEqual(second.map(row => row.step), [0, 1, 2]);
   for (const observation of second) {
     assert.ok(observation.priorTurn && observation.visibleReplyContract && observation.contextEffective && !observation.toolResultError);
-    assert.equal(originalHistoryMarker(observation.priorNativeToolIds ?? []), marker, 'actual resumed native request contains the original native history marker');
-    assert.equal(observation.incomingMessageId, messageId); assert.equal(observation.requestedModel, 'claude-opus-4-6'); assert.equal(observation.requestedEffort, 'medium');
+    assert.equal(originalHistoryMarker(observation.priorNativeToolIds ?? [], provider), marker, 'actual resumed native request contains the original native history marker');
+    assert.equal(observation.incomingMessageId, messageId); assert.equal(observation.requestedModel, codex?.model ?? 'claude-opus-4-6'); assert.equal(observation.requestedEffort, 'medium');
   }
   assert.equal(await readFile(join(fixture.root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');
   assert.deepEqual(await json(join(fixture.root, 'hoststore/tasks/test-desktop-backend', `${options.nativeTask.id}.json`)), options.nativeTask);
   const inbox = JSON.parse(await readFile(join(teamRoot, 'inboxes/user.json'), 'utf8')) as unknown;
   assert.ok(Array.isArray(inbox));
-  for (const reply of ['REPLY_NATIVE_ONE', 'REPLY_NATIVE_TWO']) assert.equal(inbox.map(record).filter(row => row.text === reply && row.from === 'alice').length, 1);
-  await revealDesktopReply(cdp, 'REPLY_NATIVE_ONE', { assertOwnedRenderer: options.assertOwnedRenderer, step });
+  for (const reply of [firstReply, secondReply]) assert.equal(inbox.map(record).filter(row => row.text === reply && row.from === 'alice').length, 1);
+  await revealDesktopReply(cdp, firstReply, { assertOwnedRenderer: options.assertOwnedRenderer, step });
   const hosts = processTable().filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hosts.length, 1); const children = processTable().filter(row => row.ppid === hosts[0]!.pid); assert.ok(children.length >= 1);
   const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })); assert.equal(typeof screenshot.data, 'string');
@@ -222,9 +255,9 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   assert.deepEqual(stopped.find(row => record(row.binding).generation === sourceBinding.generation), source);
   assert.deepEqual((await allSessions()).filter(row => record(row.binding).runId !== firstCapture.launchId), staticPredecessors);
   const finalSession = stopped.find(row => record(row.binding).generation === selectedBinding.generation)!;
-  const secondCheckpoint = await checkpoint(fixture.root, finalSession);
+  const secondCheckpoint = await checkpoint(fixture.root, finalSession, provider);
   assert.notEqual(secondCheckpoint.payload.reference, available.reference); assert.equal(secondCheckpoint.nativeSession, originalCheckpoint.nativeSession);
-  assert.ok(secondCheckpoint.history.includes(Buffer.from('NATIVE_TEAM_TWO')) && secondCheckpoint.history.includes(Buffer.from('REPLY_NATIVE_TWO')));
+  assert.ok(secondCheckpoint.history.includes(Buffer.from(secondPrompt)) && secondCheckpoint.history.includes(Buffer.from(secondReply)));
   assert.equal(digest(secondCheckpoint.history.subarray(0, originalCheckpoint.history.length)), originalCheckpoint.historySha256, 'original native JSONL history prefix remains unchanged');
   assert.equal((await lstat(originalCheckpoint.historyPath)).isSymbolicLink(), false);
   assert.equal(await fileDigest(originalCheckpoint.path), originalCheckpoint.payloadFileSha256);
@@ -232,6 +265,7 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(model.observations.length, 11); assert.deepEqual(model.failures, []);
   proof.phase = 'second-checkpoint-released'; proof.sessionsBeforeSecondStop = terminal; proof.sessionsAfterSecondStop = stopped;
   proof.secondMessage = { receipt, outbox, observations: second }; proof.secondStop = { nativeChildren: children, releasedBeforeQuit: true,
+    nativeSession: secondCheckpoint.nativeSession,
     checkpoint: secondCheckpoint.attempt, payloadPath: secondCheckpoint.path, payloadFileSha256: secondCheckpoint.payloadFileSha256,
     nativeHistoryPath: secondCheckpoint.historyPath, nativeHistorySha256: secondCheckpoint.historySha256, nativeHistoryBytes: secondCheckpoint.history.length, originalHistoryPrefixRetained: true };
   proof.finalRestorations = await query('team.launch.restorations.read', { launchId: firstCapture.launchId });
