@@ -5773,3 +5773,25 @@ Independent exact source review accepted the binding and bounded negative tests.
 Actual native ancestry, normal SDK registration/Stop and packed proof are still
 required on the new source before any P7/support claim. The original M19
 root911 HOLD is untouched; no older receipt or run is promoted to close it.
+
+### Preserve the next upstream diagnostic change
+
+The prospective tuple binding above was committed and immediately pushed as
+`bf845dfcc9406f2e597abf5e4ae3882e6abeecb0`, parentceef; tree
+`24563b41ef7c29e1b7cf47af01a2a6924367a21c`. Scoped800-test/strict package PASS and
+unresolved local broad typing retain the precise boundaries recorded above.
+
+Actual main advanced to`ef979f058f1f028c5203766b2b3a4c9bcf15da26`. Its502d..ef979
+range changes only three existing upstream diagnostic TEST/script paths,39+/1-.
+The merge applies cleanly without touching Host/provider/package/workflow bytes.
+The new task-persistence projection and its test match main blobs5509fa7d and
+d7dc8daf exactly. The modified Windows harness contains the exact incoming diff
+plus the prior PR-only BoardTaskLogStreamResponse/native stream guards; normalizing
+only diff index/hunk offsets yields byte-equal upstream and merged deltas.
+Those guards are not discarded to manufacture whole-file equality with main.
+
+The upstream task-persistence regression passed1/1, exit0, and source-size and
+whitespace checks passed. This preserves diagnostic observations and original
+assertions; it does not add an OpenCodeV2 Host driver or a liveV2 qualification.
+No unchanged Host800 test rerun is attributed to this TEST-only merge. Current
+native/SDK/packed and final canonical source qualifications remain explicit work.
