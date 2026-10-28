@@ -248,6 +248,57 @@ describe('UpdateCustomTeamTemplateUseCase', () => {
     expect(fixture.update).toHaveBeenCalledTimes(1);
   });
 
+  it('trims surrounding whitespace from member names before validation, hashing and persistence', async () => {
+    const updated = storedTemplate({ revision: 2 });
+    const fixture = gatewayFixture({ update: [{ status: 'updated', template: updated }] });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(
+      updateRequest({
+        members: [{ name: '  alice  ', role: 'reviewer', workflow: 'Review each change.' }],
+      })
+    );
+
+    expect(result).toEqual({ status: 'updated', template: updated });
+    const members = fixture.requests[0].template.members;
+    expect(members).toEqual([{ name: 'alice', role: 'reviewer', workflow: 'Review each change.' }]);
+    expect(fixture.requests[0].contentHash).toBe(
+      contentHashFor('Deliver the feature.', [
+        { name: 'alice', role: 'reviewer', workflow: 'Review each change.' },
+      ])
+    );
+  });
+
+  it('rejects a whitespace-only member name through validation', async () => {
+    const fixture = gatewayFixture({
+      update: [{ status: 'updated', template: storedTemplate({ revision: 2 }) }],
+    });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(updateRequest({ members: [{ name: '   ' }] }));
+
+    expect(result).toMatchObject({ status: 'validationFailed' });
+    expect(fixture.update).not.toHaveBeenCalled();
+  });
+
+  it('reconciles an interrupted update whose member name was trimmed before persistence', async () => {
+    const committed = storedTemplate({ revision: 2 });
+    const fixture = gatewayFixture({
+      update: [interrupted('unknown')],
+      getById: [{ status: 'found', template: committed }],
+    });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(
+      updateRequest({
+        members: [{ name: '  alice  ', role: 'reviewer', workflow: 'Review each change.' }],
+      })
+    );
+
+    expect(result).toEqual({ status: 'updated', template: committed });
+    expect(fixture.update).toHaveBeenCalledTimes(1);
+  });
+
   it('stays unresolved when the stored row differs in prompt, members or revision', async () => {
     const scenarios: CustomTeamTemplateV1[] = [
       storedTemplate({ revision: 2, teamPrompt: 'A different prompt.' }),

@@ -96,7 +96,7 @@ function toAllowlistedMembers(value: unknown): CustomTeamTemplateMemberV1[] | nu
     // could not be reconciled against its own committed row.
     members.push(
       normalizeTemplateMember({
-        name: candidate.name,
+        name: candidate.name.trim(),
         ...(typeof candidate.role === 'string' ? { role: candidate.role } : {}),
         ...(typeof candidate.workflow === 'string' ? { workflow: candidate.workflow } : {}),
       })

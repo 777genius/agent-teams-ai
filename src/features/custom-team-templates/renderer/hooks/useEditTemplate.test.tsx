@@ -219,6 +219,75 @@ describe('useEditTemplate unresolved writes', () => {
     expect(onSaved).toHaveBeenCalledWith(stored);
   });
 
+  it('rejects a re-check when content differs at the exact next revision', async () => {
+    updateTemplate.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    await render();
+    await act(async () => {
+      latest?.setName('Recovered name');
+    });
+    await saveNow();
+    expect(latest?.canRecheck).toBe(true);
+
+    // Same name and next revision, but a different team prompt does not prove
+    // the intended update committed.
+    listTemplates.mockResolvedValue({
+      status: 'ready',
+      templates: [
+        { ...template, name: 'Recovered name', teamPrompt: 'Changed prompt.', revision: 6 },
+      ],
+    } satisfies ListCustomTeamTemplatesResult);
+    await expect(recheckNow()).resolves.toBe(false);
+    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('rejects a re-check when members differ at the exact next revision', async () => {
+    updateTemplate.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    await render();
+    await act(async () => {
+      latest?.setName('Recovered name');
+    });
+    await saveNow();
+    expect(latest?.canRecheck).toBe(true);
+
+    // Same name and next revision, but different members does not prove the
+    // intended update committed.
+    listTemplates.mockResolvedValue({
+      status: 'ready',
+      templates: [
+        {
+          ...template,
+          name: 'Recovered name',
+          members: [{ name: 'bob', role: 'writer' }],
+          revision: 6,
+        },
+      ],
+    } satisfies ListCustomTeamTemplatesResult);
+    await expect(recheckNow()).resolves.toBe(false);
+    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('rejects a re-check when the matching content is at a later revision', async () => {
+    updateTemplate.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    await render();
+    await act(async () => {
+      latest?.setName('Recovered name');
+    });
+    await saveNow();
+    expect(latest?.canRecheck).toBe(true);
+
+    // Matching content at revision 7 rather than the exact next revision 6
+    // suggests another writer committed first; the outcome stays unresolved.
+    listTemplates.mockResolvedValue({
+      status: 'ready',
+      templates: [{ ...template, name: 'Recovered name', revision: 7 }],
+    } satisfies ListCustomTeamTemplatesResult);
+    await expect(recheckNow()).resolves.toBe(false);
+    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it('drops a stale save result after the dialog closes and reopens', async () => {
     const pending = deferred<UpdateCustomTeamTemplateResult>();
     updateTemplate.mockReturnValue(pending.promise);

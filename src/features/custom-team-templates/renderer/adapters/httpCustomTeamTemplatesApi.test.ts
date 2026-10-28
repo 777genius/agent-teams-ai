@@ -53,6 +53,9 @@ describe('createHttpCustomTeamTemplatesApi update transport', () => {
       `http://127.0.0.1:4321${CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate}`,
       expect.objectContaining({
         method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+        }),
         body: JSON.stringify(request),
       })
     );

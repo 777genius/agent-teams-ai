@@ -423,6 +423,16 @@ export const EditCustomTemplateDialog = ({
                             value={member.name}
                             disabled={locked}
                             placeholder={t('customTemplates.edit.memberNamePlaceholder')}
+                            aria-invalid={
+                              mIssues.some((i) => i.field === `members[${index}].name`)
+                                ? true
+                                : undefined
+                            }
+                            aria-describedby={
+                              mIssues.some((i) => i.field === `members[${index}].name`)
+                                ? `member-${index}-error`
+                                : undefined
+                            }
                             onChange={(e) => updateMember(index, { name: e.target.value })}
                           />
                         </div>
@@ -439,6 +449,16 @@ export const EditCustomTemplateDialog = ({
                             value={member.role ?? ''}
                             disabled={locked}
                             placeholder={t('customTemplates.edit.memberRolePlaceholder')}
+                            aria-invalid={
+                              mIssues.some((i) => i.field === `members[${index}].role`)
+                                ? true
+                                : undefined
+                            }
+                            aria-describedby={
+                              mIssues.some((i) => i.field === `members[${index}].role`)
+                                ? `member-${index}-error`
+                                : undefined
+                            }
                             onChange={(e) => updateMember(index, { role: e.target.value })}
                           />
                         </div>
@@ -455,13 +475,27 @@ export const EditCustomTemplateDialog = ({
                             value={member.workflow ?? ''}
                             disabled={locked}
                             placeholder={t('customTemplates.edit.memberWorkflowPlaceholder')}
+                            aria-invalid={
+                              mIssues.some((i) => i.field === `members[${index}].workflow`)
+                                ? true
+                                : undefined
+                            }
+                            aria-describedby={
+                              mIssues.some((i) => i.field === `members[${index}].workflow`)
+                                ? `member-${index}-error`
+                                : undefined
+                            }
                             onChange={(e) => updateMember(index, { workflow: e.target.value })}
                           />
                         </div>
                       </div>
 
                       {mIssues.length > 0 ? (
-                        <p role="alert" className="text-xs text-red-300">
+                        <p
+                          id={`member-${index}-error`}
+                          role="alert"
+                          className="text-xs text-red-300"
+                        >
                           {mIssues.map(issueMessage).join(' ')}
                         </p>
                       ) : null}

@@ -551,6 +551,50 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     expect(library.rows.size).toBe(2);
   });
 
+  it('allocates the next free candidate id when the derived id and -1 candidate are occupied', async () => {
+    const library = libraryFixture();
+
+    // Pre-populate the store with incompatible records at the derived id and
+    // the -1 candidate, so the allocator must advance to -2.
+    library.rows.set(
+      PREVIEW_ID,
+      storedTemplate(PREVIEW_ID, {
+        name: 'Occupied Original',
+        teamPrompt: 'Different content.',
+      })
+    );
+    library.rows.set(
+      `${PREVIEW_ID}-1`,
+      storedTemplate(`${PREVIEW_ID}-1`, {
+        name: 'Occupied Candidate',
+        teamPrompt: 'Different content.',
+      })
+    );
+
+    const preview = await preparedPreview({ gateway: library.gateway });
+    const result = await useCase({ gateway: library.gateway }, preview.store).execute({
+      previewToken: preview.token,
+    });
+
+    expect(result.status).toBe('created');
+    if (result.status !== 'created') return;
+    expect(result.template.templateId).toBe(`${PREVIEW_ID}-2`);
+
+    // Neither existing record is overwritten or changed.
+    expect(library.rows.get(PREVIEW_ID)?.name).toBe('Occupied Original');
+    expect(library.rows.get(`${PREVIEW_ID}-1`)?.name).toBe('Occupied Candidate');
+
+    // Repeating the same save reconciles to alreadySaved for the new record,
+    // not a third row.
+    const repeat = await useCase({ gateway: library.gateway }, preview.store).execute({
+      previewToken: preview.token,
+    });
+    expect(repeat.status).toBe('alreadySaved');
+    if (repeat.status !== 'alreadySaved') return;
+    expect(repeat.template.templateId).toBe(`${PREVIEW_ID}-2`);
+    expect(library.rows.size).toBe(3);
+  });
+
   it('retries a busy database with the identical request, then reports unavailability', async () => {
     const busy = { status: 'retryable', reason: 'databaseBusy' } as const;
     const recoverFixture = gatewayFixture({
