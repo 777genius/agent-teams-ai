@@ -32,6 +32,16 @@ it('seeds the qualified Windows model capacity without triggering compaction aft
     expect(29_748 + 111).toBeGreaterThanOrEqual(32_000 - limit.output);
     expect(protectedDirectories).toEqual([root]);
     await expect(seed(root, 'openrouter/nvidia/nemotron-3-super-120b-a12b:free')).rejects.toMatchObject({ code: 'EEXIST' });
+    for (const [modelId, context] of [
+      ['~z-ai/glm-flash-latest', 1_048_576],
+      ['openai/gpt-4.1-mini', 1_047_576],
+    ] as const) {
+      const directory = path.join(root, `TEST-${modelId.split('/').at(-1)}`);
+      await seed(directory, `openrouter/${modelId}`);
+      const seeded = JSON.parse(await readFile(path.join(directory, 'opencode.json'), 'utf8'));
+      expect(seeded.provider.openrouter.models[modelId].limit).toEqual({ context, output: 8192 });
+      expect(protectedDirectories).toContain(directory);
+    }
     const other = path.join(root, 'TEST-other');
     await seed(other, 'openrouter/other-model');
     const unchanged = JSON.parse(await readFile(path.join(other, 'opencode.json'), 'utf8'));

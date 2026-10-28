@@ -41,7 +41,7 @@ export interface TeamProvisioningStopRun
 export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStopRun> {
   cancelOpenCodePromptDeliveries(teamName: string): Promise<void>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
-  pauseActiveIntervalsForTeam(teamName: string): void;
+  pauseActiveIntervalsForTeam(teamName: string): { failed?: boolean } | void;
   stopPersistentTeamMembers(teamName: string): void;
   openCodeRuntimeDeliveryAdvisory: { cancelTeam(teamName: string): void };
   getTrackedRunId(teamName: string): string | null;
@@ -101,7 +101,13 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {
   ports.invalidateRuntimeSnapshotCaches(teamName);
-  ports.pauseActiveIntervalsForTeam(teamName);
+  // A task-clock write must never prevent retirement of the owned processes.
+  // Runtime callbacks may still resume an interval until teardown drains below.
+  try {
+    ports.pauseActiveIntervalsForTeam(teamName);
+  } catch {
+    ports.logger.info('task_activity_interval_pause_deferred_until_stop');
+  }
   ports.stopPersistentTeamMembers(teamName);
   ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(teamName);
   const stopRuntimeLanesForRun = async (targetRunId: string): Promise<void> => {
@@ -195,12 +201,32 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
 ): Promise<void> {
   // Keep the team lock until both branches settle, including runtime-owned
   // cleanup on runtime success even when durable cancellation fails.
-  await awaitAllOwnedProcessStops([
-    ports.cancelOpenCodePromptDeliveries(teamName),
-    stopTeamRuntimeFlow(teamName, ports).then(() =>
-      ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName)
-    ),
-  ]);
+  let stopFailed = false;
+  let stopFailure: unknown;
+  try {
+    await awaitAllOwnedProcessStops([
+      ports.cancelOpenCodePromptDeliveries(teamName),
+      stopTeamRuntimeFlow(teamName, ports).then(() =>
+        ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName)
+      ),
+    ]);
+  } catch (error) {
+    stopFailed = true;
+    stopFailure = error;
+  }
+  // Only after every owned stop/cancellation and helper cleanup has settled
+  // can the final persisted clock boundary be published without a late resume.
+  let pauseFailed = false;
+  try {
+    pauseFailed = ports.pauseActiveIntervalsForTeam(teamName)?.failed === true;
+  } catch {
+    pauseFailed = true;
+  }
+  if (pauseFailed) {
+    ports.logger.info('task_activity_interval_pause_failed_after_stop');
+  }
+  if (stopFailed) throw stopFailure;
+  if (pauseFailed) throw new Error('task_activity_interval_pause_failed_after_stop');
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {
