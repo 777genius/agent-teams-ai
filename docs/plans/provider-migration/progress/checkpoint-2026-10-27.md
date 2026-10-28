@@ -5593,3 +5593,76 @@ the workflow SHA256 is
 
 This merge does not add an OpenCodeV2 Host path, new UI, Stage2 implementation,
 SDK custody authority, P7/M17 closure or a native PASS. Draft remains unchanged.
+
+### Typed official-alias acquisition preflight
+
+The reviewed actual-main merge was committed and immediately pushed as
+`da08af6b1ad2ebffdd3fa3265c0179d44f303fb5`, with parents1580 and502d; tree
+`1e8cfb1165c517cdb87c2c2913f9548a3b0ec743`. The old1580 manual run is now terminal
+CANCELLED: nine Desktop jobs failed before TEST in pinned Node acquisition and
+two queued jobs were cancelled without starting any steps. Its successful
+canonical results above retain their original1580 scope; none of the eleven
+Desktop variants establishes native/UI/restore acceptance.
+
+The separate current-source
+[run40682390337](https://github.com/777genius/agent-teams-ai/actions/runs/40682390337)
+retains its own da08 provenance. Its diagnostic job122796105221 received official
+`/dist` HTTP/1.1 status200, but only868,352 of52,909,993 response bytes arrived in
+60.009098seconds; curl exited28. Checksum verification/cache publication,
+original stage-node, headers download, compilation and owned-child probe were
+not reached. Desktop acquisition failures in that run are likewise pre-TEST;
+no diagnostic, fixture or native PASS is inferred from the partial response.
+Raw job log and artifact12813967048 retain that failure without a retry or
+reuse of partial bytes.
+
+The verified da08 canonical suite snapshot is separately24,010 root PASS /
+98 SKIP /0 FAIL (2,045 passed files /37 skipped); controller423, MCP74, Host797,
+CI scripts179, feedback119, release9 and MCP E2E24 each have0 FAIL /0 SKIP.
+Aggregate qualification was still waiting for typed lint at this snapshot, so
+the whole run is not labelled PASS. These counts are neither1580 results nor
+qualification of the following alias/MTS correction. The observed native-side
+state was two Desktop prefill failures plus the diagnostic failure, with nine
+Desktop rows still queued; none reached a native acceptance oracle.
+
+Read-only investigation found no existing exact-archive Actions cache. The
+runner's setup-node24.21.0 binary is available, but does not replace the required
+official archive: the actions/node-versions asset is53,204,573bytes with SHA256
+`e00f77d53c0e549ac52a626a563a71f9ec27a0175146e4a679feb29ba7477e87`, whereas the
+locked official archive is52,909,993bytes with SHA256`bed7eea5…`. No archive or
+admission manifest is fabricated from the toolcache binary.
+
+Both official URL paths returned matching content length/ETag/last-modified
+metadata. One bounded scratch transfer of
+`https://nodejs.org/download/release/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz`
+completed with HTTP/1.1 status200,52,909,993bytes in0.966247seconds, curl0 and exact
+locked SHA256`bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057`.
+This is evidence from the local Linux/proxy route, not a macOS throughput claim.
+Retained actual macOS node-gyp logs also show successful GET/200 for the same
+official `/download/release/v24.21.0` headers alias and SHASUMS path.
+
+The next candidate therefore selects that one official release alias for the
+archive and diagnostic headers. The acquisition log records its actual URL;
+the diagnostic headersSource receipt matches its request. Existing lock/SHA,
+15-second connect/60-second total/128MiB bounds, single attempt, strict cache
+verification and fresh-partial cleanup remain intact. There is no new mirror,
+retry, fallback chain, toolcache shortcut or production staging change.
+
+A plan-consistency review also caught that new Node helpers must be TS/MTS with
+meaningful strict typechecking. The CI helper is renamed from.mjs to.mts, with
+explicit path/Promise/error types and an unknown parsed lock narrowed before use.
+That single file is included in the existing strict
+`tsconfig.legacy-agent-host-scripts.json`, already run by canonical workspace
+checks. Both existing workflow calls use.mts; the old JS file is removed.
+No generic downloader/framework/configuration input is added.
+
+Focused strict `pnpm typecheck:legacy-host-scripts`, Node syntax check and scoped
+fast lint passed, exit0. Source/provisioning guards passed with4,634 production
+files /143 frozen exceptions; YAML and ten shell steps passed static checks.
+The reviewed MTS helper SHA256 is
+`1c0cd90964ea4e654eb8e53f6d2e9899340b7f368d0b9039b0b9772520a5768b`;
+the workflow SHA256 is
+`b3d188ee7a7b7c02153fd204eb6eefbc3199874fab648bc87dfc6f15f1caf66f`.
+The meaningful current macOS setup proof remains the
+next diagnostic-only run of the existing workflow, with stage1_desktop=false;
+it must complete before another eleven-row native matrix is attempted. Local
+success does not close P7/M17, the original M19 SDK HOLD, or any UI/restore gate.

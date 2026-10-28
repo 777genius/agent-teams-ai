@@ -101,10 +101,19 @@ workspace gates. Native результаты этим не подтвержде�
 с прежними digest/time/size guards. Run1580 сохраняет собственную provenance;
 его результаты не переносятся автоматически на новый merge.
 
+На `da08af6b` официальный `/dist` HTTP/1.1 ответил200, но diagnostic prefill
+получил лишь868 352 из52 909 993 байт за60 секунд и завершился до TEST. Следующий
+[узкий preflight](progress/checkpoint-2026-10-27.md#typed-official-alias-acquisition-preflight)
+проверяет официальный `/download/release` alias с тем же exact SHA и прежними
+bounds; helper переведён в MTS и включён в существующий strict typecheck.
+Local transfer подтвердил точные байты, но Mac setup/native PASS ещё не следует.
+Следующий remote запуск сначала проверяет diagnostic route без11 Desktop rows.
+
+**Исторические snapshots ниже сохраняют собственные source boundaries.**
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/
-import/backup путей и точные результаты каждого запуска. Последний коммит
-с изменением CI — **`8664c62`**, он сразу запушен и добавляет только prerequisite
+import/backup путей и точные результаты каждого запуска. В том историческом срезе
+последний коммит с изменением CI — **`8664c62`**, он сразу запушен и добавляет только prerequisite
 в одном workflow и
 документацию. Код приложения и тестов побайтно совпадает с `514082c`, где поверх
 production-исправления `8465a0a` принята TEST-замена CodeQL. Собственный canonical
@@ -115,7 +124,7 @@ suites и Windows smoke. TeamBackupService72 и queue27 прошли полно�
 [CodeQL40634384705](https://github.com/777genius/agent-teams-ai/actions/runs/40634384705)
 прошёл оба анализа; alert590 исправлен, все три review threads resolved/outdated.
 
-Последний полный native/CI запуск —
+Исторический полный native/CI запуск —
 [8465 / run40631328410](https://github.com/777genius/agent-teams-ai/actions/runs/40631328410),
 он завершён. **Canonical Full qualification прошёл: 23 896 PASS / 0 FAIL / 97 SKIP**,
 все typed lint, Validate, workspace/Host и Windows smoke. Полные affected suites

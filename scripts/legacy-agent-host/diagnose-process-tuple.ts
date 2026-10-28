@@ -67,7 +67,7 @@ export async function diagnoseProcessTuple(outputParent: string, headersRoot: st
     census.files = inputs;
     census.toolchain = { compiler, sdkRoot, version: run(compiler, ['--version']) };
     census.xcodeVersion = run('/usr/bin/xcodebuild', ['-version']);
-    census.headersSource = 'https://nodejs.org/dist/v24.21.0/node-v24.21.0-headers.tar.gz';
+    census.headersSource = 'https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz';
     const validateInputs = () => { for (const input of inputs) assert.deepEqual(file(input.path), input); };
     const library = join(directory, 'registered-process.node');
     // Exact compile flags from buildProcessNativeArtifact; no production manifest is generated.

@@ -9,5 +9,8 @@
     "types": ["node"],
     "allowImportingTsExtensions": true
   },
-  "include": ["scripts/legacy-agent-host/**/*.ts"]
+  "include": [
+    "scripts/legacy-agent-host/**/*.ts",
+    "scripts/ci/prefill-legacy-host-macos-node.mts"
+  ]
 }
