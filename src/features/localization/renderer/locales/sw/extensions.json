@@ -6,9 +6,9 @@
       "refreshCatalog": "Onyesha upya katalogi"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Programu-jalizi: {{status}}",
-      "skills": "Ujuzi: {{status}}"
+      "mcp": "MCP ya runtime: {{status}}",
+      "plugins": "Programu-jalizi za runtime: {{status}}",
+      "skills": "Ujuzi wa runtime: {{status}}"
     },
     "desktopOnly": "Inapatikana katika programu ya eneo-kazi pekee.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Inakagua upatikanaji wa runtime ya viendelezi",
       "failedToStartDescription": "Viendelezi vimezimwa hadi runtime ipite ukaguzi wake wa afya wa uanzishaji. Fungua Dashibodi ili kuirekebisha au kuisakinisha upya.",
       "failedToStartTitle": "Runtime iliyosanidiwa ilipatikana lakini imeshindwa kuanza",
-      "multimodelCapabilitiesDescription": "Usaidizi wa mtoa huduma unaweza kutofautiana kwa sehemu. Programu-jalizi zinaonyeshwa tu pale runtime inapotangaza usaidizi kwa uwazi.",
-      "multimodelCapabilitiesTitle": "Uwezo wa runtime ya modeli nyingi",
+      "multimodelCapabilitiesDescription": "Beji hizi zinaeleza katalogi na vidhibiti vya MCP vya runtime yenyewe. Upatikanaji wa Universal plugins na Managed skills unaonyeshwa kando katika sehemu zao.",
+      "multimodelCapabilitiesTitle": "Viendelezi vinavyosimamiwa na runtime",
       "needsSignInDescription": "{{runtime}} ilipatikana{{version}}, lakini usakinishaji wa programu-jalizi umezimwa hadi uingie kutoka Dashibodi.",
       "needsSignInTitle": "{{runtime}} inahitaji kuingia",
       "notAvailableDescription": "Viendelezi vimezimwa hadi runtime isakinishwe. Fungua Dashibodi ili kuisakinisha na ujaribu tena.",
@@ -45,7 +45,7 @@
         "label": "Seva za MCP"
       },
       "plugins": {
-        "description": "Viongezi vidogo vya runtime. Katika hali ya modeli nyingi kwa sasa vinatumika kwa vipindi vya Anthropic vinapoungwa mkono. Usaidizi mpana wa watoa huduma uko katika maendeleo.",
+        "description": "Panua uwezo wa wakala wako kwa Universal plugins zinazosimamiwa na UAP au programu-jalizi kutoka kwenye katalogi ya runtime.",
         "label": "Programu-jalizi"
       },
       "skills": {
@@ -312,8 +312,8 @@
       "storedIn": "Imehifadhiwa katika {{root}}"
     },
     "deleteDialog": {
-      "description": "Futa ujuzi huu na uuhamishe kwenye Tupio?",
-      "descriptionWithName": "Futa \"{{name}}\" na uuhamishe kwenye Tupio? Unaweza kuurejesha baadaye kutoka Tupio ikihitajika.",
+      "description": "Delete this Skill? Restore its files from Managed Skills for at least 30 days.",
+      "descriptionWithName": "Delete \"{{name}}\"? Restore its files from Managed Skills for at least 30 days.",
       "title": "Futa ujuzi?"
     },
     "descriptionFallback": "Kagua metadata ya ujuzi uliogunduliwa na maagizo ghafi.",
@@ -684,5 +684,94 @@
   },
   "pluginCard": {
     "official": "Rasmi"
+  },
+  "uap": {
+    "pluginsTitle": "Universal plugins",
+    "skillsTitle": "Managed skills",
+    "description": "Install and maintain a reproducible agent environment with UAP.",
+    "agent": "Agent runtime",
+    "userScope": "User environment",
+    "refresh": "Refresh extensions",
+    "projectPending": "Project installation is not available in this bundled engine. Changes apply to the selected user profiles.",
+    "search": "Search extensions",
+    "fromSource": "Install from source",
+    "runtimeUnavailable": "This agent runtime needs setup before installation.",
+    "working": "Working…",
+    "installed": "Installed with UAP",
+    "updateSelected": "Update selected ({{count}})",
+    "updateAll": "Update environment",
+    "restore": "Restore locked",
+    "environmentActions": "Update and restore cover the shared UAP manifest: plugins and skills across connected agents. Review the affected targets.",
+    "noInstalled": "No managed items in this view yet.",
+    "selectEntry": "Select {{name}}",
+    "update": "Update",
+    "repair": "Repair",
+    "remove": "Remove",
+    "catalog": "Universal catalog",
+    "catalogUnavailable": "Catalog freshness is unavailable. Installed items remain available.",
+    "install": "Install",
+    "sourceHelp": "Enter an HTTP(S) repository or supported source URL. Skills are discovered and reviewed before installation.",
+    "pluginSourceHelp": "Enter a repository or supported source URL. For a GitHub branch, tag or full commit SHA, use owner/repository@revision.",
+    "source": "Source URL",
+    "revision": "Revision (optional)",
+    "alias": "Name in this environment (optional)",
+    "findSkills": "Find skills",
+    "reviewInstall": "Review installation",
+    "reviewTitle": "Review extension changes",
+    "reviewHelp": "Changes apply to the profiles listed below. Stop runs using those profiles before applying.",
+    "expired": "This review has expired. Close it and prepare the change again.",
+    "close": "Close",
+    "apply": "Apply changes",
+    "cancel": "Request cancellation",
+    "recover": "Inspect and recover",
+    "details": "Operation details",
+    "nativePlugins": "Native Claude marketplace",
+    "updateStatus": {
+      "current": "Current",
+      "available": "Update available",
+      "pinned": "Pinned to an exact version",
+      "blocked": "Update blocked by policy",
+      "check_unavailable": "Update status unavailable"
+    },
+    "operationState": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Completed",
+      "partial": "Partially completed",
+      "failed": "Failed",
+      "interrupted": "Recovery needed",
+      "canceled": "Canceled"
+    },
+    "preview": "Preview SKILL.md",
+    "uncertainReview": "The result was not confirmed. Retrying uses the same request identity and does not create another installation.",
+    "retryRequest": "Check the same request",
+    "updatePolicy": "Updates follow the declared version ranges and keep pins. A range may select the minimum compatible version; the review shows the exact changes.",
+    "restorePoints": "Restore local Skill files",
+    "restoreRetention": "Restore points are kept for at least 30 days. Up to the 100 most recent points are shown. Every restoration is reviewed before files change.",
+    "restoreFiles": "Review restoration",
+    "managedSkillReadOnly": "Managed by UAP ({{alias}}). Update, repair or remove it in Managed Skills. To edit independently, create a local copy in a different folder.",
+    "checkingOwnership": "Checking whether UAP manages these files…",
+    "copyLocal": "Make a local copy",
+    "chooseCopySkill": "Choose the exact Skill to copy. You will review its files and select a separate local destination.",
+    "pendingChanges": "Inspect or recover the outstanding operation before making another change.",
+    "transitiveDependency": "Managed as a dependency. Update or remove it through the plugin or Skill that added it.",
+    "externalUninstallConfirmation": "I removed these plugins in the native client, or they were never activated.",
+    "reviewExternalUninstall": "Review confirmed removal",
+    "backToSource": "Back to discovered Skills",
+    "installationDetails": "Installation details",
+    "restoreFilesAction": "Restore files",
+    "keep": "Keep unchanged",
+    "restoreBeforeSave": "Before save",
+    "restoreBeforeDelete": "Before deletion",
+    "restoreBeforeRestore": "Before restoration",
+    "restoreEarlierCopy": "Earlier saved copy",
+    "restoreTimeUnknown": "Time not recorded",
+    "restorePointId": "Restore point ID",
+    "restoreSelectedPoint": "Selected restore point",
+    "installTargets": "Install for",
+    "installTargetsHelp": "Choose the agents that will receive new plugins and skills.",
+    "installForAgent": "Install for {{name}}",
+    "selectInstallTarget": "Select at least one available agent.",
+    "incompatibleInstallTargets": "This extension does not support the selected agents: {{names}}."
   }
 }

@@ -38,15 +38,17 @@ describe('V2 installation choice', () => {
     }
   );
   it('explains override selection and an unqualified platform without a misleading V2 action', () => {
-    const override = render({
-      installed: true,
-      source: 'override',
-      state: 'ready',
-      version: '0.9.0',
-      compatibleV2Version: '2.1.4',
-    });
-    expect(override).toContain('overrideSelection');
-    expect(override).not.toContain('<button');
+    for (const version of ['0.9.0', undefined]) {
+      const override = render({
+        installed: true,
+        source: 'override',
+        state: 'ready',
+        ...(version ? { version } : {}),
+        compatibleV2Version: '2.1.4',
+      });
+      expect(override).toContain('overrideSelection');
+      expect(override).not.toContain('<button');
+    }
     const unsupported = render({
       installed: false,
       source: 'missing',

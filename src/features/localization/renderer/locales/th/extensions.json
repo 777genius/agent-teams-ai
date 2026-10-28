@@ -6,9 +6,9 @@
       "refreshCatalog": "รีเฟรชแคตตาล็อก"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "ปลั๊กอิน: {{status}}",
-      "skills": "สกิล: {{status}}"
+      "mcp": "MCP ของรันไทม์: {{status}}",
+      "plugins": "ปลั๊กอินของรันไทม์: {{status}}",
+      "skills": "สกิลของรันไทม์: {{status}}"
     },
     "desktopOnly": "ใช้งานได้เฉพาะในแอปเดสก์ท็อปเท่านั้น",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "กำลังตรวจสอบความพร้อมใช้งานของรันไทม์ส่วนขยาย",
       "failedToStartDescription": "ส่วนขยายจะถูกปิดใช้งานจนกว่ารันไทม์จะผ่านการตรวจสอบสุขภาพตอนเริ่มต้น เปิดแดชบอร์ดเพื่อซ่อมแซมหรือติดตั้งใหม่",
       "failedToStartTitle": "พบรันไทม์ที่ตั้งค่าไว้แต่เริ่มต้นไม่สำเร็จ",
-      "multimodelCapabilitiesDescription": "การรองรับผู้ให้บริการอาจแตกต่างกันในแต่ละส่วน ปลั๊กอินจะแสดงเฉพาะที่รันไทม์ประกาศการรองรับไว้อย่างชัดเจน",
-      "multimodelCapabilitiesTitle": "ความสามารถของรันไทม์หลายโมเดล",
+      "multimodelCapabilitiesDescription": "ป้ายเหล่านี้อธิบายแค็ตตาล็อกและการควบคุม MCP ของรันไทม์เอง ส่วนความพร้อมใช้งานของ Universal plugins และ Managed skills จะแสดงแยกกันในส่วนของแต่ละรายการ",
+      "multimodelCapabilitiesTitle": "ส่วนขยายที่รันไทม์จัดการ",
       "needsSignInDescription": "พบ {{runtime}}{{version}} แล้ว แต่การติดตั้งปลั๊กอินจะถูกปิดใช้งานจนกว่าคุณจะเข้าสู่ระบบจากแดชบอร์ด",
       "needsSignInTitle": "{{runtime}} ต้องเข้าสู่ระบบ",
       "notAvailableDescription": "ส่วนขยายจะถูกปิดใช้งานจนกว่าจะติดตั้งรันไทม์ เปิดแดชบอร์ดเพื่อติดตั้งแล้วลองอีกครั้ง",
@@ -45,7 +45,7 @@
         "label": "เซิร์ฟเวอร์ MCP"
       },
       "plugins": {
-        "description": "ส่วนเสริมขนาดเล็กสำหรับรันไทม์ ในโหมดหลายโมเดล ปัจจุบันใช้กับเซสชัน Anthropic เมื่อรองรับ การรองรับผู้ให้บริการที่กว้างขึ้นกำลังพัฒนาอยู่",
+        "description": "เพิ่มความสามารถให้เอเจนต์ด้วย Universal plugins ที่จัดการโดย UAP หรือปลั๊กอินจากแค็ตตาล็อกของรันไทม์",
         "label": "ปลั๊กอิน"
       },
       "skills": {
@@ -312,8 +312,8 @@
       "storedIn": "เก็บไว้ใน {{root}}"
     },
     "deleteDialog": {
-      "description": "ลบสกิลนี้และย้ายไปยังถังขยะหรือไม่?",
-      "descriptionWithName": "ลบ \"{{name}}\" และย้ายไปยังถังขยะหรือไม่? คุณสามารถกู้คืนได้ภายหลังจากถังขยะหากจำเป็น",
+      "description": "Delete this Skill? Restore its files from Managed Skills for at least 30 days.",
+      "descriptionWithName": "Delete \"{{name}}\"? Restore its files from Managed Skills for at least 30 days.",
       "title": "ลบสกิลหรือไม่?"
     },
     "descriptionFallback": "ตรวจสอบเมตาดาตาของสกิลที่พบและคำแนะนำดิบ",
@@ -684,5 +684,94 @@
   },
   "pluginCard": {
     "official": "ทางการ"
+  },
+  "uap": {
+    "pluginsTitle": "Universal plugins",
+    "skillsTitle": "Managed skills",
+    "description": "Install and maintain a reproducible agent environment with UAP.",
+    "agent": "Agent runtime",
+    "userScope": "User environment",
+    "refresh": "Refresh extensions",
+    "projectPending": "Project installation is not available in this bundled engine. Changes apply to the selected user profiles.",
+    "search": "Search extensions",
+    "fromSource": "Install from source",
+    "runtimeUnavailable": "This agent runtime needs setup before installation.",
+    "working": "Working…",
+    "installed": "Installed with UAP",
+    "updateSelected": "Update selected ({{count}})",
+    "updateAll": "Update environment",
+    "restore": "Restore locked",
+    "environmentActions": "Update and restore cover the shared UAP manifest: plugins and skills across connected agents. Review the affected targets.",
+    "noInstalled": "No managed items in this view yet.",
+    "selectEntry": "Select {{name}}",
+    "update": "Update",
+    "repair": "Repair",
+    "remove": "Remove",
+    "catalog": "Universal catalog",
+    "catalogUnavailable": "Catalog freshness is unavailable. Installed items remain available.",
+    "install": "Install",
+    "sourceHelp": "Enter an HTTP(S) repository or supported source URL. Skills are discovered and reviewed before installation.",
+    "pluginSourceHelp": "Enter a repository or supported source URL. For a GitHub branch, tag or full commit SHA, use owner/repository@revision.",
+    "source": "Source URL",
+    "revision": "Revision (optional)",
+    "alias": "Name in this environment (optional)",
+    "findSkills": "Find skills",
+    "reviewInstall": "Review installation",
+    "reviewTitle": "Review extension changes",
+    "reviewHelp": "Changes apply to the profiles listed below. Stop runs using those profiles before applying.",
+    "expired": "This review has expired. Close it and prepare the change again.",
+    "close": "Close",
+    "apply": "Apply changes",
+    "cancel": "Request cancellation",
+    "recover": "Inspect and recover",
+    "details": "Operation details",
+    "nativePlugins": "Native Claude marketplace",
+    "updateStatus": {
+      "current": "Current",
+      "available": "Update available",
+      "pinned": "Pinned to an exact version",
+      "blocked": "Update blocked by policy",
+      "check_unavailable": "Update status unavailable"
+    },
+    "operationState": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Completed",
+      "partial": "Partially completed",
+      "failed": "Failed",
+      "interrupted": "Recovery needed",
+      "canceled": "Canceled"
+    },
+    "preview": "Preview SKILL.md",
+    "uncertainReview": "The result was not confirmed. Retrying uses the same request identity and does not create another installation.",
+    "retryRequest": "Check the same request",
+    "updatePolicy": "Updates follow the declared version ranges and keep pins. A range may select the minimum compatible version; the review shows the exact changes.",
+    "restorePoints": "Restore local Skill files",
+    "restoreRetention": "Restore points are kept for at least 30 days. Up to the 100 most recent points are shown. Every restoration is reviewed before files change.",
+    "restoreFiles": "Review restoration",
+    "managedSkillReadOnly": "Managed by UAP ({{alias}}). Update, repair or remove it in Managed Skills. To edit independently, create a local copy in a different folder.",
+    "checkingOwnership": "Checking whether UAP manages these files…",
+    "copyLocal": "Make a local copy",
+    "chooseCopySkill": "Choose the exact Skill to copy. You will review its files and select a separate local destination.",
+    "pendingChanges": "Inspect or recover the outstanding operation before making another change.",
+    "transitiveDependency": "Managed as a dependency. Update or remove it through the plugin or Skill that added it.",
+    "externalUninstallConfirmation": "I removed these plugins in the native client, or they were never activated.",
+    "reviewExternalUninstall": "Review confirmed removal",
+    "backToSource": "Back to discovered Skills",
+    "installationDetails": "Installation details",
+    "restoreFilesAction": "Restore files",
+    "keep": "Keep unchanged",
+    "restoreBeforeSave": "Before save",
+    "restoreBeforeDelete": "Before deletion",
+    "restoreBeforeRestore": "Before restoration",
+    "restoreEarlierCopy": "Earlier saved copy",
+    "restoreTimeUnknown": "Time not recorded",
+    "restorePointId": "Restore point ID",
+    "restoreSelectedPoint": "Selected restore point",
+    "installTargets": "Install for",
+    "installTargetsHelp": "Choose the agents that will receive new plugins and skills.",
+    "installForAgent": "Install for {{name}}",
+    "selectInstallTarget": "Select at least one available agent.",
+    "incompatibleInstallTargets": "This extension does not support the selected agents: {{names}}."
   }
 }

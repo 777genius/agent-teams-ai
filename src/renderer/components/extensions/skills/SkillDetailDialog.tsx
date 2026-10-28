@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useLocalSkillOwnership } from '@features/extension-management/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { CodeBlockViewer } from '@renderer/components/chat/viewers/CodeBlockViewer';
@@ -28,6 +29,7 @@ import { formatSkillRootKind, getSkillAudienceLabel } from '@shared/utils/skillR
 import { AlertTriangle, ExternalLink, FolderOpen, Info, Pencil, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { SkillImportDialog } from './SkillImportDialog';
 import { resolveSkillProjectPath } from './skillProjectUtils';
 
 import type { SkillValidationIssue } from '@shared/types/extensions';
@@ -62,6 +64,7 @@ export const SkillDetailDialog = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !skillId) return;
@@ -78,6 +81,7 @@ export const SkillDetailDialog = ({
       setDeleteError(null);
       setDeleteLoading(false);
       setDeleteConfirmOpen(false);
+      setCopyOpen(false);
     }
   }, [open]);
 
@@ -86,6 +90,10 @@ export const SkillDetailDialog = ({
     ? resolveSkillProjectPath(item.scope, projectPath, item.projectRoot)
     : (projectPath ?? undefined);
   const issuesTone = item?.issues.length ? getIssuesTone(item.issues) : null;
+  const ownership = useLocalSkillOwnership(
+    open ? (item?.skillDir ?? null) : null,
+    effectiveProjectPath
+  );
 
   function formatScopeLabel(scope: 'user' | 'project'): string {
     return scope === 'project'
@@ -121,7 +129,7 @@ export const SkillDetailDialog = ({
   }
 
   async function handleDelete(): Promise<void> {
-    if (!item) return;
+    if (!item || ownership.ownership !== 'local') return;
     setDeleteLoading(true);
     setDeleteError(null);
     try {
@@ -177,6 +185,22 @@ export const SkillDetailDialog = ({
 
         {!loading && detail && item && (
           <div className="space-y-4">
+            {ownership.ownership !== 'local' && (
+              <div
+                className="space-y-2 rounded-md border border-amber-500/30 p-3 text-sm"
+                role="status"
+              >
+                <p>
+                  {ownership.ownership === 'managed'
+                    ? t('uap.managedSkillReadOnly', { alias: ownership.alias })
+                    : (ownership.ownership === 'unknown' && ownership.reason) ||
+                      t('uap.checkingOwnership')}
+                </p>
+                <Button size="sm" variant="outline" onClick={() => setCopyOpen(true)}>
+                  {t('uap.copyLocal')}
+                </Button>
+              </div>
+            )}
             {deleteError && (
               <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-400">
                 {deleteError}
@@ -265,7 +289,12 @@ export const SkillDetailDialog = ({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={onEdit}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onEdit}
+                disabled={ownership.ownership !== 'local'}
+              >
                 <Pencil className="mr-1.5 size-3.5" />
                 {t('skillDetail.actions.editSkill')}
               </Button>
@@ -273,7 +302,7 @@ export const SkillDetailDialog = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setDeleteConfirmOpen(true)}
-                disabled={deleteLoading}
+                disabled={deleteLoading || ownership.ownership !== 'local'}
               >
                 <Trash2 className="mr-1.5 size-3.5" />
                 {deleteLoading
@@ -391,6 +420,21 @@ export const SkillDetailDialog = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {item && (
+        <SkillImportDialog
+          open={copyOpen}
+          projectPath={projectPath}
+          projectLabel={projectPath}
+          allowCodexRootKind={item.rootKind === 'codex'}
+          initialSourceDir={item.skillDir}
+          initialFolderName={`${item.folderName}-copy`}
+          onClose={() => setCopyOpen(false)}
+          onImported={() => {
+            setCopyOpen(false);
+            onClose();
+          }}
+        />
+      )}
     </Dialog>
   );
 };

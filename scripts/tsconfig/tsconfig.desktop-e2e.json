@@ -3,7 +3,8 @@
   "include": [
     "../../scripts/e2e/anthropic-compatible-status/*.ts",
     "../../scripts/e2e/opencode-native-desktop-host.ts",
-    "../../scripts/e2e/opencode-native-windows-full.ts", "../../scripts/e2e/opencode-native-real-task-prompts.ts",
+    "../../scripts/e2e/opencode-native-windows-full.ts",
+    "../../scripts/e2e/opencode-native-real-task-prompts.ts",
     "../../scripts/e2e/opencode-native-windows-preflight.ts",
     "../../scripts/e2e/opencode-native-windows-pins.ts",
     "../../scripts/e2e/opencode-native-test-auth.ts",
@@ -15,6 +16,7 @@
     "../../scripts/e2e/opencode-diagnostics/windows-attachments.mts",
     "../../scripts/e2e/group-chats-desktop.ts",
     "../../scripts/e2e/group-no-reply-desktop.ts",
+    "../../scripts/e2e/uap-management-desktop.ts",
     "../../scripts/native-teammate-attachments-desktop.ts",
     "../../scripts/file-reference-attachments-desktop.ts",
     "../../scripts/fixtures/native-teammate-attachments/fileReferenceProof.ts",

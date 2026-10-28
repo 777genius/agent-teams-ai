@@ -19,6 +19,8 @@ resources/runtime/*
 .terminal-platform-download/
 resources/terminal-platform/*
 !resources/terminal-platform/.gitkeep
+resources/uap/*
+!resources/uap/.gitkeep
 
 # IDE
 .vscode/

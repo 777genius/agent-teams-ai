@@ -3,6 +3,7 @@ import { createAppCloseCoordinationBridge } from '@features/app-close-coordinati
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
 import { createDocumentPreviewBridge } from '@features/document-preview/preload';
+import { createExtensionManagementBridge } from '@features/extension-management/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
@@ -135,6 +136,7 @@ import {
   SKILLS_APPLY_UPSERT,
   SKILLS_CHANGED,
   SKILLS_DELETE,
+  SKILLS_DISCARD_REVIEW,
   SKILLS_GET_DETAIL,
   SKILLS_LIST,
   SKILLS_PREVIEW_IMPORT,
@@ -511,6 +513,7 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
+  extensionManagement: createExtensionManagementBridge(ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
@@ -2017,6 +2020,8 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<SkillReviewPreview>(SKILLS_PREVIEW_IMPORT, request),
     applyImport: (request: SkillImportRequest) =>
       invokeIpcWithResult<SkillDetail | null>(SKILLS_APPLY_IMPORT, request),
+    discardReview: (reviewPlanId: string) =>
+      invokeIpcWithResult<void>(SKILLS_DISCARD_REVIEW, reviewPlanId),
     deleteSkill: (request: SkillDeleteRequest) => invokeIpcWithResult<void>(SKILLS_DELETE, request),
     startWatching: (projectPath?: string) =>
       invokeIpcWithResult<string>(SKILLS_START_WATCHING, projectPath),

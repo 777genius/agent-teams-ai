@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 
 import { createLogger } from '@shared/utils/logger';
+import { splitSkillFrontmatter } from '@shared/utils/skillFrontmatter';
 import YAML from 'yaml';
 
 import type { ResolvedSkillRoot } from './SkillRootsResolver';
@@ -189,11 +190,11 @@ export class SkillMetadataParser {
   }
 
   private parseFrontmatter(rawContent: string): ParsedFrontmatter {
-    const content = rawContent.replace(/^\uFEFF/, '');
-    if (!content.startsWith('---')) {
+    const { status, rawFrontmatter, body } = splitSkillFrontmatter(rawContent);
+    if (status === 'missing') {
       return {
         rawFrontmatter: null,
-        body: content,
+        body,
         data: {},
         issues: [
           {
@@ -205,11 +206,10 @@ export class SkillMetadataParser {
       };
     }
 
-    const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/u.exec(content);
-    if (!match) {
+    if (status === 'invalid') {
       return {
         rawFrontmatter: null,
-        body: content,
+        body,
         data: {},
         issues: [
           {
@@ -220,9 +220,6 @@ export class SkillMetadataParser {
         ],
       };
     }
-
-    const rawFrontmatter = match[1];
-    const body = match[2] ?? '';
 
     try {
       const parsed = YAML.parse(rawFrontmatter);

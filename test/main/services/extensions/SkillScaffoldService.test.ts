@@ -8,10 +8,26 @@ describe('SkillScaffoldService', () => {
     const service = new SkillScaffoldService();
 
     const files = service.normalizeDraftFiles([
-      { relativePath: 'scripts/../scripts/run.sh', content: 'echo hi' },
+      { relativePath: 'scripts/../scripts/run.sh', content: 'echo hi', createOnly: true },
     ]);
 
-    expect(files[0]?.relativePath).toBe('scripts/run.sh');
+    expect(files[0]).toEqual({
+      relativePath: 'scripts/run.sh',
+      content: 'echo hi',
+      createOnly: true,
+    });
+  });
+
+  it.each([null, 'true', 1, {}])('rejects a non-boolean createOnly marker: %j', (createOnly) => {
+    expect(() =>
+      new SkillScaffoldService().normalizeDraftFiles([
+        {
+          relativePath: 'assets/README.md',
+          content: '# Assets',
+          createOnly: createOnly as boolean,
+        },
+      ])
+    ).toThrow('createOnly must be a boolean');
   });
 
   it('rejects path traversal in draft file paths', () => {

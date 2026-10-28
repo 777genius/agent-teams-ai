@@ -795,6 +795,9 @@ export const SKILLS_PREVIEW_IMPORT = 'skills:previewImport';
 /** Apply import for a skill folder */
 export const SKILLS_APPLY_IMPORT = 'skills:applyImport';
 
+/** Release an unattempted local Skill review */
+export const SKILLS_DISCARD_REVIEW = 'skills:discardReview';
+
 /** Delete an existing skill */
 export const SKILLS_DELETE = 'skills:delete';
 

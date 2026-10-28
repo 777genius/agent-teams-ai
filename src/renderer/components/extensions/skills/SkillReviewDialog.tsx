@@ -126,11 +126,12 @@ export const SkillReviewDialog = ({
                         )}
                       </div>
 
-                      {change.isBinary ? (
+                      {change.isBinary && change.action !== 'delete' && (
                         <div className="bg-surface-raised/20 rounded-md border border-border p-3 text-sm text-text-muted">
                           {t('skillReview.binaryPreviewHidden')}
                         </div>
-                      ) : (
+                      )}
+                      {!change.isBinary && (
                         <div className="min-w-0 overflow-hidden">
                           <DiffViewer
                             fileName={change.relativePath}

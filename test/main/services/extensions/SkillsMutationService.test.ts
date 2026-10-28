@@ -2,14 +2,23 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
-
 import { SkillPlanService } from '@main/services/extensions/skills/SkillPlanService';
 import { SkillScaffoldService } from '@main/services/extensions/skills/SkillScaffoldService';
 import { SkillsCatalogService } from '@main/services/extensions/skills/SkillsCatalogService';
 import { SkillsMutationService } from '@main/services/extensions/skills/SkillsMutationService';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { LocalSkillMutationExecutor } from '@main/services/extensions/skills/LocalSkillMutationExecutor';
 import type { ResolvedSkillRoot } from '@main/services/extensions/skills/SkillRootsResolver';
+
+function createExecutor() {
+  return {
+    preview: vi.fn<LocalSkillMutationExecutor['preview']>(async (plan) => plan.preview),
+    discardReview: vi.fn<LocalSkillMutationExecutor['discardReview']>(async () => {}),
+    apply: vi.fn<LocalSkillMutationExecutor['apply']>(async () => {}),
+    deleteSkill: vi.fn<LocalSkillMutationExecutor['deleteSkill']>(async () => {}),
+  };
+}
 
 function createResolver(rootPath: string) {
   return {
@@ -30,10 +39,12 @@ describe('SkillsMutationService', () => {
   const createdDirs: string[] = [];
 
   afterEach(async () => {
-    await Promise.all(createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+    await Promise.all(
+      createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true }))
+    );
   });
 
-  it('applies the reviewed plan and deletes obsolete managed files', async () => {
+  it('delegates a reviewed plan and leaves all effects to the engine executor', async () => {
     const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-mutation-'));
     createdDirs.push(projectRoot);
 
@@ -44,10 +55,12 @@ describe('SkillsMutationService', () => {
     await fs.writeFile(path.join(skillDir, 'scripts', 'README.md'), 'old script', 'utf8');
 
     const resolver = createResolver(skillsRoot);
+    const executor = createExecutor();
     const mutationService = new SkillsMutationService(
-      resolver as any,
-      new SkillsCatalogService(resolver as any),
-      new SkillScaffoldService(resolver as any),
+      executor,
+      resolver,
+      new SkillsCatalogService(resolver),
+      new SkillScaffoldService(resolver),
       undefined,
       new SkillPlanService()
     );
@@ -64,13 +77,17 @@ describe('SkillsMutationService', () => {
     const preview = await mutationService.previewUpsert(request);
     await mutationService.applyUpsert({ ...request, reviewPlanId: preview.planId });
 
-    await expect(fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8')).resolves.toBe('# updated');
-    await expect(fs.stat(path.join(skillDir, 'scripts', 'README.md'))).rejects.toMatchObject({
-      code: 'ENOENT',
+    expect(executor.apply).toHaveBeenCalledWith(preview.planId, {
+      ...request,
+      reviewPlanId: preview.planId,
     });
+    await expect(fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8')).resolves.toBe('# old');
+    await expect(fs.readFile(path.join(skillDir, 'scripts', 'README.md'), 'utf8')).resolves.toBe(
+      'old script'
+    );
   });
 
-  it('rejects apply when the reviewed plan is stale', async () => {
+  it('preserves an engine stale-plan refusal without a filesystem fallback', async () => {
     const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-mutation-'));
     createdDirs.push(projectRoot);
 
@@ -80,10 +97,13 @@ describe('SkillsMutationService', () => {
     await fs.writeFile(path.join(skillDir, 'SKILL.md'), '# old', 'utf8');
 
     const resolver = createResolver(skillsRoot);
+    const executor = createExecutor();
+    executor.apply.mockRejectedValue(new Error('The Skill files changed after review.'));
     const mutationService = new SkillsMutationService(
-      resolver as any,
-      new SkillsCatalogService(resolver as any),
-      new SkillScaffoldService(resolver as any),
+      executor,
+      resolver,
+      new SkillsCatalogService(resolver),
+      new SkillScaffoldService(resolver),
       undefined,
       new SkillPlanService()
     );
@@ -103,5 +123,8 @@ describe('SkillsMutationService', () => {
     await expect(
       mutationService.applyUpsert({ ...request, reviewPlanId: preview.planId })
     ).rejects.toThrow('changed after review');
+    await expect(fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8')).resolves.toBe(
+      '# changed after review'
+    );
   });
 });

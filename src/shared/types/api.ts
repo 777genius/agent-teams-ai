@@ -129,6 +129,7 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type { ExtensionManagementAPI } from '@features/extension-management/contracts';
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
@@ -1039,6 +1040,7 @@ export interface ElectronAPI
 
   // Extension Store — Plugin Catalog API (Electron-only, optional)
   plugins?: PluginCatalogAPI;
+  extensionManagement?: ExtensionManagementAPI;
 
   // Extension Store — MCP Registry API (Electron-only, optional)
   mcpRegistry?: McpCatalogAPI;

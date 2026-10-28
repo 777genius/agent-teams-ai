@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { promises as fs } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -455,29 +454,26 @@ describe('Team message history retrieval prerequisites', () => {
     });
   });
 
-  it('returns an empty complete page for a new team without an inbox directory', async () => {
+  it('treats a not-yet-created inbox directory as empty history', async () => {
     const service = createFeed(new TeamInboxReader());
     const directory = join(sandboxRoot(), TEAM_NAME, 'inboxes');
     await rm(directory, { recursive: true });
-    await expect(service.getPage(TEAM_NAME, { limit: 50 })).resolves.toMatchObject({
-      messages: [],
-      hasMore: false,
-      nextCursor: null,
-    });
+    const page = await service.getPage(TEAM_NAME, { limit: 50 });
+    expect(page.messages).toEqual([]);
+    expect(page.hasMore).toBe(false);
+    expect(page.nextCursor).toBeNull();
   });
 
   it('rejects failed listing, non-file and over-guard sources explicitly', async () => {
     const service = createFeed(new TeamInboxReader());
-    const listing = vi
-      .spyOn(fs, 'readdir')
-      .mockRejectedValueOnce(new Error('Synthetic listing failure'));
-    try {
-      await expect(service.getPage(TEAM_NAME, { limit: 50 })).rejects.toThrow(
-        'TEAM_HISTORY_UNAVAILABLE:listing_failed'
-      );
-    } finally {
-      listing.mockRestore();
-    }
+    const directory = join(sandboxRoot(), TEAM_NAME, 'inboxes');
+    await rm(directory, { recursive: true });
+    await writeFile(directory, 'This path is a file, so listing must fail with ENOTDIR.');
+    await expect(service.getPage(TEAM_NAME, { limit: 50 })).rejects.toThrow(
+      'TEAM_HISTORY_UNAVAILABLE:listing_failed'
+    );
+    await rm(directory);
+    await mkdir(directory);
     await mkdir(inboxPath('alice'));
     await expect(service.getPage(TEAM_NAME, { limit: 50 })).rejects.toThrow(
       'TEAM_HISTORY_UNAVAILABLE:non_file'

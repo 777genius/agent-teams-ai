@@ -67,6 +67,10 @@ vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
 }));
 
+vi.mock('@features/extension-management/renderer', () => ({
+  ManagedExtensions: () => null,
+}));
+
 vi.mock('@features/codex-account/renderer', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@features/codex-account/renderer')>();
   return {
@@ -360,7 +364,7 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     expect(storeState.fetchCliStatus).not.toHaveBeenCalled();
     expect(storeState.fetchApiKeys).not.toHaveBeenCalled();
 
-    expect(host.textContent).toContain('Multimodel runtime capabilities');
+    expect(host.textContent).toContain('Runtime-managed extensions');
     expect(host.textContent).toContain('Anthropic');
     expect(host.textContent).toContain('Codex');
     expect(host.textContent).toContain('Checking provider status...');
@@ -565,9 +569,9 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     });
 
     expect(host.textContent).toContain('OpenCode');
-    expect(host.textContent).toContain('Plugins: unsupported');
-    expect(host.textContent).toContain('MCP: read-only');
-    expect(host.textContent).not.toContain('Plugins: read-only');
+    expect(host.textContent).toContain('Runtime plugins: unsupported');
+    expect(host.textContent).toContain('Runtime MCP: read-only');
+    expect(host.textContent).not.toContain('Runtime plugins: read-only');
 
     await act(async () => {
       root.unmount();

@@ -13,6 +13,7 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import { createElectronExtensionManagement } from '@features/extension-management/main';
 import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 
@@ -200,6 +201,7 @@ import { extractNotificationContent } from '@main/utils/inboxNotificationContent
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
+import { createShutdownStepRunner, SHUTDOWN_STEP_TIMEOUT_MS } from '@main/utils/runShutdownStep';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -383,6 +385,7 @@ import type {
   TeamChangeEvent,
 } from '@shared/types';
 const logger = createLogger('App');
+const runShutdownStep = createShutdownStepRunner(logger);
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
@@ -975,6 +978,7 @@ let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
 let openCodePromptDeliveryContinuityScan: OpenCodePromptDeliveryContinuityScan | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
+let extensionManagement: ReturnType<typeof createElectronExtensionManagement>;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let rendererRecoveryController: RendererRecoveryController | null = null;
@@ -998,7 +1002,6 @@ const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
   platform: process.platform,
 });
 
-const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
 const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
@@ -1352,35 +1355,6 @@ function clearInboxNotifyTimers(): void {
     clearTimeout(timer);
   }
   inboxNotifyTimers.clear();
-}
-
-async function runShutdownStep(
-  label: string,
-  action: () => void | Promise<void>,
-  timeoutMs: number = SHUTDOWN_STEP_TIMEOUT_MS
-): Promise<void> {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    await Promise.race([
-      Promise.resolve().then(action),
-      new Promise<void>((resolve) => {
-        timeout = setTimeout(() => {
-          logger.warn(`Shutdown step timed out after ${timeoutMs}ms: ${label}`);
-          resolve();
-        }, timeoutMs);
-        timeout.unref?.();
-      }),
-    ]);
-  } catch (error) {
-    logger.warn(
-      `Shutdown step failed (${label}): ${error instanceof Error ? error.message : String(error)}`
-    );
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
 }
 
 export interface InternalStorageShutdownServices {
@@ -1968,13 +1942,22 @@ async function initializeServices(): Promise<void> {
     },
   });
   teamDataService.setTaskGroupChatCatalog((teamName) => teamGroupChatsFeature.list({ teamName }));
+  extensionManagement = createElectronExtensionManagement({
+    getMainWindow: () => mainWindow,
+    getManagementBrowserUrl: () => httpServer.getManagementBrowserUrl(),
+    isLocal: () => contextRegistry.getActive().type === 'local',
+    aliveTeams: () => teamProvisioningService.getAliveTeams(),
+    savedRequest: (name) => teamDataService.getSavedRequest(name),
+    knownProjects: () => contextRegistry.getActive().projectScanner.scan(),
+  });
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
+  extensionManagement.guardRuntimeApis(teamIpcHandlerApis);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
     memberLifecycle: teamIpcHandlerApis.memberLifecycle,
-    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
+    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => extensionManagement.admitLaunch({ teamName: input.teamName }, () => teamProvisioningService.restartLeadRuntime(input), [input.before.providerId, input.after.providerId]) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
   const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
@@ -2187,7 +2170,7 @@ async function initializeServices(): Promise<void> {
   const mcpStateService = new McpInstallationStateService(extensionsRuntimeAdapter);
   const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService(extensionsRuntimeAdapter);
   const skillsCatalogService = new SkillsCatalogService();
-  const skillsMutationService = new SkillsMutationService();
+  const skillsMutationService = new SkillsMutationService(extensionManagement.localSkills);
   skillsWatcherService = new SkillsWatcherService();
   const extensionFacadeService = new ExtensionFacadeService(
     pluginCatalogService,
@@ -2828,6 +2811,7 @@ async function initializeServices(): Promise<void> {
   });
 
   teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
+  extensionManagement.guardRuntimeApis(teamHttpHandlerApis);
   configureWindowLifecycleActions({
     quit: async () => {
       await requestGuardedAppQuit('app-quit');
@@ -2971,6 +2955,7 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
+        extensionManagement: extensionManagement.feature,
         teamGroupChatsFeature,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
@@ -3131,6 +3116,7 @@ async function shutdownServices(): Promise<void> {
     }
 
     await runShutdownStep('skills watcher stop', () => skillsWatcherService?.stopAll());
+    await runShutdownStep('extension manager stop', () => extensionManagement?.feature.close());
     await runShutdownStep('provider connection feature detach', () => {
       providerConnectionService.setCodexModelCatalogFeature(null);
       providerConnectionService.setCodexAccountFeature(null);

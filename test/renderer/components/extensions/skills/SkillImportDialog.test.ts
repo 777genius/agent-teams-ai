@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface StoreState {
@@ -9,6 +10,7 @@ interface StoreState {
 
 const storeState = {} as StoreState;
 const selectFoldersMock = vi.fn();
+const discardReview = vi.hoisted(() => vi.fn(async (_planId: string) => {}));
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: StoreState) => unknown) => selector(storeState),
@@ -19,6 +21,7 @@ vi.mock('@renderer/api', () => ({
     config: {
       selectFolders: (...args: unknown[]) => selectFoldersMock(...args),
     },
+    skills: { discardReview },
   },
 }));
 
@@ -47,11 +50,14 @@ vi.mock('@renderer/components/ui/button', () => ({
 vi.mock('@renderer/components/ui/dialog', () => ({
   Dialog: ({ open, children }: React.PropsWithChildren<{ open: boolean }>) =>
     open ? React.createElement('div', null, children) : null,
-  DialogContent: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  DialogContent: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   DialogDescription: ({ children }: React.PropsWithChildren) =>
     React.createElement('p', null, children),
-  DialogFooter: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
-  DialogHeader: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  DialogFooter: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
+  DialogHeader: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   DialogTitle: ({ children }: React.PropsWithChildren) => React.createElement('h2', null, children),
 }));
 
@@ -76,7 +82,8 @@ vi.mock('@renderer/components/ui/select', () => ({
       {
         'data-testid': 'select',
         value,
-        onChange: (event: React.ChangeEvent<HTMLSelectElement>) => onValueChange(event.target.value),
+        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+          onValueChange(event.target.value),
       },
       children
     ),
@@ -93,8 +100,15 @@ vi.mock('@renderer/components/ui/select', () => ({
 }));
 
 vi.mock('@renderer/components/extensions/skills/SkillReviewDialog', () => ({
-  SkillReviewDialog: ({ open }: { open: boolean }) =>
-    open ? React.createElement('div', { 'data-testid': 'skill-review-dialog' }, 'Review') : null,
+  SkillReviewDialog: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
+    open
+      ? React.createElement(
+          'div',
+          { 'data-testid': 'skill-review-dialog' },
+          'Review',
+          React.createElement('button', { onClick: onClose }, 'Back to import')
+        )
+      : null,
 }));
 
 vi.mock('lucide-react', () => {
@@ -114,6 +128,7 @@ describe('SkillImportDialog', () => {
     storeState.previewSkillImport = vi.fn();
     storeState.applySkillImport = vi.fn();
     selectFoldersMock.mockReset();
+    discardReview.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -152,6 +167,150 @@ describe('SkillImportDialog', () => {
     });
   });
 
+  it('keeps the suggested managed-copy destination through file review', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const previewImport = vi.fn().mockResolvedValue({
+      planId: 'managed-copy-plan',
+      targetSkillDir: '/tmp/local-skills/fixture-copy',
+      changes: [],
+      warnings: [],
+      summary: { created: 0, updated: 0, deleted: 0, binary: 0 },
+    });
+    const discardCopyReview = vi.fn(async () => {});
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(SkillImportDialog, {
+            open: true,
+            projectPath: null,
+            projectLabel: null,
+            allowCodexRootKind: false,
+            initialSourceDir: '/tmp/managed-skills/fixture',
+            initialFolderName: 'fixture-copy',
+            sourceLocked: true,
+            operations: { previewImport, applyImport: vi.fn(), discardReview: discardCopyReview },
+            onClose: vi.fn(),
+            onImported: vi.fn(),
+          })
+        );
+      });
+
+      const folder = host.querySelector<HTMLInputElement>('#skill-import-folder');
+      expect(folder?.value).toBe('fixture-copy');
+      const review = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Review And Import')
+      );
+      expect(review).toBeDefined();
+      await act(async () => review!.click());
+
+      expect(previewImport).toHaveBeenCalledWith({
+        sourceDir: '/tmp/managed-skills/fixture',
+        folderName: 'fixture-copy',
+        scope: 'user',
+        rootKind: 'claude',
+        projectPath: undefined,
+      });
+      expect(host.querySelector('[data-testid="skill-review-dialog"]')).not.toBeNull();
+      expect(storeState.previewSkillImport).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+    expect(discardCopyReview).toHaveBeenCalledExactlyOnceWith('managed-copy-plan');
+    expect(discardReview).not.toHaveBeenCalled();
+  });
+
+  it('returns Go review capacity when backing out of twenty consecutive import reviews', async () => {
+    const live = new Set<string>();
+    let sequence = 0;
+    storeState.previewSkillImport.mockImplementation(async () => {
+      if (live.size >= 16) throw new Error('Engine review capacity reached');
+      const planId = `import-${++sequence}`;
+      live.add(planId);
+      return {
+        planId,
+        targetSkillDir: '/tmp/skills/imported',
+        changes: [],
+        warnings: [],
+        summary: { created: 0, updated: 0, deleted: 0, binary: 0 },
+      };
+    });
+    discardReview.mockImplementation(async (planId: string) => {
+      live.delete(planId);
+    });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(SkillImportDialog, {
+            open: true,
+            projectPath: null,
+            projectLabel: null,
+            allowCodexRootKind: false,
+            initialSourceDir: '/tmp/source',
+            onClose: vi.fn(),
+            onImported: vi.fn(),
+          })
+        );
+      });
+      for (let index = 0; index < 20; index += 1) {
+        const review = [...host.querySelectorAll('button')].find((button) =>
+          button.textContent?.includes('Review And Import')
+        )!;
+        await act(async () => review.click());
+        const back = [...host.querySelectorAll('button')].find(
+          (button) => button.textContent === 'Back to import'
+        );
+        expect(back).toBeDefined();
+        await act(async () => back!.click());
+      }
+      expect(sequence).toBe(20);
+      expect(live.size).toBe(0);
+      expect(discardReview).toHaveBeenCalledTimes(20);
+      expect(storeState.applySkillImport).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('releases a preview that arrives after the import dialog has unmounted', async () => {
+    let complete!: (preview: { planId: string }) => void;
+    storeState.previewSkillImport.mockReturnValue(
+      new Promise((resolve) => {
+        complete = resolve;
+      })
+    );
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(SkillImportDialog, {
+          open: true,
+          projectPath: null,
+          projectLabel: null,
+          allowCodexRootKind: false,
+          initialSourceDir: '/tmp/source',
+          onClose: vi.fn(),
+          onImported: vi.fn(),
+        })
+      );
+    });
+    await act(async () => {
+      [...host.querySelectorAll('button')]
+        .find((button) => button.textContent?.includes('Review And Import'))!
+        .click();
+    });
+    await act(async () => root.unmount());
+    await act(async () => complete({ planId: 'late-import' }));
+    expect(discardReview).toHaveBeenCalledExactlyOnceWith('late-import');
+    expect(storeState.applySkillImport).not.toHaveBeenCalled();
+  });
+
   it('keeps destination folder name synced with the chosen source until edited manually', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -176,8 +335,8 @@ describe('SkillImportDialog', () => {
       await Promise.resolve();
     });
 
-    const browseButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.includes('Browse')
+    const browseButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Browse')
     ) as HTMLButtonElement;
     const sourceInput = host.querySelector('#skill-import-source') as HTMLInputElement;
     const folderInput = host.querySelector('#skill-import-folder') as HTMLInputElement;
@@ -242,8 +401,8 @@ describe('SkillImportDialog', () => {
       await Promise.resolve();
     });
 
-    const browseButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.includes('Browse')
+    const browseButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Browse')
     ) as HTMLButtonElement;
 
     await act(async () => {

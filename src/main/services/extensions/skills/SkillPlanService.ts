@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
 import * as path from 'node:path';
+
+import { isBinaryFile } from 'isbinaryfile';
 
 import { SkillScanner } from './SkillScanner';
 
@@ -14,7 +15,7 @@ import type {
 } from '@shared/types/extensions';
 
 type SkillPlanInputFile =
-  | { relativePath: string; isBinary: false; content: string }
+  | { relativePath: string; isBinary: false; content: string; createOnly?: boolean }
   | { relativePath: string; isBinary: true; sourceAbsolutePath: string };
 
 interface ManagedCurrentFile {
@@ -24,6 +25,7 @@ interface ManagedCurrentFile {
 
 interface SkillExecutionChange extends SkillReviewFileChange {
   sourceAbsolutePath?: string;
+  expectedSHA256: string | null;
 }
 
 export interface SkillExecutionPlan {
@@ -32,6 +34,9 @@ export interface SkillExecutionPlan {
 }
 
 const MANAGED_SUBDIRECTORIES = ['scripts', 'references', 'assets'] as const;
+const EDITOR_PLACEHOLDER_PATHS = new Set<string>(
+  MANAGED_SUBDIRECTORIES.map((directory) => `${directory}/README.md`)
+);
 export class SkillPlanService {
   constructor(private readonly scanner = new SkillScanner()) {}
 
@@ -43,6 +48,7 @@ export class SkillPlanService {
       relativePath: file.relativePath,
       isBinary: false,
       content: file.content,
+      createOnly: file.createOnly,
     }));
 
     return this.buildPlan(targetSkillDir, desiredFiles, 'upsert');
@@ -69,81 +75,13 @@ export class SkillPlanService {
     return this.buildPlan(targetSkillDir, desiredFiles, 'import');
   }
 
-  async applyPlan(plan: SkillExecutionPlan): Promise<void> {
-    const backupRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-plan-backup-'));
-    const createdPaths: string[] = [];
-    const backups: { absolutePath: string; backupPath: string }[] = [];
-
-    try {
-      for (const [index, change] of plan.changes.entries()) {
-        if (change.action !== 'create' && (await this.pathExists(change.absolutePath))) {
-          const backupPath = path.join(backupRoot, String(index));
-          await fs.mkdir(path.dirname(backupPath), { recursive: true });
-          await fs.copyFile(change.absolutePath, backupPath);
-          backups.push({ absolutePath: change.absolutePath, backupPath });
-        }
-
-        if (change.action === 'delete') {
-          await fs.rm(change.absolutePath, { force: true });
-          await this.cleanupManagedParents(
-            path.dirname(change.absolutePath),
-            plan.preview.targetSkillDir
-          );
-          continue;
-        }
-
-        await fs.mkdir(path.dirname(change.absolutePath), { recursive: true });
-        if (change.isBinary) {
-          if (!change.sourceAbsolutePath) {
-            throw new Error(`Missing binary source for ${change.relativePath}`);
-          }
-          await fs.copyFile(change.sourceAbsolutePath, change.absolutePath);
-        } else {
-          await fs.writeFile(change.absolutePath, change.newContent ?? '', 'utf8');
-        }
-
-        if (change.action === 'create') {
-          createdPaths.push(change.absolutePath);
-        }
-      }
-
-      await this.cleanupManagedDirectories(plan.preview.targetSkillDir);
-    } catch (error) {
-      await Promise.all(
-        createdPaths
-          .slice()
-          .reverse()
-          .map(async (absolutePath) => {
-            await fs.rm(absolutePath, { force: true });
-            await this.cleanupManagedParents(
-              path.dirname(absolutePath),
-              plan.preview.targetSkillDir
-            );
-          })
-      );
-
-      await Promise.all(
-        backups
-          .slice()
-          .reverse()
-          .map(async ({ absolutePath, backupPath }) => {
-            await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-            await fs.copyFile(backupPath, absolutePath);
-          })
-      );
-
-      throw error;
-    } finally {
-      await fs.rm(backupRoot, { recursive: true, force: true });
-    }
-  }
-
   private async buildPlan(
     targetSkillDir: string,
     desiredFiles: SkillPlanInputFile[],
     mode: 'upsert' | 'import'
   ): Promise<SkillExecutionPlan> {
     const normalizedDesired = this.normalizeDesiredFiles(desiredFiles);
+    const desiredPaths = new Set(normalizedDesired.map((file) => file.relativePath));
     const [currentManagedFiles, allExistingFiles] = await Promise.all([
       this.readCurrentManagedFiles(targetSkillDir),
       this.listAllRelativeFiles(targetSkillDir),
@@ -154,15 +92,16 @@ export class SkillPlanService {
     await Promise.all(
       normalizedDesired.map(async (file) => {
         const absolutePath = path.join(targetSkillDir, file.relativePath);
-        const existingTextContent = file.isBinary
-          ? null
-          : await this.readUtf8IfExists(absolutePath);
-        const action = (await this.pathExists(absolutePath)) ? 'update' : 'create';
+        const existing = await this.readBytesIfExists(absolutePath);
+        if (!file.isBinary && file.createOnly && existing !== null) return;
+        const action = existing === null ? 'create' : 'update';
         changesByRelativePath.set(file.relativePath, {
           relativePath: file.relativePath,
           absolutePath,
           action,
-          oldContent: existingTextContent,
+          oldContent: file.isBinary ? null : (existing?.toString('utf8') ?? null),
+          expectedSHA256:
+            existing === null ? null : createHash('sha256').update(existing).digest('hex'),
           newContent: file.isBinary ? null : file.content,
           isBinary: file.isBinary,
           sourceAbsolutePath: file.isBinary ? file.sourceAbsolutePath : undefined,
@@ -171,18 +110,28 @@ export class SkillPlanService {
     );
 
     for (const currentFile of currentManagedFiles.values()) {
-      if (changesByRelativePath.has(currentFile.relativePath)) {
+      if (desiredPaths.has(currentFile.relativePath)) {
         continue;
       }
 
-      const existingTextContent = await this.readUtf8IfExists(currentFile.absolutePath);
+      // The editor represents the Skill document and optional starter READMEs, not the full tree.
+      const representedByEditor =
+        !currentFile.relativePath.includes('/') ||
+        EDITOR_PLACEHOLDER_PATHS.has(currentFile.relativePath);
+      if (mode === 'upsert' && !representedByEditor) continue;
+
+      const existing = await this.readBytesIfExists(currentFile.absolutePath);
+      const binary = existing !== null && (await isBinaryFile(existing));
+      if (mode === 'upsert' && binary) continue;
       changesByRelativePath.set(currentFile.relativePath, {
         relativePath: currentFile.relativePath,
         absolutePath: currentFile.absolutePath,
         action: 'delete',
-        oldContent: existingTextContent,
+        oldContent: binary ? null : (existing?.toString('utf8') ?? null),
+        expectedSHA256:
+          existing === null ? null : createHash('sha256').update(existing).digest('hex'),
         newContent: null,
-        isBinary: false,
+        isBinary: binary,
       });
     }
 
@@ -193,7 +142,7 @@ export class SkillPlanService {
       changes,
       currentManagedFiles,
       allExistingFiles,
-      desiredFiles: new Set(normalizedDesired.map((file) => file.relativePath)),
+      desiredFiles: desiredPaths,
       mode,
     });
 
@@ -211,7 +160,10 @@ export class SkillPlanService {
     const preview: SkillReviewPreview = {
       planId: this.buildPlanId(targetSkillDir, changes, warnings),
       targetSkillDir,
-      changes: changes.map(({ sourceAbsolutePath: _sourceAbsolutePath, ...change }) => change),
+      changes: changes.map(
+        ({ sourceAbsolutePath: _sourceAbsolutePath, expectedSHA256: _expectedSHA256, ...change }) =>
+          change
+      ),
       warnings,
       summary,
     };
@@ -296,7 +248,9 @@ export class SkillPlanService {
     const warnings: string[] = [];
     const deleteCount = changes.filter((change) => change.action === 'delete').length;
     const updateCount = changes.filter((change) => change.action === 'update').length;
-    const binaryCount = changes.filter((change) => change.isBinary).length;
+    const binaryCount = changes.filter(
+      (change) => change.isBinary && change.action !== 'delete'
+    ).length;
 
     if (deleteCount > 0) {
       warnings.push(
@@ -351,6 +305,7 @@ export class SkillPlanService {
           relativePath: change.relativePath,
           action: change.action,
           oldContent: change.oldContent,
+          expectedSHA256: change.expectedSHA256,
           newContent: change.newContent,
           isBinary: change.isBinary,
           sourceAbsolutePath: change.sourceAbsolutePath ?? null,
@@ -365,47 +320,14 @@ export class SkillPlanService {
     return hash.digest('hex');
   }
 
-  private async readUtf8IfExists(filePath: string): Promise<string | null> {
+  private async readBytesIfExists(filePath: string): Promise<Buffer | null> {
     try {
-      return await fs.readFile(filePath, 'utf8');
+      return await fs.readFile(filePath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
       }
-      return null;
-    }
-  }
-
-  private async pathExists(targetPath: string): Promise<boolean> {
-    try {
-      await fs.stat(targetPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async cleanupManagedDirectories(targetSkillDir: string): Promise<void> {
-    await Promise.all(
-      MANAGED_SUBDIRECTORIES.map((directory) =>
-        this.cleanupManagedParents(path.join(targetSkillDir, directory), targetSkillDir)
-      )
-    );
-  }
-
-  private async cleanupManagedParents(currentDir: string, targetSkillDir: string): Promise<void> {
-    let nextDir = currentDir;
-    while (nextDir.startsWith(targetSkillDir) && nextDir !== targetSkillDir) {
-      try {
-        const entries = await fs.readdir(nextDir);
-        if (entries.length > 0) {
-          return;
-        }
-        await fs.rm(nextDir, { recursive: true });
-      } catch {
-        return;
-      }
-      nextDir = path.dirname(nextDir);
+      throw error;
     }
   }
 }

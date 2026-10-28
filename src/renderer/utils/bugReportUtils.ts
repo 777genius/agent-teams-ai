@@ -112,7 +112,7 @@ const buildBugReportMarkdown = (
     '**Diagnostics**',
     '```text',
     `Timestamp: ${new Date().toISOString()}`,
-    `Current URL: ${window.location.href}`,
+    `Current URL: ${window.location.href.split('#')[0]}`,
     `User Agent: ${window.navigator.userAgent}`,
     `Error name: ${error?.name ?? 'UnknownError'}`,
     `Error message: ${message}`,

@@ -72,6 +72,8 @@ export interface SkillDetail {
 export interface SkillDraftFile {
   relativePath: string;
   content: string;
+  /** Starter scaffolds create missing files without replacing existing authored bytes. */
+  createOnly?: boolean;
 }
 
 export interface SkillDraft {

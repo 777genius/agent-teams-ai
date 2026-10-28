@@ -68,6 +68,7 @@ export interface SkillsCatalogAPI {
   applyUpsert: (request: SkillUpsertRequest) => Promise<SkillDetail | null>;
   previewImport: (request: SkillImportRequest) => Promise<SkillReviewPreview>;
   applyImport: (request: SkillImportRequest) => Promise<SkillDetail | null>;
+  discardReview: (reviewPlanId: string) => Promise<void>;
   deleteSkill: (request: SkillDeleteRequest) => Promise<void>;
   startWatching: (projectPath?: string) => Promise<string>;
   stopWatching: (watchId: string) => Promise<void>;

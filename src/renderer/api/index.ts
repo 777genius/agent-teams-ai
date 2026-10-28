@@ -12,6 +12,8 @@
  * can install mocks on `window.electronAPI` before the adapter resolves.
  */
 
+import { createManagementHttpAccess } from '@features/extension-management';
+
 import { HttpAPIClient } from './httpClient';
 
 import type { ElectronAPI } from '@shared/types/api';
@@ -39,7 +41,8 @@ function getImpl(): ElectronAPI {
   // Lazily create the HTTP client only when actually needed (browser mode).
   // Caching avoids creating multiple EventSource connections.
   if (!httpClient) {
-    httpClient = new HttpAPIClient(getHttpBaseUrl());
+    const baseUrl = getHttpBaseUrl();
+    httpClient = new HttpAPIClient(baseUrl, createManagementHttpAccess(baseUrl, window));
   }
   return httpClient;
 }

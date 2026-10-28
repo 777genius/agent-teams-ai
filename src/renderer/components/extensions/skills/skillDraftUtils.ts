@@ -178,6 +178,7 @@ export function buildSkillDraftFiles(options: SkillDraftOptions): SkillDraftFile
     files.push({
       relativePath: 'references/README.md',
       content: '# References\n\nAdd supporting docs, examples, or links for this skill.\n',
+      createOnly: true,
     });
   }
 
@@ -185,6 +186,7 @@ export function buildSkillDraftFiles(options: SkillDraftOptions): SkillDraftFile
     files.push({
       relativePath: 'scripts/README.md',
       content: '# Scripts\n\nAdd optional helper scripts used by this skill.\n',
+      createOnly: true,
     });
   }
 
@@ -192,6 +194,7 @@ export function buildSkillDraftFiles(options: SkillDraftOptions): SkillDraftFile
     files.push({
       relativePath: 'assets/README.md',
       content: '# Assets\n\nStore screenshots or other bundled assets here.\n',
+      createOnly: true,
     });
   }
 

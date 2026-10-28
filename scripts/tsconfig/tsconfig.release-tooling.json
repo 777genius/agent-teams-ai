@@ -33,6 +33,9 @@
     "../../scripts/lib/runtime-payload-cache-async.test.mts",
     "../../scripts/lib/runtime-payload-inventory.mts",
     "../../scripts/lib/runtime-windows-zip-extraction.mts",
-    "../../scripts/lib/runtime-windows-zip-extraction.test.mts"
+    "../../scripts/lib/runtime-windows-zip-extraction.test.mts",
+    "../../scripts/stage-uap-runtime.ts",
+    "../../scripts/electron-builder/*Uap.ts",
+    "../../scripts/electron-builder/uapRuntimeIntegrity.ts"
   ]
 }

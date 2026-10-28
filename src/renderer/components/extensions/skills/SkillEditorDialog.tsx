@@ -38,6 +38,7 @@ import { toSuggestedSkillFolderName } from './skillFolderNameUtils';
 import { resolveSkillProjectPath } from './skillProjectUtils';
 import { SkillReviewDialog } from './SkillReviewDialog';
 import { validateSkillFolderName } from './skillValidationUtils';
+import { useSkillReviewLifecycle } from './useSkillReviewLifecycle';
 
 import type {
   SkillDetail,
@@ -87,6 +88,7 @@ export const SkillEditorDialog = ({
   const rawContentRef = useRef('');
   const previewSkillUpsert = useStore((s) => s.previewSkillUpsert);
   const applySkillUpsert = useStore((s) => s.applySkillUpsert);
+  const { prepare, abandon } = useSkillReviewLifecycle(open);
 
   const [scope, setScope] = useState<'user' | 'project'>('user');
   const [rootKind, setRootKind] = useState<SkillRootKind>('claude');
@@ -167,6 +169,9 @@ export const SkillEditorDialog = ({
   );
 
   useEffect(() => {
+    void abandon().catch(() => {});
+    setReviewPreview(null);
+    setReviewOpen(false);
     if (!open) return;
 
     const item = detail?.item;
@@ -223,24 +228,10 @@ export const SkillEditorDialog = ({
     setRawContent(nextRawContent);
     setManualRawEdit(false);
     setShowAdvancedEditor(hasCustomMarkdown);
-    setReviewPreview(null);
-    setReviewOpen(false);
     setReviewLoading(false);
     setSaveLoading(false);
     setMutationError(null);
-  }, [detail, mode, open, projectPath]);
-
-  useEffect(() => {
-    if (open) {
-      return;
-    }
-
-    setReviewPreview(null);
-    setReviewOpen(false);
-    setReviewLoading(false);
-    setSaveLoading(false);
-    setMutationError(null);
-  }, [open]);
+  }, [abandon, detail, mode, open, projectPath]);
 
   useEffect(() => {
     if (open && mode === 'create' && scope === 'project' && !projectPath) {
@@ -384,7 +375,8 @@ export const SkillEditorDialog = ({
     setReviewLoading(true);
     setMutationError(null);
     try {
-      const preview = await previewSkillUpsert(request);
+      const preview = await prepare(() => previewSkillUpsert(request));
+      if (!preview) return;
       setReviewPreview(preview);
       setReviewOpen(true);
     } catch (error) {
@@ -888,7 +880,10 @@ export const SkillEditorDialog = ({
         preview={reviewPreview}
         loading={saveLoading}
         error={mutationError}
-        onClose={() => setReviewOpen(false)}
+        onClose={() => {
+          setReviewOpen(false);
+          void abandon().catch((error: unknown) => setMutationError(String(error)));
+        }}
         onConfirm={() => void handleConfirmSave()}
         confirmLabel={
           mode === 'create'

@@ -1,8 +1,6 @@
-import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
-import { shell } from 'electron';
 
 import { SkillImportService } from './SkillImportService';
 import { SkillPlanService } from './SkillPlanService';
@@ -10,6 +8,7 @@ import { SkillRootsResolver } from './SkillRootsResolver';
 import { SkillScaffoldService } from './SkillScaffoldService';
 import { SkillsCatalogService } from './SkillsCatalogService';
 
+import type { LocalSkillMutationExecutor } from './LocalSkillMutationExecutor';
 import type {
   SkillDeleteRequest,
   SkillDetail,
@@ -20,6 +19,7 @@ import type {
 
 export class SkillsMutationService {
   constructor(
+    private readonly executor: LocalSkillMutationExecutor,
     private readonly rootsResolver = new SkillRootsResolver(),
     private readonly catalogService = new SkillsCatalogService(),
     private readonly scaffoldService = new SkillScaffoldService(rootsResolver),
@@ -37,7 +37,7 @@ export class SkillsMutationService {
     );
     const files = this.scaffoldService.normalizeDraftFiles(request.files);
     const plan = await this.planService.buildUpsertPlan(targetSkillDir, files);
-    return plan.preview;
+    return this.executor.preview(plan, request);
   }
 
   async applyUpsert(request: SkillUpsertRequest): Promise<SkillDetail | null> {
@@ -52,10 +52,7 @@ export class SkillsMutationService {
       request.folderName,
       request.existingSkillId
     );
-    const files = this.scaffoldService.normalizeDraftFiles(request.files);
-    const plan = await this.planService.buildUpsertPlan(targetSkillDir, files);
-    this.assertReviewedPlanMatches(request.reviewPlanId, plan.preview.planId);
-    await this.planService.applyPlan(plan);
+    await this.executor.apply(request.reviewPlanId, request);
 
     return this.catalogService.getDetail(targetSkillDir, request.projectPath);
   }
@@ -64,10 +61,16 @@ export class SkillsMutationService {
     const { sourceDir, targetSkillDir } = await this.resolveImportTarget(request);
     const inspection = await this.importService.inspectSourceDir(sourceDir);
     const plan = await this.planService.buildImportPlan(targetSkillDir, inspection.files);
-    return {
-      ...plan.preview,
-      warnings: [...new Set([...inspection.warnings, ...plan.preview.warnings])],
-    };
+    return this.executor.preview(
+      {
+        ...plan,
+        preview: {
+          ...plan.preview,
+          warnings: [...new Set([...inspection.warnings, ...plan.preview.warnings])],
+        },
+      },
+      request
+    );
   }
 
   async applyImport(request: SkillImportRequest): Promise<SkillDetail | null> {
@@ -75,18 +78,19 @@ export class SkillsMutationService {
       throw new Error('Review the import changes before saving.');
     }
 
-    const { sourceDir, targetSkillDir } = await this.resolveImportTarget(request);
-    const inspection = await this.importService.inspectSourceDir(sourceDir);
-    const plan = await this.planService.buildImportPlan(targetSkillDir, inspection.files);
-    this.assertReviewedPlanMatches(request.reviewPlanId, plan.preview.planId);
-    await this.planService.applyPlan(plan);
+    const { targetSkillDir } = await this.resolveImportTarget(request);
+    await this.executor.apply(request.reviewPlanId, request);
 
     return this.catalogService.getDetail(targetSkillDir, request.projectPath);
   }
 
+  async discardReview(reviewPlanId: string): Promise<void> {
+    await this.executor.discardReview(reviewPlanId);
+  }
+
   async deleteSkill(request: SkillDeleteRequest): Promise<void> {
     const skillDir = this.resolveExistingSkill(request.skillId, request.projectPath);
-    await shell.trashItem(skillDir);
+    await this.executor.deleteSkill(skillDir, request.projectPath);
   }
 
   private async resolveImportTarget(
@@ -95,7 +99,6 @@ export class SkillsMutationService {
     const sourceDir = await this.importService.validateSourceDir(request.sourceDir);
 
     const root = this.resolveWritableRoot(request.scope, request.rootKind, request.projectPath);
-    await fs.mkdir(root.rootPath, { recursive: true });
 
     const folderName = request.folderName?.trim() || path.basename(sourceDir);
     const folderValidation = validateFileName(folderName);
@@ -135,13 +138,5 @@ export class SkillsMutationService {
       throw new Error('Skill is outside the allowed roots');
     }
     return normalizedSkillDir;
-  }
-
-  private assertReviewedPlanMatches(reviewPlanId: string, currentPlanId: string): void {
-    if (reviewPlanId !== currentPlanId) {
-      throw new Error(
-        'The skill files changed after review. Review the latest changes and try again.'
-      );
-    }
   }
 }

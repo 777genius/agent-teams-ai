@@ -15,13 +15,28 @@ interface StoreState {
 const storeState = {} as StoreState;
 const openPathMock = vi.fn();
 const showInFolderMock = vi.fn();
+const ownership = vi.hoisted(() => ({
+  ownership: 'local' as 'local' | 'managed' | 'unknown',
+  rootId: 'root-a',
+  skillName: 'review-helper',
+  alias: 'managed-helper',
+  reason: 'Ownership could not be checked.',
+}));
+
+vi.mock('@features/extension-management/renderer', () => ({
+  useLocalSkillOwnership: () => ownership,
+}));
+
+vi.mock('@renderer/components/extensions/skills/SkillImportDialog', () => ({
+  SkillImportDialog: () => null,
+}));
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: StoreState) => unknown) => selector(storeState),
 }));
 
 vi.mock('zustand/react/shallow', () => ({
-  useShallow: <T,>(selector: T) => selector,
+  useShallow: <T>(selector: T) => selector,
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -63,12 +78,16 @@ vi.mock('@renderer/components/ui/alert-dialog', () => ({
     ),
   AlertDialogCancel: ({ children }: React.PropsWithChildren<{ disabled?: boolean }>) =>
     React.createElement('button', { type: 'button' }, children),
-  AlertDialogContent: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  AlertDialogContent: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   AlertDialogDescription: ({ children }: React.PropsWithChildren) =>
     React.createElement('p', null, children),
-  AlertDialogFooter: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
-  AlertDialogHeader: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
-  AlertDialogTitle: ({ children }: React.PropsWithChildren) => React.createElement('h3', null, children),
+  AlertDialogFooter: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
+  AlertDialogHeader: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
+  AlertDialogTitle: ({ children }: React.PropsWithChildren) =>
+    React.createElement('h3', null, children),
 }));
 
 vi.mock('@renderer/components/ui/badge', () => ({
@@ -100,10 +119,12 @@ vi.mock('@renderer/components/ui/button', () => ({
 vi.mock('@renderer/components/ui/dialog', () => ({
   Dialog: ({ open, children }: React.PropsWithChildren<{ open: boolean }>) =>
     open ? React.createElement('div', null, children) : null,
-  DialogContent: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  DialogContent: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   DialogDescription: ({ children }: React.PropsWithChildren) =>
     React.createElement('p', null, children),
-  DialogHeader: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  DialogHeader: ({ children }: React.PropsWithChildren) =>
+    React.createElement('div', null, children),
   DialogTitle: ({ children }: React.PropsWithChildren) => React.createElement('h2', null, children),
 }));
 
@@ -159,6 +180,7 @@ function makeDetail(overrides: Partial<SkillDetail['item']>): SkillDetail {
 describe('SkillDetailDialog', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    ownership.ownership = 'local';
     storeState.fetchSkillDetail = vi.fn().mockResolvedValue(undefined);
     storeState.deleteSkill = vi.fn().mockResolvedValue(undefined);
     storeState.skillsDetailsById = {};
@@ -206,16 +228,16 @@ describe('SkillDetailDialog', () => {
 
     expect(openPathMock).toHaveBeenCalledWith(detail.item.skillFile, '/tmp/project-a');
 
-    const deleteButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent === 'Delete'
+    const deleteButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Delete'
     ) as HTMLButtonElement;
     await act(async () => {
       deleteButton.click();
       await Promise.resolve();
     });
 
-    const confirmDeleteButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent === 'Delete Skill'
+    const confirmDeleteButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Delete Skill'
     ) as HTMLButtonElement;
     await act(async () => {
       confirmDeleteButton.click();
@@ -289,7 +311,8 @@ describe('SkillDetailDialog', () => {
       issues: [
         {
           code: 'has-scripts',
-          message: 'This skill includes a scripts directory. Review bundled scripts before trusting it.',
+          message:
+            'This skill includes a scripts directory. Review bundled scripts before trusting it.',
           severity: 'info',
         },
       ],
@@ -325,4 +348,45 @@ describe('SkillDetailDialog', () => {
       await Promise.resolve();
     });
   });
+
+  it.each(['managed', 'unknown'] as const)(
+    'keeps edit and delete disabled while ownership is %s',
+    async (state) => {
+      ownership.ownership = state;
+      const detail = makeDetail({});
+      storeState.skillsDetailsById[detail.item.id] = detail;
+      const onEdit = vi.fn();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(SkillDetailDialog, {
+              skillId: detail.item.id,
+              open: true,
+              onClose: vi.fn(),
+              projectPath: '/tmp/project-a',
+              onEdit,
+              onDeleted: vi.fn(),
+            })
+          );
+        });
+        for (const label of ['Edit Skill', 'Delete']) {
+          const button = [...host.querySelectorAll('button')].find(
+            (element) => element.textContent === label
+          )!;
+          expect(button.disabled).toBe(true);
+          await act(async () => button.click());
+        }
+        expect(onEdit).not.toHaveBeenCalled();
+        expect(storeState.deleteSkill).not.toHaveBeenCalled();
+        expect(host.textContent).toContain(
+          state === 'managed' ? 'Managed by UAP (managed-helper)' : ownership.reason
+        );
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
 });

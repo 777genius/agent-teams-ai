@@ -2,6 +2,7 @@ import {
   SKILLS_APPLY_IMPORT,
   SKILLS_APPLY_UPSERT,
   SKILLS_DELETE,
+  SKILLS_DISCARD_REVIEW,
   SKILLS_GET_DETAIL,
   SKILLS_LIST,
   SKILLS_PREVIEW_IMPORT,
@@ -29,6 +30,21 @@ const logger = createLogger('IPC:skills');
 let skillsCatalogService: SkillsCatalogService | null = null;
 let skillsMutationService: SkillsMutationService | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
+let admitsMutation: ((event: IpcMainInvokeEvent) => boolean) | undefined;
+
+/** Local authoring now shares the desktop extension manager's owned-window boundary. */
+export function setSkillsMutationAdmission(
+  check: (event: IpcMainInvokeEvent) => boolean
+): () => void {
+  admitsMutation = check;
+  return () => {
+    if (admitsMutation === check) admitsMutation = undefined;
+  };
+}
+function assertMutationSender(event: IpcMainInvokeEvent): void {
+  if (!admitsMutation?.(event))
+    throw new Error('Skill mutation request came from an untrusted window.');
+}
 
 export function initializeSkillsHandlers(
   skillsCatalog?: SkillsCatalogService,
@@ -47,6 +63,7 @@ export function registerSkillsHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(SKILLS_APPLY_UPSERT, handleSkillsApplyUpsert);
   ipcMain.handle(SKILLS_PREVIEW_IMPORT, handleSkillsPreviewImport);
   ipcMain.handle(SKILLS_APPLY_IMPORT, handleSkillsApplyImport);
+  ipcMain.handle(SKILLS_DISCARD_REVIEW, handleSkillsDiscardReview);
   ipcMain.handle(SKILLS_DELETE, handleSkillsDelete);
   ipcMain.handle(SKILLS_START_WATCHING, handleSkillsStartWatching);
   ipcMain.handle(SKILLS_STOP_WATCHING, handleSkillsStopWatching);
@@ -59,6 +76,7 @@ export function removeSkillsHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(SKILLS_APPLY_UPSERT);
   ipcMain.removeHandler(SKILLS_PREVIEW_IMPORT);
   ipcMain.removeHandler(SKILLS_APPLY_IMPORT);
+  ipcMain.removeHandler(SKILLS_DISCARD_REVIEW);
   ipcMain.removeHandler(SKILLS_DELETE);
   ipcMain.removeHandler(SKILLS_START_WATCHING);
   ipcMain.removeHandler(SKILLS_STOP_WATCHING);
@@ -130,52 +148,69 @@ async function handleSkillsGetDetail(
 }
 
 async function handleSkillsPreviewUpsert(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillUpsertRequest
 ): Promise<IpcResult<SkillReviewPreview>> {
   return wrapHandler('skillsPreviewUpsert', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().previewUpsert(request);
   });
 }
 
 async function handleSkillsApplyUpsert(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillUpsertRequest
 ): Promise<IpcResult<SkillDetail | null>> {
   return wrapHandler('skillsApplyUpsert', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().applyUpsert(request);
   });
 }
 
 async function handleSkillsPreviewImport(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillImportRequest
 ): Promise<IpcResult<SkillReviewPreview>> {
   return wrapHandler('skillsPreviewImport', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().previewImport(request);
   });
 }
 
 async function handleSkillsApplyImport(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillImportRequest
 ): Promise<IpcResult<SkillDetail | null>> {
   return wrapHandler('skillsApplyImport', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().applyImport(request);
   });
 }
 
 async function handleSkillsDelete(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillDeleteRequest
 ): Promise<IpcResult<void>> {
   return wrapHandler('skillsDelete', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().deleteSkill(request);
+  });
+}
+
+async function handleSkillsDiscardReview(
+  event: IpcMainInvokeEvent,
+  reviewPlanId?: string
+): Promise<IpcResult<void>> {
+  return wrapHandler('skillsDiscardReview', () => {
+    assertMutationSender(event);
+    if (typeof reviewPlanId !== 'string' || !reviewPlanId || reviewPlanId.length > 200)
+      throw new Error('A valid reviewPlanId is required');
+    return getSkillsMutationService().discardReview(reviewPlanId);
   });
 }
 

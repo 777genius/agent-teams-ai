@@ -53,6 +53,7 @@ export const GeneralSection = ({
   });
   const [serverLoading, setServerLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [browserAccessError, setBrowserAccessError] = useState<string | null>(null);
 
   // Claude Root state
   const { connectionMode, fetchProjects, fetchRepositoryGroups } = useStore(
@@ -103,13 +104,19 @@ export const GeneralSection = ({
     }
   }, []);
 
-  const serverUrl = `http://localhost:${serverStatus.port}`;
+  const serverUrl = `http://127.0.0.1:${serverStatus.port}`;
 
   const handleCopyUrl = useCallback(() => {
-    void navigator.clipboard.writeText(serverUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [serverUrl]);
+    setBrowserAccessError(null);
+    void (async () => {
+      if (!api.extensionManagement?.browserAccess)
+        throw new Error('Copy the browser link from the Agent Teams desktop app.');
+      const accessUrl = await api.extensionManagement.browserAccess();
+      await navigator.clipboard.writeText(accessUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    })().catch(() => setBrowserAccessError(commonT('codexLogin.copyFailed')));
+  }, [commonT]);
 
   // Claude Root handlers
 
@@ -655,6 +662,11 @@ export const GeneralSection = ({
                 {copied ? commonT('actions.copied') : commonT('actions.copyUrl')}
               </button>
             </div>
+          )}
+          {browserAccessError && (
+            <p role="alert" className="text-xs text-red-400">
+              {browserAccessError}
+            </p>
           )}
         </>
       ) : (
