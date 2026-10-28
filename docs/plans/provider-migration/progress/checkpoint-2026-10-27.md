@@ -4971,3 +4971,189 @@ Actions CodeQL remain required. A full canonical rerun solely for this workflow
 prerequisite is not needed: original514 source qualification is retained exactly,
 with the subsequent workflow-only delta stated separately. Draft feedback is
 not promoted into latest-head merge qualification or native qualification.
+
+
+### 8664c62 portability prerequisite commit pushed; its own matrix and Actions review pending
+
+Accepted workflow plus exactly README/checkpoint are committed as
+8664c62e6a6089831f9d6874a24cbf57c806e355,
+`ci: build Host before Anthropic portability tests`, and immediately pushed.
+Local and origin HEAD match with clean worktree/index after push. Root verifies
+that the complete delta from514 contains only this workflow and those two docs;
+all production and test bytes remain exactly514. Workflow hash4822ca19… is
+unchanged, as are the accepted scanner, queue and actual provider archive hashes.
+
+Automatic original portability40635359186 and CodeQL40635359267 are created
+at2026-10-28T04:59:18Z on exact8664. Their own outcomes are pending at this entry.
+No manual rerun, cancellation or extra native/full dispatch occurs. The original
+514 canonical40634432861 continues independently and retains its own source
+identity. The new focused matrix validates the changed workflow dependency order;
+its success is not assumed from the earlier full run or local source reasoning.
+
+
+### 514 canonical Full qualification PASS, independently verified from original shards
+
+Original canonical-only40634432861 completes SUCCESS on exact
+514082cff4fb9688c7f59df1555355ba2414ad0b. Full qualification job122641457969
+records success at05:01:35.1284247Z and completes2026-10-28T05:01:39Z.
+Root independently verifies run/head/gate metadata and all four original root
+logs after the lead's monitor completes. No retry is used.
+
+| Shard | Original job | PASS | SKIP | Sanitized original log SHA256 |
+| --- | --- | --- | --- | --- |
+| 1 | 122638279745 | 5810 | 26 | `7b76aa0514207ffb54dfda72c75c1475bddbdefcb3b5b35a26704aabed10907a` |
+| 2 | 122638279789 | 6090 | 36 | `32b596e57b62112681cdbd9f53afcb8fe1acde8058e51bdd43e593bc20649e57` |
+| 3 | 122638279793 | 5820 | 17 | `4584e45522e7854ed674e98a79bed657c87c55675053a6c492e8005c9f1abbf4` |
+| 4 | 122638279813 | 6176 | 18 | `18c0094015ee5aa6d18a178672f2227183c3a39281e8110467ce9133e67cb689` |
+
+Total **23,896 PASS /0 FAIL /97 SKIP**. The actual shard4 log explicitly records
+TeamBackupService72 tests at04:51:53.992Z and queue27 at04:52:15.906Z. All three
+typed lint jobs succeed; Validate122638280294 passes source4,626/143/800,
+architecture, downloaderNode9 and MCP stdio24. Windows122638279792 passes
+app-lock110 plus1 skip, controller11, ledger/runtime1,247 plus5 skips and
+cleanupNode25. Original workspace suites pass controller421, MCP74, Host794,
+CI/scripts179 and feedback119. Monitoring stops after the terminal original gate.
+
+Stage1 Desktop is deliberately skipped because stage1_desktop=false; no new
+macOS selected-Node gate or native result is claimed. Application/test source
+qualification is exact514. The subsequent8664 delta is only the focused workflow
+prerequisite and documentation, not a claim of latest-head full merge qualification.
+
+### 8664 original portability matrix and CodeQL PASS
+
+Original automatic portability40635359186 completes SUCCESS on exact8664. Root
+checks every original job's successful Host/ledger build and unchanged test step,
+reads all three logs, and parses actual suite/test counts including platform skips.
+
+| Platform | Job | Suite result | Test result | Completed UTC | Sanitized log SHA256 |
+| --- | --- | --- | --- | --- | --- |
+| Linux | 122640969432 | 10 PASS | 190 PASS /5 SKIP | 05:01:22Z | `831d806d1a634d70d1d70fb594c76e82e6645983abeca3f46ff54726c9ecd016` |
+| macOS | 122640969246 | 10 PASS | 195 PASS /0 SKIP | 05:02:21Z | `a06dcf4b76ca23d29a6d5f6e28d7fea64b3af3180aa084ed2ab3d0c0f746e412` |
+| Windows | 122640969408 | 8 PASS /2 SKIP | 170 PASS /15 SKIP | 05:02:53Z | `a51fcd56c02791539083d78bb6333a1fa245c34ebb4d93e029e9f1c4d4669b3d` |
+
+No suite or test fails. The retained index SHA256 is
+`1797fd3eac40d5dbdc1d89fa448d1fdaa9051c5a62e8115e728f5fda5195a416`.
+It includes original successful step states, exact workflow4822ca19… and source8664.
+Windows has two skipped platform suites; it is not reported as ten passing suites.
+All existing assertions/skips remain unchanged. This original three-platform
+GREEN closes the observed missing-dist prerequisite defect, without importing a
+PASS from canonical or another workflow. It is ordinary portability evidence,
+not the selected24.21 source-native or packed P7 custody gate.
+
+Original CodeQL40635359267 also completes SUCCESS on exact8664. Actions
+job122640969076 completes05:03:14Z; JavaScript/TypeScript122640969377 completes
+05:05:43Z. The workflow-only correction has its own fresh Actions analysis.
+No new native or full canonical workflow is manually dispatched for it.
+
+### Additional automatic packaged checks kept separate from Stage1 native evidence
+
+At05:06:59Z the additional current-head census finds no new executed code/test
+failure. Automatic Draft CI40635359052 refuses merge qualification with its
+original05:00:38.283Z Draft-feedback line; plan and Fast feedback pass. Current
+Electron40635359127 has all five platform jobs active, and separate Anthropic-
+compatible Windows E2E40635359053 is building the application. These checks are
+still pending, not declared green.
+
+Older Electron514/run40634384698 and8465/run40631208487 are cancelled following
+superseding PR pushes. Their final gates receive PACKAGED_RESULT=cancelled and
+refuse incomplete all-five-platform qualification. Prior514 has its own mac-arm
+PASS; prior8465 has mac-x64/mac-arm/win-x64 PASS, with other jobs cancelled. Those
+are not five-platform passes or new smoke assertion failures. Existing PR
+concurrency explains supersession; no manual cancellation/retry is performed.
+The completed original Stage1 native runs are separate and remain preserved.
+
+A bounded cross-check of old8465 mac-arm packaged PASS/job122628456454 finds no
+successful acquisition of the selected24.21 archive. It uses hostedtoolcache
+Node26.11.1, stage-runtime.mjs and terminal runtime, then Electron44.9.3/embedded
+Node24.22.0. Its HTTP200 is for different26.11.1 headers. Original logs contain
+no stage-node.ts, selected24.21 tarball, pinnedbed7… hash or staged Node manifest.
+This supplies no same-artifact cache or transport recovery evidence, so it does
+not justify an acquisition workaround or substitution. The cross-check stops
+there; source-native uncertainty remains accurately bounded.
+
+
+### 8664 additional packaged Windows UI/default-model E2E PASS
+
+Original Anthropic-compatible packaged Windows E2E40635359053 completes SUCCESS
+on exact8664c62e6a6089831f9d6874a24cbf57c806e355. Job122640968493 completes
+at2026-10-28T05:18:06Z. Root independently verifies the terminal run/head/job and
+every relevant original step: bundle validation, issue684 packaged UI E2E,
+default-model qualification typecheck, inherited default through the released
+bundled runtime and native save, exact package archive/preservation and sanitized
+evidence upload all succeed. Original sanitized job log SHA256:
+`81e06a42dd68f6959066c758c6ea692f54428eb1b40326546e4d63f1ae18a3c1`.
+
+This is the existing ordinary bundled-runtime/UI check on the current source,
+not new Stage1 Host/SDK/native, vendor authentication or P7/M17 custody proof.
+The separate current Electron five-platform matrix40635359127 remains active
+at this entry; its own mac-arm smoke succeeds while four platforms continue.
+No all-five-platform result is inferred from this separate Windows E2E.
+
+
+### 8664 ordinary Electron packaged matrix completes: all five platforms and full gate PASS
+
+Original Electron packaged CI40635359127 completes SUCCESS at
+2026-10-28T05:38:36Z. All five original platform jobs and the original full gate
+pass; no platform timeout, assertion failure, rerun or manual cancellation occurs.
+
+| Original platform/gate | Job | Result | Completed UTC |
+| --- | --- | --- | --- |
+| macOS arm64 | 122641819773 | PASS | 05:09:22Z |
+| Windows x64 | 122641819608 | PASS | 05:20:10Z |
+| macOS x64 | 122641819705 | PASS | 05:30:52Z |
+| Windows arm64 | 122641819722 | PASS | 05:36:13Z |
+| Linux x64 | 122641819596 | PASS | 05:37:54Z |
+| Packaged full gate | 122652841062 | PASS | 05:38:35Z |
+
+Root independently verifies terminal run metadata, all five selected successful
+jobs, and the final original gate log. At05:38:31Z that gate records scope=full,
+classification/result=success and packaged-run=true, followed by selected
+packaged verification passed. Original sanitized gate log SHA256:
+`254ae283e1f5be9ad04d15901883985c5b06da4510907e297e76069422ac9757`.
+
+Exact checkout provenance is preserved. Workflow metadata names PR head
+8664c62e6a6089831f9d6874a24cbf57c806e355, but all five original platform checkout
+logs record synthetic PR merge9631cb086f1fa4f0d71fc0b2965e0e071d96813d. Its
+parents are exactc4c576cea864dc5d8bf36ea1e989d28793076e2f and8664. Root and the
+lead independently query the GitHub Git API: both that merge and8664 have
+**identical complete treeecf5f7056b39347f4394fcdfdad586fff53d1cff**. Results
+therefore qualify the tested synthetic-merge tree, byte-identical to8664; the
+checkout is not falsely renamed to the event head. Original run metadata and
+source-tree proof are retained.
+
+This closes the additional ordinary five-platform packaging/smoke check. It does
+not qualify the new Stage1 SDK/native path, vendor inference, packed P7/M17
+custody, or the original M19 HOLD. The separate Windows UI/default-model E2E
+also passed as recorded above. The intentional automatic Draft-feedback refusal
+remains distinct from all completed substantive checks.
+
+### Final integrated source and report review; documentation-only closing update
+
+The independent critic accepts the final whole-source composition at exact8664:
+application/test bytes remain514, including the accepted scanner and queue; the
+only later non-documentation delta is the accepted two-line portability build
+prerequisite. The frozen provider archive and Stage1/OpenCodeV1 scope remain
+unchanged. No actionable cross-layer defect, scope expansion or material report
+overclaim remains in that review. Root has independently checked each final
+canonical, portability, CodeQL, Windows E2E and five-platform gate result.
+
+The critic also reviews the consolidated unpublished PR description, including
+its exact-source verification/native tables, platform skips, historical source
+attribution, upstream13-file equality at the original merge and subsequent
+workflow correction, CLA, original uncertainty and custody limits. Actual final
+packaged outcomes are appended without introducing new source qualification.
+All three GitHub CodeQL review threads are resolved/outdated automatically; no
+manual dismissal or external review comment is sent.
+
+Only README and this append-only checkpoint are prepared for the final commit.
+No further source/test/workflow change or optional test rerun is needed for this
+documentation-only delta. The PR description will be updated from the reviewed
+body file after the commit is immediately pushed. Final PR head, clean state,
+mergeability and documentation-only diff will be checked after publication.
+
+**Stage1 is still not declared complete.** The latest full native attempt8465
+has ten pre-TEST Node acquisition failures and zero native receipts. The original
+a98 Resume evidence gap, unqualified Mixed notification/group/Restart
+continuation, packed24G90 versus source24G624 qualification and original M19 SDK
+custody HOLD remain open. Earlier scoped passes are never transferred or used to
+release original UNKNOWN obligations. Draft/no merge/release/activation remains.

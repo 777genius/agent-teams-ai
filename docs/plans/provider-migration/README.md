@@ -65,11 +65,15 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/
-import/backup путей и точные результаты каждого запуска. Текущий source-кандидат
-**`514082c` запушен**: поверх production-исправления `8465a0a` он содержит только
-проверенную TEST-замену CodeQL и документацию. Его собственный
+import/backup путей и точные результаты каждого запуска. Последний коммит
+с изменением CI — **`8664c62`**, он сразу запушен и добавляет только prerequisite
+в одном workflow и
+документацию. Код приложения и тестов побайтно совпадает с `514082c`, где поверх
+production-исправления `8465a0a` принята TEST-замена CodeQL. Собственный canonical
+запуск `514082c` —
 [canonical CI40634432861](https://github.com/777genius/agent-teams-ai/actions/runs/40634432861)
-запущен; результат пока ожидается.
+завершился **PASS: 23 896 /0 FAIL /97 SKIP**, со всеми lint, Validate, workspace
+suites и Windows smoke. TeamBackupService72 и queue27 прошли полностью.
 [CodeQL40634384705](https://github.com/777genius/agent-teams-ai/actions/runs/40634384705)
 прошёл оба анализа; alert590 исправлен, все три review threads resolved/outdated.
 
@@ -87,7 +91,7 @@ import/backup путей и точные результаты каждого з�
 scanner сохраняет прежнюю грамматику и все проверки original/current input.
 Независимый критик и root приняли семантику и линейность; **14/14** локальных
 HTTP/fixture тестов прошли, включая 4 097 обёрток с недопустимым хвостом.
-Собственный удалённый CodeQL прошёл; canonical результат фиксируется отдельно.
+Собственные удалённые CodeQL и canonical проверки `514082c` прошли.
 Новая macOS/native квалификация из этого локального результата не следует.
 
 Предыдущий завершённый combined run —
@@ -142,12 +146,23 @@ complete system-reminder wrappers вокруг точного Runtime текст
 сохранены побайтно. Последующая отдельная portability-проверка выявила отсутствие
 сборки Host перед тестами нового upstream-workflow. На всех трёх ОС не загружаются
 те же dist exports. Root и критик приняли отдельную двухстрочную правку:
-существующий Host build перед прежними тестами; её собственный remote PASS пока
-ожидается. Остальной upstream сохранён.
+существующий Host build перед прежними тестами. Её собственные
+[три ОС40635359186](https://github.com/777genius/agent-teams-ai/actions/runs/40635359186)
+и [CodeQL40635359267](https://github.com/777genius/agent-teams-ai/actions/runs/40635359267)
+прошли: Linux190 PASS/5 SKIP, macOS195 PASS, Windows170 PASS/15 SKIP
+(Windows8 suites PASS/2 SKIP). Оба CodeQL-анализа `8664c62` прошли. Отдельный
+[packaged Windows UI/default-model E2E40635359053](https://github.com/777genius/agent-teams-ai/actions/runs/40635359053)
+тоже PASS. Общая [Electron matrix40635359127](https://github.com/777genius/agent-teams-ai/actions/runs/40635359127)
+завершилась **5/5 PASS** с успешным full gate: Linux x64, обе macOS и обе Windows.
+Её фактический checkout — synthetic merge `9631cb08`, чьё дерево побайтно равно
+`8664c62`; эта привязка сохранена в checkpoint. Обычные packaged-проверки не
+подменяют квалификацию нового Host по P7/M17. Остальной upstream сохранён.
 Строгий TEST shell согласован с command printf, с исходным
 RED и последующим локальным/macOS PASS. Provider-архив `2aa5d730…` и OpenCode V1
 scope неизменны. Финальное source review включает matcher и исправление audit
-drain; новые факты CI сохраняются отдельно от прежнего ревью.
+drain и двухстрочный CI prerequisite. Финальное целостное ревью исходников и
+отчёта принято; все три CodeQL review threads закрыты автоматически. Итоговый
+коммит прогресса меняет только документацию, без новых source/test правок.
 
 Frozen dashboard от 23 октября остаётся историческим снимком. Текущая native
 квалификация, packed/installed P7/M17 и исходный M19 custody HOLD остаются
