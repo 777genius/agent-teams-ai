@@ -22,7 +22,7 @@ function assertSafeDarwinMcpAcl(file: string, privateObject: boolean): void {
     const entry = /^\s*\d+:\s+(.+?)\s+(allow|deny)\s+(.+)$/.exec(line);
     if (!entry) throw new Error('Cursor MCP credential ACL could not be verified');
     if (entry[2] === 'deny') continue;
-    if ([`user:${userInfo().username}`, 'user:root'].includes(entry[1]!)) continue;
+    if ([`user:${userInfo().username}`, 'user:root'].includes(entry[1])) continue;
     const readonlyAncestorRights = new Set([
       'read',
       'readattr',
@@ -39,7 +39,7 @@ function assertSafeDarwinMcpAcl(file: string, privateObject: boolean): void {
     ]);
     if (
       privateObject ||
-      entry[3]!.split(',').some((right) => !readonlyAncestorRights.has(right.trim()))
+      entry[3].split(',').some((right) => !readonlyAncestorRights.has(right.trim()))
     ) {
       throw new Error('Cursor MCP credential ACL is not private and owner controlled');
     }
@@ -145,7 +145,9 @@ const runWindowsMcpAclScript: WindowsAclRunner = (script) => {
         WINDIR: windowsRoot,
         PATH: path.win32.join(windowsRoot, 'System32'),
         PSModulePath: path.win32.join(powerShellHome, 'Modules'),
+        // eslint-disable-next-line sonarjs/publicly-writable-directories -- WinPS compatibility only; this metadata-only child writes no files or credentials.
         ...(process.env.TEMP ? { TEMP: process.env.TEMP } : {}),
+        // eslint-disable-next-line sonarjs/publicly-writable-directories -- WinPS compatibility only; this metadata-only child writes no files or credentials.
         ...(process.env.TMP ? { TMP: process.env.TMP } : {}),
       },
       timeout: 10_000,
