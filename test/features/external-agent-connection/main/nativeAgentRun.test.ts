@@ -1,6 +1,9 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { lstat, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -9,11 +12,14 @@ import {
   nativeAgentRunArgs,
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main/nativeAgentRun';
+import { API_AUTH_REFERENCE_ENV } from '@features/local-http-auth/contracts';
+import { apiProfileScope, publishApiAuthority } from '@features/local-http-auth/main';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConnectionInfoV1 } from '@features/external-agent-connection/contracts';
+import type { ControlAuthModule } from '../../../../agent-teams-controller/src/internal/controlApiAuth';
 import type { ChildProcess } from 'node:child_process';
 
 const providerLaunch = vi.hoisted(() => ({
@@ -153,6 +159,7 @@ describe('native one-shot provider transport', () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllEnvs();
     await rm(desktop.userDataPath, { recursive: true, force: true });
   });
 
@@ -228,6 +235,96 @@ describe('native one-shot provider transport', () => {
     await runtime.dispose();
     await expect(lstat(configPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
+
+  it('pins the native Claude child to a refreshing API instance reference without a stale bearer', async () => {
+    const tokenA = 'TEST-native-reference-token-A-000000000000000';
+    const tokenB = 'TEST-native-reference-token-B-000000000000000';
+    const received: Array<string | undefined> = [];
+    let expected = tokenA;
+    const server = createServer((request, response) => {
+      received.push(request.headers.authorization);
+      response.writeHead(request.headers.authorization === `Bearer ${expected}` ? 200 : 401);
+      response.end('fixture');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Fixture listener unavailable');
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const root = desktop.userDataPath;
+    const authority = {
+      schemaVersion: 1 as const,
+      service: 'api' as const,
+      profileScope: apiProfileScope(root),
+      instanceId: randomUUID(),
+      generation: randomUUID(),
+      baseUrl,
+      token: tokenA,
+    };
+    const reference = await publishApiAuthority(root, authority);
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', baseUrl);
+    vi.stubEnv(API_AUTH_REFERENCE_ENV, reference);
+    const runtime = await prepareNativeAgentRun('anthropic', connection, {
+      ...desktop,
+      controlUrl: baseUrl,
+      controlAuthToken: tokenA,
+      claudeDir: root,
+    });
+    const execution = runtime.launch('Synthetic reference fixture', () => {});
+    try {
+      const args = vi.mocked(spawnCli).mock.calls[0][1];
+      const config = JSON.parse(await readFile(args[args.indexOf('--mcp-config') + 1], 'utf8'));
+      const childEnv = config.mcpServers['agent-teams'].env as Record<string, string>;
+      expect(childEnv[API_AUTH_REFERENCE_ENV]).toBe(reference);
+      expect(childEnv.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN).toBeUndefined();
+      const client = createRequire(import.meta.url)(
+        '../../../../agent-teams-controller/src/internal/controlApiAuth.ts'
+      ) as ControlAuthModule;
+      const [source] = client.resolveControlAuthorities(
+        { claudeDir: root },
+        { controlUrl: baseUrl },
+        childEnv[API_AUTH_REFERENCE_ENV]
+      );
+      expect((await client.authenticatedControlFetch(source, '/api/fixture')).status).toBe(200);
+      expected = tokenB;
+      await publishApiAuthority(root, { ...authority, generation: randomUUID(), token: tokenB });
+      vi.stubEnv(API_AUTH_REFERENCE_ENV, '/foreign/reference.json');
+      expect((await client.authenticatedControlFetch(source, '/api/fixture')).status).toBe(200);
+      expect(received).toEqual([`Bearer ${tokenA}`, `Bearer ${tokenB}`]);
+      await rm(reference);
+      await expect(client.authenticatedControlFetch(source, '/api/fixture')).rejects.toThrow();
+      expect(received).toHaveLength(2);
+    } finally {
+      child.close(null);
+      await execution;
+      await runtime.dispose();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it.each(['root', 'endpoint'] as const)(
+    'does not borrow a publisher reference for a foreign %s',
+    async (mismatch) => {
+      vi.stubEnv(
+        'CLAUDE_TEAM_CONTROL_URL',
+        mismatch === 'endpoint' ? 'http://127.0.0.1:41002' : desktop.controlUrl
+      );
+      vi.stubEnv(
+        API_AUTH_REFERENCE_ENV,
+        `${mismatch === 'root' ? '/foreign-root' : desktop.claudeDir}/local-http-auth/api-00000000-0000-0000-0000-000000000000.ref.json`
+      );
+      const runtime = await prepareNativeAgentRun('anthropic', connection, desktop);
+      const execution = runtime.launch('Synthetic reference fixture', () => {});
+      try {
+        const args = vi.mocked(spawnCli).mock.calls[0][1];
+        const config = JSON.parse(await readFile(args[args.indexOf('--mcp-config') + 1], 'utf8'));
+        expect(config.mcpServers['agent-teams'].env[API_AUTH_REFERENCE_ENV]).toBeUndefined();
+      } finally {
+        child.close(null);
+        await execution;
+        await runtime.dispose();
+      }
+    }
+  );
 
   it('gives Codex only the current MCP credential through child env and redacts echoed credentials', async () => {
     const previous = process.env.AGENT_TEAMS_NATIVE_MCP_AUTH_TOKEN;

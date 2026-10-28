@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 
+import { API_AUTH_REFERENCE_ENV } from '@features/local-http-auth/contracts';
 import {
+  applyApiAuthReference,
   privateDirectory,
   replacePrivateJson,
   validatePrivatePath,
@@ -107,16 +109,17 @@ export async function prepareNativeAgentRun(
     assertCleanLoopbackUrl(desktop.controlUrl, '/');
     assertCredential(desktop.controlAuthToken);
     const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
-    const managementMcp = {
-      ...launchSpec,
-      env: {
-        ...launchSpec.env,
-        [BOUND_CONTROL_URL_ENV]: desktop.controlUrl,
-        [BOUND_CONTROL_AUTH_TOKEN_ENV]: desktop.controlAuthToken,
-        [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(connection.context),
-        AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.claudeDir,
-      },
+    const managementEnv: Record<string, string> = {
+      ...launchSpec.env,
+      [BOUND_CONTROL_URL_ENV]: desktop.controlUrl,
+      [BOUND_CONTROL_AUTH_TOKEN_ENV]: desktop.controlAuthToken,
+      [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(connection.context),
+      AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.claudeDir,
     };
+    applyApiAuthReference(managementEnv, desktop.claudeDir, desktop.controlUrl);
+    // A published instance reference follows API restarts; never retain a stale bearer fallback.
+    if (managementEnv[API_AUTH_REFERENCE_ENV]) delete managementEnv[BOUND_CONTROL_AUTH_TOKEN_ENV];
+    const managementMcp = { ...launchSpec, env: managementEnv };
     secrets.push(desktop.controlAuthToken);
     // The config contains credentials: keep it in the validated private profile,
     // with the same POSIX ownership and Windows ACL checks as API authority files.
