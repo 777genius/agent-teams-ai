@@ -5952,3 +5952,29 @@ architecture, hook formatting and whitespace checks passed. The current overview
 now distinguishes earlier canonical624a and Desktop27f receipts from the later
 corrected source. No new main fetch is planned during native qualification;
 fresh current-source Desktop, final canonical and P7 chain remain required.
+
+
+### Source11 prerequisite fixture alignment
+
+The accepted actual-main merge was committed and immediately pushed as
+`452b2f35d61105727e03d4d24654800d6507c6f4` (parents `f71a40e` and `1b592e2`).
+Its fresh [run40706671986](https://github.com/777genius/agent-teams-ai/actions/runs/40706671986)
+was cancelled at14:47:11Z after four deterministic prerequisite fixture failures
+before Desktop/UI preparation; seven remaining Desktop rows were cancelled with
+no steps started. The Full job failed because required prerequisites were
+cancelled; it is not a Full PASS or a new native failure. Exact archive cache HIT
+and locked-SHA verification succeeded. Terminal census is retained locally in
+`checks/ci-40706671986-terminal-summary.json`, SHA256
+`540907921b2b8d9e8528682786f4c1d6c081085942d75f8403946656a02b66ff`.
+
+The synthetic assignment-session mock now includes the five additive controller
+field lines already required by the accepted Taskboard observer. No helper,
+product code, assertion or action budget changes. C independently accepted the
+exact fixture hash `21619d222a3c044c7b12c871da71ff42fdd418c4247b471dd4e57386a88eb08b`.
+The same complete three-file prerequisite command passed30/30,0 FAIL /0 SKIP,
+with selected Node24.21.0; strict scripts types, scoped lint and diff checks passed.
+Its retained log is `checks/taskboard-assignment-mock-full30.log`, SHA256
+`229643a627ce9e332c557732a7b757eaed3b3a2da66d5dbb68025814205193f9`.
+Fresh Desktop and canonical results remain required; P7 workflow changes are
+excluded from this fixture-only delivery. Draft status and original root911 HOLD
+remain unchanged.

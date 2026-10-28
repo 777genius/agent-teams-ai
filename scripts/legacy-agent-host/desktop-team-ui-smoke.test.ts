@@ -189,12 +189,17 @@ function assignmentRuntime() {
     identity,
     surfaceId: captured.surfaceId,
     isOwner: true,
+    canSubmit: true,
+    attachmentError: null,
     session: {
       ownerSurfaceId: captured.surfaceId,
+      ownerRevision: 1,
       commentText: '',
+      partRevisions: { commentText: 0, pendingAttachments: 0 },
       submitPending: false,
       submitError: null,
       pendingAttachments: [],
+      pendingAttachmentPreparationIds: [],
     },
   };
   const root = { return: null, stateNode: {} as { current: unknown } };
