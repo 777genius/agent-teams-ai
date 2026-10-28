@@ -13,7 +13,10 @@ export interface EnsureOpenCodeBridgeRuntimeBinaryEnvOptions {
   targetEnv: NodeJS.ProcessEnv;
   bridgeEnv?: NodeJS.ProcessEnv;
   resolveVerifiedOpenCodeRuntimeBinaryPath: () => Promise<string | null>;
-  isSupportedOpenCodeRuntimeBinaryPath?: (binaryPath: string) => Promise<boolean>;
+  isSupportedOpenCodeRuntimeBinaryPath?: (
+    binaryPath: string,
+    generation?: 'v1' | 'v2'
+  ) => Promise<boolean>;
   /** Re-resolve a path that the app selected earlier, so an in-app update takes effect. */
   refreshAutoResolvedBinary?: boolean;
   onOverrideRejected?: () => void;
@@ -39,6 +42,10 @@ function getOpenCodeRuntimeBinaryEnvValues(env: NodeJS.ProcessEnv): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
+/**
+ * The override the bridge launches: the first override variable that names an existing
+ * file. Runtime status reports the same selection.
+ */
 export function resolveExistingOpenCodeRuntimeBinaryEnvPath(
   env: NodeJS.ProcessEnv
 ): { binaryPath: string; envName: string } | null {
@@ -74,17 +81,26 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
   onOverrideRejected,
   onWarning,
 }: EnsureOpenCodeBridgeRuntimeBinaryEnvOptions): Promise<void> {
+  const applyBinary = async (env: NodeJS.ProcessEnv, binaryPath: string | null): Promise<void> => {
+    const verifiedNativeV2BinaryPath =
+      process.platform === 'win32' &&
+      binaryPath &&
+      (await isSupportedOpenCodeRuntimeBinaryPath?.(binaryPath, 'v2'))
+        ? binaryPath
+        : undefined;
+    applyOpenCodeRuntimeBinaryEnv(env, binaryPath, { verifiedNativeV2BinaryPath });
+  };
   if (refreshAutoResolvedBinary) {
     try {
       const resolvedPath = await resolveVerifiedOpenCodeRuntimeBinaryPath();
       if (resolvedPath) {
         delete targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV];
         delete targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV];
-        applyOpenCodeRuntimeBinaryEnv(targetEnv, resolvedPath);
+        await applyBinary(targetEnv, resolvedPath);
         if (targetEnv !== bridgeEnv) {
           delete bridgeEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV];
           delete bridgeEnv[OPENCODE_LEGACY_BINARY_PATH_ENV];
-          applyOpenCodeRuntimeBinaryEnv(bridgeEnv, resolvedPath);
+          await applyBinary(bridgeEnv, resolvedPath);
         }
         return;
       }
@@ -106,13 +122,16 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
         clearOpenCodeRuntimeBinaryEnvValues(bridgeEnv, invalidValues);
       }
       onOverrideRejected?.();
+      onWarning?.(
+        `[OpenCode] Ignoring runtime binary override that does not name an existing file: ${[...invalidValues].join(', ')}`
+      );
     } else if (
       !isSupportedOpenCodeRuntimeBinaryPath ||
-      (await isSupportedOpenCodeRuntimeBinaryPath(existingBinary.binaryPath).catch(() => false))
+      (await isSupportedOpenCodeRuntimeBinaryPath(existingBinary.binaryPath))
     ) {
       targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV] = existingBinary.binaryPath;
       targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV] = existingBinary.binaryPath;
-      applyOpenCodeRuntimeBinaryEnv(targetEnv, existingBinary.binaryPath);
+      await applyBinary(targetEnv, existingBinary.binaryPath);
       return;
     } else {
       const invalidValues = new Set(getOpenCodeRuntimeBinaryEnvValues(targetEnv));
@@ -131,19 +150,19 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
     targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim() ||
     targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim()
   ) {
-    applyOpenCodeRuntimeBinaryEnv(targetEnv, null);
+    await applyBinary(targetEnv, null);
     return;
   }
 
   try {
     const openCodeBinary = await resolveVerifiedOpenCodeRuntimeBinaryPath();
-    applyOpenCodeRuntimeBinaryEnv(targetEnv, openCodeBinary);
+    await applyBinary(targetEnv, openCodeBinary);
     if (
       targetEnv !== bridgeEnv &&
       targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV] &&
       !bridgeEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV]
     ) {
-      applyOpenCodeRuntimeBinaryEnv(bridgeEnv, targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV]);
+      await applyBinary(bridgeEnv, targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV]);
     }
   } catch (error) {
     onWarning?.(`[OpenCode] Runtime adapter OpenCode binary unresolved: ${getErrorMessage(error)}`);

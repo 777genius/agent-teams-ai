@@ -20,12 +20,16 @@ import {
   publishRuntimePayload,
 } from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import { phase } from './lib/runtime-bootstrap-diagnostics.mts';
+import { createRuntimeCommandCapture } from './lib/runtime-command-capture.mts';
 import {
   formatRuntimeVersionForDisplay,
   getExpectedRuntimeCliVersion,
   matchesRuntimeCliVersion,
 } from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
+
+const runAndCapture = createRuntimeCommandCapture(spawnSyncWithWindowsShell);
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const uiRepoRoot = path.resolve(scriptDir, '..');
@@ -130,27 +134,6 @@ function applyOrganizationDemoMode() {
   return demoMode === 'restore';
 }
 
-function runAndCapture(cmd, args, options = {}) {
-  const result = spawnSyncWithWindowsShell(cmd, args, {
-    encoding: 'utf8',
-    ...options,
-  });
-
-  if (result.error) {
-    throw new Error(`Failed to run ${cmd}: ${result.error.message}`);
-  }
-
-  if (result.status !== 0) {
-    const details = [result.stdout, result.stderr]
-      .map((value) => value?.trim())
-      .filter(Boolean)
-      .join('\n');
-    throw new Error(`Command failed: ${cmd} ${args.join(' ')}${details ? `\n${details}` : ''}`);
-  }
-
-  return result.stdout?.trim() ?? '';
-}
-
 function hasTerminalPlatformOverride() {
   return Boolean(
     process.env[terminalPlatformRootEnv]?.trim() ||
@@ -227,10 +210,6 @@ function getReleaseAssetDownload(runtimeLock, asset) {
     releaseTag,
     assetName: asset.file,
   };
-}
-
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
 }
 
 function formatBytes(bytes) {
@@ -384,7 +363,7 @@ async function resolveElectronViteArgs(args) {
 }
 
 function readBinaryVersion(binaryPath) {
-  return runAndCapture(binaryPath, ['--version']);
+  return runAndCapture(binaryPath, ['--version'], { timeout: 30_000 });
 }
 
 function isExecutable(filePath) {
@@ -590,18 +569,18 @@ async function ensureBootstrappedRuntime() {
   const cacheDir = path.join(runtimeCacheRoot, runtimeLock.version, platformKey);
   const payloadDir = path.join(cacheDir, 'payload-v1');
   const cachedBinaryPath = path.join(payloadDir, asset.binaryName);
-  const isCacheValid = () =>
-    isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
+  const isCacheValid = async () =>
+    (await isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName)) &&
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
-  ensureDir(cacheDir);
+  fs.mkdirSync(cacheDir, { recursive: true });
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (isCacheValid()) {
+    if (await phase('cache-validation', isCacheValid)) {
       return {
         binaryPath: cachedBinaryPath,
-        versionText: readBinaryVersion(cachedBinaryPath),
+        versionText: phase('cached-version', () => readBinaryVersion(cachedBinaryPath)),
         sourceLabel: `cached release ${runtimeLock.sourceRef}`,
         cacheDir,
         downloaded: false,
@@ -609,33 +588,47 @@ async function ensureBootstrappedRuntime() {
     }
 
     const workDir = path.join(cacheDir, `.bootstrap-${process.pid}-${Date.now()}`);
-    ensureDir(workDir);
+    fs.mkdirSync(workDir, { recursive: true });
 
     try {
       const archivePath = path.join(workDir, asset.file);
       const download = getReleaseAssetDownload(runtimeLock, asset);
       logRuntimePhase(`downloading release asset: ${asset.file}`);
-      if (!downloadReleaseAssetWithGh(download, archivePath)) {
-        await downloadWithProgress(download, archivePath);
-      }
+      await phase('download', async () => {
+        if (!downloadReleaseAssetWithGh(download, archivePath)) {
+          await downloadWithProgress(download, archivePath);
+        }
+      });
 
       logRuntimePhase('verifying archive checksum');
-      await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
+      await phase('checksum', () => verifyRuntimeArchiveChecksum(archivePath, asset, platformKey));
 
       const extractDir = path.join(workDir, 'extracted');
       logRuntimePhase(`extracting ${asset.archiveKind} archive`);
-      extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit);
+      phase('extract', () =>
+        extractArchive(archivePath, extractDir, asset.archiveKind, (command, args, options) => {
+          const result = spawnSyncWithWindowsShell(command, args, { stdio: 'inherit', ...options });
+          if (result.error)
+            throw new Error(`Runtime archive extraction failed: ${result.error.message}`);
+          if (result.status !== 0)
+            throw new Error(
+              `Runtime archive extraction failed (exit ${result.status ?? result.signal ?? 'unknown'})`
+            );
+        })
+      );
       logRuntimePhase('archive extracted');
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
       if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);
-      const versionText = readBinaryVersion(extractedBinaryPath);
+      const versionText = phase('extracted-version', () => readBinaryVersion(extractedBinaryPath));
       if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
         throw new Error(
           `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
         );
       }
-      publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256);
+      await phase('publish', () =>
+        publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256)
+      );
       return {
         binaryPath: cachedBinaryPath,
         versionText,
@@ -644,7 +637,7 @@ async function ensureBootstrappedRuntime() {
         downloaded: true,
       };
     } finally {
-      fs.rmSync(workDir, { recursive: true, force: true });
+      phase('work-cleanup', () => fs.rmSync(workDir, { recursive: true, force: true }));
     }
   } finally {
     await lockHandle.close();

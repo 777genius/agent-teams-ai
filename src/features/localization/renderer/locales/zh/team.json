@@ -359,6 +359,30 @@
     "placeholders": {
       "name": "成员名称",
       "mcpServers": "github、哨兵"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. 在打开此表单前已保存的绑定会立即更新，即使取消团队表单，这些更改也会保留。",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -1004,7 +1028,8 @@
       "cancel": "取消",
       "delete": "删除",
       "markResolved": "标记为已解决",
-      "save": "保存"
+      "save": "保存",
+      "openInTaskTab": "在单独标签页中打开"
     },
     "attachments": {
       "commentAttachment": "评论附件",

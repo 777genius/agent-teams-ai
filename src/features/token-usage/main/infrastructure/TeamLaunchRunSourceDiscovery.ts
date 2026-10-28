@@ -265,6 +265,7 @@ function buildRunsForTeam(
       teamName,
       agentId: leadMember?.agentId ?? `${teamName}:team-lead`,
       agentName: 'team-lead',
+      terminationConfirmed: leadActive === false ? true : undefined,
       runtimeKind: runtimeKindFromProvider(providerId),
       providerId,
       providerBackendId,
@@ -397,6 +398,7 @@ function buildMemberRun(
     teamName,
     agentId: configMember?.agentId ?? `${teamName}:${memberState.name}`,
     agentName: memberState.name,
+    terminationConfirmed: configMemberActive === false ? true : undefined,
     runtimeKind,
     providerId,
     providerBackendId,
@@ -486,6 +488,7 @@ function buildRuntimeSessionRun(
     agentId:
       runtimeSession.agentId ?? configMember?.agentId ?? `${teamName}:${runtimeSession.agentName}`,
     agentName: runtimeSession.agentName,
+    terminationConfirmed: configMemberActive === false ? true : undefined,
     runtimeKind,
     providerId,
     providerBackendId,

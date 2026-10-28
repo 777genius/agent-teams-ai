@@ -16,11 +16,13 @@ import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
 import type { OpenCodeMemberContextUsageProbe } from './OpenCodeStalePendingObservationSignals';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
   AgentActionMode,
   AttachmentPayload,
   InboxMessage,
   OpenCodeRuntimeDeliveryUserVisibleImpact,
+  PersistedTeamLaunchSnapshot,
   TaskRef,
   TeamConfig,
   TeamMember,
@@ -48,6 +50,7 @@ export type OpenCodeMemberMessageDeliverySource =
   | 'member-work-sync-review-pickup';
 
 export interface OpenCodeMemberMessageDeliveryInput {
+  isCurrent?: () => boolean;
   memberName: string;
   text: string;
   messageId?: string;
@@ -118,6 +121,7 @@ export interface OpenCodeMemberInboxDelivery {
 }
 
 export interface OpenCodeMemberDirectory {
+  launchSnapshot?: Pick<PersistedTeamLaunchSnapshot, 'members'> | null;
   config: TeamConfig | null;
   teamMeta: {
     launchIdentity?: {
@@ -153,10 +157,12 @@ export type OpenCodeMemberIdentityResolution =
       reason: 'recipient_is_not_opencode' | 'recipient_removed' | 'opencode_recipient_unavailable';
     };
 
-interface DeliverableTrackedRun {
+export interface DeliverableTrackedRun {
+  launchIdentity?: { resolvedLaunchModel?: string | null; selectedModel?: string | null } | null;
+  allEffectiveMembers?: readonly { name: string; model?: string }[];
   mixedSecondaryLanes: readonly {
     laneId: string;
-    member: { name: string };
+    member: { name: string; model?: string };
     runId?: string | null;
   }[];
 }
@@ -170,6 +176,7 @@ export interface OpenCodeLeadTurnActivityNotification {
 }
 
 export interface OpenCodeMemberMessageDeliveryServiceDependencies {
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration;
   getOpenCodeRuntimeMessageAdapter(): OpenCodeRuntimeMessageAdapter | null;
   readOpenCodeMemberDirectory(teamName: string): Promise<OpenCodeMemberDirectory>;
   resolveOpenCodeMemberIdentityFromDirectory(
@@ -177,6 +184,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     memberName: string,
     directory: OpenCodeMemberDirectory
   ): OpenCodeMemberIdentityResolution;
+  isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean;
   stoppingSecondaryRuntimeTeams: { has(teamName: string): boolean };
   readPersistedTeamProjectPath(teamName: string): string | null;
   resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null;
@@ -296,6 +304,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void;
   logOpenCodePromptDeliveryEvent(
     event: string,

@@ -12,8 +12,69 @@
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { spawn } from 'child_process';
+import { randomUUID } from 'crypto';
+import { accessSync, constants as fsConstants } from 'fs';
 
 const logger = createLogger('Utils:shellEnv');
+
+/**
+ * Default login-shell candidates, most preferred first.
+ *
+ * macOS keeps the platform default `/bin/zsh` and falls back to its older
+ * default when zsh was removed. Linux users may rely on zsh even when
+ * `$SHELL` is unset (for example when the account's login shell is zsh but
+ * the variable was not propagated), and variables exported by `.zshrc` are
+ * only visible when zsh itself is probed. Therefore `/bin/zsh` is probed
+ * before the generic Bash fallbacks on every POSIX platform, while Bash and
+ * `/bin/sh` remain available for containers and images without zsh. A
+ * configured `$SHELL` is always honoured as-is; when that configured shell
+ * is missing the normal resolution failure path reports it rather than
+ * silently probing a different shell. No candidate is assumed to exist
+ * without an executable probe.
+ */
+export function defaultShellCandidates(platform: NodeJS.Platform): readonly string[] {
+  if (platform === 'darwin') return ['/bin/zsh', '/bin/bash', '/bin/sh'];
+  return ['/bin/zsh', '/bin/bash', '/usr/bin/bash', '/bin/sh'];
+}
+
+/**
+ * Check whether a candidate shell path exists and is executable.
+ */
+function probeExecutableShell(candidatePath: string): boolean {
+  try {
+    accessSync(candidatePath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve the shell path used to read the exported interactive environment.
+ *
+ * A configured `$SHELL` wins verbatim (the repository never assumes that a
+ * configured shell exists; its absence surfaces through the resolver's normal
+ * failure diagnostics). Without one, the first installed platform candidate is
+ * used, with `/bin/sh` as the guaranteed last resort so a bare container gets
+ * a working probe instead of a misleading `<platform-default> ENOENT`. The
+ * filesystem probe is injectable so tests can express every platform.
+ */
+export function resolveDefaultLoginShellPath(
+  options: {
+    env?: NodeJS.ProcessEnv;
+    platform?: NodeJS.Platform;
+    probe?: (candidatePath: string) => boolean;
+  } = {}
+): string {
+  const configured = (options.env ?? process.env).SHELL?.trim();
+  if (configured) return configured;
+  const probe = options.probe ?? probeExecutableShell;
+  const candidates = defaultShellCandidates(options.platform ?? process.platform);
+  for (const candidate of candidates) {
+    if (probe(candidate)) return candidate;
+  }
+  return '/bin/sh';
+}
 
 const SHELL_ENV_TIMEOUT_MS = 12_000;
 const SHELL_ENV_BEST_EFFORT_TIMEOUT_MS = 5_000;
@@ -92,6 +153,9 @@ function clearShellEnvFailure(): void {
   shellEnvFailureCooldownUntil = 0;
 }
 
+/**
+ * Parse a NUL-separated `env -0` dump into a process-env record.
+ */
 function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   const parsed: NodeJS.ProcessEnv = {};
   const lines = content.split('\0');
@@ -110,9 +174,20 @@ function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   return parsed;
 }
 
-async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.ProcessEnv> {
+/**
+ * Spawn the given shell with args and resolve its exported environment.
+ */
+async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<NodeJS.ProcessEnv> {
+  const nonce = `AGENT_TEAMS_SHELL_ENV_${randomUUID()}`;
+  const startMarker = `\0${nonce}_START\0`;
+  const endMarker = `\0${nonce}_END\0`;
+  // Only a successful env command prints the matching end marker. Startup and
+  // logout output outside the frame cannot masquerade as exported variables.
+  // `command` bypasses printf aliases/functions from the user's startup files.
+  // Quoted printable constants and && work in sh, bash, zsh and modern fish.
+  const command = `command printf '\\0%s\\0' '${nonce}_START' && env -0 && command printf '\\0%s\\0' '${nonce}_END'`;
   const envDump = await new Promise<string>((resolve, reject) => {
-    const child = spawn(shellPath, args, {
+    const child = spawn(shellPath, [mode, command], {
       env: process.env,
       stdio: ['ignore', 'pipe', 'ignore'],
       windowsHide: true,
@@ -155,17 +230,25 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
       }
       if (!settled) {
         settled = true;
-        if (chunks.length === 0 && (code !== 0 || signal)) {
+        const content = Buffer.concat(chunks).toString('utf8');
+        const startIndex = content.indexOf(startMarker);
+        const dumpStart = startIndex + startMarker.length;
+        const endIndex = startIndex < 0 ? -1 : content.indexOf(endMarker, dumpStart);
+        const dump = endIndex < 0 ? null : content.slice(dumpStart, endIndex);
+        if (dump === null || (dump.length > 0 && !dump.endsWith('\0'))) {
           reject(
             new Error(
               signal
                 ? `shell env command exited with signal ${signal}`
-                : `shell env command exited with code ${code}`
+                : code !== 0
+                  ? `shell env command exited with code ${code}`
+                  : 'shell env command did not complete its environment dump'
             )
           );
           return;
         }
-        resolve(Buffer.concat(chunks).toString('utf8'));
+        // A complete frame remains usable when a later logout hook fails.
+        resolve(dump);
       }
     });
   });
@@ -196,10 +279,10 @@ export async function resolveInteractiveShellEnv(
   }
 
   shellEnvResolvePromise = (async () => {
-    const shellPath = process.env.SHELL || '/bin/zsh';
+    const shellPath = resolveDefaultLoginShellPath();
     try {
       emitProgress(options, 'shell-env-login', 'Reading login shell environment...');
-      const loginEnv = await readShellEnv(shellPath, ['-lic', 'env -0']);
+      const loginEnv = await readShellEnv(shellPath, '-lic');
       cachedInteractiveShellEnv = loginEnv;
       clearShellEnvFailure();
       return loginEnv;
@@ -207,7 +290,7 @@ export async function resolveInteractiveShellEnv(
       const loginMessage = loginError instanceof Error ? loginError.message : String(loginError);
       try {
         emitProgress(options, 'shell-env-interactive', 'Trying interactive shell environment...');
-        const interactiveEnv = await readShellEnv(shellPath, ['-ic', 'env -0']);
+        const interactiveEnv = await readShellEnv(shellPath, '-ic');
         cachedInteractiveShellEnv = interactiveEnv;
         clearShellEnvFailure();
         return interactiveEnv;
@@ -300,6 +383,17 @@ export async function resolveInteractiveShellEnvBestEffort(
       clearTimeout(timeoutHandle);
     }
   }
+}
+
+/** Wait for an existing probe's successful cache result, or null when it fails. */
+export async function waitForPendingShellEnv(): Promise<NodeJS.ProcessEnv | null> {
+  const pending = shellEnvResolvePromise;
+  if (!pending) return cachedInteractiveShellEnv;
+  const resolved = await pending;
+  // Strict resolution returns an uncached {} on failure. Preserve a joiner's
+  // fallback in that case, without confusing a successfully cached empty env
+  // or substituting another probe's cache if discovery was cleared meanwhile.
+  return resolved === cachedInteractiveShellEnv ? resolved : null;
 }
 
 /**

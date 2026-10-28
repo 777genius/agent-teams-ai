@@ -30,6 +30,12 @@ export class RuntimeProviderModelRequestTracker {
     this.generations.clear();
   }
 
+  async abortAndDrain(): Promise<void> {
+    const pending = [...this.lifecycleEntries].map((entry) => entry.promise);
+    this.clear(true);
+    await Promise.allSettled(pending);
+  }
+
   reuseRefresh(
     cacheKey: string,
     requestGroupId: string | null

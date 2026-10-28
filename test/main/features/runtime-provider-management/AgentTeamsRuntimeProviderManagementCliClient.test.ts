@@ -38,7 +38,8 @@ function expectCatalogWarnings(
 
 function createSpawnProcess(
   stdoutPayload: unknown,
-  exitCode = 0
+  exitCode = 0,
+  delayMs?: number
 ): {
   child: {
     stdout: EventEmitter;
@@ -58,10 +59,12 @@ function createSpawnProcess(
   const stderr = new EventEmitter();
   const stdinWrite = vi.fn();
   const stdinEnd = vi.fn(() => {
-    queueMicrotask(() => {
+    const finish = (): void => {
       stdout.emit('data', Buffer.from(JSON.stringify(stdoutPayload)));
       processEvents.emit('close', exitCode);
-    });
+    };
+    if (delayMs === undefined) queueMicrotask(finish);
+    else setTimeout(finish, delayMs);
   });
 
   return {
@@ -2252,6 +2255,86 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     }
   });
 
+  it.each(['connectProvider', 'connectWithApiKey'] as const)(
+    'lets OpenCode %s finish after the previous command deadlines',
+    async (command) => {
+      vi.useFakeTimers();
+      try {
+        const payload = {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          provider: {
+            providerId: 'openrouter',
+            state: 'connected',
+            actions: [],
+            authMethods: ['api'],
+            ownership: ['managed'],
+          },
+        };
+        const { child } = createSpawnProcess(payload, 0, 250_000);
+        spawnCliMock.mockReturnValue(child);
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        const pending = client[command]({
+          runtimeId: 'opencode',
+          providerId: 'openrouter',
+          method: 'api',
+          apiKey: 'test-key',
+        });
+        await vi.advanceTimersByTimeAsync(249_999);
+        expect(killProcessTreeMock).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(await pending).toMatchObject(payload);
+        expect(killProcessTreeMock).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it.each(['connectProvider', 'connectWithApiKey'] as const)(
+    'bounds OpenCode %s at six minutes and ignores a late success',
+    async (command) => {
+      vi.useFakeTimers();
+      try {
+        const { child } = createSpawnProcess(
+          {
+            schemaVersion: 1,
+            runtimeId: 'opencode',
+            provider: {
+              providerId: 'openrouter',
+              state: 'connected',
+              actions: [],
+              authMethods: ['api'],
+              ownership: ['managed'],
+            },
+          },
+          0,
+          360_001
+        );
+        spawnCliMock.mockReturnValue(child);
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        const pending = client[command]({
+          runtimeId: 'opencode',
+          providerId: 'openrouter',
+          method: 'api',
+          apiKey: 'test-key',
+        });
+        await vi.advanceTimersByTimeAsync(359_999);
+        expect(killProcessTreeMock).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        const response = await pending;
+        expect(response.error?.message).toContain('timed out');
+        expect(killProcessTreeMock).toHaveBeenCalledExactlyOnceWith(child, 'SIGKILL');
+        await vi.advanceTimersByTimeAsync(1);
+        expect(await pending).toEqual(response);
+        expect(response.provider).toBeUndefined();
+        expect(killProcessTreeMock).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  );
+
   it('keeps partial spawn stdout and stderr when a provider command times out', async () => {
     vi.useFakeTimers();
     const processEvents = new EventEmitter();
@@ -2281,7 +2364,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       apiKey: 'sk-input-secret-value-123456',
     });
 
-    await vi.advanceTimersByTimeAsync(180_000);
+    await vi.advanceTimersByTimeAsync(360_000);
     const response = await responsePromise;
     vi.useRealTimers();
 
@@ -2325,7 +2408,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         apiKey: 'sk-input-secret-value-123456',
       });
 
-      await vi.advanceTimersByTimeAsync(180_000);
+      await vi.advanceTimersByTimeAsync(360_000);
       const response = await responsePromise;
 
       expect(response.error?.message).toContain('...[truncated runtime provider command output]');

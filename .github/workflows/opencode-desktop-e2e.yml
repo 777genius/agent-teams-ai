@@ -3,6 +3,7 @@ name: OpenCode diagnostics desktop E2E
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/**
@@ -12,8 +13,14 @@ on:
 permissions:
   contents: read
 
+# Draft pushes cancel stale PR work; manual, push and scheduled runs stay independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   desktop:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     strategy:
       fail-fast: false
       matrix:
@@ -73,3 +80,5 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/manifest.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/app-errors.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/events.ndjson

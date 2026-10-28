@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
@@ -31,6 +31,11 @@ it('distinguishes a proven empty inbox from unavailable inbox history in preview
   ]);
 
   await rm(join(root, 'teams', 'alpha-team', 'inboxes'), { recursive: true });
+  const fresh = await source.loadPreview({ ...input, forceRefresh: true });
+  expect(fresh.warnings).toEqual(empty.warnings);
+
+  // A missing directory is valid for a new team; a non-directory source is not.
+  await writeFile(join(root, 'teams', 'alpha-team', 'inboxes'), 'invalid inbox source');
   const unavailable = await source.loadPreview({ ...input, forceRefresh: true });
   expect(unavailable.status).toBe('skipped');
   expect(unavailable.warnings).toContainEqual({

@@ -154,6 +154,204 @@ function createRelayPorts(
 }
 
 describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
+  it('skips unledgered old group runs without blocking the fresh group', async () => {
+    const ports = createRelayPorts({
+      readInboxMessages: vi.fn().mockResolvedValue([
+        message({ messageId: 'old', groupChatId: 'group', groupRunKey: 'old-run' }),
+        message({
+          messageId: 'fresh-group',
+          groupChatId: 'group',
+          groupRunKey: 'run-1',
+          timestamp: '2026-01-01T00:01:00.000Z',
+        }),
+        message({ messageId: 'fresh-dm', timestamp: '2026-01-01T00:02:00.000Z' }),
+      ]),
+    });
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'stale-group-run' },
+      ports
+    );
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'fresh-group' })
+    );
+    expect(ports.deliverOpenCodeMemberMessage).not.toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'old' })
+    );
+    expect(ports.resolveCurrentOpenCodeRuntimeRunId).toHaveBeenCalledTimes(1);
+    expect(ports.logWarning).not.toHaveBeenCalled();
+  });
+
+  it.each([null, 'run-1'])(
+    'skips stale group envelopes before owed read recovery with ledger run %s',
+    async (runId) => {
+      const old = ledgerRecord({
+        inboxMessageId: 'old',
+        groupChatId: 'group',
+        runId,
+        status: 'responded',
+        responseState: 'responded_visible_message',
+        inboxReadCommittedAt: null,
+      });
+      const markInboxReadCommitted = vi.fn().mockResolvedValue(old);
+      const ensurePending = vi.fn();
+      const ports = createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([
+          message({ messageId: 'old', groupChatId: 'group', groupRunKey: 'old-run' }),
+          message({
+            messageId: 'fresh-group',
+            groupChatId: 'group',
+            groupRunKey: 'run-1',
+            timestamp: '2026-01-01T00:01:00.000Z',
+          }),
+        ]),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+          getByInboxMessage: vi.fn(async ({ inboxMessageId }) =>
+            inboxMessageId === 'old' ? old : null
+          ),
+          applyDestinationProof: vi.fn(),
+          markInboxReadCommitted,
+          ensurePending,
+        })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+        applyDestinationProof: vi.fn().mockResolvedValue({ ledgerRecord: old, visibleReply: null }),
+        isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn().mockResolvedValue(true),
+      });
+      await relayOpenCodeMemberInboxMessagesWithPorts(
+        { teamName: 'team', memberName: 'worker', relayKey: 'stale-group-owed-read' },
+        ports
+      );
+      expect(ports.applyDestinationProof).not.toHaveBeenCalled();
+      expect(markInboxReadCommitted).not.toHaveBeenCalled();
+      expect(ensurePending).not.toHaveBeenCalled();
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+        'team',
+        expect.objectContaining({ messageId: 'fresh-group' })
+      );
+    }
+  );
+
+  it.each(['missing', 'error'])(
+    'skips group delivery with %s run truth while still serving DM',
+    async (reason) => {
+      const ports = createRelayPorts({
+        readInboxMessages: vi
+          .fn()
+          .mockResolvedValue([
+            message({ messageId: 'group', groupChatId: 'group', groupRunKey: 'run-1' }),
+            message({ messageId: 'dm', timestamp: '2026-01-01T00:01:00.000Z' }),
+          ]),
+        resolveCurrentOpenCodeRuntimeRunId:
+          reason === 'error'
+            ? vi.fn().mockRejectedValue(new Error('unavailable'))
+            : vi.fn().mockResolvedValue(null),
+      });
+      await relayOpenCodeMemberInboxMessagesWithPorts(
+        { teamName: 'team', memberName: 'worker', relayKey: 'unknown-group-run-' + reason },
+        ports
+      );
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+        'team',
+        expect.objectContaining({ messageId: 'dm' })
+      );
+      expect(ports.logWarning).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not create an unscoped followup when a queued scoped wake is revoked during the existing-relay inbox read', async () => {
+    const existing = deferred<OpenCodeMemberInboxRelayResult>();
+    const reading = deferred<void>();
+    const release = deferred<readonly InboxMessage[]>();
+    let current = true;
+    const scheduleWake = vi.fn();
+    const ports = createRelayPorts({
+      readInboxMessages: async () => {
+        reading.resolve();
+        return await release.promise;
+      },
+      scheduleOpenCodeMemberInboxDeliveryWake: scheduleWake,
+    });
+    ports.inFlight.set('team/worker', existing.promise);
+    const work = relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+        options: { onlyMessageId: 'queued', source: 'watchdog', isCurrent: () => current },
+      },
+      ports
+    );
+    await reading.promise;
+    current = false;
+    release.resolve([message({ messageId: 'queued' })]);
+    await work;
+    expect(scheduleWake).not.toHaveBeenCalled();
+    existing.resolve({ attempted: 0, delivered: 0, relayed: 0, failed: 0 });
+    await existing.promise;
+  });
+
+  it('preserves the scoped owner when forwarding a queued existing-relay wake into the watchdog', async () => {
+    const existing = deferred<OpenCodeMemberInboxRelayResult>();
+    let current = true;
+    const isCurrent = (): boolean => current;
+    const scheduled = vi.fn();
+    const ports = createRelayPorts({
+      readInboxMessages: async () => [message({ messageId: 'queued' })],
+      scheduleOpenCodeMemberInboxDeliveryWake: (input) => {
+        scheduleOpenCodeMemberInboxDeliveryWakeWithPorts(input, {
+          watchdogScheduler: { isEnabled: () => true },
+          scheduleWake: scheduled,
+        });
+      },
+    });
+    ports.inFlight.set('team/worker', existing.promise);
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+        options: { onlyMessageId: 'queued', source: 'watchdog', isCurrent },
+      },
+      ports
+    );
+    expect(scheduled).toHaveBeenCalledWith(expect.objectContaining({ isCurrent }));
+    current = false;
+    expect(isCurrent()).toBe(false);
+    existing.resolve({ attempted: 0, delivered: 0, relayed: 0, failed: 0 });
+    await existing.promise;
+  });
+
+  it('revokes a scoped watchdog wake while inbox reading is in flight', async () => {
+    const reading = deferred<void>();
+    const release = deferred<readonly InboxMessage[]>();
+    let current = true;
+    const deliver = vi.fn(async () => ({ delivered: true }));
+    const ports = createRelayPorts({
+      readInboxMessages: async () => {
+        reading.resolve();
+        return await release.promise;
+      },
+      deliverOpenCodeMemberMessage: deliver,
+    });
+    const work = relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'scoped-bootstrap',
+        options: { onlyMessageId: 'queued', source: 'watchdog', isCurrent: () => current },
+      },
+      ports
+    );
+    await reading.promise;
+    current = false;
+    release.resolve([message({ messageId: 'queued' })]);
+    await work;
+    expect(deliver).not.toHaveBeenCalled();
+  });
+
   it('keeps a group terminal handoff fenced while still delivering fresh DM', async () => {
     const terminal = ledgerRecord({
       status: 'failed_terminal',
@@ -815,20 +1013,19 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       })
     );
 
-    // The pending notification is attempted with the teammate report coalesced
-    // into the same prompt (both reply-optional), and the user message reaches
-    // deliver() on its own.
+    // The user keeps priority while the pending notice is observed. The peer
+    // report retains its own unread row instead of riding inside a no-reply block.
     expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(2);
     expect(deliverOpenCodeMemberMessage.mock.calls.map(([, input]) => input.messageId)).toEqual([
       'task-comment-forward:1',
       'user-2',
     ]);
-    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [teammateReport]);
+    expect(markInboxMessagesRead).not.toHaveBeenCalledWith('team', 'team-lead', [teammateReport]);
     expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [userFollowUp]);
-    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 2, failed: 0 });
+    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 1, failed: 0 });
   });
 
-  it('coalesces queued reply-optional notices into one delivery and stops at the first reply-required message', async () => {
+  it('coalesces queued app notices into one delivery and stops at the first reply-required message', async () => {
     const comment = message({
       messageId: 'task-comment-forward:1',
       from: 'Scribe',
@@ -912,8 +1109,8 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     );
 
     // Relay order: system notifications first (priority), then the rest by
-    // time. The first notice carries the next three reply-optional rows; the
-    // user message is delivered alone; the trailing notice waits for the next
+    // time. The first notice carries only the two app-authored rows; the peer
+    // keeps its own unread row, the user is delivered alone, and the rest waits for the next
     // relay run (one committed delivery per run).
     expect(deliverOpenCodeMemberMessage.mock.calls.map(([, input]) => input.messageId)).toEqual([
       'task-comment-forward:1',
@@ -923,9 +1120,9 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.text).toBe('Top 3 risks posted.');
     const coalescedText =
       deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.coalescedNoticeText ?? '';
-    expect(coalescedText).toContain('<opencode_coalesced_notices count="3">');
+    expect(coalescedText).toContain('<opencode_coalesced_notices count="2">');
     expect(coalescedText).toContain('notice 1 (from system, messageId task-comment-forward:2');
-    expect(coalescedText).toContain('#de5126de done. Risks are on the board.');
+    expect(coalescedText).not.toContain('#de5126de done. Risks are on the board.');
     expect(coalescedText).toContain('@Drafter started task #a36889d4');
     // The user prompt ends the run, so neither it nor the notice behind it is
     // folded into the notice prompt.
@@ -936,9 +1133,9 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [
       dependencyResolved,
       drafterStarted,
-      scribeDone,
     ]);
-    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 4, failed: 0 });
+    expect(markInboxMessagesRead).not.toHaveBeenCalledWith('team', 'team-lead', [scribeDone]);
+    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 3, failed: 0 });
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([expect.stringContaining('opencode_inbox_relay_coalesced_notices')])
     );
@@ -954,6 +1151,7 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     const rider = message({
       messageId: 'notice-2',
       from: 'Scribe',
+      source: 'system_notification',
       text: 'section 2 done',
       timestamp: '2026-01-01T00:00:01.000Z',
     });
@@ -1007,6 +1205,7 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     const rider = message({
       messageId: 'notice-2',
       from: 'Scribe',
+      source: 'system_notification',
       text: 'section 2 done',
       timestamp: '2026-01-01T00:00:01.000Z',
     });

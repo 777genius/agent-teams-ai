@@ -1,3 +1,9 @@
+import {
+  getOpenCodeV2EngineVersion,
+  isOpenCodeV2RangeVersion,
+  pinnedRuntimeShipsOpenCodeV2,
+} from './pinnedOpenCodeV2Contract';
+
 import type { NativeKey } from '../../contracts';
 
 export const MINIMUM_AGENT_TEAMS_OPENCODE_VERSION = '1.16.0';
@@ -10,7 +16,10 @@ export interface OpenCodeSemver {
 
 /** Normalize only the measured whole V2 CLI spelling; V1 remains bare semver. */
 function normalizeOpenCodeVersionText(raw: string): string {
-  return raw.trim().replace(/^opencode v(?=2\.)/, '').replace(/^v/, '');
+  return raw
+    .trim()
+    .replace(/^opencode v(?=2\.)/, '')
+    .replace(/^v/, '');
 }
 
 /** Whole CLI output only; never extract a version from arbitrary diagnostic text. */
@@ -57,14 +66,16 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
       productionEligible: true,
     };
   }
-  // V2 build metadata cannot establish an exact qualified dialect.
-  if (normalizeOpenCodeVersionText(raw) === version && (version === '2.0.0' || version === '2.0.21')) {
+  // V2 is recognized by the pinned runtime's range rule; build metadata cannot
+  // establish an exact dialect. Eligibility follows the runtime's qualification data.
+  if (normalizeOpenCodeVersionText(raw) === version && isOpenCodeV2RangeVersion(version)) {
+    const engine = getOpenCodeV2EngineVersion(version);
     return {
       kind: 'recognized',
       generation: 'v2',
-      apiDialect: `v2-${version}`,
+      apiDialect: `v2-${engine ?? version}`,
       version,
-      productionEligible: false,
+      productionEligible: engine !== null,
     };
   }
   return { kind: 'blocked', reason: parsed.major === 0 ? 'too_old' : 'unknown_generation' };
@@ -75,7 +86,22 @@ export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefine
   return Boolean(raw && classifyNativeVersion(raw).kind === 'recognized');
 }
 
-export function isLegacyOpenCodeVersionSupported(raw: string | null | undefined): boolean {
+/**
+ * Whether the pinned runtime can serve this native version at all: any recognized V1, or a
+ * recognized V2 when the runtime ships OpenCode V2. A runtime released without V2 cannot read
+ * or launch V2, so the app treats such a binary like an unsupported one.
+ */
+export function isOpenCodeVersionServedByRuntime(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  const classification = classifyNativeVersion(raw);
+  return (
+    classification.kind === 'recognized' &&
+    (classification.generation === 'v1' || pinnedRuntimeShipsOpenCodeV2())
+  );
+}
+
+/** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */
+export function isOpenCodeVersionProductionEligible(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const classification = classifyNativeVersion(raw);
   return classification.kind === 'recognized' && classification.productionEligible;

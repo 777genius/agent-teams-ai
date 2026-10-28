@@ -1,5 +1,6 @@
 import { calculateMessageCost, getPricing } from '@shared/utils/pricing';
 
+import { isGatewayAggregateEvent } from './gatewayUsageEvents';
 import { normalizeBillingMode, normalizeCostBreakdown } from './tokenUsageTotals';
 
 import type {
@@ -23,7 +24,11 @@ export function keepOnlyMappedUsageEvents(params: {
   let unmappedEventCount = 0;
 
   for (const event of params.events) {
-    if (runById.has(event.appRunId)) {
+    if (!isGatewayAggregateEvent(event) && runById.get(event.appRunId)?.gatewayUsageRef) {
+      // Reconciliation can mark a run after local events were already persisted.
+      continue;
+    }
+    if (runById.has(event.appRunId) || isGatewayAggregateEvent(event)) {
       attributed.push(event);
     } else {
       unmappedEventCount += 1;

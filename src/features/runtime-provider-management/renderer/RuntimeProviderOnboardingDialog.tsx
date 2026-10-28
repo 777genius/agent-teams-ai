@@ -16,7 +16,7 @@ import {
 } from './hooks/useRuntimeProviderOnboarding';
 import { RuntimeProviderOnboardingView } from './ui/RuntimeProviderOnboardingView';
 
-import type { RuntimeProviderQuickConnectGate } from '../core/domain';
+import type { OpenCodeGeneration, RuntimeProviderQuickConnectGate } from '../core/domain';
 import type { JSX } from 'react';
 
 interface RuntimeProviderOnboardingDialogProps {
@@ -26,6 +26,7 @@ interface RuntimeProviderOnboardingDialogProps {
   readonly providerId?: string | null;
   readonly projectPath?: string | null;
   readonly runtimeGate: RuntimeProviderQuickConnectGate;
+  readonly openCodeGeneration?: OpenCodeGeneration;
   readonly runtimeUpdateRequired?: boolean;
   readonly disabled?: boolean;
   readonly onInstallOrUpdateRuntime: () => Promise<void> | void;
@@ -40,6 +41,7 @@ export const RuntimeProviderOnboardingDialog = ({
   providerId = null,
   projectPath = null,
   runtimeGate,
+  openCodeGeneration = 'v1',
   runtimeUpdateRequired = false,
   disabled = false,
   onInstallOrUpdateRuntime,
@@ -56,6 +58,7 @@ export const RuntimeProviderOnboardingDialog = ({
     providerId,
     projectPath,
     runtimeGate,
+    openCodeGeneration,
     runtimeUpdateRequired,
     onInstallOrUpdateRuntime,
     onProviderChanged,

@@ -45,10 +45,15 @@ import {
   buildDirectTmuxRestartLauncher,
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
+import { applyTeamContextLimitEnv } from './TeamProvisioningEnvGuards';
 import {
   createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
   type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
 } from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
+import {
+  applyDirectGatewayArgs,
+  cleanupUnspawnedGatewayLaunch,
+} from './TeamProvisioningMemberGatewayRuntime';
 import {
   matchesExactTeamMemberName,
   matchesMemberNameOrBase,
@@ -58,6 +63,7 @@ import {
 import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
 import { type MemberLifecycleOperationKind } from './TeamProvisioningMemberLifecycleOperationRunner';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
+import { buildDirectRestartPromptMessage } from './TeamProvisioningMessagePersistence';
 import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
   type OpenCodeMemberRestartSystemMessageInput,
@@ -98,7 +104,6 @@ import type {
 } from './TeamProvisioningMemberLifecycleHostPorts';
 import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
 import type {
-  DirectProcessMemberLaunchReason,
   DirectProcessMemberRestartInput,
   EffectiveConfiguredMember,
   LiveRosterAttachReason,
@@ -536,21 +541,8 @@ export class TeamProvisioningMemberLifecycleController {
   }
 
   private enqueueDirectRestartPromptInternal(input: DirectRestartPromptInput): void {
-    const timestamp = nowIso();
-    const operation = input.operation ?? 'manual_restart';
-    const isRestart = operation === 'manual_restart';
     this.persistInboxMessage(input.teamName, input.memberName, {
-      from: input.leadName,
-      to: input.memberName,
-      text: input.prompt,
-      timestamp,
-      read: false,
-      source: 'system_notification',
-      leadSessionId: input.leadSessionId ?? undefined,
-      messageId: `direct-${operation}-${input.memberName}-${randomUUID()}`,
-      summary: isRestart
-        ? `Restart bootstrap instructions for ${input.memberName}`
-        : `Bootstrap instructions for ${input.memberName}`,
+      ...buildDirectRestartPromptMessage(input),
     });
   }
 
@@ -609,7 +601,6 @@ export class TeamProvisioningMemberLifecycleController {
     });
     await ensureCwdExists(cwd);
 
-    const operation: DirectProcessMemberLaunchReason = 'manual_restart';
     const preliminaryMemberSpec = this.buildPrimaryOwnedMemberSpecForRuntime({
       configuredMember: input.configuredMember,
       run: input.run,
@@ -622,12 +613,14 @@ export class TeamProvisioningMemberLifecycleController {
     const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
       teamRuntimeAuth: {
         teamName: input.teamName,
+        memberName: input.configuredMember.name,
         authMaterialId: `${input.run.runId}-direct-${input.configuredMember.name}-${randomUUID()}`,
         allowAnthropicApiKeyHelper: true,
       },
     });
     let directTmuxLaunchSucceeded = false;
     try {
+      applyTeamContextLimitEnv(provisioningEnv.env, input.run.request.limitContext);
       if (provisioningEnv.warning) {
         throw new Error(provisioningEnv.warning);
       }
@@ -645,7 +638,7 @@ export class TeamProvisioningMemberLifecycleController {
         primaryEnv: provisioningEnv,
         teamRuntimeAuth: {
           teamName: input.teamName,
-          authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
+          authMaterialId: `${input.run.runId}-direct-manual_restart-${input.configuredMember.name}-defaults-${randomUUID()}`,
           allowAnthropicApiKeyHelper: true,
         },
       });
@@ -697,11 +690,9 @@ export class TeamProvisioningMemberLifecycleController {
         includeAnthropicHelper: providerId === 'anthropic',
         contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
       });
-      applyDirectMemberRuntimeEnv(
-        provisioningEnv.env,
-        runtimeArgsPlan.appManagedSettingsPath,
-        input.run.runId
-      );
+      const env = provisioningEnv.env;
+      applyDirectMemberRuntimeEnv(env, runtimeArgsPlan.appManagedSettingsPath, input.run.runId);
+      const directGatewayArgs = await applyDirectGatewayArgs(this.host, input, memberSpec, env);
 
       const runtimeArgs = mergeJsonSettingsArgs([
         '--agent-id',
@@ -733,6 +724,7 @@ export class TeamProvisioningMemberLifecycleController {
         ...runtimeArgsPlan.fastModeArgs,
         ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
         ...runtimeArgsPlan.settingsArgs,
+        ...(directGatewayArgs?.codexArgs ?? []),
       ]);
       const launcher = await buildDirectTmuxRestartLauncher({
         cwd,
@@ -740,6 +732,7 @@ export class TeamProvisioningMemberLifecycleController {
         providerId,
         binaryPath: claudePath,
         args: runtimeArgs,
+        finalEnvPatch: directGatewayArgs?.envPatch,
       });
 
       try {
@@ -765,17 +758,19 @@ export class TeamProvisioningMemberLifecycleController {
           leadName: input.leadName,
           leadSessionId: parentSessionId,
           prompt,
-          operation,
+          operation: 'manual_restart',
         });
+        await directGatewayArgs?.beginLaunch?.();
         await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, launcher.command);
+        directTmuxLaunchSucceeded = true;
         this.appendMemberBootstrapDiagnostic(
           input.run,
           input.memberName,
           `restart command delivered to tmux pane ${input.paneId}`
         );
         this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
-        directTmuxLaunchSucceeded = true;
       } catch (error) {
+        await cleanupUnspawnedGatewayLaunch(directGatewayArgs, [], directTmuxLaunchSucceeded);
         await launcher.cleanup();
         throw error;
       }
@@ -816,7 +811,6 @@ export class TeamProvisioningMemberLifecycleController {
       run: input.run,
     });
     await ensureCwdExists(cwd);
-
     const preliminaryMemberSpec = this.buildPrimaryOwnedMemberSpecForRuntime({
       configuredMember: input.configuredMember,
       run: input.run,
@@ -829,12 +823,14 @@ export class TeamProvisioningMemberLifecycleController {
     const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
       teamRuntimeAuth: {
         teamName: input.teamName,
+        memberName: input.configuredMember.name,
         authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-${randomUUID()}`,
         allowAnthropicApiKeyHelper: true,
       },
     });
     let directProcessLaunchSucceeded = false;
     try {
+      applyTeamContextLimitEnv(provisioningEnv.env, input.run.request.limitContext);
       if (provisioningEnv.warning) {
         throw new Error(provisioningEnv.warning);
       }
@@ -929,11 +925,9 @@ export class TeamProvisioningMemberLifecycleController {
         includeAnthropicHelper: providerId === 'anthropic',
         contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
       });
-      applyDirectMemberRuntimeEnv(
-        provisioningEnv.env,
-        runtimeArgsPlan.appManagedSettingsPath,
-        input.run.runId
-      );
+      const env = provisioningEnv.env;
+      applyDirectMemberRuntimeEnv(env, runtimeArgsPlan.appManagedSettingsPath, input.run.runId);
+      const directGatewayArgs = await applyDirectGatewayArgs(this.host, input, memberSpec, env);
 
       const runtimeArgs = mergeJsonSettingsArgs([
         '--teammate-runtime',
@@ -967,6 +961,7 @@ export class TeamProvisioningMemberLifecycleController {
         ...runtimeArgsPlan.fastModeArgs,
         ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
         ...runtimeArgsPlan.settingsArgs,
+        ...(directGatewayArgs?.codexArgs ?? []),
       ]);
 
       this.assertRunStillCurrentAndAlive(input.run, input.teamName);
@@ -974,12 +969,14 @@ export class TeamProvisioningMemberLifecycleController {
       const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
       let child: ReturnType<typeof spawnCli>;
       try {
+        await directGatewayArgs?.beginLaunch?.();
         child = spawnCli(claudePath, runtimeArgs, {
           cwd,
           detached: true,
           env: {
             ...provisioningEnv.env,
             ...nativeBootstrapEnv,
+            ...(directGatewayArgs?.envPatch ?? {}),
             [TEAMMATE_RUNTIME_ENV]: 'headless',
             [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
             [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
@@ -987,16 +984,13 @@ export class TeamProvisioningMemberLifecycleController {
           stdio: ['pipe', 'pipe', 'pipe'],
         });
       } catch (error) {
-        stdoutLog.destroy();
-        stderrLog.destroy();
+        await cleanupUnspawnedGatewayLaunch(directGatewayArgs, [stdoutLog, stderrLog]);
         throw error;
       }
       if (!child.pid) {
-        stdoutLog.destroy();
-        stderrLog.destroy();
+        await cleanupUnspawnedGatewayLaunch(directGatewayArgs, [stdoutLog, stderrLog]);
         throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
       }
-
       const runtimePid = child.pid;
       const processPaneId = `process:${runtimePid}`;
       const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
@@ -1008,6 +1002,9 @@ export class TeamProvisioningMemberLifecycleController {
         );
       });
       child.once('close', (code, signal) => {
+        void directGatewayArgs
+          ?.confirmStopped?.()
+          .catch(() => logger.warn('Failed to persist gateway member termination'));
         void this.appendDirectProcessRuntimeEvent({
           type: 'exited',
           eventsPath: runtimePaths.eventsPath,

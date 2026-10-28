@@ -128,7 +128,10 @@ export function composeExternalAgentConnection(options: {
 }
 
 /** Refresh only main-owned command copies; running agents retain their original context. */
-export async function refreshDesktopBridgeEnvironment(env: NodeJS.ProcessEnv): Promise<void> {
+export async function refreshDesktopBridgeEnvironment(
+  env: NodeJS.ProcessEnv,
+  requireBoundControl = true
+): Promise<void> {
   const root = getClaudeBasePath();
   const authority = agentTeamsMcpHttpServer.appContext.read(root);
   if (env.AGENT_TEAMS_MCP_CLAUDE_DIR !== root) {
@@ -149,5 +152,9 @@ export async function refreshDesktopBridgeEnvironment(env: NodeJS.ProcessEnv): P
     });
   }
   applyAgentTeamsMcpAppContext(env, root);
-  applyOpenCodeBoundControlEnvironment(env, getDesktopMcpChildEnvironment());
+  // Startup retirement does not spawn native agents or need a control listener.
+  applyOpenCodeBoundControlEnvironment(
+    env,
+    requireBoundControl ? getDesktopMcpChildEnvironment() : {}
+  );
 }

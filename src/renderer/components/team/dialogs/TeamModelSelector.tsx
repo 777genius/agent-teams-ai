@@ -119,6 +119,7 @@ import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTri
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
+import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   OpenCodeCatalogRefreshErrorCard,
@@ -145,6 +146,7 @@ import {
 import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
+import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 export {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -1077,6 +1079,7 @@ export interface TeamModelSelectorProps {
   value: string;
   onValueChange: (value: string) => void;
   preserveSelectedModel?: boolean;
+  limitContext?: boolean;
   projectPath?: string | null;
   id?: string;
   disableGeminiOption?: boolean;
@@ -1099,6 +1102,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   value,
   onValueChange,
   preserveSelectedModel = false,
+  limitContext = false,
   projectPath = null,
   id,
   disableGeminiOption = false,
@@ -1150,9 +1154,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     sourceCliStatus,
     providerStatus: passiveRuntimeProviderStatus,
     codexSnapshotPending,
-  } = useEffectiveCliProviderStatus(effectiveProviderId, {
-    projectPath: effectiveProviderId === 'opencode' ? openCodeCatalogScopeKey || null : null,
-  });
+  } = useTeamModelProviderStatus(effectiveProviderId, openCodeCatalogScopeKey, true);
   const { providerStatus: openCodePassiveProviderStatus } = useEffectiveCliProviderStatus(
     'opencode',
     { projectPath: openCodeCatalogScopeKey || null }
@@ -1470,19 +1472,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const defaultModelTooltip = useTeamDefaultModelTooltip(
     effectiveProviderId,
     runtimeProviderStatus,
-    openCodeDefaultLabelModel
+    openCodeDefaultLabelModel,
+    limitContext
   );
-  const openCodeDefaultOptionLabel = useMemo(() => {
-    if (effectiveProviderId !== 'opencode' || !openCodeDefaultLabelModel) {
-      return t('modelSelector.defaultModel');
-    }
-    return t('modelSelector.defaultWithResolved', {
-      model: formatOpenCodeDefaultRouteLabel(
-        openCodeDefaultLabelModel,
-        openCodePassiveProviderStatus
-      ),
-    });
-  }, [effectiveProviderId, openCodeDefaultLabelModel, openCodePassiveProviderStatus, t]);
+  const defaultLabelModel =
+    effectiveProviderId === 'opencode' && openCodeDefaultLabelModel
+      ? formatOpenCodeDefaultRouteLabel(openCodeDefaultLabelModel, openCodePassiveProviderStatus)
+      : resolveRuntimeDefaultModelLabel(effectiveProviderId, runtimeProviderStatus, limitContext)
+          ?.label;
+  const defaultOptionLabel = defaultLabelModel
+    ? t('modelSelector.defaultWithResolved', { model: defaultLabelModel })
+    : t('modelSelector.defaultModel');
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -1739,7 +1739,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const pendingOptions: TeamRuntimeModelOption[] = [
         {
           value: '',
-          label: openCodeDefaultOptionLabel,
+          label: defaultOptionLabel,
           badgeLabel: t('modelSelector.defaultModel'),
         },
       ];
@@ -1750,7 +1750,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     const unscopedRuntimeOptions = getAvailableTeamProviderModelOptions(
       effectiveProviderId,
-      runtimeProviderStatus
+      runtimeProviderStatus,
+      normalizedValue
     );
     const catalogModelById = new Map<string, ProviderModelCatalogItem>();
     for (const model of runtimeProviderStatus?.modelCatalog?.models ?? []) {
@@ -1772,11 +1773,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         : unscopedRuntimeOptions;
     const presentedRuntimeOptions = addCodexAstraUpdatePreview(
       effectiveProviderId,
-      effectiveProviderId === 'opencode'
-        ? runtimeOptions.map((option) =>
-            option.value.trim() ? option : { ...option, label: openCodeDefaultOptionLabel }
-          )
-        : runtimeOptions,
+      runtimeOptions.map((option) =>
+        option.value.trim() ? option : { ...option, label: defaultOptionLabel }
+      ),
       codexRuntimeStatus
     );
     if (
@@ -1800,9 +1799,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     codexRuntimeStatus,
     effectiveProviderId,
     openCodeLocalProviderLookupAuthoritative,
-    openCodeDefaultOptionLabel,
+    defaultOptionLabel,
     openCodeLocalModelOverlay.modelIds,
     openCodeLocalModelOverlay.options,
+    normalizedValue,
     runtimeProviderStatus,
     selectedLocalModelFallbackOption,
     shouldAwaitRuntimeModelList,
@@ -2877,7 +2877,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           )}
         >
           <OverflowModelName
-            text={opt.label}
+            text={opt.value === '' ? t('modelSelector.defaultModel') : opt.label}
             className={cn(
               'max-w-full break-words leading-tight',
               isFlatOpenCodeCell &&
@@ -2885,6 +2885,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               opt.value === 'gpt-5.5' && 'font-bold'
             )}
           />
+          {opt.value === '' && defaultLabelModel ? (
+            <OverflowModelName
+              text={defaultLabelModel}
+              className="max-w-full break-words text-xs font-normal leading-tight text-[var(--color-text-muted)]"
+            />
+          ) : null}
           {localModelPresentation && localModelDescriptor ? (
             <OpenCodeLocalModelStatus
               presentation={localModelPresentation}

@@ -16,31 +16,49 @@ export function useTeamGroupChats(teamName: string, contextId: string, rosterKey
   const identity = JSON.stringify([contextId, teamName]);
   const currentIdentity = useRef(identity);
   currentIdentity.current = identity;
-  const refresh = useCallback(async () => {
-    try {
-      const result = await api.teamGroupChats.list({ teamName });
-      if (currentIdentity.current === identity) {
-        setCatalog({ identity, groups: result, loaded: true });
-        setError(null);
+  const pending = useRef(new Map<string, { promise: Promise<void>; refreshAgain: boolean }>());
+  const refresh = useCallback(
+    (refreshAfterPending = false): Promise<void> => {
+      const existing = pending.current.get(identity);
+      if (existing) {
+        if (refreshAfterPending) existing.refreshAgain = true;
+        return existing.promise;
       }
-    } catch (cause) {
-      if (currentIdentity.current === identity)
-        setError(cause instanceof Error ? cause.message : String(cause));
-    }
-  }, [identity, teamName]);
+      const entry = { promise: Promise.resolve(), refreshAgain: false };
+      entry.promise = (async () => {
+        do {
+          entry.refreshAgain = false;
+          try {
+            const result = await api.teamGroupChats.list({ teamName });
+            if (currentIdentity.current === identity) {
+              setCatalog({ identity, groups: result, loaded: true });
+              setError(null);
+            }
+          } catch (cause) {
+            if (currentIdentity.current === identity)
+              setError(cause instanceof Error ? cause.message : String(cause));
+          }
+        } while (entry.refreshAgain && currentIdentity.current === identity);
+      })().finally(() => {
+        if (pending.current.get(identity) === entry) pending.current.delete(identity);
+      });
+      pending.current.set(identity, entry);
+      return entry.promise;
+    },
+    [identity, teamName]
+  );
   useEffect(() => {
     setCatalog({ identity, groups: [], loaded: false });
     setError(null);
-    void refresh();
-  }, [identity, refresh]);
+  }, [identity]);
   useEffect(() => {
-    void refresh();
+    void refresh(true);
   }, [refresh, rosterKey]);
   useEffect(
     () =>
       api.teams.onTeamChange?.((_event, change) => {
         if (change.teamName === teamName && (change.type === 'config' || change.type === 'inbox'))
-          void refresh();
+          void refresh(true);
       }),
     [refresh, teamName]
   );

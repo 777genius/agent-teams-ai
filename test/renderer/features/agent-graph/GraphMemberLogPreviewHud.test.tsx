@@ -166,7 +166,7 @@ describe('GraphMemberLogPreviewHud', () => {
       button.textContent?.includes('pnpm test')
     );
     expect(row).not.toBeUndefined();
-    expect(row?.querySelector('svg.text-amber-300')).not.toBeNull();
+    expect(row?.querySelector('svg[class~="text-[#fcd34d]"]')).not.toBeNull();
     expect(row?.querySelector('.line-clamp-3')).toBeNull();
     expect(row?.querySelector('.line-clamp-2')).not.toBeNull();
     expect(row?.className).toContain('h-[72px]');

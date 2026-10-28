@@ -20,6 +20,23 @@ import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/
 import type { PersistedTeamLaunchSnapshot } from '../../../../src/shared/types';
 
 describe('OpenCodeTeamRuntimeAdapter', () => {
+  it('binds launch refreshes to one run and selected effort without changing normal UI preflight', async () => {
+    const checkReadiness = vi.fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>(async () => readiness({ state: 'ready', launchAllowed: true }));
+    const launchOpenCodeTeam = vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>(async () => successfulOpenCodeLaunchData());
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+      launchOpenCodeTeam,
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+    });
+    const input = launchInput({ effort: 'low' });
+    await adapter.prepare(input);
+    await adapter.launch(input);
+    expect(checkReadiness.mock.calls[0]?.[0]).toMatchObject({ effort: 'low' });
+    expect(checkReadiness.mock.calls[0]?.[0]).not.toHaveProperty('freshExecutionProofRequestId');
+    expect(checkReadiness.mock.calls[1]?.[0]).toMatchObject({ effort: 'low', freshExecutionProofRequestId: input.runId });
+    expect(launchOpenCodeTeam.mock.calls[0]?.[0]).toMatchObject({ effort: 'low' });
+  });
+
   it('maps readiness failures to a structured prepare block', async () => {
     const bridge = bridgePort(
       readiness({
@@ -334,6 +351,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       selectedModel: 'cursor-acp/auto',
       requireExecutionProbe: true,
       skipPermissions: true,
+      freshExecutionProofRequestId: 'run-1',
     });
   });
 
@@ -471,6 +489,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       selectedModel: 'ollama/qwen3:8b',
       requireExecutionProbe: true,
       skipPermissions: true,
+      freshExecutionProofRequestId: 'run-1',
     });
     expect(launchOpenCodeTeam).not.toHaveBeenCalled();
     expect(result).toMatchObject({
@@ -688,6 +707,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       selectedModel: 'openai/gpt-5.4-mini',
       requireExecutionProbe: true,
       skipPermissions: true,
+      freshExecutionProofRequestId: 'run-1',
     });
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1043,7 +1063,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       '/repo',
       'openai/gpt-5.4-mini',
       true,
-      true
+      true,
+      expect.objectContaining({ freshExecutionProofRequestId: 'run-1' })
     );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({

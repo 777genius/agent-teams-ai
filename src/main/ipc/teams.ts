@@ -18,6 +18,7 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
   isTeamDataWorkerFatalError,
@@ -124,6 +125,10 @@ import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import {
+  parseTeamMemberRestartResult,
+  type TeamMemberRestartResult,
+} from '@shared/types/teamMemberRestart';
+import {
   extractFlagsFromHelp,
   extractUserFlags,
   PROTECTED_CLI_FLAGS,
@@ -183,6 +188,7 @@ import {
   buildOriginalUserRequestBlock,
 } from '../services/team/messageDeliveryText';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import { assertEscalatedStopConfirmed } from '../services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
@@ -249,6 +255,7 @@ import type {
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
   AddTaskCommentRequest,
   AgentActionMode,
@@ -573,6 +580,7 @@ let teamPermanentDeletionLifecycle: {
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let resolveOpenCodeInputDeclaration: ResolveOpenCodeInputDeclaration | undefined;
 let teamScopedResourceReleaser: TeamScopedResourceReleaser | null = null;
 let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
@@ -580,7 +588,6 @@ const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
-
 function isValidStoredAttachmentMimeType(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const v = value.trim();
@@ -591,10 +598,6 @@ function isValidStoredAttachmentMimeType(value: unknown): value is string {
   return slash > 0 && slash < v.length - 1;
 }
 
-/**
- * Prevents GC from collecting Notification objects in the deprecated showTeamNativeNotification.
- * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
- */
 const activeTeamNotifications = new Set<Notification>();
 
 export function initializeTeamHandlers(
@@ -621,9 +624,12 @@ export function initializeTeamHandlers(
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   },
-  scopedResourceReleaser?: TeamScopedResourceReleaser
+  scopedResourceReleaser?: TeamScopedResourceReleaser,
+  inputDeclarationResolver?: ResolveOpenCodeInputDeclaration,
+  retireGatewayBindings?: (teamName: string) => Promise<void>
 ): void {
   teamDataService = service;
+  resolveOpenCodeInputDeclaration = inputDeclarationResolver;
   teamProvisioningStartApi = teamHandlerApis.provisioningStart;
   teamProvisioningStatusApi = teamHandlerApis.provisioningStatus;
   teamProvisioningPreflightApi = teamHandlerApis.preflight;
@@ -665,6 +671,7 @@ export function initializeTeamHandlers(
     attachmentStore,
     taskAttachmentStore,
     lifecycle: () => teamPermanentDeletionLifecycle,
+    retireGatewayBindings,
     invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
     logRecoveryError: (teamName, error) =>
       logger.error(
@@ -2837,6 +2844,7 @@ async function handleSendMessage(
         memberName,
         providerId: recipientProviderId,
         attachments: nativeAttachments,
+        resolveOpenCodeInputDeclaration,
         readTeamData: (teamName) =>
           getTeamDataService().getTeamData(teamName, { includeMemberBranches: false }),
       });
@@ -3889,7 +3897,7 @@ async function handleRestartMember(
   teamName: unknown,
   memberName: unknown,
   expectedSecondary?: unknown
-): Promise<IpcResult<void>> {
+): Promise<IpcResult<TeamMemberRestartResult>> {
   const validatedTeamName = validateTeamName(teamName);
   if (!validatedTeamName.valid) {
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
@@ -3908,6 +3916,20 @@ async function handleRestartMember(
         validatedMemberName.value!,
         ...(expectedSecondary === undefined ? [] : [expectedSecondary])
       );
+      return { status: 'restarted' } as const;
+    } catch (error) {
+      if (
+        error instanceof OpenCodeRetainedPrimaryRestartError &&
+        error.retention.teamName === validatedTeamName.value &&
+        error.retention.memberName === validatedMemberName.value
+      ) {
+        return parseTeamMemberRestartResult({
+          status: error.outcome,
+          error: error.message,
+          ...error.retention,
+        });
+      }
+      throw error;
     } finally {
       getTeamDataService().invalidateMessageFeed(validatedTeamName.value!);
     }
@@ -4016,6 +4038,7 @@ async function handleStopTeam(
         `[${tn}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
       );
     }
+    assertEscalatedStopConfirmed(result);
   });
 }
 

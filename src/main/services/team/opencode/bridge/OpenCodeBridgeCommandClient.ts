@@ -6,6 +6,7 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from '@main/utils/openCodeNodeModulesJunction';
+import { redactDiagnosticAssignments } from '@shared/utils/redactDiagnosticAssignments';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -24,6 +25,17 @@ import {
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
 import {
+  classifyOpenCodeBridgeTermination,
+  type OpenCodeBridgeTerminationReason,
+  openCodeBridgeWatchdogDetails,
+  openCodeBridgeWatchdogMessage,
+} from './OpenCodeBridgeWatchdogDiagnostics';
+import {
+  hasOpenCodeOwnedChildBinding,
+  prepareOpenCodeShutdownCleanupEnvironment,
+} from './OpenCodeMcpBridgeEnv';
+import { appendRegistryLockDiagnostics } from './OpenCodeRegistryLockDiagnostics';
+import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
 } from './OpenCodeStartupCleanupBridge';
@@ -37,15 +49,14 @@ export interface OpenCodeBridgeProcessRunInput {
   stderrLimitBytes: number;
   env: NodeJS.ProcessEnv;
 }
-
 export interface OpenCodeBridgeProcessRunResult {
   stdout: string;
   stderr: string;
   exitCode: number | null;
   timedOut: boolean;
   outcomeUnknownReason?: 'transport_timeout' | 'output_limit' | 'termination_failed';
+  terminationReason?: OpenCodeBridgeTerminationReason;
 }
-
 export interface OpenCodeBridgeProcessRunner {
   run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult>;
 }
@@ -71,7 +82,9 @@ export interface OpenCodeBridgeCommandClientOptions {
   diagnosticIdFactory?: () => string;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
-  envProvider?: () => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>;
+  envProvider?: (
+    command: OpenCodeBridgeCommandName
+  ) => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>;
   keepInputFile?: boolean;
   /** Test seam; defaults to the real Windows profile junction repair. */
   ensureWindowsNodeModulesJunction?: (profileId: string, errorMessage: string) => boolean;
@@ -168,6 +181,7 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
         stderr,
         exitCode: typeof failure.code === 'number' ? failure.code : null,
         timedOut,
+        terminationReason: classifyOpenCodeBridgeTermination(failure.processTerminationError),
         outcomeUnknownReason: failure.processTerminationError
           ? 'termination_failed'
           : outputLimitExceeded
@@ -197,7 +211,9 @@ export class OpenCodeBridgeCommandClient {
   private readonly diagnosticIdFactory: () => string;
   private readonly clock: () => Date;
   private readonly env: NodeJS.ProcessEnv;
-  private readonly envProvider: (() => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>) | null;
+  private readonly envProvider: OpenCodeBridgeCommandClientOptions['envProvider'] | null;
+  private lastSuccessfulOwnedChildEnv: NodeJS.ProcessEnv | null = null;
+  private shutdownCleanupEnv: NodeJS.ProcessEnv | null = null;
   private readonly keepInputFile: boolean;
   private readonly ensureWindowsNodeModulesJunction: (
     profileId: string,
@@ -218,6 +234,15 @@ export class OpenCodeBridgeCommandClient {
     this.keepInputFile = options.keepInputFile ?? false;
     this.ensureWindowsNodeModulesJunction =
       options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
+  }
+
+  /** Prepare one registry-only shutdown child while the current app binding is still open. */
+  prepareShutdownCleanup(currentBoundChildEnv: Readonly<Record<string, string>>): void {
+    this.shutdownCleanupEnv = null;
+    this.shutdownCleanupEnv = prepareOpenCodeShutdownCleanupEnvironment(
+      this.lastSuccessfulOwnedChildEnv,
+      currentBoundChildEnv
+    );
   }
 
   /** Read only the original request's retained response; never launch another CLI. */
@@ -378,7 +403,16 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
-        const env = await this.resolveEnv();
+        const prepared =
+          command === 'opencode.cleanupHosts' &&
+          body &&
+          typeof body === 'object' &&
+          'reason' in body &&
+          body.reason === 'shutdown'
+            ? this.shutdownCleanupEnv
+            : null;
+        if (prepared) this.shutdownCleanupEnv = null;
+        const env = prepared ? { ...prepared } : await this.resolveEnv(command);
         if (options.canDispatch?.() === false) {
           retainStartupEvidence = false;
           return this.contractFailure(
@@ -397,8 +431,9 @@ export class OpenCodeBridgeCommandClient {
           timeoutMs: options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
-          env,
+          env: { ...env },
         });
+        await appendRegistryLockDiagnostics(processResult.stderr, env, this.diagnostics, envelope);
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
         let observedOutputWriteError: string | null = null;
         if (retainStartupEvidence && bridgeOutput.content) {
@@ -442,12 +477,7 @@ export class OpenCodeBridgeCommandClient {
           }
         }
         if (processResult.timedOut) {
-          const unknownOutcomeMessage =
-            processResult.outcomeUnknownReason === 'output_limit'
-              ? 'OpenCode bridge output exceeded its safety limit; process outcome is unknown'
-              : processResult.outcomeUnknownReason === 'termination_failed'
-                ? 'OpenCode bridge process could not be terminated; process outcome is unknown'
-                : 'OpenCode bridge transport watchdog timed out';
+          const unknownOutcomeMessage = openCodeBridgeWatchdogMessage(processResult);
           return this.contractFailure(
             envelope,
             'transport_watchdog_timeout',
@@ -456,11 +486,7 @@ export class OpenCodeBridgeCommandClient {
             {
               stderr: redactBridgeDiagnosticText(processResult.stderr),
               attempts: attempt,
-              runtimeTimeoutMs: options.timeoutMs,
-              transportWatchdogGraceMs: OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
-              transportWatchdogTimeoutMs:
-                options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
-              outcomeUnknownReason: processResult.outcomeUnknownReason ?? 'transport_timeout',
+              ...openCodeBridgeWatchdogDetails(processResult, options.timeoutMs),
               ...processDetails,
             }
           );
@@ -511,6 +537,8 @@ export class OpenCodeBridgeCommandClient {
         ) {
           retainStartupEvidence = false;
         }
+        if (parsed.value.ok && this.envProvider && !prepared && hasOpenCodeOwnedChildBinding(env))
+          this.lastSuccessfulOwnedChildEnv = env;
         return parsed.value;
       }
 
@@ -601,13 +629,13 @@ export class OpenCodeBridgeCommandClient {
     }
   }
 
-  private async resolveEnv(): Promise<NodeJS.ProcessEnv> {
+  private async resolveEnv(command: OpenCodeBridgeCommandName): Promise<NodeJS.ProcessEnv> {
     if (!this.envProvider) {
       return this.env;
     }
     // Host publication is authoritative, including removal. A cached URL can name
     // a retired server and must never override the current transport selection.
-    return applyOpenCodeAutoUpdatePolicy(await this.envProvider());
+    return applyOpenCodeAutoUpdatePolicy(await this.envProvider(command));
   }
 
   private async writeInputFile<TBody>(
@@ -686,10 +714,10 @@ function collectBridgeFailureText(failure: OpenCodeBridgeFailure): string {
 }
 
 export function redactBridgeDiagnosticText(value: string): string {
-  const capped = value.length > 4_000 ? `${value.slice(0, 4_000)}...[truncated]` : value;
-  return capped
-    .replace(/(authorization:\s*bearer\s+)[^\s]+/gi, '$1[redacted]')
-    .replace(/((?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s"'`]+/gi, '$1[redacted]');
+  const redacted = redactDiagnosticAssignments(value, (key) =>
+    /api[_-]?key|token|password|secret|authorization|credential|cookie/i.test(key)
+  );
+  return redacted.length > 4_000 ? `${redacted.slice(0, 4_000)}...[truncated]` : redacted;
 }
 
 function shouldRetryEmptyReadOnlyStdout(

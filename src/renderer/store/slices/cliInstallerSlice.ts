@@ -1,7 +1,6 @@
 /**
  * CLI Installer slice — manages CLI installation status and install/update progress.
  */
-
 import {
   type AnalyticsErrorClass,
   type AnalyticsProviderCheckReason,
@@ -34,6 +33,7 @@ import type {
   CliProviderId,
   CliProviderStatus,
   CliProviderStatusCheckErrorCode,
+  OpenCodeRuntimeInstallOptions,
   OpenCodeRuntimeStatus,
 } from '@shared/types';
 import type { StateCreator } from 'zustand';
@@ -369,8 +369,7 @@ function areProviderBackendsEqual(
  * IPC path (`CliInstallerService.cloneCliInstallationStatus()` then
  * `publishStatusSnapshot()`) hands the renderer freshly-deserialised
  * provider objects on every tick — reference equality on those nested
- * fields would never hold even when the snapshot is structurally
- * identical.
+ * fields would never hold even when the snapshot is structurally identical.
  */
 function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatus): boolean {
   if (a === b) return true;
@@ -380,6 +379,7 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.supported === b.supported &&
     a.authenticated === b.authenticated &&
     a.authMethod === b.authMethod &&
+    a.effectiveDefaultModel === b.effectiveDefaultModel &&
     a.verificationState === b.verificationState &&
     (a.statusCheckOutcome ?? null) === (b.statusCheckOutcome ?? null) &&
     (a.statusCheckErrorCode ?? null) === (b.statusCheckErrorCode ?? null) &&
@@ -868,7 +868,7 @@ export interface CliInstallerSlice {
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
-  installOpenCodeRuntime: () => Promise<void>;
+  installOpenCodeRuntime: (options?: OpenCodeRuntimeInstallOptions) => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
   fetchCodexRuntimeStatus: () => Promise<void>;
   installCodexRuntime: () => Promise<void>;
@@ -1104,7 +1104,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         };
       });
 
-      scheduleCodexCatalogLoadingRefreshes(get);
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
 
       if (!metadata.installed) {
         if (epoch === cliStatusEpoch) {
@@ -1407,7 +1407,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             cliProviderStatusLoading: nextLoading,
           };
         });
-        scheduleCodexCatalogLoadingRefresh(get, providerId);
+        if (requestIsCurrent) scheduleCodexCatalogLoadingRefresh(get, providerId);
         const settledProviderStatus = projectPath
           ? get().cliProviderStatusByScope[scopeKey]
           : providerStatus;
@@ -1565,7 +1565,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
   invalidateCliStatus: async () => {
     clearCodexCatalogLoadingRefresh('codex');
-    cliStatusEpoch += 1;
+    const epoch = ++cliStatusEpoch;
     cliProviderStatusGeneration += 1;
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
@@ -1577,8 +1577,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       cliProviderStatusLoading: {},
     }));
     await api.cliInstaller?.invalidateStatus();
+    if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
   },
-
   installCli: () => {
     set({
       cliInstallerState: 'checking',
@@ -1625,7 +1625,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     return openCodeRuntimeStatusInFlight;
   },
 
-  installOpenCodeRuntime: async () => {
+  installOpenCodeRuntime: async (options) => {
     if (!api.openCodeRuntime) return;
     const installStartedAtMs = Date.now();
     const previousStatus = get().openCodeRuntimeStatus;
@@ -1646,7 +1646,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       },
     });
     try {
-      const status = await api.openCodeRuntime.install();
+      const status = await api.openCodeRuntime.install(options);
       const installSucceeded = status.installed && status.state === 'ready';
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
       recordRuntimeInstallEnd({

@@ -1,3 +1,4 @@
+import { isOpenCodeHumanGroupNonResponse } from './OpenCodeHumanGroupReply';
 import {
   describePrimaryLaneBootstrapSelfHeal,
   OPENCODE_PRIMARY_LANE_BOOTSTRAP_MISSING_REASON,
@@ -58,6 +59,7 @@ export interface OpenCodePromptDeliveryFollowUpDependencies {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void;
   nowIso?: () => string;
   nowMs?: () => number;
@@ -74,6 +76,9 @@ export function getOpenCodeDeliveryNextDelayMs(input: {
     hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord)
   ) {
     return OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS;
+  }
+  if (input.retry && input.ledgerRecord && isOpenCodeHumanGroupNonResponse(input.ledgerRecord)) {
+    return OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS;
   }
   // A retry after an observed answer is a re-prompt, not a first delivery: give
   // the turn that produced the answer room to finish before asking again.
@@ -176,6 +181,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
       teamName: string;
       memberName: string;
       reason: string;
+      isCurrent?: () => boolean;
       selfHealExhausted?: boolean;
       selfHealDiagnostic?: string;
     },
@@ -211,6 +217,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
       primaryLaneBootstrapMissing: true,
     });
     this.deps.scheduleWatchdog({
+      ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
       teamName: input.teamName,
       memberName: input.memberName,
       messageId: input.ledgerRecord.inboxMessageId,
@@ -226,6 +233,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
     memberName: string;
     retry: boolean;
     reason: string;
+    isCurrent?: () => boolean;
     /** Set once `decidePrimaryLaneBootstrapSelfHeal` has returned `give_up`. */
     selfHealExhausted?: boolean;
     /** The `give_up` clause, so the terminal row says why the ladder ended. */
@@ -281,6 +289,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
         maxSessionRefreshAttempts,
       });
       this.deps.scheduleWatchdog({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         teamName: input.teamName,
         memberName: input.memberName,
         messageId: input.ledgerRecord.inboxMessageId,
@@ -331,6 +340,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
         maxSessionRefreshAttempts,
       });
       this.deps.scheduleWatchdog({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         teamName: input.teamName,
         memberName: input.memberName,
         messageId: input.ledgerRecord.inboxMessageId,
@@ -402,6 +412,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
         pendingAgeMs,
       });
       this.deps.scheduleWatchdog({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         teamName: input.teamName,
         memberName: input.memberName,
         messageId: input.ledgerRecord.inboxMessageId,
@@ -431,6 +442,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
       { retry: input.retry, reason: input.reason }
     );
     this.deps.scheduleWatchdog({
+      ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
       teamName: input.teamName,
       memberName: input.memberName,
       messageId: input.ledgerRecord.inboxMessageId,
@@ -450,6 +462,7 @@ export interface UndeliverableOpenCodePrimaryLaneBootstrapDelivery {
 
 /** Structural view of the inbox row the relay is trying to deliver. */
 export interface UndeliverableOpenCodePrimaryLaneBootstrapMessage {
+  isCurrent?: () => boolean;
   messageId?: string;
   text: string;
   inboxTimestamp?: string;
@@ -542,6 +555,7 @@ export async function settleUndeliverableOpenCodePrimaryLaneBootstrap(
     now,
   });
   const settled = await deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+    ...(message.isCurrent ? { isCurrent: message.isCurrent } : {}),
     ledger,
     ledgerRecord,
     teamName: input.teamName,

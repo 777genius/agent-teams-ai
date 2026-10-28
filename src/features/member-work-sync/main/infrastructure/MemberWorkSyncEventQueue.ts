@@ -36,6 +36,7 @@ export interface MemberWorkSyncQueueDiagnostics {
   reconciled: number;
   dropped: number;
   failed: number;
+  quiesced: number;
   nextRunAt?: string;
   oldestQueuedAgeMs?: number;
   oldestRunningAgeMs?: number;
@@ -161,6 +162,7 @@ export class MemberWorkSyncEventQueue {
     reconciled: 0,
     dropped: 0,
     failed: 0,
+    quiesced: 0,
   };
 
   constructor(private readonly deps: MemberWorkSyncEventQueueDeps) {
@@ -484,6 +486,16 @@ export class MemberWorkSyncEventQueue {
       .catch((error: unknown) => {
         failed = true;
         failure = error;
+        if (error instanceof MemberWorkSyncTeamQuiescedError) {
+          // A quiesced team parks its queue work and is retried without consuming the
+          // retry budget, so this is an expected state rather than a reconcile failure.
+          this.counters.quiesced += 1;
+          this.deps.logger?.debug('member work sync queue reconcile parked: team quiesced', {
+            teamName: item.teamName,
+            memberName: item.memberName,
+          });
+          return;
+        }
         this.counters.failed += 1;
         this.deps.logger?.warn('member work sync queue reconcile failed', {
           teamName: item.teamName,

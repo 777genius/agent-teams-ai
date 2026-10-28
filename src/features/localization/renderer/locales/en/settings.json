@@ -12,6 +12,10 @@
     "notifications": {
       "description": "Control when and how you get notified about agent activity, task completions, and errors.",
       "label": "Notifications"
+    },
+    "gatewayProviders": {
+      "description": "Manage gateway endpoints for per-teammate model access.",
+      "label": "Gateway providers"
     }
   },
   "view": {
@@ -839,9 +843,9 @@
         "noCredentials": "Base URL must not include credentials"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint disabled. Saved token was kept.",
         "endpointSaved": "Endpoint saved",
-        "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured."
+        "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured.",
+        "notActiveUntilSaved": "Not active yet. Save the endpoint to switch; until then launches keep the previous connection method."
       }
     },
     "connection": {
@@ -942,10 +946,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "configured",
-      "enabled": "Enabled",
       "notConfigured": "Not configured",
       "notSet": "not set",
-      "off": "Off",
       "unknown": "Unknown"
     },
     "title": "Provider Settings",
@@ -961,8 +963,6 @@
       "apiKeySavedRefreshFailed": "API key saved, but failed to refresh provider status.",
       "connectionUpdatedRefreshFailed": "Connection updated, but failed to refresh provider status.",
       "deleteApiKey": "Failed to delete API key",
-      "disableEndpoint": "Failed to disable endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint disabled, but failed to refresh provider status.",
       "endpointSavedRefreshFailed": "Endpoint saved, but failed to refresh provider status.",
       "refreshCodexAccount": "Failed to refresh Codex account",
       "saveApiKey": "Failed to save API key",
@@ -1102,5 +1102,41 @@
   },
   "cliStatus": {
     "versionUpgrade": "v{{current}} -> v{{latest}}"
+  },
+  "gatewayProviders": {
+    "title": "Gateway providers",
+    "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+    "addProfile": "Add profile",
+    "empty": "No gateway profiles yet.",
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "save": "Save"
+    },
+    "badges": {
+      "privateNetwork": "Private network allowed"
+    },
+    "boundTeammates": "Bound teammates: {{total}}",
+    "dialog": {
+      "createTitle": "Add gateway profile",
+      "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+      "editTitle": "Edit gateway profile"
+    },
+    "errors": {
+      "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+      "fieldsRequired": "Display name and gateway URL are required."
+    },
+    "fields": {
+      "allowPrivateNetwork": "Allow private network address",
+      "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+      "baseUrl": "Gateway URL",
+      "baseUrlHint": "Gateway root without a trailing /v1.",
+      "displayName": "Display name"
+    },
+    "hints": {
+      "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+      "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+    }
   }
 }

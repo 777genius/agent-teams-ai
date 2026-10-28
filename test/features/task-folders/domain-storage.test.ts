@@ -6,6 +6,7 @@ import {
   applyCommand,
   emptySnapshot,
   parentOf,
+  seededSnapshot,
   validateSnapshot,
 } from '../../../src/features/task-folders/core/domain/folders';
 import {
@@ -92,7 +93,10 @@ describe('folder invariants and durable commands', () => {
       if (saves.length === 0) await gate;
       saves.push(s);
     });
-    const controller = new FolderController({ load: async () => ({ kind: 'empty' }), save });
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot: emptySnapshot() }),
+      save,
+    });
     await controller.load();
     const a = controller.execute({ type: 'create', id: 'a', name: 'A', parent: null });
     const b = controller.execute({ type: 'create', id: 'b', name: 'B', parent: 'a' });
@@ -115,7 +119,10 @@ describe('folder invariants and durable commands', () => {
       .fn(async () => undefined)
       .mockRejectedValueOnce(new Error('quota A'))
       .mockRejectedValueOnce(new Error('quota B'));
-    const controller = new FolderController({ load: async () => ({ kind: 'empty' }), save });
+    const controller = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot: emptySnapshot() }),
+      save,
+    });
     const a = controller.execute({ type: 'create', id: 'a', name: 'A', parent: null });
     const b = controller.execute({ type: 'create', id: 'b', name: 'B', parent: null });
     const c = controller.execute({ type: 'create', id: 'c', name: 'C', parent: null });
@@ -235,7 +242,7 @@ describe('folder invariants and durable commands', () => {
   it('executes a new valid manual command after an invalid same-operation predecessor retires a failure', async () => {
     const save = vi.fn(async () => undefined);
     const controller = new FolderController({
-      load: async () => ({ kind: 'empty' }),
+      load: async () => ({ kind: 'valid', snapshot: emptySnapshot() }),
       save,
     });
     await controller.execute({ type: 'create', id: 'original', parent: null, name: 'Original' });
@@ -404,5 +411,25 @@ describe('folder invariants and durable commands', () => {
     });
     expect(await repository.load()).toEqual({ kind: 'unavailable' });
     await expect(repository.save(fixture())).rejects.toThrow('denied');
+  });
+  it('seeds and persists the starter folder when nothing is stored yet', async () => {
+    const save = vi.fn(async () => undefined);
+    const controller = new FolderController({ load: async () => ({ kind: 'empty' }), save });
+    await controller.load();
+    expect(controller.getSnapshot().status).toBe('ready');
+    expect(controller.getSnapshot().snapshot).toEqual(seededSnapshot());
+    expect(save).toHaveBeenCalledWith(seededSnapshot());
+  });
+  it('keeps the seeded starter folder ready in memory even when its first save fails', async () => {
+    const controller = new FolderController({
+      load: async () => ({ kind: 'empty' }),
+      save: vi.fn(async () => {
+        throw new Error('quota');
+      }),
+    });
+    await controller.load();
+    expect(controller.getSnapshot().status).toBe('ready');
+    expect(controller.getSnapshot().snapshot).toEqual(seededSnapshot());
+    expect(controller.getSnapshot().error).toBeNull();
   });
 });

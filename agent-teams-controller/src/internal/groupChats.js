@@ -1,7 +1,8 @@
 const desktopBinding = require('./desktopControlBinding.js');
 
 // Group persistence and delivery belong to the bound desktop main process.
-async function request(context, action, flags = {}, timeoutMs = 30000) {
+// Runtime admission may take up to 120 seconds; retain time for persistence/fanout.
+async function request(context, action, flags = {}, timeoutMs = 135000) {
   const urls = desktopBinding.boundControlBaseUrls(context, flags);
   if (!urls) throw new Error('Group chats require the app-bound team control API.');
   const from = typeof flags.from === 'string' ? flags.from.trim() : '';

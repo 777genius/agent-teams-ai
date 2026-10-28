@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const bindingPath = require.resolve('../src/internal/desktopControlBinding.js');
@@ -11,6 +11,7 @@ const previousToken = process.env.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN;
 const previousRoot = process.env.AGENT_TEAMS_MCP_CLAUDE_DIR;
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const [key, value] of Object.entries({
     AGENT_TEAMS_BOUND_CONTROL_URL: previousUrl,
     AGENT_TEAMS_BOUND_CONTEXT_JSON: previousContext,
@@ -26,6 +27,7 @@ afterEach(() => {
 
 describe('app-bound group chat transport', () => {
   it('refreshes the catalog, carries app identity, and preserves archived admission errors', async () => {
+    const deadline = vi.spyOn(AbortSignal, 'timeout');
     const seen: Array<{
       path: string;
       context: string;
@@ -112,6 +114,8 @@ describe('app-bound group chat transport', () => {
           ({ authorization }) => authorization === 'Bearer sandbox-control-token-0123456789abcdef'
         )
       ).toBe(true);
+      // The client must retain the desktop's full 120-second admission budget.
+      expect(deadline.mock.calls.slice(0, 3).map(([ms]) => ms)).toEqual([135000, 135000, 135000]);
       expect(seen[0]).toMatchObject({
         path: '/api/teams/sandbox/group-chats/list',
         context: JSON.stringify(appContext),

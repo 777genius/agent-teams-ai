@@ -1,10 +1,13 @@
 import type { AnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
+import type { OpenCodeRetainedSecondaryDelivery } from './OpenCodeRetainedSecondaryOwnership';
+import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
 import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCandidates';
 import type { LeadActivityState } from './TeamProvisioningLeadActivity';
 import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor';
 import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type { TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import type { SecondaryStopProgressCustody } from './TeamProvisioningSecondaryStopProgress';
 import type {
   WorkspaceTrustDiagnosticsManifest,
   WorkspaceTrustExecutionResult,
@@ -51,9 +54,11 @@ export interface PendingMemberRestartContext {
 
 export interface ProvisioningRun {
   runId: string;
+  retainedSecondaryDelivery?: OpenCodeRetainedSecondaryDelivery;
   teamName: string;
   startedAt: string;
   progress: TeamProvisioningProgress;
+  secondaryStopProgressCustody?: SecondaryStopProgressCustody;
   stdoutBuffer: string;
   stderrBuffer: string;
   /** Rolling buffer of CLI log lines (oldest -> newest). */
@@ -140,6 +145,8 @@ export interface ProvisioningRun {
   memberMcpConfigPaths: string[];
   /** Path to the deterministic bootstrap spec file for later cleanup. */
   bootstrapSpecPath: string | null;
+  /** Original one-shot launch intent retained only until provisioning/auth retry terminates. */
+  bootstrapSpecSnapshot?: RuntimeBootstrapSpec | null;
   /** Path to the deferred first-user-task file consumed by runtime after bootstrap. */
   bootstrapUserPromptPath: string | null;
   isLaunch: boolean;

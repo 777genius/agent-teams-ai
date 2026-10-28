@@ -14,6 +14,7 @@ import {
   type RuntimeTurnSettledHookSettingsProvider,
 } from './TeamProvisioningRuntimeTurnSettledPlanning';
 
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
 
 export interface TeamProvisioningEnvRuntimePortsDeps {
@@ -21,6 +22,7 @@ export interface TeamProvisioningEnvRuntimePortsDeps {
   getControlApiBaseUrlResolver(): (() => Promise<string | null>) | null;
   getRuntimeTurnSettledEnvironmentProvider(): RuntimeTurnSettledEnvironmentProvider | null;
   getRuntimeTurnSettledHookSettingsProvider(): RuntimeTurnSettledHookSettingsProvider | null;
+  getMemberGatewayRuntimeSeams?(): MemberGatewayRuntimeSeams | null;
   logger: TeamProvisioningEnvBuilderPorts['logger'];
 }
 
@@ -106,6 +108,7 @@ export function createTeamProvisioningEnvRuntimePorts(
                 logger: deps.logger,
               }
             ),
+          getMemberGatewayRuntimeSeams: () => deps.getMemberGatewayRuntimeSeams?.() ?? null,
           logger: deps.logger,
         },
       }),

@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { STOP_ESCALATION_TIMEOUT_MS } from '../../../../src/main/services/team/lifecycle/teamForceStopFlow';
+import { OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeCommandLedgerError } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
   type OpenCodeReadinessBridgeOptions,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import {
+  OPEN_CODE_SDK_STOP_CAP_MS,
+  resolveOpenCodeLaunchTimeoutMs,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 import type {
@@ -24,6 +30,67 @@ type StateChangingExecuteMock = NonNullable<
   ReturnType<typeof vi.fn>;
 
 describe('OpenCodeReadinessBridge', () => {
+  it.each(['exact', 'mismatched', 'missing', 'wrong-child'] as const)(
+    'observes only the exact corrective attempt (%s)',
+    async (match) => {
+      const executor = fakeSequenceExecutor([
+        bridgeCommandSuccess({
+          command: 'opencode.commandStatus',
+          requestId: 'status',
+          data: {
+            status: 'prompt_accepted',
+            safeToRetry: false,
+            accepted: true,
+            ...(match === 'missing'
+              ? {}
+              : { deliveryAttemptId: match === 'mismatched' ? 'old-attempt' : 'repair-2' }),
+            runtimePromptMessageId: 'new-prompt',
+            diagnostics: [],
+          },
+        }),
+        bridgeCommandSuccess({
+          command: 'opencode.observeMessageDelivery',
+          requestId: 'observe',
+          data: {
+            observed: true,
+            memberName: 'bob',
+            diagnostics: [],
+            responseObservation: {
+              state: 'pending',
+              deliveredUserMessageId: match === 'wrong-child' ? 'other-prompt' : 'new-prompt',
+              assistantMessageId: null,
+              toolCallNames: [],
+              visibleMessageToolCallId: null,
+              visibleReplyMessageId: null,
+              visibleReplyCorrelation: null,
+              latestAssistantPreview: null,
+              reason: null,
+            },
+          },
+        }),
+      ]);
+      const result = await new OpenCodeReadinessBridge(executor).observeOpenCodeTeamMessageDelivery(
+        {
+          teamId: 'team-a',
+          teamName: 'team-a',
+          laneId: 'lane',
+          projectPath: '/repo',
+          memberName: 'bob',
+          messageId: 'inbound',
+          deliveryAttemptId: 'repair-2',
+          runtimePromptMessageId: 'old-prompt',
+        }
+      );
+      expect(result.observed).toBe(match === 'exact');
+      expect(executor.execute).toHaveBeenCalledTimes(
+        match === 'exact' || match === 'wrong-child' ? 2 : 1
+      );
+      if (match === 'exact')
+        expect(executor.execute.mock.calls[1][1]).toMatchObject({
+          runtimePromptMessageId: 'new-prompt',
+        });
+    }
+  );
   it('executes the read-only opencode.readiness command and returns readiness data', async () => {
     const readinessResult = readiness({ state: 'ready', launchAllowed: true });
     const executor = fakeExecutor(bridgeSuccess(readinessResult));
@@ -670,6 +737,28 @@ describe('OpenCodeReadinessBridge', () => {
         timeoutMs: 5_000,
       },
     ]);
+  });
+
+  it('preserves an explicit runtime pre-submission failure without treating it as unknown acceptance', async () => {
+    const failed = bridgeFailure('timeout', 'host acquisition timed out', []);
+    if (failed.ok) throw new Error('Expected failure');
+    failed.command = 'opencode.sendMessage';
+    failed.error.details = { phase: 'host_start', promptSubmission: 'not_started' };
+    const executor = fakeExecutor(failed);
+    const bridge = new OpenCodeReadinessBridge(executor);
+    await expect(
+      bridge.sendOpenCodeTeamMessage({
+        teamId: 'team-a',
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:bob',
+        projectPath: '/repo',
+        memberName: 'bob',
+        text: 'hello',
+        messageId: 'message-1',
+        deliveryAttemptId: 'ledger-1:1:payload',
+      })
+    ).resolves.toMatchObject({ accepted: false, promptNotSubmitted: true });
+    expect(executor.execute).toHaveBeenCalledTimes(1);
   });
 
   it('recovers accepted OpenCode sendMessage after empty bridge output through commandStatus', async () => {
@@ -1410,6 +1499,42 @@ describe('OpenCodeReadinessBridge', () => {
     );
     expect(executor.execute).not.toHaveBeenCalled();
   });
+
+  it('keeps the stop command budget at the SDK Stop envelope and inside the escalation race', async () => {
+    const executor = fakeExecutor(
+      bridgeCommandFailure({
+        command: 'opencode.stopTeam',
+        requestId: 'stop-req-1',
+        kind: 'provider_error',
+        message: 'OpenCode stop failed',
+      })
+    );
+    const bridge = new OpenCodeReadinessBridge(executor);
+
+    await bridge.stopOpenCodeTeam({
+      runId: 'run-1',
+      laneId: 'primary',
+      teamId: 'team-a',
+      teamName: 'team-a',
+      projectPath: '/repo',
+      reason: 'TEST-stop-budget',
+    });
+
+    expect(executor.execute).toHaveBeenCalledOnce();
+    const call = (executor.execute as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      unknown,
+      { timeoutMs: number },
+    ];
+    expect(call[0]).toBe('opencode.stopTeam');
+    // Below the SDK Stop cap a healthy Windows stop is clipped again.
+    expect(call[2].timeoutMs).toBeGreaterThanOrEqual(OPEN_CODE_SDK_STOP_CAP_MS);
+    // One attempt settles within its budget plus one watchdog grace; the race
+    // keeps headroom above that for the per-team lock and the file phases.
+    expect(call[2].timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS).toBeLessThan(
+      STOP_ESCALATION_TIMEOUT_MS
+    );
+  });
 });
 
 function fakeExecutor(
@@ -1573,3 +1698,70 @@ function readiness(
     ...overrides,
   };
 }
+
+describe('measured V2 launch timeout policy', () => {
+  const input = (version: string | null | undefined, selectedModel = 'openai/gpt-5.5') => ({
+    selectedModel,
+    members: [],
+    ...(version === undefined
+      ? {}
+      : {
+          executionProof: {
+            schemaVersion: 1 as const,
+            providerId: 'opencode' as const,
+            modelId: selectedModel,
+            projectPath: '/TEST-project',
+            profileRootKey: 'TEST-profile',
+            projectBehaviorFingerprint: 'TEST-behavior',
+            managedConfigFingerprint: 'TEST-config',
+            managedAuthFingerprint: null,
+            binaryPath: '/TEST-opencode',
+            binaryFingerprint: 'TEST-binary',
+            opencodeVersion: version,
+            capabilitySnapshotId: null,
+            credentialMode: 'none' as const,
+            reusable: true,
+            verifiedAt: '2026-10-16T00:00:00Z',
+            expiresAt: '2026-10-16T00:05:00Z',
+            proofHash: 'TEST-proof',
+          },
+        }),
+  });
+  it('uses 300s for measured V2 on every platform and preserves explicit overrides', () => {
+    for (const version of ['2.0.0', '2.0.21']) {
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(300_000);
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), 15_000, 'win32')).toBe(15_000);
+      for (const platform of ['darwin', 'linux'] as const)
+        expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, platform)).toBe(300_000);
+    }
+    for (const version of ['1.19.0', undefined, null])
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(120_000);
+  });
+  it('preserves larger local and serial allowances independently of the native baseline', () => {
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(input('2.0.21', 'ollama/model'), undefined, 'win32')
+    ).toBe(420_000);
+    const serial = {
+      ...input('2.0.21', 'cursor-acp/model'),
+      members: Array.from({ length: 2 }, (_, index) => ({
+        name: `member-${index}`,
+        role: 'worker',
+        prompt: 'TEST',
+      })),
+    };
+    expect(resolveOpenCodeLaunchTimeoutMs(serial, undefined, 'win32')).toBe(600_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { ...serial, selectedModel: 'kiro/model' },
+        undefined,
+        'darwin'
+      )
+    ).toBe(300_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(input(undefined, 'cursor-acp/model'), undefined, 'win32')
+    ).toBe(300_000);
+    expect(resolveOpenCodeLaunchTimeoutMs(input(undefined, 'kiro/model'), undefined, 'linux')).toBe(
+      120_000
+    );
+  });
+});

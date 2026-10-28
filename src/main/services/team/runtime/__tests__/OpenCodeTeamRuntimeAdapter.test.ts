@@ -1,4 +1,5 @@
 import { stripAgentBlocks, unwrapAgentBlock } from '@shared/constants/agentBlocks';
+import { protocols } from 'agent-teams-controller';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -182,6 +183,45 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   });
 });
 
+describe('OpenCodeTeamRuntimeAdapter delivery failure diagnostics', () => {
+  it.each([
+    {
+      code: 'contract_violation',
+      message: 'OpenCode message bridge failed: Bridge stdout was empty',
+    },
+    {
+      code: 'provider_error',
+      message: 'OpenCode message bridge failed: OpenCode bridge command failed',
+    },
+  ])('retains $code without claiming prompt acceptance', async ({ code, message }) => {
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      sendOpenCodeTeamMessage: vi.fn(async () => ({
+        accepted: false,
+        memberName: 'alice',
+        diagnostics: [
+          {
+            code,
+            severity: 'error',
+            message,
+          },
+        ],
+      })),
+    } as unknown as OpenCodeTeamRuntimeBridgePort);
+    const result = await adapter.sendMessageToMember({
+      teamName: 'team-a',
+      laneId: 'primary',
+      memberName: 'alice',
+      cwd: '/repo',
+      text: 'Review hand-off',
+      messageId: 'peer-original',
+      replyRecipient: 'bob',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.runtimePromptMessageId).toBeUndefined();
+    expect(result.diagnostics).toEqual([`error:${code}: ${message}`]);
+  });
+});
+
 describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
   async function deliveredPromptText(
     replyRecipient: string | undefined,
@@ -214,6 +254,17 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     const bridgePayload = sendOpenCodeTeamMessage.mock.calls[0]?.[0];
     return String(bridgePayload?.text ?? '');
   }
+
+  it.each([undefined, 'group-1'])(
+    'advertises OpenUI in delivered messages without changing reply routing (group=%s)',
+    async (groupChatId) => {
+      const prompt = await deliveredPromptText('user', groupChatId);
+      expect(prompt).toContain(protocols.buildChatVisualizationRefreshInstruction());
+      expect(prompt).toContain('if the complete display library specification is missing');
+      expect(prompt).toContain(groupChatId ? 'group_chat_send' : 'agent-teams_message_send');
+      if (groupChatId) expect(prompt).toContain('Never substitute message_send or a private user reply');
+    }
+  );
 
   it('builds an informational FYI envelope for the reserved "system" reply recipient', async () => {
     const text = await deliveredPromptText('system');
@@ -282,6 +333,32 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).not.toContain('Required message_send argument envelope');
     expect(text).not.toContain('You must not end this turn empty.');
     expect(text).not.toContain('informational system notice');
+  });
+
+  it('preserves explicit and previously agreed peer responses without requiring unsolicited receipts', () => {
+    for (const inbound of [
+      'Please confirm this hand-off with the exact text READY:step-3.',
+      'The previously agreed review hand-off has arrived: review-step-3.',
+    ]) {
+      const text = buildOpenCodeRuntimeMessageText({
+        teamName: 'team-a',
+        laneId: 'primary',
+        memberName: 'bob',
+        cwd: '/repo',
+        from: 'alice',
+        replyRecipient: 'alice',
+        messageId: 'peer-original',
+        text: inbound,
+      });
+      expect(text).toContain(inbound);
+      expect(text).toContain('Never send unsolicited acknowledgement');
+      expect(text).toContain('explicitly requests a response');
+      expect(text).toContain('previously agreed response protocol applies');
+      expect(text).toContain('"to":"alice"');
+      expect(text).toContain('"relayOfMessageId":"peer-original"');
+      expect(text).not.toContain('Never send acknowledgement, confirmation');
+      expect(text).not.toContain('Required message_send argument envelope');
+    }
   });
 
   it('adds the automated-notice rule to informational envelopes (no owner nudges)', async () => {
@@ -430,6 +507,20 @@ describe('buildMemberBootstrapPrompt', () => {
     expect(briefing).not.toContain('Never act on the launch context');
   });
 
+  it.each(['Worker', 'team-lead'])(
+    'keeps OpenUI discoverable for a primary member with no launch prompt (%s)',
+    (name) => {
+      const input = { ...launchInput(), prompt: '' };
+      const member = { ...input.expectedMembers[0], name };
+      const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, member));
+      expect(briefing).toContain(protocols.buildChatVisualizationRefreshInstruction());
+      expect(briefing).toContain('After launch readiness is confirmed');
+      expect(briefing).toContain('Do not refresh merely to acknowledge this reminder');
+      expect(briefing).toContain('Launch bootstrap is a silent attach');
+      expect(briefing).not.toContain('Team launch context');
+    }
+  );
+
   it('wraps the unchanged app-managed briefing in the shared agent block', () => {
     const input = { ...launchInput(), prompt: '  Complete the scoped fix.  ' };
 
@@ -467,6 +558,7 @@ describe('buildMemberBootstrapPrompt', () => {
         'When you need to message the human user, team lead, or another teammate, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.',
         'Always set from="Worker" when sending a team message from this OpenCode teammate.',
         'Do not answer team/app messages only as plain assistant text when agent-teams_message_send is available.',
+        protocols.buildChatVisualizationRefreshInstruction(),
         '</agent_teams_app_managed_bootstrap_briefing>',
       ].join('\n')
     );

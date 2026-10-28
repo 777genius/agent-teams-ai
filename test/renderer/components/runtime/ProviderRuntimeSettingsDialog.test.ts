@@ -544,6 +544,28 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function getConnectionMethodCards(host: HTMLElement): HTMLButtonElement[] {
+  return Array.from(
+    host.querySelectorAll<HTMLButtonElement>('[data-testid^="connection-method-"]')
+  );
+}
+
+function expectSingleCheckedCard(host: HTMLElement, expectedTestId: string): void {
+  const checked = getConnectionMethodCards(host).filter(
+    (card) => card.getAttribute('aria-checked') === 'true'
+  );
+  expect(checked).toHaveLength(1);
+  expect(checked[0]?.getAttribute('data-testid')).toBe(expectedTestId);
+}
+
+function clickConnectionMethodCard(host: HTMLElement, testId: string): void {
+  const card = host.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
+  if (!card) {
+    throw new Error(`Connection method card "${testId}" not found`);
+  }
+  card.click();
+}
+
 describe('ProviderRuntimeSettingsDialog', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -655,6 +677,180 @@ describe('ProviderRuntimeSettingsDialog', () => {
     }
   });
 
+  it.each([
+    { runtimeState: 'unavailable', supported: true },
+    { runtimeState: 'unsupported', supported: false },
+  ])(
+    'allows clearing a saved Anthropic Fast default when the runtime is $runtimeState',
+    async ({ supported }) => {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+      storeState.appConfig.providerConnections.anthropic.fastModeDefault = true;
+      const provider: CliProviderStatus = {
+        ...createAnthropicProvider(),
+        runtimeCapabilities: {
+          fastMode: { supported, available: false, source: 'runtime' },
+        },
+      };
+
+      await act(async () => {
+        root.render(
+          React.createElement(ProviderRuntimeSettingsDialog, {
+            open: true,
+            onOpenChange: vi.fn(),
+            providers: [provider],
+            initialProviderId: 'anthropic',
+            onSelectBackend: vi.fn(),
+            onRefreshProvider,
+          })
+        );
+        await Promise.resolve();
+      });
+
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(findButtonByText(host, 'Default Off').disabled).toBe(false);
+      expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(true);
+      expect(findButtonByText(host, 'Prefer Fast').className).toContain('shadow-sm');
+
+      await act(async () => {
+        findButtonByText(host, 'Default Off').click();
+        await Promise.resolve();
+      });
+
+      expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
+        anthropic: { fastModeDefault: false },
+      });
+      expect(storeState.appConfig.providerConnections.anthropic.fastModeDefault).toBe(false);
+      expect(onRefreshProvider).toHaveBeenCalledExactlyOnceWith('anthropic', 'provider_change');
+      if (!supported) {
+        expect(host.textContent).not.toContain('Prefer Fast');
+      }
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  );
+
+  it('keeps Anthropic Fast default controls busy until the saved change finishes refreshing', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let finishRefresh!: () => void;
+    const refresh = new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    });
+    const onRefreshProvider = vi.fn(() => refresh);
+    storeState.appConfig.providerConnections.anthropic.fastModeDefault = true;
+    const provider: CliProviderStatus = {
+      ...createAnthropicProvider(),
+      runtimeCapabilities: {
+        fastMode: { supported: true, available: true, source: 'runtime' },
+      },
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [provider],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      findButtonByText(host, 'Default Off').click();
+      await Promise.resolve();
+    });
+
+    expect(findButtonByText(host, 'Default Off').disabled).toBe(true);
+    expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(true);
+    await act(async () => {
+      findButtonByText(host, 'Prefer Fast').click();
+      await Promise.resolve();
+    });
+    expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
+      anthropic: { fastModeDefault: false },
+    });
+
+    await act(async () => {
+      finishRefresh();
+      await refresh;
+    });
+    expect(findButtonByText(host, 'Default Off').disabled).toBe(false);
+    expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(false);
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps Anthropic Fast off through capability hydration until explicitly enabled', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider: CliProviderStatus = {
+      ...createAnthropicProvider(),
+      runtimeCapabilities: {
+        fastMode: { supported: false, available: false, source: 'runtime' },
+      },
+    };
+    const props = {
+      open: true,
+      onOpenChange: vi.fn(),
+      providers: [provider],
+      initialProviderId: 'anthropic' as const,
+      onSelectBackend: vi.fn(),
+      onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+    };
+
+    await act(async () => {
+      root.render(React.createElement(ProviderRuntimeSettingsDialog, props));
+      await Promise.resolve();
+    });
+    expect(host.textContent).not.toContain('Default Off');
+    expect(host.textContent).not.toContain('Prefer Fast');
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          ...props,
+          providers: [
+            {
+              ...provider,
+              runtimeCapabilities: {
+                fastMode: { supported: true, available: true, source: 'runtime' },
+              },
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(storeState.appConfig.providerConnections.anthropic.fastModeDefault).toBe(false);
+    expect(findButtonByText(host, 'Default Off').className).toContain('shadow-sm');
+    expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(false);
+    await act(async () => {
+      findButtonByText(host, 'Prefer Fast').click();
+      await Promise.resolve();
+    });
+    expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
+      anthropic: { fastModeDefault: true },
+    });
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('renders anthropic connection cards and can switch to API key mode', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -699,6 +895,62 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
   });
 
+  it.each([
+    {
+      mode: 'Auto',
+      authMode: 'auto' as const,
+      endpoint: null,
+      expectedCard: 'connection-method-auto',
+    },
+    {
+      mode: 'Anthropic subscription',
+      authMode: 'oauth' as const,
+      endpoint: null,
+      expectedCard: 'connection-method-oauth',
+    },
+    {
+      mode: 'API key',
+      authMode: 'api_key' as const,
+      endpoint: null,
+      expectedCard: 'connection-method-api_key',
+    },
+    {
+      mode: 'compatible endpoint',
+      authMode: 'api_key' as const,
+      endpoint: { enabled: true, baseUrl: 'http://localhost:1234' },
+      expectedCard: 'connection-method-compatible',
+    },
+  ])(
+    'checks exactly one connection method card for persisted $mode',
+    async ({ authMode, endpoint, expectedCard }) => {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      storeState.appConfig.providerConnections.anthropic.authMode = authMode;
+      if (endpoint) {
+        storeState.appConfig.providerConnections.anthropic.compatibleEndpoint = endpoint;
+      }
+
+      await act(async () => {
+        root.render(
+          React.createElement(ProviderRuntimeSettingsDialog, {
+            open: true,
+            onOpenChange: vi.fn(),
+            providers: [createAnthropicProvider({ configuredAuthMode: authMode })],
+            initialProviderId: 'anthropic',
+            onSelectBackend: vi.fn(),
+            onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+          })
+        );
+        await Promise.resolve();
+      });
+
+      expect(getConnectionMethodCards(host)).toHaveLength(4);
+      expectSingleCheckedCard(host, expectedCard);
+      expect(host.querySelector('#anthropic-compatible-base-url') !== null).toBe(endpoint !== null);
+    }
+  );
+
   it('keeps anthropic connection cards available when authoritative status omits connection metadata', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -737,6 +989,34 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
   });
 
+  it('shows the configured endpoint URL on the compatible card without connection metadata', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    storeState.appConfig.providerConnections.anthropic.compatibleEndpoint = {
+      enabled: true,
+      baseUrl: 'http://localhost:1234',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [{ ...createAnthropicProvider(), connection: null }],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(findButtonByText(host, 'Local / compatible endpoint').textContent).toContain(
+      'http://localhost:1234'
+    );
+  });
+
   it('disables a persisted compatible endpoint when selecting an auth card without connection metadata', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -758,6 +1038,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
+    expectSingleCheckedCard(host, 'connection-method-compatible');
     expect(findButtonByText(host, 'Anthropic subscription').textContent).not.toContain('Selected');
 
     await act(async () => {
@@ -904,7 +1185,10 @@ describe('ProviderRuntimeSettingsDialog', () => {
     const autoButton = findButtonByText(host, 'Auto');
     expect(autoButton.textContent).not.toContain('Local gateway');
     expect(autoButton.textContent).not.toContain('Selected');
-    expect(host.textContent).toContain('Local / compatible endpoint');
+    expectSingleCheckedCard(host, 'connection-method-compatible');
+    expect(findButtonByText(host, 'Local / compatible endpoint').textContent).toContain(
+      'http://localhost:1234'
+    );
 
     await act(async () => {
       autoButton.click();
@@ -920,6 +1204,194 @@ describe('ProviderRuntimeSettingsDialog', () => {
         },
       },
     });
+  });
+
+  it('switches instantly to a saved compatible endpoint when its card is selected', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    storeState.appConfig.providerConnections.anthropic.authMode = 'oauth';
+    storeState.appConfig.providerConnections.anthropic.compatibleEndpoint = {
+      enabled: false,
+      baseUrl: 'http://localhost:1234',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider({ configuredAuthMode: 'oauth' })],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledTimes(1);
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://localhost:1234',
+        },
+      },
+    });
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
+  });
+
+  it('falls back to the endpoint draft with an error when the instant switch cannot be saved', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    storeState.appConfig.providerConnections.anthropic.compatibleEndpoint = {
+      enabled: false,
+      baseUrl: 'http://localhost:1234',
+    };
+    storeState.updateConfig.mockRejectedValueOnce(new Error('config write failed'));
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider({ configuredAuthMode: 'auto' })],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(host.textContent).toContain('config write failed');
+    expectSingleCheckedCard(host, 'connection-method-compatible');
+    expect(
+      findButtonByText(host, 'Local / compatible endpoint').textContent
+    ).not.toContain('Selected');
+    expect(onRefreshProvider).not.toHaveBeenCalled();
+  });
+
+  it('drafts the compatible endpoint mode without saving when no valid URL is stored', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider({ configuredAuthMode: 'auto' })],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expectSingleCheckedCard(host, 'connection-method-compatible');
+    expect(
+      findButtonByText(host, 'Local / compatible endpoint').textContent
+    ).not.toContain('Selected');
+    expect(host.textContent).toContain('Not active yet');
+    const baseUrlInput = host.querySelector(
+      '#anthropic-compatible-base-url'
+    ) as HTMLInputElement | null;
+    expect(baseUrlInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(baseUrlInput!, 'http://localhost:1234');
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(
+      (host.querySelector('#anthropic-compatible-base-url') as HTMLInputElement | null)?.value
+    ).toBe('http://localhost:1234');
+
+    await act(async () => {
+      findButtonByText(host, 'Save endpoint').click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://localhost:1234',
+        },
+      },
+    });
+    expectSingleCheckedCard(host, 'connection-method-compatible');
+    const compatibleCard = findButtonByText(host, 'Local / compatible endpoint');
+    expect(compatibleCard.textContent).toContain('Selected');
+    expect(compatibleCard.textContent).toContain('http://localhost:1234');
+    expect(host.textContent).not.toContain('Not active yet');
+  });
+
+  it('exits the compatible endpoint draft without saving when another card is selected', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider({ configuredAuthMode: 'auto' })],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('#anthropic-compatible-base-url')).not.toBeNull();
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-auto');
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(host.querySelector('#anthropic-compatible-base-url')).toBeNull();
+    expectSingleCheckedCard(host, 'connection-method-auto');
   });
 
   it('shows a compatible endpoint as checking while its full catalog loads', async () => {
@@ -1096,7 +1568,10 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Local / compatible endpoint');
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
 
     const baseUrlInput = host.querySelector(
       '#anthropic-compatible-base-url'
@@ -1157,6 +1632,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
     const baseUrlInput = host.querySelector(
       '#anthropic-compatible-base-url'
     ) as HTMLInputElement | null;
@@ -1205,6 +1685,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
     const baseUrlInput = host.querySelector(
       '#anthropic-compatible-base-url'
     ) as HTMLInputElement | null;
@@ -1246,6 +1731,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
     const baseUrlInput = host.querySelector(
       '#anthropic-compatible-base-url'
     ) as HTMLInputElement | null;
@@ -1267,7 +1757,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).not.toHaveBeenCalled();
   });
 
-  it('disables Anthropic-compatible endpoint without deleting its saved token', async () => {
+  it('switches between the compatible endpoint and API key without deleting the saved token', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1311,14 +1801,16 @@ describe('ProviderRuntimeSettingsDialog', () => {
     });
 
     expect(host.textContent).toContain('lm...io');
+    expectSingleCheckedCard(host, 'connection-method-compatible');
 
     await act(async () => {
-      findButtonByText(host, 'Disable').click();
+      clickConnectionMethodCard(host, 'connection-method-api_key');
       await Promise.resolve();
     });
 
     expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
       anthropic: {
+        authMode: 'api_key',
         compatibleEndpoint: {
           enabled: false,
           baseUrl: 'http://localhost:1234',
@@ -1327,6 +1819,22 @@ describe('ProviderRuntimeSettingsDialog', () => {
     });
     expect(storeState.deleteApiKey).not.toHaveBeenCalled();
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
+
+    await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenLastCalledWith('providerConnections', {
+      anthropic: {
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://localhost:1234',
+        },
+      },
+    });
+    expect(storeState.deleteApiKey).not.toHaveBeenCalled();
+    expect(onRefreshProvider).toHaveBeenCalledTimes(2);
   });
 
   it('shows native-only Codex connection copy and API-key management without login actions', async () => {
@@ -1361,6 +1869,12 @@ describe('ProviderRuntimeSettingsDialog', () => {
       'Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.'
     );
     expect(host.textContent).toContain('Connection method');
+    expect(getConnectionMethodCards(host).map((card) => card.dataset.testid)).toEqual([
+      'connection-method-auto',
+      'connection-method-chatgpt',
+      'connection-method-api_key',
+    ]);
+    expectSingleCheckedCard(host, 'connection-method-auto');
     expect(host.textContent).toContain('ChatGPT account');
     expect(host.textContent).toContain('Use an OpenAI API key as a secondary Codex auth path.');
     expect(host.textContent).toContain('Set API key');

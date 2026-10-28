@@ -96,6 +96,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
           isOpenCodeRuntimeLaneIndexActive: vi.fn(() => true),
         },
       },
+      isMemberLifecycleOperationActive: () => false,
       stoppingSecondaryRuntimeTeams: new Set<string>(),
       readPersistedTeamProjectPath: vi.fn(async () => path.join('/tmp', 'team-a')),
       runTracking: {

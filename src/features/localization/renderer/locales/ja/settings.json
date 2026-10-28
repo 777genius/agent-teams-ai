@@ -12,6 +12,10 @@
     "notifications": {
       "description": "エージェントのアクティビティ、タスクの完了、エラーについて通知するタイミングと方法を制御します。",
       "label": "お知らせ"
+    },
+    "gatewayProviders": {
+      "description": "Manage gateway endpoints for per-teammate model access.",
+      "label": "Gateway providers"
     }
   },
   "view": {
@@ -802,9 +806,9 @@
         "noCredentials": "ベースURLは、資格情報が含まれていません"
       },
       "status": {
-        "endpointDisabledTokenKept": "エンドポイントが無効になっています。 保存されたトークンが保存されました。",
         "endpointSaved": "エンドポイント保存",
-        "endpointSavedTokenMissing": "エンドポイントを保存します。 Auth トークンは設定されていません。"
+        "endpointSavedTokenMissing": "エンドポイントを保存します。 Auth トークンは設定されていません。",
+        "notActiveUntilSaved": "まだ有効ではありません。切り替えるにはエンドポイントを保存してください。それまで起動には以前の接続方式が使われます。"
       }
     },
     "connection": {
@@ -905,10 +909,8 @@
     "runtimeSummary": "稼働時間: {{runtime}}",
     "status": {
       "configured": "仕様",
-      "enabled": "有効化",
       "notConfigured": "設定されていない",
       "notSet": "設定しない",
-      "off": "オフ",
       "unknown": "未知の"
     },
     "title": "プロバイダの設定",
@@ -924,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API キーは保存しましたが、プロバイダの状態をリフレッシュできませんでした。",
       "connectionUpdatedRefreshFailed": "接続が更新されましたが、プロバイダのステータスを更新できませんでした。",
       "deleteApiKey": "APIキーを削除できなかった",
-      "disableEndpoint": "エンドポイントを無効にできない",
-      "endpointDisabledRefreshFailed": "エンドポイントが無効になっていますが、プロバイダのステータスをリフレッシュできませんでした。",
       "endpointSavedRefreshFailed": "エンドポイントは保存されますが、プロバイダのステータスを更新できませんでした。",
       "refreshCodexAccount": "Codexアカウントを更新できなかった",
       "saveApiKey": "APIキーを保存できなかった",
@@ -1065,5 +1065,41 @@
   },
   "cliStatus": {
     "versionUpgrade": "v{{current}} → v{{latest}}"
+  },
+  "gatewayProviders": {
+    "title": "Gateway providers",
+    "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+    "addProfile": "Add profile",
+    "empty": "No gateway profiles yet.",
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "save": "Save"
+    },
+    "badges": {
+      "privateNetwork": "Private network allowed"
+    },
+    "boundTeammates": "Bound teammates: {{total}}",
+    "dialog": {
+      "createTitle": "Add gateway profile",
+      "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+      "editTitle": "Edit gateway profile"
+    },
+    "errors": {
+      "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+      "fieldsRequired": "Display name and gateway URL are required."
+    },
+    "fields": {
+      "allowPrivateNetwork": "Allow private network address",
+      "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+      "baseUrl": "Gateway URL",
+      "baseUrlHint": "Gateway root without a trailing /v1.",
+      "displayName": "Display name"
+    },
+    "hints": {
+      "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+      "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+    }
   }
 }

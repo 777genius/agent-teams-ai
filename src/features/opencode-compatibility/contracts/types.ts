@@ -1,7 +1,7 @@
 export type Generation = 'v1' | 'v2';
 export type NativeKey =
   | { generation: 'v1'; apiDialect: 'v1' }
-  | { generation: 'v2'; apiDialect: 'v2-2.0.0' | 'v2-2.0.21' };
+  | { generation: 'v2'; apiDialect: `v2-${string}` };
 export type NativeIdentity = Readonly<
   NativeKey & {
     version: string;

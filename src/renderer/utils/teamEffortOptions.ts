@@ -1,8 +1,8 @@
-import {
-  resolveAnthropicEffortSupport,
-  resolveAnthropicRuntimeSelection,
-} from '@features/anthropic-runtime-profile/renderer';
+import { resolveAnthropicEffortSupport } from '@features/anthropic-runtime-profile/renderer';
 
+import { resolveAnthropicProviderRuntimeSelection } from './anthropicRuntimeSelection';
+
+import type { AnthropicRuntimeSelection } from '@features/anthropic-runtime-profile/renderer';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
 
 const BASE_EFFORT_OPTIONS = [{ value: '', label: 'Default' }] as const;
@@ -74,7 +74,7 @@ function normalizeEfforts(
 
 function getAnthropicEffortsFromRuntimeOrFallback(params: {
   providerStatus?: CliProviderStatus | null;
-  selection: ReturnType<typeof resolveAnthropicRuntimeSelection>;
+  selection: AnthropicRuntimeSelection;
 }): EffortLevel[] {
   const runtimeEfforts = params.providerStatus?.runtimeCapabilities?.reasoningEffort?.values ?? [];
   const candidateEfforts = runtimeEfforts.length > 0 ? runtimeEfforts : ANTHROPIC_FALLBACK_EFFORTS;
@@ -100,14 +100,11 @@ export function getTeamEffortOptions(params: {
   }
 
   if (providerId === 'anthropic') {
-    const selection = resolveAnthropicRuntimeSelection({
-      source: {
-        modelCatalog: params.providerStatus?.modelCatalog,
-        runtimeCapabilities: params.providerStatus?.runtimeCapabilities,
-      },
-      selectedModel: params.model,
-      limitContext: params.limitContext === true,
-    });
+    const selection = resolveAnthropicProviderRuntimeSelection(
+      params.providerStatus,
+      params.model,
+      params.limitContext === true
+    );
     const defaultLabel = selection.defaultEffort
       ? `Default (${TEAM_EFFORT_LABELS[selection.defaultEffort]})`
       : 'Default';
@@ -203,14 +200,11 @@ export function getTeamEffortSelectorPresentation(params: {
     };
   }
 
-  const selection = resolveAnthropicRuntimeSelection({
-    source: {
-      modelCatalog: params.providerStatus?.modelCatalog,
-      runtimeCapabilities: params.providerStatus?.runtimeCapabilities,
-    },
-    selectedModel: params.model,
-    limitContext: params.limitContext === true,
-  });
+  const selection = resolveAnthropicProviderRuntimeSelection(
+    params.providerStatus,
+    params.model,
+    params.limitContext === true
+  );
   const hasExactCatalogTruth = selection.catalogModel !== null;
   const supportsConfigurableEffort = selection.supportedEfforts.length > 0;
 

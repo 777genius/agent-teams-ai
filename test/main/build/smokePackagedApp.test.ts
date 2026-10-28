@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { execFile, execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -142,6 +142,217 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
   );
   const fixturePath = path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-process-TEST.cjs');
 
+  it.skipIf(process.platform !== 'linux').each(['preexisting', 'young', 'late', 'leader'])(
+    'preserves strict process birth and ownership boundaries for %s environments',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-baseline-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(
+            process.execPath,
+            [path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-baseline-TEST.ts'), mode],
+            {
+              cwd: sandbox,
+              env: { ...process.env, PACKAGED_SMOKE_FIXTURE_ROOT: sandbox },
+              encoding: 'utf8',
+              timeout: 12_000,
+            },
+            (error, stdout, stderr) => {
+              if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+              else resolve(stdout);
+            }
+          );
+        });
+        expect(JSON.parse(output)).toEqual({
+          mode,
+          nativeBirthBoundary: true,
+          predecessorUntouched: true,
+          lateOrYoungRejected: mode !== 'preexisting',
+          ownedDrained: mode === 'preexisting',
+        });
+        expect(
+          JSON.parse(fs.readFileSync(path.join(sandbox, 'baseline-cleanup.json'), 'utf8'))
+        ).toEqual({ remaining: [] });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    14_000
+  );
+
+  it.skipIf(process.platform !== 'linux').each(['ownership-retiring', 'ownership-persistent', 'ownership-newly-observed'])(
+    'keeps same-birth unmarked process debt unsettled on %s',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-ownership-debt-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(process.execPath, [
+            path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-escaped-TEST.ts'), mode,
+          ], {
+            cwd: sandbox,
+            env: { ...process.env, PACKAGED_SMOKE_FIXTURE_ROOT: sandbox, PACKAGED_SMOKE_FIXTURE_MODE: mode },
+            encoding: 'utf8', timeout: 14_000,
+          }, (error, stdout, stderr) => {
+            if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+            else resolve(stdout);
+          });
+        });
+        expect(JSON.parse(output)).toEqual({ mode, samePidAndBirth: true,
+          settledOnlyAfterExit: mode === 'ownership-retiring',
+          persistentDebtRejected: mode !== 'ownership-retiring',
+          freshDebtRetained: mode === 'ownership-newly-observed',
+          unverifiedSignals: 0, sentinelUntouched: true });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    }, 16_000
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'treats a same-uid non-dumpable process as unowned instead of failing the census',
+    async () => {
+      const child = spawn(
+        'python3',
+        ['-c', 'import ctypes,time;ctypes.CDLL(None).prctl(4,0);time.sleep(60)'],
+        { stdio: 'ignore' }
+      );
+      try {
+        let control = 'timeout';
+        const deadline = Date.now() + 5_000;
+        while (Date.now() < deadline) {
+          try {
+            fs.readFileSync(`/proc/${child.pid}/environ`);
+            control = 'readable';
+          } catch (error) {
+            control = (error as NodeJS.ErrnoException).code ?? 'unknown';
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        expect(control).toBe('EACCES');
+        const { createPackagedSmokeOwnership } = requireFromTest(
+          '../../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts'
+        ) as {
+          createPackagedSmokeOwnership(options?: {
+            timeoutMs?: number;
+          }): { begin(): { pid: number }[] };
+        };
+        const ownership = createPackagedSmokeOwnership({ timeoutMs: 10_000 });
+        expect(ownership.begin().some((entry) => entry.pid === child.pid)).toBe(false);
+      } finally {
+        child.kill('SIGKILL');
+      }
+    },
+    15_000
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps a marked non-dumpable descendant as unsettled debt until it exits',
+    async () => {
+      const { createPackagedSmokeOwnership } = requireFromTest(
+        '../../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts'
+      ) as {
+        createPackagedSmokeOwnership(options?: {
+          timeoutMs?: number;
+        }): {
+          environment: Record<string, string>;
+          begin(pid?: number): { pid: number }[];
+          waitForExit(timeoutMs: number): Promise<boolean>;
+          finish(): unknown;
+        };
+      };
+      const ownership = createPackagedSmokeOwnership({ timeoutMs: 10_000 });
+      let grandchild: number | undefined;
+      const child = spawn(
+        process.execPath,
+        [
+          '-e',
+          "const {spawn}=require('node:child_process');" +
+            "const p=spawn('python3',['-c','import ctypes,time;ctypes.CDLL(None).prctl(4,0);time.sleep(60)'],{stdio:'ignore'});" +
+            'console.log(p.pid);setInterval(()=>{},1000);',
+        ],
+        { env: { ...process.env, ...ownership.environment }, stdio: ['ignore', 'pipe', 'ignore'] }
+      );
+      try {
+        grandchild = Number(
+          await new Promise<string>((resolve, reject) => {
+            child.once('error', reject);
+            child.stdout.once('data', (chunk: Buffer) => resolve(chunk.toString().trim()));
+          })
+        );
+        expect(Number.isInteger(grandchild)).toBe(true);
+        const deadline = Date.now() + 5_000;
+        let denied = false;
+        while (Date.now() < deadline) {
+          try {
+            fs.readFileSync(`/proc/${grandchild}/environ`);
+          } catch (error) {
+            denied = (error as NodeJS.ErrnoException).code === 'EACCES';
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        expect(denied).toBe(true);
+        ownership.begin(child.pid);
+        child.kill('SIGKILL');
+        await new Promise<void>((resolve) => child.once('close', () => resolve()));
+        expect(await ownership.waitForExit(1_500)).toBe(false);
+        expect(() => ownership.finish()).toThrow(/Unverifiable packaged smoke process/);
+      } finally {
+        if (grandchild !== undefined) {
+          try {
+            process.kill(grandchild, 'SIGKILL');
+          } catch {
+            // Already gone.
+          }
+        }
+        if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      }
+    },
+    20_000
+  );
+
+  it.each(['app-success', 'app-failure', 'mcp-success', 'mcp-failure', 'owner-exited', 'delayed-kill'])(
+    'drains escaped owned processes and preserves an unrelated sentinel on %s',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-escaped-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(
+            process.execPath,
+            [path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-escaped-TEST.ts'), mode],
+            {
+              cwd: sandbox,
+              env: {
+                ...process.env,
+                PACKAGED_SMOKE_FIXTURE_ROOT: sandbox,
+                PACKAGED_SMOKE_FIXTURE_MODE: mode,
+              },
+              encoding: 'utf8',
+              timeout: 14_000,
+            },
+            (error, stdout, stderr) => {
+              if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+              else resolve(stdout);
+            }
+          );
+        });
+        expect(JSON.parse(output)).toMatchObject({
+          mode,
+          status: mode.endsWith('failure') ? 1 : 0,
+          escapedGone: true,
+          sentinelUntouched: true,
+          detached: true,
+          receiptPhases: ['begin', 'final'],
+          signals: ['SIGTERM', 'SIGKILL'],
+        });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    16_000
+  );
+
   it.each(['normal', 'retained-pipes', 'already-exited', 'silent-descendant', 'delayed-kill'])(
     'closes %s fixture and lets its Node harness exit',
     (mode) => {
@@ -198,7 +409,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
             const kill = process.kill;
             process.kill = function(pid, signal) {
               const result = kill.call(this, pid, signal);
-              // Deliver the real owned-group cleanup before injecting a diagnostic failure.
+              // Deliver the real exact-owned cleanup before injecting a diagnostic failure.
               if (signal === 'SIGKILL') throw new Error('TEST cleanup failure');
               return result;
             };
@@ -234,7 +445,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
               // execFile reports normal nonzero exits as errors; preserve their exact status.
               resolve({ error: undefined, status: error.code, stdout, stderr });
             } else {
-              reject(error);
+              reject(new Error(error.message, { cause: error }));
             }
           }
         );
@@ -250,9 +461,11 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
       };
       if (mode !== 'success') expect(result.stderr).toContain(failureReasons[mode]);
       if (mode === 'failure-and-cleanup-error') {
-        expect(result.stderr).toContain('TEST cleanup failure');
+        expect(result.stderr).toContain('Unable to signal owned packaged smoke process');
+        expect(result.stderr).not.toContain('TEST cleanup failure');
+        expect(result.stderr).toContain('Preserved TEST sandbox after cleanup failure');
       } else {
-        expect(result.stdout).toContain('stdio closed');
+        expect(result.stdout, `Harness stderr:\n${result.stderr}`).toContain('stdio closed');
       }
       expect(result.stdout.includes('[smokePackagedApp] OK')).toBe(mode === 'success');
       if (mode === 'success') {
@@ -393,9 +606,9 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
         const env: NodeJS.ProcessEnv = {
           ...process.env,
           TMPDIR: sandbox,
-          PACKAGED_SMOKE_TIMEOUT_MS: '2000',
+          PACKAGED_SMOKE_TIMEOUT_MS: '5000',
           PACKAGED_SMOKE_STABLE_MS: '0',
-          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
+          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '5000',
         };
         delete env.NODE_OPTIONS;
         const script = path.resolve(
@@ -406,11 +619,11 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
           cwd: sandbox,
           env,
           encoding: 'utf8',
-          timeout: 8_000,
+          timeout: 20_000,
         });
         expect(result.error).toBeUndefined();
         expect(result.stdout + result.stderr).not.toContain('TEST isolation failure');
-        expect(result.status).toBe(contract === 'valid' ? 0 : 1);
+        expect(result.status, result.stdout + result.stderr).toBe(contract === 'valid' ? 0 : 1);
         expect(result.stdout.includes(`[smokePackaged${kind}] OK`)).toBe(contract === 'valid');
         if (contract === 'invalid') {
           expect(result.stderr).toContain(

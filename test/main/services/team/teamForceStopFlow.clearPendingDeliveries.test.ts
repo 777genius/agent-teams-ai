@@ -1,3 +1,4 @@
+import * as fileLocks from '@main/services/team/fileLock';
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
@@ -7,6 +8,7 @@ import {
   OpenCodePromptDeliveryLedgerStore,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
+  clearOpenCodeRuntimeLaneStorage,
   getOpenCodeLaneScopedRuntimeFilePath,
   setOpenCodeRuntimeActiveRunManifest,
   upsertOpenCodeRuntimeLaneIndexEntry,
@@ -139,6 +141,119 @@ describe('clearPendingOpenCodePromptDeliveriesForTeam', () => {
       expect(records.find((record) => record.id === successorId)?.cancelledAt).toBeFalsy();
     }
   );
+
+  it('leaves an explicitly scoped absent ledger untouched without acquiring a lock', async () => {
+    const lock = vi.spyOn(fileLocks, 'withFileLock');
+    await expect(
+      clearPendingOpenCodePromptDeliveriesForTeam({
+        teamName,
+        teamsBasePath,
+        ownedLaneIds: [laneId],
+        throwOnError: true,
+      })
+    ).resolves.toEqual({ cleared: 0, diagnostics: [] });
+    expect(lock).not.toHaveBeenCalled();
+    await expect(fs.stat(path.join(teamsBasePath, teamName))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not recreate a ledger removed between the fast precheck and locked recheck', async () => {
+    await publishRun('run-a');
+    await seedDelivery({ inboxMessageId: 'msg-a', runId: 'run-a', now: requestedAt.toISOString() });
+    const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
+      teamsBasePath,
+      teamName,
+      laneId,
+      fileName: 'opencode-prompt-delivery-ledger.json',
+    });
+    const cancel = vi.spyOn(
+      OpenCodePromptDeliveryLedgerStore.prototype,
+      'cancelNonTerminalRecords'
+    );
+    const withLock = fileLocks.withFileLock;
+    vi.spyOn(fileLocks, 'withFileLock').mockImplementation(
+      <T>(filePath: string, operation: () => Promise<T>, options?: fileLocks.FileLockOptions) =>
+        withLock(
+          filePath,
+          async () => {
+            if (filePath.endsWith('.lifecycle')) await fs.rm(ledgerPath);
+            return await operation();
+          },
+          options
+        )
+    );
+    await expect(
+      clearPendingOpenCodePromptDeliveriesForTeam({
+        teamName,
+        teamsBasePath,
+        ownedLaneIds: [laneId],
+        throwOnError: true,
+      })
+    ).resolves.toEqual({ cleared: 0, diagnostics: [] });
+    expect(cancel).not.toHaveBeenCalled();
+    await expect(fs.stat(ledgerPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('finishes cancelling a lane ledger before cleanup can remove its directory', async () => {
+    await publishRun('run-a');
+    await seedDelivery({ inboxMessageId: 'msg-a', runId: 'run-a', now: requestedAt.toISOString() });
+    let notifyCancellationEntered!: () => void;
+    let releaseCancellation!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      notifyCancellationEntered = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      releaseCancellation = resolve;
+    });
+    const cancel = OpenCodePromptDeliveryLedgerStore.prototype.cancelNonTerminalRecords;
+    vi.spyOn(
+      OpenCodePromptDeliveryLedgerStore.prototype,
+      'cancelNonTerminalRecords'
+    ).mockImplementation(async function (this: OpenCodePromptDeliveryLedgerStore, input) {
+      notifyCancellationEntered();
+      await released;
+      return await cancel.call(this, input);
+    });
+    const clearing = clearPendingOpenCodePromptDeliveriesForTeam({
+      teamName,
+      teamsBasePath,
+      ownedLaneIds: [laneId],
+      ownedRunIds: ['run-a'],
+      throwOnError: true,
+    });
+    await entered;
+    let cleanupEntered = false;
+    const withLock = fileLocks.withFileLock;
+    vi.spyOn(fileLocks, 'withFileLock').mockImplementation(
+      <T>(filePath: string, operation: () => Promise<T>, options?: fileLocks.FileLockOptions) =>
+        withLock(
+          filePath,
+          async () => {
+            if (filePath.endsWith('.lifecycle')) cleanupEntered = true;
+            return await operation();
+          },
+          options
+        )
+    );
+    const cleanup = clearOpenCodeRuntimeLaneStorage({
+      teamsBasePath,
+      teamName,
+      laneId,
+      expectedRunId: 'run-a',
+    });
+    try {
+      // File-lock admission is synchronous: an unprotected cleanup would enter
+      // its callback here while cancellation is still paused in the directory.
+      expect(cleanupEntered).toBe(false);
+    } finally {
+      releaseCancellation();
+      await Promise.allSettled([clearing, cleanup]);
+    }
+    await expect(clearing).resolves.toMatchObject({ cleared: 1, diagnostics: expect.any(Array) });
+    await expect(cleanup).resolves.toBe(true);
+    expect(cleanupEntered).toBe(true);
+  });
 
   it('cancels the stopped run and keeps the run that took the lane after it', async () => {
     await publishRun('run-a');

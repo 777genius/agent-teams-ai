@@ -1,6 +1,7 @@
 import type { TeamMcpConfigBuilder } from '../TeamMcpConfigBuilder';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   DirectProcessMemberLaunchReason,
   EffectiveConfiguredMember,
@@ -172,8 +173,10 @@ export interface TeamProvisioningMemberLifecycleRuntimeLaunchPorts {
     providerId: TeamProviderId,
     providerBackendId: TeamProviderBackendId | undefined,
     options: {
+      gatewayMember?: boolean;
       teamRuntimeAuth: {
         teamName: string;
+        memberName?: string;
         authMaterialId: string;
         allowAnthropicApiKeyHelper: boolean;
       };
@@ -197,6 +200,7 @@ export interface TeamProvisioningMemberLifecycleRuntimeLaunchPorts {
     includeAnthropicHelper: boolean;
     contextLabel: string;
   }): Promise<TeamRuntimeLaunchArgsPlan>;
+  getMemberGatewayRuntimeSeams(): MemberGatewayRuntimeSeams | null;
   buildTrackedMemberMcpLaunchConfig(input: {
     cwd: string;
     mcpPolicy: TeamCreateRequest['members'][number]['mcpPolicy'];

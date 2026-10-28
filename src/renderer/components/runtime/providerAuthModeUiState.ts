@@ -24,5 +24,14 @@ export function resolveProviderAuthModeUiState(
     provider?.providerId === 'anthropic' &&
     (provider.connection?.compatibleEndpoint?.enabled ?? configuredCompatibleEndpointEnabled);
 
-  return { configurableAuthModes, configuredAuthMode, anthropicCompatibleEndpointEnabled };
+  return {
+    configurableAuthModes,
+    configuredAuthMode:
+      provider?.providerId === 'anthropic' &&
+      configuredAuthMode !== undefined &&
+      !ANTHROPIC_AUTH_MODES.includes(configuredAuthMode)
+        ? 'auto'
+        : configuredAuthMode,
+    anthropicCompatibleEndpointEnabled,
+  };
 }

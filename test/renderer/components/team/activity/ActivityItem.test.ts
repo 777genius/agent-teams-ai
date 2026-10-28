@@ -1,6 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { parseChatVisualization } from '@features/chat-visualizations/renderer/parseChatVisualization';
+import { guardChatVisualizationProgram } from '@features/chat-visualizations/renderer/programGuards';
 import {
   ActivityItem,
   getCrossTeamSentMemberName,
@@ -1305,12 +1307,60 @@ describe('ActivityItem bootstrap recipient route', () => {
       taskChip?.click();
       await Promise.resolve();
     });
-    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123', 'demo', 'canonical');
 
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('routes literal same-display-ID task chips to their explicit A/B teams', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+    const messageFor = (teamName: string, taskId: string): InboxMessage => ({
+      from: 'alice',
+      to: 'user',
+      text: 'please review',
+      timestamp: new Date('2026-10-14T12:00:00.000Z').toISOString(),
+      read: false,
+      source: 'inbox',
+      messageKind: 'task_comment_notification',
+      taskRefs: [{ taskId, displayId: '#7', teamName }],
+    });
+
+    for (const [teamName, taskId] of [
+      ['team-a', 'canonical-a'],
+      ['team-b', 'canonical-b'],
+    ] as const) {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: messageFor(teamName, taskId),
+            teamName,
+            directParticipant: 'alice',
+            onTaskIdClick,
+          })
+        );
+        await Promise.resolve();
+      });
+      const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+        (button.textContent ?? '').includes('#7')
+      );
+      expect(taskChip).toBeDefined();
+      await act(async () => {
+        taskChip?.click();
+        await Promise.resolve();
+      });
+    }
+
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(1, 'canonical-a', 'team-a', 'canonical');
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(2, 'canonical-b', 'team-b', 'canonical');
+
+    await act(async () => root.unmount());
   });
 
   it('keeps lead→teammate routes visible in the lead thread', async () => {
@@ -1394,27 +1444,6 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
         onValueChange(event.target.value),
     }),
 }));
-vi.mock('@renderer/components/team/dialogs/TaskGroupChatField', () => ({
-  TaskGroupChatField: ({
-    value,
-    onChange,
-  }: {
-    value: string | null;
-    onChange: (value: string | null) => void;
-  }) =>
-    React.createElement(
-      'select',
-      {
-        'aria-label': 'Group',
-        value: value ?? '',
-        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-          onChange(event.target.value || null),
-      },
-      React.createElement('option', { value: '' }, 'None'),
-      React.createElement('option', { value: 'group-a' }, 'Group A'),
-      React.createElement('option', { value: 'group-b' }, 'Group B')
-    ),
-}));
 
 describe('message task action and dialog ownership', () => {
   afterEach(() => {
@@ -1483,7 +1512,6 @@ describe('message task action and dialog ownership', () => {
     }
     await act(() => Promise.resolve(root.render(React.createElement(Boundary))));
     await act(() => Promise.resolve(taskAction(host).click()));
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
     expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
     const description = host.querySelector<HTMLTextAreaElement>(
       '[aria-label="Description"]'
@@ -1497,7 +1525,6 @@ describe('message task action and dialog ownership', () => {
     const command = submit.mock.calls[0][0].command;
     expect(command?.commandId).toBeTruthy();
     expect(createButton(host).disabled).toBe(false);
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
     expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
     expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Description"]')?.value).toContain(
       'Keep the original group'
@@ -1506,22 +1533,21 @@ describe('message task action and dialog ownership', () => {
     expect(submit.mock.calls[1][0].command).toEqual(command);
     expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
     await act(() => {
-      const field = host.querySelector<HTMLSelectElement>('[aria-label="Group"]')!;
-      field.value = '';
-      field.dispatchEvent(new Event('change', { bubbles: true }));
+      const subject = host.querySelector<HTMLInputElement>('#task-subject')!;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(subject, 'Edited subject');
+      subject.dispatchEvent(new Event('input', { bubbles: true }));
       return Promise.resolve();
     });
     expect(host.querySelector('[role="alert"]')).toBeNull();
     await act(() => Promise.resolve(createButton(host).click()));
-    expect(submit.mock.calls[2][0].groupChatId).toBeUndefined();
+    expect(submit.mock.calls[2][0].groupChatId).toBe('group-a');
+    expect(submit.mock.calls[2][0].subject).toBe('Edited subject');
     expect(submit.mock.calls[2][0].command).not.toEqual(command);
     expect(host.querySelector('#task-subject')).toBeNull();
     await act(() => Promise.resolve(dialog.openCreateTaskDialog('Ordinary task')));
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-b');
-    await act(() => {
-      dialog.closeCreateTaskDialog();
-      return Promise.resolve();
-    });
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[3][0].groupChatId).toBe('group-b');
     await act(() =>
       Promise.resolve(
         dialog.handleCreateTaskFromMessage({
@@ -1531,7 +1557,8 @@ describe('message task action and dialog ownership', () => {
         })
       )
     );
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('');
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[4][0].groupChatId).toBeUndefined();
     await act(() => Promise.resolve(root.unmount()));
   });
 
@@ -1700,6 +1727,60 @@ describe('message task action and dialog ownership', () => {
 });
 
 describe('collapsed message visualization access', () => {
+  it.each(['```openui-lang', '~~~openui'])(
+    'preserves literal OpenUI data in %s through main, direct, and group message presentation',
+    async (opener) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const source = String.raw`root = Stack([Card([TextContent("@alice work @TeamX #abc123 C:\\new\\test")])]);`;
+      const delimiter = /^[`~]+/.exec(opener)![0];
+      const block = `${opener}\n${source}\n${delimiter}`;
+      const prose = 'Hi @alice from @TeamX\\nReady\\t#abc123';
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      try {
+        for (const origin of [
+          { from: 'team-lead', to: 'user' },
+          { from: 'alice', to: 'user' },
+          { from: 'alice', to: 'user', groupChatId: 'group-a', groupMessageId: 'post-1' },
+        ]) {
+          await act(() =>
+            Promise.resolve(
+              root.render(
+                React.createElement(ActivityItem, {
+                  key: `${origin.from}:${origin.groupChatId ?? 'direct'}`,
+                  message: {
+                    ...origin,
+                    text: `${prose}\n\n${block}`,
+                    timestamp: '2026-10-27T10:00:00.000Z',
+                    read: true,
+                  },
+                  teamName: 'sandbox',
+                  memberColorMap: new Map([['alice', 'blue']]),
+                  teamNames: ['TeamX'],
+                })
+              )
+            )
+          );
+          const shown = host.querySelector('[data-markdown-renderer="full"]')?.textContent ?? '';
+          expect(shown).toBe(
+            `Hi [@alice](mention://blue/alice) from [TeamX](team://TeamX)\nReady\t[#abc123](task://abc123)\n\n${block}`
+          );
+          const shownSource = shown.slice(
+            shown.indexOf(opener) + opener.length + 1,
+            shown.lastIndexOf(delimiter)
+          );
+          const parsed = parseChatVisualization(shownSource);
+          expect(guardChatVisualizationProgram(parsed, 'closed')).toEqual({ status: 'ready' });
+          expect(parsed.root).toEqual(parseChatVisualization(source).root);
+        }
+      } finally {
+        await act(() => Promise.resolve(root.unmount()));
+        host.remove();
+      }
+    }
+  );
+
   it.each(['openui-lang', 'mermaid'])(
     'keeps %s on the rich rendering path instead of a label-only preview',
     async (language) => {

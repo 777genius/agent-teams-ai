@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { EventEmitter } from 'events';
+import { accessSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -14,6 +15,20 @@ vi.mock('child_process', () => ({
 vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => '/Users/tester',
 }));
+
+// accessSync stays a passthrough to the real builtin by default so unrelated
+// tests keep real-fs behavior; the "default login-shell selection" tests pin
+// exact probe results with vi.mocked(accessSync).mockImplementation for
+// cross-platform determinism under the mocked child_process.spawn.
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    accessSync: vi.fn((path: Parameters<typeof actual.accessSync>[0], mode?: number) =>
+      actual.accessSync(path, mode)
+    ),
+  };
+});
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -33,18 +48,32 @@ function createChild(): MockChildProcess {
   return new MockChildProcess();
 }
 
+function shellFrame(child: MockChildProcess): { start: string; end: string } {
+  const callIndex = hoisted.spawn.mock.results.findIndex((result) => result.value === child);
+  const args = hoisted.spawn.mock.calls[callIndex][1] as string[];
+  const command = args[1];
+  expect(command).not.toContain('\0');
+  const markers = [...command.matchAll(/'(AGENT_TEAMS_SHELL_ENV_[0-9a-f-]+_(?:START|END))'/g)];
+  expect(markers).toHaveLength(2);
+  return { start: `\0${markers[0][1]}\0`, end: `\0${markers[1][1]}\0` };
+}
+
 function emitEnv(child: MockChildProcess, env: Record<string, string>): void {
   const dump = `${Object.entries(env)
     .map(([key, value]) => `${key}=${value}`)
     .join('\0')}\0`;
-  child.stdout.emit('data', Buffer.from(dump));
+  const frame = shellFrame(child);
+  child.stdout.emit('data', Buffer.from(frame.start + dump + frame.end));
   child.emit('close', 0);
 }
 
 function emitEnvChunks(child: MockChildProcess, chunks: string[]): void {
+  const frame = shellFrame(child);
+  child.stdout.emit('data', Buffer.from(frame.start));
   for (const chunk of chunks) {
     child.stdout.emit('data', Buffer.from(chunk));
   }
+  child.stdout.emit('data', Buffer.from(frame.end));
   child.emit('close', 0);
 }
 
@@ -52,7 +81,14 @@ function emitError(child: MockChildProcess, message: string): void {
   child.emit('error', new Error(message));
 }
 
-function emitClose(child: MockChildProcess, code: number | null, signal: NodeJS.Signals | null): void {
+/**
+ * Emit a child-process close event with the given exit code and signal.
+ */
+function emitClose(
+  child: MockChildProcess,
+  code: number | null,
+  signal: NodeJS.Signals | null
+): void {
   child.emit('close', code, signal);
 }
 
@@ -115,13 +151,13 @@ describe('shellEnv', () => {
     expect(hoisted.spawn).toHaveBeenNthCalledWith(
       1,
       '/bin/zsh',
-      ['-lic', 'env -0'],
+      ['-lic', expect.stringContaining(' && env -0 && ')],
       expect.objectContaining({ windowsHide: true })
     );
     expect(hoisted.spawn).toHaveBeenNthCalledWith(
       2,
       '/bin/zsh',
-      ['-ic', 'env -0'],
+      ['-ic', expect.stringContaining(' && env -0 && ')],
       expect.objectContaining({ windowsHide: true })
     );
   });
@@ -375,6 +411,160 @@ describe('shellEnv', () => {
     expect(hoisted.loggerWarn).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['startup banner', 'Shell plugin failed to initialize\n'],
+    ['startup banner containing equals', 'PLUGIN_INIT=failed\n'],
+    ['equals banner before complete-looking env', 'PLUGIN_INIT=failed\nPATH=/login/bin\0'],
+    ['complete-looking partial env', 'PATH=/login/bin\0'],
+    ['unterminated last record', 'PATH=/login/bin\0ANTHROPIC_AUTH_TOKEN=truncated'],
+    ['malformed complete record', 'PATH=/login/bin\0not-an-env-record\0'],
+    ['banner-prefixed key', 'Shell plugin failed\nPATH=/login/bin\0'],
+    ['empty complete record', '\0'],
+  ])(
+    'retries a failed login shell with %s instead of caching its output',
+    async (_name, output) => {
+      const interactiveEnv = {
+        ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+        ANTHROPIC_AUTH_TOKEN: 'TEST-interactive-token',
+        ANTHROPIC_MODEL: 'TEST-main-model',
+        ANTHROPIC_SMALL_FAST_MODEL: 'TEST-fast-model',
+      };
+      hoisted.spawn.mockImplementation((_shellPath: string, args: string[]) => {
+        const child = createChild();
+        queueMicrotask(() => {
+          if (args[0] === '-lic') {
+            child.stdout.emit('data', Buffer.from(output));
+            emitClose(child, 42, null);
+          } else {
+            emitEnv(child, interactiveEnv);
+          }
+        });
+        return child;
+      });
+
+      const shellEnv = await importShellEnv();
+
+      await expect(shellEnv.resolveInteractiveShellEnv()).resolves.toEqual(interactiveEnv);
+      expect(hoisted.spawn.mock.calls.map((call) => call[1])).toEqual([
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        ['-ic', expect.stringContaining(' && env -0 && ')],
+      ]);
+      expect(shellEnv.getCachedShellEnv()).toEqual(interactiveEnv);
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps complete env output when a logout hook fails after the dump', async () => {
+    const env = {
+      PATH: '/complete/bin',
+      HOME: '/Users/tester',
+      EMPTY: '',
+      NOTE: 'first=value\nsecond=value',
+      'BASH_FUNC_module%%': '() {\n printf "%s\\n" "a=b";\n}',
+      ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token',
+    };
+    const dump = `${Object.entries(env)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\0')}\0`;
+    const child = createChild();
+    hoisted.spawn.mockReturnValueOnce(child);
+    const shellEnv = await importShellEnv();
+    const result = shellEnv.resolveInteractiveShellEnv();
+
+    const frame = shellFrame(child);
+    const output = `PLUGIN_INIT=ready\n${frame.start}${dump}${frame.end}LOGOUT=failed\n`;
+    child.stdout.emit('data', Buffer.from(output.slice(0, 31)));
+    child.stdout.emit('data', Buffer.from(output.slice(31)));
+    emitClose(child, 42, null);
+
+    await expect(result).resolves.toEqual(env);
+    expect(shellEnv.getCachedShellEnv()).toEqual(env);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(1);
+    expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'missing-start',
+    'missing-end',
+    'clipped-end',
+    'wrong-end',
+    'incomplete-record',
+  ] as const)('rejects %s even when the shell exits successfully', async (scenario) => {
+    const interactiveEnv = { PATH: '/complete/bin', ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token' };
+    hoisted.spawn.mockImplementation((_shellPath: string, args: string[]) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        if (args[0] === '-ic') {
+          emitEnv(child, interactiveEnv);
+          return;
+        }
+        const frame = shellFrame(child);
+        const outputs = {
+          'missing-start': `PATH=/partial/bin\0${frame.end}`,
+          'missing-end': `${frame.start}PATH=/partial/bin\0`,
+          'clipped-end': `${frame.start}PATH=/partial/bin\0${frame.end.slice(0, -1)}`,
+          'wrong-end': `${frame.start}PATH=/partial/bin\0\0AGENT_TEAMS_SHELL_ENV_other_END\0`,
+          'incomplete-record': `${frame.start}PATH=/partial/bin${frame.end}`,
+        };
+        child.stdout.emit('data', Buffer.from(outputs[scenario]));
+        emitClose(child, 0, null);
+      });
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+
+    await expect(shellEnv.resolveInteractiveShellEnv()).resolves.toEqual(interactiveEnv);
+    expect(shellEnv.getCachedShellEnv()).toEqual(interactiveEnv);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    expect(hoisted.spawn.mock.calls[0][1][1]).not.toBe(hoisted.spawn.mock.calls[1][1][1]);
+    expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('accepts a completed frame containing an empty environment', async () => {
+    const child = createChild();
+    hoisted.spawn.mockReturnValueOnce(child);
+    const shellEnv = await importShellEnv();
+    const result = shellEnv.resolveInteractiveShellEnv();
+    const frame = shellFrame(child);
+
+    child.stdout.emit('data', Buffer.from(frame.start + frame.end));
+    emitClose(child, 42, null);
+
+    await expect(result).resolves.toEqual({});
+    expect(shellEnv.getCachedShellEnv()).toEqual({});
+    expect(hoisted.spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves noisy failures uncached and reuses the failure cooldown', async () => {
+    hoisted.spawn.mockImplementation((_shellPath: string, args: string[]) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        const output = args[0] === '-lic' ? 'Login plugin failed\n' : 'PLUGIN_INIT=failed\n';
+        child.stdout.emit('data', Buffer.from(output));
+        emitClose(child, 42, null);
+      });
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+    const firstFallback = { PATH: '/fallback/first' };
+    const secondFallback = { PATH: '/fallback/second' };
+
+    await expect(
+      shellEnv.resolveInteractiveShellEnvBestEffort({ fallbackEnv: firstFallback })
+    ).resolves.toBe(firstFallback);
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    await expect(
+      shellEnv.resolveInteractiveShellEnvBestEffort({ fallbackEnv: secondFallback })
+    ).resolves.toBe(secondFallback);
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    expect(hoisted.loggerWarn).toHaveBeenCalledTimes(1);
+    expect(hoisted.loggerWarn).toHaveBeenCalledWith(
+      'Failed to resolve shell env after login and interactive probes: login=shell env command exited with code 42; interactive=shell env command exited with code 42'
+    );
+  });
+
   it('coalesces concurrent best-effort calls behind one shell process', async () => {
     const children: MockChildProcess[] = [];
     hoisted.spawn.mockImplementation(() => {
@@ -547,6 +737,89 @@ describe('shellEnv', () => {
     expect(hoisted.spawn).toHaveBeenCalledTimes(3);
   });
 
+  it('preserves a joiner fallback when discovery fails after the soft timeout', async () => {
+    const children: MockChildProcess[] = [];
+    hoisted.spawn.mockImplementation(() => {
+      const child = createChild();
+      children.push(child);
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+    const fallbackEnv = { HOME: '/custom/home', PATH: '/fallback/bin', EMPTY: '' };
+    const processEnvBefore = { ...process.env };
+    const bestEffort = shellEnv.resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv,
+    });
+    const pending = shellEnv.waitForPendingShellEnv();
+    const otherJoiner = shellEnv.waitForPendingShellEnv();
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(await bestEffort).toBe(fallbackEnv);
+    emitError(children[0], 'login failed');
+    await vi.advanceTimersByTimeAsync(0);
+    emitError(children[1], 'interactive failed');
+
+    expect((await pending) ?? fallbackEnv).toBe(fallbackEnv);
+    expect(await otherJoiner).toBeNull();
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(await shellEnv.waitForPendingShellEnv()).toBeNull();
+    expect(
+      await shellEnv.resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv })
+    ).toBe(fallbackEnv);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    expect(process.env).toEqual(processEnvBefore);
+  });
+
+  it('joins a completed empty environment as a successful cached result', async () => {
+    const child = createChild();
+    hoisted.spawn.mockReturnValueOnce(child);
+    const shellEnv = await importShellEnv();
+
+    expect(await shellEnv.waitForPendingShellEnv()).toBeNull();
+    expect(hoisted.spawn).not.toHaveBeenCalled();
+    const strict = shellEnv.resolveInteractiveShellEnv();
+    const pending = shellEnv.waitForPendingShellEnv();
+    const frame = shellFrame(child);
+    child.stdout.emit('data', Buffer.from(frame.start + frame.end));
+    emitClose(child, 0, null);
+
+    const resolved = await strict;
+    expect(resolved).toEqual({});
+    expect(await pending).toBe(resolved);
+    expect(await shellEnv.waitForPendingShellEnv()).toBe(resolved);
+    expect(shellEnv.getCachedShellEnv()).toBe(resolved);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not substitute a newer cache for a failed probe that a caller already joined', async () => {
+    const children: MockChildProcess[] = [];
+    hoisted.spawn.mockImplementation(() => {
+      const child = createChild();
+      children.push(child);
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+    const failedProbe = shellEnv.resolveInteractiveShellEnv();
+    const failedJoin = shellEnv.waitForPendingShellEnv();
+    shellEnv.clearShellEnvCache();
+    const successfulProbe = shellEnv.resolveInteractiveShellEnv();
+    const successfulJoin = shellEnv.waitForPendingShellEnv();
+
+    emitError(children[0], 'old login failed');
+    await vi.advanceTimersByTimeAsync(0);
+    emitEnv(children[1], { HOME: '/new/home', PATH: '/new/bin' });
+    const resolved = await successfulProbe;
+    expect(await successfulJoin).toBe(resolved);
+    emitError(children[2], 'old interactive failed');
+
+    expect(await failedProbe).toEqual({});
+    expect(await failedJoin).toBeNull();
+    expect(shellEnv.getCachedShellEnv()).toBe(resolved);
+    expect(await shellEnv.waitForPendingShellEnv()).toBe(resolved);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(3);
+  });
+
   it('uses cached shell env immediately without spawning or returning fallback', async () => {
     const firstChild = createChild();
     hoisted.spawn.mockReturnValueOnce(firstChild);
@@ -603,5 +876,261 @@ describe('shellEnv', () => {
     ).resolves.toEqual({});
     expect(hoisted.spawn).not.toHaveBeenCalled();
     expect(shellEnv.getCachedShellEnv()).toEqual({});
+  });
+
+  describe('default login-shell selection', () => {
+    /**
+     * Pin the mocked filesystem probe to a fixed set of installed shells.
+     */
+    function pinInstalledShells(installed: readonly string[]): void {
+      vi.mocked(accessSync).mockImplementation((path): void => {
+        const candidatePath = path.toString();
+        if (installed.includes(candidatePath)) return;
+        throw new Error(`ENOENT: ${candidatePath} is not installed`);
+      });
+    }
+
+    it('documents the platform default candidate ordering', async () => {
+      const shellEnv = await importShellEnv();
+      expect(shellEnv.defaultShellCandidates('darwin')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(shellEnv.defaultShellCandidates('linux')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+      // Shell-equivalent candidates on Windows document the shared
+      // metadata contract only; resolveInteractiveShellEnv returns early
+      // on win32, so these entries are never used as Windows defaults.
+      expect(shellEnv.defaultShellCandidates('win32')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+    });
+
+    it('resolves interactions through the injected probe and trimmed configured shell', async () => {
+      const shellEnv = await importShellEnv();
+      expect(
+        shellEnv.resolveDefaultLoginShellPath({
+          env: { SHELL: '  /opt/homebrew/bin/fish  ' },
+          probe: () => false,
+        })
+      ).toBe('/opt/homebrew/bin/fish');
+      expect(
+        shellEnv.resolveDefaultLoginShellPath({
+          env: {},
+          platform: 'linux',
+          probe: (candidate) => candidate === '/usr/bin/bash',
+        })
+      ).toBe('/usr/bin/bash');
+      expect(
+        shellEnv.resolveDefaultLoginShellPath({
+          env: {},
+          platform: 'linux',
+          probe: () => false,
+        })
+      ).toBe('/bin/sh');
+    });
+
+    it('spawns the first installed platform candidate when SHELL is unset', async () => {
+      delete process.env.SHELL;
+      pinInstalledShells(['/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({
+        PATH: '/resolved/bin',
+        HOME: '/Users/tester',
+      });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/bash',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('falls back to /bin/sh when every platform candidate is missing', async () => {
+      delete process.env.SHELL;
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/sh-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/sh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/sh',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('honours a configured SHELL verbatim without probing for installation', async () => {
+      process.env.SHELL = '/opt/homebrew/bin/fish';
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/fish-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/fish-bin' });
+      expect(vi.mocked(accessSync)).not.toHaveBeenCalled();
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/opt/homebrew/bin/fish',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('honours linux candidate ordering across separate install roots', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/usr/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/linux-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/linux-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/usr/bin/bash',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('selects /bin/zsh before Bash on Linux when zsh is installed', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/bin/zsh', '/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/zsh-bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/zsh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/zsh',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
+
+    it('falls back to Bash on Linux when zsh is absent but Bash is installed', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/bash-bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/bash-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/bash',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
+
+    it('uses /bin/sh on Linux when only the portable fallback is available', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/sh-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/sh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/sh',
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
   });
 });

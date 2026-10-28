@@ -5,7 +5,7 @@ import {
   collectChangeScope,
   isDmgDisplayOnly,
 } from '../../scripts/ci/ci-change-scope.mts';
-import { qualifyFull } from '../../scripts/ci/ci-feedback.mts';
+import { planFeedback, qualifyFull } from '../../scripts/ci/ci-feedback.mts';
 const entry = (path: string, status = 'M') => ({ path, status });
 const pkg = {
   scripts: { test: 'vitest' },
@@ -101,14 +101,44 @@ test('gate requires selected checks, successful plan and draft never qualifies',
   assert.equal(qualifyFull(needs, 'false', 'false', '4').ok, false);
 });
 
-test('metadata edits never own the canonical required qualification name', async () => {
+test('every event reports the required qualification under its static name', async () => {
   const { readFileSync } = await import('node:fs');
   const yaml = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
   assert.match(
     yaml,
-    /full-qualification:\n\s+name:.*'Metadata qualification'.*'Full qualification'/
+    /\n {2}full-qualification:\n {4}name: Full qualification\n {4}needs: \[[^\]]+\]\n {4}if: always\(\)\n/
   );
-  assert.match(yaml, /github\.event\.action == 'edited'.*needs\.plan\.result != 'success'/);
+  assert.doesNotMatch(yaml, /Metadata qualification/);
+});
+
+test('only listed markdown is documentation; legal texts and issue templates run full CI', () => {
+  for (const path of [
+    'README.md',
+    'AGENTS.md',
+    'AGENT_CRITICAL_GUARDRAILS.md',
+    'CLAUDE.md',
+    'docs/RELEASE.md',
+    'docs/nested/guide.md',
+    '.github/pull_request_template.md',
+  ])
+    assert.equal(classifyChanges([entry(path)]).scope, 'docs', path);
+  for (const path of [
+    'SECURITY.md',
+    '.github/CLA.md',
+    '.github/CODE_OF_CONDUCT.md',
+    '.github/CONTRIBUTING.md',
+    '.github/SECURITY.md',
+    '.github/ISSUE_TEMPLATE/bug_report.md',
+    '.github/ISSUE_TEMPLATE/feature_request.md',
+    'src/features/README.md',
+    'landing/product-docs/index.md',
+    'landing/README.md',
+    'announcements/release/body.md',
+    '.github/workflows/notes.md',
+    'docs/release.json',
+    'README.mdx',
+  ])
+    assert.equal(classifyChanges([entry(path)]).scope, 'full', path);
 });
 
 test('DMG qualification cannot pass without its macOS mounted fixture', () => {
@@ -192,6 +222,59 @@ test('classifier binds real git merge parents and rejects altered event, missing
       GITHUB_SHA: merge,
     };
     assert.equal(collectChangeScope(env, cwd).scope, 'docs');
+    // Title/body and label events keep the commits; any other edit or action stays full.
+    const scopeFor = (fields: Record<string, unknown>) => {
+      writeFileSync(eventFile, JSON.stringify({ ...payload, ...fields }));
+      return collectChangeScope(env, cwd).scope;
+    };
+    assert.equal(scopeFor({ action: 'edited', changes: { body: { from: null } } }), 'docs');
+    assert.equal(scopeFor({ action: 'edited', changes: { title: { from: 'Old' } } }), 'docs');
+    assert.equal(
+      scopeFor({ action: 'edited', changes: { base: { ref: { from: 'dev' } } } }),
+      'full'
+    );
+    assert.equal(scopeFor({ action: 'edited', changes: {} }), 'full');
+    assert.equal(scopeFor({ action: 'edited' }), 'full');
+    assert.equal(scopeFor({ action: 'labeled' }), 'docs');
+    assert.equal(scopeFor({ action: 'unlabeled' }), 'docs');
+    assert.equal(
+      scopeFor({
+        action: 'labeled',
+        pull_request: { ...payload.pull_request, labels: [{ name: 'ci:full' }] },
+      }),
+      'full'
+    );
+    assert.equal(scopeFor({ action: 'assigned' }), 'full');
+    // Without reusable full evidence a title/body edit qualifies the same diff again.
+    const repo = { id: 1, full_name: '777genius/agent-teams-ai' };
+    const edited = {
+      ...payload,
+      action: 'edited',
+      changes: { body: { from: null } },
+      repository: repo,
+      pull_request: {
+        ...payload.pull_request,
+        id: 2,
+        title: 'docs: describe release check',
+        body: 'Updated description',
+        base: { sha: base, ref: 'main', repo },
+        head: { sha: head, ref: 'docs/check', repo },
+      },
+    };
+    const offline = () => Promise.reject(new Error('offline'));
+    const previousCwd = process.cwd();
+    process.chdir(cwd);
+    try {
+      writeFileSync(eventFile, JSON.stringify(edited));
+      const decision = await planFeedback(env, edited, offline);
+      assert.deepEqual([decision.scope, decision.full, decision.metadata], ['docs', true, false]);
+      const retarget = { ...edited, changes: { base: { ref: { from: 'dev' } } } };
+      writeFileSync(eventFile, JSON.stringify(retarget));
+      assert.equal((await planFeedback(env, retarget, offline)).scope, 'full');
+    } finally {
+      process.chdir(previousCwd);
+    }
+    writeFileSync(eventFile, JSON.stringify(payload));
     assert.equal(collectChangeScope({ ...env, GITHUB_SHA: head }, cwd).scope, 'full');
     writeFileSync(
       eventFile,

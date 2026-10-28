@@ -11,6 +11,7 @@ import {
   createSearchNavigationRequest,
   findTabBySession,
   findTabBySessionAndProject,
+  isOrdinaryTeamTab,
   truncateLabel,
 } from '@renderer/types/tabs';
 import { deferTabMutationForActiveChangeReview } from '@renderer/utils/changeReviewLifecycleCoordinator';
@@ -271,7 +272,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     const targetPane = findPaneByTabId(paneLayout, tabId);
     const targetTab = targetPane?.tabs.find((t) => t.id === tabId);
     if (prevTab?.id !== tabId) {
-      addNavigationBreadcrumb(prevTab?.label ?? 'none', targetTab?.label ?? tabId);
+      addNavigationBreadcrumb(prevTab?.type ?? null, targetTab?.type ?? null);
     }
     // Find which pane contains this tab
     const pane = findPaneByTabId(paneLayout, tabId);
@@ -386,7 +387,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     // Without this, switching between team A and team B tabs leaves stale data
     // because each TeamDetailView is kept mounted (CSS display-toggle) and its
     // useEffect(teamName) only fires once on mount.
-    if ((tab.type === 'team' || tab.type === 'graph') && tab.teamName) {
+    if ((isOrdinaryTeamTab(tab) || tab.type === 'graph') && tab.teamName) {
       if (state.selectedTeamName !== tab.teamName) {
         // Different team -- full reload (also auto-selects project via selectTeam)
         void state.selectTeam(tab.teamName);

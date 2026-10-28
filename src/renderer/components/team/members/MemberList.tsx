@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import {
+  declareActivityTimerKeys,
   deriveReviewActivityTimerAnchor,
   deriveWorkActivityTimerAnchor,
   syncMemberActivityTimer,
@@ -23,6 +24,10 @@ import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 
 import { getPendingMemberDeliveryState } from '../messages/messagesPanelLogic';
 
+import {
+  collectMemberActivityTimerIds,
+  collectMemberActivityTimerSyncInputs,
+} from './memberActivityTimerInputs';
 import { MemberCard, type RuntimeTelemetryScale } from './MemberCard';
 
 import type { PendingMemberDeliveryState } from '../messages/messagesPanelLogic';
@@ -468,8 +473,7 @@ function buildCachedMemberRuntimeEntries(
     const signature = buildMemberRuntimeCardSignature(entry);
     const cached = cache.get(memberName);
     if (
-      !cached ||
-      cached.signature !== signature ||
+      cached?.signature !== signature ||
       nowMs - cached.cachedAt >= MEMBER_CARD_RUNTIME_TELEMETRY_CACHE_MS
     ) {
       cache.set(memberName, { signature, cachedAt: nowMs, entry });
@@ -1056,62 +1060,40 @@ export const MemberList = memo(function MemberList({
     [getActivityTimerRunId]
   );
 
-  useEffect(() => {
-    if (!taskMap) return;
-    const nowMs = Date.now();
-    const latestRuntimeEntries = memberRuntimeEntriesRef.current;
-    for (const member of activeMembers) {
-      const spawnEntry = memberSpawnStatuses?.get(member.name);
-      const runtimeEntry = latestRuntimeEntries?.get(member.name);
-      const running = isMemberActivityTimerRunning(member, spawnEntry, runtimeEntry);
-      const currentTaskCandidate = member.currentTaskId
-        ? (taskMap.get(member.currentTaskId) ?? null)
-        : null;
-      if (isDisplayableCurrentTask(currentTaskCandidate)) {
-        const anchor = deriveWorkActivityTimerAnchor(currentTaskCandidate, {
-          teamName,
-          memberName: member.name,
-        });
-        if (anchor) {
-          const visible =
-            running &&
-            shouldDisplayMemberCurrentTask({
-              member,
-              isTeamAlive,
-              spawnStatus: spawnEntry?.status,
-              spawnLaunchState: spawnEntry?.launchState,
-              spawnRuntimeAlive: spawnEntry?.runtimeAlive,
-              spawnEntry,
-              runtimeEntry,
-            });
-          syncMemberActivityTimer({
-            timerId: anchor.timerId,
-            startedAtMs: anchor.startedAtMs,
-            baseElapsedMs: anchor.baseElapsedMs,
-            running: visible,
-            runId: getActivityTimerRunId(visible),
-            nowMs,
-          });
-        }
-      }
+  // Identifies this list to the store's declaration set: more than one team can be on screen, and
+  // each must spare its own keys without withdrawing another's.
+  const activityTimerOwnerRef = useRef<object>({});
 
-      const reviewTask = reviewTaskByMember.get(member.name) ?? null;
-      if (reviewTask) {
-        const anchor = deriveReviewActivityTimerAnchor(reviewTask, {
-          teamName,
-          memberName: member.name,
-        });
-        if (anchor) {
-          syncMemberActivityTimer({
-            timerId: anchor.timerId,
-            startedAtMs: anchor.startedAtMs,
-            baseElapsedMs: anchor.baseElapsedMs,
-            running,
-            runId: getActivityTimerRunId(running),
-            nowMs,
-          });
-        }
-      }
+  // Declared from a layout effect, written from a passive one, and that split is the point. A member
+  // card syncs its own timer from a passive effect, and the first passive write of a frame is what
+  // reclaims the backlog; declaring here from a passive effect would land after that drain had already
+  // deleted the anchors this list is about to write. The case that needs it is a member whose card is
+  // not on screen: its record banks elapsed time nothing has read this session, and only this
+  // declaration says the key is still live. Layout effects flush before any passive effect, so the
+  // write order between this list and the cards is unchanged.
+  useLayoutEffect(() => {
+    const owner = activityTimerOwnerRef.current;
+    declareActivityTimerKeys(
+      owner,
+      collectMemberActivityTimerIds({ activeMembers, reviewTaskByMember, taskMap, teamName })
+    );
+    return () => declareActivityTimerKeys(owner, []);
+  }, [activeMembers, reviewTaskByMember, taskMap, teamName]);
+
+  useEffect(() => {
+    for (const input of collectMemberActivityTimerSyncInputs({
+      nowMs: Date.now(),
+      activeMembers,
+      isMemberRunning: isMemberActivityTimerRunning,
+      isTeamAlive,
+      memberSpawnStatuses,
+      reviewTaskByMember,
+      runIdFor: getActivityTimerRunId,
+      runtimeEntries: memberRuntimeEntriesRef.current,
+      taskMap,
+      teamName,
+    })) {
+      syncMemberActivityTimer(input);
     }
   }, [
     activeMembers,

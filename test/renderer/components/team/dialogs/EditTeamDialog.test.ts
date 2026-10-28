@@ -1,9 +1,15 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
+import { MembersEditorSection } from '@renderer/components/team/members/MembersEditorSection';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/api', () => ({
   api: {
+    gatewayProvider: {
+      listGatewayBindings: vi.fn(async () => []),
+      unbindGatewayMember: vi.fn(async () => {}),
+    },
     teams: {
       updateConfig: vi.fn(async () => {}),
       replaceMembers: vi.fn(async () => {}),
@@ -14,24 +20,13 @@ vi.mock('@renderer/api', () => ({
 }));
 
 vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
-  MembersEditorSection: ({
-    members,
-    onChange,
-    fieldError,
-    headerExtra,
-  }: {
-    members: Array<{
-      id: string;
-      name: string;
-      originalName?: string;
-      roleSelection?: string;
-      customRole?: string;
-      providerId?: string;
-      model?: string;
-      effort?: string;
-      mcpPolicy?: { mode: 'appOnly' };
-    }>;
-    onChange: (
+  MembersEditorSection: vi.fn(
+    ({
+      members,
+      onChange,
+      fieldError,
+      headerExtra,
+    }: {
       members: Array<{
         id: string;
         name: string;
@@ -42,152 +37,167 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
         model?: string;
         effort?: string;
         mcpPolicy?: { mode: 'appOnly' };
-      }>
-    ) => void;
-    fieldError?: string;
-    headerExtra?: React.ReactNode;
-  }) =>
-    React.createElement(
-      'div',
-      null,
-      'members-editor',
-      headerExtra,
+      }>;
+      onChange: (
+        members: Array<{
+          id: string;
+          name: string;
+          originalName?: string;
+          roleSelection?: string;
+          customRole?: string;
+          providerId?: string;
+          model?: string;
+          effort?: string;
+          mcpPolicy?: { mode: 'appOnly' };
+        }>
+      ) => void;
+      fieldError?: string;
+      headerExtra?: React.ReactNode;
+    }) =>
       React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'rename-existing-member',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 0 ? { ...member, name: 'alice-renamed' } : member
-              )
-            ),
-        },
-        'rename-existing-member'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'remove-existing-member',
-          onClick: () => onChange(members.slice(1)),
-        },
-        'remove-existing-member'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'duplicate-member-name',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 1 ? { ...member, name: members[0]?.name ?? member.name } : member
-              )
-            ),
-        },
-        'duplicate-member-name'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'invalid-member-name',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 0 ? { ...member, name: 'team-lead' } : member
-              )
-            ),
-        },
-        'invalid-member-name'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'change-member-runtime',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 0 ? { ...member, providerId: 'codex', model: 'gpt-5.4' } : member
-              )
-            ),
-        },
-        'change-member-runtime'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'change-member-mcp-policy',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 0 ? { ...member, mcpPolicy: { mode: 'appOnly' } } : member
-              )
-            ),
-        },
-        'change-member-mcp-policy'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'revert-member-runtime',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 0 ? { ...member, providerId: 'codex', model: 'gpt-5.2' } : member
-              )
-            ),
-        },
-        'revert-member-runtime'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'change-member-role',
-          onClick: () =>
-            onChange(
-              members.map((member, index) =>
-                index === 0 ? { ...member, roleSelection: 'developer' } : member
-              )
-            ),
-        },
-        'change-member-role'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'add-new-member',
-          onClick: () =>
-            onChange([
-              ...members,
-              {
-                id: 'draft-new',
-                name: 'charlie',
-                roleSelection: '',
-                customRole: '',
-              },
-            ]),
-        },
-        'add-new-member'
-      ),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          'data-testid': 'remove-new-member',
-          onClick: () => onChange(members.filter((member) => member.id !== 'draft-new')),
-        },
-        'remove-new-member'
-      ),
-      fieldError ? React.createElement('div', { 'data-testid': 'members-field-error' }, fieldError) : null
-    ),
+        'div',
+        null,
+        'members-editor',
+        headerExtra,
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'rename-existing-member',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 0 ? { ...member, name: 'alice-renamed' } : member
+                )
+              ),
+          },
+          'rename-existing-member'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'remove-existing-member',
+            onClick: () => onChange(members.slice(1)),
+          },
+          'remove-existing-member'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'duplicate-member-name',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 1 ? { ...member, name: members[0]?.name ?? member.name } : member
+                )
+              ),
+          },
+          'duplicate-member-name'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'invalid-member-name',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 0 ? { ...member, name: 'team-lead' } : member
+                )
+              ),
+          },
+          'invalid-member-name'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'change-member-runtime',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 0 ? { ...member, providerId: 'codex', model: 'gpt-5.4' } : member
+                )
+              ),
+          },
+          'change-member-runtime'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'change-member-mcp-policy',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 0 ? { ...member, mcpPolicy: { mode: 'appOnly' } } : member
+                )
+              ),
+          },
+          'change-member-mcp-policy'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'revert-member-runtime',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 0 ? { ...member, providerId: 'codex', model: 'gpt-5.2' } : member
+                )
+              ),
+          },
+          'revert-member-runtime'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'change-member-role',
+            onClick: () =>
+              onChange(
+                members.map((member, index) =>
+                  index === 0 ? { ...member, roleSelection: 'developer' } : member
+                )
+              ),
+          },
+          'change-member-role'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'add-new-member',
+            onClick: () =>
+              onChange([
+                ...members,
+                {
+                  id: 'draft-new',
+                  name: 'charlie',
+                  roleSelection: '',
+                  customRole: '',
+                },
+              ]),
+          },
+          'add-new-member'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            'data-testid': 'remove-new-member',
+            onClick: () => onChange(members.filter((member) => member.id !== 'draft-new')),
+          },
+          'remove-new-member'
+        ),
+        fieldError
+          ? React.createElement('div', { 'data-testid': 'members-field-error' }, fieldError)
+          : null
+      )
+  ),
   buildMembersFromDrafts: vi.fn((members) =>
     (
       members as Array<{
@@ -295,13 +305,8 @@ vi.mock('@renderer/components/ui/button', () => ({
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
-  Dialog: ({
-    open,
-    children,
-  }: {
-    open: boolean;
-    children: React.ReactNode;
-  }) => (open ? React.createElement('div', null, children) : null),
+  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? React.createElement('div', null, children) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogDescription: ({ children }: { children: React.ReactNode }) =>
@@ -327,8 +332,8 @@ vi.mock('@renderer/constants/teamColors', () => ({
   getThemedBadge: () => '#0f172a',
 }));
 
-import { EditTeamDialog } from '@renderer/components/team/dialogs/EditTeamDialog';
 import { api } from '@renderer/api';
+import { EditTeamDialog } from '@renderer/components/team/dialogs/EditTeamDialog';
 
 describe('EditTeamDialog', () => {
   afterEach(() => {
@@ -680,7 +685,15 @@ describe('EditTeamDialog', () => {
     expect(api.teams.updateConfig).toHaveBeenCalledTimes(1);
     expect(api.teams.removeMember).toHaveBeenCalledWith('live-team', 'alice');
     expect(api.teams.replaceMembers).toHaveBeenCalledWith('live-team', {
-      members: [{ name: 'bob', role: 'Developer', providerId: undefined, model: undefined, effort: undefined }],
+      members: [
+        {
+          name: 'bob',
+          role: 'Developer',
+          providerId: undefined,
+          model: undefined,
+          effort: undefined,
+        },
+      ],
     });
 
     await act(async () => {
@@ -784,7 +797,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -854,7 +867,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -917,7 +930,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -987,7 +1000,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1432,3 +1445,96 @@ describe('EditTeamDialog', () => {
     });
   });
 });
+
+const draftReceipt = {
+  teamName: 'sandbox-team',
+  memberName: 'alice',
+  profileId: 'profile',
+  profileDisplayName: 'Gateway',
+  gatewayUsageRef: 'usage-alice',
+  boundAt: '2026-10-20T00:00:00.000Z',
+  credentialStatus: 'ready' as const,
+};
+async function renderGatewayEdit(existingBinding = false) {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.mocked(api.gatewayProvider.listGatewayBindings).mockResolvedValue(
+    existingBinding ? [draftReceipt] : []
+  );
+  vi.mocked(api.gatewayProvider.unbindGatewayMember).mockClear().mockResolvedValue(undefined);
+  vi.mocked(api.teams.updateConfig).mockResolvedValue(
+    {} as Awaited<ReturnType<typeof api.teams.updateConfig>>
+  );
+  vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      React.createElement(EditTeamDialog, {
+        open: true,
+        teamName: 'sandbox-team',
+        currentName: 'Sandbox',
+        currentDescription: '',
+        currentColor: 'blue',
+        currentMembers: [
+          { name: 'alice', role: 'Reviewer', providerId: 'anthropic', model: 'sonnet' },
+        ] as React.ComponentProps<typeof EditTeamDialog>['currentMembers'],
+        onClose: vi.fn(),
+        onChangeLeadRuntime: vi.fn(),
+        onSaved: vi.fn(async () => {}),
+      })
+    );
+  });
+  return { host, root };
+}
+
+it.each([false, true])(
+  'owns new Edit Team bindings through cancellation or save (saved=%s)',
+  async (saved) => {
+    const { host, root } = await renderGatewayEdit();
+    try {
+      const bindings = vi.mocked(MembersEditorSection).mock.lastCall?.[0].gatewayBindings;
+      expect(bindings?.runBinding).toBeTypeOf('function');
+      await act(async () => {
+        await bindings!.runBinding!(async () => draftReceipt);
+      });
+      if (saved)
+        await act(async () => {
+          Array.from(host.querySelectorAll('button'))
+            .find((button) => button.textContent === 'Save')!
+            .click();
+        });
+    } finally {
+      await act(async () => root.unmount());
+    }
+    expect(api.gatewayProvider.unbindGatewayMember).toHaveBeenCalledTimes(saved ? 0 : 1);
+  }
+);
+
+it.each(['rename-existing-member', 'remove-existing-member'])(
+  'retires the old gateway identity only after %s is saved',
+  async (action) => {
+    const { host, root } = await renderGatewayEdit(true);
+    try {
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>(`[data-testid="${action}"]`)!.click();
+      });
+      expect(api.gatewayProvider.unbindGatewayMember).not.toHaveBeenCalled();
+      await act(async () => {
+        Array.from(host.querySelectorAll('button'))
+          .find((button) => button.textContent === 'Save')!
+          .click();
+      });
+      expect(api.gatewayProvider.unbindGatewayMember).toHaveBeenCalledExactlyOnceWith({
+        teamName: draftReceipt.teamName,
+        memberName: draftReceipt.memberName,
+        expectedBinding: {
+          gatewayUsageRef: draftReceipt.gatewayUsageRef,
+          boundAt: draftReceipt.boundAt,
+        },
+      });
+    } finally {
+      await act(async () => root.unmount());
+    }
+  }
+);

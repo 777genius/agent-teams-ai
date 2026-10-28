@@ -8,6 +8,7 @@ import {
 
 import { ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS } from '../../runtime/anthropicTeamApiKeyHelper';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
+import { getExplicitDesktopTeammateMode } from '../runtimeTeammateMode';
 
 import {
   type AnthropicApiKeyHelperCleanupRetryOwner,
@@ -23,10 +24,16 @@ import {
   type ProvisioningEnvResolution,
   type TeamRuntimeAuthContext,
 } from './TeamProvisioningEnvBuilder';
+import { applyTeamContextLimitEnv } from './TeamProvisioningEnvGuards';
 import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   buildLargeDeterministicBootstrapWarning,
 } from './TeamProvisioningLaunchCompatibility';
+import {
+  assertMemberGatewaySpawnCompatibility,
+  getRuntimeCatalogMembers,
+  type MemberGatewayRuntimeArgs,
+} from './TeamProvisioningMemberGatewayRuntime';
 import {
   buildEffectiveTeamMemberSpecs,
   teamRequestIncludesCodexMember,
@@ -135,6 +142,7 @@ export interface DeterministicCreateSetupFlowResult<TMixedSecondaryLane> {
   resolvedProviderId: TeamProviderId;
   providerArgsForLaunch: string[];
   inheritedProviderArgsForLaunch: string[];
+  memberArgsByMember: Map<string, MemberGatewayRuntimeArgs>;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
   launchIdentity: ProviderModelLaunchIdentity | null;
@@ -212,6 +220,7 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     providerArgs = [],
     warning: envWarning,
   } = provisioningEnv;
+  applyTeamContextLimitEnv(shellEnv, request.limitContext);
   anthropicApiKeyHelperLease.coalesce(provisioningEnv.anthropicApiKeyHelper);
   if (envWarning) {
     throw new Error(envWarning);
@@ -301,6 +310,11 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     { teamRuntimeAuth }
   );
   anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
+  assertMemberGatewaySpawnCompatibility({
+    memberArgsByMember: crossProviderMemberArgs.memberArgsByMember,
+    usesAnthropicApiKeyHelper: crossProviderMemberArgs.usesAnthropicApiKeyHelper,
+    teammateModeIsInProcess: getExplicitDesktopTeammateMode(request.extraCliArgs) === 'in-process',
+  });
   const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
     ? await collectWorkspaceTrustWorkspaces({
         cwd: request.cwd,
@@ -341,7 +355,10 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     cwd: request.cwd,
     env: shellEnv,
     request,
-    effectiveMembers: effectiveMemberSpecs,
+    effectiveMembers: getRuntimeCatalogMembers(
+      effectiveMemberSpecs,
+      crossProviderMemberArgs.memberArgsByMember
+    ),
     providerArgsByProvider,
   });
 
@@ -354,6 +371,7 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     resolvedProviderId,
     providerArgsForLaunch,
     inheritedProviderArgsForLaunch: crossProviderMemberArgsForLaunch.args,
+    memberArgsByMember: crossProviderMemberArgsForLaunch.memberArgsByMember,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
     launchIdentity,

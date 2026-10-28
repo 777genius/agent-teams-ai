@@ -86,7 +86,19 @@ vi.mock('@main/utils/directoryPresence', async (importOriginal) => ({
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: () => resolveInteractiveShellEnvMock(),
   resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvMock(),
+  waitForPendingShellEnv: () => Promise.resolve(null),
 }));
+
+vi.mock('@main/services/infrastructure/ConfigManager', () => {
+  const configManager = {
+    getConfig: () => ({
+      providerConnections: {
+        anthropic: { authMode: 'auto', compatibleEndpoint: { enabled: false } },
+      },
+    }),
+  };
+  return { ConfigManager: { getInstance: () => configManager }, configManager };
+});
 
 vi.mock('fs', () => ({
   default: {
@@ -1037,7 +1049,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       'codex',
       'opencode',
     ]);
-    expect(calls).toEqual([
+    expect([...calls].sort()).toEqual([
       'runtime status --json --provider anthropic --summary',
       'runtime status --json --provider codex --summary',
       'runtime status --json --provider opencode --summary',
@@ -3655,7 +3667,7 @@ describe('ClaudeMultimodelBridgeService', () => {
 
       if (
         normalizedArgs.startsWith(
-          'runtime transcript --json --provider opencode --team team-a --member alice --projection-only --limit 20 --session-id session-exact --output '
+          'runtime transcript --json --provider opencode --team team-a --member alice --projection-only --limit 20 --lane primary --session-id session-exact --run-id run-original --output '
         )
       ) {
         const outputIndex = Array.isArray(args) ? args.indexOf('--output') : -1;
@@ -3698,12 +3710,21 @@ describe('ClaudeMultimodelBridgeService', () => {
       memberName: 'alice',
       limit: 20,
       sessionId: ' session-exact ',
+      laneId: 'primary',
+      runId: ' run-original ',
     });
 
     expect(transcript?.sessionId).toBe('session-exact');
     expect(execCliMock).toHaveBeenCalledWith(
       '/mock/agent_teams_orchestrator',
-      expect.arrayContaining(['--session-id', 'session-exact']),
+      expect.arrayContaining([
+        '--lane',
+        'primary',
+        '--session-id',
+        'session-exact',
+        '--run-id',
+        'run-original',
+      ]),
       expect.any(Object)
     );
   });

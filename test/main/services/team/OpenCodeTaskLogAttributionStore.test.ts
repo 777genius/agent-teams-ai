@@ -12,8 +12,8 @@ vi.mock('@main/utils/pathDecoder', () => ({
 }));
 
 import {
-  OpenCodeTaskLogAttributionStore,
   getOpenCodeTaskLogAttributionPath,
+  OpenCodeTaskLogAttributionStore,
 } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeTaskLogAttributionStore';
 
 describe('OpenCodeTaskLogAttributionStore', () => {
@@ -110,6 +110,23 @@ describe('OpenCodeTaskLogAttributionStore', () => {
         source: 'launch_runtime',
       },
     ]);
+  });
+
+  it('retains optional original run bindings without changing historical records', async () => {
+    const store = new OpenCodeTaskLogAttributionStore();
+    const base = {
+      taskId: 'task-a',
+      memberName: 'alice',
+      scope: 'task_session' as const,
+      sessionId: 'ses_TEST',
+    };
+    await store.replaceTaskRecords('team-a', 'task-a', [
+      base,
+      { ...base, runId: ' TEST-run-a ' },
+      { ...base, runId: 'TEST-run-b' },
+    ]);
+    const records = await store.readTaskRecords('team-a', 'task-a');
+    expect(records.map((record) => record.runId)).toEqual([undefined, 'TEST-run-a', 'TEST-run-b']);
   });
 
   it('degrades to empty records for missing, invalid, or unsupported files', async () => {

@@ -374,6 +374,22 @@ describe('providerConnectionUi', () => {
     );
   });
 
+  it('hides the Anthropic preferred auth summary while a compatible endpoint is enabled', () => {
+    const provider = createAnthropicProvider({
+      authenticated: false,
+      authMethod: null,
+      configuredAuthMode: 'oauth',
+    });
+    provider.connection!.compatibleEndpoint = {
+      enabled: true,
+      baseUrl: 'http://localhost:1234',
+      tokenConfigured: false,
+      tokenSource: null,
+    };
+
+    expect(getProviderConnectionModeSummary(provider)).toBeNull();
+  });
+
   it('treats Codex as lane-managed and surfaces the current runtime summary', () => {
     const provider = createCodexProvider({
       apiKeyConfigured: true,

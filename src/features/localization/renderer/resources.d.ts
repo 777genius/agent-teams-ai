@@ -774,6 +774,7 @@ export default interface Resources {
       "markUnread": "Mark as unread",
       "pin": "Pin",
       "rename": "Rename",
+      "restoreTask": "Restore task",
       "unarchive": "Unarchive",
       "unpin": "Unpin"
     },
@@ -794,6 +795,8 @@ export default interface Resources {
       "searchProjects": "Search projects...",
       "searchTeams": "Search teams...",
       "selectAll": "Select all",
+      "showArchived": "Show archived tasks",
+      "showDeleted": "Show deleted tasks",
       "status": "Status",
       "statusOptions": {
         "approved": "APPROVED",
@@ -808,11 +811,13 @@ export default interface Resources {
     "taskFolders": {
       "actions": "Folder or task actions",
       "archived": "Archived task",
+      "cannotMoveHere": "You can't move tasks here",
       "collapse": "Collapse folder",
       "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable",
       "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
       "deleteFolder": "Delete folder",
       "destination": "Destination folder",
+      "dockToSidebar": "Folders as the sidebar",
       "dragFolder": "Drag folder",
       "dragTask": "Drag task to a folder",
       "expand": "Expand folder",
@@ -820,6 +825,7 @@ export default interface Resources {
       "invalidName": "Use a name with 1–120 characters.",
       "loading": "Loading folders…",
       "move": "Move to…",
+      "moveHere": "Put it here",
       "newFolder": "New folder",
       "newSubfolder": "New subfolder",
       "organizationDescription": "Organize tasks without changing their team, project or status.",
@@ -832,7 +838,9 @@ export default interface Resources {
       "saveError": "Could not save folder organization. Your last saved structure is preserved.",
       "showArchived": "Show archived tasks",
       "title": "Task folders",
-      "unfiled": "Unfiled"
+      "unfiled": "Unfiled",
+      "unreadTasks_one": "{{count}} unread task",
+      "unreadTasks_other": "{{count}} unread tasks"
     },
     "tasks": {
       "date": {
@@ -870,6 +878,11 @@ export default interface Resources {
       },
       "hideArchived": "Hide archived",
       "pinned": "Pinned",
+      "restoreFailed": {
+        "confirmLabel": "OK",
+        "fallbackMessage": "An unexpected error occurred",
+        "title": "Failed to restore task"
+      },
       "searchPlaceholder": "Search tasks...",
       "showArchived": "Show archived",
       "showLess": "Show less",
@@ -878,7 +891,8 @@ export default interface Resources {
         "byProject": "By project",
         "byTeam": "By team",
         "byTime": "By time",
-        "byUnread": "By unread"
+        "byUnread": "By unread",
+        "manualOrder": "Manual order"
       },
       "teamLabel": "Team: {{team}}",
       "title": "Tasks"
@@ -1156,8 +1170,13 @@ export default interface Resources {
         "openCodeErrorTitle": "OpenCode needs attention",
         "openCodeInstalling": "Installing the managed OpenCode runtime...",
         "openCodeInstallingPercent": "Installing the managed OpenCode runtime - {{percent}}%",
+        "openCodeOverrideIgnoredPath": "{{envName}} = {{binaryPath}} (version {{version}})",
+        "openCodeOverrideIgnoredTitle": "OpenCode binary override is not used",
+        "openCodeOverrideUnknownVersion": "unknown",
         "openCodeRequired": "Install OpenCode to connect and use these providers with Agent Teams.",
         "openCodeTitle": "Preparing OpenCode",
+        "openCodeV2LaunchDetail": "OpenCode Zen refuses its free models, such as big-pickle, for V2 runs until an Agent Teams runtime update. On V2, launch teams with a paid provider such as Kimi Code, or use OpenCode V1 for free models.",
+        "openCodeV2LaunchTitle": "OpenCode V2 {{version}} is selected",
         "openKiroGuide": "Open official guide",
         "pasteBaseUrl": "Paste Dedicated Base URL",
         "planConnected": "Plan connected",
@@ -1209,8 +1228,10 @@ export default interface Resources {
         "install": "Install",
         "installing": "Installing",
         "openCodeTitle": "Install OpenCode runtime into app data",
+        "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
         "retryInstall": "Retry install",
-        "update": "Update"
+        "update": "Update",
+        "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available."
       },
       "sponsorship": {
         "description": "Partner with or sponsor Agent Teams",
@@ -1389,6 +1410,11 @@ export default interface Resources {
         "allTeams": "All teams",
         "filterTeams": "Filter teams",
         "selectedTeams": "{{count}} teams"
+      },
+      "gateway": {
+        "dailyGranularity": "Gateway usage is aggregated by UTC day.",
+        "lastSuccessfulImport": "Last complete gateway import:",
+        "noConfirmedImport": "A complete gateway import is not yet confirmed; totals may be partial."
       },
       "labels": {
         "cost": "Cost",
@@ -2546,6 +2572,42 @@ export default interface Resources {
       },
       "title": "Remote Connection"
     },
+    "gatewayProviders": {
+      "actions": {
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "save": "Save"
+      },
+      "addProfile": "Add profile",
+      "badges": {
+        "privateNetwork": "Private network allowed"
+      },
+      "boundTeammates": "Bound teammates: {{total}}",
+      "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+      "dialog": {
+        "createTitle": "Add gateway profile",
+        "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+        "editTitle": "Edit gateway profile"
+      },
+      "empty": "No gateway profiles yet.",
+      "errors": {
+        "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+        "fieldsRequired": "Display name and gateway URL are required."
+      },
+      "fields": {
+        "allowPrivateNetwork": "Allow private network address",
+        "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+        "baseUrl": "Gateway URL",
+        "baseUrlHint": "Gateway root without a trailing /v1.",
+        "displayName": "Display name"
+      },
+      "hints": {
+        "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+        "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+      },
+      "title": "Gateway providers"
+    },
     "general": {
       "agentLanguage": {
         "description": "Language for agent communication",
@@ -3104,9 +3166,9 @@ export default interface Resources {
         "description": "Use an Anthropic-compatible local runtime endpoint.",
         "keepSavedToken": "Leave blank to keep saved token",
         "status": {
-          "endpointDisabledTokenKept": "Endpoint disabled. Saved token was kept.",
           "endpointSaved": "Endpoint saved",
-          "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured."
+          "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured.",
+          "notActiveUntilSaved": "Not active yet. Save the endpoint to switch; until then launches keep the previous connection method."
         },
         "title": "Local / compatible endpoint",
         "tokenStatus": "Token {{status}}",
@@ -3238,8 +3300,6 @@ export default interface Resources {
         "apiKeySavedRefreshFailed": "API key saved, but failed to refresh provider status.",
         "connectionUpdatedRefreshFailed": "Connection updated, but failed to refresh provider status.",
         "deleteApiKey": "Failed to delete API key",
-        "disableEndpoint": "Failed to disable endpoint",
-        "endpointDisabledRefreshFailed": "Endpoint disabled, but failed to refresh provider status.",
         "endpointSavedRefreshFailed": "Endpoint saved, but failed to refresh provider status.",
         "refreshCodexAccount": "Failed to refresh Codex account",
         "saveApiKey": "Failed to save API key",
@@ -3282,10 +3342,8 @@ export default interface Resources {
       "runtimeSummary": "Runtime: {{runtime}}",
       "status": {
         "configured": "configured",
-        "enabled": "Enabled",
         "notConfigured": "Not configured",
         "notSet": "not set",
-        "off": "Off",
         "unknown": "Unknown"
       },
       "title": "Provider Settings",
@@ -3457,6 +3515,10 @@ export default interface Resources {
         "description": "Power-user options: export/import config, reset defaults, and raw configuration editing.",
         "label": "Advanced"
       },
+      "gatewayProviders": {
+        "description": "Manage gateway endpoints for per-teammate model access.",
+        "label": "Gateway providers"
+      },
       "general": {
         "description": "Core app preferences like theme, language, display density, and startup behavior.",
         "label": "General"
@@ -3557,6 +3619,13 @@ export default interface Resources {
         "acknowledged": "Bootstrap acknowledged",
         "restarting": "Restarting teammate",
         "starting": "Starting teammate"
+      },
+      "chatVisualization": {
+        "description": "Full visualization view",
+        "exceedsLimits": "Visualization exceeds display limits",
+        "incomplete": "Visualization incomplete",
+        "open": "Open visualization",
+        "unavailable": "Visualization unavailable"
       },
       "expandDialog": {
         "description": "Expanded message view"
@@ -4676,6 +4745,30 @@ export default interface Resources {
         "defaultSetting": "default context setting",
         "description": "Anthropic context is team-wide for this launch: {{mode}}. Use Limit context to 200K tokens to avoid long-context behavior.",
         "limitEnabled": "200K limit enabled"
+      },
+      "gateway": {
+        "apiKeyLabel": "Gateway API key",
+        "apiKeyPlaceholder": "Paste the teammate gateway API key",
+        "authRejected": "Key authorization was rejected.",
+        "bindButton": "Bind teammate",
+        "bindingStatus": "Bound to {{profile}}",
+        "credentialChanged": "stored key changed — bind again with a new key",
+        "credentialMissing": "stored key missing — bind again with a new key",
+        "credentialReady": "key stored",
+        "emptyCatalog": "The model catalog is empty.",
+        "keyRequired": "Enter the gateway API key first.",
+        "modelLabel": "Model",
+        "modelPlaceholder": "Select a model",
+        "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Bindings saved before opening this form update immediately and keep those changes if you cancel the team form.",
+        "probeButton": "Check key and load models",
+        "probing": "Checking...",
+        "profileLabel": "Gateway profile",
+        "profilePlaceholder": "Select a gateway profile",
+        "profileRequired": "Select a gateway profile first.",
+        "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+        "title": "Gateway provider",
+        "unavailable": "The gateway is unavailable right now.",
+        "unbindButton": "Unbind"
       },
       "mcp": {
         "agentTeamsMcp": "Agent Teams MCP",
@@ -6373,6 +6466,7 @@ export default interface Resources {
         "cancel": "Cancel",
         "delete": "Delete",
         "markResolved": "Mark resolved",
+        "openInTaskTab": "Open in a separate tab",
         "save": "Save"
       },
       "attachments": {
@@ -6475,7 +6569,16 @@ export default interface Resources {
       "logs": {
         "newArriving": "New task logs arriving"
       },
+      "navigation": {
+        "editorRefused": "The file could not be opened in the team editor. The request is saved.",
+        "reviewRefused": "Changes could not be opened. The request is saved."
+      },
       "notFound": "Task not found",
+      "page": {
+        "deleted": "Task deleted",
+        "provisioning": "Task is temporarily unavailable while the team is provisioning",
+        "unavailable": "Task unavailable"
+      },
       "related": {
         "blockedBy": "Blocked by",
         "blocks": "Blocks",

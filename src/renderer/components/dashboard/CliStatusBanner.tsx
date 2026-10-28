@@ -6,7 +6,6 @@
  * Shows live detail text for every phase and a mini log panel during installation.
  * Only rendered in Electron mode.
  */
-
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -18,7 +17,10 @@ import {
 } from '@features/codex-account/renderer';
 import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { OpenCodeV2InstallAction } from '@features/opencode-runtime-installer/renderer';
 import {
+  canManagedInstallChangeOpenCodeRuntime,
+  getOpenCodeGeneration,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   OpenCodeCatalogErrorAlert,
@@ -108,7 +110,11 @@ import {
 
 import { DashboardRateLimitChips } from './DashboardRateLimitChips';
 import { FluxionSponsorBanner } from './FluxionSponsorBanner';
-import { canLoadOpenCodeDashboardCatalog } from './openCodeDashboardCatalogPolicy';
+import {
+  canLoadOpenCodeDashboardCatalog,
+  countVerifiedOpenCodeDashboardModels,
+  hasAvailableFreeOpenCodeDashboardModel,
+} from './openCodeDashboardCatalogPolicy';
 import { OpenCodeFreeTierUpdateAction } from './OpenCodeFreeTierUpdateAction';
 import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
@@ -121,6 +127,7 @@ import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { OpenCodeRuntimeInstallOptions } from '@features/opencode-runtime-installer/contracts';
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type {
   CliProviderAuthMode,
@@ -128,13 +135,10 @@ import type {
   CliProviderStatus,
   OpenCodeRuntimeStatus,
 } from '@shared/types';
-
 // =============================================================================
 // Border color by state
 // =============================================================================
-
 type BannerVariant = 'loading' | 'error' | 'success' | 'info' | 'warning';
-
 const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
   loading: { border: 'var(--color-border)', bg: 'transparent' },
   error: { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.06)' },
@@ -463,7 +467,7 @@ interface InstalledBannerProps {
   codexRuntimeStatusLoading: boolean;
   isBusy: boolean;
   onInstall: () => void;
-  onOpenCodeInstall: () => void;
+  onOpenCodeInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
   onOpenCodeRefresh: () => void;
   onCodexInstall: () => void;
   onRefresh: () => void;
@@ -651,6 +655,7 @@ function shouldShowOpenCodeInstallAction(
   return (
     provider.providerId === 'opencode' &&
     !showSkeleton &&
+    canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
     (openCodeRuntimeStatus?.updateAvailable === true ||
       isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus?.version) ||
       (!isOpenCodeProviderEffectivelyReady(provider) &&
@@ -674,31 +679,28 @@ function shouldShowCodexInstallAction(
   );
 }
 
-function shouldShowOpenCodeProviderFreeBadge(provider: CliProviderStatus): boolean {
-  return provider.providerId === 'opencode';
-}
-
 function getOpenCodeDashboardChips(
   provider: CliProviderStatus,
+  runtimeStatus: OpenCodeRuntimeStatus | null,
   t: ReturnType<typeof useAppTranslation>['t']
 ): { label: string; title?: string }[] {
-  if (!shouldShowOpenCodeProviderFreeBadge(provider)) {
+  if (provider.providerId !== 'opencode') {
     return [];
   }
 
   const catalogModels = provider.modelCatalog?.models ?? [];
   const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(catalogModels);
-  const verifiedCount = new Set(
-    catalogModels
-      .filter((model) => model.metadata?.opencode?.proofState === 'verified')
-      .map((model) => model.launchModel)
-  ).size;
+  const verifiedCount = countVerifiedOpenCodeDashboardModels(provider);
 
   return [
-    {
-      label: t('cliStatus.provider.freeModels'),
-      title: t('cliStatus.provider.freeModelsTitle'),
-    },
+    ...(hasAvailableFreeOpenCodeDashboardModel(provider, runtimeStatus)
+      ? [
+          {
+            label: t('cliStatus.provider.freeModels'),
+            title: t('cliStatus.provider.freeModelsTitle'),
+          },
+        ]
+      : []),
     ...(configuredLocalCount > 0
       ? [
           {
@@ -1000,6 +1002,7 @@ const InstalledBanner = ({
               {(providersCollapsed ||
                 !visibleProviders.some((provider) => provider.providerId === 'opencode')) &&
               openCodeRuntimeStatus?.installed &&
+              canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
               (openCodeRuntimeStatus.updateAvailable ||
                 isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus.version)) ? (
                 <OpenCodeFreeTierUpdateAction
@@ -1014,6 +1017,16 @@ const InstalledBanner = ({
                   onUpdate={onOpenCodeInstall}
                   disabled={openCodeRuntimeInstalling}
                 />
+              ) : null}
+              {providersCollapsed && openCodeRuntimeStatus?.ignoredOverride ? (
+                <span
+                  data-testid="opencode-ignored-override-compact"
+                  className="flex items-center gap-1 text-xs text-amber-300"
+                  title={`${openCodeRuntimeStatus.ignoredOverride.binaryPath}: ${openCodeRuntimeStatus.ignoredOverride.reason}`}
+                >
+                  <AlertTriangle className="size-3 shrink-0" />
+                  {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
+                </span>
               ) : null}
               {runtimeAuthSummary && (
                 <span
@@ -1176,7 +1189,11 @@ const InstalledBanner = ({
               (provider.modelCatalogRefreshState === 'loading' ||
                 (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider)));
             const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
-            const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
+            const openCodeDashboardChips = getOpenCodeDashboardChips(
+              provider,
+              openCodeRuntimeStatus,
+              t
+            );
             const hasDetailContent = Boolean(
               (provider.backend?.label && !runtimeSummary) ||
               runtimeSummary ||
@@ -1369,6 +1386,13 @@ const InstalledBanner = ({
                         {getRuntimeInstallLabel(codexRuntimeStatus, t)}
                       </button>
                     ) : null}
+                    {provider.providerId === 'opencode' && !showSkeleton ? (
+                      <OpenCodeV2InstallAction
+                        status={openCodeRuntimeStatus}
+                        busy={openCodeRuntimeInstalling}
+                        onInstall={onOpenCodeInstall}
+                      />
+                    ) : null}
                     {shouldShowOpenCodeInstallAction(
                       provider,
                       showSkeleton,
@@ -1376,7 +1400,7 @@ const InstalledBanner = ({
                     ) ? (
                       <button
                         type="button"
-                        onClick={onOpenCodeInstall}
+                        onClick={() => onOpenCodeInstall()}
                         disabled={openCodeRuntimeInstalling}
                         className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                         style={{
@@ -1835,8 +1859,15 @@ export const CliStatusBanner = ({
     refreshOpenCodeDashboardCatalog,
   ]);
 
+  // An explicit OpenCode re-check must bypass the provider directory cache for
+  // every dashboard reader: the key drives both the connected-model catalog
+  // (refreshRevision) and the Providers & plans grid (refreshKey).
+  const refreshOpenCodeProviderDirectory = useCallback(() => {
+    setProviderQuickConnectRefreshKey((current) => current + 1);
+  }, []);
+
   const handleOpenCodeRefresh = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    refreshOpenCodeProviderDirectory();
     void (async () => {
       await invalidateOpenCodeRuntimeStatus();
       await fetchOpenCodeRuntimeStatus();
@@ -1844,7 +1875,7 @@ export const CliStatusBanner = ({
   }, [
     fetchOpenCodeRuntimeStatus,
     invalidateOpenCodeRuntimeStatus,
-    refreshOpenCodeDashboardCatalog,
+    refreshOpenCodeProviderDirectory,
   ]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
@@ -1985,14 +2016,21 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      if (providerId === 'opencode') refreshOpenCodeDashboardCatalog();
-      const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      let refreshed: boolean;
+      try {
+        refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      } finally {
+        // After the status check, so the grid and the connected-model catalog
+        // (which waits for status checks) start their refresh reads together
+        // and the main process can serve both with one runtime call.
+        if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
+      }
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
       return refreshed;
     },
-    [fetchCliProviderStatus, refreshOpenCodeDashboardCatalog]
+    [fetchCliProviderStatus, refreshOpenCodeProviderDirectory]
   );
 
   const handleProviderBackendChange = useCallback(
@@ -2085,6 +2123,7 @@ export const CliStatusBanner = ({
             providerId={providerOnboardingRequest.providerId}
             projectPath={selectedProjectPath}
             runtimeGate={openCodeQuickConnectGate}
+            openCodeGeneration={getOpenCodeGeneration(openCodeRuntimeStatus?.version)}
             runtimeUpdateRequired={
               isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus) &&
               (providerOnboardingRequest.mode === 'wizard' ||
@@ -2094,8 +2133,7 @@ export const CliStatusBanner = ({
             disabled={isBusy || cliStatusLoading}
             onInstallOrUpdateRuntime={() => installOpenCodeRuntime()}
             onProviderChanged={() => {
-              setProviderQuickConnectRefreshKey((current) => current + 1);
-              handleProviderRefresh('opencode');
+              void handleProviderRefresh('opencode');
             }}
             onAdvancedSettings={handleOnboardingAdvancedSettings}
           />
@@ -2245,7 +2283,7 @@ export const CliStatusBanner = ({
           codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
           onInstall={handleInstall}
-          onOpenCodeInstall={() => void installOpenCodeRuntime()}
+          onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
           onOpenCodeRefresh={handleOpenCodeRefresh}
           onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
@@ -2505,7 +2543,7 @@ export const CliStatusBanner = ({
             codexRuntimeStatusLoading={codexRuntimeStatusLoading}
             isBusy={isBusy}
             onInstall={handleInstall}
-            onOpenCodeInstall={() => void installOpenCodeRuntime()}
+            onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
             onOpenCodeRefresh={handleOpenCodeRefresh}
             onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
             onRefresh={handleRefresh}
@@ -2588,7 +2626,7 @@ export const CliStatusBanner = ({
           codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
           onInstall={handleInstall}
-          onOpenCodeInstall={() => void installOpenCodeRuntime()}
+          onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
           onOpenCodeRefresh={handleOpenCodeRefresh}
           onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
@@ -2791,7 +2829,7 @@ export const CliStatusBanner = ({
         codexRuntimeStatusLoading={codexRuntimeStatusLoading}
         isBusy={isBusy}
         onInstall={handleInstall}
-        onOpenCodeInstall={() => void installOpenCodeRuntime()}
+        onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
         onOpenCodeRefresh={handleOpenCodeRefresh}
         onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
         onRefresh={handleRefresh}

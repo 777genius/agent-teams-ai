@@ -1,5 +1,6 @@
 import './index.css';
 import './positiveText.css';
+import './warningText.css';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -10,8 +11,8 @@ import { initializeAppCloseCoordination } from '@features/app-close-coordination
 
 import { registerDynamicImportRecovery } from './utils/dynamicImportRecovery';
 import { App } from './App';
-import { initSentryRenderer } from './sentry';
-import { initializeNotificationListeners } from './store';
+import { initSentryRenderer, setRendererErrorContextGetter } from './sentry';
+import { initializeNotificationListeners, useStore } from './store';
 import { bootstrapRendererTelemetryFromConfig } from './telemetry';
 
 import type { SplashSceneHandle } from './components/splash/splashScene';
@@ -29,6 +30,23 @@ declare global {
 
 // Prepare Sentry before React renders. Actual init waits for telemetry config.
 initSentryRenderer();
+setRendererErrorContextGetter(() => {
+  const state = useStore.getState();
+  const panes = state.paneLayout.panes;
+  return {
+    activeTabType: state.getActiveTab()?.type,
+    paneCount: panes.length,
+    tabCount: panes.reduce((count, pane) => count + pane.tabs.length, 0),
+    memberCount: state.selectedTeamData?.members.length,
+    taskCount: state.selectedTeamData?.tasks.length,
+    hasPendingReviewRequest: state.pendingReviewRequest != null,
+    hasGlobalTaskDetail: state.globalTaskDetail != null,
+    dialogCount: document.querySelectorAll('[role="dialog"]').length,
+    listboxCount: document.querySelectorAll('[role="listbox"]').length,
+    textareaCount: document.querySelectorAll('textarea').length,
+    codeMirrorCount: document.querySelectorAll('.cm-editor').length,
+  };
+});
 registerDynamicImportRecovery();
 
 let root: ReactDOM.Root | null = null;

@@ -4,6 +4,8 @@ import {
   hasOpenCodeGroupAcknowledgement,
   type OpenCodeGroupAcknowledgementReader,
 } from './OpenCodeGroupAcknowledgement';
+import { isOpenCodeCompletedGroupNonResponse } from './OpenCodeGroupNonResponse';
+import { isOpenCodeHumanGroupNonResponse } from './OpenCodeHumanGroupReply';
 
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -53,6 +55,10 @@ export async function materializeOpenCodeGroupReply(input: {
 }> {
   const record = input.ledgerRecord;
   const text = record.observedAssistantPreview?.trim();
+  if (isOpenCodeCompletedGroupNonResponse(record)) {
+    await input.checkpoint();
+    return { ledgerRecord: record, visibleReply: null };
+  }
   if (record.groupChatId && record.responseState === 'tool_error') {
     await input.checkpoint();
     const ledgerRecord = await input.ledger.markFailedTerminal({
@@ -80,6 +86,20 @@ export async function materializeOpenCodeGroupReply(input: {
     return { ledgerRecord: record, visibleReply: null };
   }
   await input.checkpoint();
+  // Older runtimes cannot certify this internal token as a completed silent turn.
+  // Never publish it or turn a preview into completion proof; fail closed instead.
+  if (text === '[[AGENT_TEAMS_NO_REPLY]]') {
+    if (isOpenCodeHumanGroupNonResponse(record) || record.groupRepairHandoffPending) {
+      return { ledgerRecord: record, visibleReply: null };
+    }
+    const ledgerRecord = await input.ledger.markFailedTerminal({
+      id: record.id,
+      reason: 'group_non_response_runtime_unsupported',
+      diagnostics: record.diagnostics,
+      failedAt: input.nowIso(),
+    });
+    return { ledgerRecord, visibleReply: null };
+  }
   try {
     const saved = await input.send({
       teamName: input.teamName,

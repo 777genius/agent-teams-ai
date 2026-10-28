@@ -6,6 +6,8 @@ import {
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
 
+import type { TaskDetailIdentity } from '@features/team-task-detail/core';
+
 export type TaskStatusFilterId =
   | 'todo'
   | 'in_progress'
@@ -23,7 +25,18 @@ export const STATUS_OPTIONS = [
   { id: 'approved', labelKey: 'approved', color: '#16a34a' },
 ] as const satisfies readonly { id: TaskStatusFilterId; labelKey: string; color: string }[];
 
+export const TASK_STATUS_FILTER_IDS = STATUS_OPTIONS.map((option) => option.id);
+
 export type ReadFilter = 'all' | 'unread' | 'read';
+export const READ_FILTERS = ['all', 'unread', 'read'] as const satisfies readonly ReadFilter[];
+
+export function isTaskStatusFilterId(value: unknown): value is TaskStatusFilterId {
+  return TASK_STATUS_FILTER_IDS.some((id) => id === value);
+}
+
+export function isReadFilter(value: unknown): value is ReadFilter {
+  return READ_FILTERS.some((filter) => filter === value);
+}
 
 export interface TaskFiltersState {
   statusIds: Set<TaskStatusFilterId>;
@@ -32,6 +45,8 @@ export interface TaskFiltersState {
   /** @deprecated Use readFilter instead */
   unreadOnly: boolean;
   readFilter: ReadFilter;
+  showArchived: boolean;
+  showDeleted: boolean;
 }
 
 export const defaultTaskFiltersState = (): TaskFiltersState => ({
@@ -40,7 +55,21 @@ export const defaultTaskFiltersState = (): TaskFiltersState => ({
   projectPath: null,
   unreadOnly: false,
   readFilter: 'all',
+  showArchived: true,
+  showDeleted: false,
 });
+
+export function isDefaultTaskFiltersState(filters: TaskFiltersState): boolean {
+  return (
+    filters.statusIds.size === STATUS_OPTIONS.length &&
+    STATUS_OPTIONS.every((option) => filters.statusIds.has(option.id)) &&
+    filters.teamName === null &&
+    filters.projectPath === null &&
+    filters.readFilter === 'all' &&
+    filters.showArchived &&
+    !filters.showDeleted
+  );
+}
 
 export function taskMatchesStatus(
   task: {
@@ -77,9 +106,8 @@ export function useReadStateSnapshot(): ReturnType<typeof getSnapshot> {
 
 export function getTaskUnreadCount(
   readState: ReturnType<typeof getSnapshot>,
-  teamName: string,
-  taskId: string,
+  identity: TaskDetailIdentity,
   comments: { id?: string; createdAt: string }[] | undefined
 ): number {
-  return getUnreadCount(readState, teamName, taskId, comments ?? []);
+  return getUnreadCount(readState, identity, comments ?? []);
 }

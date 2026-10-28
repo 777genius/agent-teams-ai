@@ -12,6 +12,10 @@
     "notifications": {
       "description": "控制您何时以及如何收到有关智能体活动、任务完成和错误的通知。",
       "label": "通知"
+    },
+    "gatewayProviders": {
+      "description": "Manage gateway endpoints for per-teammate model access.",
+      "label": "Gateway providers"
     }
   },
   "view": {
@@ -802,9 +806,9 @@
         "noCredentials": "基本 URL 不得包含凭据"
       },
       "status": {
-        "endpointDisabledTokenKept": "端点已禁用。保存的 Token 被保留。",
         "endpointSaved": "端点已保存",
-        "endpointSavedTokenMissing": "端点已保存。未配置认证 Token。"
+        "endpointSavedTokenMissing": "端点已保存。未配置认证 Token。",
+        "notActiveUntilSaved": "尚未激活。保存端点以进行切换；在此之前启动将使用先前的连接方式。"
       }
     },
     "connection": {
@@ -905,10 +909,8 @@
     "runtimeSummary": "运行时：{{runtime}}",
     "status": {
       "configured": "已配置",
-      "enabled": "启用",
       "notConfigured": "未配置",
       "notSet": "未设置",
-      "off": "关闭",
       "unknown": "未知"
     },
     "title": "提供商设置",
@@ -924,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API 密钥已保存，但无法刷新提供商状态。",
       "connectionUpdatedRefreshFailed": "连接已更新，但无法刷新提供商状态。",
       "deleteApiKey": "删除 API 密钥失败",
-      "disableEndpoint": "禁用端点失败",
-      "endpointDisabledRefreshFailed": "端点已禁用，但无法刷新提供商状态。",
       "endpointSavedRefreshFailed": "端点已保存，但无法刷新提供商状态。",
       "refreshCodexAccount": "刷新 Codex 帐户失败",
       "saveApiKey": "无法保存 API 密钥",
@@ -1065,5 +1065,41 @@
   },
   "cliStatus": {
     "versionUpgrade": "v{{current}} -> v{{latest}}"
+  },
+  "gatewayProviders": {
+    "title": "Gateway providers",
+    "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+    "addProfile": "Add profile",
+    "empty": "No gateway profiles yet.",
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "save": "Save"
+    },
+    "badges": {
+      "privateNetwork": "Private network allowed"
+    },
+    "boundTeammates": "Bound teammates: {{total}}",
+    "dialog": {
+      "createTitle": "Add gateway profile",
+      "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+      "editTitle": "Edit gateway profile"
+    },
+    "errors": {
+      "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+      "fieldsRequired": "Display name and gateway URL are required."
+    },
+    "fields": {
+      "allowPrivateNetwork": "Allow private network address",
+      "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+      "baseUrl": "Gateway URL",
+      "baseUrlHint": "Gateway root without a trailing /v1.",
+      "displayName": "Display name"
+    },
+    "hints": {
+      "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+      "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+    }
   }
 }

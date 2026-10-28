@@ -4,12 +4,18 @@ import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
   findRuntimeProviderOnboardingPlanByProviderId,
+  findRuntimeProviderOnboardingPlanEntry,
   getRuntimeProviderCredentialUrl,
+  getRuntimeProviderOnboardingCredentialUrls,
   getRuntimeProviderOnboardingPlan,
+  getRuntimeProviderOnboardingPlanProviderIds,
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isRuntimeProviderOnboardingPlanConnected,
   isRuntimeProviderOnboardingPlanRoutable,
   normalizeRuntimeProviderOnboardingProgress,
+  rankRecommendedRuntimeProviderModels,
+  resolveRuntimeProviderOnboardingPlan,
+  resolveRuntimeProviderOnboardingRouteGeneration,
   resolveXiaomiMiMoTokenPlanProvider,
   selectRecommendedRuntimeProviderModel,
 } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
@@ -132,6 +138,64 @@ describe('runtime provider onboarding domain', () => {
         directoryEntry({ providerId: plan.providerId, connectedAuthHint: 'api' })
       )
     ).toBe(true);
+  });
+
+  it('prefers MiniMax-M3.1-Flash over MiniMax-M3 when the live catalog exposes both', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const m3 = model('minimax-coding-plan/MiniMax-M3', { default: true });
+    const flash = model('minimax-coding-plan/MiniMax-M3.1-Flash');
+
+    expect(plan.preferredModelFragments).toEqual(['minimax-m3.1-flash', 'minimax-m3']);
+    expect(selectRecommendedRuntimeProviderModel(plan, [m3, flash])).toBe(flash);
+  });
+
+  it('falls back to MiniMax-M3 when Flash is absent or unavailable in the live catalog', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const m3 = model('minimax-coding-plan/MiniMax-M3');
+    const flash = model('minimax-coding-plan/MiniMax-M3.1-Flash', {
+      availability: 'unavailable',
+    });
+
+    expect(selectRecommendedRuntimeProviderModel(plan, [m3])).toBe(m3);
+    expect(selectRecommendedRuntimeProviderModel(plan, [flash, m3])).toBe(m3);
+    expect(selectRecommendedRuntimeProviderModel(plan, [])).toBeNull();
+  });
+
+  it('does not fall back to retired MiniMax catalog models during onboarding', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const retired = [
+      'minimax-coding-plan/MiniMax-M2.7',
+      'minimax-coding-plan/MiniMax-M3-highspeed',
+      'openrouter/minimax/minimax-m2.7',
+      'opencode/minimax-m2.5-free',
+    ].map((modelId) => model(modelId, { default: true }));
+    const flash = model('openrouter/minimax/minimax-m3.1-flash:free');
+
+    expect(rankRecommendedRuntimeProviderModels(plan, retired)).toEqual([]);
+    expect(selectRecommendedRuntimeProviderModel(plan, retired)).toBeNull();
+    expect(selectRecommendedRuntimeProviderModel(plan, [...retired, flash])).toBe(flash);
+  });
+
+  it.each(['minimax', 'minimax-cn', 'minimax-coding-plan', 'minimax-cn-coding-plan'])(
+    'filters bare MiniMax IDs from the %s scoped catalog before recommending a default',
+    (providerId) => {
+      const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+      const retired = model('MiniMax-M2.7', { providerId, default: true });
+      const current = model('MiniMax-M3.1-Flash', { providerId });
+      expect(selectRecommendedRuntimeProviderModel(plan, [retired])).toBeNull();
+      expect(rankRecommendedRuntimeProviderModels(plan, [retired, current])).toEqual([current]);
+    }
+  );
+
+  it('preserves explicitly saved MiniMax model selections', () => {
+    const progress = {
+      ...createRuntimeProviderOnboardingProgress(['minimax-token-plan']),
+      selectedModels: { 'minimax-token-plan': 'custom/minimax-model' },
+    };
+
+    expect(normalizeRuntimeProviderOnboardingProgress(progress)?.selectedModels).toEqual({
+      'minimax-token-plan': 'custom/minimax-model',
+    });
   });
 
   it('opens the official MiMo Token Plan key management page for every region', () => {
@@ -298,5 +362,84 @@ describe('runtime provider onboarding domain', () => {
         selectedPlanIds: ['unknown'],
       })
     ).toBeNull();
+  });
+});
+
+describe('Kimi Code routes by OpenCode generation', () => {
+  const plan = getRuntimeProviderOnboardingPlan('kimi-code-membership');
+
+  it('keeps one V1 provider with both console domains', () => {
+    expect(resolveRuntimeProviderOnboardingPlan(plan, 'v1', null)).toBe(plan);
+    expect(getRuntimeProviderOnboardingPlanProviderIds(plan, 'v1')).toEqual(['kimi-for-coding']);
+    expect(getRuntimeProviderOnboardingCredentialUrls(plan)).toEqual([
+      'https://www.kimi.com/code/console',
+      'https://www.kimi.ai/code/console',
+    ]);
+  });
+
+  it('asks for a V2 route and maps the chosen one to its integration', () => {
+    const unresolved = resolveRuntimeProviderOnboardingPlan(plan, 'v2', null);
+    expect(unresolved.routeChoices?.map((route) => route.host)).toEqual(['kimi.com', 'kimi.ai']);
+    expect(getRuntimeProviderOnboardingPlanProviderIds(plan, 'v2')).toEqual([
+      'kimi-code-plan-cn',
+      'kimi-code-plan-global',
+      'kimi-for-coding',
+    ]);
+
+    const global = resolveRuntimeProviderOnboardingPlan(plan, 'v2', 'kimi-code-plan-global');
+    expect(global.providerId).toBe('kimi-code-plan-global');
+    expect(global.routeChoices).toBeUndefined();
+    expect(getRuntimeProviderOnboardingCredentialUrls(global)).toEqual([
+      'https://www.kimi.ai/code/console',
+    ]);
+    expect(global.preferredModelFragments).toEqual([
+      'kimi-code-plan-global/kimi-for-coding',
+      'kimi-code-plan-global/k3',
+      'kimi-code-plan-global/kimi-for-coding-highspeed',
+    ]);
+  });
+
+  it('finds the plan from a V2 integration id', () => {
+    const found = findRuntimeProviderOnboardingPlanByProviderId('kimi-code-plan-cn');
+    expect(found?.id).toBe('kimi-code-membership');
+    expect(found?.providerId).toBe('kimi-code-plan-cn');
+    expect(getRuntimeProviderCredentialUrl('kimi-code-plan-cn')).toBe(
+      'https://www.kimi.com/code/console'
+    );
+  });
+});
+
+describe('Kimi Code route guard', () => {
+  const plan = getRuntimeProviderOnboardingPlan('kimi-code-membership');
+  const routes = [{ providerId: 'kimi-for-coding' }, { providerId: 'Kimi-Code-Plan-Global' }];
+
+  it('uses the connected route integration with the pinned runtime on V2 only', () => {
+    const entries = [
+      directoryEntry({ providerId: 'kimi-for-coding', state: 'not-connected' }),
+      directoryEntry({ providerId: 'kimi-code-plan-cn', state: 'connected' }),
+    ];
+    expect(
+      findRuntimeProviderOnboardingPlanEntry('kimi-code-membership', 'v2', entries)?.providerId
+    ).toBe('kimi-code-plan-cn');
+    expect(
+      findRuntimeProviderOnboardingPlanEntry('kimi-code-membership', 'v1', entries)?.providerId
+    ).toBe('kimi-for-coding');
+  });
+
+  it('keeps routes off for a runtime that does not serve them', () => {
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, false)).toBe('v1');
+  });
+
+  it('uses routes on V2 only when the runtime serves and lists a route integration', () => {
+    expect(
+      resolveRuntimeProviderOnboardingRouteGeneration(
+        plan,
+        'v2',
+        [{ providerId: 'kimi-for-coding' }],
+        true
+      )
+    ).toBe('v1');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, true)).toBe('v2');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v1', routes, true)).toBe('v1');
   });
 });

@@ -316,31 +316,11 @@
 }
 
 .kanban-column-glow {
-  background-image:
-    radial-gradient(
-      ellipse 150% 70% at 50% 0,
-      color-mix(in srgb, var(--kanban-column-accent) 8%, transparent) 0%,
-      color-mix(in srgb, var(--kanban-column-accent) 3%, transparent) 48%,
-      transparent 100%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--kanban-column-accent) 6%, transparent) 0%,
-      color-mix(in srgb, var(--kanban-column-accent) 3.5%, transparent) 38%,
-      color-mix(in srgb, var(--kanban-column-accent) 1.5%, transparent) 76%,
-      transparent 100%
-    );
-  background-position: top center;
-  background-repeat: no-repeat;
+  background-color: color-mix(in srgb, var(--kanban-column-accent) 5%, transparent);
 }
 
 .kanban-column-header-glow {
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--kanban-column-accent) 8%, transparent) 0%,
-    color-mix(in srgb, var(--kanban-column-accent) 3%, transparent) 58%,
-    transparent 100%
-  );
+  background-image: none;
 }
 
 .kanban-task-card-toolbar button {
@@ -1145,7 +1125,8 @@ a[href],
 .member-launch-diagnostics-pulse {
   position: relative;
   overflow: visible;
-  animation: member-diagnostics-attention-fill 1.7s ease-in-out infinite;
+  /* Draw attention briefly, then keep the warning tint without repainting forever. */
+  animation: member-diagnostics-attention-fill 1.7s ease-in-out 3 forwards;
 }
 
 .member-launch-diagnostics-pulse::after {
@@ -1155,7 +1136,7 @@ a[href],
   border: 1px solid rgba(248, 113, 113, 0.55);
   border-radius: inherit;
   pointer-events: none;
-  animation: member-diagnostics-attention-ring 1.7s ease-out infinite;
+  animation: member-diagnostics-attention-ring 1.7s ease-out 3 forwards;
 }
 
 /* Skeleton-style shimmer for waiting members: a translucent light sweep */

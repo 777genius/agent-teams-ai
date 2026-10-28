@@ -24,7 +24,6 @@ import {
   WorkspaceTrustLaunchNotice,
 } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
-import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
   buildMemberDraftColorMap,
   buildMemberDraftSuggestions,
@@ -85,6 +84,7 @@ import {
 } from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
+import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
@@ -93,8 +93,9 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
+import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
-import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -109,7 +110,10 @@ import {
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
-import { buildProviderModelChecksMap } from './defaultModelSelection';
+import {
+  buildProviderModelChecksMap,
+  collectDialogMemberProviderIds,
+} from './defaultModelSelection';
 import {
   cancelScheduledIdleSet,
   type ScheduledIdleHandle,
@@ -119,11 +123,13 @@ import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModel
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { resolvePersistedTeamModel } from './persistedTeamModel';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
@@ -167,6 +173,7 @@ import {
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
 import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
+import { CreateTeamProviderStatusStrip } from './RetryOpenCodeStatus';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import {
   analyzeTeammateRuntimeCompatibility,
@@ -176,8 +183,8 @@ import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibili
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
+import { useDialogMemberModelScope } from './useDialogMemberModelScope';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
-import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
@@ -578,10 +585,9 @@ export const CreateTeamDialog = ({
     forceDefaultProjectSelection,
     appliedDefaultProjectModePath: forcedDefaultProjectModePathRef.current,
   });
-  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
-    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
-  const openCodeLocalModelScope = useOpenCodeLocalModelScope({
+  const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
+    teamName: sanitizeTeamName(teamName.trim()),
     projectPath: effectiveCwd,
     selectedProviderId,
     members,
@@ -600,26 +606,32 @@ export const CreateTeamDialog = ({
     () => getNextSuggestedTeamName(allTakenTeamNames),
     [allTakenTeamNames]
   );
-  const selectedMemberProviders = useMemo<TeamProviderId[]>(() => {
-    if (runtimeSelectionUnresolved) return [];
-    if (!multimodelEnabled) return ['anthropic'];
-    if (soloTeam || syncModelsWithLead) return [selectedProviderId];
-    return Array.from(
-      new Set([
-        selectedProviderId,
-        ...members.flatMap((member) =>
-          !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
-        ),
-      ])
+  const selectedMemberProviders = useMemo(
+    () =>
+      runtimeSelectionUnresolved
+        ? []
+        : collectDialogMemberProviderIds(
+            multimodelEnabled,
+            selectedProviderId,
+            soloTeam || syncModelsWithLead || gatewayBindings.pending ? [] : members,
+            gatewayBindings.boundMemberNames
+          ),
+    [
+      runtimeSelectionUnresolved,
+      members,
+      multimodelEnabled,
+      selectedProviderId,
+      soloTeam,
+      syncModelsWithLead,
+      gatewayBindings,
+    ]
+  );
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(
+      globalRuntimeProviderStatusById,
+      effectiveCwd,
+      open && launchPreflightSelectionReady && selectedMemberProviders.includes('anthropic')
     );
-  }, [
-    runtimeSelectionUnresolved,
-    members,
-    multimodelEnabled,
-    selectedProviderId,
-    soloTeam,
-    syncModelsWithLead,
-  ]);
   const openCodeCatalogEnabled =
     open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
   useEffect(() => {
@@ -1426,7 +1438,7 @@ export const CreateTeamDialog = ({
         setSelectedEffortRaw(initialData.effort ?? '');
       }
       if (Object.hasOwn(initialData, 'fastMode')) {
-        setSelectedFastModeRaw(initialData.fastMode ?? 'inherit');
+        setSelectedFastModeRaw(initialData.fastMode ?? getStoredTeamFastMode());
       }
       if (Object.hasOwn(initialData, 'limitContext')) {
         setLimitContextRaw(initialData.limitContext === true);
@@ -1653,14 +1665,11 @@ export const CreateTeamDialog = ({
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
-        ? resolveAnthropicRuntimeSelection({
-            source: {
-              modelCatalog: runtimeProviderStatusById.get('anthropic')?.modelCatalog,
-              runtimeCapabilities: runtimeProviderStatusById.get('anthropic')?.runtimeCapabilities,
-            },
+        ? resolveAnthropicProviderRuntimeSelection(
+            runtimeProviderStatusById.get('anthropic'),
             selectedModel,
-            limitContext: effectiveAnthropicRuntimeLimitContext,
-          })
+            effectiveAnthropicRuntimeLimitContext
+          )
         : null,
     [
       effectiveAnthropicRuntimeLimitContext,
@@ -1728,12 +1737,12 @@ export const CreateTeamDialog = ({
             selection:
               anthropicRuntimeSelection ??
               resolveAnthropicRuntimeSelection({
-                source: {
-                  modelCatalog: null,
-                  runtimeCapabilities: null,
-                },
+                source: {},
                 selectedModel,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
+                defaultLaunchModel: getAnthropicRuntimeDefaultLaunchModel(
+                  runtimeProviderStatusById.get('anthropic')
+                ),
               }),
             selectedEffort: selectedEffortForCurrentSelection,
             selectedFastMode,
@@ -1867,6 +1876,7 @@ export const CreateTeamDialog = ({
   );
   const modelValidationError = useMemo(
     () =>
+      gatewayBindings.error ??
       openCodeDefaultSelectionError ??
       getDialogTeamModelValidationError({
         selectedProviderId,
@@ -1879,6 +1889,7 @@ export const CreateTeamDialog = ({
         openCodeProviderScopedStatusBySourceId,
       }),
     [
+      gatewayBindings,
       effectiveMemberDrafts,
       openCodeDefaultSelectionError,
       openCodeLocalModelScope,
@@ -1897,31 +1908,14 @@ export const CreateTeamDialog = ({
     );
     return issue?.reason ?? issue?.detail ?? null;
   }, [effectiveModel, prepareChecks, selectedModel, selectedProviderId]);
-  const memberModelIssueById = useMemo(() => {
-    const next: Record<string, string> = {};
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-      if (syncModelsWithLead && leadModelIssueText) {
-        next[member.id] = leadModelIssueText;
-        continue;
-      }
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      const issue = getProvisioningModelIssue(prepareChecks, providerId, member.model);
-      const issueText = issue?.reason ?? issue?.detail ?? null;
-      if (issueText) {
-        next[member.id] = issueText;
-      }
-    }
-    return next;
-  }, [
-    effectiveMemberDrafts,
-    leadModelIssueText,
-    prepareChecks,
+  const memberModelIssueById = getDialogMemberModelIssues({
+    members: effectiveMemberDrafts,
     selectedProviderId,
+    prepareChecks,
     syncModelsWithLead,
-  ]);
+    leadModelIssueText,
+    gatewayBoundMemberNames: gatewayBindings.boundMemberNames,
+  });
   const canSkipPreflight = () =>
     launchTeam &&
     optionalPreflight.canSkipProviderPreflight(
@@ -1934,6 +1928,7 @@ export const CreateTeamDialog = ({
       loadingCliStatus?.providers
     );
   const hasCreateFormErrors =
+    gatewayBindings.pending ||
     !!teamNameInlineError ||
     isNameTakenByExistingTeam ||
     isNameProvisioning ||
@@ -2119,6 +2114,7 @@ export const CreateTeamDialog = ({
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
   const handleSubmit = (): void => {
+    if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
     if (launchTeam && !launchPreflightSelectionReady) return;
     if (submissionFence.busy || isSubmitting) return;
@@ -2187,26 +2183,38 @@ export const CreateTeamDialog = ({
             cwd: effectiveCwd,
             projectFolder: api.projectFolder,
           });
-          await api.teams.createConfig({
-            runtimeSelectionVersion: request.runtimeSelectionVersion,
-            teamName: request.teamName,
-            displayName: request.displayName,
-            description: request.description,
-            color: request.color,
-            members: request.members,
-            cwd: configOnlyCwd,
-            prompt: request.prompt,
-            providerId: request.providerId,
-            providerBackendId: request.providerBackendId,
-            model: request.model,
-            effort: request.effort,
-            fastMode: request.fastMode,
-            syncModelsWithLead: request.syncModelsWithLead,
-            limitContext: request.limitContext,
-            skipPermissions: request.skipPermissions,
-            worktree: request.worktree,
-            extraCliArgs: request.extraCliArgs,
-          });
+          await gatewayBindings.run(() =>
+            api.teams.createConfig({
+              runtimeSelectionVersion: request.runtimeSelectionVersion,
+              teamName: request.teamName,
+              displayName: request.displayName,
+              description: request.description,
+              color: request.color,
+              members: request.members,
+              cwd: configOnlyCwd,
+              prompt: request.prompt,
+              providerId: request.providerId,
+              providerBackendId: request.providerBackendId,
+              model: resolvePersistedTeamModel({
+                model: request.model,
+                selectedModel: effectiveSelectedModel,
+                providerId: request.providerId,
+                globalStatus: globalRuntimeProviderStatusById.get('anthropic'),
+                scopedStatus: runtimeProviderStatusById.get(selectedProviderId),
+                projectSelectionReady: launchPreflightSelectionReady,
+                probedCwd: effectiveCwd,
+                persistedCwd: configOnlyCwd,
+                limitContext: effectiveAnthropicRuntimeLimitContext,
+              }),
+              effort: request.effort,
+              fastMode: request.fastMode,
+              syncModelsWithLead: request.syncModelsWithLead,
+              limitContext: request.limitContext,
+              skipPermissions: request.skipPermissions,
+              worktree: request.worktree,
+              extraCliArgs: request.extraCliArgs,
+            })
+          );
           if (selectedOrganizationPlacement) {
             try {
               await api.organizations.assignTeamToUnit({
@@ -2243,7 +2251,9 @@ export const CreateTeamDialog = ({
         if (!syncModelsWithLead) {
           persistCurrentMemberRuntimePreferences(members);
         }
-        await onCreate(request, selectedOrganizationPlacement ?? undefined);
+        await gatewayBindings.run(() =>
+          onCreate(request, selectedOrganizationPlacement ?? undefined)
+        );
         onOpenTeam(request.teamName, effectiveCwd || undefined);
         resetFormState();
         onClose();
@@ -2468,6 +2478,8 @@ export const CreateTeamDialog = ({
               runtimeSelectionUnresolved={runtimeSelectionUnresolved}
               members={members}
               onMembersChange={setMembers}
+              teamName={dialogTeamNameKey || undefined}
+              gatewayBindings={gatewayBindings}
               fieldError={fieldErrors.members}
               validateMemberName={validateMemberNameInline}
               showWorkflow
@@ -2587,6 +2599,7 @@ export const CreateTeamDialog = ({
                           onValueChange={setSelectedFastMode}
                           providerFastModeDefault={anthropicProviderFastModeDefault}
                           model={selectedModel}
+                          projectPath={effectiveCwd}
                           limitContext={effectiveAnthropicRuntimeLimitContext}
                           id="create-fast-mode"
                         />
@@ -2867,7 +2880,9 @@ export const CreateTeamDialog = ({
         <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
-              <ProviderActivityStatusStrip
+              <CreateTeamProviderStatusStrip
+                projectPath={effectiveCwd}
+                disabled={isSubmitting}
                 cliStatus={effectiveCliStatus}
                 providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
                 sourceCliStatus={loadingCliStatus}
@@ -3065,6 +3080,7 @@ export const CreateTeamDialog = ({
                 disabled={
                   !canCreate ||
                   !draftLoaded ||
+                  gatewayBindings.pending ||
                   isSubmitting ||
                   (launchTeam && !launchPreflightSelectionReady) ||
                   (prepareState === 'loading' && !canSkipPreflight()) ||

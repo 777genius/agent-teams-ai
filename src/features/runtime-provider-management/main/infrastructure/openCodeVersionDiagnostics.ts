@@ -25,10 +25,14 @@ export async function probeOpenCodeBinaryVersion(
   binaryPath: string
 ): Promise<OpenCodeBinaryVersionProbe> {
   const started = performance.now();
+  // Let the installed CLI choose its mode independently of Electron/Vite.
+  const env = { ...process.env };
+  delete env.NODE_ENV;
   try {
     const { stdout } = await execCli(binaryPath, ['--version'], {
       timeout: VERSION_TIMEOUT_MS,
       windowsHide: true,
+      env,
     });
     return { ok: true, version: stdout.trim() || null };
   } catch (error) {

@@ -42,6 +42,7 @@ import { createSessionSlice } from './slices/sessionSlice';
 import { createSubagentSlice } from './slices/subagentSlice';
 import { createTabSlice } from './slices/tabSlice';
 import { createTabUISlice } from './slices/tabUISlice';
+import { createTeamTaskDetailStoreSlices } from './slices/taskDetailStoreSlices';
 import {
   createTeamSlice,
   getActiveTeamPendingReplyWaits,
@@ -53,12 +54,15 @@ import {
 } from './slices/teamSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
+import { invalidateTaskDetailForTeamChange } from './team/taskDetailReadAuthority';
+import { startTaskLogStreamTracking } from './team/taskLogStreamTracking';
 import {
   cancelNewlyTrashedTeamRefreshes,
   captureTeamManagementRefreshScope,
   continueAcceptedTeamManagementChange,
 } from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
+import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
@@ -185,6 +189,7 @@ export const useStore = create<AppState>()((...args) => ({
   ...createSessionDetailSlice(...args),
   ...createSubagentSlice(...args),
   ...createTeamSlice(...args),
+  ...createTeamTaskDetailStoreSlices(...args),
   ...createConversationSlice(...args),
   ...createTabSlice(...args),
   ...createTabUISlice(...args),
@@ -964,24 +969,8 @@ export function initializeNotificationListeners(): () => void {
     );
   };
 
-  const getVisibleTeamNamesInAnyPane = (state = useStore.getState()): Set<string> => {
-    const { paneLayout } = state;
-    const visibleTeamNames = new Set<string>();
-    for (const pane of paneLayout.panes) {
-      if (!pane.activeTabId) continue;
-      const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-      if (
-        (activeTab?.type === 'team' || activeTab?.type === 'graph') &&
-        activeTab.teamName != null
-      ) {
-        visibleTeamNames.add(activeTab.teamName);
-      }
-    }
-    return visibleTeamNames;
-  };
-
   const isTeamVisibleInAnyPane = (teamName: string): boolean => {
-    return getVisibleTeamNamesInAnyPane().has(teamName);
+    return getVisibleTeamNamesInAnyPane(useStore.getState()).has(teamName);
   };
 
   const shouldRefreshTeamMessages = (teamName: string): boolean => {
@@ -989,7 +978,7 @@ export function initializeNotificationListeners(): () => void {
   };
 
   const getTrackedTeamMessageRefreshTeams = (): Set<string> => {
-    const tracked = getVisibleTeamNamesInAnyPane();
+    const tracked = getVisibleTeamNamesInAnyPane(useStore.getState());
     for (const teamName of getActiveTeamPendingReplyWaits()) {
       tracked.add(teamName);
     }
@@ -1008,11 +997,7 @@ export function initializeNotificationListeners(): () => void {
   };
 
   const getTrackedToolActivityTeams = (): Set<string> => {
-    return getVisibleTeamNamesInAnyPane();
-  };
-
-  const getTrackedTaskLogActivityTeams = (): Set<string> => {
-    return getVisibleTeamNamesInAnyPane();
+    return getVisibleTeamNamesInAnyPane(useStore.getState());
   };
 
   const noteRelevantTeamActivity = (teamName: string, timestamp = Date.now()): void => {
@@ -1438,45 +1423,7 @@ export function initializeNotificationListeners(): () => void {
     unsubscribeTeamDeletion();
   });
 
-  if (api.teams?.setTaskLogStreamTracking) {
-    let trackedTeamNames = new Set<string>();
-    const syncVisibleTeamTracking = (): void => {
-      const nextTrackedTeamNames = getTrackedTaskLogActivityTeams();
-
-      for (const teamName of nextTrackedTeamNames) {
-        if (!trackedTeamNames.has(teamName)) {
-          void api.teams.setTaskLogStreamTracking(teamName, true).catch(() => undefined);
-        }
-      }
-
-      for (const teamName of trackedTeamNames) {
-        if (!nextTrackedTeamNames.has(teamName)) {
-          void api.teams.setTaskLogStreamTracking(teamName, false).catch(() => undefined);
-          clearTaskLogActivityStateForTeam(teamName);
-        }
-      }
-
-      trackedTeamNames = nextTrackedTeamNames;
-    };
-
-    syncVisibleTeamTracking();
-
-    const unsubscribeVisibleTeamTracking = useStore.subscribe((state, prevState) => {
-      if (state.paneLayout === prevState.paneLayout) {
-        return;
-      }
-      syncVisibleTeamTracking();
-    });
-
-    cleanupFns.push(() => {
-      unsubscribeVisibleTeamTracking();
-      for (const teamName of trackedTeamNames) {
-        void api.teams.setTaskLogStreamTracking(teamName, false).catch(() => undefined);
-        clearTaskLogActivityStateForTeam(teamName);
-      }
-      trackedTeamNames.clear();
-    });
-  }
+  cleanupFns.push(startTaskLogStreamTracking(useStore, clearTaskLogActivityStateForTeam));
 
   // Listen for task-list file changes to refresh currently viewed session metadata
   if (api.onTodoChange) {
@@ -1626,6 +1573,8 @@ export function initializeNotificationListeners(): () => void {
         const currentRunId = useStore.getState().currentRuntimeRunIdByTeam[event.teamName];
         return currentRunId != null && currentRunId !== event.runId;
       })();
+
+      invalidateTaskDetailForTeamChange(useStore.getState(), event, isStaleRuntimeEvent);
 
       const seedCurrentRunIdIfMissing = (): void => {
         if (!event.runId) return;

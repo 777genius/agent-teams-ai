@@ -1,14 +1,135 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildTaskLinkHref,
+  createEncodedTaskReference,
+  extractTaskRefsFromText,
   linkifyTaskIdsInMarkdown,
   parseTaskLinkHref,
+  resolveTaskReferenceCandidate,
+  stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
+import { describe, expect, it } from 'vitest';
 
 import type { TaskRef } from '@shared/types';
 
 describe('taskReferenceUtils', () => {
+  it.each(['~~~openui', '```openui-lang', '> ~~~openui'])(
+    'preserves composer task identities after code in %s',
+    (opener) => {
+      const first = createEncodedTaskReference('1', 'canonical-a', 'team-a');
+      const second = createEncodedTaskReference('1', 'canonical-b', 'team-b');
+      const prefix = opener.startsWith('>') ? '> ' : '';
+      const fence = opener.match(/[`~]+/)![0];
+      const raw = `${opener}\n${prefix}root = Stack([Card([TextContent("${first}")])]);\n${prefix}${fence}\n\nAfter ${second}`;
+      const refs = extractTaskRefsFromText(raw, []);
+      const stored = stripEncodedTaskReferenceMetadata(raw);
+
+      expect(refs.map((ref) => ref.taskId)).toEqual(['canonical-a', 'canonical-b']);
+      expect(linkifyTaskIdsInMarkdown(stored, refs)).toBe(
+        stored.replace('After #1', 'After [#1](task://canonical-b?team=team-b&display=1)')
+      );
+    }
+  );
+
+  it('keeps complete composer references aligned across literal code, link labels and trimmed inline chips', () => {
+    const refs = ['a', 'b', 'c', 'd'].map((name) =>
+      createEncodedTaskReference('1', `canonical-${name}`, `team-${name}`)
+    );
+    const raw = `~~~openui\n${refs[0]}\n~~~\n\n\`literal ${refs[1]}\` [task ${refs[2]}](task://1) \`  ${refs[3]}  \``;
+    const stored = stripEncodedTaskReferenceMetadata(raw);
+    expect(linkifyTaskIdsInMarkdown(stored, extractTaskRefsFromText(raw, []))).toBe(
+      '~~~openui\n#1\n~~~\n\n`literal #1` [task #1](task://canonical-c?team=team-c&display=1) [#1](task://canonical-d?team=team-d&display=1)'
+    );
+  });
+
+  it('keeps legacy prose-only pairing when raw task occurrence coverage is incomplete', () => {
+    const ref = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const text = '~~~openui\n#unknown\n~~~\n\n#1';
+    expect(linkifyTaskIdsInMarkdown(text, [ref])).toBe(
+      '~~~openui\n#unknown\n~~~\n\n[#1](task://canonical-a?team=team-a&display=1)'
+    );
+  });
+
+  it('never resolves a canonical ID through another task display ID', () => {
+    const tasks = [
+      { id: 'other', displayId: '1' },
+      { id: '1', displayId: '2' },
+    ];
+    expect(resolveTaskReferenceCandidate(tasks, '1', 'canonical')?.id).toBe('1');
+    expect(resolveTaskReferenceCandidate(tasks, '1', 'display')?.id).toBe('other');
+    expect(resolveTaskReferenceCandidate(tasks, '2', 'canonical')).toBeUndefined();
+  });
+  it('consumes the stored reference paired with encoded metadata before a legacy duplicate', () => {
+    const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    const text = `${createEncodedTaskReference('1', first.taskId, first.teamName)} then #1`;
+    expect(linkifyTaskIdsInMarkdown(text, [first, second])).toBe(
+      '[#1](task://canonical-a?team=team-a&display=1) then [#1](task://canonical-b?team=team-b&display=1)'
+    );
+  });
+
+  it('keeps paired cross-team targets in legacy Markdown links without rewriting explicit links', () => {
+    const target = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    expect(linkifyTaskIdsInMarkdown('[#1](task://1)', [target])).toBe(
+      '[#1](task://canonical-b?team=team-b&display=1)'
+    );
+    expect(
+      linkifyTaskIdsInMarkdown('[#1](task://canonical-a?team=team-a&display=1)', [target])
+    ).toBe('[#1](task://canonical-a?team=team-a&display=1)');
+    expect(linkifyTaskIdsInMarkdown('[#1](https://example.test/task/1)', [target])).toBe(
+      '[#1](https://example.test/task/1)'
+    );
+  });
+
+  it('pairs descriptive Markdown labels in occurrence order across external and cross-team links', () => {
+    const refs = [
+      { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' },
+      { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' },
+      { taskId: 'canonical-c', teamName: 'team-c', displayId: '1' },
+    ];
+    expect(
+      linkifyTaskIdsInMarkdown('[source #1](https://example.test) [Task #1](task://1) #1', refs)
+    ).toBe(
+      '[source #1](https://example.test) [Task #1](task://canonical-b?team=team-b&display=1) [#1](task://canonical-c?team=team-c&display=1)'
+    );
+    expect(linkifyTaskIdsInMarkdown('[ #1 ](task://1)', [refs[1]])).toBe(
+      '[ #1 ](task://canonical-b?team=team-b&display=1)'
+    );
+  });
+
+  it('keeps existing links intact when their labels also contain inline code', () => {
+    const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    expect(
+      linkifyTaskIdsInMarkdown('[see `code` #1](https://example.test) #1', [first, second])
+    ).toBe('[see `code` #1](https://example.test) [#1](task://canonical-b?team=team-b&display=1)');
+    expect(linkifyTaskIdsInMarkdown('[#1 and `code`](task://1) #1', [first, second])).toBe(
+      '[#1 and `code`](task://canonical-a?team=team-a&display=1) [#1](task://canonical-b?team=team-b&display=1)'
+    );
+  });
+
+  it('keeps duplicate, encoded, escaped, fenced, and explicit label references paired correctly', () => {
+    const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+    const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+    const third = { taskId: 'canonical-c', teamName: 'team-c', displayId: '1' };
+    const encoded = createEncodedTaskReference('1', first.taskId, first.teamName);
+
+    expect(linkifyTaskIdsInMarkdown('[#1 #1](task://1) #1', [first, second, third])).toBe(
+      '[#1 #1](task://canonical-a?team=team-a&display=1) [#1](task://canonical-c?team=team-c&display=1)'
+    );
+    expect(linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])).toBe(
+      `[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`
+    );
+    expect(linkifyTaskIdsInMarkdown('[\\#1](https://example.test) #1', [first])).toBe(
+      '[\\#1](https://example.test) [#1](task://canonical-a?team=team-a&display=1)'
+    );
+    expect(linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])).toBe(
+      '```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)'
+    );
+    expect(
+      linkifyTaskIdsInMarkdown('[Task #1](task://canonical-a?team=team-a&display=1)', [first])
+    ).toBe('[Task #1](task://canonical-a?team=team-a&display=1)');
+  });
+
   describe('TASK_REF_REGEX and isAllowedTaskRefBoundary', () => {
     it('linkifies #ref when preceded by boundary (space, start)', () => {
       const taskRef: TaskRef = {
@@ -43,9 +164,7 @@ describe('taskReferenceUtils', () => {
         teamName: 'my-team',
       };
       const r = linkifyTaskIdsInMarkdown('done `#aa5d608e`', [taskRef]);
-      expect(r).toBe(
-        'done [#aa5d608e](task://task-1?team=my-team&display=aa5d608e)'
-      );
+      expect(r).toBe('done [#aa5d608e](task://task-1?team=my-team&display=aa5d608e)');
     });
 
     it('does not linkify non-task inline code', () => {
@@ -63,19 +182,52 @@ describe('taskReferenceUtils', () => {
       const r = linkifyTaskIdsInMarkdown('```\n#aa5d608e\n```\n#bb7c9012');
       expect(r).toBe('```\n#aa5d608e\n```\n[#bb7c9012](task://bb7c9012)');
     });
+
+    it.each([
+      '~~~openui\nroot = Stack([Card([TextContent("#1 is ready")])]);\n~~~',
+      '> ```openui-lang\n> #1\n> ```',
+      '````text\n```openui\n#1\n```\n````',
+      '- ~~~openui\n  #1\n  ~~~',
+    ])('does not consume task identities from a code block: %s', (block) => {
+      const first = { taskId: 'canonical-a', teamName: 'team-a', displayId: '1' };
+      const second = { taskId: 'canonical-b', teamName: 'team-b', displayId: '1' };
+      expect(linkifyTaskIdsInMarkdown(`#1\n\n${block}\n\n\`#1\``, [first, second])).toBe(
+        `[#1](task://canonical-a?team=team-a&display=1)\n\n${block}\n\n[#1](task://canonical-b?team=team-b&display=1)`
+      );
+    });
+
+    it('preserves task-looking data in an open fence', () => {
+      const text = '~~~openui-lang\nroot = Stack([Card([TextContent("#1';
+      expect(linkifyTaskIdsInMarkdown(text)).toBe(text);
+    });
   });
 
   describe('buildTaskLinkHref and parseTaskLinkHref', () => {
+    it('roundtrips literal percent, plus, and escape-like identity text exactly once', () => {
+      const ref: TaskRef = {
+        taskId: 'canonical%25+escape',
+        displayId: 'display%25+100%',
+        teamName: 'team%25+literal',
+      };
+
+      expect(buildTaskLinkHref(ref)).toBe(
+        'task://canonical%2525%2Bescape?team=team%2525%2Bliteral&display=display%2525%2B100%25'
+      );
+      expect(parseTaskLinkHref(buildTaskLinkHref(ref))).toEqual({
+        taskId: 'canonical%25+escape',
+        teamName: 'team%25+literal',
+        displayId: 'display%25+100%',
+      });
+    });
+
     it('roundtrips task ref', () => {
       const ref: TaskRef = {
         taskId: 'tid-1',
         displayId: 'T-1',
         teamName: 'team-a',
       };
-      const href = buildTaskLinkHref(ref);
-      expect(href).toContain('task://');
-      expect(href).toContain('team=');
-      expect(href).toContain('display=');
+      const href = 'task://tid-1?team=team-a&display=T-1';
+      expect(buildTaskLinkHref(ref)).toBe(href);
 
       const parsed = parseTaskLinkHref(href);
       expect(parsed).toEqual({

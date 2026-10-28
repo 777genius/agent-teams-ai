@@ -34,9 +34,14 @@ import {
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
-import { getClaudeBasePath, getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import {
+  getClaudeBasePath,
+  getTeamsBasePath,
+  setClaudeBasePathOverride,
+} from '../../../../src/main/utils/pathDecoder';
 
 import type { HttpServices } from '../../../../src/main/http';
+import type { LiveInboxRelayResult } from '../../../../src/main/services/team/provisioning/TeamProvisioningLiveInboxRelayRouting';
 import type { TaskRef } from '../../../../src/shared/types';
 
 const DEFAULT_ORCHESTRATOR_CLI =
@@ -300,6 +305,19 @@ export async function waitUntil(
   );
 }
 
+export function isOpenCodeLiveRelayComplete(
+  relay: Pick<LiveInboxRelayResult, 'relayed' | 'lastDelivery'>
+): boolean {
+  // A watchdog can commit this exact inbox row between live-test polls. A
+  // subsequent scoped relay reports durable acceptance without relaying again.
+  return (
+    relay.relayed >= 1 ||
+    (relay.lastDelivery?.delivered === true &&
+      relay.lastDelivery.accepted === true &&
+      relay.lastDelivery.responsePending === false)
+  );
+}
+
 export async function waitForOpenCodeLanesStopped(
   teamName: string,
   timeoutMs = 90_000
@@ -310,16 +328,41 @@ export async function waitForOpenCodeLanesStopped(
   }, timeoutMs);
 }
 
+export interface OpenCodeOriginalTranscriptBinding {
+  runId: string;
+  laneId: string;
+  runtimeSessionId: string;
+}
+
 export async function getRuntimeTranscript(input: {
   bridgeClient: OpenCodeBridgeCommandClient;
   teamName: string;
   memberName: string;
   projectPath: string;
+  originalBinding?: OpenCodeOriginalTranscriptBinding;
 }): Promise<unknown> {
-  const laneId = await resolveOpenCodeMemberLaneId(input.teamName, input.memberName);
+  const binding = input.originalBinding;
+  if (
+    binding &&
+    [binding.runId, binding.laneId, binding.runtimeSessionId].some(
+      (value) => typeof value !== 'string' || !value || value !== value.trim()
+    )
+  ) {
+    throw new Error('Original OpenCode transcript binding incomplete');
+  }
+  const laneId = binding
+    ? binding.laneId
+    : await resolveOpenCodeMemberLaneId(input.teamName, input.memberName);
   return input.bridgeClient
     .execute<
-      { teamId: string; teamName: string; laneId: string; memberName: string },
+      {
+        teamId: string;
+        teamName: string;
+        laneId: string;
+        memberName: string;
+        runId?: string;
+        runtimeSessionId?: string;
+      },
       { logProjection?: { messages?: unknown[] }; messages?: unknown[] }
     >(
       'opencode.getRuntimeTranscript',
@@ -328,6 +371,7 @@ export async function getRuntimeTranscript(input: {
         teamName: input.teamName,
         laneId,
         memberName: input.memberName,
+        ...(binding ? { runId: binding.runId, runtimeSessionId: binding.runtimeSessionId } : {}),
       },
       { cwd: input.projectPath, timeoutMs: 60_000 }
     )
@@ -359,6 +403,7 @@ export async function waitForOpenCodeMemberIdle(input: {
   memberName: string;
   projectPath: string;
   timeoutMs: number;
+  originalBinding?: OpenCodeOriginalTranscriptBinding;
 }): Promise<void> {
   const deadline = Date.now() + input.timeoutMs;
   let lastState: string | null = null;

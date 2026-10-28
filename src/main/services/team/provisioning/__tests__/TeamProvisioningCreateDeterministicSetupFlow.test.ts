@@ -156,6 +156,7 @@ function buildPorts(
         ANTHROPIC_AUTH_TOKEN: 'helper-token',
         MEMBER_SYNC: '1',
       },
+      memberArgsByMember: new Map(),
       usesAnthropicApiKeyHelper: true,
       ...({ anthropicApiKeyHelper } as const),
     })),
@@ -267,7 +268,11 @@ describe('TeamProvisioningCreateDeterministicSetupFlow', () => {
     expect(result.mixedSecondaryLanes).toEqual([{ memberName: 'Side' }]);
     expect(result.providerArgsForLaunch).toEqual(['--provider-base']);
     expect(result.inheritedProviderArgsForLaunch).toEqual(['--cross-provider']);
-    expect(result.shellEnv).toMatchObject({ BASE_ENV: '1', MEMBER_SYNC: '1' });
+    expect(result.shellEnv).toMatchObject({
+      BASE_ENV: '1',
+      MEMBER_SYNC: '1',
+      CLAUDE_CODE_DISABLE_1M_CONTEXT: '1',
+    });
     expect(result.shellEnv.ANTHROPIC_API_KEY).toBeUndefined();
     expect(result.shellEnv.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
     expect(result.geminiRuntimeAuth).toBeNull();

@@ -1,5 +1,9 @@
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  humanGroupReplyControlText,
+  isOpenCodeHumanGroupNonResponse,
+} from './OpenCodeHumanGroupReply';
 import { buildOpenCodePromptBodyText } from './OpenCodeMemberMessageDeliveryPorts';
 import {
   buildOpenCodePromptDeliveryAttemptText,
@@ -52,7 +56,7 @@ export async function prepareOpenCodePromptDispatch(input: {
   memberName: string;
   message: Pick<
     OpenCodeMemberMessageDeliveryInput,
-    'text' | 'coalescedNoticeText' | 'messageKind' | 'messageId'
+    'text' | 'coalescedNoticeText' | 'messageKind' | 'messageId' | 'groupChatId' | 'replyRecipient'
   >;
   ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
   forceSessionRefreshReason: string | undefined;
@@ -110,16 +114,29 @@ export async function prepareOpenCodePromptDispatch(input: {
         `attempts=${ledgerRecord?.attempts} reason=${retryPendingReason}`
     );
   }
+  const humanGroupControl =
+    input.message.groupChatId &&
+    (input.message.replyRecipient ?? ledgerRecord?.replyRecipient)?.trim().toLowerCase() === 'user'
+      ? humanGroupReplyControlText(
+          input.message.groupChatId,
+          ledgerRecord?.inboxMessageId ?? input.message.messageId ?? ''
+        )
+      : null;
   const deliveryText = buildOpenCodePromptDeliveryAttemptText({
     text: buildOpenCodePromptBodyText(input.message),
     omitOriginalPrompt: promptBodyAlreadyDelivered,
     originalPromptMessageId: ledgerRecord?.inboxMessageId ?? input.message.messageId ?? null,
-    controlText: buildOpenCodePromptDeliveryRepairControlText({
-      ledgerRecord,
-      readAllowed: retryReadAllowed,
-      pendingReason: retryPendingReason,
-      controlUrl,
-    }),
+    controlText:
+      humanGroupControl &&
+      (!promptBodyAlreadyDelivered ||
+        (ledgerRecord && isOpenCodeHumanGroupNonResponse(ledgerRecord)))
+        ? humanGroupControl
+        : buildOpenCodePromptDeliveryRepairControlText({
+            ledgerRecord,
+            readAllowed: retryReadAllowed,
+            pendingReason: retryPendingReason,
+            controlUrl,
+          }),
   });
   return { controlUrl, forceSessionRefreshReason, promptBodyAlreadyDelivered, deliveryText };
 }

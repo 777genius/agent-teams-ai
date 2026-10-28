@@ -1,6 +1,7 @@
 import {
   AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+  ANTHROPIC_MODEL_ENV_KEYS,
   type AnthropicConnectionMode,
 } from '@shared/constants/anthropicConnectionMode';
 
@@ -31,6 +32,8 @@ const BACKEND_SELECTION_ENV_KEYS = [
   'CLAUDE_CODE_GEMINI_BACKEND',
   'CLAUDE_CODE_CODEX_BACKEND',
 ] as const;
+
+const ANTHROPIC_MODEL_ENV_KEY_SET = new Set<string>(ANTHROPIC_MODEL_ENV_KEYS);
 
 export interface AnthropicRuntimeConnectionPreference {
   authMode: 'auto' | 'oauth' | 'api_key';
@@ -103,11 +106,25 @@ export function resolveAnthropicConnectionMode(
   return 'auto';
 }
 
+export function shouldResolveAnthropicShellEnv(
+  providerId: RuntimeEnvProviderId | undefined,
+  preference: AnthropicRuntimeConnectionPreference = ConfigManager.getInstance().getConfig()
+    .providerConnections.anthropic
+): boolean {
+  return (
+    resolveRuntimeProviderId(providerId) === 'anthropic' &&
+    resolveAnthropicConnectionMode(preference) === 'auto'
+  );
+}
+
 function clearExplicitAnthropicRouteEnv(
   env: NodeJS.ProcessEnv,
   connectionMode: AnthropicConnectionMode
 ): void {
   for (const key of ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS) {
+    if (connectionMode === 'compatible' && ANTHROPIC_MODEL_ENV_KEY_SET.has(key)) {
+      continue;
+    }
     env[key] = undefined;
   }
   env.ANTHROPIC_BASE_URL = undefined;

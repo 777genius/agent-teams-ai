@@ -73,9 +73,15 @@ export function normalizeCostBreakdown(
 ): TokenUsageCostBreakdownDto {
   const source = cost?.source ?? 'unknown';
   const apiEquivalentUsd = positive(cost?.apiEquivalentUsd ?? cost?.estimatedUsd);
-  const billableUsd =
-    positive(cost?.billableUsd) ||
-    (source === 'provider' || source === 'gateway' ? positive(cost?.estimatedUsd) : 0);
+  const explicitBillable =
+    typeof cost?.billableUsd === 'number' &&
+    Number.isFinite(cost.billableUsd) &&
+    cost.billableUsd >= 0;
+  const billableUsd = explicitBillable
+    ? cost.billableUsd!
+    : source === 'provider' || source === 'gateway'
+      ? positive(cost?.estimatedUsd)
+      : 0;
   return {
     estimatedUsd: apiEquivalentUsd,
     billableUsd,
@@ -96,7 +102,8 @@ export function addEventToSummary(
   const exact = isExactUsageSource(event.usageSourceKind);
   const cost = normalizeCostBreakdown(event.cost);
   const billingMode = normalizeBillingMode(event.billingMode ?? cost.billingMode);
-  const billingCounts = billingSummaryDelta(billingMode, event.tokens.totalTokens);
+  const requestCount = normalizeRequestCount(event.requestCount);
+  const billingCounts = billingSummaryDelta(billingMode, event.tokens.totalTokens, requestCount);
   const kiroUsage = event.providerUsage?.kiro;
   const previousKiroOccurredAt = summary.lastKiroCreditsAt;
   const hasNewerKiroUsage = Boolean(
@@ -104,7 +111,7 @@ export function addEventToSummary(
     (!previousKiroOccurredAt || event.occurredAt.localeCompare(previousKiroOccurredAt) >= 0)
   );
   return {
-    requestCount: summary.requestCount + 1,
+    requestCount: summary.requestCount + requestCount,
     runCount: summary.runCount,
     runningRunCount: summary.runningRunCount,
     totalTokens: summary.totalTokens + event.tokens.totalTokens,
@@ -142,9 +149,14 @@ export function normalizeBillingMode(value: unknown): TokenUsageBillingMode {
   return value === 'api' || value === 'subscription' || value === 'free' ? value : 'unknown';
 }
 
+export function normalizeRequestCount(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 1;
+}
+
 function billingSummaryDelta(
   billingMode: TokenUsageBillingMode,
-  totalTokens: number
+  totalTokens: number,
+  requestCount: number
 ): {
   apiRequestCount: number;
   subscriptionRequestCount: number;
@@ -156,15 +168,31 @@ function billingSummaryDelta(
   unknownTokens: number;
 } {
   return {
-    apiRequestCount: billingMode === 'api' ? 1 : 0,
-    subscriptionRequestCount: billingMode === 'subscription' ? 1 : 0,
-    freeRequestCount: billingMode === 'free' ? 1 : 0,
-    unknownRequestCount: billingMode === 'unknown' ? 1 : 0,
+    apiRequestCount: billingMode === 'api' ? requestCount : 0,
+    subscriptionRequestCount: billingMode === 'subscription' ? requestCount : 0,
+    freeRequestCount: billingMode === 'free' ? requestCount : 0,
+    unknownRequestCount: billingMode === 'unknown' ? requestCount : 0,
     apiTokens: billingMode === 'api' ? totalTokens : 0,
     subscriptionTokens: billingMode === 'subscription' ? totalTokens : 0,
     freeTokens: billingMode === 'free' ? totalTokens : 0,
     unknownTokens: billingMode === 'unknown' ? totalTokens : 0,
   };
+}
+
+export function buildSourceCounts(
+  events: readonly TokenUsageEventDto[]
+): Record<TokenUsageSourceKind, number> {
+  const counts: Record<TokenUsageSourceKind, number> = {
+    sdk_exact: 0,
+    gateway_exact: 0,
+    log_parsed: 0,
+    tokenizer_estimated: 0,
+    cost_estimated: 0,
+  };
+  for (const event of events) {
+    counts[event.usageSourceKind] += 1;
+  }
+  return counts;
 }
 
 export function addRunToSummary(

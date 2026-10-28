@@ -60,8 +60,8 @@ describe('getTeamModelRecommendation', () => {
     expect(isTeamModelRecommended('opencode', 'opencode/big-pickle')).toBe(true);
 
     expect(getTeamModelRecommendation('opencode', 'opencode/minimax-m2.5-free')).toMatchObject({
-      level: 'tested-with-limits',
-      label: 'Tested with limits',
+      level: 'not-recommended',
+      reason: expect.stringContaining('duplicate or missing reply tokens'),
     });
     expect(isTeamModelRecommended('opencode', 'opencode/minimax-m2.5-free')).toBe(false);
   });

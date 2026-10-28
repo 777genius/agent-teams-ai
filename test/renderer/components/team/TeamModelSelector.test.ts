@@ -451,6 +451,34 @@ describe('resolveTeamModelSelectorValue', () => {
 });
 
 describe('computeEffectiveTeamModel', () => {
+  it('uses a confirmed configured default before the catalog while preserving explicit selection', () => {
+    const providerStatus = {
+      providerId: 'anthropic' as const,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      effectiveDefaultModel: 'gateway/custom-default',
+      defaultModel: 'old-model-list-default',
+    };
+    expect(computeEffectiveTeamModel('', false, 'anthropic', providerStatus)).toBe(
+      'gateway/custom-default'
+    );
+    expect(computeEffectiveTeamModel('explicit-model', false, 'anthropic', providerStatus)).toBe(
+      'explicit-model'
+    );
+    expect(
+      computeEffectiveTeamModel('', false, 'anthropic', {
+        ...providerStatus,
+        statusCheckOutcome: 'pending',
+      })
+    ).toBe('old-model-list-default');
+    expect(
+      computeEffectiveTeamModel('', false, 'anthropic', {
+        ...providerStatus,
+        providerId: 'codex',
+      })
+    ).toBe('opus[1m]');
+  });
+
   it('appends [1m] for Opus but keeps Sonnet on standard context', () => {
     expect(computeEffectiveTeamModel('opus', false, 'anthropic')).toBe('opus[1m]');
     expect(computeEffectiveTeamModel('sonnet', false, 'anthropic')).toBe('sonnet');
@@ -561,9 +589,15 @@ describe('computeEffectiveTeamModel', () => {
     expect(computeEffectiveTeamModel('opus[1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('opus[1m][1m]', true, 'anthropic')).toBe('opus');
     expect(computeEffectiveTeamModel('', true, 'anthropic')).toBe('opus');
-    expect(computeEffectiveTeamModel('claude-opus-4-8[1m]', true, 'anthropic')).toBe('opus');
-    expect(computeEffectiveTeamModel('claude-opus-4-7[1m]', true, 'anthropic')).toBe('opus');
-    expect(computeEffectiveTeamModel('claude-sonnet-4-6', true, 'anthropic')).toBe('sonnet');
+    expect(computeEffectiveTeamModel('claude-opus-4-8[1m]', true, 'anthropic')).toBe(
+      'claude-opus-4-8'
+    );
+    expect(computeEffectiveTeamModel('claude-opus-4-7[1m]', true, 'anthropic')).toBe(
+      'claude-opus-4-7'
+    );
+    expect(computeEffectiveTeamModel('claude-sonnet-4-6', true, 'anthropic')).toBe(
+      'claude-sonnet-4-6'
+    );
   });
 
   it('returns haiku as-is', () => {

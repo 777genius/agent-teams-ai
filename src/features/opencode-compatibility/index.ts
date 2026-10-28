@@ -8,12 +8,14 @@ export type {
 export {
   classifyNativeVersion,
   evaluateLegacyOpenCodeSupport,
-  isLegacyOpenCodeVersionSupported,
+  isOpenCodeVersionProductionEligible,
+  isOpenCodeVersionServedByRuntime,
   isRecognizedOpenCodeRuntimeVersion,
   MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
   parseOpenCodeSemver,
   semverLt,
 } from './core/domain/generation';
+export { getLatestQualifiedOpenCodeV2Version } from './core/domain/pinnedOpenCodeV2Contract';
 export type { DecodeResult, NegotiationResult } from './core/domain/protocol2';
 export {
   decodeOwnerPermissionReply,

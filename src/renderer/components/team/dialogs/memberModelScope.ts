@@ -12,6 +12,8 @@ import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import { getProvisioningModelIssue } from './provisioningModelIssues';
+
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { TeamProviderId } from '@shared/types';
 
@@ -26,6 +28,8 @@ type OpenCodeProviderScopedStatusBySourceId = ReadonlyMap<
 >;
 
 interface OpenCodeLocalModelScope {
+  gatewayBoundMemberNames?: ReadonlySet<string>;
+  gatewayBindingsPending?: boolean;
   openCodeLocalProviderIds?: ReadonlySet<string>;
   openCodeLocalProviderLookupAuthoritative?: boolean;
 }
@@ -92,12 +96,14 @@ function isKnownOpenCodeLocalModel(
 export function getSelectedOpenCodeModels(
   selectedProviderId: TeamProviderId,
   selectedModel: string | null | undefined,
-  members: readonly MemberDraft[]
+  members: readonly MemberDraft[],
+  gatewayBoundMemberNames?: ReadonlySet<string>
 ): string[] {
   const models = selectedProviderId === 'opencode' ? [selectedModel?.trim() ?? ''] : [];
   for (const member of members) {
     if (
       !member.removedAt &&
+      !gatewayBoundMemberNames?.has(member.name.trim()) &&
       resolveMemberProviderForModelScope({
         memberProviderId: member.providerId,
         selectedProviderId,
@@ -150,7 +156,11 @@ export function getDialogTeamModelValidationError(
   }
 
   for (const member of input.members) {
-    if (member.removedAt) {
+    if (
+      member.removedAt ||
+      input.gatewayBindingsPending ||
+      input.gatewayBoundMemberNames?.has(member.name.trim())
+    ) {
       continue;
     }
     const providerId = resolveMemberProviderForModelScope({
@@ -262,7 +272,12 @@ export function clearInheritedMemberModelsUnavailableForProvider(
 ): { members: MemberDraft[]; changed: boolean } {
   let changed = false;
   const members = input.members.map((member) => {
-    if (member.removedAt || !member.model?.trim()) {
+    if (
+      member.removedAt ||
+      !member.model?.trim() ||
+      input.gatewayBindingsPending ||
+      input.gatewayBoundMemberNames?.has(member.name.trim())
+    ) {
       return member;
     }
     const providerId = resolveMemberProviderForModelScope({
@@ -334,4 +349,32 @@ export function clearInheritedMemberModelsUnavailableForProvider(
   });
 
   return { members, changed };
+}
+
+export function getDialogMemberModelIssues(input: {
+  members: readonly MemberDraft[];
+  selectedProviderId: TeamProviderId;
+  prepareChecks: Parameters<typeof getProvisioningModelIssue>[0];
+  syncModelsWithLead: boolean;
+  leadModelIssueText: string | null;
+  gatewayBoundMemberNames: ReadonlySet<string>;
+  validateMembers?: boolean;
+}): Record<string, string> {
+  const issues: Record<string, string> = {};
+  if (input.validateMembers === false) return issues;
+  for (const member of input.members) {
+    if (member.removedAt || input.gatewayBoundMemberNames.has(member.name.trim())) continue;
+    if (input.syncModelsWithLead && input.leadModelIssueText) {
+      issues[member.id] = input.leadModelIssueText;
+      continue;
+    }
+    const providerId = resolveMemberProviderForModelScope({
+      memberProviderId: member.providerId,
+      selectedProviderId: input.selectedProviderId,
+    });
+    const issue = getProvisioningModelIssue(input.prepareChecks, providerId, member.model);
+    const text = issue?.reason ?? issue?.detail;
+    if (text) issues[member.id] = text;
+  }
+  return issues;
 }

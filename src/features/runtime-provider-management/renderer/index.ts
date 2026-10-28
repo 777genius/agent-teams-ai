@@ -1,10 +1,17 @@
 export {
+  canManagedInstallChangeOpenCodeRuntime,
+  getOpenCodeGeneration,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
 export type { OpenCodeCatalogFailure } from './hooks/catalogFailure';
+export type {
+  OpenCodeAttachmentDeclaration,
+  OpenCodeAttachmentTarget,
+} from './hooks/useOpenCodeAttachmentDeclarations';
+export { useOpenCodeAttachmentDeclarations } from './hooks/useOpenCodeAttachmentDeclarations';
 export { useOpenCodeConnectedModelCatalog } from './hooks/useOpenCodeConnectedModelCatalog';
 export {
   type OpenCodeLocalModelSetupActionState,

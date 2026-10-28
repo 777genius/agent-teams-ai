@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readOpenCodeV2Contract } from '../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import { getExpectedRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -83,6 +84,12 @@ for (const [platform, asset] of Object.entries(lock.assets ?? {})) {
       `asset ${platform} must pin a 64-hex sha256 of the published archive, got ${asset.sha256 ?? '<missing>'}.`
     );
   }
+}
+
+// The runtime release manifest publishes its OpenCode V2 contract (supported range and
+// qualified versions); the lock pins it verbatim. The app's own parser validates it.
+if (!readOpenCodeV2Contract(lock.opencodeV2)) {
+  fail('opencodeV2 must copy the published runtime manifest contract ({ range, qualified }).');
 }
 
 console.log('[verify-runtime-lock] OK');

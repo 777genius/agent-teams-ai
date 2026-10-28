@@ -6,10 +6,22 @@ import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
 
-import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
+import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, preflightOpenCodeFullTeamEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
   TEST_PROJECT_MARKER_CONTENT, writeSmokeOwnership } from '../../scripts/prove-opencode-full-team.mjs';
 
 import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
+
+// FULL V2 cases come from the pinned runtime's qualification records, never literals here.
+const pinnedRecords = Object.entries(JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2.qualified)
+  .filter(([key]) => /^(linux|darwin)-/.test(key));
+const pinnedQualified = pinnedRecords.flatMap(([key, versions]) => versions.map(version => [...key.split('-'), version]));
+// A runtime released without V2 qualifies nothing; then a version in the pinned range stands in.
+const pinnedV2 = JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2;
+const [samplePlatform, sampleArch, sampleVersion] = pinnedQualified[0] ?? ['darwin', 'arm64', pinnedV2.range.minimum];
+// A version qualified on one FULL platform but not on another, when the pinned data has one.
+const pinnedElsewhere = pinnedRecords.flatMap(([key, versions]) => pinnedQualified
+  .filter(([platform, arch, version]) => `${platform}-${arch}` !== key && !versions.includes(version))
+  .map(([, , version]) => [...key.split('-'), version]));
 
 for (const prefix of ['opencode-full-team-', 'opencode-mixed-team-']) {
   test(`${prefix} allocates private canonical Darwin roots with room for tsx sockets`, { skip: process.platform === 'win32' }, () => {
@@ -89,6 +101,101 @@ function cleanup(input) {
   fs.rmSync(path.dirname(input.env.HOME), { recursive: true, force: true });
   fs.rmSync(input.env.OPENCODE_E2E_PROOF_DIRECTORY, { recursive: true, force: true });
 }
+
+async function withOwnedPreflight(check) {
+  const { root, env } = fixture();
+  let input;
+  try {
+    await runFullTeamSmoke({ sourceEnv: env, vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+      preflight: async value => { input = value; await check(value); return { ok: false }; },
+      spawn: () => assert.fail('offline preflight test must not launch FULL'),
+    });
+  } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+}
+
+test('FULL V2 preflight uses exact version and passive selected-provider inventory on Linux/macOS', async () => {
+  await withOwnedPreflight(async input => {
+    for (const [platform, arch, version] of pinnedQualified) {
+      const calls = [];
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
+        legacyPreflight: () => assert.fail('V2 must never use native agent/serve or legacy health'),
+        spawn: (command, args, options) => {
+          calls.push({ command, args, options });
+          assert.equal(options.env, input.env); assert.equal(options.cwd, input.projectPath);
+          assert.equal(options.maxBuffer, 256_000);
+          return { status: 0, stdout: calls.length === 1 ? `opencode v${version}\n`
+            : JSON.stringify({ models: { models: [{ modelId: 'selected/model' }] } }) };
+        },
+      });
+      assert.deepEqual(result, { ok: true, generation: 'v2', version });
+      assert.deepEqual(calls.map(call => [call.command, call.args]), [
+        [input.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH, ['--version']],
+        [input.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH, ['runtime', 'providers', 'models',
+          '--runtime', 'opencode', '--provider', 'selected', '--project-path', input.projectPath,
+          '--limit', '100', '--json']],
+      ]);
+      assert.deepEqual(calls.map(call => call.options.timeout), [20_000, 90_000]);
+    }
+    let calls = 0;
+    assert.deepEqual(await preflightOpenCodeFullTeamEnvironment(input, {
+      spawn: (_command, args) => { calls++; assert.deepEqual(args, ['--version']); return { status: 0, stdout: '1.19.0\r\n' }; },
+      legacyPreflight: value => { assert.equal(value, input); return { ok: true, legacy: true }; },
+    }), { ok: true, legacy: true });
+    assert.equal(calls, 1);
+  });
+});
+
+test('FULL V2 preflight fails closed on unsupported versions and malformed or missing inventory', async () => {
+  await withOwnedPreflight(async input => {
+    const qualified = sampleVersion;
+    // An in-range release without a qualification record is refused like an out-of-range one.
+    for (const version of ['2.999.0\n', '3.0.0\n', `${qualified}-rc.1\n`, `${qualified}\n\n`, ` ${qualified}\n`,
+      `${qualified} extra`, `0${qualified}\n`]) {
+      let calls = 0;
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: samplePlatform, arch: sampleArch,
+        legacyPreflight: () => assert.fail('unsupported version cannot fall back'),
+        spawn: () => { calls++; return { status: 0, stdout: version, stderr: 'synthetic-secret' }; },
+      });
+      assert.equal(result.ok, false); assert.equal(calls, 1);
+      assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
+    }
+    // Qualification binds to the platform: a version qualified elsewhere is refused here,
+    // as is any qualified version on a platform FULL does not run on or has no record for.
+    // Without any qualified version, every FULL platform refuses V2.
+    const unqualifiedHere = pinnedQualified.length ? [] : [['darwin', 'arm64', sampleVersion], ['linux', 'x64', sampleVersion]];
+    for (const [platform, arch, version] of [...pinnedElsewhere, ...unqualifiedHere, ['win32', 'x64', sampleVersion],
+      ['linux', 'ia32', sampleVersion]]) {
+      let calls = 0;
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
+        legacyPreflight: () => assert.fail('unqualified version cannot fall back'),
+        spawn: () => { calls++; return { status: 0, stdout: `${version}\n` }; },
+      });
+      assert.deepEqual([result.ok, result.stage, calls], [false, 'generation-policy', 1]);
+    }
+    // Inventory checks need a version the pinned runtime qualifies.
+    for (const catalog of pinnedQualified.length === 0 ? [] : [
+      { status: 1, stderr: 'synthetic-secret' }, { status: null, signal: 'SIGTERM' },
+      { status: 0, error: new Error('synthetic-secret') }, { status: 0, stdout: 'synthetic-secret' },
+      { status: 0, stdout: 'null' }, { status: 0, stdout: '{"models":[]}' },
+      { status: 0, stdout: '{"models":{"models":[{"modelId":"other/model"}]}}' },
+    ]) {
+      let calls = 0;
+      const [platform, arch, version] = pinnedQualified[0];
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
+        legacyPreflight: () => assert.fail('inventory failure cannot fall back'),
+        spawn: () => ++calls === 1 ? { status: 0, stdout: version } : catalog,
+      });
+      assert.equal(result.ok, false); assert.equal(calls, 2);
+      assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
+    }
+    await assert.rejects(preflightOpenCodeFullTeamEnvironment({ ...input, env: { ...input.env, HOME: '/foreign' } }, {
+      spawn: () => assert.fail('must validate ownership before any command'),
+    }), /wrapper-owned/);
+    await assert.rejects(preflightOpenCodeFullTeamEnvironment({ ...input, projectPath: '/foreign' }, {
+      spawn: () => assert.fail('must reject foreign cwd before any command'),
+    }), /owned project/);
+  });
+});
 
 test('isolates auth/home/config and retains cleanup-confirmed proof after success', async () => {
   const { root, env } = fixture();
@@ -528,3 +635,31 @@ for (const raw of ['unchanged', 'unchanged-internal', 'rotated', 'missing', 'mal
     });
   }
 }
+
+
+test('stages a declared model config after ownership and before passive preflight', async () => {
+  const { root, env } = fixture();
+  const config = { provider: { selected: { models: { model: { name: 'Declared TEST model' } } } } };
+  const configFile = path.join(root, 'model-config.json');
+  fs.writeFileSync(configFile, JSON.stringify(config), { mode: 0o600 });
+  let input;
+  try {
+    const status = await runFullTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'),
+      sourceEnv: { ...env, OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH: configFile },
+      log() {},
+      preflight: async (value) => {
+        input = value;
+        assertOwnedSmokeEnvironment(value.env, 'FULL');
+        assert.deepEqual(JSON.parse(fs.readFileSync(path.join(value.projectPath, 'opencode.json'), 'utf8')), config);
+        return { ok: false };
+      },
+      spawn() { throw new Error('No model or runner may start in this offline boundary test'); },
+    });
+    assert.equal(status, 1);
+    assert.ok(input, 'Passive preflight must be reached with the staged config');
+  } finally {
+    cleanup(input);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

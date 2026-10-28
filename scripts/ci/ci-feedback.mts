@@ -183,11 +183,14 @@ export async function planFeedback(
       reason: 'Title/body edit with an authenticated same-head/base producer; preserve code checks',
     };
   }
-  // An edited event that failed strict metadata proof always requires full CI.
-  // The legacy selector remains available to callers using draft lifecycle feedback.
+  // A title/body edit that cannot reuse full evidence qualifies its unchanged
+  // immutable diff again, so a focused PR stays focused. Other edits run full CI.
   try {
-    if (env.GITHUB_EVENT_NAME === 'pull_request' && object(event).action === 'edited')
-      return fallback;
+    if (env.GITHUB_EVENT_NAME === 'pull_request' && object(event).action === 'edited') {
+      if (!isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event)) return fallback;
+      const change = collectChangeScope(env);
+      return { ...fallback, scope: change.scope, reason: change.reason };
+    }
   } catch {
     return fallback;
   }

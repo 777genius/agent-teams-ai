@@ -27,6 +27,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { resolveFilePath } from '@renderer/store/utils/pathResolution';
+import { MAX_MARKDOWN_CHARS } from '@renderer/utils/markdownLimits';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
@@ -46,6 +47,7 @@ import { highlightLine } from '../viewers/syntaxHighlighter';
 import { FileLink, isRelativeUrl } from './FileLink';
 import { MarkdownPre } from './MarkdownPre';
 import { MarkdownPreContext } from './MarkdownPreContext';
+import { useResolvedViewerTeamContext } from './useResolvedViewerTeamContext';
 
 // =============================================================================
 // Types
@@ -70,6 +72,8 @@ interface MarkdownViewerProps {
   teamColorByName?: ReadonlyMap<string, string>;
   /** Optional team click handler to avoid subscribing to store in leaf renderers. */
   onTeamClick?: (teamName: string) => void;
+  /** Team that owns legacy task://display-id links in this rendered content. */
+  taskOriginTeamName?: string;
 }
 
 interface CompactMarkdownPreviewProps {
@@ -79,11 +83,9 @@ interface CompactMarkdownPreviewProps {
   teamColorByName?: ReadonlyMap<string, string>;
   /** Optional team click handler to avoid subscribing to store in leaf renderers. */
   onTeamClick?: (teamName: string) => void;
+  /** Team that owns legacy task://display-id links in this rendered content. */
+  taskOriginTeamName?: string;
 }
-
-const EMPTY_TEAMS: { teamName?: string; displayName?: string; color?: string }[] = [];
-const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
-const NOOP_TEAM_CLICK = (): void => undefined;
 
 type ViewerMarkdownMode = 'default' | 'compact-preview';
 interface HastElementLike {
@@ -394,6 +396,8 @@ function createViewerMarkdownComponents(
   isLight = false,
   teamColorByName: ReadonlyMap<string, string> = new Map(),
   onTeamClick?: (teamName: string) => void,
+  taskOriginTeamName?: string,
+  taskOriginContextId?: string,
   mode: ViewerMarkdownMode = 'default'
 ): Components {
   const hl = (children: React.ReactNode): React.ReactNode =>
@@ -584,7 +588,12 @@ function createViewerMarkdownComponents(
           return <>{children}</>;
         }
         return (
-          <TaskTooltip taskId={taskId} teamName={parsedTaskLink?.teamName}>
+          <TaskTooltip
+            taskId={taskId}
+            teamName={parsedTaskLink?.teamName ?? taskOriginTeamName}
+            contextId={taskOriginContextId}
+            referenceKind={parsedTaskLink?.teamName ? 'canonical' : 'display'}
+          >
             <a
               href={href}
               className="cursor-pointer font-medium no-underline hover:underline"
@@ -815,41 +824,11 @@ function createViewerMarkdownComponents(
 // - for medium/large content: disable syntax highlighting
 // - for very large content: show a raw preview instead of parsing markdown
 const DISABLE_HIGHLIGHT_CHARS = 12_000;
-const MAX_MARKDOWN_CHARS = 60_000;
 const LARGE_PREVIEW_CHARS = 30_000;
 
 // =============================================================================
 // Component
 // =============================================================================
-
-function useResolvedViewerTeamContext(
-  providedTeamColorByName?: ReadonlyMap<string, string>,
-  providedOnTeamClick?: (teamName: string) => void
-): {
-  teamColorByName: ReadonlyMap<string, string>;
-  onTeamClick?: (teamName: string) => void;
-} {
-  const teams = useStore(useShallow((s) => (providedTeamColorByName ? EMPTY_TEAMS : s.teams)));
-  const openTeamTab = useStore((s) => (providedOnTeamClick ? NOOP_TEAM_CLICK : s.openTeamTab));
-
-  const fallbackTeamColorByName = React.useMemo(() => {
-    const result = new Map<string, string>();
-    for (const team of teams) {
-      if (team.teamName) {
-        result.set(team.teamName, team.color ?? '');
-      }
-      if (team.displayName) {
-        result.set(team.displayName, team.color ?? '');
-      }
-    }
-    return result;
-  }, [teams]);
-
-  return {
-    teamColorByName: providedTeamColorByName ?? fallbackTeamColorByName ?? EMPTY_TEAM_COLOR_MAP,
-    onTeamClick: providedOnTeamClick ?? openTeamTab,
-  };
-}
 
 export const CompactMarkdownPreview: React.FC<CompactMarkdownPreviewProps> = React.memo(
   function CompactMarkdownPreview({
@@ -857,12 +836,15 @@ export const CompactMarkdownPreview: React.FC<CompactMarkdownPreviewProps> = Rea
     className = '',
     teamColorByName: providedTeamColorByName,
     onTeamClick: providedOnTeamClick,
+    taskOriginTeamName: providedTaskOriginTeamName,
   }) {
     const { isLight } = useTheme();
-    const { teamColorByName, onTeamClick } = useResolvedViewerTeamContext(
-      providedTeamColorByName,
-      providedOnTeamClick
-    );
+    const { teamColorByName, onTeamClick, taskOriginTeamName, taskOriginContextId } =
+      useResolvedViewerTeamContext(
+        providedTeamColorByName,
+        providedOnTeamClick,
+        providedTaskOriginTeamName
+      );
 
     const components = React.useMemo(
       () =>
@@ -871,9 +853,11 @@ export const CompactMarkdownPreview: React.FC<CompactMarkdownPreviewProps> = Rea
           isLight,
           teamColorByName,
           onTeamClick,
+          taskOriginTeamName,
+          taskOriginContextId,
           'compact-preview'
         ),
-      [isLight, onTeamClick, teamColorByName]
+      [isLight, onTeamClick, taskOriginContextId, taskOriginTeamName, teamColorByName]
     );
 
     return (
@@ -909,15 +893,18 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
   baseDir,
   teamColorByName: providedTeamColorByName,
   onTeamClick: providedOnTeamClick,
+  taskOriginTeamName: providedTaskOriginTeamName,
 }) {
   const { t } = useAppTranslation('common');
   const [showRaw, setShowRaw] = React.useState(false);
   const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
   const { isLight } = useTheme();
-  const { teamColorByName, onTeamClick } = useResolvedViewerTeamContext(
-    providedTeamColorByName,
-    providedOnTeamClick
-  );
+  const { teamColorByName, onTeamClick, taskOriginTeamName, taskOriginContextId } =
+    useResolvedViewerTeamContext(
+      providedTeamColorByName,
+      providedOnTeamClick,
+      providedTaskOriginTeamName
+    );
 
   const isTooLarge = content.length > MAX_MARKDOWN_CHARS;
   const disableHighlight = content.length > DISABLE_HIGHLIGHT_CHARS;
@@ -1066,11 +1053,14 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(function
   // Create markdown components with optional search highlighting
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
-  const baseComponents = searchCtx
-    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick)
-    : isLight
-      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick)
-      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick);
+  const baseComponents = createViewerMarkdownComponents(
+    searchCtx,
+    isLight,
+    teamColorByName,
+    onTeamClick,
+    taskOriginTeamName,
+    taskOriginContextId
+  );
 
   // When baseDir is set (editor preview), override img to load local files via IPC
   const components = baseDir

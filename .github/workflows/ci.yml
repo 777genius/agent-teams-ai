@@ -69,7 +69,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
-        run: node scripts/ci/ci-feedback.mts plan
+        run: |
+          node --test test/scripts/ciOptionalWorkflows.test.mts
+          node scripts/ci/ci-feedback.mts plan
 
   feedback:
     name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback' }}
@@ -126,9 +128,6 @@ jobs:
       - name: Guard Team Provisioning architecture
         run: node ./scripts/ci/check-team-provisioning-architecture.mjs
 
-      - name: Verify runtime lock
-        run: node ./scripts/ci/verify-runtime-lock.mjs
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
@@ -137,6 +136,10 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+
+      # Loads the TypeScript contract parser, so it needs the pinned Node.
+      - name: Verify runtime lock
+        run: node ./scripts/ci/verify-runtime-lock.mjs
 
       - name: Restore pnpm node-gyp executable bit
         run: |
@@ -209,6 +212,25 @@ jobs:
             fi
           done
 
+      - name: Install lsof for diagnostics ownership checks
+        run: |
+          if ! command -v lsof >/dev/null 2>&1; then
+            # lsof is not in the ubuntu-24.04 runner image package list, but Homebrew
+            # is preinstalled there (see actions/runner-images Ubuntu2404-Readme.md)
+            # and its lsof formula ships Linux bottles, so install without su/apt:
+            if ! command -v brew >/dev/null 2>&1 && [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+              eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            fi
+            if ! command -v brew >/dev/null 2>&1; then
+              echo "lsof is required by the opencode diagnostics ownership harness"
+              echo "and neither lsof nor Homebrew is available on this runner"
+              exit 1
+            fi
+            brew install lsof
+            # Each Actions step starts a fresh shell; preserve Homebrew discovery.
+            echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+            echo "$(brew --prefix)/sbin" >> "$GITHUB_PATH"
+          fi
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
@@ -475,8 +497,11 @@ jobs:
       - name: Build and mount DMG fixture
         run: node scripts/ci/verify-dmg-artwork.mts
 
+  # Required by branch protection. Keep the name static for every event: on
+  # PR #985 an edited-event run that reported another name left the required
+  # context "Expected" although earlier runs for the same head had passed.
   full-qualification:
-    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata qualification' || 'Full qualification' }}
+    name: Full qualification
     needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
     if: always()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}

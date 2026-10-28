@@ -2,6 +2,7 @@
 // Disposable Electron profile and CLI only. No agent/team launch commands.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,6 +16,7 @@ import {
   packagedTarget,
   packagedStopOrder,
   closePackagedBrowser,
+  retainPackagedLineage,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
@@ -70,12 +72,21 @@ async function ownedProcesses() {
         owned.push(prior);
     }
     data.observedProcesses = owned;
+    try {
+      const lineage = retainPackagedLineage(data.diagnosticLineage?.records, owned);
+      data.diagnosticLineage = {
+        ...lineage,
+        truncated: lineage.truncated || data.diagnosticLineage?.truncated === true,
+      };
+    } catch {
+      data.diagnosticLineageCollectionFailed = true;
+    }
     await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   }
   return owned;
 }
 
-async function assertOwnedDebugEndpoint() {
+async function assertOwnedDebugEndpoint(receipt) {
   // Retain the existing bounded recheck, without assuming the cause of snapshot differences.
   // Missing/reused launcher or foreign listeners still fail closed.
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -145,6 +156,23 @@ async function assertOwnedDebugEndpoint() {
         );
       }
     }
+    if (receipt && data.packaged) {
+      try {
+        receipt.verifiedOwnership = {
+          at: Date.now(),
+          endpointPort: 9222,
+          browser: listenerProcesses.slice(0, 8).map((p) => ({
+            pid: p.pid,
+            parent: p.parent,
+            birth: p.birth,
+            executable: p.executable,
+          })),
+          identitiesTruncated: listenerProcesses.length > 8,
+        };
+      } catch {
+        /* Observation cannot change the validated ownership decision. */
+      }
+    }
     return;
   }
   throw new Error('CDP listener ownership did not stabilize; refusing access');
@@ -152,7 +180,7 @@ async function assertOwnedDebugEndpoint() {
 
 if (mode === 'seed-packaged') {
   const options = packagedArguments(process.argv.slice(3));
-  const artifact = await packagedArtifact(options.executable);
+  const artifact = await packagedArtifact(options.executable, options.candidateEvidence);
   const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
   const data = {
     root: dir,
@@ -164,6 +192,7 @@ if (mode === 'seed-packaged') {
     packaged: true,
     artifact,
     runtimeSetup: options.runtimeSetup,
+    ...(options.candidateEvidence ? { candidateEvidence: options.candidateEvidence } : {}),
   };
   await preparePackagedProfile(data);
   data.projectSentinel = await prepareExistingProject(data);
@@ -217,34 +246,111 @@ if (mode === 'seed-packaged') {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'stop') {
+  const historicalManifest = await manifest();
   let owned = await ownedProcesses();
   const data = await manifest();
   if (data.packaged)
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   if (data.packaged) {
-    const graceful = { at: new Date().toISOString() };
+    const graceful = { at: new Date().toISOString(), cdp: {} };
+    let closureHistory = [];
+    try {
+      const prior = historicalManifest.observedProcesses ?? [];
+      assert(prior.length + owned.length <= 500, 'Closure diagnostic bound exceeded');
+      closureHistory = [...prior, ...owned].filter(
+        (p, i, all) =>
+          all.findIndex((entry) => entry.pid === p.pid && entry.birth === p.birth) === i
+      );
+    } catch {
+      graceful.historyUnavailable = true;
+    }
+    const closureCensus = () => {
+      try {
+        const current = processes();
+        const known = closureHistory.map((expected) => {
+          const live = current.find((p) => p.pid === expected.pid);
+          return {
+            expected: {
+              pid: expected.pid,
+              parent: expected.parent,
+              birth: expected.birth,
+              executable: expected.executable ?? null,
+            },
+            state: !live
+              ? 'absent-from-census'
+              : !expected.birth || !live.birth
+                ? 'unknown'
+                : expected.birth !== live.birth
+                  ? 'pid-reused'
+                  : 'same-birth-present',
+            current: live
+              ? {
+                  pid: live.pid,
+                  parent: live.parent,
+                  birth: live.birth,
+                  executable: live.executable ?? null,
+                }
+              : null,
+          };
+        });
+        let descendants;
+        try {
+          descendants = ownedTree(current, data.launcher)
+            .slice(0, 500)
+            .map((p) => ({
+              pid: p.pid,
+              parent: p.parent,
+              birth: p.birth,
+              executable: p.executable ?? null,
+            }));
+        } catch {
+          descendants = null;
+        }
+        return { at: Date.now(), observationOnly: true, known, descendants };
+      } catch {
+        return { at: Date.now(), collectionFailed: true };
+      }
+    };
+    graceful.beforeClose = closureCensus();
     try {
       graceful.outcome = await closePackagedBrowser({
-        assertOwnership: assertOwnedDebugEndpoint,
-        readVersion: async () => (await fetch('http://127.0.0.1:9222/json/version', {
-          signal: AbortSignal.timeout(5000),
-        })).json(),
-        connect: endpoint => new WebSocket(endpoint),
+        assertOwnership: () => assertOwnedDebugEndpoint(graceful.cdp),
+        receipt: graceful.cdp,
+        readVersion: async () =>
+          (
+            await fetch('http://127.0.0.1:9222/json/version', {
+              signal: AbortSignal.timeout(5000),
+            })
+          ).json(),
+        connect: (endpoint) => new WebSocket(endpoint),
+      }).catch((error) => {
+        // Missing CDP acknowledgement does not end the app's owned shutdown.
+        graceful.error = String(error);
       });
+      graceful.afterClose = closureCensus();
       const deadline = Date.now() + 5000;
       while (Date.now() < deadline) {
         const snapshot = processes();
-        if (!owned.some(entry => entry.pid !== data.launcher.pid && snapshot.some(current =>
-          entry.pid === current.pid && entry.birth === current.birth))) break;
+        if (
+          !owned.some(
+            (entry) =>
+              entry.pid !== data.launcher.pid &&
+              snapshot.some((current) => entry.pid === current.pid && entry.birth === current.birth)
+          )
+        )
+          break;
         await delay(100);
       }
     } catch (error) {
       graceful.error = String(error); // Identity-checked signals remain the fallback.
+    } finally {
+      if (!graceful.afterClose) graceful.afterClose = closureCensus();
     }
     await writeFile(path.join(root, 'cleanup-graceful.json'), JSON.stringify(graceful, null, 2));
     const survivors = await ownedProcesses();
     for (const entry of survivors)
-      if (!owned.some(prior => prior.pid === entry.pid && prior.birth === entry.birth)) owned.push(entry);
+      if (!owned.some((prior) => prior.pid === entry.pid && prior.birth === entry.birth))
+        owned.push(entry);
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   }
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
@@ -258,7 +364,23 @@ if (mode === 'seed-packaged') {
       signals.push(record);
       const current = processes().find((p) => p.pid === entry.pid);
       record.current = current ?? null;
-      if (!current) { record.outcome = 'missing-from-identity-snapshot'; continue; }
+      if (!current) {
+        record.outcome = 'missing-from-identity-snapshot';
+        continue;
+      }
+      assert(
+        entry.pid === current.pid &&
+          typeof entry.birth === 'string' &&
+          Number.isFinite(Date.parse(entry.birth)) &&
+          typeof current.birth === 'string' &&
+          Number.isFinite(Date.parse(current.birth)),
+        'Invalid process birth identity; refusing signal'
+      );
+      if (entry.birth !== current.birth) {
+        // The original process retired; its PID grants no authority over its replacement.
+        record.outcome = 'pid-reused-original-retired';
+        continue;
+      }
       sameIdentity(entry, current);
       try {
         process.kill(entry.pid, 'SIGTERM');
@@ -280,7 +402,7 @@ if (mode === 'seed-packaged') {
   if (data.packaged) {
     assert.equal(process.platform, 'win32');
     assert.deepEqual(
-      await packagedArtifact(data.artifact.app.path),
+      await packagedArtifact(data.artifact.app.path, data.candidateEvidence),
       data.artifact,
       'App artifact changed'
     );
@@ -303,16 +425,38 @@ if (mode === 'seed-packaged') {
     await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   }
   if (data.packaged) setInterval(() => {}, 1000); // Keep ownership root live until explicit stop.
-  if (!data.packaged && (await readFile(path.join(root, 'scenario'), 'utf8')).trim() === cleanupScenario) {
+  if (
+    !data.packaged &&
+    (await readFile(path.join(root, 'scenario'), 'utf8')).trim() === cleanupScenario
+  ) {
     assert.equal(process.platform, 'win32');
     data.cleanupLaunchStartedAt = Date.now();
   }
+  if (data.packaged) env.ELECTRON_ENABLE_STACK_DUMPING = '1';
   const child = spawn(launch.command, launch.args, {
     cwd: data.packaged ? data.root : repo,
     stdio: 'inherit',
     shell: false,
     env,
   });
+  if (data.packaged) {
+    const createdAt = Date.now(),
+      events = [];
+    const receiptPath = path.join(root, `child-lifecycle-${data.launcher.pid}-${createdAt}.json`);
+    for (const event of ['exit', 'close'])
+      child.once(event, (code, signal) => {
+        try {
+          events.push({ event, pid: child.pid ?? null, at: Date.now(), code, signal });
+          // Synchronous bounded snapshot survives foreground exit and existing root JSON artifact collection.
+          writeFileSync(
+            receiptPath,
+            JSON.stringify({ run: data.run ?? null, createdAt, events: events.slice(0, 2) }) + '\n'
+          );
+        } catch {
+          /* A missing receipt is unknown; never change child lifetime or process.exitCode. */
+        }
+      });
+  }
   await new Promise((resolve, reject) => {
     child.once('spawn', resolve);
     child.once('error', reject);

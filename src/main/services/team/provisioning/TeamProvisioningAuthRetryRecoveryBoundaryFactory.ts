@@ -11,6 +11,8 @@ import {
 } from './TeamProvisioningAuthRetryRecovery';
 import {
   getProvisioningRunTimeoutMs,
+  removeDeterministicBootstrapSpecFile,
+  writeDeterministicBootstrapSpecFile,
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
 import { PREFLIGHT_AUTH_RETRY_DELAY_MS } from './TeamProvisioningProviderDiagnostics';
@@ -80,6 +82,8 @@ export function createTeamProvisioningAuthRetryRecoveryBoundary<
           mcpConfigBuilder: deps.mcpConfigBuilder,
           readBootstrapRealTaskSubmissionState,
           writeDeterministicBootstrapUserPromptFile,
+          writeDeterministicBootstrapSpecFile,
+          removeDeterministicBootstrapSpecFile,
           validateAgentTeamsMcpRuntime: (claudePath, cwd, env, mcpConfigPath, options) =>
             deps.providerRuntime.validateAgentTeamsMcpRuntime(
               claudePath,

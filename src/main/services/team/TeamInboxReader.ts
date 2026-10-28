@@ -580,13 +580,21 @@ export class TeamInboxReader {
     return unwrapInboxWindow(
       await readInboxWindow(
         {
-          listMembers: async () =>
-            options.groupChatId
-              ? ['user']
-              : (await fs.promises.readdir(inboxDir))
-                  .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
-                  .map((name) => name.replace(/\.json$/, ''))
-                  .filter((name) => name !== '*'),
+          listMembers: async () => {
+            if (options.groupChatId) return ['user'];
+            let entries: string[];
+            try {
+              entries = await fs.promises.readdir(inboxDir);
+            } catch (error) {
+              // New teams have no inbox directory until their first message.
+              if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+              throw error;
+            }
+            return entries
+              .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
+              .map((name) => name.replace(/\.json$/, ''))
+              .filter((name) => name !== '*');
+          },
           readMember: async (member): Promise<InboxMemberData> => {
             const inboxPath = path.join(inboxDir, `${member}.json`);
             try {

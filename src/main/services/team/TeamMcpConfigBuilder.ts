@@ -26,6 +26,7 @@ import {
   parseNodeRuntimeProbeMetadata,
   probePackagedElectronNodeRuntime,
 } from './McpNodeRuntimeProbe';
+import { resolveWorkspaceMcpBundle } from './WorkspaceMcpBundle';
 
 import type { TeamMemberMcpPolicy, TeamMemberMcpScope } from '@shared/types';
 
@@ -144,30 +145,8 @@ function getWorkspaceMcpServerDir(): string {
   return path.join(getWorkspaceRoot(), 'mcp-server');
 }
 
-function getBuiltServerEntry(): string {
-  return path.join(getWorkspaceMcpServerDir(), 'dist', 'index.js');
-}
-
 function getSourceServerEntry(): string {
   return path.join(getWorkspaceMcpServerDir(), 'src', 'index.ts');
-}
-
-function getWorkspaceTsxPackageJsonCandidates(): string[] {
-  return [
-    path.join(getWorkspaceMcpServerDir(), 'node_modules', 'tsx', 'package.json'),
-    path.join(getWorkspaceRoot(), 'node_modules', 'tsx', 'package.json'),
-  ];
-}
-
-function resolvePackageBin(
-  packageJsonPath: string,
-  binName: string,
-  packageJsonRaw: string
-): string | null {
-  const packageJson = JSON.parse(packageJsonRaw) as { bin?: string | Record<string, string> };
-  const bin = typeof packageJson.bin === 'string' ? packageJson.bin : packageJson.bin?.[binName];
-  if (!bin) return null;
-  return path.resolve(path.dirname(packageJsonPath), bin);
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -177,40 +156,6 @@ async function pathExists(targetPath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function resolveWorkspaceTsxCli(checked: string[]): Promise<string | null> {
-  for (const packageJsonPath of getWorkspaceTsxPackageJsonCandidates()) {
-    checked.push(packageJsonPath);
-    if (!(await pathExists(packageJsonPath))) {
-      continue;
-    }
-
-    try {
-      const tsxCli = resolvePackageBin(
-        packageJsonPath,
-        'tsx',
-        await fs.promises.readFile(packageJsonPath, 'utf8')
-      );
-      if (!tsxCli) {
-        logger.warn(`tsx package has no bin.tsx entry at ${packageJsonPath}`);
-        continue;
-      }
-
-      checked.push(tsxCli);
-      if (await pathExists(tsxCli)) {
-        return tsxCli;
-      }
-    } catch (error) {
-      logger.warn(
-        `Failed to resolve tsx CLI from ${packageJsonPath}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  }
-
-  return null;
 }
 
 function shouldRetryMcpConfigRemoval(error: NodeJS.ErrnoException): boolean {
@@ -578,29 +523,16 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     logger.warn(`Packaged MCP entry not found at ${packagedEntry}, falling back to workspace`);
   }
 
-  // 2. Dev mode — prefer source so pnpm dev always sees current MCP tools
+  // 2. Compile current development sources before starting the MCP client clock.
   const sourceEntry = getSourceServerEntry();
   emitProgress(options, 'source-entry', 'Checking MCP source entry...');
   checked.push(sourceEntry);
   if (await pathExists(sourceEntry)) {
-    emitProgress(options, 'tsx-runner', 'Resolving MCP TypeScript runner...');
-    const tsxCli = await resolveWorkspaceTsxCli(checked);
-    if (tsxCli) {
-      return {
-        command: await resolveNodePath(options),
-        args: [tsxCli, sourceEntry],
-      };
-    }
-  }
-
-  // 3. Dev mode fallback — use built dist when source execution is unavailable
-  const builtEntry = getBuiltServerEntry();
-  emitProgress(options, 'built-entry', 'Checking built MCP server entry...');
-  checked.push(builtEntry);
-  if (await pathExists(builtEntry)) {
+    emitProgress(options, 'workspace-bundle', 'Preparing current MCP JavaScript bundle...');
+    const command = await resolveNodePath(options);
     return {
-      command: await resolveNodePath(options),
-      args: [builtEntry],
+      command,
+      args: [await resolveWorkspaceMcpBundle(getWorkspaceRoot(), command, getMcpServerBasePath())],
     };
   }
 

@@ -1,4 +1,8 @@
 // @vitest-environment node
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import packageJson from '../../../package.json';
@@ -7,6 +11,10 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  isRetryableAppleNotaryNetworkFailure,
+  isRetryableDmgDetachFailure,
+  runElectronBuilderOnce,
+  runWithPackagingRetry,
   runWithNativeDependencyRestore,
 } = require('../../../scripts/electron-builder/dist-invocations.cjs');
 
@@ -451,5 +459,191 @@ describe('electron-builder dist wrapper', () => {
         packageTarget: async () => undefined,
       })
     ).rejects.toThrow('restore failed');
+  });
+});
+
+describe('electron-builder transient packaging retry', () => {
+  const detachFailureOutput =
+    "dmgbuild.core.DMGError: Unable to detach device cleanly: hdiutil: couldn't eject \"disk2\" - Resource busy";
+
+  function detachFlakeError(): Error & { output?: string } {
+    const error: Error & { output?: string } = new Error(
+      'electron-builder failed with exit code 1'
+    );
+    error.output = detachFailureOutput;
+    return error;
+  }
+
+  it('classifies the dmgbuild clean-detach failure from packaged CI run 39495942432', () => {
+    expect(isRetryableDmgDetachFailure(detachFailureOutput)).toBe(true);
+    expect(
+      isRetryableDmgDetachFailure("hdiutil: couldn't eject \"disk2\" - Resource busy")
+    ).toBe(true);
+    expect(
+      isRetryableDmgDetachFailure('Exit code: 1. Command failed: /cache/dmgbuild -s 2.json')
+    ).toBe(false);
+  });
+
+  it('retries once after a detach flake and resolves the second attempt', async () => {
+    const calls: number[] = [];
+    const result = await runWithPackagingRetry(
+      (attempt: number) => {
+        calls.push(attempt);
+        if (attempt === 1) {
+          throw detachFlakeError();
+        }
+        return 'packaged';
+      },
+      { delayMs: 0, log: { warn: () => undefined } }
+    );
+
+    expect(result).toBe('packaged');
+    expect(calls).toEqual([1, 2]);
+  });
+
+  it('does not retry failures that are not detach flakes', async () => {
+    const calls: number[] = [];
+    const failure: Error & { output?: string } = new Error(
+      'electron-builder failed with exit code 1'
+    );
+    failure.output = 'Found incompatible native binaries in win32-arm64 bundle after pruning';
+
+    await expect(
+      runWithPackagingRetry(
+        (attempt: number) => {
+          calls.push(attempt);
+          throw failure;
+        },
+        { delayMs: 0, log: { warn: () => undefined } }
+      )
+    ).rejects.toBe(failure);
+    expect(calls).toEqual([1]);
+  });
+
+  it('retries notarization and stapling only after Apple transport failures', async () => {
+    // Shapes taken from Release run 40142955746 (macOS x64 attempts 1 and 5, arm64 attempt 1).
+    const pollFailure = (code: string, text: string) =>
+      `  ⨯ Failed to notarize via notarytool.  Failed with unexpected result: \n\nError: HTTPError(statusCode: nil, error: Error Domain=NSURLErrorDomain Code=${code} "${text}" UserInfo={...})  failedTask=build`;
+    const pollOffline = pollFailure('-1009', 'The Internet connection appears to be offline.');
+    const pollTimedOut = pollFailure('-1001', 'The request timed out.');
+    const stapleLost = [
+      '  ⨯ Failed to staple your application with code: 68',
+      '',
+      'Processing: /work/release/mac-arm64/Agent Teams AI.app',
+      'Domain is api.apple-cloudkit.com',
+      'Response is (null)',
+      'error is Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."',
+      "CloudKit's response is inconsistent with expections: (null)",
+      'The staple and validate action failed! Error 68.',
+    ].join('\n');
+    // A rejection is parsed JSON; a network error while fetching its log must not make it retryable.
+    const rejectedWithLogNetworkError = [
+      '  ⨯ Failed to notarize via notarytool',
+      '',
+      '{"id":"11d1990d","status":"Invalid","message":"Processing complete"}',
+      '',
+      'Diagnostics from notarytool log: Error: HTTPError(statusCode: nil, error: Error Domain=NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline.")',
+    ].join('\n');
+    const unauthorizedAfterEarlierNetworkNoise = [
+      'downloading electron: Error Domain=NSURLErrorDomain Code=-1001 "The request timed out."',
+      '  ⨯ Failed to notarize via notarytool.  Failed with unexpected result: ',
+      '',
+      'Error: HTTPError(statusCode: Optional(401), error: unauthorized)',
+    ].join('\n');
+    const pollTlsFailure = pollFailure('-1200', 'An SSL error has occurred.');
+    const stapleMissingTicket = [
+      '  ⨯ Failed to staple your application with code: 65',
+      '',
+      'Could not find base64 encoded ticket in response for 2/2/abc',
+      'The staple and validate action failed! Error 65.',
+      'later: error is Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."',
+    ].join('\n');
+    const unrelatedNetwork =
+      'Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost." while downloading electron';
+
+    for (const output of [pollOffline, pollTimedOut, stapleLost]) {
+      expect(isRetryableAppleNotaryNetworkFailure(output)).toBe(true);
+    }
+    for (const output of [
+      rejectedWithLogNetworkError,
+      unauthorizedAfterEarlierNetworkNoise,
+      pollTlsFailure,
+      stapleMissingTicket,
+      unrelatedNetwork,
+    ]) {
+      expect(isRetryableAppleNotaryNetworkFailure(output)).toBe(false);
+    }
+
+    const calls: number[] = [];
+    const warnings: string[] = [];
+    const result = await runWithPackagingRetry(
+      (attempt: number) => {
+        calls.push(attempt);
+        if (attempt === 1) {
+          const error: Error & { output?: string } = new Error(
+            'electron-builder failed with exit code 1'
+          );
+          error.output = pollTimedOut;
+          throw error;
+        }
+        return 'notarized';
+      },
+      { delayMs: 0, log: { warn: (message: string) => warnings.push(message) } }
+    );
+
+    expect(result).toBe('notarized');
+    expect(calls).toEqual([1, 2]);
+    expect(warnings).toEqual([
+      '[electron-builder] Apple notarization network failure detected (attempt 1/2); retrying in 0ms',
+    ]);
+  });
+
+  it('captures stderr written after exit so late detach flakes classify as retryable', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dist-cli-capture-'));
+    const cliPath = path.join(tempDir, 'fake-cli.cjs');
+    fs.writeFileSync(
+      cliPath,
+      [
+        "const { spawn } = require('node:child_process');",
+        '// Keep the inherited stderr pipe open past this process exit and write the',
+        '// detach failure late, so exit-based capture would miss it.',
+        "spawn(process.execPath, ['-e', `setTimeout(() => { console.error('dmgbuild.core.DMGError: Unable to detach device cleanly'); }, 400)`], {",
+        "  stdio: ['ignore', 'inherit', 'inherit'],",
+        '});',
+        'process.exit(1);',
+        '',
+      ].join('\n')
+    );
+
+    try {
+      let failure: (Error & { output?: string }) | undefined;
+      try {
+        await runElectronBuilderOnce(cliPath, []);
+      } catch (error) {
+        failure = error as Error & { output?: string };
+      }
+      expect(failure).toBeDefined();
+      expect(failure?.output).toContain('Unable to detach device cleanly');
+      expect(
+        isRetryableDmgDetachFailure(`${failure?.message ?? ''}\n${failure?.output ?? ''}`)
+      ).toBe(true);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('stops after the attempt budget when the volume stays busy', async () => {
+    const calls: number[] = [];
+
+    await expect(
+      runWithPackagingRetry(
+        (attempt: number) => {
+          calls.push(attempt);
+          throw detachFlakeError();
+        },
+        { delayMs: 0, log: { warn: () => undefined } }
+      )
+    ).rejects.toThrow('electron-builder failed with exit code 1');
+    expect(calls).toEqual([1, 2]);
   });
 });

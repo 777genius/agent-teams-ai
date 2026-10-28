@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 
+import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
+
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 export interface ProjectScopedRuntimeProviderStatuses {
@@ -10,20 +12,27 @@ export interface ProjectScopedRuntimeProviderStatuses {
   runtimeProviderStatusById: Map<CliProviderId, CliProviderStatus>;
 }
 
-/** OpenCode launch authority is project-scoped; other providers keep their global status. */
+/** Claude defaults and OpenCode routes use the launch project's runtime status. */
 export function useProjectScopedRuntimeProviderStatuses(
   globalRuntimeProviderStatusById: ReadonlyMap<CliProviderId, CliProviderStatus>,
-  projectPath: string
+  projectPath: string,
+  enabled = true
 ): ProjectScopedRuntimeProviderStatuses {
   const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
     useEffectiveCliProviderStatus('opencode', { projectPath: projectPath || null });
+  const { providerStatus: anthropicStatus } = useTeamModelProviderStatus(
+    'anthropic',
+    projectPath,
+    enabled
+  );
   const runtimeProviderStatusById = useMemo(() => {
     const statuses = new Map(globalRuntimeProviderStatusById);
     if (projectPath && projectScopedOpenCodeStatus) {
       statuses.set('opencode', projectScopedOpenCodeStatus);
     }
+    if (projectPath && anthropicStatus) statuses.set('anthropic', anthropicStatus);
     return statuses;
-  }, [globalRuntimeProviderStatusById, projectPath, projectScopedOpenCodeStatus]);
+  }, [globalRuntimeProviderStatusById, projectPath, projectScopedOpenCodeStatus, anthropicStatus]);
 
   return { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById };
 }

@@ -642,7 +642,8 @@
       "byTime": "By time",
       "byUnread": "Dengan belum dibaca",
       "byProject": "Menurut proyek",
-      "byTeam": "Oleh tim"
+      "byTeam": "Oleh tim",
+      "manualOrder": "Urutan manual"
     }
   },
   "toolViewer": {

@@ -5,7 +5,6 @@ import {
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
-import { isOpenCodeDeliveryFromOtherRun } from '../opencode/delivery/OpenCodePromptDeliveryRunEligibility';
 import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import { isOpenCodeAttachmentDeliveryFailureReason } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 
@@ -14,11 +13,8 @@ import {
   waitForInboxRelayInFlight,
 } from './TeamProvisioningInboxRelayCandidates';
 import {
-  DEFAULT_INBOX_RELAY_BATCH_SIZE,
-  hasStableInboxMessageId,
   inferOpenCodeInboxMessageTaskRefs,
   type RelayInboxMessage,
-  selectOpenCodeInboxRelayBatch,
 } from './TeamProvisioningInboxRelayPolicy';
 import { type OpenCodeInboxAttachmentPayloadsResult } from './TeamProvisioningOpenCodeAttachmentPayloads';
 import {
@@ -40,6 +36,10 @@ import {
   terminalizeOpenCodeMissingInboxRowRecord,
 } from './TeamProvisioningOpenCodeInboxReadCommitRecovery';
 import {
+  armOpenCodeInboxFollowUpWake,
+  selectOpenCodeMemberInboxRelayUnreadMessages,
+} from './TeamProvisioningOpenCodeMemberInboxFollowUpWake';
+import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
 } from './TeamProvisioningOpenCodeMemberInboxRelayLease';
@@ -55,6 +55,7 @@ import {
   dedupeOpenCodeMemberInboxRelayDiagnostics,
   type OpenCodeMemberInboxRelayResult,
 } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
+import { createOpenCodeMemberInboxRunFence } from './TeamProvisioningOpenCodeMemberInboxRunFence';
 import { settleOpenCodePostCompletionNotices } from './TeamProvisioningOpenCodePostCompletionSettlement';
 
 import type {
@@ -67,9 +68,11 @@ import type { OpenCodeVisibleReplyProof } from '../opencode/delivery/OpenCodePro
 import type { AgentActionMode, InboxMessage, TaskRef, TeamTask } from '@shared/types';
 
 export { scheduleOpenCodeMemberInboxDeliveryWakeWithPorts } from './TeamProvisioningOpenCodeMemberInboxDeliveryWake';
+export { selectOpenCodeMemberInboxRelayUnreadMessages } from './TeamProvisioningOpenCodeMemberInboxFollowUpWake';
 export type { OpenCodeMemberInboxRelayResult } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
 
 export interface OpenCodeMemberInboxRelayOptions {
+  isCurrent?: () => boolean;
   onlyMessageId?: string;
   source?: OpenCodeMemberMessageDeliverySource;
   deliveryMetadata?: {
@@ -101,6 +104,7 @@ export interface RelayOpenCodeMemberInboxMessagesPorts {
     memberName: string;
     messageId: string;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void;
   isOpenCodeRuntimeRecipient(teamName: string, memberName: string): Promise<boolean>;
   resolveOpenCodeMemberDeliveryIdentity(
@@ -179,6 +183,8 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
 ): Promise<OpenCodeMemberInboxRelayResult> {
   const { teamName, memberName, relayKey } = input;
   const options = input.options ?? {};
+  if (options.isCurrent?.() === false)
+    return buildOpenCodeMemberInboxRelaySupersededResult(relayKey);
   const existing = getActiveOpenCodeMemberInboxRelayWork({
     inFlight: ports.inFlight,
     relayKey,
@@ -187,11 +193,24 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
     const onlyMessageId = options.onlyMessageId?.trim();
     if (!onlyMessageId) {
       try {
-        return await waitForInboxRelayInFlight({
+        const relayResult = await waitForInboxRelayInFlight({
           promise: existing,
           relayName: 'opencode_member_inbox_relay',
           relayKey,
         });
+        // The coalesced request ran no walk of its own: rows that landed after
+        // the in-flight walk read its inbox snapshot are invisible to it, so
+        // leave the same follow-up wake a walk leaves for its own leftovers.
+        if (options.isCurrent?.() !== false) {
+          await armOpenCodeInboxFollowUpWake({
+            teamName,
+            memberName,
+            inboxMessages: await ports.readInboxMessages(teamName, memberName).catch(() => []),
+            handledMessageIds: new Set<string>(),
+            ports,
+          });
+        }
+        return relayResult;
       } catch (error) {
         if (!isInboxRelayInFlightTimeoutError(error)) {
           throw error;
@@ -202,6 +221,8 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
       }
     }
     const inboxMessages = await ports.readInboxMessages(teamName, memberName).catch(() => []);
+    if (options.isCurrent?.() === false)
+      return buildOpenCodeMemberInboxRelaySupersededResult(relayKey);
     const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
     if (targetMessage?.read) {
       if (targetMessage.messageKind === 'member_work_sync_nudge') {
@@ -210,6 +231,7 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
           memberName,
           messageId: onlyMessageId,
           delayMs: 500,
+          ...(options.isCurrent ? { isCurrent: options.isCurrent } : {}),
         });
         return buildOpenCodeMemberWorkSyncReadWaitingResult(onlyMessageId);
       }
@@ -233,12 +255,14 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
       memberName,
       messageId: onlyMessageId,
       delayMs: 500,
+      ...(options.isCurrent ? { isCurrent: options.isCurrent } : {}),
     });
     return buildOpenCodeMemberInboxQueuedBehindResult({ relayKey, messageId: onlyMessageId });
   }
 
   const generation: { work?: Promise<OpenCodeMemberInboxRelayResult> } = {};
-  const isCurrentGeneration = (): boolean => ports.inFlight.get(relayKey) === generation.work;
+  const isCurrentGeneration = (): boolean =>
+    options.isCurrent?.() !== false && ports.inFlight.get(relayKey) === generation.work;
   const work = runOpenCodeMemberInboxRelayWork(input, ports, isCurrentGeneration);
   generation.work = work;
 
@@ -385,12 +409,13 @@ async function runOpenCodeMemberInboxRelayWork(
   // own: the anchor's read-commit usually re-fires the inbox watcher, but a
   // delivery that writes no inbox row would otherwise leave the rider waiting.
   const scheduleOpenCodeCoalesceRiderWake = (rider?: RelayInboxMessage): void => {
-    if (!rider || rider.read) return;
+    if (!rider || rider.read || options.isCurrent?.() === false) return;
     ports.scheduleOpenCodeMemberInboxDeliveryWake({
       teamName,
       memberName,
       messageId: rider.messageId,
       delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+      ...(options.isCurrent ? { isCurrent: options.isCurrent } : {}),
     });
   };
 
@@ -428,7 +453,15 @@ async function runOpenCodeMemberInboxRelayWork(
 
   // Cursor-driven walk: a pending non-user delivery may skip ahead to a newer
   // user message (see findNextUnreadUserMessageIndex) instead of breaking.
+  const handledMessageIds = new Set<string>();
   let cursor = 0;
+  const runFence = createOpenCodeMemberInboxRunFence({
+    resolveCurrentRunId: () =>
+      ports.resolveCurrentOpenCodeRuntimeRunId(teamName, memberIdentity.laneId),
+    isCurrent: isCurrentGeneration,
+    ledger: promptLedger,
+    nowIso: () => ports.nowIso(),
+  });
   while (cursor < unread.length) {
     const index = cursor;
     cursor += 1;
@@ -436,6 +469,7 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!message) {
       break;
     }
+    handledMessageIds.add(message.messageId);
     let existingRecord = await promptLedger
       .getByInboxMessage({
         teamName,
@@ -450,24 +484,13 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
-    if (existingRecord) {
-      const currentRunId = await ports.resolveCurrentOpenCodeRuntimeRunId(
-        teamName,
-        memberIdentity.laneId
-      );
-      if (isOpenCodeDeliveryFromOtherRun(existingRecord, currentRunId)) {
-        // Persist the fence so due scans cannot repeatedly select this historical row.
-        await promptLedger.ensurePending({
-          ...existingRecord,
-          runId: currentRunId,
-          now: ports.nowIso(),
-        });
-        continue;
-      }
-    }
-    if (!isCurrentGeneration()) {
+    const existingRunFence = existingRecord
+      ? await runFence.fenceExistingDelivery(message, existingRecord)
+      : 'current';
+    if (existingRunFence === 'superseded' || !isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
+    if (existingRunFence === 'stale') continue;
     if (!message.groupChatId && existingRecord?.status === 'failed_terminal') {
       const requeuedRecord = await ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
         ledger: promptLedger,
@@ -550,6 +573,13 @@ async function runOpenCodeMemberInboxRelayWork(
       // delivery path below - its observe pass, and the plain-text
       // materialization, are what produce the missing proof.
     }
+    if (message.groupChatId) {
+      const outcome = await runFence.checkGroupDelivery(message);
+      if (outcome === 'superseded' || !isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
+      if (outcome === 'stale') continue;
+    }
     const existingTaskRefs = existingRecord?.taskRefs?.length ? existingRecord.taskRefs : undefined;
     const metadataTaskRefs = options.deliveryMetadata?.taskRefs?.length
       ? options.deliveryMetadata.taskRefs
@@ -603,6 +633,9 @@ async function runOpenCodeMemberInboxRelayWork(
     if (settlement.kind === 'read_committed') {
       result.relayed += settlement.messages.length;
       result.diagnostics = [...(result.diagnostics ?? []), settlement.diagnostic];
+      for (const settledMessage of settlement.messages) {
+        handledMessageIds.add(settledMessage.messageId);
+      }
       for (let skipIndex = index + 1; skipIndex < unread.length; skipIndex += 1) {
         if (!settlement.messages.includes(unread[skipIndex])) break;
         cursor = Math.max(cursor, skipIndex + 1);
@@ -687,6 +720,7 @@ async function runOpenCodeMemberInboxRelayWork(
       scheduleOpenCodeCoalesceRiderWake(coalescable[0]);
     }
     const delivery = await ports.deliverOpenCodeMemberMessage(teamName, {
+      ...(options.isCurrent ? { isCurrent: options.isCurrent } : {}),
       memberName,
       from: message.from,
       groupRunKey: message.groupRunKey,
@@ -721,6 +755,9 @@ async function runOpenCodeMemberInboxRelayWork(
     if (coalesced.length > 0 && isOpenCodeCoalescedNoticeDeliveryProven(delivery)) {
       try {
         await ports.markInboxMessagesRead(teamName, memberName, coalesced);
+        for (const coalescedMessage of coalesced) {
+          handledMessageIds.add(coalescedMessage.messageId);
+        }
         result.relayed += coalesced.length;
         result.diagnostics = [
           ...(result.diagnostics ?? []),
@@ -839,26 +876,19 @@ async function runOpenCodeMemberInboxRelayWork(
     break;
   }
 
-  return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
-}
+  if (options.isCurrent?.() !== false) {
+    await armOpenCodeInboxFollowUpWake({
+      teamName,
+      memberName,
+      inboxMessages,
+      handledMessageIds,
+      wokenMessageId: onlyMessageId,
+      lastDelivery: result.lastDelivery,
+      ports,
+    });
+  }
 
-export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {
-  inboxMessages: readonly InboxMessage[];
-  onlyMessageId?: string;
-  maxRelay?: number;
-}): RelayInboxMessage[] {
-  const onlyMessageId = input.onlyMessageId?.trim();
-  return selectOpenCodeInboxRelayBatch(
-    input.inboxMessages.filter((message): message is RelayInboxMessage => {
-      if (onlyMessageId && message.messageId !== onlyMessageId) return false;
-      if (message.read && (!onlyMessageId || message.messageKind !== 'member_work_sync_nudge')) {
-        return false;
-      }
-      if (typeof message.text !== 'string' || message.text.trim().length === 0) return false;
-      return hasStableInboxMessageId(message);
-    }),
-    input.maxRelay ?? DEFAULT_INBOX_RELAY_BATCH_SIZE
-  );
+  return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
 }
 
 export function resolveOpenCodeMemberInboxDeliveryDecision(input: {

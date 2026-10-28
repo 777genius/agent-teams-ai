@@ -4,6 +4,7 @@ import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
 import { createDocumentPreviewBridge } from '@features/document-preview/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
+import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
@@ -19,6 +20,7 @@ import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -342,6 +344,7 @@ import type {
   MessagesPage,
   NotificationTrigger,
   OpenCodeRuntimeDeliveryStatus,
+  OpenCodeRuntimeInstallOptions,
   OpenCodeRuntimeStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
@@ -516,6 +519,7 @@ const electronAPI: ElectronAPI = {
   ...createRecentProjectsBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
+  gatewayProvider: createGatewayProviderBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
   ...createProjectFolderBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
@@ -1240,11 +1244,13 @@ const electronAPI: ElectronAPI = {
       );
     },
     restartMember: async (teamName: string, memberName: string, expectedSecondary?: boolean) => {
-      return invokeIpcWithResult<void>(
-        TEAM_RESTART_MEMBER,
-        teamName,
-        memberName,
-        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+      return parseTeamMemberRestartResult(
+        await invokeIpcWithResult<unknown>(
+          TEAM_RESTART_MEMBER,
+          teamName,
+          memberName,
+          ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+        )
       );
     },
     skipMemberForLaunch: async (teamName: string, memberName: string) => {
@@ -1819,11 +1825,13 @@ const electronAPI: ElectronAPI = {
 
   // ===== OpenCode Runtime Installer API =====
   openCodeRuntime: {
+    platform: process.platform,
+    arch: process.arch,
     getStatus: async (): Promise<OpenCodeRuntimeStatus> => {
       return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_GET_STATUS);
     },
-    install: async (): Promise<OpenCodeRuntimeStatus> => {
-      return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_INSTALL);
+    install: async (options?: OpenCodeRuntimeInstallOptions): Promise<OpenCodeRuntimeStatus> => {
+      return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_INSTALL, options);
     },
     invalidateStatus: async (): Promise<void> => {
       return invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS);

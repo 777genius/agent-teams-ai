@@ -439,6 +439,290 @@ describe('OpenCodeTaskLogStreamSource', () => {
     ).toEqual(['assignment', 'native-write', 'write-result', 'complete', 'assignment-final']);
   });
 
+  it('projects pump-turn task lifecycle work past the delivered turn through its terminal marker', async () => {
+    const messages = [
+      textLogMessage({ uuid: 'assignment', type: 'user', role: 'user', timestamp: '2026-04-21T10:01:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'first-read',
+        parentUuid: 'assignment',
+        timestamp: '2026-04-21T10:01:30Z',
+        toolName: 'read',
+        input: { filePath: 'sum.cjs' },
+      }),
+      toolResultLogMessage({
+        uuid: 'first-read-result',
+        parentUuid: 'first-read',
+        sourceToolAssistantUUID: 'first-read',
+        timestamp: '2026-04-21T10:01:31Z',
+      }),
+      textLogMessage({ uuid: 'pump-work', type: 'user', role: 'user', timestamp: '2026-04-21T10:02:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'work-bash',
+        parentUuid: 'pump-work',
+        timestamp: '2026-04-21T10:02:10Z',
+        toolName: 'bash',
+        input: { command: 'node verify.cjs COMMAND_EXEC:nonce-1' },
+      }),
+      toolResultLogMessage({
+        uuid: 'work-bash-result',
+        parentUuid: 'work-bash',
+        sourceToolAssistantUUID: 'work-bash',
+        timestamp: '2026-04-21T10:02:11Z',
+      }),
+      taskMarkerLogMessage({
+        uuid: 'work-comment',
+        parentUuid: 'pump-work',
+        timestamp: '2026-04-21T10:02:20Z',
+        toolName: 'agent-teams_task_add_comment',
+        input: { teamName: 'team-a', taskId: 'task-a' },
+      }),
+      toolResultLogMessage({
+        uuid: 'work-comment-result',
+        parentUuid: 'work-comment',
+        sourceToolAssistantUUID: 'work-comment',
+        timestamp: '2026-04-21T10:02:21Z',
+      }),
+      textLogMessage({ uuid: 'pump-write', type: 'user', role: 'user', timestamp: '2026-04-21T10:03:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'markerless-write',
+        parentUuid: 'pump-write',
+        timestamp: '2026-04-21T10:03:10Z',
+        toolName: 'write',
+        input: { filePath: 'peer.cjs' },
+      }),
+      textLogMessage({ uuid: 'pump-complete', type: 'user', role: 'user', timestamp: '2026-04-21T10:04:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'done-complete',
+        parentUuid: 'pump-complete',
+        timestamp: '2026-04-21T10:04:10Z',
+        toolName: 'agent-teams_task_complete',
+        input: { teamName: 'team-a', taskId: 'task-a' },
+      }),
+      toolResultLogMessage({
+        uuid: 'done-complete-result',
+        parentUuid: 'done-complete',
+        sourceToolAssistantUUID: 'done-complete',
+        timestamp: '2026-04-21T10:04:11Z',
+      }),
+      textLogMessage({ uuid: 'pump-later', type: 'user', role: 'user', timestamp: '2026-04-21T10:05:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'late-bash',
+        parentUuid: 'pump-later',
+        timestamp: '2026-04-21T10:05:10Z',
+        toolName: 'bash',
+        input: { command: 'node other.cjs' },
+      }),
+    ];
+    const chunkBuilder = {
+      buildBundleChunks: vi.fn((projected) => [
+        { id: 'chunk', kind: 'assistant', messages: projected },
+      ]),
+    };
+    const source = new OpenCodeTaskLogStreamSource(
+      {
+        getOpenCodeTranscript: vi.fn(async () => ({
+          sessionId: 'session-opencode',
+          logProjection: { messages },
+        })),
+      } as never,
+      { resolve: async () => '/tmp/claude' },
+      { getTasks: async () => [createTask()], getDeletedTasks: async () => [] } as never,
+      chunkBuilder as never,
+      { readTaskRecords: async () => [] },
+      {
+        readTaskRecords: async () => [
+          {
+            taskId: 'task-a',
+            memberName: 'alice',
+            scope: 'member_session_window',
+            source: 'delivery_ledger',
+            sessionId: 'session-opencode',
+            startMessageUuid: 'assignment',
+            since: '2026-04-21T10:01:00Z',
+            until: '2026-04-21T10:08:00Z',
+          } satisfies OpenCodeTaskLogAttributionRecord,
+        ],
+      }
+    );
+
+    const response = await source.getTaskLogStream('team-a', 'task-a');
+
+    expect(response?.source).toBe('opencode_runtime_attribution');
+    expect(
+      chunkBuilder.buildBundleChunks.mock.calls[0][0].map(
+        (message: { uuid: string }) => message.uuid
+      )
+    ).toEqual([
+      'assignment',
+      'first-read',
+      'first-read-result',
+      'pump-work',
+      'work-bash',
+      'work-bash-result',
+      'work-comment',
+      'work-comment-result',
+      'pump-write',
+      'markerless-write',
+      'pump-complete',
+      'done-complete',
+      'done-complete-result',
+    ]);
+  });
+
+  it('projects markerless work pump turns between the delivered turn and the terminal marker', async () => {
+    const messages = [
+      textLogMessage({ uuid: 'assignment', type: 'user', role: 'user', timestamp: '2026-04-21T10:01:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'first-read',
+        parentUuid: 'assignment',
+        timestamp: '2026-04-21T10:01:30Z',
+        toolName: 'read',
+        input: { filePath: 'sum.cjs' },
+      }),
+      toolResultLogMessage({
+        uuid: 'first-read-result',
+        parentUuid: 'first-read',
+        sourceToolAssistantUUID: 'first-read',
+        timestamp: '2026-04-21T10:01:31Z',
+      }),
+      textLogMessage({ uuid: 'pump-write', type: 'user', role: 'user', timestamp: '2026-04-21T10:02:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'work-read',
+        parentUuid: 'pump-write',
+        timestamp: '2026-04-21T10:02:10Z',
+        toolName: 'read',
+        input: { filePath: 'alice-verify.cjs' },
+      }),
+      toolResultLogMessage({
+        uuid: 'work-read-result',
+        parentUuid: 'work-read',
+        sourceToolAssistantUUID: 'work-read',
+        timestamp: '2026-04-21T10:02:11Z',
+      }),
+      taskMarkerLogMessage({
+        uuid: 'work-write',
+        parentUuid: 'pump-write',
+        timestamp: '2026-04-21T10:02:20Z',
+        toolName: 'write',
+        input: { filePath: 'sum.cjs' },
+      }),
+      toolResultLogMessage({
+        uuid: 'work-write-result',
+        parentUuid: 'work-write',
+        sourceToolAssistantUUID: 'work-write',
+        timestamp: '2026-04-21T10:02:21Z',
+      }),
+      textLogMessage({ uuid: 'pump-bash', type: 'user', role: 'user', timestamp: '2026-04-21T10:03:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'work-bash',
+        parentUuid: 'pump-bash',
+        timestamp: '2026-04-21T10:03:10Z',
+        toolName: 'bash',
+        input: { command: 'node verify.cjs COMMAND_EXEC:nonce-1' },
+      }),
+      toolResultLogMessage({
+        uuid: 'work-bash-result',
+        parentUuid: 'work-bash',
+        sourceToolAssistantUUID: 'work-bash',
+        timestamp: '2026-04-21T10:03:11Z',
+      }),
+      textLogMessage({ uuid: 'pump-comment', type: 'user', role: 'user', timestamp: '2026-04-21T10:04:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'work-comment',
+        parentUuid: 'pump-comment',
+        timestamp: '2026-04-21T10:04:10Z',
+        toolName: 'agent-teams_task_add_comment',
+        input: { teamName: 'team-a', taskId: 'task-a' },
+      }),
+      toolResultLogMessage({
+        uuid: 'work-comment-result',
+        parentUuid: 'work-comment',
+        sourceToolAssistantUUID: 'work-comment',
+        timestamp: '2026-04-21T10:04:11Z',
+      }),
+      textLogMessage({ uuid: 'pump-complete', type: 'user', role: 'user', timestamp: '2026-04-21T10:05:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'done-complete',
+        parentUuid: 'pump-complete',
+        timestamp: '2026-04-21T10:05:10Z',
+        toolName: 'agent-teams_task_complete',
+        input: { teamName: 'team-a', taskId: 'task-a' },
+      }),
+      toolResultLogMessage({
+        uuid: 'done-complete-result',
+        parentUuid: 'done-complete',
+        sourceToolAssistantUUID: 'done-complete',
+        timestamp: '2026-04-21T10:05:11Z',
+      }),
+      textLogMessage({ uuid: 'pump-later', type: 'user', role: 'user', timestamp: '2026-04-21T10:06:00Z' }),
+      taskMarkerLogMessage({
+        uuid: 'late-bash',
+        parentUuid: 'pump-later',
+        timestamp: '2026-04-21T10:06:10Z',
+        toolName: 'bash',
+        input: { command: 'node other.cjs' },
+      }),
+    ];
+    const chunkBuilder = {
+      buildBundleChunks: vi.fn((projected) => [
+        { id: 'chunk', kind: 'assistant', messages: projected },
+      ]),
+    };
+    const source = new OpenCodeTaskLogStreamSource(
+      {
+        getOpenCodeTranscript: vi.fn(async () => ({
+          sessionId: 'session-opencode',
+          logProjection: { messages },
+        })),
+      } as never,
+      { resolve: async () => '/tmp/claude' },
+      { getTasks: async () => [createTask()], getDeletedTasks: async () => [] } as never,
+      chunkBuilder as never,
+      { readTaskRecords: async () => [] },
+      {
+        readTaskRecords: async () => [
+          {
+            taskId: 'task-a',
+            memberName: 'alice',
+            scope: 'member_session_window',
+            source: 'delivery_ledger',
+            sessionId: 'session-opencode',
+            startMessageUuid: 'assignment',
+            since: '2026-04-21T10:01:00Z',
+            until: '2026-04-21T10:08:00Z',
+          } satisfies OpenCodeTaskLogAttributionRecord,
+        ],
+      }
+    );
+
+    const response = await source.getTaskLogStream('team-a', 'task-a');
+
+    expect(response?.source).toBe('opencode_runtime_attribution');
+    expect(
+      chunkBuilder.buildBundleChunks.mock.calls[0][0].map(
+        (message: { uuid: string }) => message.uuid
+      )
+    ).toEqual([
+      'assignment',
+      'first-read',
+      'first-read-result',
+      'pump-write',
+      'work-read',
+      'work-read-result',
+      'work-write',
+      'work-write-result',
+      'pump-bash',
+      'work-bash',
+      'work-bash-result',
+      'pump-comment',
+      'work-comment',
+      'work-comment-result',
+      'pump-complete',
+      'done-complete',
+      'done-complete-result',
+    ]);
+  });
+
   it('sanitizes OpenCode delivery retry envelopes from projected task log text', async () => {
     const bridge = {
       getOpenCodeTranscript: vi.fn(async () => ({
@@ -1510,6 +1794,118 @@ describe('OpenCodeTaskLogStreamSource', () => {
       memberName: 'alice',
       limit: 200,
     });
+  });
+
+  it('falls back to owner heuristic when a run-bound ledger transcript is available but its turn is clipped', async () => {
+    const bridge = {
+      getOpenCodeTranscript: vi.fn(async (_binaryPath, params: { memberName: string }) => {
+        if (params.memberName === 'bob') {
+          return {
+            sessionId: 'session-bob',
+            logProjection: {
+              messages: [
+                {
+                  uuid: 'delivered-prompt',
+                  parentUuid: undefined,
+                  type: 'user',
+                  timestamp: '2026-04-21T11:50:00.000Z',
+                  role: 'user',
+                  content: [{ type: 'text', text: 'Delivered turn outside the attribution window' }],
+                  isMeta: false,
+                  sessionId: 'session-bob',
+                  toolCalls: [],
+                  toolResults: [],
+                },
+                {
+                  uuid: 'delivered-reply',
+                  parentUuid: 'delivered-prompt',
+                  type: 'assistant',
+                  timestamp: '2026-04-21T11:51:00.000Z',
+                  role: 'assistant',
+                  content: [{ type: 'text', text: 'Reply outside the attribution window' }],
+                  isMeta: false,
+                  sessionId: 'session-bob',
+                  toolCalls: [],
+                  toolResults: [],
+                },
+              ],
+            },
+          };
+        }
+        return {
+          sessionId: 'session-alice',
+          logProjection: {
+            messages: [
+              {
+                uuid: 'alice-inside',
+                parentUuid: undefined,
+                type: 'assistant',
+                timestamp: '2026-04-21T10:05:00.000Z',
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Heuristic owner work' }],
+                isMeta: false,
+                sessionId: 'session-alice',
+                toolCalls: [],
+                toolResults: [],
+              },
+            ],
+          },
+        };
+      }),
+    };
+    const chunkBuilder = {
+      buildBundleChunks: vi.fn((messages) => [
+        {
+          id: 'chunk-heuristic',
+          kind: 'assistant',
+          messages,
+        },
+      ]),
+    };
+    // A legacy delivery carries a runtime runId, but its transcript read is
+    // available and the attribution window clips the delivered turn away.
+    const attributionRecords: OpenCodeTaskLogAttributionRecord[] = [
+      {
+        taskId: 'task-a',
+        memberName: 'bob',
+        scope: 'member_session_window',
+        sessionId: 'session-bob',
+        runId: 'run-legacy-1',
+        since: '2026-04-21T12:00:00.000Z',
+        until: '2026-04-21T12:10:00.000Z',
+        startMessageUuid: 'delivered-prompt',
+        source: 'delivery_ledger',
+      },
+    ];
+    const source = new OpenCodeTaskLogStreamSource(
+      bridge as never,
+      { resolve: async () => '/tmp/claude' },
+      {
+        getTasks: async () => [createTask()],
+        getDeletedTasks: async () => [],
+      } as never,
+      chunkBuilder as never,
+      { readTaskRecords: vi.fn(async () => attributionRecords) }
+    );
+
+    const response = await source.getTaskLogStream('team-a', 'task-a');
+
+    expect(response?.source).toBe('opencode_runtime_fallback');
+    expect(response?.runtimeProjection).toEqual({
+      provider: 'opencode',
+      mode: 'heuristic',
+      attributionRecordCount: 1,
+      projectedMessageCount: 1,
+      boardMcpToolCount: 0,
+      nativeToolCount: 0,
+      fallbackReason: 'attribution_no_projected_messages',
+    });
+    expect(response?.participants[0]?.label).toBe('alice');
+    expect(
+      chunkBuilder.buildBundleChunks.mock.calls
+        .at(-1)?.[0]
+        .map((message: { uuid: string }) => message.uuid)
+    ).toEqual(['alice-inside']);
   });
 
   it('keys the short cache by attribution records so new explicit attribution is visible immediately', async () => {

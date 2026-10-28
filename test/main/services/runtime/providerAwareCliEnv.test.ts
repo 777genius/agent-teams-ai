@@ -166,6 +166,23 @@ describe('buildProviderAwareCliEnv', () => {
     }
   );
 
+  it('prepares the native binary without consulting global credentials for a gateway member', async () => {
+    const { buildProviderAwareCliEnv } = await import('@main/services/runtime/providerAwareCliEnv');
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue('/sandbox/managed/codex');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'codex',
+      connectionMode: 'runtime-only',
+    });
+    expect(result.env.CODEX_CLI_PATH).toBe('/sandbox/managed/codex');
+    expect(result.connectionIssues).toEqual({});
+    expect(result.providerArgs).toEqual([]);
+    expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).toHaveBeenCalled();
+    expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    expect(getConfiguredConnectionIssuesMock).not.toHaveBeenCalled();
+    expect(getConfiguredConnectionLaunchArgsMock).not.toHaveBeenCalled();
+  });
+
   it('keeps passive reads passive when no server or MCP launch metadata exists and strips dead endpoints', async () => {
     vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', undefined);
     const { buildPassiveProviderStatusCliEnv } =
@@ -267,9 +284,15 @@ describe('buildProviderAwareCliEnv', () => {
           'sandbox-control-token-0123456789abcdef'
         );
         const client = new AgentTeamsRuntimeProviderManagementCliClient();
-        await expect(
-          client.loadModels({ runtimeId: 'opencode', providerId: 'xai' })
-        ).resolves.toEqual(response);
+        const startedAt = Date.now();
+        const catalog = await client.loadModels({ runtimeId: 'opencode', providerId: 'xai' });
+        const freshUntil = catalog.models?.freshUntil;
+        expect(catalog).toEqual({
+          ...response,
+          models: { ...response.models, freshUntil: expect.any(String) },
+        });
+        expect(Date.parse(freshUntil!)).toBeGreaterThanOrEqual(startedAt + 120_000);
+        expect(Date.parse(freshUntil!)).toBeLessThanOrEqual(Date.now() + 120_000);
         const [command, args, options] = execCliMock.mock.calls.at(-1)!;
         expect(command).toBe('/sandbox/agent-teams-cli');
         expect(args).toEqual([
@@ -1251,6 +1274,42 @@ describe('buildProviderAwareCliEnv', () => {
     ).toHaveLength(1);
   });
 
+  it('passes a probe-verified Windows standalone V2 directly to owned launches', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-standalone-V2-env-'));
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const originalResources = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
+    const wrapper = path.join(root, 'runtime', 'opencode-console', 'opencode.exe');
+    const native = path.join(root, 'user-selected.exe');
+    fs.mkdirSync(path.dirname(wrapper), { recursive: true });
+    fs.writeFileSync(wrapper, 'TEST console wrapper');
+    fs.writeFileSync(native, 'TEST standalone native');
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'resourcesPath', { value: root, configurable: true });
+    isSupportedOpenCodeRuntimeBinaryPathMock.mockImplementation(
+      async (candidate, generation) =>
+        candidate === native && (generation === undefined || generation === 'v2')
+    );
+    try {
+      const { buildProviderAwareCliEnv } =
+        await import('@main/services/runtime/providerAwareCliEnv');
+      const result = await buildProviderAwareCliEnv({
+        providerId: 'opencode',
+        connectionMode: 'runtime-only',
+        env: { OPENCODE_BIN_PATH: native, OPENCODE_CONSOLE_WRAPPER_TARGET: '/TEST/stale' },
+      });
+      expect(isSupportedOpenCodeRuntimeBinaryPathMock).toHaveBeenCalledWith(native, 'v2');
+      expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(native);
+      expect(result.env.OPENCODE_BIN_PATH).toBe(native);
+      expect(result.env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+      expect(fs.existsSync(path.join(path.dirname(wrapper), 'opencode.real.path'))).toBe(false);
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+      if (originalResources) Object.defineProperty(process, 'resourcesPath', originalResources);
+      else Reflect.deleteProperty(process, 'resourcesPath');
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('exposes an explicit OpenCode binary override on PATH when the app-managed resolver is cold', async () => {
     const explicitBinaryPath = path.join(process.cwd(), 'custom opencode', 'opencode');
 
@@ -1266,6 +1325,52 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
     expect(result.env.OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
+  });
+
+  it.each([
+    { caller: 'PTY shell', binaryPath: undefined, source: 'call' },
+    { caller: 'Claude management', binaryPath: '/sandbox/claude', source: 'call' },
+    { caller: 'PTY shell', binaryPath: undefined, source: 'process' },
+    { caller: 'Claude management', binaryPath: '/sandbox/claude', source: 'process' },
+  ])(
+    'preserves an explicit OpenCode override without probing for $caller ($source)',
+    async ({ binaryPath, source }) => {
+      const explicitBinaryPath = '/TEST/unresponsive-opencode';
+      isSupportedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(new Error('probe timed out'));
+      resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(
+        new Error('unexpected runtime resolution')
+      );
+      if (source === 'process') {
+        vi.stubEnv('OPENCODE_BIN_PATH', explicitBinaryPath);
+      }
+      const { buildProviderAwareCliEnv } =
+        await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+      const result = await buildProviderAwareCliEnv({
+        binaryPath,
+        connectionMode: 'augment',
+        allowStoredApiKeyDecryption: false,
+        env: source === 'call' ? { OPENCODE_BIN_PATH: explicitBinaryPath } : {},
+      });
+      expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
+      expect(result.env.OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
+      expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
+      expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+      expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it('propagates an explicit OpenCode verification failure before choosing a managed runtime', async () => {
+    const failure = new Error('Could not verify the explicitly selected OpenCode binary');
+    isSupportedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(failure);
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    await expect(
+      buildProviderAwareCliEnv({
+        providerId: 'opencode',
+        env: { OPENCODE_BIN_PATH: '/TEST/selected-opencode' },
+      })
+    ).rejects.toBe(failure);
+    expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
   });
 
   it('ignores an unsupported explicit OpenCode override and uses the verified runtime', async () => {

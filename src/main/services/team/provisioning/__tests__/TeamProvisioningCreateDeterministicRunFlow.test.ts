@@ -79,6 +79,7 @@ function createSetup(): DeterministicCreateSetupFlowResult<TestLane> {
     resolvedProviderId: 'codex',
     providerArgsForLaunch: ['--provider'],
     inheritedProviderArgsForLaunch: ['--inherited'],
+    memberArgsByMember: new Map(),
     effectiveMemberSpecs: [request.members[0]],
     allEffectiveMemberSpecs: request.members,
     launchIdentity: null,

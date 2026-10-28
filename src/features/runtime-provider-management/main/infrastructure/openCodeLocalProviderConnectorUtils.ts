@@ -11,6 +11,7 @@ import type {
   RuntimeLocalProviderProbeResponse,
   RuntimeLocalProviderScopeDto,
 } from '../../contracts';
+import type { OpenCodeGatewayProviderTarget } from './OpenCodeGatewayArtifactOwnership';
 
 const MAX_MODELS = 500;
 const JSON_FORMATTING: FormattingOptions = {
@@ -31,6 +32,7 @@ export interface LocalModelConfigMetadata {
 }
 
 export interface LocalProviderConfigWriteInput {
+  readonly gatewayOwner?: OpenCodeGatewayProviderTarget;
   readonly scope: RuntimeLocalProviderScopeDto;
   readonly projectPath?: string | null;
   readonly providerId: string;

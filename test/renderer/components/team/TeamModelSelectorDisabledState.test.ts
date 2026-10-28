@@ -272,6 +272,212 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('keeps legacy Anthropic status global without requesting a project scope', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          supported: true,
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          models: ['sonnet'],
+          capabilities: { teamLaunch: true, oneShot: true },
+        },
+      ],
+    };
+    const onValueChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+          projectPath: '/tmp/legacy-project',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(
+      storeState.fetchCliProviderStatus.mock.calls.filter(
+        ([providerId, options]) => providerId === 'anthropic' && options?.projectPath
+      )
+    ).toEqual([]);
+    expect(
+      host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
+        ?.textContent
+    ).toContain('Default');
+    expect(onValueChange).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it.each([null, 'global/wrong-default'])(
+    'keeps the Anthropic project default unknown until its scope answers and ignores late previous-project truth when the global effective model is %s',
+    async (globalDefault) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const status = (model: string) => ({
+        providerId: 'anthropic',
+        supported: true,
+        authenticated: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        effectiveDefaultModel: model,
+        models: ['sonnet'],
+        capabilities: { teamLaunch: true, oneShot: true },
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'anthropic',
+          source: 'anthropic-compatible-api',
+          status: 'ready',
+          fetchedAt: '2026-10-20T00:00:00.000Z',
+          staleAt: '2099-10-20T00:00:00.000Z',
+          defaultModelId: model,
+          defaultLaunchModel: model,
+          models: [{ id: model, launchModel: model, displayName: model }],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
+      });
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [{ ...status('global/wrong-default'), effectiveDefaultModel: globalDefault }],
+      };
+      const onValueChange = vi.fn();
+      const requests = new Map<string, Deferred<void>>();
+      storeState.fetchCliProviderStatus.mockImplementation(
+        (_providerId, options: { projectPath?: string }) => {
+          const deferred = createDeferred<void>();
+          requests.set(options.projectPath ?? '', deferred);
+          return deferred.promise;
+        }
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const render = (projectPath: string) =>
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'anthropic',
+            onProviderChange: () => undefined,
+            value: '',
+            onValueChange,
+            projectPath,
+          })
+        );
+      await act(async () => {
+        render('/tmp/project-a');
+        await Promise.resolve();
+      });
+      expect(requests.has('/tmp/project-a')).toBe(true);
+      expect(host.textContent).not.toContain('global/wrong-default');
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(requests.has('/tmp/project-b')).toBe(true);
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-a')
+      ] = status('project-a/model');
+      await resolveDeferred(requests.get('/tmp/project-a')!, undefined);
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(host.textContent).not.toContain('project-a/model');
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-b')
+      ] = status('project-b/model');
+      await resolveDeferred(requests.get('/tmp/project-b')!, undefined);
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Defaultproject-b/model');
+      expect(host.textContent).not.toContain('project-a/model');
+      expect(onValueChange).not.toHaveBeenCalled();
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each([
+    ['en', 'Default - gateway/custom-default'],
+    ['ru', 'По умолчанию - gateway/custom-default'],
+  ])(
+    'shows the confirmed default in %s without changing its empty value',
+    async (locale, label) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      await appI18n.changeLanguage(locale);
+      const onValueChange = vi.fn();
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            providerId: 'anthropic',
+            supported: true,
+            authenticated: true,
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+            effectiveDefaultModel: 'gateway/custom-default',
+            models: ['gateway/custom-default', 'sonnet'],
+            capabilities: { teamLaunch: true, oneShot: true },
+          },
+        ],
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const render = (value: string, providerId: 'anthropic' | 'codex' = 'anthropic') =>
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId,
+            value,
+            onProviderChange: () => undefined,
+            onValueChange,
+          })
+        );
+      try {
+        await act(async () => {
+          render('');
+          await Promise.resolve();
+        });
+        const defaultOption = host.querySelector<HTMLButtonElement>(
+          '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+        );
+        expect(defaultOption?.textContent).toContain(label.replace(' - ', ''));
+        expect(
+          Array.from(
+            defaultOption?.querySelectorAll('[data-testid="team-model-selector-model-name"]') ?? []
+          ).map((element) => element.textContent)
+        ).toEqual(label.split(' - '));
+        expect(defaultOption?.getAttribute('aria-label')).toContain(label);
+        expect(onValueChange).not.toHaveBeenCalled();
+        await act(async () => defaultOption?.click());
+        expect(onValueChange).toHaveBeenLastCalledWith('');
+        onValueChange.mockClear();
+        await act(async () => {
+          render('sonnet');
+          await Promise.resolve();
+        });
+        expect(host.querySelector('[aria-pressed="true"]')?.textContent).toContain('Sonnet');
+        expect(onValueChange).not.toHaveBeenCalled();
+        await act(async () => {
+          render('', 'codex');
+          await Promise.resolve();
+        });
+        expect(host.textContent).not.toContain('gateway/custom-default');
+      } finally {
+        await act(async () => root.unmount());
+        await appI18n.changeLanguage('en');
+      }
+    }
+  );
+
   beforeEach(() => {
     vi.stubGlobal('EventSource', undefined);
   });
@@ -972,7 +1178,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(defaultModelButton?.getAttribute('aria-label')).toContain(
       'Anthropic-compatible endpoint default model'
     );
-    expect(defaultModelButton?.getAttribute('aria-label')).toContain('openai/gpt-oss-20b');
+    expect(defaultModelButton?.getAttribute('aria-label')).not.toContain('openai/gpt-oss-20b');
     const localModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('GPT OSS 20B')
     );
@@ -1211,6 +1417,65 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(onValueChange).not.toHaveBeenCalledWith('');
   });
 
+  it('shows the saved retired MiniMax selection without offering other retired models', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          authMethod: 'api_key',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI', endpointLabel: 'opencode' },
+          authenticated: true,
+          supported: true,
+          capabilities: { teamLaunch: true },
+          models: [
+            'opencode/minimax-m2.5-free',
+            'opencode/minimax-m3-free',
+            'openrouter/minimax/minimax-m2.7',
+          ],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+    const render = (value: string) =>
+      React.createElement(TeamModelSelector, {
+        providerId: 'opencode',
+        onProviderChange: () => undefined,
+        providerReadyById: { opencode: true },
+        value,
+        onValueChange,
+      });
+
+    await act(async () => {
+      root.render(render('opencode/minimax-m2.5-free'));
+      await Promise.resolve();
+    });
+    const selected = host.querySelector(
+      '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+    );
+    expect(selected?.textContent).toContain('minimax-m2.5-free');
+    expect(selected?.getAttribute('aria-disabled')).toBe('false');
+    expect(selected?.textContent).toContain('Not recommended');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(render('opencode/minimax-m3-free'));
+      await Promise.resolve();
+    });
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
+        ?.textContent
+    ).toContain('minimax-m3-free');
+  });
+
   it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -1234,6 +1499,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             'openrouter/qwen/qwen3-coder-plus',
             'opencode/big-pickle',
             'opencode/minimax-m2.5-free',
+            'opencode/minimax-m3-free',
+            'openrouter/minimax/minimax-m2.7',
+            'openrouter/minimax/minimax-m3.1-flash:free',
             'openrouter/openai/gpt-oss-120b:free',
             'openrouter/mistralai/codestral-2508',
             'openrouter/anthropic/claude-sonnet-4.6',
@@ -1264,8 +1532,17 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('Tested');
     expect(host.textContent).toContain('mistralai/codestral-2508');
     expect(host.textContent).toContain('Tested');
-    expect(host.textContent).toContain('minimax-m2.5-free');
-    expect(host.textContent).toContain('Tested with limits');
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).toContain('minimax-m3-free');
+    expect(host.textContent).toContain('minimax-m3.1-flash:free');
+    expect(host.textContent).not.toContain('Tested with limits');
+    const flashOption = Array.from(
+      host.querySelectorAll('[data-testid="team-model-selector-model-option"]')
+    ).find((option) => option.textContent?.includes('minimax-m3.1-flash:free'));
+    expect(flashOption).toBeDefined();
+    expect(flashOption?.textContent).not.toContain('Tested');
+    expect(flashOption?.textContent).not.toContain('Recommended');
     expect(host.textContent).toContain('openai/gpt-oss-120b:free');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('qwen/qwen3-coder-plus');
@@ -1288,7 +1565,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     const testedIndex = buttonTexts.findIndex((text) => text.includes('mistralai/codestral-2508'));
     const recommendedIndex = buttonTexts.findIndex((text) => text.includes('big-pickle'));
-    const limitedIndex = buttonTexts.findIndex((text) => text.includes('minimax-m2.5-free'));
+    const currentMiniMaxIndex = buttonTexts.findIndex((text) => text.includes('minimax-m3-free'));
     const notRecommendedIndex = buttonTexts.findIndex((text) =>
       text.includes('openai/gpt-oss-20b:free')
     );
@@ -1297,11 +1574,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(sonnetIndex).toBeGreaterThanOrEqual(0);
     expect(recommendedIndex).toBeGreaterThanOrEqual(0);
-    expect(limitedIndex).toBeGreaterThanOrEqual(0);
+    expect(currentMiniMaxIndex).toBeGreaterThanOrEqual(0);
     expect(testedIndex).toBeGreaterThanOrEqual(0);
-    expect(limitedIndex).toBeGreaterThan(recommendedIndex);
+    expect(currentMiniMaxIndex).toBeGreaterThan(recommendedIndex);
     expect(testedIndex).toBeGreaterThan(recommendedIndex);
-    expect(unavailableIndex).toBeGreaterThan(limitedIndex);
+    expect(unavailableIndex).toBeGreaterThan(currentMiniMaxIndex);
     expect(notRecommendedIndex).toBeGreaterThan(unavailableIndex);
 
     expect(host.textContent).toContain('Recommended only');
@@ -3965,7 +4242,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['openrouter/minimax/minimax-m2.5-free'],
+          models: ['openrouter/minimax/minimax-m3.1-flash:free'],
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
@@ -3978,9 +4255,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             defaultLaunchModel: null,
             models: [
               {
-                id: 'openrouter/minimax/minimax-m2.5-free',
-                launchModel: 'openrouter/minimax/minimax-m2.5-free',
-                displayName: 'minimax/minimax-m2.5-free',
+                id: 'openrouter/minimax/minimax-m3.1-flash:free',
+                launchModel: 'openrouter/minimax/minimax-m3.1-flash:free',
+                displayName: 'minimax/minimax-m3.1-flash:free',
               },
             ],
           },
@@ -4354,7 +4631,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['opencode/minimax-m3-free'],
         },
       ],
     };
@@ -4407,7 +4684,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['openrouter/minimax/minimax-m2.5-free'],
+          models: ['openrouter/minimax/minimax-m3.1-flash:free'],
         },
       ],
     };
@@ -4473,7 +4750,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['openrouter/minimax/minimax-m2.5-free'],
+          models: ['openrouter/minimax/minimax-m3.1-flash:free'],
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
@@ -4486,9 +4763,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             defaultLaunchModel: null,
             models: [
               {
-                id: 'openrouter/minimax/minimax-m2.5-free',
-                launchModel: 'openrouter/minimax/minimax-m2.5-free',
-                displayName: 'minimax/minimax-m2.5-free',
+                id: 'openrouter/minimax/minimax-m3.1-flash:free',
+                launchModel: 'openrouter/minimax/minimax-m3.1-flash:free',
+                displayName: 'minimax/minimax-m3.1-flash:free',
               },
             ],
           },
@@ -5364,7 +5641,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['community/community-model', 'opencode/minimax-m2.7', 'openai/gpt-5.6'],
+          models: ['community/community-model', 'opencode/minimax-m3', 'openai/gpt-5.6'],
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
@@ -5395,9 +5672,9 @@ describe('TeamModelSelector disabled Codex models', () => {
                 },
               },
               {
-                id: 'opencode/minimax-m2.7',
-                launchModel: 'opencode/minimax-m2.7',
-                displayName: 'minimax-m2.7',
+                id: 'opencode/minimax-m3',
+                launchModel: 'opencode/minimax-m3',
+                displayName: 'minimax-m3',
                 hidden: false,
                 supportedReasoningEfforts: [],
                 defaultReasoningEffort: null,
@@ -5512,7 +5789,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
     expect(host.textContent).toContain('community-model');
-    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).not.toContain('minimax-m3');
     expect(host.textContent).not.toContain('gpt-5.6');
 
     await act(async () => {
@@ -5604,7 +5881,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(host.textContent).toContain('big-pickle');
-    expect(host.textContent).toContain('Default - big-pickle');
+    expect(host.textContent).toContain('Defaultbig-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).not.toContain('Loading models');
 
@@ -7613,7 +7890,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       materializesDefault: true,
     });
 
-    expect(defaultCard?.textContent).toContain('Default - big-pickle (OpenCode Zen)');
+    expect(defaultCard?.textContent).toContain('Defaultbig-pickle (OpenCode Zen)');
     expect(defaultCard?.getAttribute('aria-disabled')).toBe('false');
     expect(defaultCard?.getAttribute('aria-label')).toContain('opencode/big-pickle');
 
@@ -7644,7 +7921,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).not.toContain('kimi-k2');
     expect(host.textContent).toContain('space-bunny-free');
     expect(findOpenCodeDefaultCard(host)?.textContent).toContain(
-      'Default - big-pickle (OpenCode Zen)'
+      'Defaultbig-pickle (OpenCode Zen)'
     );
 
     await unmount();

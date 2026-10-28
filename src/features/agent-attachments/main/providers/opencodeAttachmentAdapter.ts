@@ -7,6 +7,7 @@ import {
 } from '@features/agent-attachments/core/domain';
 
 import type {
+  AgentAttachmentCapability,
   AttachmentValidationResult,
   NativeAgentAttachmentMimeType,
 } from '@features/agent-attachments/core/domain';
@@ -31,6 +32,7 @@ export interface OpenCodeAttachmentDeliveryParts {
 export interface BuildOpenCodeAttachmentDeliveryPartsInput {
   text: string;
   model: string;
+  capability?: AgentAttachmentCapability;
   attachments?: AttachmentPayload[];
 }
 
@@ -156,10 +158,8 @@ export function buildOpenCodeAttachmentDeliveryParts(
     };
   }
 
-  const capability = resolveAgentAttachmentCapability({
-    providerId: 'opencode',
-    model: input.model,
-  });
+  const capability =
+    input.capability ?? resolveAgentAttachmentCapability({ providerId: 'opencode' });
 
   const preparedAttachments: {
     attachment: AttachmentPayload;
@@ -186,12 +186,16 @@ export function buildOpenCodeAttachmentDeliveryParts(
     }
     if (isOpenCodeVideoMimeType(mimeType)) {
       if (!capability.supportsVideo) {
-        throw new AgentAttachmentError('attachment_type_unsupported', capability.videoDisplayText, {
-          providerId: 'opencode',
-          model: input.model,
-          retryable: false,
-          safeDetails: { reason: capability.reason },
-        });
+        throw new AgentAttachmentError(
+          'attachment_model_unsupported',
+          capability.videoDisplayText,
+          {
+            providerId: 'opencode',
+            model: input.model,
+            retryable: false,
+            safeDetails: { reason: capability.reason },
+          }
+        );
       }
       preparedAttachments.push({
         attachment,

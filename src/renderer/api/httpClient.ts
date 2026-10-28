@@ -64,6 +64,7 @@ import type {
   ConnectionInfoV1,
   ExternalAgentConnectionApi,
 } from '@features/external-agent-connection/contracts';
+import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
@@ -225,7 +226,20 @@ function createBrowserRuntimeProviderError(
   };
 }
 
+function gatewayUnavailable(): never {
+  throw new Error('Gateway providers are available in the desktop app.');
+}
+
 export class HttpAPIClient implements ElectronAPI {
+  gatewayProvider: GatewayProviderApi = {
+    listGatewayProfiles: async () => [],
+    saveGatewayProfile: async () => gatewayUnavailable(),
+    deleteGatewayProfile: async () => gatewayUnavailable(),
+    probeGatewayModels: async () => gatewayUnavailable(),
+    listGatewayBindings: async () => [],
+    bindGatewayMember: async () => gatewayUnavailable(),
+    unbindGatewayMember: async () => gatewayUnavailable(),
+  };
   get teamGroupChats() {
     return createHttpTeamGroupChatsAPI(this.baseUrl, this.authorizationHeaders());
   }
@@ -1347,7 +1361,7 @@ export class HttpAPIClient implements ElectronAPI {
         members: {},
       };
     },
-    restartMember: async (): Promise<void> => {
+    restartMember: async () => {
       throw new Error('Member restart is not available in browser mode');
     },
     retryFailedOpenCodeSecondaryLanes: async () => {

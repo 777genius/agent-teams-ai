@@ -11,6 +11,7 @@ type ExecCliMock = (
   binaryPath: string | null,
   args: string[],
   options?: {
+    cwd?: string;
     encoding?: BufferEncoding;
     timeout?: number;
     env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
@@ -28,6 +29,9 @@ const hoisted = vi.hoisted(() => ({
     stdout: JSON.stringify({ execPath: '/mock/node', version: '24.16.0' }),
     stderr: '',
   })),
+  resolveWorkspaceMcpBundleMock: vi.fn<
+    (root: string, node: string, outputRoot: string) => Promise<string>
+  >((...args) => Promise.resolve(path.join(args[2], 'dev', 'TEST', 'index.js'))),
   cachedShellEnv: null as NodeJS.ProcessEnv | null,
   resolveInteractiveShellEnvMock: vi.fn<ResolveInteractiveShellEnvMock>(
     async () => ({}) as NodeJS.ProcessEnv
@@ -38,6 +42,10 @@ let mockHomeDir = '';
 type ModuleLoad = (request: string, parent: NodeModule | undefined, isMain: boolean) => unknown;
 const moduleInternal = Module as unknown as { _load: ModuleLoad };
 const originalModuleLoad = moduleInternal._load;
+
+vi.mock('@main/services/team/WorkspaceMcpBundle', () => ({
+  resolveWorkspaceMcpBundle: hoisted.resolveWorkspaceMcpBundleMock,
+}));
 
 vi.mock('@main/utils/childProcess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
@@ -127,29 +135,12 @@ describe('TeamMcpConfigBuilder', () => {
     expect(server?.command).toMatch(/(^node(?:-\d+)?$|[\\/]node(?:-\d+)?(?:\.exe)?$)/);
   }
 
-  function expectNodeTsxSourceEntry(
-    server: { command?: string; args?: string[] } | undefined,
-    tsxCli: string,
-    sourceEntry: string
-  ): void {
-    expect(server?.args).toEqual([tsxCli, sourceEntry]);
-    expect(server?.command).toMatch(/(^node(?:-\d+)?$|[\\/]node(?:-\d+)?(?:\.exe)?$)/);
-  }
-
   function getBuiltWorkspaceEntry(): string {
-    return path.join(process.cwd(), 'mcp-server', 'dist', 'index.js');
+    return path.join(tempAppData, 'mcp-server', 'dev', 'TEST', 'index.js');
   }
 
   function getSourceWorkspaceEntry(): string {
     return path.join(process.cwd(), 'mcp-server', 'src', 'index.ts');
-  }
-
-  function getWorkspaceTsxPackageJson(): string {
-    return path.join(process.cwd(), 'mcp-server', 'node_modules', 'tsx', 'package.json');
-  }
-
-  function getWorkspaceTsxCli(): string {
-    return path.join(process.cwd(), 'mcp-server', 'node_modules', 'tsx', 'dist', 'cli.mjs');
   }
 
   function mockPathExists(existingPaths: string[], options: { strict?: boolean } = {}): void {
@@ -175,24 +166,10 @@ describe('TeamMcpConfigBuilder', () => {
     });
   }
 
-  function mockSourceWorkspaceEntryAvailable(): {
-    sourceEntry: string;
-    tsxPackageJson: string;
-    tsxCli: string;
-    builtEntry: string;
-  } {
-    const sourceEntry = getSourceWorkspaceEntry();
-    const tsxPackageJson = getWorkspaceTsxPackageJson();
-    const tsxCli = getWorkspaceTsxCli();
+  function mockSourceWorkspaceEntryAvailable(): { builtEntry: string } {
     const builtEntry = getBuiltWorkspaceEntry();
-    mockPathExists([sourceEntry, tsxPackageJson, tsxCli, builtEntry], { strict: true });
-    return { sourceEntry, tsxPackageJson, tsxCli, builtEntry };
-  }
-
-  function mockBuiltWorkspaceEntryAvailable(): string {
-    const builtEntry = getBuiltWorkspaceEntry();
-    mockPathExists([builtEntry], { strict: true });
-    return builtEntry;
+    mockPathExists([getSourceWorkspaceEntry(), builtEntry], { strict: true });
+    return { builtEntry };
   }
 
   beforeEach(() => {
@@ -218,6 +195,10 @@ describe('TeamMcpConfigBuilder', () => {
     setAppDataBasePath(tempAppData);
     setPackagedMode(false);
     setResourcesPath(undefined);
+    hoisted.resolveWorkspaceMcpBundleMock.mockReset();
+    hoisted.resolveWorkspaceMcpBundleMock.mockImplementation((...args) =>
+      Promise.resolve(path.join(args[2], 'dev', 'TEST', 'index.js'))
+    );
     hoisted.execCliMock.mockClear();
     hoisted.execCliMock.mockResolvedValue({
       stdout: nodeRuntimeProbeStdout('/mock/node'),
@@ -279,8 +260,8 @@ describe('TeamMcpConfigBuilder', () => {
     expect(filename).toMatch(new RegExp(`^agent-teams-mcp-${process.pid}-\\d+-[0-9a-f-]+\\.json$`));
   });
 
-  it('prefers the source workspace MCP entry in dev mode when available', async () => {
-    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+  it('launches a current workspace bundle without a TypeScript loader in dev mode', async () => {
+    const { builtEntry } = mockSourceWorkspaceEntryAvailable();
     const builder = new TeamMcpConfigBuilder();
 
     const configPath = await builder.writeConfigFile();
@@ -292,7 +273,15 @@ describe('TeamMcpConfigBuilder', () => {
     };
 
     const server = parsed.mcpServers?.['agent-teams'];
-    expectNodeTsxSourceEntry(server, tsxCli, sourceEntry);
+    expectNodeEntry(server, builtEntry);
+  });
+
+  it('fails config creation when preparing the current bundle fails', async () => {
+    mockSourceWorkspaceEntryAvailable();
+    hoisted.resolveWorkspaceMcpBundleMock.mockRejectedValue(new Error('MCP build failed'));
+
+    await expect(new TeamMcpConfigBuilder().writeConfigFile()).rejects.toThrow('MCP build failed');
+    expect(fs.existsSync(path.join(tempAppData, 'mcp-configs'))).toBe(false);
   });
 
   it('pins the MCP controller to the active Claude base path', async () => {
@@ -308,24 +297,14 @@ describe('TeamMcpConfigBuilder', () => {
     expect(server?.env?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(claudeDir);
   });
 
-  it('falls back to the built workspace MCP entry when source execution is unavailable', async () => {
-    const builtEntry = mockBuiltWorkspaceEntryAvailable();
-    const builder = new TeamMcpConfigBuilder();
-
-    const configPath = await builder.writeConfigFile();
-    createdPaths.push(configPath);
-
-    const raw = fs.readFileSync(configPath, 'utf8');
-    const parsed = JSON.parse(raw) as {
-      mcpServers?: Record<string, { command?: string; args?: string[] }>;
-    };
-
-    const server = parsed.mcpServers?.['agent-teams'];
-    expectNodeEntry(server, builtEntry);
+  it('rejects orphaned dist when current workspace sources are unavailable', async () => {
+    mockPathExists([getBuiltWorkspaceEntry()], { strict: true });
+    await expect(resolveAgentTeamsMcpLaunchSpec()).rejects.toThrow('entrypoint not found');
+    expect(hoisted.resolveWorkspaceMcpBundleMock).not.toHaveBeenCalled();
   });
 
   it('uses the shared CLI helper for the Node.js runtime resolver', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     const builder = new TeamMcpConfigBuilder();
 
     const configPath = await builder.writeConfigFile();
@@ -636,7 +615,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('falls back to strict shell env lookup when fast Node lookup cannot resolve Node', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     const previousNodeBinary = process.env.NODE_BINARY;
     const previousNpmNodeExecPath = process.env.npm_node_execpath;
     delete process.env.NODE_BINARY;
@@ -682,7 +661,7 @@ describe('TeamMcpConfigBuilder', () => {
   it.skipIf(process.platform === 'win32')(
     'prefers strict shell env lookup over fast Node lookup from a minimal GUI PATH',
     async () => {
-      mockBuiltWorkspaceEntryAvailable();
+      mockSourceWorkspaceEntryAvailable();
       const previousPath = process.env.PATH;
       process.env.PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(path.delimiter);
       hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
@@ -718,7 +697,7 @@ describe('TeamMcpConfigBuilder', () => {
   );
 
   it('falls back to strict shell env lookup when the fast Node runtime is too old', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     const previousNodeBinary = process.env.NODE_BINARY;
     const previousNpmNodeExecPath = process.env.npm_node_execpath;
     const previousPath = process.env.PATH;
@@ -770,7 +749,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('falls back to strict shell env lookup when fast Node lookup reports an empty path', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
       PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
       HOME: '/Users/tester',
@@ -800,7 +779,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('prefers an explicit NODE_BINARY over PATH-based node lookup', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     const previousNodeBinary = process.env.NODE_BINARY;
     process.env.NODE_BINARY = '/explicit/node';
     hoisted.execCliMock.mockImplementationOnce(async (command) => {
@@ -825,7 +804,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('uses PATH Node 26.x when Node 24.x is also available later', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     const previousNodeBinary = process.env.NODE_BINARY;
     const previousNpmNodeExecPath = process.env.npm_node_execpath;
     const previousPath = process.env.PATH;
@@ -893,6 +872,12 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('launches the generated MCP config with the selected real Node runtime in a test profile', async () => {
+    const actualBundle = await vi.importActual<
+      typeof import('@main/services/team/WorkspaceMcpBundle')
+    >('@main/services/team/WorkspaceMcpBundle');
+    hoisted.resolveWorkspaceMcpBundleMock.mockImplementation(
+      actualBundle.resolveWorkspaceMcpBundle
+    );
     const previousNodeBinary = process.env.NODE_BINARY;
     const claudeDir = path.join(tempAppData, 'claude');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -901,6 +886,7 @@ describe('TeamMcpConfigBuilder', () => {
     hoisted.execCliMock.mockImplementation((command, args, options) => {
       const result = spawnSync(command ?? '', args, {
         encoding: 'utf8',
+        cwd: options?.cwd,
         env: options?.env,
         timeout: options?.timeout,
       });
@@ -1014,7 +1000,7 @@ describe('TeamMcpConfigBuilder', () => {
   }, 45_000);
 
   it('fails fast when Node cannot be resolved instead of emitting a broken bare node command', async () => {
-    mockBuiltWorkspaceEntryAvailable();
+    mockSourceWorkspaceEntryAvailable();
     hoisted.execCliMock.mockRejectedValue(new Error('spawn node ENOENT'));
     const builder = new TeamMcpConfigBuilder();
 
@@ -1074,7 +1060,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('writes Agent Teams MCP only member config even when user and project MCP exist', async () => {
-    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const { builtEntry } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
     const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-claude-root-'));
@@ -1144,7 +1130,7 @@ describe('TeamMcpConfigBuilder', () => {
     };
 
     expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
-    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expectNodeEntry(parsed.mcpServers['agent-teams'], builtEntry);
     expect(parsed.mcpServers['agent-teams']).toMatchObject({
       enabled: true,
       env: {
@@ -1303,7 +1289,7 @@ describe('TeamMcpConfigBuilder', () => {
   });
 
   it('generated agent-teams server ignores same-named user MCP entry', async () => {
-    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const { builtEntry } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
     createdDirs.push(homeDir);
     mockHomeDir = homeDir;
@@ -1329,12 +1315,12 @@ describe('TeamMcpConfigBuilder', () => {
       mcpServers: Record<string, { command?: string; args?: string[]; enabled?: boolean }>;
     };
 
-    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expectNodeEntry(parsed.mcpServers['agent-teams'], builtEntry);
     expect(parsed.mcpServers['agent-teams']?.enabled).toBe(true);
   });
 
   it('forces generated agent-teams MCP even when user, project, local, or allowlist settings shadow it', async () => {
-    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const { builtEntry } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
     createdDirs.push(homeDir, projectDir);
@@ -1388,12 +1374,12 @@ describe('TeamMcpConfigBuilder', () => {
     };
 
     expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
-    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expectNodeEntry(parsed.mcpServers['agent-teams'], builtEntry);
     expect(parsed.mcpServers['agent-teams']?.enabled).toBe(true);
   });
 
   it('forces the generated agent-teams MCP server on regardless of user, local, or project settings', async () => {
-    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+    const { builtEntry } = mockSourceWorkspaceEntryAvailable();
     const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-home-'));
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-project-'));
     createdDirs.push(homeDir, projectDir);
@@ -1441,7 +1427,7 @@ describe('TeamMcpConfigBuilder', () => {
 
     expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
     expect(parsed.mcpServers['agent-teams']?.enabled).toBe(true);
-    expectNodeTsxSourceEntry(parsed.mcpServers['agent-teams'], tsxCli, sourceEntry);
+    expectNodeEntry(parsed.mcpServers['agent-teams'], builtEntry);
   });
 
   it('passes the configured Claude root to the MCP server', async () => {
@@ -1496,7 +1482,9 @@ describe('TeamMcpConfigBuilder', () => {
       });
       createdPaths.push(configPath);
       expect(readGeneratedServer(configPath)?.env).toMatchObject(resolved);
-    } finally { revoke(); }
+    } finally {
+      revoke();
+    }
   });
 
   it('ignores malformed user MCP file', async () => {
@@ -1726,8 +1714,8 @@ describe('TeamMcpConfigBuilder', () => {
     expectNodeEntry(readGeneratedServer(configPath), path.join(stableDir, 'index.js'));
   });
 
-  it('packaged mode falls back to the source workspace MCP entry when resourcesPath bundle is missing', async () => {
-    const { sourceEntry, tsxCli } = mockSourceWorkspaceEntryAvailable();
+  it('packaged mode prepares a current workspace MCP bundle when resourcesPath bundle is missing', async () => {
+    const { builtEntry } = mockSourceWorkspaceEntryAvailable();
     setPackagedMode(true, '6.0.0');
     const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
     createdDirs.push(resourcesDir);
@@ -1737,6 +1725,6 @@ describe('TeamMcpConfigBuilder', () => {
     const configPath = await builder.writeConfigFile();
     createdPaths.push(configPath);
 
-    expectNodeTsxSourceEntry(readGeneratedServer(configPath), tsxCli, sourceEntry);
+    expectNodeEntry(readGeneratedServer(configPath), builtEntry);
   });
 });

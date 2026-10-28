@@ -1,6 +1,8 @@
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamMemberResolver } from '@main/services/team/TeamMemberResolver';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { protocols } from 'agent-teams-controller';
 
 import { createGroupChatRuntimePorts } from '../infrastructure/groupChatRuntimePorts';
 
@@ -49,7 +51,16 @@ export function createDesktopTeamGroupChats(deps: {
     deliver: async (teamName, message, run, shouldStillWrite) => {
       const sent = await deps.inboxWriter.sendMessage(
         teamName,
-        { ...message, attachments: undefined, member: message.to },
+        {
+          ...message,
+          // Keep the canonical group post unchanged; OpenCode adds its reminder at runtime.
+          text:
+            message.from === 'user' && run.provider !== 'opencode'
+              ? `${wrapAgentBlock(protocols.buildChatVisualizationRefreshInstruction())}\n\n${message.text}`
+              : message.text,
+          attachments: undefined,
+          member: message.to,
+        },
         { shouldStillWrite }
       );
       return sent.deliveredToInbox

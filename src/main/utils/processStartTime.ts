@@ -117,9 +117,11 @@ async function readWindowsProcessStartTimeMs(
     `$process = Get-Process -Id ${normalizedPid} -ErrorAction Stop`,
     '$process.StartTime.ToUniversalTime().ToString("o")',
   ].join('; ');
+  // UTF-16LE Base64 carries the identical script without shell quote reinterpretation.
   return execProcessProbeText(
     'powershell.exe',
-    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand',
+      Buffer.from(script, 'utf16le').toString('base64')],
     timeoutMs,
     onDiagnostic
   );

@@ -68,6 +68,39 @@ function verifiedOpenCodeProvider(): CliProviderStatus {
 }
 
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
+  test.each([' configured-model ', null, undefined, 42, {}, []])(
+    'maps only the current typed effective model %j',
+    (effectiveDefaultModel) => {
+      const provider = mapRuntimeProviderStatus('anthropic', {
+        ...verifiedOpenCodeProvider(),
+        providerId: 'anthropic',
+        effectiveDefaultModel,
+        defaultModel: 'legacy-model',
+      });
+      expect(provider.effectiveDefaultModel).toBe(
+        effectiveDefaultModel === undefined
+          ? undefined
+          : typeof effectiveDefaultModel === 'string'
+            ? 'configured-model'
+            : null
+      );
+      expect(provider.defaultModel).toBe('legacy-model');
+    }
+  );
+
+  test.each(['pending', 'transient_error', 'model_only'])(
+    'does not promote effective model from %s status',
+    (statusCheckOutcome) => {
+      const provider = mapRuntimeProviderStatus('anthropic', {
+        ...verifiedOpenCodeProvider(),
+        providerId: 'anthropic',
+        effectiveDefaultModel: 'unconfirmed-model',
+        statusCheckOutcome,
+      });
+      expect(provider.effectiveDefaultModel).toBeNull();
+    }
+  );
+
   test.each(
     (['anthropic', 'codex'] as const).flatMap((providerId) =>
       [true, false].map((teamLaunch) => ({ providerId, teamLaunch }))
@@ -139,6 +172,23 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
         resetsAt: null,
       },
     });
+  });
+
+  test('keeps the runtime default model separate from catalog fallback truth', () => {
+    const provider = mapRuntimeProviderStatus('anthropic', {
+      supported: true,
+      authenticated: true,
+      authMethod: 'claude.ai',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      canLoginFromUi: true,
+      models: ['opus', 'claude-opus-5-5'],
+      defaultModel: 'claude-opus-5-5',
+      capabilities: { teamLaunch: true, oneShot: true },
+    });
+
+    expect(provider.defaultModel).toBe('claude-opus-5-5');
+    expect(provider.modelCatalog).toBeNull();
   });
 
   test('drops malformed Anthropic subscription rate limit windows', () => {

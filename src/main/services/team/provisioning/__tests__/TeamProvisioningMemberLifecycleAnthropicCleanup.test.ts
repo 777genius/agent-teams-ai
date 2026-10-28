@@ -159,6 +159,7 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
     return {
       runs: new Map([[run.runId, run]]),
       getAliveRunId: () => run.runId,
+      getMemberGatewayRuntimeSeams: () => null,
       isCurrentTrackedRun: (candidateRun: DirectProcessRestartInput['run']) => candidateRun === run,
       getRunTrackedCwd: () => testRoot,
       buildPrimaryOwnedMemberSpecForRuntime: ({

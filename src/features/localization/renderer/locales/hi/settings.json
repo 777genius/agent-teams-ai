@@ -12,6 +12,10 @@
     "notifications": {
       "description": "जब आप एजेंट गतिविधि, कार्य पूरा होने और त्रुटियों के बारे में सूचित करते हैं तो नियंत्रण करें।",
       "label": "अधिसूचनाएं"
+    },
+    "gatewayProviders": {
+      "description": "Manage gateway endpoints for per-teammate model access.",
+      "label": "Gateway providers"
     }
   },
   "view": {
@@ -802,9 +806,9 @@
         "noCredentials": "बेस URL में क्रेडेंशियल शामिल नहीं होना चाहिए"
       },
       "status": {
-        "endpointDisabledTokenKept": "एंडपॉइंट विकलांग। बचाया टोकन रखा गया था।",
         "endpointSaved": "एंडपॉइंट बचाया",
-        "endpointSavedTokenMissing": "समापन बिंदु बचाया। Auth token को कॉन्फ़िगर नहीं किया गया है।"
+        "endpointSavedTokenMissing": "समापन बिंदु बचाया। Auth token को कॉन्फ़िगर नहीं किया गया है।",
+        "notActiveUntilSaved": "अभी सक्रिय नहीं। स्विच करने के लिए एंडपॉइंट सहेजें; तब तक लॉन्च पिछली कनेक्शन विधि का उपयोग करते हैं।"
       }
     },
     "connection": {
@@ -905,10 +909,8 @@
     "runtimeSummary": "रनटाइम: {{runtime}}",
     "status": {
       "configured": "विन्यास",
-      "enabled": "सक्षम",
       "notConfigured": "कॉन्फ़िगर नहीं किया गया",
       "notSet": "नहीं",
-      "off": "बंद",
       "unknown": "अज्ञात"
     },
     "title": "प्रदाता सेटिंग्स",
@@ -924,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API कुंजी बचाया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
       "connectionUpdatedRefreshFailed": "कनेक्शन अद्यतन किया गया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
       "deleteApiKey": "API कुंजी को हटाने में विफल",
-      "disableEndpoint": "निष्क्रिय करने में विफल",
-      "endpointDisabledRefreshFailed": "एंडपॉइंट विकलांग, लेकिन प्रदाता की स्थिति को रीफ्रेश करने में विफल रहा।",
       "endpointSavedRefreshFailed": "एंडपॉइंट बचाया, लेकिन प्रदाता की स्थिति को रीफ्रेश करने में विफल रहा।",
       "refreshCodexAccount": "कोडेक्स खाते को रीफ्रेश करने में विफल रहा",
       "saveApiKey": "API कुंजी को बचाने में विफल रहा",
@@ -1065,5 +1065,41 @@
   },
   "cliStatus": {
     "versionUpgrade": "V{{current}} -> v{{latest}}"
+  },
+  "gatewayProviders": {
+    "title": "Gateway providers",
+    "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+    "addProfile": "Add profile",
+    "empty": "No gateway profiles yet.",
+    "actions": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "save": "Save"
+    },
+    "badges": {
+      "privateNetwork": "Private network allowed"
+    },
+    "boundTeammates": "Bound teammates: {{total}}",
+    "dialog": {
+      "createTitle": "Add gateway profile",
+      "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+      "editTitle": "Edit gateway profile"
+    },
+    "errors": {
+      "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+      "fieldsRequired": "Display name and gateway URL are required."
+    },
+    "fields": {
+      "allowPrivateNetwork": "Allow private network address",
+      "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+      "baseUrl": "Gateway URL",
+      "baseUrlHint": "Gateway root without a trailing /v1.",
+      "displayName": "Display name"
+    },
+    "hints": {
+      "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+      "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+    }
   }
 }

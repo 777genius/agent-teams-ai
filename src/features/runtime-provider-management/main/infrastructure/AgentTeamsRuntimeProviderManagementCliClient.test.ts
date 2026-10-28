@@ -28,6 +28,8 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: vi.fn(async () => ({ env: {} })),
 }));
 
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+
 import { AgentTeamsRuntimeProviderManagementCliClient } from './AgentTeamsRuntimeProviderManagementCliClient';
 
 import type { RuntimeProviderManagementDirectoryResponse } from '../../contracts';
@@ -98,6 +100,27 @@ describe('AgentTeamsRuntimeProviderManagementCliClient model refresh generations
       models: { diagnostics: ['fresh'], catalogState: 'fresh' },
     });
     expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves the original snapshot deadline on cache hits', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    try {
+      execCliMock.mockResolvedValue({ stdout: modelResponse('fresh'), stderr: '' });
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const input = {
+        runtimeId: 'opencode' as const,
+        providerId: 'openrouter',
+        projectPath: '/TEST/cache',
+      };
+      const first = await client.loadModels(input);
+      clock.mockReturnValue(1_060_000);
+      const cached = await client.loadModels(input);
+      expect(cached.models?.freshUntil).toBe(first.models?.freshUntil);
+      expect(Date.parse(cached.models!.freshUntil!)).toBe(1_120_000);
+      expect(execCliMock).toHaveBeenCalledTimes(1);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it('fences recovered model JSON from a superseded generation', async () => {
@@ -403,6 +426,87 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
   });
 });
 
+describe('AgentTeamsRuntimeProviderManagementCliClient OpenCode runtime changes', () => {
+  beforeEach(() => {
+    execCliMock.mockReset();
+  });
+
+  function missingOpenCodeDirectory(): RuntimeProviderManagementDirectoryResponse {
+    const response = directoryResponse(true);
+    response.directory!.diagnostics = ['OpenCode CLI not detected on PATH'];
+    return response;
+  }
+
+  it('drops a directory cached before OpenCode was installed', async () => {
+    let generation = 0;
+    execCliMock
+      .mockResolvedValueOnce(directoryOutput(missingOpenCodeDirectory()))
+      .mockResolvedValueOnce(directoryOutput(directoryResponse()));
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      getOpenCodeRuntimeGeneration: () => generation,
+    });
+
+    await client.loadProviderDirectory(directoryInput);
+    await client.loadProviderDirectory(directoryInput);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+
+    generation = 1;
+    const installed = await client.loadProviderDirectory(directoryInput);
+    expect(installed.directory?.entries[0].state).toBe('connected');
+    await client.loadProviderDirectory(directoryInput);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops cached model reads after the runtime changed', async () => {
+    let generation = 0;
+    execCliMock
+      .mockResolvedValueOnce({ stdout: modelResponse('before'), stderr: '' })
+      .mockResolvedValueOnce({ stdout: modelResponse('after'), stderr: '' });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      getOpenCodeRuntimeGeneration: () => generation,
+    });
+    const input = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/test/project',
+    };
+
+    await client.loadModels(input);
+    await client.loadModels(input);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+
+    generation = 1;
+    await expect(client.loadModels(input)).resolves.toMatchObject({
+      models: { diagnostics: ['after'] },
+    });
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not join a directory read that started before the runtime changed', async () => {
+    let generation = 0;
+    const beforeInstall = deferred<ReturnType<typeof directoryOutput>>();
+    execCliMock
+      .mockReturnValueOnce(beforeInstall.promise)
+      .mockResolvedValueOnce(directoryOutput(directoryResponse()));
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      getOpenCodeRuntimeGeneration: () => generation,
+    });
+
+    const stale = client.loadProviderDirectory(directoryInput);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    generation = 1;
+    const fresh = await client.loadProviderDirectory(directoryInput);
+    expect(fresh.directory?.entries[0].state).toBe('connected');
+
+    beforeInstall.resolve(directoryOutput(missingOpenCodeDirectory()));
+    await stale;
+    expect((await client.loadProviderDirectory(directoryInput)).directory?.entries[0].state).toBe(
+      'connected'
+    );
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -422,11 +526,20 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
   }
 
   function succeed(child: ReturnType<typeof childProcess>) {
-    child.stdout.write(JSON.stringify({
-      schemaVersion: 1,
-      runtimeId: 'opencode',
-      provider: { runtimeId: 'opencode', providerId: 'groq', authenticated: true, actions: [], authMethods: [], ownership: [] },
-    }));
+    child.stdout.write(
+      JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        provider: {
+          runtimeId: 'opencode',
+          providerId: 'groq',
+          authenticated: true,
+          actions: [],
+          authMethods: [],
+          ownership: [],
+        },
+      })
+    );
     child.emit('close', 0);
   }
 
@@ -437,26 +550,28 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     projectPath: '/test/project',
   };
 
-  it('allows a native key connection to finish after the old 90-second boundary', async () => {
+  it('allows a native key connection to finish after the old 180-second boundary', async () => {
     const child = childProcess();
     let stdin = '';
-    child.stdin.on('data', (chunk: Buffer) => { stdin += chunk.toString(); });
+    child.stdin.on('data', (chunk: Buffer) => {
+      stdin += chunk.toString();
+    });
     const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
     await vi.advanceTimersByTimeAsync(0);
     expect(spawnCliMock).toHaveBeenCalledTimes(1);
     expect(spawnCliMock.mock.calls[0]?.[1]).not.toContain(input.apiKey);
     expect(stdin).toBe(input.apiKey);
-    await vi.advanceTimersByTimeAsync(120_000);
+    await vi.advanceTimersByTimeAsync(250_000);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
     succeed(child);
     await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
   });
 
-  it('keeps the absolute 180-second key deadline and refuses late output', async () => {
+  it('keeps the absolute 360-second key deadline and refuses late output', async () => {
     const child = childProcess();
     const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
     await vi.advanceTimersByTimeAsync(0);
-    await vi.advanceTimersByTimeAsync(179_999);
+    await vi.advanceTimersByTimeAsync(359_999);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     const result = await pending;
@@ -468,14 +583,14 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     expect(result.provider).toBeUndefined();
   });
 
-  it('keeps the default 90-second budget for the generic connect command', async () => {
+  it('keeps the 360-second OpenCode budget for the generic connect command', async () => {
     const child = childProcess();
     const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectProvider({
       ...input,
       method: 'api',
     });
     await vi.advanceTimersByTimeAsync(0);
-    await vi.advanceTimersByTimeAsync(89_999);
+    await vi.advanceTimersByTimeAsync(359_999);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(killProcessTreeMock).toHaveBeenCalledExactlyOnceWith(child, 'SIGKILL');
@@ -488,7 +603,82 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     await vi.advanceTimersByTimeAsync(0);
     succeed(child);
     await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
-    await vi.advanceTimersByTimeAsync(180_000);
+    await vi.advanceTimersByTimeAsync(360_001);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('model catalog shutdown ownership', () => {
+  it('fences new requests and joins a pre-spawn model load without starting a late CLI', async () => {
+    const gate = deferred<string>();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockImplementationOnce(() => gate.promise);
+    execCliMock.mockClear();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/TEST/catalog',
+    };
+    const pending = client.loadModels(input);
+    let drained = false;
+    const shutdown = client.shutdown().then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    expect((await client.loadModels(input)).error?.message).toContain('shutting down');
+    gate.resolve('/test/agent-teams-cli');
+    await Promise.all([pending, shutdown]);
+    expect(drained).toBe(true);
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('provider directory shutdown ownership', () => {
+  it('fences directory loads awaiting env and rejects new directory admission', async () => {
+    const gate = deferred<string>();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockImplementationOnce(() => gate.promise);
+    execCliMock.mockClear();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = { runtimeId: 'opencode' as const, projectPath: '/TEST/directory-shutdown' };
+    const pending = client.loadProviderDirectory(input);
+    let drained = false;
+    const shutdown = client.shutdown().then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    expect((await client.loadProviderDirectory(input)).error?.message).toContain('shutting down');
+    gate.resolve('/test/agent-teams-cli');
+    await Promise.all([pending, shutdown]);
+    expect(drained).toBe(true);
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
+  it('aborts and joins directory generations detached by refresh invalidation', async () => {
+    const old = deferred<{ stdout: string; stderr: string }>();
+    const fresh = deferred<{ stdout: string; stderr: string }>();
+    execCliMock.mockReset();
+    execCliMock.mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise);
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = { runtimeId: 'opencode' as const, projectPath: '/TEST/directory-generations' };
+    const oldLoad = client.loadProviderDirectory(input);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    const newLoad = client.loadProviderDirectory({ ...input, refresh: true });
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(2));
+    const signals = execCliMock.mock.calls.map((call) => call[2].signal as AbortSignal);
+    let drained = false;
+    const shutdown = client.shutdown().then(() => {
+      drained = true;
+    });
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    fresh.resolve(directoryOutput(directoryResponse()));
+    expect((await newLoad).error).toBeDefined();
+    expect(drained).toBe(false);
+    old.resolve(directoryOutput(directoryResponse()));
+    const [oldResponse] = await Promise.all([oldLoad, shutdown]);
+    expect(oldResponse.error).toBeDefined();
+    expect(drained).toBe(true);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 });

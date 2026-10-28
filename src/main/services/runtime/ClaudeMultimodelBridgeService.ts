@@ -1,7 +1,7 @@
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
-import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort, waitForPendingShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { mkdtemp, readFile, rm } from 'fs/promises';
@@ -19,6 +19,7 @@ import {
   markProviderCatalogRefreshFailed,
 } from './providerCatalogAuthority';
 import { providerConnectionService } from './ProviderConnectionService';
+import { shouldResolveAnthropicShellEnv } from './providerRuntimeEnv';
 import {
   applyProviderStatusCheck,
   createDefaultProviderStatus,
@@ -157,6 +158,7 @@ interface ProviderStatusPayloadResponse {
   canLoginFromUi?: boolean;
   statusMessage?: string | null;
   detailMessage?: string | null;
+  defaultModel?: string | null;
   capabilities?: {
     teamLaunch?: boolean;
     oneShot?: boolean;
@@ -185,6 +187,7 @@ interface ProviderModelsCommandResponse {
   providers?: Record<
     string,
     {
+      defaultModel?: string | null;
       models?: (string | { id?: string; label?: string; description?: string })[];
     }
   >;
@@ -205,6 +208,8 @@ interface UnifiedRuntimeStatusResponse {
       canLoginFromUi?: boolean;
       statusMessage?: string | null;
       detailMessage?: string | null;
+      defaultModel?: string | null;
+      effectiveDefaultModel?: string | null;
       selectedBackendId?: string | null;
       resolvedBackendId?: string | null;
       availableBackends?: {
@@ -871,6 +876,7 @@ export class ClaudeMultimodelBridgeService {
       verificationState: runtimeStatus.verificationState ?? 'unknown',
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
+      defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
@@ -947,11 +953,19 @@ export class ClaudeMultimodelBridgeService {
 
     if (modelListResult.status === 'fulfilled') {
       const parsed = extractJsonObject<ProviderModelsCommandResponse>(modelListResult.value.stdout);
-      const runtimeModels = extractModelIds(parsed.providers?.[providerId]?.models);
+      const providerModels = parsed.providers?.[providerId];
+      const runtimeDefaultModel = providerModels?.defaultModel?.trim();
+      const runtimeModels = extractModelIds(providerModels?.models);
       if (runtimeModels.length > 0) {
         provider = {
           ...provider,
           models: runtimeModels,
+        };
+      }
+      if (runtimeDefaultModel) {
+        provider = {
+          ...provider,
+          defaultModel: runtimeDefaultModel,
         };
       }
       fulfilledProbeCount += 1;
@@ -1038,6 +1052,13 @@ export class ClaudeMultimodelBridgeService {
       ...statusCheck,
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
+      defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
+      effectiveDefaultModel:
+        runtimeStatus.effectiveDefaultModel === undefined
+          ? undefined
+          : isAuthoritativeStatus && typeof runtimeStatus.effectiveDefaultModel === 'string'
+            ? runtimeStatus.effectiveDefaultModel.trim() || null
+            : null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: isAuthoritativeStatus && runtimeStatus.capabilities?.teamLaunch === true,
@@ -1248,6 +1269,15 @@ export class ClaudeMultimodelBridgeService {
     if (existing) return existing;
 
     const request = (async () => {
+      if (shouldResolveAnthropicShellEnv(providerId)) {
+        await resolveInteractiveShellEnvBestEffort({
+          source: 'provider-status:anthropic',
+          timeoutMs: 1_500,
+          fallbackEnv: process.env,
+        });
+        // Catalog hydration can finish discovery in the background after the bounded summary.
+        if (options.summary !== true) await waitForPendingShellEnv();
+      }
       const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
         binaryPath,
         providerId,
@@ -1736,6 +1766,7 @@ export class ClaudeMultimodelBridgeService {
       limit?: number;
       laneId?: string;
       sessionId?: string;
+      runId?: string;
       timeoutMs?: number;
     }
   ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
@@ -1760,6 +1791,10 @@ export class ClaudeMultimodelBridgeService {
     }
     if (typeof params.sessionId === 'string' && params.sessionId.trim().length > 0) {
       args.push('--session-id', params.sessionId.trim());
+    }
+
+    if (typeof params.runId === 'string' && params.runId.trim().length > 0) {
+      args.push('--run-id', params.runId.trim());
     }
 
     const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));
@@ -1853,12 +1888,6 @@ export class ClaudeMultimodelBridgeService {
     binaryPath: string,
     onUpdate?: ProviderStatusesObserver
   ): Promise<CliProviderStatus[]> {
-    await resolveInteractiveShellEnvBestEffort({
-      timeoutMs: 1_500,
-      fallbackEnv: process.env,
-      background: false,
-    });
-
     const generation = this.beginProviderStatusHydration(binaryPath, DEFAULT_PROVIDER_STATUS_IDS);
     let catalogHydrationOwnsGenerationCleanup = false;
     try {

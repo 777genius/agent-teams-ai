@@ -53,6 +53,7 @@ function createService(events: string[]): TeamProvisioningServiceMemberLifecycle
     runs: new Map([['run-1', run]]),
     runtimeAdapterRunByTeam: new Map(),
     failedOpenCodeSecondaryRetryInFlightByTeam: new Map(),
+    getMemberGatewayRuntimeSeams: () => null,
     mcpConfigBuilder: {
       async writeConfigFile(projectPath) {
         events.push(`mcp:${projectPath}`);

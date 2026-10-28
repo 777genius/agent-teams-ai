@@ -642,7 +642,8 @@
       "byTime": "Kwa wakati",
       "byUnread": "Kwa zisizosomwa",
       "byProject": "Kwa mradi",
-      "byTeam": "Kwa timu"
+      "byTeam": "Kwa timu",
+      "manualOrder": "Mpangilio wa mikono"
     }
   },
   "toolViewer": {

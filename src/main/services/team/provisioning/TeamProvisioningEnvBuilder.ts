@@ -4,18 +4,22 @@ import { getDesktopMcpChildEnvironment } from '@features/external-agent-connecti
 import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
-import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv';
+import {
+  resolveTeamProviderId,
+  shouldResolveAnthropicShellEnv,
+} from '@main/services/runtime/providerRuntimeEnv';
 import {
   getAppDataPath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
 } from '@main/utils/pathDecoder';
-import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort, waitForPendingShellEnv } from '@main/utils/shellEnv';
 import {
   AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+  ANTHROPIC_MODEL_ENV_KEYS,
 } from '@shared/constants/anthropicConnectionMode';
 import * as os from 'os';
 import * as path from 'path';
@@ -38,6 +42,11 @@ import {
   type AnthropicApiKeyHelperSetupLease,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { hasAnthropicCompatibleAuthTokenEnv } from './TeamProvisioningDirectRestart';
+import {
+  type MemberGatewayRuntimeArgs,
+  type MemberGatewayRuntimeSeams,
+  resolveMemberGatewayRuntimeArgs,
+} from './TeamProvisioningMemberGatewayRuntime';
 import { normalizeTeamMemberProviderId } from './TeamProvisioningMemberSpecs';
 import {
   getConfiguredRuntimeBackend,
@@ -61,6 +70,7 @@ export type ProvisioningAuthSource =
 
 export interface TeamRuntimeAuthContext {
   teamName?: string;
+  memberName?: string;
   authMaterialId?: string;
   allowAnthropicApiKeyHelper?: boolean;
   /** Setup-scoped ownership for any helper materialized through this context. */
@@ -80,6 +90,12 @@ export interface CrossProviderMemberArgsResult {
   args: string[];
   providerArgsByProvider: Map<TeamProviderId, string[]>;
   envPatch: NodeJS.ProcessEnv;
+  /**
+   * Per-member gateway artifacts keyed by member name. Member env patches stay
+   * out of the shared `envPatch`/`shellEnv`; they are applied per member at the
+   * member's own spawn point or carried in the one-time bootstrap spec.
+   */
+  memberArgsByMember: Map<string, MemberGatewayRuntimeArgs>;
   usesAnthropicApiKeyHelper: boolean;
   anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
 }
@@ -106,6 +122,7 @@ export interface TeamProvisioningEnvBuilderPorts {
   processEnv?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   resolveInteractiveShellEnvBestEffort?: typeof resolveInteractiveShellEnvBestEffort;
+  waitForPendingShellEnv?: typeof waitForPendingShellEnv;
   getHomeDir?: typeof getHomeDir;
   getClaudeBasePath?: typeof getClaudeBasePath;
   getAutoDetectedClaudeBasePath?: typeof getAutoDetectedClaudeBasePath;
@@ -120,6 +137,8 @@ export interface TeamProvisioningEnvBuilderPorts {
 }
 
 export interface BuildProvisioningEnvOptions {
+  /** Set by the direct-member host only after exact credential resolution. */
+  gatewayMember?: boolean;
   includeCodexTeammateAuth?: boolean;
   teamRuntimeAuth?: TeamRuntimeAuthContext;
 }
@@ -142,6 +161,7 @@ export interface BuildCrossProviderMemberArgsInput {
       options?: BuildProvisioningEnvOptions
     ): Promise<ProvisioningEnvResolution>;
     buildRuntimeTurnSettledHookSettingsArgs(providerId: TeamProviderId): Promise<string[]>;
+    getMemberGatewayRuntimeSeams?(): MemberGatewayRuntimeSeams | null;
     logger: Pick<TeamProvisioningEnvBuilderLogger, 'error'>;
   };
 }
@@ -233,6 +253,7 @@ function buildAnthropicCrossProviderConnectionEnvPatch(env: NodeJS.ProcessEnv): 
   }
 
   if (connectionMode === 'compatible') {
+    copyDefinedEnvKeys(envPatch, env, ANTHROPIC_MODEL_ENV_KEYS);
     envPatch.ANTHROPIC_BASE_URL = env.ANTHROPIC_BASE_URL?.trim() ?? '';
     envPatch.ANTHROPIC_AUTH_TOKEN = env.ANTHROPIC_AUTH_TOKEN?.trim() ?? '';
     envPatch.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY?.trim() ?? '';
@@ -293,14 +314,23 @@ export async function buildProvisioningEnv({
 }: BuildProvisioningEnvInput): Promise<ProvisioningEnvResolution> {
   const processEnv = ports.processEnv ?? process.env;
   const platform = ports.platform ?? process.platform;
-  const shellEnv = await (
+  const discoverShellEnv = !options?.gatewayMember && shouldResolveAnthropicShellEnv(providerId);
+  let shellEnv = await (
     ports.resolveInteractiveShellEnvBestEffort ?? resolveInteractiveShellEnvBestEffort
   )({
     source: 'team-provisioning',
     timeoutMs: 1_500,
     fallbackEnv: processEnv,
-    background: false,
+    background: discoverShellEnv,
   });
+  if (discoverShellEnv) {
+    // Active launches must wait for already-running auth discovery. Injected
+    // resolvers own their pending work instead of reading the global cache.
+    const waitForShellEnv =
+      ports.waitForPendingShellEnv ??
+      (ports.resolveInteractiveShellEnvBestEffort ? undefined : waitForPendingShellEnv);
+    shellEnv = (await waitForShellEnv?.()) ?? shellEnv;
+  }
   // getHomeDir() uses Electron's app.getPath('home') which handles Unicode
   // correctly on Windows. Prefer it over process.env which may be garbled.
   const electronHome = (ports.getHomeDir ?? getHomeDir)();
@@ -347,6 +377,7 @@ export async function buildProvisioningEnv({
     providerBackendId,
     shellEnv,
     env,
+    ...(options?.gatewayMember ? { connectionMode: 'runtime-only' as const } : {}),
   });
   const providerConnectionIssue = providerEnvResult.connectionIssues[resolvedProviderId];
   const providerEnv = providerEnvResult.env;
@@ -393,6 +424,10 @@ export async function buildProvisioningEnv({
       `${home}/.local/state`;
     providerEnv.XDG_CONFIG_HOME = xdgConfigHome;
     providerEnv.XDG_STATE_HOME = xdgStateHome;
+  }
+
+  if (options?.gatewayMember) {
+    return { env: providerEnv, authSource: 'none', geminiRuntimeAuth: null, providerArgs: [] };
   }
 
   if (providerConnectionIssue) {
@@ -533,6 +568,31 @@ export async function buildProvisioningEnv({
   };
 }
 
+async function resolveCrossProviderMemberGatewayArgs(
+  memberSpecs: TeamCreateRequest['members'],
+  primaryProviderId: TeamProviderId,
+  teamName: string | undefined,
+  seams: MemberGatewayRuntimeSeams | null
+): Promise<Map<string, MemberGatewayRuntimeArgs>> {
+  const memberArgsByMember = new Map<string, MemberGatewayRuntimeArgs>();
+  if (!seams || !teamName?.trim()) return memberArgsByMember;
+  for (const member of memberSpecs) {
+    const memberArgs = await resolveMemberGatewayRuntimeArgs({
+      seams,
+      teamName,
+      memberName: member.name,
+      providerId: resolveTeamProviderId(
+        normalizeTeamMemberProviderId(member.providerId) ?? primaryProviderId
+      ),
+      model: member.model,
+    });
+    if (memberArgs) {
+      memberArgsByMember.set(member.name, memberArgs);
+    }
+  }
+  return memberArgsByMember;
+}
+
 export async function buildCrossProviderMemberArgs({
   primaryProviderId,
   memberSpecs,
@@ -561,7 +621,24 @@ export async function buildCrossProviderMemberArgs({
   }
 
   try {
+    const memberArgsByMember = await resolveCrossProviderMemberGatewayArgs(
+      memberSpecs,
+      primaryProviderId,
+      options?.teamRuntimeAuth?.teamName,
+      ports.getMemberGatewayRuntimeSeams?.() ?? null
+    );
     for (const providerId of providersToPrepare) {
+      const providerMembers = memberSpecs.filter(
+        (member) =>
+          resolveTeamProviderId(
+            normalizeTeamMemberProviderId(member.providerId) ?? primaryProviderId
+          ) === providerId
+      );
+      if (
+        providerMembers.length > 0 &&
+        providerMembers.every((member) => memberArgsByMember.get(member.name)?.gatewayUsageRef)
+      )
+        continue;
       const dynamicSpawnOnly = providerId === 'anthropic' && prepareAnthropicForDynamicSpawn;
       let env: ProvisioningEnvResolution;
       try {
@@ -630,6 +707,7 @@ export async function buildCrossProviderMemberArgs({
       args,
       providerArgsByProvider,
       envPatch,
+      memberArgsByMember,
       usesAnthropicApiKeyHelper,
       anthropicApiKeyHelper,
     };

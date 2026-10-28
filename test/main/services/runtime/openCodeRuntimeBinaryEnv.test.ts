@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyOpenCodeRuntimeBinaryEnv,
   resolveOpenCodeConsoleWrapperPath,
+  resolveOpenCodeV2NpmWrapperBinary,
 } from '../../../../src/main/services/runtime/openCodeRuntimeBinaryEnv';
 
 const tempDirs: string[] = [];
@@ -109,6 +110,124 @@ describe('applyOpenCodeRuntimeBinaryEnv', () => {
 });
 
 describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
+  function nativeV2(
+    resourcesPath: string,
+    version = '2.0.32',
+    packageName = '@opencode/cli-windows-x64'
+  ) {
+    const packageRoot = path.join(resourcesPath, 'selected-cli-package');
+    fs.mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });
+    const binary = path.join(packageRoot, 'bin', 'opencode.exe');
+    fs.writeFileSync(binary, 'TEST-native');
+    fs.writeFileSync(
+      path.join(packageRoot, 'package.json'),
+      JSON.stringify({
+        name: packageName,
+        version,
+      })
+    );
+    return fs.realpathSync(binary);
+  }
+
+  it.each(['2.0.0', '2.0.32'])(
+    'keeps the selected native V2 package path for SDK metadata: %s',
+    (version) => {
+      const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+      const binary = nativeV2(resourcesPath, version);
+      const env: NodeJS.ProcessEnv = { PATH: '' };
+      applyOpenCodeRuntimeBinaryEnv(env, binary, { resourcesPath, platform: 'win32', env: {} });
+      expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binary);
+      expect(env.OPENCODE_BIN_PATH).toBe(binary);
+      expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+      expect(fs.existsSync(path.join(path.dirname(wrapperPath), 'opencode.real.path'))).toBe(false);
+    }
+  );
+
+  it.each(['@opencode/cli-windows-arm64', '@opencode/cli-windows-x64-baseline'])(
+    'keeps the selected native V2 %s package path for SDK metadata',
+    (packageName) => {
+      const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+      const binary = nativeV2(resourcesPath, '2.0.32', packageName);
+      const env: NodeJS.ProcessEnv = { PATH: '' };
+      applyOpenCodeRuntimeBinaryEnv(env, binary, { resourcesPath, platform: 'win32', env: {} });
+      expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binary);
+      expect(env.OPENCODE_BIN_PATH).toBe(binary);
+      expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+      expect(fs.existsSync(path.join(path.dirname(wrapperPath), 'opencode.real.path'))).toBe(false);
+    }
+  );
+
+  it.each([
+    { name: '@opencode/cli-windows-x64', version: '1.19.0' },
+    { name: '@other/cli-windows-x64', version: '2.0.32' },
+  ])('does not bypass the wrapper for unrelated package metadata: %j', (metadata) => {
+    const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+    const binary = nativeV2(resourcesPath);
+    fs.writeFileSync(
+      path.join(path.dirname(path.dirname(binary)), 'package.json'),
+      JSON.stringify(metadata)
+    );
+    const env: NodeJS.ProcessEnv = { PATH: '' };
+    applyOpenCodeRuntimeBinaryEnv(env, binary, { resourcesPath, platform: 'win32', env: {} });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
+    expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBe(binary);
+  });
+
+  it('does not infer native identity from a selected console wrapper and its stale target', () => {
+    const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+    const binary = nativeV2(resourcesPath);
+    const env: NodeJS.ProcessEnv = {
+      PATH: '',
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: wrapperPath,
+      OPENCODE_BIN_PATH: wrapperPath,
+      OPENCODE_CONSOLE_WRAPPER_TARGET: binary,
+    };
+    applyOpenCodeRuntimeBinaryEnv(env, path.join(resourcesPath, 'unselected.exe'), {
+      resourcesPath,
+      platform: 'win32',
+      env: {},
+      verifiedNativeV2BinaryPath: binary,
+    });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
+    expect(env.OPENCODE_BIN_PATH).toBe(wrapperPath);
+    expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBe(binary);
+  });
+
+  it('routes a probe-verified standalone V2 directly without wrapper or sidecar mutations', () => {
+    const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+    const binary = path.join(resourcesPath, 'user-selected.exe');
+    fs.writeFileSync(binary, 'TEST standalone native');
+    const env: NodeJS.ProcessEnv = { PATH: '', OPENCODE_CONSOLE_WRAPPER_TARGET: '/TEST/stale' };
+    applyOpenCodeRuntimeBinaryEnv(env, binary, {
+      resourcesPath,
+      platform: 'win32',
+      env: {},
+      verifiedNativeV2BinaryPath: binary,
+    });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binary);
+    expect(env.OPENCODE_BIN_PATH).toBe(binary);
+    expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+    expect(fs.existsSync(path.join(path.dirname(wrapperPath), 'opencode.real.path'))).toBe(false);
+  });
+
+  it('never selects a stale V2 wrapper target over an explicit different V1 binary', () => {
+    const { resourcesPath, wrapperPath, realBinaryPath } = makeResourcesWithWrapper();
+    const binary = nativeV2(resourcesPath);
+    const env: NodeJS.ProcessEnv = {
+      PATH: '',
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: realBinaryPath,
+      OPENCODE_CONSOLE_WRAPPER_TARGET: binary,
+    };
+    applyOpenCodeRuntimeBinaryEnv(env, binary, {
+      resourcesPath,
+      platform: 'win32',
+      env: {},
+      verifiedNativeV2BinaryPath: binary,
+    });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
+    expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBe(realBinaryPath);
+  });
+
   it('routes the Windows runtime through the console wrapper when it is bundled', () => {
     const { resourcesPath, wrapperPath, realBinaryPath } = makeResourcesWithWrapper();
     const env: NodeJS.ProcessEnv = { PATH: path.join(resourcesPath, 'stale') };
@@ -258,5 +377,98 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
     expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
     expect(env.PATH?.split(path.delimiter)).toEqual([path.dirname(wrapperPath)]);
+  });
+});
+
+describe('resolveOpenCodeV2NpmWrapperBinary', () => {
+  function npmInstall(options: {
+    hoisted: boolean;
+    link: boolean;
+    version?: string;
+    platform?: 'linux' | 'windows';
+    withDecoy?: boolean;
+  }): { wrapperBinary: string; platformBinary: string; root: string } {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'at-opencode-npm-'));
+    tempDirs.push(root);
+    const version = options.version ?? '2.0.32';
+    const platformName = options.platform ?? 'linux';
+    const executable = platformName === 'windows' ? 'opencode.exe' : 'opencode';
+    const scope = path.join(root, 'node_modules', '@opencode');
+    const wrapperRoot = path.join(scope, 'cli');
+    fs.mkdirSync(path.join(wrapperRoot, 'bin'), { recursive: true });
+    fs.writeFileSync(
+      path.join(wrapperRoot, 'package.json'),
+      JSON.stringify({ name: '@opencode/cli', version })
+    );
+    const platformScope = options.hoisted
+      ? scope
+      : path.join(wrapperRoot, 'node_modules', '@opencode');
+    const writePlatformPackage = (name: string, content: string): string => {
+      const packageRoot = path.join(platformScope, name);
+      fs.mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });
+      fs.writeFileSync(
+        path.join(packageRoot, 'package.json'),
+        JSON.stringify({ name: `@opencode/${name}`, version: '2.0.32' })
+      );
+      const binary = path.join(packageRoot, 'bin', executable);
+      fs.writeFileSync(binary, content);
+      return binary;
+    };
+    // The decoy sorts first and has the same size: only the real source may be selected.
+    if (options.withDecoy !== false)
+      writePlatformPackage(`cli-${platformName}-x64`, 'TEST-native-B');
+    const platformBinary = writePlatformPackage(
+      `cli-${platformName}-x64-baseline`,
+      'TEST-native-A'
+    );
+    const wrapperBinary = path.join(wrapperRoot, 'bin', 'opencode.exe');
+    if (options.link) fs.linkSync(platformBinary, wrapperBinary);
+    else fs.copyFileSync(platformBinary, wrapperBinary);
+    return { wrapperBinary, platformBinary: fs.realpathSync(platformBinary), root };
+  }
+
+  it.each([
+    { hoisted: false, link: true },
+    { hoisted: true, link: true },
+    { hoisted: false, link: false },
+    { hoisted: true, link: false },
+    { hoisted: true, link: false, withDecoy: false },
+  ])('selects the platform package binary behind the npm wrapper: %j', (layout) => {
+    const { wrapperBinary, platformBinary } = npmInstall(layout);
+
+    expect(resolveOpenCodeV2NpmWrapperBinary(wrapperBinary, 'linux')).toBe(platformBinary);
+
+    const env: NodeJS.ProcessEnv = { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: wrapperBinary, PATH: '' };
+    applyOpenCodeRuntimeBinaryEnv(env, null, { platform: 'linux' });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(platformBinary);
+    expect(env.OPENCODE_BIN_PATH).toBe(platformBinary);
+    expect(env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(platformBinary));
+  });
+
+  it('selects the Windows platform binary instead of the bundled console wrapper', () => {
+    const { resourcesPath } = makeResourcesWithWrapper();
+    const { wrapperBinary, platformBinary } = npmInstall({
+      hoisted: false,
+      link: true,
+      platform: 'windows',
+    });
+    const env: NodeJS.ProcessEnv = { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: wrapperBinary, PATH: '' };
+
+    applyOpenCodeRuntimeBinaryEnv(env, null, { resourcesPath, platform: 'win32', env: {} });
+
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(platformBinary);
+    expect(env.OPENCODE_BIN_PATH).toBe(platformBinary);
+    expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+  });
+
+  it('keeps the configured path when no platform package matches the wrapper', () => {
+    const { wrapperBinary } = npmInstall({ hoisted: false, link: false, version: '2.0.0' });
+
+    expect(resolveOpenCodeV2NpmWrapperBinary(wrapperBinary, 'linux')).toBeNull();
+    expect(resolveOpenCodeV2NpmWrapperBinary(wrapperBinary, 'darwin')).toBeNull();
+
+    const env: NodeJS.ProcessEnv = { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: wrapperBinary, PATH: '' };
+    applyOpenCodeRuntimeBinaryEnv(env, null, { platform: 'linux' });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperBinary);
   });
 });

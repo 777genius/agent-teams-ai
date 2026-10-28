@@ -1,6 +1,7 @@
 import {
   APP_CLOSE_READINESS_REQUEST,
   APP_CLOSE_READINESS_RESPONSE,
+  APP_CLOSE_READINESS_STARTED,
   type AppCloseCoordinationElectronApi,
   type AppCloseReadinessHandler,
   type AppCloseReadinessRequest,
@@ -25,6 +26,7 @@ export function createAppCloseCoordinationBridge(
   ipcRenderer.on(
     APP_CLOSE_READINESS_REQUEST,
     (_event: IpcRendererEvent, request: AppCloseReadinessRequest) => {
+      ipcRenderer.send(APP_CLOSE_READINESS_STARTED, { requestId: request.requestId });
       void (async () => {
         let ok = true;
         let blockers: string[] = [];

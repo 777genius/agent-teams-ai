@@ -3497,10 +3497,46 @@ describe('RuntimeProviderManagementPanelView', () => {
           availability: 'untested',
         },
         {
+          providerId: 'minimax-coding-plan',
+          modelId: 'MiniMax-M2.7',
+          displayName: 'Retired bare MiniMax M2.7',
+          sourceLabel: 'MiniMax',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'minimax-coding-plan',
+          modelId: 'MiniMax-M3.1-Flash',
+          displayName: 'Current bare MiniMax Flash',
+          sourceLabel: 'MiniMax',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
           providerId: 'openrouter',
           modelId: 'opencode/minimax-m2.5-free',
           displayName: 'minimax-m2.5-free',
           sourceLabel: 'OpenCode',
+          free: true,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/minimax/minimax-m2.7',
+          displayName: 'minimax/minimax-m2.7',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/minimax/minimax-m3.1-flash:free',
+          displayName: 'minimax/minimax-m3.1-flash:free',
+          sourceLabel: 'OpenRouter',
           free: true,
           default: false,
           availability: 'untested',
@@ -3557,7 +3593,18 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Not recommended');
     expect(host.textContent).toContain('Not verified in OpenCode');
     expect(host.textContent).toContain('Tested');
-    expect(host.textContent).toContain('Tested with limits');
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(host.textContent).not.toContain('Retired bare MiniMax M2.7');
+    expect(host.textContent).toContain('Current bare MiniMax Flash');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).toContain('minimax-m3.1-flash:free');
+    expect(host.textContent).not.toContain('Tested with limits');
+    const flashRow = host.querySelector(
+      '[data-testid="runtime-provider-model-row-openrouter/minimax/minimax-m3.1-flash:free"]'
+    );
+    expect(flashRow).not.toBeNull();
+    expect(flashRow?.textContent).not.toContain('Tested');
+    expect(flashRow?.textContent).not.toContain('Recommended');
     expect(host.textContent).toContain('Recommended only');
     expect(host.textContent).not.toContain('Set OpenCode default');
     expect(
@@ -3582,7 +3629,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(modelSearch?.style.paddingLeft).toBe('42px');
     expect(modelList?.style.maxHeight).toBe('300px');
     expect(host.querySelector('[data-testid="runtime-provider-model-virtual-list"]')).toBeNull();
-    expect(host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]')).toHaveLength(7);
+    expect(host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]')).toHaveLength(8);
     expect(host.textContent).not.toContain('OpenRouterfree');
     const firstTestButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Test'
@@ -3597,12 +3644,12 @@ describe('RuntimeProviderManagementPanelView', () => {
       (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
     );
     expect((host.textContent ?? '').indexOf('opencode/big-pickle')).toBeLessThan(
-      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+      (host.textContent ?? '').indexOf('minimax-m3.1-flash:free')
     );
     expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
-      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+      (host.textContent ?? '').indexOf('minimax-m3.1-flash:free')
     );
-    expect((host.textContent ?? '').indexOf('minimax-m2.5-free')).toBeLessThan(
+    expect((host.textContent ?? '').indexOf('minimax-m3.1-flash:free')).toBeLessThan(
       (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
     );
     expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')).toBeLessThan(

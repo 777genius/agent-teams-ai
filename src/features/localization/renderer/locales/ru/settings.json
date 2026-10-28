@@ -12,6 +12,10 @@
     "notifications": {
       "description": "Настройте, когда и как получать уведомления об активности агентов, завершении задач и ошибках.",
       "label": "Уведомления"
+    },
+    "gatewayProviders": {
+      "description": "Управление шлюзовыми эндпоинтами для персональных моделей тиммейтов.",
+      "label": "Провайдеры шлюзов"
     }
   },
   "view": {
@@ -839,9 +843,9 @@
         "noCredentials": "Base URL не должен содержать credentials"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint отключён. Сохранённый token оставлен.",
         "endpointSaved": "Endpoint сохранён",
-        "endpointSavedTokenMissing": "Endpoint сохранён. Auth token не настроен."
+        "endpointSavedTokenMissing": "Endpoint сохранён. Auth token не настроен.",
+        "notActiveUntilSaved": "Ещё не активен. Сохраните endpoint, чтобы переключиться; до этого запуски используют прежний способ подключения."
       }
     },
     "connection": {
@@ -942,10 +946,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "настроен",
-      "enabled": "Включено",
       "notConfigured": "Не настроен",
       "notSet": "не задан",
-      "off": "Выкл.",
       "unknown": "Неизвестно"
     },
     "title": "Настройки провайдера",
@@ -961,8 +963,6 @@
       "apiKeySavedRefreshFailed": "API key сохранён, но не удалось обновить статус провайдера.",
       "connectionUpdatedRefreshFailed": "Подключение обновлено, но не удалось обновить статус провайдера.",
       "deleteApiKey": "Не удалось удалить API key",
-      "disableEndpoint": "Не удалось отключить endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint отключён, но не удалось обновить статус провайдера.",
       "endpointSavedRefreshFailed": "Endpoint сохранён, но не удалось обновить статус провайдера.",
       "refreshCodexAccount": "Не удалось обновить Codex account",
       "saveApiKey": "Не удалось сохранить API key",
@@ -1102,5 +1102,41 @@
   },
   "cliStatus": {
     "versionUpgrade": "v{{current}} -> v{{latest}}"
+  },
+  "gatewayProviders": {
+    "title": "Провайдеры шлюзов",
+    "description": "Шлюзовые эндпоинты для персональных gateway-моделей тиммейтов. API-ключи вводятся в строке тиммейта и не хранятся в настройках приложения.",
+    "addProfile": "Добавить профиль",
+    "empty": "Профилей шлюзов пока нет.",
+    "actions": {
+      "cancel": "Отмена",
+      "delete": "Удалить",
+      "edit": "Изменить",
+      "save": "Сохранить"
+    },
+    "badges": {
+      "privateNetwork": "Частная сеть разрешена"
+    },
+    "boundTeammates": "Привязано тиммейтов: {{total}}",
+    "dialog": {
+      "createTitle": "Добавить профиль шлюза",
+      "description": "Профили указывают на корневой URL шлюза. Соединение и ключ проверяются при пробе API-ключа тиммейта в строке участника.",
+      "editTitle": "Изменить профиль шлюза"
+    },
+    "errors": {
+      "boundUrl": "С этим профилем всё ещё связаны тиммейты. Сначала отвяжите их или создайте отдельный профиль для нового URL.",
+      "fieldsRequired": "Название и URL шлюза обязательны."
+    },
+    "fields": {
+      "allowPrivateNetwork": "Разрешить адрес в частной сети",
+      "allowPrivateNetworkHint": "Этот шлюз работает на другом компьютере в вашей сети. Трафик идёт по локальной сети и не шифруется при использовании HTTP.",
+      "baseUrl": "URL шлюза",
+      "baseUrlHint": "Корневой URL шлюза без завершающего /v1.",
+      "displayName": "Название"
+    },
+    "hints": {
+      "deleteKeepsHistory": "Удаление профиля не скрывает исторические источники расходов из отчётов и бюджетов.",
+      "probeIsTest": "Отдельной проверки соединения нет: соединение проверяется при пробе API-ключа тиммейта в строке участника."
+    }
   }
 }

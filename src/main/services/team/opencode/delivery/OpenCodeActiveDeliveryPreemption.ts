@@ -31,6 +31,7 @@ export type OpenCodeActiveDeliveryPreemptionPorts = Pick<
  */
 export async function recoverOpenCodeActiveDeliveryBlocker(input: {
   assertCurrentRun: () => void;
+  isCurrent?: () => boolean;
   ports: OpenCodeActiveDeliveryPreemptionPorts;
   ledger: OpenCodePromptDeliveryLedgerStore;
   activeRecord: OpenCodePromptDeliveryLedgerRecord;
@@ -84,6 +85,7 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
     });
     await assertOpenCodePromptDeliveryNotCancelled(ledger, active, input.assertCurrentRun);
     ports.scheduleOpenCodePromptDeliveryWatchdog({
+      ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
       teamName,
       memberName,
       messageId: active.inboxMessageId,

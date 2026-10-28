@@ -20,6 +20,7 @@ import {
   applyOpenCodeRuntimeBinaryEnv,
   OPENCODE_LEGACY_BINARY_PATH_ENV,
   OPENCODE_RUNTIME_BINARY_PATH_ENV,
+  readOpenCodeBinaryOverride,
 } from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
@@ -44,7 +45,7 @@ export interface ProviderAwareCliEnvOptions {
   providerBackendId?: string | null;
   shellEnv?: NodeJS.ProcessEnv | null;
   env?: NodeJS.ProcessEnv;
-  connectionMode?: 'strict' | 'augment';
+  connectionMode?: 'strict' | 'augment' | 'runtime-only';
   allowStoredApiKeyDecryption?: boolean;
   allowedStoredApiKeyEnvVarNames?: readonly string[];
   allowClaudeUserSettingsAuthEnv?: boolean;
@@ -59,16 +60,7 @@ export interface ProviderAwareCliEnvResult {
 function resolveExplicitOpenCodeBinary(
   options: Pick<ProviderAwareCliEnvOptions, 'env'>
 ): string | null {
-  return (
-    [
-      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
-      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
-    ]
-      .find((candidate): candidate is string => Boolean(candidate?.trim()))
-      ?.trim() ?? null
-  );
+  return readOpenCodeBinaryOverride(options.env, process.env)?.binaryPath ?? null;
 }
 
 /**
@@ -156,9 +148,11 @@ export async function buildProviderAwareCliEnv(
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
+    // Generic shells and management commands only inherit the override; the
+    // OpenCode launch path owns verification and its fail-closed errors.
     const supportedExplicitOpenCodeBinary =
       explicitOpenCodeBinary &&
-      (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary).catch(() => false))
+      (!resolvedProviderId || (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary)))
         ? explicitOpenCodeBinary
         : null;
     const openCodeBinary =
@@ -170,7 +164,14 @@ export async function buildProviderAwareCliEnv(
       delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
       delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
     }
-    applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary);
+    const verifiedNativeV2BinaryPath =
+      process.platform === 'win32' &&
+      resolvedProviderId === 'opencode' &&
+      openCodeBinary &&
+      (await isSupportedOpenCodeRuntimeBinaryPath(openCodeBinary, 'v2'))
+        ? openCodeBinary
+        : undefined;
+    applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary, { verifiedNativeV2BinaryPath });
   }
   const appManagedCodexBinary = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
   if (
@@ -183,6 +184,13 @@ export async function buildProviderAwareCliEnv(
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     await ensureAgentTeamsMcpLocalLaunchEnv(env);
     applyAgentTeamsMcpAppContext(env);
+  }
+
+  // Member gateways supply their own verified credentials and launch arguments.
+  // Keep binary/MCP preparation above, without consulting the global connection.
+  if (connectionMode === 'runtime-only') {
+    removeGlobalElectronRunAsNodeEnv(env);
+    return { env, connectionIssues: {}, providerArgs: [] };
   }
 
   if (options.providerId) {

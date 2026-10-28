@@ -1,6 +1,25 @@
 import { randomUUID } from 'crypto';
 
-import { isLowercaseSha256 } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
+import {
+  assertLaunchBehaviorFingerprint,
+  assertLaunchResultBehaviorFingerprint,
+  attachBridgePreconditions,
+  commandRequiresRuntimeStoreManifestPrecondition,
+  isActiveOpenCodeBridgeCommandLeaseError,
+  isLaunchFingerprintEchoMismatch,
+  isOpenCodeBridgeEmptyOutputFailure,
+  isOpenCodeBridgeUnknownOutcomeFailure,
+  isOpenCodeLaunchCapabilitySnapshotRecoveryAttempt,
+  isRecord,
+  reconciliationRequiredLaunchResult,
+  requiresOpenCodeDeliveryAcceptanceContract,
+  requiresOpenCodeVideoFilePartsContract,
+  resolveOpenCodeBridgeLeaseAcquireTimeoutMs,
+  sleep,
+  stringifyError,
+} from './OpenCodeStateChangingBridgePreconditions';
+
+export { attachBridgePreconditions, resolveOpenCodeBridgeLeaseAcquireTimeoutMs };
 
 import {
   assertBridgeEvidenceCanCommitToRuntimeStores,
@@ -8,7 +27,6 @@ import {
   extractRunId,
   OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
   type OpenCodeBridgeCommandName,
-  type OpenCodeBridgeCommandPreconditions,
   type OpenCodeBridgeDiagnosticEvent,
   type OpenCodeBridgeHandshake,
   type OpenCodeBridgePeerIdentity,
@@ -25,6 +43,10 @@ import {
   recoverRuntimeStop,
   runtimeStopRequest,
 } from './OpenCodeRuntimeStopRecovery';
+import {
+  rememberOpenCodeStateChangingCleanupFailure,
+  rememberOpenCodeStateChangingFailurePhase,
+} from './OpenCodeStateChangingCausalFailure';
 import { assertStopDomainResult } from './OpenCodeStopOutcomeRecovery';
 
 import type {
@@ -32,8 +54,6 @@ import type {
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from './OpenCodeBridgeCommandLedgerStore';
-
-const DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS = 10_000;
 const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
 
 export interface OpenCodeBridgeCommandExecutor {
@@ -56,9 +76,13 @@ export interface OpenCodeBridgeHandshakePort {
     expectedRunId: string | null;
     expectedCapabilitySnapshotId: string | null;
     expectedManifestHighWatermark: number | null;
+    timeoutMs?: number;
     cwd?: string;
     allowEmptyLaneStop?: boolean;
     selectedModel?: string | null;
+    effort?: string;
+    expectedBehaviorFingerprint?: string | null;
+    executionProofIdentity?: string;
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
     teamName?: string;
@@ -105,6 +129,18 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   leaseAcquireRetryDelayMs?: number;
 }
 
+interface StateChangingInput<TBody> {
+  command: OpenCodeBridgeCommandName;
+  teamName: string;
+  laneId?: string | null;
+  runId: string | null;
+  capabilitySnapshotId: string | null;
+  behaviorFingerprint: string | null;
+  body: TBody;
+  cwd: string;
+  timeoutMs: number;
+}
+
 export class OpenCodeStateChangingBridgeCommandService {
   private readonly expectedClientIdentity: OpenCodeBridgePeerIdentity;
   private readonly handshakePort: OpenCodeBridgeHandshakePort;
@@ -138,24 +174,32 @@ export class OpenCodeStateChangingBridgeCommandService {
       options.leaseAcquireRetryDelayMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS;
   }
 
-  async execute<TBody, TData>(input: {
-    command: OpenCodeBridgeCommandName;
-    teamName: string;
-    laneId?: string | null;
-    runId: string | null;
-    capabilitySnapshotId: string | null;
-    behaviorFingerprint: string | null;
-    body: TBody;
-    cwd: string;
-    timeoutMs: number;
-  }): Promise<OpenCodeBridgeResult<TData>> {
+  async execute<TBody, TData>(
+    input: StateChangingInput<TBody>
+  ): Promise<OpenCodeBridgeResult<TData>> {
+    const context = { phase: 'manifest' };
+    try {
+      return await this.executeTracked<TBody, TData>(input, context);
+    } catch (error) {
+      rememberOpenCodeStateChangingFailurePhase(error, context.phase);
+      throw error;
+    }
+  }
+
+  private async executeTracked<TBody, TData>(
+    input: StateChangingInput<TBody>,
+    context: { phase: string }
+  ): Promise<OpenCodeBridgeResult<TData>> {
     assertLaunchBehaviorFingerprint(input.command, input.behaviorFingerprint, input.body);
+    // Pre-dispatch phases share the command budget so the attempt settles inside the caller's escalation race.
+    const preDispatchDeadlineMs = Date.now() + input.timeoutMs;
     const normalizedLaneId = input.laneId ?? null;
     const manifest = await this.manifestReader.read(
       input.teamName,
       normalizedLaneId,
       input.command === 'opencode.stopTeam'
     );
+    context.phase = 'binding';
     const { capabilitySnapshotId, body: commandBody } = bindLifecycleManifest(input, manifest);
     // Preserve caller identity in the ledger; committed behavior fences runtime effects.
     const behaviorFingerprint =
@@ -179,6 +223,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       body: commandBody,
     });
     if (input.command === 'opencode.stopTeam') {
+      context.phase = 'stop_ledger_lookup';
       const existing = await this.ledger.getByIdempotencyKey(idempotencyKey);
       if (existing) {
         const lease = await this.acquireLease({
@@ -186,9 +231,12 @@ export class OpenCodeStateChangingBridgeCommandService {
           laneId: normalizedLaneId,
           runId: input.runId,
           command: input.command,
+          acquireBudgetMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
         });
+        let primary: unknown;
         try {
+          context.phase = 'stop_recovery';
           const current = await this.manifestReader.read(input.teamName, normalizedLaneId, true);
           const bound = bindLifecycleManifest(input, current);
           return await recoverRuntimeStop<TData>({
@@ -210,18 +258,31 @@ export class OpenCodeStateChangingBridgeCommandService {
             handshakePort: this.handshakePort,
             bridge: this.bridge,
             ledger: this.ledger,
-            timeoutMs: input.timeoutMs,
+            timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           });
+        } catch (error) {
+          primary = error;
+          rememberOpenCodeStateChangingFailurePhase(error, context.phase);
+          throw error;
         } finally {
-          await this.leaseStore.release(lease.leaseId);
+          await this.leaseStore.release(lease.leaseId).catch((cleanup) => {
+            if (primary && typeof primary === 'object')
+              rememberOpenCodeStateChangingCleanupFailure(primary, cleanup);
+            else {
+              rememberOpenCodeStateChangingFailurePhase(cleanup, 'lease_release');
+              throw cleanup;
+            }
+          });
         }
       }
     }
+    context.phase = 'handshake';
     const handshake = await this.handshakePort.handshake({
       requiredCommand: input.command,
       expectedRunId: input.runId,
       expectedCapabilitySnapshotId: capabilitySnapshotId,
       expectedManifestHighWatermark,
+      timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
       cwd: input.cwd,
       teamId: input.teamName,
       laneId: normalizedLaneId,
@@ -232,11 +293,15 @@ export class OpenCodeStateChangingBridgeCommandService {
         ? {
             selectedModel:
               typeof commandBody.selectedModel === 'string' ? commandBody.selectedModel : null,
+            effort: typeof commandBody.effort === 'string' ? commandBody.effort : undefined,
+            expectedBehaviorFingerprint: behaviorFingerprint,
+            executionProofIdentity: stableHash(commandBody.executionProof ?? null),
             toolApprovalMode:
               commandBody.skipPermissions === false ? ('manual' as const) : ('auto' as const),
           }
         : {}),
     });
+    context.phase = 'handshake_validation';
     const handshakeValidation = validateOpenCodeBridgeHandshake({
       handshake,
       expectedClient: this.expectedClientIdentity,
@@ -268,16 +333,19 @@ export class OpenCodeStateChangingBridgeCommandService {
         !handshake.server.bridgeProtocol.supportedCommands.includes('opencode.reconcileStop'))
     )
       throw new Error('Unsupported Stop recovery capability/version; reconciliation unknown');
+    context.phase = 'lease_acquire';
     const commandRequestId = this.requestIdFactory();
     const lease = await this.acquireLease({
       teamName: input.teamName,
       laneId: normalizedLaneId,
       runId: input.runId,
       command: input.command,
+      acquireBudgetMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
       ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
     });
 
     try {
+      context.phase = 'stop_target';
       const stopManifest =
         input.command === 'opencode.stopTeam'
           ? await this.manifestReader.read(input.teamName, normalizedLaneId, true)
@@ -314,7 +382,11 @@ export class OpenCodeStateChangingBridgeCommandService {
           : null;
       const bodyWithPreconditions = attachBridgePreconditions(
         stopRequest
-          ? { ...(isRecord(commandBody) && commandBody), stopRecovery: stopRequest }
+          ? {
+              ...(isRecord(commandBody) && commandBody),
+              projectPath: stopRequest.target.projectPath,
+              stopRecovery: stopRequest,
+            }
           : commandBody,
         {
           handshakeIdentityHash: handshake.identityHash,
@@ -329,6 +401,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         }
       );
 
+      context.phase = 'ledger_begin';
       const begin = await this.ledger.begin({
         idempotencyKey,
         requestId: commandRequestId,
@@ -357,16 +430,20 @@ export class OpenCodeStateChangingBridgeCommandService {
         );
       }
 
+      context.phase = 'dispatch';
       const result = await this.bridge.execute<typeof bodyWithPreconditions, TData>(
         input.command,
         bodyWithPreconditions,
         {
-          cwd: input.cwd,
-          timeoutMs: input.timeoutMs,
+          cwd: stopRequest?.target.projectPath ?? input.cwd,
+          // The dispatch settles inside the same shared budget instead of
+          // restarting the full command clock after the pre-dispatch phases.
+          timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           requestId: commandRequestId,
         }
       );
 
+      context.phase = 'failure_persistence';
       if (!result.ok) {
         if (isOpenCodeBridgeUnknownOutcomeFailure(result)) {
           await this.ledger.markUnknownAfterTimeout({
@@ -394,6 +471,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         return result;
       }
 
+      context.phase = 'result_validation';
       try {
         assertBridgeEvidenceCanCommitToRuntimeStores({
           result,
@@ -485,17 +563,23 @@ export class OpenCodeStateChangingBridgeCommandService {
           return ambiguousResult;
         }
       }
+      context.phase = 'stop_result_validation';
       if (input.command === 'opencode.stopTeam') assertStopDomainResult(result);
       if (stopRequest) validateRuntimeStopData(result.data, stopRequest);
+      context.phase = 'ledger_complete';
       await this.ledger.markCompleted({
         idempotencyKey,
         response: result,
         ...(stopTarget ? { stopRecovery: { target: stopTarget, result } } : {}),
       });
+      context.phase = 'lease_release';
       await this.leaseStore.release(lease.leaseId);
       return result;
     } catch (error) {
-      await this.leaseStore.release(lease.leaseId).catch(() => undefined);
+      rememberOpenCodeStateChangingFailurePhase(error, context.phase);
+      await this.leaseStore.release(lease.leaseId).catch((cleanup) => {
+        rememberOpenCodeStateChangingCleanupFailure(error, cleanup);
+      });
       throw error;
     }
   }
@@ -506,13 +590,17 @@ export class OpenCodeStateChangingBridgeCommandService {
     runId: string | null;
     command: OpenCodeBridgeCommandName;
     ttlMs: number;
+    acquireBudgetMs?: number;
   }): Promise<OpenCodeBridgeCommandLease> {
+    const acquireTimeoutMs = resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
+      configuredTimeoutMs: this.leaseAcquireTimeoutMs,
+      leaseTtlMs: input.ttlMs,
+    });
     const deadlineMs =
       Date.now() +
-      resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
-        configuredTimeoutMs: this.leaseAcquireTimeoutMs,
-        leaseTtlMs: input.ttlMs,
-      });
+      (input.acquireBudgetMs === undefined
+        ? acquireTimeoutMs
+        : Math.min(acquireTimeoutMs, input.acquireBudgetMs));
     while (true) {
       try {
         return await this.leaseStore.acquire(input);
@@ -570,184 +658,4 @@ export class OpenCodeStateChangingBridgeCommandService {
       createdAt: completedAt,
     });
   }
-}
-
-function assertLaunchBehaviorFingerprint(
-  command: OpenCodeBridgeCommandName,
-  behaviorFingerprint: string | null,
-  body: unknown
-): void {
-  if (command !== 'opencode.launchTeam') {
-    return;
-  }
-  if (!isLowercaseSha256(behaviorFingerprint)) {
-    throw new Error('OpenCode launch requires a lowercase SHA-256 behavior fingerprint');
-  }
-  if (!isRecord(body) || body.expectedBehaviorFingerprint !== behaviorFingerprint) {
-    throw new Error('OpenCode launch behavior fingerprint does not match its command body');
-  }
-}
-
-function assertLaunchResultBehaviorFingerprint(
-  command: OpenCodeBridgeCommandName,
-  expectedBehaviorFingerprint: string | null,
-  data: unknown
-): void {
-  if (command !== 'opencode.launchTeam') {
-    return;
-  }
-  if (!isRecord(data) || data.expectedBehaviorFingerprint !== expectedBehaviorFingerprint) {
-    throw new Error('OpenCode launch result behavior fingerprint mismatch');
-  }
-}
-
-export function attachBridgePreconditions<TBody>(
-  body: TBody,
-  preconditions: OpenCodeBridgeCommandPreconditions
-): TBody & { preconditions: OpenCodeBridgeCommandPreconditions } {
-  if (isRecord(body)) {
-    return {
-      ...body,
-      preconditions,
-    } as TBody & { preconditions: OpenCodeBridgeCommandPreconditions };
-  }
-
-  return {
-    payload: body,
-    preconditions,
-  } as unknown as TBody & { preconditions: OpenCodeBridgeCommandPreconditions };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isOpenCodeLaunchCapabilitySnapshotRecoveryAttempt(
-  command: OpenCodeBridgeCommandName,
-  body: unknown
-): boolean {
-  if (command !== 'opencode.launchTeam' || !isRecord(body)) {
-    return false;
-  }
-  const recoveryAttemptId = body.capabilitySnapshotRecoveryAttemptId;
-  return typeof recoveryAttemptId === 'string' && recoveryAttemptId.trim().length > 0;
-}
-
-function requiresOpenCodeDeliveryAcceptanceContract(
-  command: OpenCodeBridgeCommandName,
-  body: unknown
-): boolean {
-  if (command !== 'opencode.sendMessage' || !isRecord(body)) {
-    return false;
-  }
-  return body.settlementMode === 'acceptance';
-}
-
-function requiresOpenCodeVideoFilePartsContract(
-  command: OpenCodeBridgeCommandName,
-  body: unknown
-): boolean {
-  if (command !== 'opencode.sendMessage' || !isRecord(body) || !Array.isArray(body.fileParts)) {
-    return false;
-  }
-  return body.fileParts.some(
-    (part) => isRecord(part) && typeof part.mime === 'string' && part.mime.startsWith('video/')
-  );
-}
-
-function commandRequiresRuntimeStoreManifestPrecondition(
-  command: OpenCodeBridgeCommandName
-): boolean {
-  // App metadata and runtime stores own independent watermarks. Lifecycle commands
-  // are fenced by exact lane/run/capability authority, not cross-domain counters.
-  // Launch binds fresh capability/behavior proof and owned session materialization;
-  // message delivery has its own durable acceptance evidence.
-  return (
-    command !== 'opencode.launchTeam' &&
-    command !== 'opencode.sendMessage' &&
-    command !== 'opencode.stopTeam' &&
-    command !== 'opencode.reconcileTeam'
-  );
-}
-
-export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {
-  configuredTimeoutMs?: number | null;
-  leaseTtlMs: number;
-}): number {
-  if (typeof input.configuredTimeoutMs === 'number') {
-    return Math.max(0, input.configuredTimeoutMs);
-  }
-  return Math.max(DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS, Math.max(0, input.leaseTtlMs));
-}
-
-function stringifyError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function isLaunchFingerprintEchoMismatch(
-  command: OpenCodeBridgeCommandName,
-  expectedBehaviorFingerprint: string | null,
-  data: unknown,
-  error: unknown
-): boolean {
-  return (
-    command === 'opencode.launchTeam' &&
-    stringifyError(error) === 'OpenCode launch result behavior fingerprint mismatch' &&
-    (!isRecord(data) || data.expectedBehaviorFingerprint !== expectedBehaviorFingerprint)
-  );
-}
-
-function reconciliationRequiredLaunchResult<TData>(
-  result: Extract<OpenCodeBridgeResult<TData>, { ok: true }>,
-  message = 'OpenCode launch result behavior fingerprint mismatch'
-): Extract<OpenCodeBridgeResult<TData>, { ok: false }> {
-  return {
-    ok: false,
-    schemaVersion: result.schemaVersion,
-    requestId: result.requestId,
-    command: result.command,
-    completedAt: result.completedAt,
-    durationMs: result.durationMs,
-    error: {
-      kind: 'contract_violation',
-      message,
-      retryable: false,
-    },
-    diagnostics: [
-      ...result.diagnostics,
-      {
-        type: 'opencode_bridge_unknown_outcome',
-        providerId: 'opencode',
-        severity: 'warning',
-        message,
-        createdAt: result.completedAt,
-      },
-    ],
-  };
-}
-
-function isActiveOpenCodeBridgeCommandLeaseError(error: OpenCodeBridgeCommandLeaseError): boolean {
-  return error.message.startsWith('OpenCode bridge command lease already active:');
-}
-
-function isOpenCodeBridgeUnknownOutcomeFailure(result: OpenCodeBridgeResult<unknown>): boolean {
-  return (
-    !result.ok &&
-    (result.error.kind === 'timeout' ||
-      result.error.kind === 'transport_watchdog_timeout' ||
-      isOpenCodeBridgeEmptyOutputFailure(result))
-  );
-}
-
-function isOpenCodeBridgeEmptyOutputFailure(result: OpenCodeBridgeResult<unknown>): boolean {
-  return (
-    !result.ok &&
-    result.error.kind === 'contract_violation' &&
-    (result.error.message === 'Bridge stdout was empty' ||
-      result.error.message === 'Bridge stdout was empty after retry')
-  );
-}
-
-function sleep(delayMs: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

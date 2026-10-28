@@ -26,6 +26,7 @@ function providerStatus(overrides: Partial<CliProviderStatus> = {}): CliProvider
     statusMessage: null,
     detailMessage: null,
     models: ['opencode/big-pickle'],
+    defaultModel: 'opencode/big-pickle',
     modelAvailability: [],
     canLoginFromUi: false,
     capabilities: {
@@ -137,6 +138,75 @@ describe.each(['anthropic', 'codex'] as const)('%s refresh provenance', (provide
     expect(
       sanitizeProviderStatusAuthority({ ...previous, ...change }).teamLaunchAuthorityRestriction
     ).toBeUndefined();
+  });
+});
+
+describe('provider runtime default identity', () => {
+  it('keeps old runtime absence distinct from a new runtime explicit unknown model', () => {
+    const legacy = providerStatus();
+    expect(
+      mergeProviderStatusDisplayEvidence(legacy, legacy).effectiveDefaultModel
+    ).toBeUndefined();
+    expect(
+      createDegradedProviderStatus(legacy, new Error('unavailable')).effectiveDefaultModel
+    ).toBeUndefined();
+    expect(
+      mergeProviderStatusDisplayEvidence({ ...legacy, effectiveDefaultModel: null }, legacy)
+        .effectiveDefaultModel
+    ).toBeNull();
+  });
+
+  it.each([null, undefined, ''])(
+    'clears removed effective model %j without retaining stale display evidence',
+    (effectiveDefaultModel) => {
+      const previous = providerStatus({ effectiveDefaultModel: 'old-model' });
+      const incoming = providerStatus({ effectiveDefaultModel });
+      expect(mergeProviderStatusDisplayEvidence(incoming, previous).effectiveDefaultModel).toBe(
+        effectiveDefaultModel === undefined ? undefined : null
+      );
+      expect(
+        createDegradedProviderStatus(previous, new Error('unavailable')).effectiveDefaultModel
+      ).toBeNull();
+    }
+  );
+
+  it.each(['pending', 'transient_error', 'model_only'] as const)(
+    'clears effective model during %s refresh',
+    (statusCheckOutcome) => {
+      const previous = providerStatus({ effectiveDefaultModel: 'old-model' });
+      const incoming = providerStatus({
+        effectiveDefaultModel: 'unconfirmed-model',
+        statusCheckOutcome,
+      });
+      expect(
+        mergeProviderStatusDisplayEvidence(incoming, previous).effectiveDefaultModel
+      ).toBeNull();
+    }
+  );
+
+  it('prefers the incoming runtime default and retains it across incomplete refreshes', () => {
+    const previous = providerStatus({
+      providerId: 'anthropic',
+      defaultModel: 'claude-opus-5-5',
+      models: ['claude-opus-5-5'],
+      modelCatalog: null,
+    });
+    const incomingWithoutDefault = providerStatus({
+      providerId: 'anthropic',
+      defaultModel: null,
+      models: ['opus'],
+      modelCatalog: null,
+    });
+
+    expect(mergeProviderStatusDisplayEvidence(incomingWithoutDefault, previous).defaultModel).toBe(
+      'claude-opus-5-5'
+    );
+    expect(
+      mergeProviderStatusDisplayEvidence(
+        { ...incomingWithoutDefault, defaultModel: 'claude-opus-6' },
+        previous
+      ).defaultModel
+    ).toBe('claude-opus-6');
   });
 });
 

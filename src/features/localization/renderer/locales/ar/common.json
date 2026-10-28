@@ -642,7 +642,8 @@
       "byTime": "في الوقت المناسب",
       "byUnread": "غير مرئية",
       "byProject": "حسب المشروع",
-      "byTeam": "فريق"
+      "byTeam": "فريق",
+      "manualOrder": "الترتيب اليدوي"
     }
   },
   "toolViewer": {

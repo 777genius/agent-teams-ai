@@ -1,7 +1,7 @@
 import { RuntimeProviderCompanionCoordinator } from '../application/RuntimeProviderCompanionCoordinator';
 import {
   AgentTeamsRuntimeProviderManagementCliClient,
-  type RuntimeProviderOAuthClientDependencies,
+  type RuntimeProviderCliClientDependencies,
 } from '../infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
 import { createRuntimeProviderCompanionRegistry } from '../infrastructure/cli-companion/createRuntimeProviderCompanionRegistry';
 import {
@@ -9,6 +9,10 @@ import {
   type KiroCliCompanionServiceDependencies,
 } from '../infrastructure/KiroCliCompanionService';
 import { OpenCodeLocalProviderConnector } from '../infrastructure/OpenCodeLocalProviderConnector';
+import {
+  type ReadOpenCodeDiagnosticStatus,
+  withProviderSetupDiagnostics,
+} from '../infrastructure/providerSetupDiagnostics';
 
 import type {
   RuntimeLocalProviderConnectorPort,
@@ -55,16 +59,19 @@ import type {
   RuntimeProviderOAuthProgressDto,
 } from '@features/runtime-provider-management/contracts';
 
-export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementApi;
+export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementApi & {
+  shutdown(): Promise<void>;
+};
 
 export function createRuntimeProviderManagementFeature(
   deps: {
     port?: RuntimeProviderManagementPort;
+    readOpenCodeDiagnosticStatus?: ReadOpenCodeDiagnosticStatus;
     localProviderConnector?: RuntimeLocalProviderConnectorPort;
     companionRegistry?: RuntimeProviderCompanionRegistry;
     /** @deprecated Use companionRegistry. Kept for focused tests and packaged integrations. */
     companionService?: KiroCliCompanionService;
-  } & RuntimeProviderOAuthClientDependencies &
+  } & RuntimeProviderCliClientDependencies &
     Pick<KiroCliCompanionServiceDependencies, 'emitProgress'> = {}
 ): RuntimeProviderManagementFeatureFacade {
   const port = deps.port ?? new AgentTeamsRuntimeProviderManagementCliClient(deps);
@@ -86,6 +93,7 @@ export function createRuntimeProviderManagementFeature(
   const companionCoordinator = new RuntimeProviderCompanionCoordinator(port, companionRegistry);
 
   return {
+    shutdown: () => port.shutdown?.() ?? Promise.resolve(),
     listLocalProviders: (
       input: RuntimeLocalProviderListInput
     ): Promise<RuntimeLocalProviderListResponse> =>
@@ -129,13 +137,40 @@ export function createRuntimeProviderManagementFeature(
     ): Promise<RuntimeProviderManagementDirectoryResponse> => port.loadProviderDirectory(input),
     loadSetupForm: (
       input: RuntimeProviderManagementLoadSetupFormInput
-    ): Promise<RuntimeProviderManagementSetupFormResponse> => port.loadSetupForm(input),
+    ): Promise<RuntimeProviderManagementSetupFormResponse> =>
+      port
+        .loadSetupForm(input)
+        .then((response) =>
+          withProviderSetupDiagnostics(
+            response,
+            { ...input, operation: 'setup-form' },
+            deps.readOpenCodeDiagnosticStatus
+          )
+        ),
     connectProvider: (
       input: RuntimeProviderManagementConnectInput
-    ): Promise<RuntimeProviderManagementProviderResponse> => port.connectProvider(input),
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      port
+        .connectProvider(input)
+        .then((response) =>
+          withProviderSetupDiagnostics(
+            response,
+            { ...input, operation: 'connect' },
+            deps.readOpenCodeDiagnosticStatus
+          )
+        ),
     connectWithApiKey: (
       input: RuntimeProviderManagementConnectApiKeyInput
-    ): Promise<RuntimeProviderManagementProviderResponse> => port.connectWithApiKey(input),
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      port
+        .connectWithApiKey(input)
+        .then((response) =>
+          withProviderSetupDiagnostics(
+            response,
+            { ...input, operation: 'connect-api-key' },
+            deps.readOpenCodeDiagnosticStatus
+          )
+        ),
     forgetCredential: (
       input: RuntimeProviderManagementForgetInput
     ): Promise<RuntimeProviderManagementProviderResponse> => port.forgetCredential(input),

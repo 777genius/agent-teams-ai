@@ -1,9 +1,85 @@
 import assert from 'node:assert/strict';
-import { mkdir, readFile, readdir, lstat, writeFile, rename } from 'node:fs/promises';
+import { mkdir, readFile, readdir, lstat, writeFile, rename, open } from 'node:fs/promises';
 import path from 'node:path';
 
 export const cleanupScenario = 'startup-cleanup';
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Failure evidence only: never infer cleanup success from a diagnostic record.
+export async function startupCleanupFailureDiagnostic(root, startedAt) {
+  let handle;
+  try {
+    assert(Number.isSafeInteger(startedAt) && startedAt > 0);
+    let file = root;
+    const paths = [];
+    for (const part of ['user-data', 'opencode-bridge', 'diagnostics', 'events.ndjson']) {
+      const parent = await lstat(file);
+      assert(parent.isDirectory() && !parent.isSymbolicLink());
+      paths.push([file, parent]);
+      file = path.join(file, part);
+    }
+    const before = await lstat(file);
+    assert(before.isFile() && !before.isSymbolicLink());
+    assert(before.size > 0 && before.size <= 4 * 1024 * 1024);
+    paths.push([file, before]);
+    const verifyPaths = async () => {
+      for (const [name, identity] of paths) {
+        const current = await lstat(name);
+        assert(
+          !current.isSymbolicLink() && current.dev === identity.dev && current.ino === identity.ino
+        );
+        assert.equal(current.isDirectory(), identity.isDirectory());
+        assert.equal(current.isFile(), identity.isFile());
+      }
+    };
+    handle = await open(file, 'r');
+    const opened = await handle.stat();
+    assert(opened.isFile() && opened.dev === before.dev && opened.ino === before.ino);
+    assert(opened.size === before.size && opened.mtimeMs === before.mtimeMs);
+    await verifyPaths();
+    const bytes = Buffer.alloc(before.size);
+    const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
+    assert.equal(bytesRead, bytes.length);
+    const after = await handle.stat();
+    assert(after.size === opened.size && after.mtimeMs === opened.mtimeMs);
+    await verifyPaths();
+    const text = bytes.toString('utf8');
+    const rows = text
+      .slice(0, text.lastIndexOf('\n') + 1)
+      .split('\n')
+      .filter(Boolean);
+    let result = null;
+    const now = Date.now();
+    for (const line of rows) {
+      const row = JSON.parse(line);
+      const at = Date.parse(row.createdAt);
+      if (
+        row.providerId !== 'opencode' ||
+        row.type !== 'opencode_bridge_contract_violation' ||
+        row.data?.command !== 'opencode.cleanupStartupHosts' ||
+        row.data.mutationStarted !== false ||
+        !(at >= startedAt && at <= now) ||
+        typeof row.data.preparationError !== 'string'
+      )
+        continue;
+      result = {
+        id: typeof row.id === 'string' ? row.id.slice(0, 120) : null,
+        type: row.type,
+        providerId: row.providerId,
+        createdAt: new Date(at).toISOString(),
+        command: row.data.command,
+        requestId: typeof row.data.requestId === 'string' ? row.data.requestId.slice(0, 120) : null,
+        mutationStarted: false,
+        preparationError: row.data.preparationError.slice(0, 4000),
+      };
+    }
+    return result;
+  } catch {
+    return null; // Missing, changing or foreign evidence leaves the cause unknown.
+  } finally {
+    await handle?.close().catch(() => undefined);
+  }
+}
 
 // Startup may create empty global hook queues, but never team or event state.
 async function assertEmptyHookInfrastructure(dir, relative = '') {
@@ -74,6 +150,21 @@ export async function seedStartupCleanup(root) {
   assert.equal(process.platform, 'win32', 'Startup cleanup E2E is Windows-only');
   await mkdir(path.join(root, 'cleanup-control'));
   await assertEmptyCleanupState(root);
+  const configPath = path.join(root, 'home/.claude/agent-teams-config.json');
+  const config = await readFile(configPath, 'utf8')
+    .then(JSON.parse)
+    .catch((error) => {
+      if (error.code === 'ENOENT') return {};
+      throw error;
+    });
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      ...config,
+      httpServer: { ...config.httpServer, enabled: true, port: 3456 },
+    })
+  );
 }
 
 export async function verifyStartupCleanup({ root, evaluate, send }) {
@@ -267,6 +358,10 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
   } catch (error) {
     evidence.passed = false;
     evidence.error = String(error);
+    evidence.bridgePreparationDiagnostic = await startupCleanupFailureDiagnostic(
+      root,
+      manifest.cleanupLaunchStartedAt
+    );
     try {
       await capture('failure');
     } catch (captureError) {

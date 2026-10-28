@@ -45,6 +45,7 @@ import {
   cloneCachedProviderProbeResult,
   cloneProviderProbeResult,
 } from './TeamProvisioningProviderProbeCache';
+import { resolveRuntimeStatusDefaultModel } from './TeamProvisioningRuntimeDefaultModel';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
 import { buildMissingCliError } from './TeamProvisioningRuntimeFailureLabels';
 import {
@@ -636,19 +637,8 @@ export class TeamProvisioningPrepareCoordinator {
       }
     );
     const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(stdout);
-    const providerStatus = parsed.providers?.[providerId] ?? null;
-    const modelCatalog =
-      providerStatus?.modelCatalog?.providerId === providerId ? providerStatus.modelCatalog : null;
-    const defaultLaunchModel = modelCatalog?.defaultLaunchModel?.trim() || null;
-
-    if (providerId === 'anthropic') {
-      return resolveAnthropicLaunchModel({
-        limitContext,
-        availableLaunchModels: modelCatalog?.models.map((model) => model.launchModel) ?? [],
-        defaultLaunchModel,
-      });
-    }
-    return defaultLaunchModel;
+    const status = parsed.providers?.[providerId] ?? null;
+    return resolveRuntimeStatusDefaultModel(status, providerId, limitContext);
   }
 
   async materializeEffectiveTeamMemberSpecs(params: {

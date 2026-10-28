@@ -1,13 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OngoingIndicator } from '@renderer/components/common/OngoingIndicator';
@@ -44,17 +35,13 @@ import {
 } from 'lucide-react';
 
 import { KanbanTaskAttachmentMosaic } from './KanbanTaskAttachmentMosaic';
+import { useTaskCommentPulse } from './useTaskCommentPulse';
 
-import type {
-  KanbanColumnId,
-  KanbanTaskState,
-  TaskComment,
-  TeamTask,
-  TeamTaskWithKanban,
-} from '@shared/types';
+import type { KanbanColumnId, KanbanTaskState, TeamTask, TeamTaskWithKanban } from '@shared/types';
 
 interface KanbanTaskCardProps {
   task: TeamTaskWithKanban;
+  contextId: string;
   teamName: string;
   columnId: KanbanColumnId;
   kanbanTaskState?: KanbanTaskState;
@@ -90,19 +77,6 @@ interface FlatDependencyRowProps extends DependencyBadgeProps {
   tone: 'blocked' | 'depends' | 'blocks';
 }
 
-interface CommentPulseState {
-  taskKey: string;
-  commentCount: number;
-  commentIds: Set<string>;
-  pulseKey: number;
-}
-
-interface CommentPulseSyncAction {
-  taskKey: string;
-  comments: readonly TaskComment[];
-}
-
-const EMPTY_TASK_COMMENTS: readonly TaskComment[] = [];
 const taskCardSignatureCache = new WeakMap<TeamTaskWithKanban, string>();
 
 function getTaskCardSignature(task: TeamTaskWithKanban): string {
@@ -164,51 +138,6 @@ function areTaskMapDependenciesEqual(
     }
   }
   return true;
-}
-
-function createCommentPulseState(
-  taskKey: string,
-  comments: readonly TaskComment[],
-  pulseKey = 0
-): CommentPulseState {
-  return {
-    taskKey,
-    commentCount: comments.length,
-    commentIds: new Set(comments.map((comment) => comment.id)),
-    pulseKey,
-  };
-}
-
-function hasSameCommentIds(state: CommentPulseState, comments: readonly TaskComment[]): boolean {
-  return (
-    comments.length === state.commentCount &&
-    comments.every((comment) => state.commentIds.has(comment.id))
-  );
-}
-
-function syncCommentPulseState(
-  state: CommentPulseState,
-  action: CommentPulseSyncAction
-): CommentPulseState {
-  if (state.taskKey !== action.taskKey) {
-    return createCommentPulseState(action.taskKey, action.comments);
-  }
-
-  const hasNewIncomingComment =
-    action.comments.length > state.commentCount &&
-    action.comments.some(
-      (comment) => !state.commentIds.has(comment.id) && comment.author !== 'user'
-    );
-
-  if (!hasNewIncomingComment && hasSameCommentIds(state, action.comments)) {
-    return state;
-  }
-
-  return createCommentPulseState(
-    action.taskKey,
-    action.comments,
-    hasNewIncomingComment ? state.pulseKey + 1 : state.pulseKey
-  );
 }
 
 const DependencyBadge = ({
@@ -733,6 +662,7 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
 export const KanbanTaskCard = memo(
   function KanbanTaskCard({
     task,
+    contextId,
     teamName,
     columnId,
     kanbanTaskState,
@@ -757,23 +687,21 @@ export const KanbanTaskCard = memo(
   }: KanbanTaskCardProps): React.JSX.Element {
     const { t } = useAppTranslation('team');
     const { isLight } = useTheme();
-    const unreadCount = useUnreadCommentCount(teamName, task.id, task.comments);
-    const commentPulseTaskKey = `${teamName}/${task.id}`;
-    const comments = task.comments ?? EMPTY_TASK_COMMENTS;
-    const commentCount = comments.length;
+    const commentCount = task.comments?.length ?? 0;
+    const unreadCount = useUnreadCommentCount(
+      { contextId, teamName, taskId: task.id },
+      task.comments
+    );
+    const visibleCommentPulseKey = useTaskCommentPulse(
+      { contextId, teamName, taskId: task.id },
+      task.comments
+    );
     const [toolbarOpen, setToolbarOpen] = useState(false);
     const [actionPopoverOpen, setActionPopoverOpen] = useState(false);
     const handleActionPopoverOpenChange = useCallback((open: boolean): void => {
       setActionPopoverOpen(open);
       if (!open) setToolbarOpen(false);
     }, []);
-    const [commentPulse, syncCommentPulse] = useReducer(
-      syncCommentPulseState,
-      { taskKey: commentPulseTaskKey, comments },
-      ({ taskKey, comments: initialComments }) => createCommentPulseState(taskKey, initialComments)
-    );
-    const visibleCommentPulseKey =
-      commentPulse.taskKey === commentPulseTaskKey ? commentPulse.pulseKey : 0;
     const blockedByIds = task.blockedBy?.filter((id) => id.length > 0) ?? [];
     const blocksIds = task.blocks?.filter((id) => id.length > 0) ?? [];
     const hasBlockedBy = blockedByIds.length > 0;
@@ -843,9 +771,6 @@ export const KanbanTaskCard = memo(
       </div>
     );
 
-    useEffect(() => {
-      syncCommentPulse({ taskKey: commentPulseTaskKey, comments });
-    }, [commentCount, commentPulseTaskKey, comments]);
     const cardContent = (
       <div
         data-task-id={task.id}
@@ -1057,6 +982,7 @@ export const KanbanTaskCard = memo(
   },
   (prev, next) =>
     getTaskCardSignature(prev.task) === getTaskCardSignature(next.task) &&
+    prev.contextId === next.contextId &&
     prev.teamName === next.teamName &&
     prev.columnId === next.columnId &&
     areKanbanTaskStatesEqual(prev.kanbanTaskState, next.kanbanTaskState) &&

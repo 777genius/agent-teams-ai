@@ -7,6 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { openCodeV2ContractQualifies, readOpenCodeV2Contract } from '../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mjs';
 import { preflightOpenCodeLiveEnvironment } from './lib/opencode-live-preflight.mjs';
 
@@ -30,6 +31,59 @@ export const ISOLATED_PATH_KEYS = [
 ];
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// V2 versions follow the pinned runtime's contract (runtime.lock.json opencodeV2): FULL runs
+// only a version the runtime qualified for team launch on this platform.
+function qualifiedPinnedOpenCodeV2Version(version, platformKey) {
+  const contract = readOpenCodeV2Contract(
+    JSON.parse(fs.readFileSync(path.join(repoRoot, 'runtime.lock.json'), 'utf8')).opencodeV2);
+  return contract !== null && openCodeV2ContractQualifies(contract, [platformKey], version);
+}
+
+/** Passive generation/model qualification. FULL still proves actual readiness,
+ * work and original-run stop through the production bridge below. */
+export async function preflightOpenCodeFullTeamEnvironment(input, {
+  spawn = spawnSync,
+  legacyPreflight = preflightOpenCodeLiveEnvironment,
+  platform = process.platform,
+  arch = process.arch,
+} = {}) {
+  assertOwnedSmokeEnvironment(input.env, 'FULL');
+  if (input.projectPath !== input.env.OPENCODE_E2E_PROJECT_PATH)
+    throw new Error('FULL preflight requires its owned project');
+  const unavailable = (stage) => ({ ok: false, reason: 'Selected OpenCode generation or model inventory unavailable', stage });
+  const run = (command, args, timeout) => spawn(command, args, {
+    cwd: input.projectPath, env: input.env, encoding: 'utf8', timeout, maxBuffer: 256_000,
+  });
+  const measured = run(input.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH, ['--version'], 20_000);
+  if (measured.error || measured.signal || measured.status !== 0) return unavailable('version-command');
+  const version = /^(?:opencode v)?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))(?:\r?\n)?$/.exec(measured.stdout);
+  if (!version || version[0] !== measured.stdout) return unavailable('version-output');
+  if (version[1].startsWith('1.')) return legacyPreflight(input);
+  if (!['linux', 'darwin'].includes(platform) || !qualifiedPinnedOpenCodeV2Version(version[1], `${platform}-${arch}`))
+    return unavailable('generation-policy');
+  if (!Array.isArray(input.requiredModels) || input.requiredModels.length !== 1 ||
+      input.requiredModels[0] !== input.env.OPENCODE_E2E_MODEL ||
+      !/^[^\s/]+\/[^\s]+$/.test(input.requiredModels[0])) return unavailable('required-models');
+  const model = input.requiredModels[0], provider = model.slice(0, model.indexOf('/'));
+  const cli = input.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+  const catalog = run(cli, ['runtime', 'providers', 'models', '--runtime', 'opencode', '--provider', provider,
+    '--project-path', input.projectPath, '--limit', '100', '--json'],
+  // A first catalog against cold owned bun caches plus antivirus scanning can
+  // take close to three minutes; only a hung CLI may fail this stage.
+  path.basename(cli) === 'cli-source' ? 360_000 : 90_000);
+  if (catalog.error || catalog.signal || catalog.status !== 0) return unavailable('catalog-command');
+  try {
+    const payload = JSON.parse(catalog.stdout);
+    if (!isRecord(payload) || !isRecord(payload.models) || !Array.isArray(payload.models.models))
+      return unavailable('catalog-shape');
+    if (!payload.models.models.some(row => isRecord(row) && row.modelId === model))
+      return unavailable('catalog-selection');
+  } catch { return unavailable('catalog-json'); }
+  // Inventory is passive, not bootstrap or native retirement evidence. V2 has
+  // no V1 agent-list/serve/legacy-health preflight or global host cleanup claim.
+  return { ok: true, generation: 'v2', version: version[1] };
+}
 
 export function allocateSmokeOwnedRoot(prefix, platform = process.platform, tempDirectory = os.tmpdir()) {
   // macOS's per-user tmpdir is too long for nested tsx Unix socket paths.
@@ -214,7 +268,7 @@ export function isCompleteSmokeProof(proof, kind, models) {
 
 export async function runFullTeamSmoke({
   sourceEnv = process.env,
-  preflight = preflightOpenCodeLiveEnvironment,
+  preflight = preflightOpenCodeFullTeamEnvironment,
   spawn = spawnSync,
   vitestEntryPath = path.join(repoRoot, 'node_modules/vitest/vitest.mjs'),
   log = console.log,
@@ -355,7 +409,9 @@ export async function runFullTeamSmoke({
     // Credentials enter only via the explicit test input above; never inherit auth profiles.
     for (const key of ISOLATED_PATH_KEYS) {
       env[key] = path.join(ownedRoot, key.toLowerCase());
-      fs.mkdirSync(env[key], { recursive: true });
+      // The V2 probe store validates, never repairs: every isolated root must
+      // be private at creation (0700) or readiness fails probe_store_foreign.
+      fs.mkdirSync(env[key], { recursive: true, mode: 0o700 });
     }
     if (selectedAuth !== undefined) {
       const authDirectory = path.join(env.XDG_DATA_HOME, 'opencode');
@@ -371,6 +427,16 @@ export async function runFullTeamSmoke({
       repoRoot,
     });
     writeSmokeOwnership(env, 'FULL');
+    const projectConfigFile = sourceEnv.OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH;
+    if (projectConfigFile) {
+      if (!path.isAbsolute(projectConfigFile)) throw new Error('TEST project config must be absolute');
+      const config = JSON.parse(fs.readFileSync(projectConfigFile, 'utf8'));
+      if (!config || typeof config !== 'object' || Array.isArray(config))
+        throw new Error('TEST project config must be a JSON object');
+      fs.writeFileSync(path.join(projectPath, 'opencode.json'), JSON.stringify(config), {
+        flag: 'wx', mode: 0o600,
+      });
+    }
     assertOwnedSmokeEnvironment(env, 'FULL');
     log(
       `OpenCode full team proof: ${model}, project ${projectPath}, CLI ${env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH}`
@@ -386,7 +452,7 @@ export async function runFullTeamSmoke({
     });
     if (!readiness.ok) {
       // Provider/CLI failures may include secret material; keep raw state, never print it.
-      log('Prerequisite check failed; no inference submitted. Inspect owned state locally.');
+      log(`Prerequisite check failed at stage=${readiness.stage}; no inference submitted. Inspect owned state locally.`);
       return 1;
     }
     const result = spawn(

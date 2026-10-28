@@ -21,6 +21,7 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(),
   resolveInteractiveShellEnvBestEffort: vi.fn(),
+  waitForPendingShellEnv: vi.fn().mockResolvedValue(null),
 }));
 
 const buildProviderAwareCliEnvMock = vi.fn();
@@ -4042,7 +4043,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     }
   });
 
-  it('uses no-background best-effort shell env for provisioning launch env', async () => {
+  it('enables bounded shell discovery for Anthropic Auto provisioning launch env', async () => {
     const svc = new TeamProvisioningService();
     const buildProvisioningEnv = providerRuntimeHarness(svc).buildProvisioningEnv.bind(
       providerRuntimeHarness(svc)
@@ -4054,7 +4055,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(options).toMatchObject({
       source: 'team-provisioning',
       timeoutMs: 1_500,
-      background: false,
+      background: true,
     });
     expect(options?.fallbackEnv).toBe(process.env);
     expect(buildProviderAwareCliEnvMock).toHaveBeenLastCalledWith(

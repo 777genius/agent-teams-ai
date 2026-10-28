@@ -41,8 +41,12 @@ import {
   prepareSavedReviewCache,
   requestSavedReviewOriginalsAfterSave,
 } from './changeReviewSaveCache';
+import {
+  buildPersistDecisionScopeKey,
+  ConfirmedReviewDecisions,
+  reviewPersistedSnapshotsEqual,
+} from './reviewDecisionPersistence';
 
-/** Tracks in-flight checkTaskHasChanges calls to avoid duplicate requests */
 const taskChangesCheckInFlight = new Set<string>();
 /** Tracks background presence revalidation for optimistic terminal summary hits */
 const taskChangesPresenceRevalidationInFlight = new Set<string>();
@@ -64,20 +68,6 @@ const pendingPersistDecisionWrites = new Map<string, () => Promise<void>>();
 const persistDecisionWriteChains = new Map<string, Promise<void>>();
 const decisionRevisionByScope = new Map<string, number>();
 const PERSIST_DEBOUNCE_MS = 500;
-
-function reviewPersistedSnapshotsEqual(
-  left: ReviewPersistedStateSnapshot,
-  right: ReviewPersistedStateSnapshot
-): boolean {
-  return (
-    JSON.stringify(left.hunkDecisions) === JSON.stringify(right.hunkDecisions) &&
-    JSON.stringify(left.fileDecisions) === JSON.stringify(right.fileDecisions) &&
-    JSON.stringify(left.hunkContextHashesByFile ?? {}) ===
-      JSON.stringify(right.hunkContextHashesByFile ?? {}) &&
-    JSON.stringify(left.reviewActionHistory) === JSON.stringify(right.reviewActionHistory) &&
-    JSON.stringify(left.reviewRedoHistory) === JSON.stringify(right.reviewRedoHistory)
-  );
-}
 
 import type { AppState } from '../types';
 import type {
@@ -213,14 +203,6 @@ function enqueuePersistDecisionWrite(
     }
   );
   return current;
-}
-
-function buildPersistDecisionScopeKey(
-  teamName: string,
-  scopeKey: string,
-  scopeToken?: string
-): string {
-  return scopeToken ? `${teamName}:${scopeKey}:${scopeToken}` : `${teamName}:${scopeKey}`;
 }
 
 function applyTaskChangePresenceCacheUpdate(
@@ -518,6 +500,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   set,
   get
 ) => {
+  const confirmedDecisions = new ConfirmedReviewDecisions();
   const buildResolvedFileInvalidation = (
     s: ChangeReviewSlice,
     filePath: string
@@ -867,8 +850,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       }));
     },
 
-    // ── Decision persistence ──
-
     loadDecisionsFromDisk: async (teamName: string, scopeKey: string, scopeToken: string) => {
       const requestToken = ++latestDecisionLoadRequestToken;
       const hydrationScopeKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
@@ -890,6 +871,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const latest = get();
         if (latest.changeSetEpoch !== changeSetEpoch) return;
         decisionRevisionByScope.set(hydrationScopeKey, data?.revision ?? 0);
+        confirmedDecisions.remember(hydrationScopeKey, data?.revision ?? 0, data);
         // A user decision made while the disk read was in flight must win over persisted state.
         if (
           latest.hunkDecisions !== initialHunkDecisions ||
@@ -1011,6 +993,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       };
       const write = async (): Promise<void> => {
         const expectedRevision = decisionRevisionByScope.get(scopeStorageKey) ?? 0;
+        if (confirmedDecisions.matches(scopeStorageKey, expectedRevision, queuedSnapshot)) return;
+        confirmedDecisions.forget(scopeStorageKey);
         const saved = await api.review.saveDecisions(
           teamName,
           scopeKey,
@@ -1023,6 +1007,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           persistedReviewRedoHistory
         );
         decisionRevisionByScope.set(scopeStorageKey, saved.revision);
+        confirmedDecisions.remember(
+          scopeStorageKey,
+          saved.revision,
+          saved.reconciledState ?? queuedSnapshot
+        );
         const latest = get();
         if (
           saved.reconciledState &&
@@ -1126,6 +1115,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       clearPersistDecisionTimer(scopeStorageKey);
       try {
         await enqueuePersistDecisionWrite(scopeStorageKey, async () => {
+          const revision = decisionRevisionByScope.get(scopeStorageKey) ?? 0;
+          if (
+            !forceDiscard &&
+            scopeToken &&
+            confirmedDecisions.matches(scopeStorageKey, revision, null)
+          )
+            return;
+          confirmedDecisions.forget(scopeStorageKey);
           const cleared = await api.review.clearDecisions(
             teamName,
             scopeKey,
@@ -1133,6 +1130,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             forceDiscard ? undefined : (decisionRevisionByScope.get(scopeStorageKey) ?? 0)
           );
           decisionRevisionByScope.set(scopeStorageKey, cleared.revision);
+          confirmedDecisions.remember(scopeStorageKey, cleared.revision, null);
           if (get().decisionHydrationScopeKey === scopeStorageKey) {
             set({ decisionRevision: cleared.revision });
           }
@@ -1151,6 +1149,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       revision: number
     ) => {
       const scopeStorageKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
+      confirmedDecisions.forget(scopeStorageKey);
       decisionRevisionByScope.set(scopeStorageKey, revision);
       if (get().decisionHydrationScopeKey === scopeStorageKey) {
         set({ decisionRevision: revision });

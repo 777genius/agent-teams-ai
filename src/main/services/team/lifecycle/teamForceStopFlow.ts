@@ -22,7 +22,12 @@ import {
   getOpenCodeLaneScopedRuntimeFilePath,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
+  withOpenCodeRuntimeLaneLifecycleLock,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  openCodeRegularStopRejectionCode,
+  OpenCodeRuntimeStopUnconfirmedError,
+} from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import type { TeamLaunchStateReadResult, TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
@@ -39,8 +44,13 @@ export const RUNTIME_HOSTS_POLL_INTERVAL_MS = 1_000;
  * a stop that was about to succeed: a 45s budget cut off a lane that confirmed
  * at 47.6s. `countLiveRuntimeHosts` ends the wait the moment the hosts are
  * gone, so a healthy stop never spends this budget and it only bounds a hang.
+ * A stop attempt settles within the stop command budget plus one transport
+ * watchdog grace: every bridge call it makes, recovery included, draws from one
+ * deadline, and only a watchdog kill - which ends the attempt - overruns it.
+ * The rest of the race is headroom for the per-team lock and the file phases
+ * around the attempt, so a slow stop still reports its own causal failure.
  */
-export const STOP_ESCALATION_TIMEOUT_MS = 90_000;
+export const STOP_ESCALATION_TIMEOUT_MS = 120_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
   'force_stop_requested: pending delivery cancelled by user force stop';
 
@@ -340,6 +350,7 @@ async function runTeamStopFlow(
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
+  let causalFailure: TeamForceStopResult['causalFailure'];
   let timedOut = false;
   let runtimeHostsGone: { promise: Promise<'runtime_already_down'>; cancel(): void } | null = null;
   try {
@@ -365,12 +376,25 @@ async function runTeamStopFlow(
           ports.logWarning(
             `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
           );
+          if (error instanceof OpenCodeRuntimeStopUnconfirmedError) {
+            causalFailure = error.causalFailure;
+            diagnostics.push(...error.diagnosticCodes.map((code) => `stop_failure_code:${code}`));
+            if (error.diagnosticCodes.length === 0) {
+              diagnostics.push(`stop_failure_code:${openCodeRegularStopRejectionCode(error)}`);
+            }
+          } else {
+            diagnostics.push(`stop_failure_code:${openCodeRegularStopRejectionCode(error)}`);
+          }
           diagnostics.push(`Regular stop failed: ${message}`);
         }
         return 'stop_failed' as const;
       }
     );
-    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
+    // Recorded host exit does not acknowledge native lane/session cleanup.
+    // Keep its original stop attempt authoritative until the existing deadline.
+    runtimeHostsGone = ownedLaneIds?.length
+      ? { promise: new Promise<'runtime_already_down'>(() => {}), cancel() {} }
+      : watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
       runtimeHostsGone.promise,
@@ -445,10 +469,17 @@ async function runTeamStopFlow(
   // After the kills, never before them: a startup lock a live host still holds
   // open cannot be unlinked, so it is the kill that turns it into an orphan.
   await releaseSharedRuntimeResources(teamName, ports, diagnostics);
-  await markStopped(teamName, ports, diagnostics, publicationAuthority);
+  const cleanupOutcome =
+    stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete';
+  // Withdrawing launch ownership is a claim that the whole stop completed.
+  // Unknown authority or surviving processes must keep that evidence retryable.
+  if (cleanupOutcome === 'completed') {
+    await markStopped(teamName, ports, diagnostics, publicationAuthority);
+  }
   return {
     stopOutcome,
-    cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
+    ...(causalFailure ? { causalFailure } : {}),
+    cleanupOutcome,
     killedRuntimePids,
     clearedPendingDeliveries,
     diagnostics,
@@ -695,18 +726,26 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       laneId,
       fileName: 'opencode-prompt-delivery-ledger.json',
     });
-    if (!fs.existsSync(ledgerPath)) {
-      continue;
-    }
+    if (!fs.existsSync(ledgerPath)) continue;
     try {
-      const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
-      const result = await ledger.cancelNonTerminalRecords({
-        now: (input.now?.() ?? new Date()).toISOString(),
-        reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
-        includeRecoverableTerminal: input.includeRecoverableTerminal,
-        ownedRunIds: input.ownedRunIds,
-        createdAtOrBeforeMs: input.requestedAtMs,
-      });
+      // Lane removal takes this same outer lock; ledger writes must finish
+      // before cleanup can delete their directory. The inner store lock never
+      // calls lifecycle operations, so ordering remains lane -> ledger.
+      const result = await withOpenCodeRuntimeLaneLifecycleLock(
+        { teamsBasePath, teamName: input.teamName, laneId },
+        async () => {
+          if (!fs.existsSync(ledgerPath)) return null;
+          const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
+          return await ledger.cancelNonTerminalRecords({
+            now: (input.now?.() ?? new Date()).toISOString(),
+            reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
+            includeRecoverableTerminal: input.includeRecoverableTerminal,
+            ownedRunIds: input.ownedRunIds,
+            createdAtOrBeforeMs: input.requestedAtMs,
+          });
+        }
+      );
+      if (!result) continue;
       cleared += result.cancelled;
       keptForLaterRun += result.keptForLaterRun;
     } catch (error) {

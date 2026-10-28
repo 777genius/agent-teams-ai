@@ -96,6 +96,7 @@ export type AgentAttachmentProviderId = 'anthropic' | 'codex' | 'opencode' | 'un
 export interface AgentAttachmentCapabilityTarget {
   providerId: AgentAttachmentProviderId | string;
   model?: string | null;
+  declaredInputModalities?: readonly string[] | null;
   nativeInboxTextAttachmentsSupported?: boolean;
 }
 

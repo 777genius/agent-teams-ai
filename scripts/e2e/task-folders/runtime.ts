@@ -45,7 +45,7 @@ export async function fixture(repo: string) {
   }
   const root = await mkdtemp(path.join(scratch, 'tf-TEST-'));
   try {
-    const team = 'task-folders-TEST-' + randomUUID();
+    const team = 'task-folders-test-' + randomUUID();
     const project = path.join(root, 'TEST-project');
     const claude = path.join(root, 'claude');
     const env: Record<string, string> = Object.fromEntries(

@@ -1,5 +1,9 @@
+import { getTaskDisplayId } from '@shared/utils/taskIdentity';
+
+import { mapMarkdownOutsideCode } from './markdownCodeRanges';
+
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { TaskRef } from '@shared/types';
+import type { TaskRef, TeamTask } from '@shared/types';
 
 const TASK_REF_REGEX = /#([A-Za-z0-9-]+)\b/g;
 const EXACT_TASK_REF_REGEX = /^#([A-Za-z0-9-]+)$/;
@@ -47,6 +51,25 @@ function resolveTaskSuggestion(candidates: MentionSuggestion[]): MentionSuggesti
   return null;
 }
 
+export type TaskReferenceClickKind = 'canonical' | 'display';
+export type TaskIdClickHandler = (
+  taskId: string,
+  targetTeamName?: string,
+  referenceKind?: TaskReferenceClickKind
+) => void;
+
+/** Callers supply only the originating or explicitly addressed team's tasks. */
+export function resolveTaskReferenceCandidate<T extends Pick<TeamTask, 'id' | 'displayId'>>(
+  tasks: readonly T[],
+  taskId: string,
+  kind?: TaskReferenceClickKind
+): T | undefined {
+  const canonical = tasks.find((task) => task.id === taskId);
+  if (kind === 'canonical') return canonical;
+  const display = tasks.find((task) => getTaskDisplayId(task) === taskId.trim());
+  return kind === 'display' ? (display ?? canonical) : (canonical ?? display);
+}
+
 export interface TaskReferenceMatch {
   start: number;
   end: number;
@@ -65,6 +88,14 @@ interface EncodedTaskMetadata {
 interface EncodedTaskMetadataMatch {
   metadata: EncodedTaskMetadata;
   end: number;
+}
+
+interface TaskReferenceOccurrence {
+  start: number;
+  end: number;
+  raw: string;
+  ref: string;
+  encodedMetadata: EncodedTaskMetadata | null;
 }
 
 interface ParsedTaskLinkHref {
@@ -205,8 +236,8 @@ export function parseTaskLinkHref(href: string): ParsedTaskLinkHref | null {
     const displayId = search.get('display');
     return {
       taskId: decodeURIComponent(taskIdPart),
-      teamName: teamName ? decodeURIComponent(teamName) : undefined,
-      displayId: displayId ? decodeURIComponent(displayId) : undefined,
+      teamName: teamName ?? undefined,
+      displayId: displayId ?? undefined,
     };
   } catch {
     return null;
@@ -255,116 +286,196 @@ function findMarkdownLinkEnd(text: string, start: number): number {
   return -1;
 }
 
+function isEscapedMarkdownPosition(text: string, position: number): boolean {
+  let backslashCount = 0;
+  for (let index = position - 1; index >= 0 && text[index] === '\\'; index -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function findTaskReferenceOccurrences(text: string): TaskReferenceOccurrence[] {
+  const occurrences: TaskReferenceOccurrence[] = [];
+  for (const match of text.matchAll(TASK_REF_REGEX)) {
+    const raw = match[0];
+    const ref = match[1];
+    const start = match.index ?? -1;
+    if (start < 0) continue;
+
+    const preceding = start > 0 ? text[start - 1] : undefined;
+    if (!isAllowedTaskRefBoundary(preceding) || isEscapedMarkdownPosition(text, start)) continue;
+
+    const metadataMatch = extractEncodedTaskMetadata(text, start + raw.length);
+    occurrences.push({
+      start,
+      end: metadataMatch?.end ?? start + raw.length,
+      raw,
+      ref,
+      encodedMetadata: metadataMatch?.metadata ?? null,
+    });
+  }
+  return occurrences;
+}
+
 export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): string {
   if (!text) return text;
 
   const orderedTaskRefs = taskRefs ?? [];
+  const rawOccurrences = orderedTaskRefs.length ? findTaskReferenceOccurrences(text) : [];
+  // Composer messages can retain identities for literal code occurrences. Use
+  // source positions only when the stored array covers the complete raw text;
+  // legacy/API arrays containing prose references alone keep their original order.
+  const refsByOffset =
+    orderedTaskRefs.length > 0 &&
+    orderedTaskRefs.length === rawOccurrences.length &&
+    rawOccurrences.every(({ ref, encodedMetadata }, index) => {
+      const stored = orderedTaskRefs[index];
+      return (
+        stored.displayId.toLowerCase() === ref.toLowerCase() &&
+        (!encodedMetadata ||
+          (encodedMetadata.taskId === stored.taskId &&
+            encodedMetadata.teamName === stored.teamName))
+      );
+    })
+      ? new Map(rawOccurrences.map(({ start }, index) => [start, orderedTaskRefs[index]]))
+      : undefined;
   let taskRefIndex = 0;
 
-  const consumeStructuredTaskRef = (ref: string): TaskRef | undefined => {
-    if (
-      taskRefIndex < orderedTaskRefs.length &&
-      orderedTaskRefs[taskRefIndex]?.displayId.toLowerCase() === ref.toLowerCase()
-    ) {
-      return orderedTaskRefs[taskRefIndex++];
-    }
-    return undefined;
+  const consumeStructuredTaskRef = (sourceOffset: number): TaskRef | undefined => {
+    return refsByOffset ? refsByOffset.get(sourceOffset) : orderedTaskRefs[taskRefIndex++];
   };
 
-  const buildLink = (raw: string, ref: string): string => {
-    const structuredTaskRef = consumeStructuredTaskRef(ref);
+  const matchingStructuredTaskRef = (
+    pairedTaskRef: TaskRef | undefined,
+    ref: string
+  ): TaskRef | undefined => {
+    return pairedTaskRef?.displayId.toLowerCase() === ref.toLowerCase() ? pairedTaskRef : undefined;
+  };
+
+  const buildLink = (
+    raw: string,
+    ref: string,
+    sourceOffset: number,
+    encodedTaskRef?: EncodedTaskMetadata
+  ): string => {
+    const pairedTaskRef = consumeStructuredTaskRef(sourceOffset);
+    const structuredTaskRef = encodedTaskRef ?? matchingStructuredTaskRef(pairedTaskRef, ref);
     const href = structuredTaskRef ? buildTaskLinkHref(structuredTaskRef) : `task://${ref}`;
     return `[${raw}](${href})`;
   };
 
-  const linkifyPlainText = (value: string): string => {
+  const linkifyPlainText = (value: string, sourceOffset: number): string => {
     let result = '';
     let cursor = 0;
 
-    for (const match of value.matchAll(TASK_REF_REGEX)) {
-      const raw = match[0];
-      const ref = match[1];
-      const start = match.index ?? -1;
-      if (start < 0) continue;
-
+    for (const occurrence of findTaskReferenceOccurrences(value)) {
+      const { raw, ref, start, end, encodedMetadata } = occurrence;
       result += value.slice(cursor, start);
-      const preceding = start > 0 ? value[start - 1] : undefined;
-      if (!isAllowedTaskRefBoundary(preceding)) {
-        result += raw;
-        cursor = start + raw.length;
-        continue;
-      }
-
-      result += buildLink(raw, ref);
-      cursor = start + raw.length;
+      result += buildLink(raw, ref, sourceOffset + start, encodedMetadata ?? undefined);
+      cursor = end;
     }
 
     result += value.slice(cursor);
     return result;
   };
 
-  let result = '';
-  let cursor = 0;
+  return mapMarkdownOutsideCode(
+    text,
+    (prose, sourceOffset) => {
+      let result = '';
+      let cursor = 0;
 
-  while (cursor < text.length) {
-    const char = text[cursor];
+      while (cursor < prose.length) {
+        const char = prose[cursor];
 
-    if (char === '[') {
-      const linkEnd = findMarkdownLinkEnd(text, cursor);
-      if (linkEnd !== -1) {
-        const closeBracket = text.indexOf(']', cursor + 1);
-        const label = text.slice(cursor + 1, closeBracket);
-        const labelMatch = EXACT_TASK_REF_REGEX.exec(label);
-        if (labelMatch) {
-          consumeStructuredTaskRef(labelMatch[1]);
+        if (char === '[') {
+          const linkEnd = findMarkdownLinkEnd(prose, cursor);
+          if (linkEnd !== -1) {
+            const closeBracket = prose.indexOf(']', cursor + 1);
+            const label = prose.slice(cursor + 1, closeBracket);
+            const labelOccurrences = findTaskReferenceOccurrences(label).map((occurrence) => {
+              const pairedTaskRef = consumeStructuredTaskRef(
+                sourceOffset + cursor + 1 + occurrence.start
+              );
+              return {
+                ...occurrence,
+                pairedTaskRef: matchingStructuredTaskRef(pairedTaskRef, occurrence.ref),
+              };
+            });
+            const hrefStart = closeBracket + 2;
+            const href = prose.slice(hrefStart, linkEnd - 1);
+            const parsedHref = parseTaskLinkHref(href);
+            const legacyTaskId =
+              parsedHref && parsedHref.teamName === undefined && parsedHref.displayId === undefined
+                ? parsedHref.taskId
+                : undefined;
+            const legacyLabelOccurrence = legacyTaskId
+              ? labelOccurrences.find(
+                  (occurrence) =>
+                    occurrence.pairedTaskRef &&
+                    occurrence.ref.toLowerCase() === legacyTaskId.toLowerCase()
+                )
+              : undefined;
+            if (legacyLabelOccurrence?.pairedTaskRef) {
+              result += prose.slice(cursor, hrefStart);
+              result += buildTaskLinkHref(legacyLabelOccurrence.pairedTaskRef);
+              result += prose.slice(linkEnd - 1, linkEnd);
+            } else {
+              result += prose.slice(cursor, linkEnd);
+            }
+            cursor = linkEnd;
+            continue;
+          }
         }
-        result += text.slice(cursor, linkEnd);
-        cursor = linkEnd;
-        continue;
-      }
-    }
 
-    if (char === '`') {
-      const run = /^`+/.exec(text.slice(cursor))?.[0] ?? '`';
+        if (char === '`') {
+          const run = /^`+/.exec(prose.slice(cursor))?.[0] ?? '`';
 
-      if (
-        run.length >= 3 &&
-        (cursor === 0 || text[cursor - 1] === '\n') &&
-        (text[cursor + run.length] === undefined || /\s/.test(text[cursor + run.length]))
-      ) {
-        const fenceEnd = findClosingFence(text, cursor, run);
-        if (fenceEnd !== -1) {
-          result += text.slice(cursor, fenceEnd);
-          cursor = fenceEnd;
-          continue;
+          if (
+            run.length >= 3 &&
+            (cursor === 0 || prose[cursor - 1] === '\n') &&
+            (prose[cursor + run.length] === undefined || /\s/.test(prose[cursor + run.length]))
+          ) {
+            const fenceEnd = findClosingFence(prose, cursor, run);
+            if (fenceEnd !== -1) {
+              result += prose.slice(cursor, fenceEnd);
+              cursor = fenceEnd;
+              continue;
+            }
+          }
+
+          const codeEnd = findClosingBacktickRun(prose, cursor, run.length);
+          if (codeEnd !== -1) {
+            const code = prose.slice(cursor + run.length, codeEnd);
+            const codeMatch = EXACT_TASK_REF_REGEX.exec(code.trim());
+            if (codeMatch) {
+              result += buildLink(
+                code.trim(),
+                codeMatch[1],
+                sourceOffset + cursor + run.length + code.length - code.trimStart().length
+              );
+            } else {
+              result += prose.slice(cursor, codeEnd + run.length);
+            }
+            cursor = codeEnd + run.length;
+            continue;
+          }
         }
+
+        let nextSpecial = prose.length;
+        const nextLink = prose.indexOf('[', cursor + 1);
+        const nextCode = prose.indexOf('`', cursor + 1);
+        if (nextLink !== -1) nextSpecial = Math.min(nextSpecial, nextLink);
+        if (nextCode !== -1) nextSpecial = Math.min(nextSpecial, nextCode);
+
+        result += linkifyPlainText(prose.slice(cursor, nextSpecial), sourceOffset + cursor);
+        cursor = nextSpecial;
       }
 
-      const codeEnd = findClosingBacktickRun(text, cursor, run.length);
-      if (codeEnd !== -1) {
-        const code = text.slice(cursor + run.length, codeEnd);
-        const codeMatch = EXACT_TASK_REF_REGEX.exec(code.trim());
-        if (codeMatch) {
-          result += buildLink(code.trim(), codeMatch[1]);
-        } else {
-          result += text.slice(cursor, codeEnd + run.length);
-        }
-        cursor = codeEnd + run.length;
-        continue;
-      }
-    }
-
-    let nextSpecial = text.length;
-    const nextLink = text.indexOf('[', cursor + 1);
-    const nextCode = text.indexOf('`', cursor + 1);
-    if (nextLink !== -1) nextSpecial = Math.min(nextSpecial, nextLink);
-    if (nextCode !== -1) nextSpecial = Math.min(nextSpecial, nextCode);
-
-    result += linkifyPlainText(text.slice(cursor, nextSpecial));
-    cursor = nextSpecial;
-  }
-
-  return result;
+      return result;
+    },
+    { handleInlineTaskReferences: true }
+  );
 }
 
 export function stripEncodedTaskReferenceMetadata(text: string): string {
@@ -396,28 +507,19 @@ export function findTaskReferenceMatches(
   const suggestionsByRef = buildSuggestionsByRef(taskSuggestions);
 
   const matches: TaskReferenceMatch[] = [];
-  for (const match of text.matchAll(TASK_REF_REGEX)) {
-    const raw = match[0];
-    const ref = match[1];
-    const start = match.index ?? -1;
-    if (start < 0) continue;
-
-    const preceding = start > 0 ? text[start - 1] : undefined;
-    if (!isAllowedTaskRefBoundary(preceding)) continue;
-
-    const metadataMatch = extractEncodedTaskMetadata(text, start + raw.length);
-    const suggestion = metadataMatch
-      ? buildTaskSuggestionFromMetadata(metadataMatch.metadata, taskSuggestions)
-      : resolveTaskSuggestion(suggestionsByRef.get(ref.toLowerCase()) ?? []);
+  for (const occurrence of findTaskReferenceOccurrences(text)) {
+    const suggestion = occurrence.encodedMetadata
+      ? buildTaskSuggestionFromMetadata(occurrence.encodedMetadata, taskSuggestions)
+      : resolveTaskSuggestion(suggestionsByRef.get(occurrence.ref.toLowerCase()) ?? []);
     if (!suggestion) continue;
 
     matches.push({
-      start,
-      end: metadataMatch?.end ?? start + raw.length,
-      raw,
-      ref,
+      start: occurrence.start,
+      end: occurrence.end,
+      raw: occurrence.raw,
+      ref: occurrence.ref,
       suggestion,
-      encoded: metadataMatch != null,
+      encoded: occurrence.encodedMetadata != null,
     });
   }
 

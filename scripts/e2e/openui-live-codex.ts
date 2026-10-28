@@ -11,6 +11,8 @@ import { resolveLiveSmokeOrchestratorCliPath } from '../lib/live-smoke-runtime.m
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createParser } from '@openuidev/lang-core';
+import { readOpenUIReply } from '../lib/openui-chat-reply';
+import { checkChatVisualizationBudget } from '../../src/features/chat-visualizations/renderer/programBudget';
 import type { TeamCreateRequest } from '../../src/shared/types/team';
 // Existing raw CDP client; all interaction stays in the owned dev:mcp renderer.
 // @ts-expect-error Existing JavaScript harness has no declaration file.
@@ -167,6 +169,10 @@ async function click(expression: string) {
 }
 const button = (text: string, root = 'document') =>
   `Array.from(${root}.querySelectorAll('button')).find(e => e.textContent?.trim() === ${JSON.stringify(text)} || e.getAttribute('aria-label') === ${JSON.stringify(text)})`;
+const openuiArticle = (marker: string) =>
+  `Array.from(document.querySelectorAll('article')).find(e => e.textContent.includes(${JSON.stringify(marker)}) && e.querySelector('[data-chat-visualization-kind="openui"]'))`;
+const openuiBlock = (marker: string, fenceIndex: number) =>
+  `${openuiArticle(marker)}?.querySelectorAll('[data-chat-visualization-kind="openui"]')[${fenceIndex}]`;
 async function fill(selector: string, value: string) {
   await click(`document.querySelector(${JSON.stringify(selector)})`);
   await cdp.send('Input.insertText', { text: value });
@@ -189,7 +195,7 @@ type Message = {
   groupChatId?: string;
   groupMessageId?: string;
 };
-async function verifyGeneratedCatalog(text: string, output: string) {
+async function parseGeneratedVisualization(text: string) {
   const protocol = JSON.parse(
     await readFile(
       path.join(
@@ -199,15 +205,28 @@ async function verifyGeneratedCatalog(text: string, output: string) {
       'utf8'
     )
   );
-  const source = text.match(/```openui-lang\s*\n([\s\S]*?)\n```/)?.[1];
-  assert(source && source.length <= 32_000, 'Actual Codex catalog needs a bounded closed fence');
+  const { fences, prose } = readOpenUIReply(text);
+  const fenceIndex = fences.findIndex((fence) => fence.state === 'closed');
+  const source = fences[fenceIndex]?.source;
+  assert(
+    source && source.length <= 32_000,
+    'Actual Codex visualization needs a bounded closed fence'
+  );
+  assert.equal(checkChatVisualizationBudget(source), 'within', 'Actual visualization budget');
   const parsed = createParser(protocol.spec.schema, protocol.spec.root).parse(source);
-  assert.equal(parsed.meta.errors.length, 0, 'Actual catalog parser errors');
-  assert.equal(parsed.root?.hasDynamicProps, false, 'Actual catalog must be static');
+  assert.equal(parsed.meta.errors.length, 0, 'Actual visualization parser errors');
+  assert.equal(parsed.meta.incomplete, false, 'Actual visualization must be complete');
+  assert.deepEqual(parsed.meta.unresolved, [], 'Actual visualization references must resolve');
+  assert.equal(parsed.root?.typeName, 'Stack', 'Actual visualization root');
+  assert.equal(parsed.root?.hasDynamicProps, false, 'Actual visualization must be static');
   const cards = parsed.root?.props.children as {
     props: { children: { typeName: string; props: Record<string, unknown> }[] };
   }[];
   assert(Array.isArray(cards), 'Actual root Stack Cards');
+  return { source, parsed, cards, fenceIndex, prose };
+}
+async function verifyGeneratedCatalog(text: string, output: string) {
+  const { source, parsed, cards, fenceIndex } = await parseGeneratedVisualization(text);
   const expected = [
     ['BAR_GROUPED', 'BarChart', 'grouped'],
     ['BAR_STACKED', 'BarChart', 'stacked'],
@@ -260,9 +279,12 @@ async function verifyGeneratedCatalog(text: string, output: string) {
     'Actual static cell types'
   );
   await json(output, { ok: true, expected, source, root: parsed.root });
-  return tableCard.props.children
-    .filter((node) => node.typeName === 'TextContent')
-    .map((node) => ({ text: node.props.text, size: node.props.size ?? 'default' }));
+  return {
+    fenceIndex,
+    textExamples: tableCard.props.children
+      .filter((node) => node.typeName === 'TextContent')
+      .map((node) => ({ text: node.props.text, size: node.props.size ?? 'default' })),
+  };
 }
 async function main() {
   const f = await fixture();
@@ -288,15 +310,20 @@ async function main() {
       throw error;
     }
   };
-  const reply = async (marker: string, groupId?: string) => {
+  const reply = async (
+    marker: string,
+    groupId?: string,
+    accept: (message: Message) => boolean = () => true
+  ) => {
     let result: Message | undefined;
     const deadline = Date.now() + 300_000;
     while (Date.now() < deadline) {
       result = (await messages()).find(
         (message) =>
           message.from === 'visualizer' &&
-          message.text.includes(marker) &&
-          message.groupChatId === groupId
+          readOpenUIReply(message.text).prose.includes(marker) &&
+          message.groupChatId === groupId &&
+          accept(message)
       );
       if (result) break;
       await delay(500);
@@ -355,13 +382,13 @@ async function main() {
       fastMode: 'off',
       skipPermissions: true,
       prompt:
-        'This is a disposable visualization smoke. Do not create tasks or edit files. Lead stays idle; visualizer waits for direct user requests and replies using Agent Teams MCP. Never start other agents or access real projects.',
+        'This is a disposable visualization smoke. Do not create tasks or edit files. Lead stays idle; visualizer waits for direct user requests. Never start other agents or access real projects.',
       members: [
         {
           name: 'visualizer',
           providerId: 'codex',
           model: process.env.OPENUI_LIVE_MODEL ?? 'gpt-6.1-sol',
-          role: 'Visualization test assistant. Respond only to explicit user test requests. Use member_briefing and actual MCP message_send/group_chat_send for replies, never stdout as delivery. Do not edit files or create tasks.',
+          role: 'Visualization test assistant. Respond only to explicit user test requests. Do not edit files or create tasks.',
         },
       ],
     };
@@ -394,6 +421,57 @@ async function main() {
     await cdp.evaluate(
       `(async () => { const s=window.__agentTeamsDevStore.getState(); await s.fetchTeams(); s.openTeamTab(${JSON.stringify(f.teamName)},${JSON.stringify(f.projectPath)}); await s.selectTeam(${JSON.stringify(f.teamName)},{skipProjectAutoSelect:true}); s.setMessagesPanelMode('sidebar'); })()`
     );
+    phase = 'real Codex OpenUI discovery request';
+    const discoveryMarker = token + '_DISCOVERY';
+    const discoveryPrompt = `Show a bar chart of Alpha = 10 and Beta = 20 right here in this chat using OpenUI, with a short explanation. Include ${discoveryMarker} in your explanation.`;
+    const discoverySent = await api(
+      `window.electronAPI.teams.sendMessage(${JSON.stringify(f.teamName)},${JSON.stringify({ member: 'visualizer', text: discoveryPrompt, from: 'user', messageId: randomUUID() })})`
+    );
+    await json(path.join(f.shots, 'discovery-request-delivery.json'), discoverySent);
+    const discovery = await reply(discoveryMarker, undefined, (message) =>
+      readOpenUIReply(message.text).fences.some((fence) => fence.state === 'closed')
+    );
+    const discovered = await parseGeneratedVisualization(discovery.text);
+    assert(
+      discovered.prose.includes(discoveryMarker),
+      'Discovery explanation must accompany the visualization'
+    );
+    const discoveryChart = discovered.cards
+      .flatMap((card) => card.props.children)
+      .find((node) => node.typeName === 'BarChart');
+    assert(discoveryChart, 'Ordinary OpenUI request must produce a bar chart');
+    const discoveryLabels = discoveryChart.props.labels as string[];
+    const discoverySeries = discoveryChart.props.series as { props: { values: number[] } }[];
+    assert.equal(discoveryLabels.length, 2, 'Discovery chart labels');
+    assert.equal(discoverySeries.length, 1, 'Discovery chart series');
+    assert.equal(discoverySeries[0].props.values.length, 2, 'Discovery chart values');
+    assert.deepEqual(
+      Object.fromEntries(
+        discoveryLabels.map((label, index) => [label, discoverySeries[0].props.values[index]])
+      ),
+      { Alpha: 10, Beta: 20 },
+      'Discovery chart preserves requested data'
+    );
+    await json(path.join(f.shots, 'discovery-parser-proof.json'), {
+      ok: true,
+      source: discovered.source,
+      root: discovered.parsed.root,
+    });
+    await openSurface('visualizer');
+    const discoveryBlock = openuiBlock(discoveryMarker, discovered.fenceIndex);
+    await waitFor(
+      `${discoveryBlock}?.getAttribute('data-chat-visualization-status') === 'content'`,
+      'discovered OpenUI reply valid'
+    );
+    await click(`${discoveryBlock}.querySelector('button')`);
+    await waitFor(
+      `document.querySelector('[role="dialog"] [data-openui-chart="bar"]')`,
+      'discovered OpenUI chart rendered'
+    );
+    await screenshot(path.join(f.shots, 'discovery-chart.png'));
+    await key('Escape');
+    await waitFor(`!document.querySelector('[role="dialog"]')`, 'discovery chart closes');
+    milestones.push({ phase, ok: true, messageId: discovery.messageId });
     phase = 'real Codex catalog request';
     const galleryMarker = token + '_CATALOG';
     const galleryPrompt = `${galleryMarker}\nRefresh member_briefing once, then generate a fictional static visualization gallery yourself from the exact enabled OpenUI library. Reply to user via actual MCP message_send from visualizer; include this marker in readable prose outside fences. No task creation or file edits. One fenced openui-lang root Stack with separate Cards titled exactly: BAR_GROUPED, BAR_STACKED, LINE_LINEAR, LINE_NATURAL, LINE_STEP, PIE_PIE_CIRCULAR, PIE_PIE_SEMI, PIE_DONUT_CIRCULAR, PIE_DONUT_SEMI, TABLE_TEXT. Each chart must use its requested variant; Pie appearances circular or semiCircular. Bars need two Series and three labels; Lines need four non-collinear points to distinguish interpolation; all data fictional finite static values. TABLE_TEXT has CardHeader title+subtitle, Table/Col with12rows and cells string/number/boolean/null (column types only string/number or omitted), plus TextContent examples for all5sizes small/default/large/small-heavy/large-heavy. Use real library positional signatures, optional null placeholders only where necessary, one assignment per line. No Query/state/actions/functions. Also include one fenced mermaid flowchart Start-->Done. End with short readable explanation. Do not acknowledge without sending the complete gallery to user.`;
@@ -402,7 +480,7 @@ async function main() {
     );
     await json(path.join(f.shots, 'catalog-request-delivery.json'), sent);
     const gallery = await reply(galleryMarker);
-    const textExamples = await verifyGeneratedCatalog(
+    const { textExamples, fenceIndex: galleryFenceIndex } = await verifyGeneratedCatalog(
       gallery.text,
       path.join(f.shots, 'catalog-parser-proof.json')
     );
@@ -411,11 +489,12 @@ async function main() {
       'Agent must generate both formats'
     );
     await openSurface('visualizer');
+    const galleryBlock = openuiBlock(galleryMarker, galleryFenceIndex);
     await waitFor(
-      `document.querySelector('[data-chat-visualization-kind="openui"][data-chat-visualization-status="content"]')`,
+      `${galleryBlock}?.getAttribute('data-chat-visualization-status') === 'content'`,
       'agent gallery valid'
     );
-    const opener = `document.querySelector('[data-chat-visualization-kind="openui"] button')`;
+    const opener = `${galleryBlock}.querySelector('button')`;
     await click(opener);
     await waitFor(
       `document.querySelector('[role="dialog"] [data-openui-chart="bar"]')`,
@@ -480,7 +559,7 @@ async function main() {
     );
     await click(`document.querySelector('[role="switch"][aria-label="Full Screen"]')`);
     await waitFor(
-      `document.querySelector('[data-chat-visualization-kind="openui"][data-chat-visualization-presentation="inline"] [data-openui-chart="line"]')`,
+      `${galleryBlock}?.getAttribute('data-chat-visualization-presentation') === 'inline' && ${galleryBlock}?.querySelector('[data-openui-chart="line"]')`,
       'main gallery inline'
     );
     await screenshot(path.join(f.shots, 'main-gallery-inline.png'));
@@ -548,7 +627,7 @@ async function main() {
     await json(path.join(f.shots, 'group-request.json'), groupRequest);
     const groupReply = await reply(groupMarker, group.id);
     assert.equal(groupReply.messageId, groupReply.groupMessageId, 'Real group canonical identity');
-    const groupArticle = `Array.from(document.querySelectorAll('article')).find(e => e.textContent.includes(${JSON.stringify(groupMarker)}) && e.querySelector('[data-chat-visualization-kind="openui"]'))`;
+    const groupArticle = openuiArticle(groupMarker);
     await waitFor(
       `${groupArticle}?.querySelector('[data-chat-visualization-kind="openui"][data-chat-visualization-status="content"]') && ${groupArticle}?.querySelector('[data-chat-visualization-kind="mermaid"]')`,
       'actual new group visual reply'
@@ -585,7 +664,7 @@ async function main() {
       milestones,
       rendererErrors,
       transport:
-        'Actual app IPC sends; real Codex native agent MCP message_send/group_chat_send replies; durable inbox watcher; no synthetic reply injection.',
+        'Actual app IPC sends; real Codex native runtime-delivered replies; durable inbox watcher; no synthetic reply injection.',
     });
     console.log(JSON.stringify({ ok: true, evidence: f.shots, teamName: f.teamName }));
   } catch (error) {

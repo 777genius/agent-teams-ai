@@ -1287,15 +1287,38 @@ export function buildMemberLaunchPresentation({
           livenessKind: 'confirmed_bootstrap',
         } satisfies TeamAgentRuntimeEntry)
       : runtimeEntry;
-  const currentRuntimeOfflineVisualState = getCurrentRuntimeOfflineVisualState(
-    member,
-    visualRuntimeEntry,
-    visualSpawnStatus,
-    visualSpawnLaunchState,
-    visualSpawnRuntimeAlive,
-    visualSpawnBootstrapConfirmed,
-    isTeamProvisioning
-  );
+  // A newly queued/spawning member can have an empty runtime snapshot until its
+  // process registers. Keep its explicit pending state visible during that gap.
+  const waitingForInitialRuntime =
+    isTeamProvisioning === true &&
+    (visualSpawnStatus === 'waiting' || visualSpawnStatus === 'spawning') &&
+    (visualSpawnLaunchState == null ||
+      visualSpawnLaunchState === 'starting' ||
+      visualSpawnLaunchState === 'runtime_pending_bootstrap') &&
+    visualSpawnBootstrapConfirmed !== true &&
+    !visualSpawnHardFailure &&
+    !spawnBootstrapStalled &&
+    !spawnError &&
+    !hasSpawnRuntimeErrorDiagnostic &&
+    !hasRuntimeErrorDiagnostic &&
+    !member.removedAt &&
+    member.status !== 'terminated' &&
+    visualRuntimeEntry?.alive !== true &&
+    (visualRuntimeEntry?.livenessKind == null ||
+      visualRuntimeEntry.livenessKind === 'registered_only' ||
+      visualRuntimeEntry.livenessKind === 'not_found' ||
+      visualRuntimeEntry.livenessKind === 'stale_metadata');
+  const currentRuntimeOfflineVisualState = waitingForInitialRuntime
+    ? null
+    : getCurrentRuntimeOfflineVisualState(
+        member,
+        visualRuntimeEntry,
+        visualSpawnStatus,
+        visualSpawnLaunchState,
+        visualSpawnRuntimeAlive,
+        visualSpawnBootstrapConfirmed,
+        isTeamProvisioning
+      );
   const hasConfirmedSpawnLaunch =
     visualSpawnLaunchState === 'confirmed_alive' && visualSpawnBootstrapConfirmed === true;
   const suppressOpenCodeAppMcpAdvisory = isHealthyOpenCodeAppMcpConnectivityAdvisory({

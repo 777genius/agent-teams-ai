@@ -402,14 +402,31 @@ export function createTeamProvisioningOutputRecoveryHelper<
         return;
       }
 
+      let msg: Record<string, unknown>;
       try {
-        const msg = JSON.parse(trimmed) as Record<string, unknown>;
-        helper.handleParsedStdoutJsonMessage(run, msg);
+        msg = JSON.parse(trimmed) as Record<string, unknown>;
       } catch {
         helper.handleAuthFailureInOutput(run, trimmed, 'stdout');
         if (ports.hasApiError(trimmed) && !ports.isAuthFailureWarning(trimmed, 'stdout')) {
           helper.emitApiErrorWarning(run, trimmed);
         }
+        return;
+      }
+
+      try {
+        helper.handleParsedStdoutJsonMessage(run, msg);
+      } catch {
+        // Dispatch can fail after valid JSON was decoded. Do not misclassify
+        // that failure as authentication output or expose the raw payload.
+        ports.logger.warn(`[${run.teamName}] stream-json handler failed`, {
+          code: 'TEAM_STREAM_JSON_HANDLER_FAILED',
+          runId: run.runId,
+          messageType:
+            msg?.type === 'result' ? 'result' : msg?.type === 'system' ? 'system' : 'other',
+          successfulResult: msg?.type === 'result' && msg.subtype === 'success',
+          bootstrapCompleted:
+            msg?.type === 'system' && msg.subtype === 'team_bootstrap' && msg.event === 'completed',
+        });
       }
     },
 

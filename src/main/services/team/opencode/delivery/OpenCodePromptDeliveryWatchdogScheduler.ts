@@ -1,4 +1,5 @@
 import {
+  OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
   OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY,
   OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY,
 } from './OpenCodePromptDeliveryWatchdog';
@@ -19,6 +20,7 @@ export interface OpenCodePromptDeliveryWatchdogSchedulerDependencies {
    * that never received a new inbox row explained itself nowhere.
    */
   relay(input: {
+    isCurrent?: () => boolean;
     teamName: string;
     memberName: string;
     messageId: string;
@@ -47,9 +49,15 @@ export interface OpenCodePromptDeliveryWatchdogStaleErrorInput {
   error: unknown;
 }
 
+export function isOpenCodePromptDeliveryWatchdogEnabled(): boolean {
+  return process.env.CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG !== '0';
+}
+
 export class OpenCodePromptDeliveryWatchdogScheduler {
-  private readonly timers = new Map<string, NodeJS.Timeout>();
-  private readonly deadlines = new Map<string, number>();
+  private readonly timers = new Map<
+    string,
+    { timer: NodeJS.Timeout; deadlineMs: number; isCurrent?: () => boolean }
+  >();
   private readonly queue: {
     teamName: string;
     memberName: string;
@@ -74,7 +82,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
   constructor(private readonly deps: OpenCodePromptDeliveryWatchdogSchedulerDependencies) {}
 
   isEnabled(): boolean {
-    const enabled = process.env.CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG !== '0';
+    const enabled = isOpenCodePromptDeliveryWatchdogEnabled();
     if (!enabled && !this.disabledLogged) {
       this.disabledLogged = true;
       this.deps.info(
@@ -89,8 +97,9 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void {
-    if (!this.isEnabled()) {
+    if (!this.isEnabled() || input.isCurrent?.() === false) {
       return;
     }
     const messageId = input.messageId?.trim();
@@ -100,64 +109,85 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
       memberName: input.memberName,
       messageId,
     });
-    const delayMs = Math.max(500, Math.min(input.delayMs, 60_000));
-    const deadlineMs = Date.now() + delayMs;
+    let deadlineMs = Date.now() + Math.max(500, Math.min(input.delayMs, 60_000));
+    let isCurrent = input.isCurrent;
     const existing = this.timers.get(key);
     if (existing) {
-      const existingDeadlineMs = this.deadlines.get(key);
-      if (typeof existingDeadlineMs === 'number' && existingDeadlineMs <= deadlineMs + 25) {
-        return;
-      }
-      clearTimeout(existing);
+      const revoked = existing.isCurrent?.() === false;
+      const upgradesToUnscoped = existing.isCurrent != null && isCurrent == null;
+      if (!revoked && !upgradesToUnscoped && existing.deadlineMs <= deadlineMs + 25) return;
+      // An unscoped wake keeps its broader existing intent. A new current
+      // generation replaces a revoked one, retaining the earliest deadline.
+      if (!revoked && existing.isCurrent == null) isCurrent = undefined;
+      deadlineMs = Math.min(existing.deadlineMs, deadlineMs);
+      clearTimeout(existing.timer);
     }
-    const timer = setTimeout(() => {
-      this.timers.delete(key);
-      this.deadlines.delete(key);
-      this.enqueue({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        run: async () => {
-          if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
-            const recovered = await this.deps.recoverBeforeDelivery({
-              teamName: input.teamName,
-              memberName: input.memberName,
-            });
-            if (!recovered) {
-              return;
-            }
-          }
-          try {
-            this.logRelayDiagnostics({
-              teamName: input.teamName,
-              memberName: input.memberName,
-              messageId,
-              outcome: await this.deps.relay({
+    const timer = setTimeout(
+      () => {
+        this.timers.delete(key);
+        this.enqueue({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          run: async () => {
+            if (isCurrent?.() === false) {
+              await this.rearmSupersededWake({
                 teamName: input.teamName,
                 memberName: input.memberName,
                 messageId,
-              }),
-            });
-          } catch (error) {
-            if (
-              await this.isStaleError({
+              });
+              return;
+            }
+            if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
+              const recovered = await this.deps.recoverBeforeDelivery({
+                teamName: input.teamName,
+                memberName: input.memberName,
+              });
+              if (!recovered) {
+                return;
+              }
+            }
+            if (isCurrent?.() === false) {
+              await this.rearmSupersededWake({
                 teamName: input.teamName,
                 memberName: input.memberName,
                 messageId,
-                error,
-              })
-            ) {
-              this.deps.debug(
-                `[${input.teamName}] Ignoring stale OpenCode prompt delivery watchdog job for ${input.memberName}/${messageId}: ${this.deps.getErrorMessage(error)}`
-              );
+              });
               return;
             }
-            throw error;
-          }
-        },
-      });
-    }, delayMs);
-    this.timers.set(key, timer);
-    this.deadlines.set(key, deadlineMs);
+            try {
+              this.logRelayDiagnostics({
+                teamName: input.teamName,
+                memberName: input.memberName,
+                messageId,
+                outcome: await this.deps.relay({
+                  teamName: input.teamName,
+                  memberName: input.memberName,
+                  messageId,
+                  ...(isCurrent ? { isCurrent } : {}),
+                }),
+              });
+            } catch (error) {
+              if (
+                await this.isStaleError({
+                  teamName: input.teamName,
+                  memberName: input.memberName,
+                  messageId,
+                  error,
+                })
+              ) {
+                this.deps.debug(
+                  `[${input.teamName}] Ignoring stale OpenCode prompt delivery watchdog job for ${input.memberName}/${messageId}: ${this.deps.getErrorMessage(error)}`
+                );
+                return;
+              }
+              throw error;
+            }
+          },
+        });
+      },
+      Math.max(0, deadlineMs - Date.now())
+    );
+    this.timers.set(key, { timer, deadlineMs, isCurrent });
   }
 
   /**
@@ -195,6 +225,33 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     );
   }
 
+  /**
+   * A wake can outlive the relay generation it was armed under: it waits behind
+   * the per-member queue and fires after that generation rotated. Dropping it
+   * silently lost its row, because nothing re-arms a row already sitting in the
+   * inbox. While the row is still unread, re-arm the wake unscoped - the walk
+   * re-derives identity and authority from durable state, exactly like the
+   * manual relay path - so a superseded generation delays delivery instead of
+   * losing the message.
+   */
+  private async rearmSupersededWake(input: {
+    teamName: string;
+    memberName: string;
+    messageId: string;
+  }): Promise<void> {
+    const messages = await this.deps
+      .getInboxMessages({ teamName: input.teamName, memberName: input.memberName })
+      .catch(() => []);
+    const target = messages.find((message) => message.messageId === input.messageId);
+    if (!target || target.read) return;
+    this.schedule({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      messageId: input.messageId,
+      delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+    });
+  }
+
   async isStaleError(input: OpenCodePromptDeliveryWatchdogStaleErrorInput): Promise<boolean> {
     if (!this.deps.isRecordNotFoundError(input.error)) {
       return false;
@@ -228,9 +285,8 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     for (const key of Array.from(this.timers.keys())) {
       if (key.startsWith(`opencode-delivery:${teamName}:`)) {
         const timer = this.timers.get(key);
-        if (timer) clearTimeout(timer);
+        if (timer) clearTimeout(timer.timer);
         this.timers.delete(key);
-        this.deadlines.delete(key);
       }
     }
     for (let index = this.queue.length - 1; index >= 0; index -= 1) {

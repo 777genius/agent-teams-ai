@@ -8,6 +8,7 @@ import type {
   AnthropicApiKeyHelperCleanupRetryOwner,
   AnthropicApiKeyHelperRunOwner,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
+import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
 import type { TeamProvisioningOutputRecoveryRun } from './TeamProvisioningOutputRecovery';
 import type {
   TeamCreateRequest,
@@ -37,6 +38,8 @@ export interface TeamProvisioningAuthRetryRun
   spawnContext: TeamProvisioningAuthRetrySpawnContext | null;
   mcpConfigPath: string | null;
   bootstrapUserPromptPath: string | null;
+  bootstrapSpecPath?: string | null;
+  bootstrapSpecSnapshot?: RuntimeBootstrapSpec | null;
   processClosed: boolean;
   finalizingByTimeout: boolean;
   deterministicBootstrap: boolean;
@@ -65,6 +68,8 @@ export interface TeamProvisioningAuthRetryPorts<TRun extends TeamProvisioningAut
   mcpConfigBuilder: TeamProvisioningAuthRetryMcpConfigBuilder;
   readBootstrapRealTaskSubmissionState(teamName: string): Promise<BootstrapRealTaskSubmissionState>;
   writeDeterministicBootstrapUserPromptFile(prompt: string): Promise<string>;
+  writeDeterministicBootstrapSpecFile(spec: RuntimeBootstrapSpec): Promise<string>;
+  removeDeterministicBootstrapSpecFile(filePath: string | null): Promise<void>;
   validateAgentTeamsMcpRuntime(
     claudePath: string,
     cwd: string,
@@ -117,6 +122,15 @@ async function finalizeFailedAuthRetry<TRun extends TeamProvisioningAuthRetryRun
   }
 ): Promise<void> {
   run.authRetryInProgress = false;
+  run.bootstrapSpecSnapshot = null;
+  if (options.terminationConfirmed && run.bootstrapSpecPath) {
+    await ports.removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath).then(
+      () => {
+        run.bootstrapSpecPath = null;
+      },
+      () => ports.logger.warn(`[${run.teamName}] Bootstrap spec cleanup will be retried`)
+    );
+  }
   const ownership = await finalizeAuthRetryCleanupOwnership({
     run,
     child,
@@ -231,6 +245,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
         ports,
       });
       run.authRetryInProgress = false;
+      run.bootstrapSpecSnapshot = null;
       const progress = ports.updateProgress(
         run,
         'failed',
@@ -405,6 +420,25 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
     ) {
       throw new Error('Team launch cancelled by app shutdown');
     }
+    const specFlagIdx = ctx.args.indexOf('--team-bootstrap-spec');
+    if (specFlagIdx !== -1) {
+      if (specFlagIdx + 1 >= ctx.args.length || !run.bootstrapSpecSnapshot) {
+        throw new Error('Original bootstrap spec is unavailable for authentication retry');
+      }
+      await ports.removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath ?? null);
+      const restoredSpecPath = await ports.writeDeterministicBootstrapSpecFile(
+        run.bootstrapSpecSnapshot
+      );
+      run.bootstrapSpecPath = restoredSpecPath;
+      ctx.args[specFlagIdx + 1] = restoredSpecPath;
+      if (
+        run.cancelRequested ||
+        run.processKilled ||
+        ports.isStopAllTeamsGenerationChanged(stopAllGenerationAtStart)
+      ) {
+        throw new Error('Team launch cancelled by app shutdown');
+      }
+    }
     child = ports.spawnCli(ctx.claudePath, ctx.args, {
       cwd: ctx.cwd,
       env: { ...ctx.env },
@@ -422,6 +456,7 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
   ports.logger.info(
     `[${run.teamName}] Respawned CLI process after auth failure (pid=${child.pid ?? '?'})`
   );
+  run.bootstrapSpecSnapshot = null;
   run.child = child;
   run.processClosed = false;
   run.finalizingByTimeout = false;

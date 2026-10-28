@@ -255,6 +255,7 @@ describe('cliInstallerSlice', () => {
 
   afterEach(async () => {
     // Clear module-owned watchdog handles before replacing their timer clock.
+    useStore.setState({ cliStatus: null });
     await useStore.getState().invalidateCliStatus();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -284,6 +285,49 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('reconcileCliStatus', () => {
+    it('publishes new runtime contract support when an absent effective model becomes explicit null', () => {
+      const base = createReadyOpenCodeCatalogProvider('first-model');
+      const provider = {
+        ...base,
+        providerId: 'anthropic' as const,
+        modelCatalog: { ...base.modelCatalog!, providerId: 'anthropic' as const },
+      };
+      const previous = reconcileCliStatus(null, createMultimodelStatus([provider]));
+      expect(previous.providers[0].effectiveDefaultModel).toBeUndefined();
+      const next = reconcileCliStatus(
+        previous,
+        createMultimodelStatus([{ ...provider, effectiveDefaultModel: null }])
+      );
+      expect(next).not.toBe(previous);
+      expect(next.providers[0].effectiveDefaultModel).toBeNull();
+    });
+
+    it('publishes effective-default-only changes and clears removed or omitted defaults', () => {
+      const base = createReadyOpenCodeCatalogProvider('first-model');
+      const provider = {
+        ...base,
+        providerId: 'anthropic' as const,
+        displayName: 'Anthropic',
+        modelCatalog: { ...base.modelCatalog!, providerId: 'anthropic' as const },
+        effectiveDefaultModel: 'first-model',
+      };
+      const initial = reconcileCliStatus(null, createMultimodelStatus([provider]));
+      const changed = reconcileCliStatus(
+        initial,
+        createMultimodelStatus([{ ...provider, effectiveDefaultModel: 'second-model' }])
+      );
+      expect(changed).not.toBe(initial);
+      expect(changed.providers[0].effectiveDefaultModel).toBe('second-model');
+      const cleared = reconcileCliStatus(
+        changed,
+        createMultimodelStatus([{ ...provider, effectiveDefaultModel: null }])
+      );
+      expect(cleared.providers[0].effectiveDefaultModel).toBeNull();
+      expect(
+        reconcileCliStatus(changed, createMultimodelStatus([])).providers[0].effectiveDefaultModel
+      ).toBeNull();
+    });
+
     it('does not suppress updates whose only change is current refresh provenance', () => {
       const base = createReadyOpenCodeCatalogProvider('haiku');
       const provider = {

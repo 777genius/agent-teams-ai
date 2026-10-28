@@ -6,8 +6,15 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { getConfiguredAgentLanguageName } from './TeamProvisioningAgentLanguage';
+import {
+  removeOwnedBootstrapSpecFile,
+  writeOwnedBootstrapSpecFile,
+} from './TeamProvisioningBootstrapSpecFiles';
+
+export { cleanupOrphanedDeterministicBootstrapSpecs } from './TeamProvisioningBootstrapSpecFiles';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   EffortLevel,
   TeamCreateRequest,
@@ -21,6 +28,11 @@ export const RUN_TIMEOUT_MS = 300_000;
 export interface TeamProvisioningRunTimeoutInput {
   deterministicBootstrap: boolean;
   effectiveMembers: TeamCreateRequest['members'];
+}
+
+export interface RuntimeBootstrapMemberCodexSpec {
+  configOverrides?: string[];
+  forcedLoginMethod?: 'api';
 }
 
 interface RuntimeBootstrapMemberSpec {
@@ -39,6 +51,10 @@ interface RuntimeBootstrapMemberSpec {
   mcpSettingSources?: string;
   strictMcpConfig?: boolean;
   nativeAppManagedBootstrap?: NativeAppManagedBootstrapSpec;
+  /** Literal member gateway env; lives only in the one-time spec file. */
+  env?: Record<string, string>;
+  codex?: RuntimeBootstrapMemberCodexSpec;
+  gatewayUsageRef?: string;
 }
 
 export interface RuntimeBootstrapMemberMcpLaunchConfig {
@@ -110,12 +126,43 @@ export function getProvisioningRunTimeoutMs(run: TeamProvisioningRunTimeoutInput
   );
 }
 
+/**
+ * Per-member gateway bootstrap fields. `env` carries literal keys only inside
+ * the one-time spec file and never enters fingerprints or diagnostics.
+ */
+function buildRuntimeBootstrapMemberGatewayFields(
+  memberArgs: MemberGatewayRuntimeArgs | undefined
+): Partial<RuntimeBootstrapMemberSpec> {
+  if (!memberArgs) return {};
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(memberArgs.envPatch)) {
+    if (typeof value === 'string') env[key] = value;
+  }
+  return {
+    ...(memberArgs.gatewayUsageRef ? { gatewayUsageRef: memberArgs.gatewayUsageRef } : {}),
+    ...(Object.keys(env).length ? { env } : {}),
+    ...(memberArgs.configOverrides?.length
+      ? {
+          codex: {
+            configOverrides: [...memberArgs.configOverrides],
+            ...(memberArgs.codexForcedLoginMethod
+              ? { forcedLoginMethod: memberArgs.codexForcedLoginMethod }
+              : {}),
+          },
+        }
+      : {}),
+    // OpenCode model route travels to the member, never to global config.
+    ...(memberArgs.modelRoute?.trim() ? { model: memberArgs.modelRoute.trim() } : {}),
+  };
+}
+
 export function buildDeterministicCreateBootstrapSpec(
   runId: string,
   request: TeamCreateRequest,
   effectiveMembers: TeamCreateRequest['members'],
   nativeAppManagedBootstrapByMember: ReadonlyMap<string, NativeAppManagedBootstrapSpec> = new Map(),
-  mcpLaunchConfigByMember: ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig> = new Map()
+  mcpLaunchConfigByMember: ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig> = new Map(),
+  memberArgsByMember: ReadonlyMap<string, MemberGatewayRuntimeArgs> = new Map()
 ): RuntimeBootstrapSpec {
   return {
     version: 1,
@@ -161,6 +208,7 @@ export function buildDeterministicCreateBootstrapSpec(
         ...(nativeAppManagedBootstrapByMember.get(member.name)
           ? { nativeAppManagedBootstrap: nativeAppManagedBootstrapByMember.get(member.name)! }
           : {}),
+        ...buildRuntimeBootstrapMemberGatewayFields(memberArgsByMember.get(member.name)),
       };
     }),
     launch: {
@@ -178,7 +226,8 @@ export function buildDeterministicLaunchBootstrapSpec(
   request: TeamLaunchRequest,
   effectiveMembers: TeamCreateRequest['members'],
   nativeAppManagedBootstrapByMember: ReadonlyMap<string, NativeAppManagedBootstrapSpec> = new Map(),
-  mcpLaunchConfigByMember: ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig> = new Map()
+  mcpLaunchConfigByMember: ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig> = new Map(),
+  memberArgsByMember: ReadonlyMap<string, MemberGatewayRuntimeArgs> = new Map()
 ): RuntimeBootstrapSpec {
   return {
     version: 1,
@@ -221,6 +270,7 @@ export function buildDeterministicLaunchBootstrapSpec(
         ...(nativeAppManagedBootstrapByMember.get(member.name)
           ? { nativeAppManagedBootstrap: nativeAppManagedBootstrapByMember.get(member.name)! }
           : {}),
+        ...buildRuntimeBootstrapMemberGatewayFields(memberArgsByMember.get(member.name)),
       };
     }),
     launch: {
@@ -236,10 +286,7 @@ export function buildDeterministicLaunchBootstrapSpec(
 export async function writeDeterministicBootstrapSpecFile(
   spec: RuntimeBootstrapSpec
 ): Promise<string> {
-  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'agent-teams-bootstrap-'));
-  const filePath = path.join(tempDir, `${spec.team.name}-${randomUUID()}.json`);
-  await atomicWriteAsync(filePath, JSON.stringify(spec), { mode: 0o600 });
-  return filePath;
+  return writeOwnedBootstrapSpecFile(JSON.stringify(spec));
 }
 
 async function removeDeterministicBootstrapTempFile(filePath: string | null): Promise<void> {
@@ -249,7 +296,7 @@ async function removeDeterministicBootstrapTempFile(filePath: string | null): Pr
 }
 
 export async function removeDeterministicBootstrapSpecFile(filePath: string | null): Promise<void> {
-  await removeDeterministicBootstrapTempFile(filePath);
+  await removeOwnedBootstrapSpecFile(filePath);
 }
 
 export async function writeDeterministicBootstrapUserPromptFile(prompt: string): Promise<string> {

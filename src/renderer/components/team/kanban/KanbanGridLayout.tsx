@@ -16,13 +16,14 @@ import type { ReactElement, Ref } from 'react';
 import type { Layout, LayoutItem, ResizeHandleAxis } from 'react-grid-layout/legacy';
 
 const GRID_COLS = 12;
-const GRID_ROW_HEIGHT = 18;
-const GRID_MARGIN: [number, number] = [0, 12];
+// Preserve the existing 30px row pitch while filling the former 12px gutter.
+const GRID_ROW_HEIGHT = 30;
+const GRID_MARGIN: [number, number] = [0, 0];
 const DEFAULT_ITEM_WIDTH = 4;
 const DEFAULT_ITEM_HEIGHT_PX = 400;
 const DEFAULT_ITEM_HEIGHT = Math.max(
   1,
-  Math.round((DEFAULT_ITEM_HEIGHT_PX + GRID_MARGIN[1]) / (GRID_ROW_HEIGHT + GRID_MARGIN[1]))
+  Math.ceil((DEFAULT_ITEM_HEIGHT_PX + GRID_MARGIN[1]) / (GRID_ROW_HEIGHT + GRID_MARGIN[1]))
 );
 const DEFAULT_MIN_HEIGHT = 10;
 const DEFAULT_MIN_WIDTH = 3;
@@ -188,7 +189,7 @@ const LoadingKanbanGridLayout = ({
   return (
     <div ref={containerRef} className={cn('min-w-0 max-w-full', className)}>
       <div
-        className="grid gap-y-3"
+        className="grid"
         style={{
           gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
           gridAutoRows: `${GRID_ROW_HEIGHT}px`,

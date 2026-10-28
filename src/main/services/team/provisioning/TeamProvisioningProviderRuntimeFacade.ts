@@ -39,6 +39,9 @@ export interface TeamProvisioningProviderRuntimeFacadeServiceHost {
     getRuntimeTurnSettledHookSettingsProvider(): ReturnType<
       TeamProvisioningEnvRuntimePortsDeps['getRuntimeTurnSettledHookSettingsProvider']
     >;
+    getMemberGatewayRuntimeSeams(): ReturnType<
+      NonNullable<TeamProvisioningEnvRuntimePortsDeps['getMemberGatewayRuntimeSeams']>
+    >;
   };
 }
 
@@ -197,6 +200,7 @@ export function createTeamProvisioningProviderRuntimeFacadeDepsFromService(
         service.appShellBoundary.getRuntimeTurnSettledEnvironmentProvider(),
       getRuntimeTurnSettledHookSettingsProvider: () =>
         service.appShellBoundary.getRuntimeTurnSettledHookSettingsProvider(),
+      getMemberGatewayRuntimeSeams: () => service.appShellBoundary.getMemberGatewayRuntimeSeams(),
       logger: options.logger,
     }),
   };

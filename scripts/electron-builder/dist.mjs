@@ -10,6 +10,8 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runElectronBuilderOnce,
+  runWithPackagingRetry,
   runWithNativeDependencyRestore,
 } = require('./dist-invocations.cjs');
 
@@ -17,6 +19,7 @@ export {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runWithPackagingRetry,
   runWithNativeDependencyRestore,
 };
 
@@ -80,21 +83,7 @@ async function runRendererBundleGuard() {
 
 async function runElectronBuilder(args) {
   const cliPath = require.resolve('electron-builder/cli.js');
-  await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cliPath, ...args], {
-      stdio: 'inherit',
-      env: process.env,
-    });
-
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`electron-builder failed with ${signal ?? `exit code ${code}`}`));
-    });
-  });
+  await runWithPackagingRetry(() => runElectronBuilderOnce(cliPath, args));
 }
 
 export async function main(argv, {
