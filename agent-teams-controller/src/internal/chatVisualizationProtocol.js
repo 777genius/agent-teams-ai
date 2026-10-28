@@ -37,8 +37,10 @@ function buildChatVisualizationProtocolText() {
 function buildChatVisualizationRefreshInstruction() {
     return [
         'CHAT VISUALIZATION REFRESH REQUIRED:',
-        '- After launch readiness is confirmed, before producing an openui-lang visualization, call member_briefing once and follow its complete chat visualization protocol.',
-        '- Until that refresh succeeds, send ordinary prose or ordinary code instead of inventing visualization signatures or emitting an incomplete fence.',
+        '- This chat supports built-in OpenUI without a separate tool or connector. Follow this conversation\'s existing reply delivery and visibility rules.',
+        '- After launch readiness is confirmed, before fulfilling a request for OpenUI here or producing an openui-lang visualization: if the complete display library specification is missing from your context, call lead_briefing once if you are the team lead; otherwise call member_briefing once. Follow its complete chat visualization protocol. Reuse the specification when it is already present.',
+        '- This refresh supplies display instructions for the current reply; it does not request launch readiness, unrelated board work, or a different reply destination.',
+        '- If the required refresh fails, send ordinary prose explaining the limitation instead of inventing visualization signatures or emitting an incomplete fence. Do not refresh merely to acknowledge this reminder.',
     ].join('\n');
 }
 

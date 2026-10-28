@@ -13,6 +13,9 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMcpDeploymentManifest } from '../../../../mcp-server/deploymentManifest';
+import mcpPackage from '../../../../mcp-server/package.json';
+
 import {
   markTeamRunAlive,
   memberLifecycleUseCasesHarness,
@@ -50,6 +53,10 @@ vi.mock('@main/utils/childProcess', () => ({
       }
       fs.mkdirSync(output, { recursive: true });
       fs.writeFileSync(path.join(output, 'index.js'), '// TEST compiled MCP bundle\n');
+      fs.writeFileSync(
+        path.join(output, 'package.json'),
+        `${JSON.stringify(createMcpDeploymentManifest(mcpPackage), null, 2)}\n`
+      );
       return { stdout: '', stderr: '' };
     }
     if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
@@ -420,7 +427,7 @@ function expectAppOnlyMcpConfigPath(mcpConfigPath: string): void {
   expect(fs.readFileSync(entry, 'utf8')).toBe('// TEST compiled MCP bundle\n');
   expect(
     JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'), 'utf8'))
-  ).toEqual({ type: 'module' });
+  ).toEqual(createMcpDeploymentManifest(mcpPackage));
 }
 
 function expectAppOnlyMemberMcpConfig(member: BootstrapSpecMember | undefined): void {

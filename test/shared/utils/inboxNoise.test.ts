@@ -33,6 +33,15 @@ describe('stripTeammateMessageBlocks', () => {
     const text = 'Just some normal text without protocol blocks.';
     expect(stripTeammateMessageBlocks(text)).toBe(text);
   });
+
+  it('can remove reserved XML without normalizing the surrounding display data', () => {
+    const text =
+      'Before\n\n\n<teammate-message teammate_id="alice">hidden</teammate-message>\n\n\nAfter';
+    expect(stripTeammateMessageBlocks(text, { normalizeWhitespace: false })).toBe(
+      'Before\n\n\n\n\n\n\nAfter'
+    );
+    expect(stripTeammateMessageBlocks(text)).toBe('Before\n\nAfter');
+  });
 });
 
 describe('isOnlyTeammateMessageBlocks', () => {
@@ -66,15 +75,13 @@ describe('isOnlyTeammateMessageBlocks', () => {
 
 describe('isThoughtProtocolNoise', () => {
   it('detects idle_notification JSON', () => {
-    expect(
-      isThoughtProtocolNoise('{"type":"idle_notification","message":"alice is idle"}')
-    ).toBe(true);
+    expect(isThoughtProtocolNoise('{"type":"idle_notification","message":"alice is idle"}')).toBe(
+      true
+    );
   });
 
   it('detects shutdown_request JSON', () => {
-    expect(
-      isThoughtProtocolNoise('{"type":"shutdown_request","reason":"done"}')
-    ).toBe(true);
+    expect(isThoughtProtocolNoise('{"type":"shutdown_request","reason":"done"}')).toBe(true);
   });
 
   it('detects shutdown_approved JSON', () => {
@@ -103,9 +110,7 @@ describe('isThoughtProtocolNoise', () => {
   });
 
   it('returns false for non-noise JSON', () => {
-    expect(
-      isThoughtProtocolNoise('{"type":"message","message":"Hello from lead"}')
-    ).toBe(false);
+    expect(isThoughtProtocolNoise('{"type":"message","message":"Hello from lead"}')).toBe(false);
   });
 
   it('returns false for text with teammate-message mixed with content', () => {

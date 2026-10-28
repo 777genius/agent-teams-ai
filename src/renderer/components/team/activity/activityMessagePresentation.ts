@@ -10,7 +10,10 @@ import {
   classifyIdleNotification,
   getIdleNoiseLabel,
 } from '@renderer/utils/idleNotificationSemantics';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+import {
+  normalizeLegacyMarkdownEscapes,
+  stripAgentBlocksForMarkdown,
+} from '@renderer/utils/markdownCodeRanges';
 import {
   CROSS_TEAM_SENT_SOURCE,
   CROSS_TEAM_SOURCE,
@@ -137,10 +140,10 @@ export function getStrippedActivityTextCached({
   ]);
   return getCachedActivityValue(activityStrippedTextCache, cacheKey, () => {
     let stripped = getSanitizedInboxMessageText(message).trim();
-    if (!hasBootstrapDisplay) stripped = stripAgentBlocks(stripped).trim();
+    if (!hasBootstrapDisplay) stripped = stripAgentBlocksForMarkdown(stripped);
     if (!stripped) return null;
     if (isCrossTeamAny) stripped = stripCrossTeamPrefix(stripped);
-    return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    return normalizeLegacyMarkdownEscapes(stripped);
   });
 }
 
