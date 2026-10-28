@@ -66,24 +66,39 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления исходных Create/Launch/Task/group/
 attachment/import/backup путей и точные результаты каждого запуска. Полный CI
-на `744d4fe` прошёл: **23 883 основных теста, 0 ошибок, 92 пропуска**, все проверки
-типов/lint, workspace/Host и Windows smoke. Из десяти source Desktop вариантов
-прошли семь; общий combined run `40612764356` остаётся failed. Все семь PASS
-проверены по исходным артефактам, включая отдельный cold Review и оба Quit/readback.
+на `3d147d2` прошёл: **23 883 основных теста, 0 ошибок, 92 пропуска**, все проверки
+типов/lint, workspace/Host и Windows smoke. В завершённом combined run
+[`40619252645`](https://github.com/777genius/agent-teams-ai/actions/runs/40619252645)
+прошли **9 из 10 source Desktop вариантов**; общий результат остаётся failed из-за
+Mixed. Actual macOS selected-Node gate прошёл **27/27** общих регрессий.
 
-Исходный Taskboard, F08 stale snapshot/feed и Trash/Restore прошли; cold default-B
-и unavailable-A тоже прошли. В rollback команда A завершилась в A, но сравнение B
-пересеклось со штатной резервной копией при старте. TEST-исправление `a87befc`
-ожидает точную публикацию последнего startup-target B перед исходным census,
-сохраняя все побайтовые сравнения; 14 локальных проверок и два независимых ревью
-прошли, actual corrected rollback ещё предстоит.
+Taskboard прошёл полностью: исходные Task/review/notification/cross-Team controls,
+F08 stale snapshot/feed, Trash/Restore и все три cold owner/default этапа.
+После rollback команды A и B завершились под исходными владельцами; все 6 файлов B
+и 136 файлов A в соответствующих сравнениях сохранились побайтно. TEST-ожидание
+точной стартовой публикации backup сохранило полные сравнения и исходный deadline;
+независимый аудит новых артефактов подтвердил результат.
 
-Mixed выполнил исходные три диалога. Его TEST-счётчики смешали business inputs со
-штатными receipt-bound уведомлениями; узкое исправление их классификации и полного
-учёта проходит проверку. Group и Restart в этом запуске ещё не достигнуты. Resume
-снова остановился перед первым Launch: успешный model probe не заменяет отсутствующий
-финальный proof/signature. Review в новом запуске прошёл вместе с отдельным cold
-readback; это не объясняет и не повышает прежние failed/UNKNOWN результаты.
+Create, persistent teammate, оба import-сценария, оба Quit/readback, холодный Resume
+и Review с отдельным cold readback прошли в этом запуске. Их исходные команды,
+продуктовые данные, native входы и cleanup подтверждены независимыми аудитами;
+точные принятые границы сохранены в checkpoint. Успешный Resume подтверждает эту
+попытку и не объясняет прежние остановки перед первым Launch или старые UNKNOWN.
+
+Новый Mixed корректно сохранил команду, но до Edit/Launch остановился на TEST-селекторе
+карточки: такой же team-атрибут есть у сохранённой скрытой вкладки. Однострочное
+уточнение до существующей карточки с role=button прошло два независимых просмотра
+и bounded DOM-проверку, закоммичено и сразу запушено как `6341d609`. Исправленный
+native проход ещё предстоит. Ранее исправленный учёт receipt-bound Task-уведомлений
+прошёл 44 локальные проверки и текущий macOS gate, но в этом раннем отказе не
+выполнялся; исходные business/group/Restart бюджеты и точный census сохранены.
+
+Перед следующим прогоном включены два точных upstream-коммита до `c4c576ce`:
+merge `8db2347b` проверен независимо и сразу запушен. Новый Main использует
+`command printf` в shell-проверке; два TEST-литерала согласованы с этим точным
+форматом. Существующий набор сначала воспроизвёл 4 PASS / 1 FAIL, затем прошёл
+5/5; strict TypeScript и source guard прошли. Все 13 upstream-файлов сохранены
+побайтно, provider-архив неизменен. Новый combined/native прогон ещё предстоит.
 
 Frozen dashboard/данные от 23 октября остаются историческим снимком. Последующие
 изменения не наследуют прежний native/UI PASS. Финальная проверка исправленного
@@ -162,8 +177,9 @@ macOS arm64 без Desktop UI, vendor auth и независимой whole-tree 
 сохранены; полные M03/M06/M13 и итоговые Stage1 gates этим proof не закрыты.
 
 Текущие незакрытые проверки и неопределённости перечислены в checkpoint выше:
-исправленное cold owner/default продолжение, исходные Mixed/Launch traces и
-итоговая проверка текущего candidate, а также packed tuple и исходный M19 custody.
+исправленный native Mixed и итоговая проверка candidate, а также packed tuple
+и исходный M19 custody. Cold owner/default и Resume текущего `3d147d2` запуска прошли;
+их новые результаты не изменяют исходные failed/UNKNOWN traces.
 Task11 принят в своём
 offline scope; [обычные Claude warm/cold review](evidence/m13-existing-native-review-warm-cold-ui-handoff.json)
 `57c477…` / `4bd123…` (RO0002) приняты в указанной границе. Retention manifests:
@@ -186,8 +202,9 @@ gap/nonreviewable по [§10 контракта](stage-1-contracts.md#10-task-li
 handoffs сохраняют границы своих отдельных snapshots; они не являются новым списком
 обязательных tool classes. UNKNOWN/HOLD и raw INCOMPLETE сохраняются, original
 M19 SDK HOLD не снят.
-Актуальные итоговые gates текущего набора изменений ещё впереди; старые тестовые
-счётчики ниже относятся к соответствующим историческим snapshots, не к final CI.
+Canonical qualification на `3d147d2` прошла; исправленный Mixed и итоговая фиксация candidate
+ещё предстоят. Старые тестовые счётчики ниже относятся к соответствующим
+историческим snapshots, не к текущему CI.
 Доставка остаётся **draft-only**: без merge в main/release, публикации или
 включения нового пути пользователям; этап 2 сейчас не выполняется.
 
