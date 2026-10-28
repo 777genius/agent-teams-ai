@@ -19,6 +19,11 @@ export function teamBackupResourceVersion(store: TeamStore, binding: TeamBinding
   for (const entry of listTeamCommandEntries(store)) {
     if (digest(entry.binding) !== digest(binding)) throw new TeamOwnerError('hold');
     if ('family' in entry) {
+      // Group sends persist their canonical row directly, outside agent-targeted message receipts.
+      if (entry.family === 'group-chat' && entry.request.operation === 'send' && teamFile === 'inboxes/user.json') {
+        if (entry.phase !== 'completed') throw new TeamOwnerError('hold');
+        decisions.push({ commandId: entry.commandId, fingerprint: entry.fingerprint });
+      }
       if (entry.family === 'queued-discard' && teamFile === `inboxes/${entry.member}.json`) {
         if (entry.phase !== 'completed') throw new TeamOwnerError('hold');
         decisions.push({ commandId: entry.commandId, fingerprint: entry.fingerprint, discardedMessageIds: entry.discardedMessageIds });

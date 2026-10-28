@@ -11,11 +11,13 @@ import {
 import { selectCurrentGroupEntry } from '../dist/composition/readGroupRuntime.js';
 import assert from 'node:assert/strict';
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
   realpathSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -24,6 +26,7 @@ import { test } from 'node:test';
 import type { TestContext } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { OwnerBackupResourceAccess } from '../dist/adapters/lifecycle/OwnerBackupResourceAccess.js';
 import { createTeamMcpTools } from '../dist/mcp/tools.js';
 import { digest } from '../dist/team/identity.js';
 import { teamCommandPath, validateCommandEntry } from '../dist/team/commandEntries.js';
@@ -164,6 +167,125 @@ test('Host groups use original receipts/outboxes, exact physical envelopes and c
     /conflict/
   );
 });
+test('newer completed group post prevents stale canonical inbox restore while the current snapshot remains restorable', async (t) => {
+  const f = fixture(t);
+  await f.human.execute('TEST-create', f.create, guard);
+  const first = await f.human.execute('TEST-send', f.send, guard);
+  assert.equal(first.phase, 'completed');
+  const resource = new OwnerBackupResourceAccess(f.store, f.binding);
+  const path = `teams/${f.binding.teamName}/inboxes/user.json`;
+  const original = resource.capture(path);
+  const reply = await f.agent.execute(
+    'TEST-reply',
+    {
+      operation: 'send',
+      groupChatId: id,
+      messageId: replyId,
+      text: 'Newer actual group reply',
+      relayOfMessageId: f.inbox('alice')[0]!.messageId!,
+    },
+    guard
+  );
+  assert.equal(reply.phase, 'completed');
+  assert.deepEqual(
+    f.inbox('user').map((row) => row.groupMessageId),
+    [postId, replyId]
+  );
+  const current = resource.capture(path);
+  const originalReceipts = f.store.fenced(() => f.store.list('commands'));
+  const originalDeliveries = f
+    .outbox()
+    .map((name) => readFileSync(join(f.store.directory, 'outbox', name), 'utf8'));
+  const originalPeerInboxes = ['lead', 'alice'].map((name) => f.inbox(name));
+  unlinkSync(join(f.root, path));
+  assert.equal(resource.restoreMissing(path, original.bytes, original.proof), 'held');
+  assert.equal(existsSync(join(f.root, path)), false);
+  assert.notEqual(current.proof.ownerVersion, original.proof.ownerVersion);
+  assert.equal(resource.restoreMissing(path, current.bytes, current.proof), 'restored');
+  assert.deepEqual(readFileSync(join(f.root, path)), current.bytes);
+  assert.deepEqual(
+    f.store.fenced(() => f.store.list('commands')),
+    originalReceipts
+  );
+  assert.deepEqual(
+    f.outbox().map((name) => readFileSync(join(f.store.directory, 'outbox', name), 'utf8')),
+    originalDeliveries
+  );
+  assert.deepEqual(
+    ['lead', 'alice'].map((name) => f.inbox(name)),
+    originalPeerInboxes
+  );
+  assert.deepEqual(f.human.lookup('TEST-send'), first);
+  assert.deepEqual(f.agent.lookup('TEST-reply'), reply);
+});
+
+for (const phase of ['prepared', 'held'] as const) {
+  test(`a ${phase} original group send holds canonical inbox backup and restore without replay`, async (t) => {
+    const f = fixture(t);
+    await f.human.execute('TEST-create', f.create, guard);
+    await f.human.execute('TEST-send', f.send, guard);
+    const resource = new OwnerBackupResourceAccess(f.store, f.binding);
+    const path = `teams/${f.binding.teamName}/inboxes/user.json`;
+    const original = resource.capture(path);
+    let reached!: () => void, release!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let refuse = false;
+    const commands = f.owner.groupCommands('human', {
+      async getRun(name) {
+        if (phase === 'prepared') {
+          reached();
+          await gate;
+          throw new Error('TEST-original-runtime-unavailable');
+        }
+        return f.runtime.getRun(name);
+      },
+      afterDelivery() {
+        refuse = true;
+      },
+    });
+    const pending = commands.execute(
+      'TEST-pending-send',
+      { ...f.send, messageId: replyId, text: 'Original pending group post' },
+      {
+        inside() {},
+        before() {
+          if (refuse) throw new Error('TEST-original-input-lost');
+        },
+      }
+    );
+    const settled = assert.rejects(pending, /TEST-original-(runtime-unavailable|input-lost)/);
+    try {
+      if (phase === 'prepared') await paused;
+      else await settled;
+      assert.equal(commands.lookup('TEST-pending-send').phase, phase);
+      const originalReceipts = f.store.fenced(() => f.store.list('commands'));
+      const originalDeliveries = f
+        .outbox()
+        .map((name) => readFileSync(join(f.store.directory, 'outbox', name), 'utf8'));
+      assert.throws(() => resource.capture(path), /hold/);
+      unlinkSync(join(f.root, path));
+      assert.equal(resource.restoreMissing(path, original.bytes, original.proof), 'held');
+      assert.equal(existsSync(join(f.root, path)), false);
+      assert.deepEqual(
+        f.store.fenced(() => f.store.list('commands')),
+        originalReceipts
+      );
+      assert.deepEqual(
+        f.outbox().map((name) => readFileSync(join(f.store.directory, 'outbox', name), 'utf8')),
+        originalDeliveries
+      );
+    } finally {
+      release();
+      await settled;
+    }
+  });
+}
+
 test('human first-ID creation, archived replay and agent physical acknowledgement retain original semantics', async (t) => {
   const f = fixture(t);
   const created = await f.human.execute('TEST-create', f.create, guard);
