@@ -1,5 +1,22 @@
 import assert from 'node:assert/strict';
 
+// Native 2.1.4 to-session-error and runner output-limit types, plus legacy
+// class names. Both child projection and parent validation use this closed list.
+const ERROR_TYPES = [
+  'provider.rate-limit', 'provider.auth', 'provider.quota', 'provider.free-limit',
+  'provider.content-filter', 'provider.transport', 'provider.internal', 'provider.invalid-output',
+  'provider.invalid-request', 'provider.unsupported-operation', 'provider.no-route',
+  'provider.unknown', 'provider.timeout', 'permission.rejected', 'tool.execution', 'unknown', 'output-limit',
+  'APIError', 'APICallError', 'ProviderAuthError', 'ContextOverflowError', 'UnknownError',
+  'NoOutputGeneratedError', 'InvalidResponseDataError', 'InvalidPromptError', 'ModelNotFoundError', 'RequestBudgetExceededError',
+] as const;
+const ERROR_CODES = ['insufficient_credits', 'insufficient_quota', 'rate_limit_exceeded', 'invalid_api_key',
+  'context_length_exceeded', 'max_tokens_exceeded', 'invalid_request_error', 'model_not_found', 'server_error',
+  'request_budget_exceeded', 'max_steps_exceeded', 'output_length_exceeded'] as const;
+
+export const projectV2TerminalErrorType = (value: unknown) => ERROR_TYPES.find(type => type === value) ?? null;
+export const projectV2TerminalErrorCode = (value: unknown) => ERROR_CODES.find(code => code === value) ?? null;
+
 /** Diagnostic only: exact original input's native terminal, never send authority. */
 export function projectV2TerminalFailure(value: unknown, expected: { sessionId: string; nativeInputId: string }) {
   const row = (v: unknown): Record<string, unknown> => {
@@ -33,16 +50,11 @@ export function projectV2TerminalFailure(value: unknown, expected: { sessionId: 
   const terminal = events[end]!, data = row(terminal.data);
   const error = data.error && typeof data.error === 'object' ? row(data.error) : {};
   const nested = error.data && typeof error.data === 'object' ? row(error.data) : {};
-  const names = ['APIError', 'APICallError', 'ProviderAuthError', 'ContextOverflowError', 'UnknownError',
-    'NoOutputGeneratedError', 'InvalidResponseDataError', 'InvalidPromptError', 'ModelNotFoundError', 'RequestBudgetExceededError'];
-  const codes = ['insufficient_credits', 'insufficient_quota', 'rate_limit_exceeded', 'invalid_api_key',
-    'context_length_exceeded', 'max_tokens_exceeded', 'invalid_request_error', 'model_not_found', 'server_error',
-    'request_budget_exceeded', 'max_steps_exceeded', 'output_length_exceeded'];
   const status = [error.statusCode, error.status, nested.statusCode, nested.status].find(v => Number.isInteger(v) && Number(v) >= 100 && Number(v) <= 599);
   const finish = interval.filter(e => e.type === 'session.step.ended').at(-1);
   return { source: 'exact_original_owned_native_event' as const, terminalType: String(terminal.type),
-    errorType: names.find(v => v === error.type || v === error.name) ?? null,
-    errorCode: codes.find(v => v === error.code || v === nested.code) ?? null,
+    errorType: projectV2TerminalErrorType(error.type) ?? projectV2TerminalErrorType(error.name),
+    errorCode: projectV2TerminalErrorCode(error.code) ?? projectV2TerminalErrorCode(nested.code),
     httpStatus: typeof status === 'number' ? status : null,
     lastStepFinish: ['stop', 'tool-calls', 'length', 'error', 'content-filter'].find(v => v === (finish && row(finish.data).finish)) ?? null };
 }

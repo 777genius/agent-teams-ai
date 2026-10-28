@@ -21,7 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import { projectV2TerminalFailure, v2TerminalFailureReaderCode } from './opencode-diagnostics/v2-terminal-failure';
+import { projectV2TerminalErrorCode, projectV2TerminalErrorType, projectV2TerminalFailure, v2TerminalFailureReaderCode } from './opencode-diagnostics/v2-terminal-failure';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
 import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact } from './opencode-native-windows-command';
@@ -2913,9 +2913,8 @@ async function main() {
             // Reproject the child's closed fields; never copy raw child output into proof.
             assert(fact.source === 'exact_original_owned_native_event');
             assert(['session.execution.failed', 'session.execution.succeeded', 'session.execution.interrupted'].includes(fact.terminalType));
-            const token = (value: unknown) => typeof value === 'string' && /^[A-Za-z_]{2,90}$/.test(value) ? value : null;
             capture.terminalEvent = { source: 'exact_original_owned_native_event', terminalType: fact.terminalType,
-              errorType: token(fact.errorType), errorCode: token(fact.errorCode),
+              errorType: projectV2TerminalErrorType(fact.errorType), errorCode: projectV2TerminalErrorCode(fact.errorCode),
               httpStatus: Number.isInteger(fact.httpStatus) && fact.httpStatus >= 100 && fact.httpStatus <= 599 ? fact.httpStatus : null,
               lastStepFinish: ['stop', 'tool-calls', 'length', 'error', 'content-filter'].find(item => item === fact.lastStepFinish) ?? null };
           } catch { /* Missing trusted source, original input or live owner stays unavailable. */ }
