@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { teamCommandPath } from '../dist/team/commandEntries.js';
+import { readFileSync } from 'node:fs';
+import { AttachmentArtifactStore } from '../dist/attachments/AttachmentArtifactStore.js';
 import { mkdtempSync, realpathSync, rmSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,7 +17,7 @@ import { assertRosterEditable } from '../dist/composition/teamRoster.js';
 import type { MemberEntry } from '../dist/composition/MemberEntry.js';
 import type { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
 import type { DeliveryIntent, TeamGrant } from '../dist/team/contracts.js';
-function fixture(t: import('node:test').TestContext) {
+function fixture(t: import('node:test').TestContext, rich = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owned-queue-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = { backendId: 'TEST-owner', teamId: 'TEST-team-id', teamName: 'TEST-team' };
@@ -23,7 +27,15 @@ function fixture(t: import('node:test').TestContext) {
     members: [{ memberId: 'lead', name: 'team-lead', role: 'lead' }, { memberId: 'alice', name: 'alice', role: 'member', delivery: selected }],
     grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'task.write', 'message.write', 'admin'] },
       { principalId: 'alice', memberName: 'alice', permissions: ['read', 'message.write'] }] });
-  const message = owner.connect('human').execute({ commandId: 'TEST-send', operation: 'message.send', payload: { to: 'alice', text: 'original queued input' } });
+  const artifacts = new AttachmentArtifactStore(root, binding, store);
+  const refs = rich ? ['TEST-z-first', 'TEST-a-second'].map(id => {
+    const bytes = Buffer.from(id);
+    const uploaded = artifacts.upload({ uploadId: id, purpose: { kind: 'message', member: 'alice' },
+      attachment: { id, filename: id + '.txt', mimeType: 'text/plain', size: bytes.length },
+      digest: createHash('sha256').update(bytes).digest('hex'), offset: 0, base64: bytes.toString('base64') });
+    assert.ok(uploaded.reference); return uploaded.reference;
+  }) : undefined;
+  const message = owner.connect('human').execute({ commandId: 'TEST-send', operation: 'message.send', payload: { to: 'alice', text: 'original queued input', ...(refs ? { attachments: refs } : {}) } });
   const intent = store.read<DeliveryIntent>(`outbox/${message.effects.deliveryId}.json`)!;
   const runtimeStore = new FileRuntimeStore(root);
   let opens = 0;
@@ -35,7 +47,7 @@ function fixture(t: import('node:test').TestContext) {
   const inbox = () => store.read<unknown[]>('../inboxes/alice.json')!;
   const input = { commandId: 'TEST-discard', member: 'alice', messageIds: [intent.messageId] };
   const backup = new OwnerBackupResourceAccess(store, binding);
-  return { root, store, owner, intent, runtimeStore, runtime, delivery, queue, inbox, input, backup, opens: () => opens };
+  return { root, binding, refs, store, owner, intent, runtimeStore, runtime, delivery, queue, inbox, input, backup, opens: () => opens };
 }
 test('actual unseen Runtime input is cancelled once; only its confirmed queued row is discarded and old backup cannot resurrect it', async t => {
   const f = fixture(t), before = f.backup.capture('teams/TEST-team/inboxes/alice.json');
@@ -102,4 +114,51 @@ test('original roster closure accepts durable cancelled inputs but refuses claim
   f.runtimeStore.fenced(f.intent.binding, tx => { const record = tx.get()!; record.inputs[0]!.phase = 'rejected'; tx.put(record); });
   assert.doesNotThrow(() => assertRosterEditable(options));
   assert.equal(f.opens(), 0);
+});
+
+
+test('rich queued discard cancels the original input once and cold recovery preserves exact attachment refs', async t => {
+  const f = fixture(t, true);
+  assert.deepEqual(f.intent.attachments, f.refs);
+  const messagePath = join(f.store.directory, teamCommandPath('TEST-send'));
+  const messageBytes = readFileSync(messagePath, 'utf8');
+  let cancellations = 0, admissions = 0;
+  const delivery = { ...f.delivery,
+    async cancelDelivery(intent: DeliveryIntent) { cancellations++; return f.delivery.cancelDelivery(intent); },
+    async admitDelivery(intent: DeliveryIntent) { admissions++; return f.delivery.admitDelivery(intent); } };
+  const queue = f.owner.queuedMessages('human', delivery);
+  const originalWrite = f.store.write.bind(f.store);
+  let fail = true;
+  f.store.write = (name, value) => {
+    if (name === '../inboxes/alice.json' && fail) { fail = false; throw new Error('TEST rich projection interruption'); }
+    originalWrite(name, value);
+  };
+  await assert.rejects(queue.discard(f.input), /rich projection interruption/);
+  f.store.write = originalWrite;
+  const retained = queue.lookup(f.input.commandId, { member: f.input.member, messageIds: f.input.messageIds })!;
+  assert.equal(retained.phase, 'prepared');
+  assert.deepEqual(retained.targets[0]!.intent, f.intent);
+  assert.equal(retained.targets[0]!.fingerprint, f.runtime.fingerprintDelivery(f.intent));
+  assert.equal(retained.targets[0]!.proof!.inputId, f.intent.inputId);
+  const record = f.runtime.readCapturedSession(f.intent.binding).record!;
+  assert.equal(record.inputs.length, 1); assert.equal(record.inputs[0]!.phase, 'cancelled');
+  const operationRef = record.inputs[0]!.operationRef;
+  const cold = createFilesystemTeamOwner({ root: f.root, binding: f.binding, members: [], grants: [],
+    store: new TeamOwnerStore(f.root, f.binding.teamName) });
+  assert.deepEqual(await cold.recoverQueuedMessages(delivery), [{ commandId: f.input.commandId, phase: 'completed' }]);
+  const coldQueue = cold.queuedMessages('human', delivery);
+  const completed = coldQueue.lookup(f.input.commandId, { member: f.input.member, messageIds: f.input.messageIds })!;
+  assert.equal(completed.phase, 'completed');
+  assert.deepEqual(completed.targets, retained.targets);
+  assert.equal(completed.captureDigest, retained.captureDigest);
+  assert.equal(completed.fingerprint, retained.fingerprint);
+  assert.deepEqual(completed.discardedMessageIds, [f.intent.messageId]);
+  assert.deepEqual(await coldQueue.discard(f.input), completed);
+  assert.equal(f.inbox().length, 0);
+  const outbox = f.store.read<DeliveryIntent>(`outbox/${f.intent.deliveryId}.json`)!;
+  assert.deepEqual(outbox, { ...f.intent, phase: 'not_admitted', runtimeReceipt: retained.targets[0]!.proof!.receipt });
+  assert.deepEqual(outbox.attachments, f.refs);
+  assert.equal(readFileSync(messagePath, 'utf8'), messageBytes);
+  assert.equal(f.runtime.readCapturedSession(f.intent.binding).record!.inputs[0]!.operationRef, operationRef);
+  assert.equal(cancellations, 1); assert.equal(admissions, 0); assert.equal(f.opens(), 0);
 });

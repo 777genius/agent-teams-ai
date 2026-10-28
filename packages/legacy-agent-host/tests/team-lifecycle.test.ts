@@ -5,6 +5,11 @@ import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { continueTeamLifecycleCleanup } from '../dist/team/continueTeamLifecycleCleanup.js';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { AttachmentArtifactStore } from '../dist/attachments/AttachmentArtifactStore.js';
+import type { DeliveryIntent } from '../dist/team/contracts.js';
+import { digest } from '../dist/team/identity.js';
+import { teamCommandPath } from '../dist/team/commandEntries.js';
 import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,13 +21,16 @@ import { TeamLifecycleTransitions } from '../dist/team/TeamLifecycleTransitions.
 import type { LifecycleOwnerState } from '../dist/team/lifecycleContracts.js';
 import type { TeamGrant } from '../dist/team/contracts.js';
 
-function fixture(t: import('node:test').TestContext) {
+function fixture(t: import('node:test').TestContext, rich = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-lifecycle-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = { backendId: 'TEST-owner', teamId: 'TEST-team-id', teamName: 'TEST-team' };
   const store = new TeamOwnerStore(root, binding.teamName);
-  const members = [{ memberId: 'TEST-lead', name: 'team-lead', role: 'lead' as const }];
-  const grants: TeamGrant[] = [{ principalId: 'human', memberName: 'user', permissions: ['read', 'task.write', 'admin'] }];
+  const members = [{ memberId: 'TEST-lead', name: 'team-lead', role: 'lead' as const },
+    ...(rich ? [{ memberId: 'alice', name: 'alice', role: 'member' as const,
+      delivery: { ...binding, runId: 'TEST-run', memberId: 'alice', generation: '1' } }] : [])];
+  const grants: TeamGrant[] = [{ principalId: 'human', memberName: 'user', permissions: ['read', 'task.write', 'admin', ...(rich ? ['message.write' as const] : [])] },
+    ...(rich ? [{ principalId: 'alice', memberName: 'alice', permissions: ['read' as const, 'message.write' as const] }] : [])];
   const owner = createFilesystemTeamOwner({ root, binding, store, members, grants });
   owner.connect('human').execute({ commandId: 'TEST-task', operation: 'task.create', payload: { subject: 'retained task' } });
   const state = () => store.read<LifecycleOwnerState>('state.json')!;
@@ -34,7 +42,7 @@ function fixture(t: import('node:test').TestContext) {
   const roster = new TeamRosterTransitions({ binding, store, state, authorize, assertEditable() {}, invalidate() {} });
   const lifecycle = new TeamLifecycleTransitions({ binding, store, state, authorize, captureRuntimeBindings: () => [],
     recoverConfig: current => roster.recover(current), invalidate() {}, reserved: id => !!store.read(`commands/${id}.json`) });
-  return { root, store, owner, state, lifecycle };
+  return { root, binding, members, grants, store, owner, state, lifecycle };
 }
 test('trash/restore is one original product decision; restore retains Task bytes and grants, and does not clear runtime debt', t => {
   const f = fixture(t), current = f.lifecycle.view('human');
@@ -197,4 +205,52 @@ test('durable trash receipt closes new work even when the first owner-state publ
   f.owner.lifecycleContinuation().recover();
   assert.equal(api.execute(input).phase, 'completed');
   assert.equal(api.view().deleted, true);
+});
+
+
+test('Trash captures actual settled rich delivery history with ordered refs and cold original identity', async t => {
+  const f = fixture(t, true);
+  const artifacts = new AttachmentArtifactStore(f.root, f.binding, f.store);
+  const refs = ['TEST-z-first', 'TEST-a-second'].map(id => {
+    const bytes = Buffer.from(id);
+    const uploaded = artifacts.upload({ uploadId: id, purpose: { kind: 'message', member: 'alice' },
+      attachment: { id, filename: id + '.txt', mimeType: 'text/plain', size: bytes.length },
+      digest: createHash('sha256').update(bytes).digest('hex'), offset: 0, base64: bytes.toString('base64') });
+    assert.ok(uploaded.reference); return uploaded.reference;
+  });
+  const message = f.owner.connect('human').execute({ commandId: 'TEST-rich-send', operation: 'message.send',
+    payload: { to: 'alice', text: 'retained rich history', attachments: refs } });
+  const location = `outbox/${message.effects.deliveryId}.json`;
+  const original = f.store.read<DeliveryIntent>(location)!;
+  const runtimeStore = new FileRuntimeStore(f.root);
+  let opens = 0;
+  const runtime = new RuntimeOwner({ store: runtimeStore, profileId: 'TEST-profile', hostIncarnation: 'TEST-incarnation',
+    driverFactory: { async open() { opens++; throw new Error('No native allocation for retained history'); } },
+    authorize: (binding, action, input) => input ? f.owner.authorizeDeliveryIntent(input, action) : f.owner.authorizeMemberBinding(binding, action),
+    canDispatch: () => false });
+  await runtime.admitDelivery(original);
+  runtimeStore.fenced(original.binding, tx => { const record = tx.get()!;
+    record.inputs[0]!.phase = 'terminal'; record.inputs[0]!.terminal = 'succeeded'; tx.put(record); });
+  assert.deepEqual(await f.owner.resumeDeliveries(runtime), [{ deliveryId: original.deliveryId, outcome: 'admitted' }]);
+  const settled = f.store.read<DeliveryIntent>(location)!;
+  assert.deepEqual(settled.attachments, refs);
+  const outboxBytes = readFileSync(join(f.store.directory, location), 'utf8');
+  const messageBytes = readFileSync(join(f.store.directory, teamCommandPath('TEST-rich-send')), 'utf8');
+  const lifecycle = f.owner.lifecycleCommands('human');
+  const input = { commandId: 'TEST-rich-trash', operation: 'trash', expectedRevision: lifecycle.view().revision };
+  const receipt = lifecycle.execute(input);
+  assert.equal(receipt.phase, 'completed'); assert.equal(lifecycle.view().deleted, true);
+  assert.deepEqual(receipt.targets.map(row => row.intent), [settled]);
+  assert.deepEqual(receipt.targets[0]!.intent.attachments, refs);
+  assert.equal(receipt.captureDigest, digest({ intents: [settled], runtimeBindings: receipt.runtimeBindings }));
+  const cold = createFilesystemTeamOwner({ root: f.root, binding: f.binding, members: f.members, grants: f.grants,
+    store: new TeamOwnerStore(f.root, f.binding.teamName) });
+  cold.lifecycleContinuation().recover();
+  assert.deepEqual(cold.lifecycleCommands('human').lookup(input.commandId,
+    { operation: input.operation, expectedRevision: input.expectedRevision }), receipt);
+  assert.deepEqual(cold.lifecycleCommands('human').execute(input), receipt);
+  assert.equal(readFileSync(join(f.store.directory, location), 'utf8'), outboxBytes);
+  assert.equal(readFileSync(join(f.store.directory, teamCommandPath('TEST-rich-send')), 'utf8'), messageBytes);
+  assert.equal(runtime.readCapturedSession(original.binding).record!.inputs.length, 1);
+  assert.equal(opens, 0);
 });

@@ -6058,3 +6058,48 @@ YAML parse/equality excluding that exact permission map and diff checks passed.
 This current inherited finding is not attributed to the new product correction.
 Fresh exact-head CodeQL analysis must establish scanner resolution; local source
 review does not claim it. Uncommitted retained-rich source/tests are excluded.
+
+
+### Retained rich deliveries remain valid for Trash and queued discard
+
+The independently accepted read-only workflow permissions correction was
+committed and immediately pushed as `47a52f36b`; scanner resolution remains a
+fresh-analysis obligation. A separate reproduced product defect affected
+supported rich messages: commitTeamMessage persisted attachment references,
+while the strict retained-delivery schema omitted that field. Consequently
+Trash rejected even settled rich outbox history, and queued discard held before
+its original cancellation decision.
+
+The production correction imports the existing shared
+messageAttachmentReferencesSchema and admits it as an optional retained-intent
+field. Strict objects, ordered references, digest/ID uniqueness, batch/byte
+limits and original fingerprints stay intact. No field stripping, migration,
+policy change or admission/replay path is introduced.
+
+Matching final regressions are RED2/2 on the old schema at the actual lifecycle
+and queued-receipt validators, then GREEN2/2 after the schema correction. They
+use actual uploads and message commands: settled Runtime history survives Trash
+capture/cold receipt replay with identical original outbox/message bytes;
+interrupted rich queued discard cold-recovers the same ordered references,
+IDs, fingerprint and cancellation proof, with exactly one cancellation, zero
+additional admission and zero native opens. Initial test-setup failures are
+retained separately and are not the claimed RED.
+
+The selected Node24.21 five-suite affected gate completed32/32 PASS,0 FAIL /
+0 SKIP /0 CANCEL, exit0 (495.719seconds); strict Host test types and scoped lint
+also exited0. All original sessions completed without a signal, retry or duplicate
+command despite the executor delay. Build and whitespace checks passed.
+C independently accepted the exact production/test hashes and terminal results:
+source `18e3c14493c9b9fcf025d3df286efb627ab376570b0b091b2803f7401432f676`,
+lifecycle `37d7a59bbb6e6ff02fd3916232ec16ece1fd6d8d64dcd8aad54db92efee71f5d`,
+queue `e691932275675f318a0c947ae4e2ad36b723e6c0673db447ee0993503d7d34a1`.
+Retained logs: `checks/retained-rich-red-final.log` SHA256
+`fd35eaf2f5ff51308436d4a80f3430d9b4f07f1d846563dafc2cf91bc2ed2325`,
+and `checks/retained-rich-green.log` SHA256
+`3c7003b425d06002965e0e709fc280a5bd525119b7beb0576a19e1ab703f87fd`.
+Fresh final canonical/Source11/P7/CodeQL evidence must bind this later source;
+old7fec/624a results are not transferred. Draft and original root911 HOLD remain.
+
+Final delivery source-size guard passed4,638 files with the unchanged143 frozen
+exceptions and800-line limit. Affected log SHA256 is
+`273b881d3a3f4453407f6d442acf4c14249f1e7fb0a8261b22974c2b1fda49fb`.

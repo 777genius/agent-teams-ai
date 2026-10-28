@@ -99,6 +99,9 @@ acquisition; Taskboard сохранил один `(image)` comment; Claude Resum
 независимым ревью; [checkpoint](progress/checkpoint-2026-10-27.md) сохраняет точные
 refs, gates и границы. Fresh Desktop/managed-MCP Resume и all-three native restore
 с OpenCode1.19.4 остаются обязательными.
+Позднее исправлен воспроизведённый product defect: strict retained-delivery schema
+не принимала поддерживаемые attachment refs, блокируя Trash/discard rich messages.
+Matching RED/GREEN2/2 и affected32/32 прошли; свежий final CI ещё требуется.
 
 **Node acquisition и cache seed уже подтверждены на macOS24G624:** diagnostic-only
 40694908161 получил точные official bytes и сохранил cache с полным locked SHA;
