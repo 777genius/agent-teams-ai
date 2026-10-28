@@ -4,7 +4,11 @@ import { lstat, mkdir, open, realpath, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
-import { assertPrivateWindowsAcl } from './windowsPrivateAcl';
+import {
+  assertPrivateWindowsAcl,
+  assertSafeDarwinMcpAcl,
+  assertWindowsMcpAncestry,
+} from './privateFileAcl';
 
 /** Windows path boundary supplements effective ACL verification; it never proves privacy alone. */
 export function assertWindowsProfileRoot(root: string, userProfile: string): void {
@@ -29,18 +33,30 @@ export async function validateOwnedDirectoryRoot(root: string): Promise<string> 
   if (!path.isAbsolute(root) || path.resolve(root) !== root)
     throw new Error('Expected absolute profile root');
   // Refuse links at every existing component, including the profile root.
+  const ancestors: string[] = [];
   let cursor = root;
   while (true) {
     const stat = await lstat(cursor);
+    ancestors.push(cursor);
     if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Unsafe API profile root');
-    if (cursor === root && process.getuid && (stat.uid !== process.getuid() || stat.mode & 0o022)) {
-      throw new Error('API profile root is not owner controlled');
+    if (process.platform === 'darwin') assertSafeDarwinMcpAcl(cursor, false);
+    if (process.getuid) {
+      const owner = process.getuid();
+      const systemTemporary = cursor !== root && stat.uid === 0 && (stat.mode & 0o1000) !== 0;
+      if (
+        (cursor === root && stat.uid !== owner) ||
+        (stat.uid !== owner && stat.uid !== 0) ||
+        ((stat.mode & 0o022) !== 0 && !systemTemporary)
+      ) {
+        throw new Error('API profile root is not owner controlled');
+      }
     }
     const parent = path.dirname(cursor);
     if (parent === cursor) break;
     cursor = parent;
   }
   if ((await realpath(root)) !== root) throw new Error('API profile root changed');
+  if (process.platform === 'win32') assertWindowsMcpAncestry(ancestors);
   return root;
 }
 
@@ -67,10 +83,12 @@ export async function validatePrivatePath(file: string, directory = false): Prom
     throw new Error('API state must be private and owned by this user');
   }
   if (process.platform === 'win32') assertPrivateWindowsAcl(file);
+  if (process.platform === 'darwin') assertSafeDarwinMcpAcl(file, true);
   return stat;
 }
 
 export async function readPrivateJson(file: string): Promise<unknown> {
+  await validateOwnedDirectoryRoot(path.dirname(file));
   await validatePrivatePath(file);
   const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
@@ -109,11 +127,12 @@ export async function replacePrivateJson(
     }
     return validateExisting(file);
   };
+  await validateOwnedDirectoryRoot(path.dirname(file));
   const previous = await inspect();
   const temporary = `${file}.${randomUUID()}.tmp`;
   const handle = await open(
     temporary,
-    constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY,
+    constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0),
     0o600
   );
   try {
@@ -121,9 +140,11 @@ export async function replacePrivateJson(
     const opened = await handle.stat();
     if (opened.dev !== temporaryStat.dev || opened.ino !== temporaryStat.ino)
       throw new Error('Private API temporary file changed');
+    await validateOwnedDirectoryRoot(path.dirname(file));
     await handle.writeFile(JSON.stringify(value) + '\n', 'utf8');
     await handle.sync();
     await handle.close();
+    await validateOwnedDirectoryRoot(path.dirname(file));
     const current = await inspect();
     if (current?.dev !== previous?.dev || current?.ino !== previous?.ino)
       throw new Error('API publication target changed');

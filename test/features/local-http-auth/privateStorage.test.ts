@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdtemp, readFile, realpath, rm, symlink } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 
 import {
@@ -16,7 +16,11 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 async function fixtureRoot(): Promise<string> {
-  const root = await realpath(await mkdtemp(path.join(tmpdir(), 'private-authority-')));
+  const root = await realpath(
+    await mkdtemp(
+      path.join(process.platform === 'win32' ? homedir() : tmpdir(), 'private-authority-')
+    )
+  );
   roots.push(root);
   return root;
 }

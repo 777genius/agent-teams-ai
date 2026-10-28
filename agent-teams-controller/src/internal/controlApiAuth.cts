@@ -4,9 +4,12 @@ const authFs = require('node:fs') as typeof import('node:fs');
 const authPath = require('node:path') as typeof import('node:path');
 const authCrypto = require('node:crypto') as typeof import('node:crypto');
 const authOs = require('node:os') as typeof import('node:os');
-const { assertPrivateWindowsAcl } = require('./windowsPrivateAcl.cts') as {
-  assertPrivateWindowsAcl(this: void, file: string): void;
-};
+const { assertPrivateWindowsAcl, assertSafeDarwinMcpAcl, assertWindowsMcpAncestry } =
+  require('./windowsPrivateAcl.cts') as {
+    assertPrivateWindowsAcl(this: void, file: string): void;
+    assertSafeDarwinMcpAcl(this: void, file: string, privateObject: boolean): void;
+    assertWindowsMcpAncestry(this: void, paths: string[]): void;
+  };
 
 type ControlContext = import('./controlApiAuthTypes').ControlContext;
 type ControlFlags = import('./controlApiAuthTypes').ControlFlags;
@@ -42,24 +45,33 @@ function validateRoot(root: string): void {
       throw new Error('API credentials must inherit a private user-profile ACL');
     }
   }
+  const ancestors: string[] = [];
   let cursor = root;
   while (true) {
     const stat = authFs.lstatSync(cursor);
+    ancestors.push(cursor);
     if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Unsafe control API root');
-    if (cursor === root && process.getuid && (stat.uid !== process.getuid() || stat.mode & 0o022)) {
-      throw new Error('Control API root is not owner controlled');
+    if (process.platform === 'darwin') assertSafeDarwinMcpAcl(cursor, false);
+    if (process.getuid) {
+      const owner = process.getuid();
+      const systemTemporary = cursor !== root && stat.uid === 0 && (stat.mode & 0o1000) !== 0;
+      if (
+        (cursor === root && stat.uid !== owner) ||
+        (stat.uid !== owner && stat.uid !== 0) ||
+        ((stat.mode & 0o022) !== 0 && !systemTemporary)
+      )
+        throw new Error('Control API root is not owner controlled');
     }
     const parent = authPath.dirname(cursor);
     if (parent === cursor) break;
     cursor = parent;
   }
+  if (authFs.realpathSync(root) !== root) throw new Error('Control API root changed');
+  if (process.platform === 'win32') assertWindowsMcpAncestry(ancestors);
 }
 
 function readPrivate(file: string, directory: string): unknown {
-  if (process.platform === 'win32') {
-    assertPrivateWindowsAcl(directory);
-    assertPrivateWindowsAcl(file);
-  }
+  validateRoot(directory);
   const dirStat = authFs.lstatSync(directory);
   if (
     !dirStat.isDirectory() ||
@@ -68,6 +80,7 @@ function readPrivate(file: string, directory: string): unknown {
   ) {
     throw new Error('Unsafe control API credential directory');
   }
+  if (process.platform === 'darwin') assertSafeDarwinMcpAcl(directory, true);
   const stat = authFs.lstatSync(file);
   if (
     !stat.isFile() ||
@@ -77,6 +90,8 @@ function readPrivate(file: string, directory: string): unknown {
   ) {
     throw new Error('Unsafe control API credential reference');
   }
+  if (process.platform === 'win32') assertPrivateWindowsAcl(file);
+  if (process.platform === 'darwin') assertSafeDarwinMcpAcl(file, true);
   const fd = authFs.openSync(file, authFs.constants.O_RDONLY | (authFs.constants.O_NOFOLLOW ?? 0));
   try {
     const opened = authFs.fstatSync(fd);
@@ -175,7 +190,9 @@ function discoveryAuthority(
   directory: string,
   reference: string
 ): ControlAuthority {
-  const discovery = raw as Partial<ControlAuthority> & { descriptorPath?: string };
+  const discovery = raw as Partial<ControlAuthority> & {
+    descriptorPath?: string;
+  };
   if (
     !discovery ||
     typeof discovery !== 'object' ||

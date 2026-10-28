@@ -3,6 +3,8 @@ import { copyFile, mkdir, readdir, rm, readFile, writeFile } from 'node:fs/promi
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { renderControllerAcl } from './privateAclMirror.mts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(__dirname, '..');
 const srcDir = path.join(packageRoot, 'src');
@@ -44,6 +46,17 @@ async function copyRecursive(sourceDir, targetDir) {
       }
     }
   }
+}
+
+const policySource = await readFile(
+  path.join(packageRoot, '../src/features/local-http-auth/main/infrastructure/privateFileAcl.ts'),
+  'utf8'
+);
+if (
+  (await readFile(path.join(srcDir, 'internal/windowsPrivateAcl.cts'), 'utf8')) !==
+  renderControllerAcl(policySource)
+) {
+  throw new Error('Controller ACL adapter differs from the authoritative private-file policy');
 }
 
 await rm(distDir, { recursive: true, force: true });

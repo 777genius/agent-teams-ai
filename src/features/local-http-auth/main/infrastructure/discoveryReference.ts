@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import { normalizeEndpoint } from '../../core/domain/authority';
 
+import { assertPrivateWindowsAcl, assertSafeDarwinMcpAcl } from './privateFileAcl';
 import { replacePrivateJson } from './privateFiles';
-import { assertPrivateWindowsAcl } from './windowsPrivateAcl';
 
 import type { ApiDiscoveryReference } from '../../contracts';
 
@@ -79,6 +79,7 @@ export async function writeManualDiscovery(
     )
       throw new Error('Unsafe legacy API metadata');
     if (process.platform === 'win32') assertPrivateWindowsAcl(target);
+    if (process.platform === 'darwin') assertSafeDarwinMcpAcl(target, true);
     const handle = await open(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     try {
       const opened = await handle.stat();
