@@ -42,7 +42,10 @@ export async function runDesktopMixedGroupUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(groups.length, 1);
   const group = groups[0]!;
   assert.equal(group.name, 'TEST-mixed-group');
-  assert.deepEqual(group.membership, { kind: 'fixed', memberNames: ['bob', 'carol', 'team-lead'] });
+  const membership = row(group.membership);
+  assert.ok(Array.isArray(membership.memberNames));
+  assert.deepEqual({ ...membership, memberNames: [...membership.memberNames].sort() },
+    { kind: 'fixed', memberNames: ['bob', 'carol', 'team-lead'] });
   const composer = '[data-testid="group-chat-composer"]';
   await ui.click(composer + ' .message-composer-recipient-selector', 'mixed directed recipient selector');
   await ui.click('[data-radix-popper-content-wrapper] button span.font-medium', 'exact mixed Bob recipient', 'bob');

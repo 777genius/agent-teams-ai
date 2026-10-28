@@ -6145,3 +6145,47 @@ Delivery source-size guard passed4,638 files with the unchanged143 frozen
 exceptions/800-line cap. Both accepted source hashes remain exact.
 C independently rechecked the final hashes,14-test log and original sequential
 exit statuses and accepted the final source/gate boundary before delivery.
+
+
+### Mixed fixed-membership TEST comparison
+
+The final literal-serialization slice was committed and immediately pushed as
+`8471c2539a4b8e31473d4c2a6be7d9081bb49eaf`. Its own canonical
+[run40716971821](https://github.com/777genius/agent-teams-ai/actions/runs/40716971821)
+passed Full qualification: root24,034 PASS /98 SKIP /0 FAIL; Host813,
+controller423, MCP74, scripts179, feedback119, release9, MCP E2E24 and policy10
+passed. Counts census `checks/ci-40716971821-canonical-counts.json` has SHA256
+`debf1e704dd57cb6258c3efd32f96e841990ebe4c37b1c8448a289b995fad4d1`.
+Actual8471 CodeQL has no branch-new finding:591/592 are fixed, and187 remaining
+instances are shared with main; retained assessment SHA256 is
+`12b2de5fddbdfc51b81379be8398e44147440f729f46a2529daf4af557d73488`.
+These results bind8471, not this later TEST correction.
+
+The actual Mixed receipt (artifact12829470883, rootEHOXRn), SHA256
+`55e551377eaf26b520e49a73091c1107ab738b8d1548e10490b33d89e3c39a77`,
+remains INCOMPLETE. Initial three native business inputs and four notices all
+completed successfully (lead3/Bob2/Carol2); fixed group creation completed once,
+then the TEST assertion rejected the supported lead-first membership order.
+Group delivery and Restart were not reached/qualified. Quit left four sessions
+closed/sealed/released, app exit0/null and an empty PGID; Host identity was not
+captured, so Host absence is unproven. At this snapshot ActiveQuit and Claude
+Resume are scoped source PASS on8471, Mixed is FAIL, eight rows are still queued,
+and P7 upload/audit is pending; no overall native or next-head PASS is claimed.
+
+The bounded two-file TEST correction compares a shallow full-membership-object
+copy with a sorted COPY of memberNames. Stored/request roster order, kind and
+extra fields, cardinality and duplicates remain checked/preserved. Product UI,
+actions, protocol and budgets do not change. Matching real-smoke assertion RED
+at line45 becomes GREEN across six valid/invalid variants; the existing complete
+three-file prerequisite suite passes31/31,0 FAIL /0 SKIP. Strict scripts types,
+scoped lint and diff checks passed. C independently accepted exact smoke SHA256
+`20a18f5b7bcee28a3aaac7d9aebb5fab0786f5f067ad55d65884fdc7567106a6`
+and existing test SHA256
+`bd01b009439df1b750e53b67abe8d95278850436b547636d7fdcf19f3e618075`.
+Affected log SHA256 is
+`13c54ea19694847ca8f95d2dd058ce0c17fc5339d3eb77762cc2d38943014294`.
+Both existing paths remain in the finite inventory. Fresh Mixed delivery/Restart
+execution is still needed; the original once-created group/input is not replayed.
+Draft, Stage1/OpenCodeV1 scope and original root911 HOLD remain unchanged.
+Delivery source-size guard passed4,638 production files with the unchanged143
+frozen exceptions and800-line limit; no inventory path or cap changes were needed.

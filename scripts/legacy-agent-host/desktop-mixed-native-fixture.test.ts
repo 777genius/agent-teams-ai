@@ -9,6 +9,7 @@ import {
   type ObservedMixedTaskNotice,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts';
 import { initialMixedBusinessTurns, mixedInputAccounting } from './desktop-mixed-input-proof.ts';
+import { runDesktopMixedGroupUiSmoke } from './desktop-mixed-group-ui-smoke.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import type { TestContext } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,6 +31,60 @@ import {
 } from './desktop-mixed-native-fixture.ts';
 
 const prompt = 'Reply only OK. Do not use tools, access files or run commands.';
+
+test('mixed group smoke accepts exact fixed membership in either roster order without changing retained data', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-mixed-group-selection-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const directory = join(root, 'hoststore/teams', mixedDesktopTeamName);
+  await mkdir(directory, { recursive: true });
+  const path = join(directory, 'group-chats.json');
+  const afterSelection = new Error('TEST stop before directed group delivery');
+  const cases = [
+    { label: 'current lead-first roster', names: ['team-lead', 'bob', 'carol'], valid: true },
+    { label: 'alphabetical roster', names: ['bob', 'carol', 'team-lead'], valid: true },
+    { label: 'foreign member', names: ['team-lead', 'bob', 'alice'], valid: false },
+    { label: 'missing member', names: ['team-lead', 'bob'], valid: false },
+    { label: 'duplicate replaces member', names: ['team-lead', 'bob', 'bob'], valid: false },
+    { label: 'extra duplicate', names: ['team-lead', 'bob', 'carol', 'bob'], valid: false },
+  ];
+  for (const { label, names, valid } of cases) {
+    const saved = JSON.stringify({ groups: [{ id: 'TEST-original-group', name: 'TEST-mixed-group',
+      membership: { kind: 'fixed', memberNames: names } }] });
+    await writeFile(path, saved);
+    const inserted: unknown[] = [], checked: string[] = [];
+    let selectionPassed = false;
+    const cdp = {
+      async send(method: string, params?: Record<string, unknown>) {
+        if (method === 'Input.insertText') inserted.push(params?.text);
+        return {};
+      },
+      async evaluate(expression: string) {
+        if (expression.includes('message-composer-recipient-selector')) {
+          selectionPassed = true;
+          throw afterSelection;
+        }
+        if (expression.includes("getAttribute('data-state')")) {
+          checked.push(expression);
+          return 'checked';
+        }
+        if (expression.includes('scrollHeight')) return { visible: true };
+        if (expression.includes('const elements =')) return { x: 1, y: 1, text: '', tag: 'BUTTON' };
+        if (expression.startsWith('document.querySelector(') || expression.startsWith('!document.querySelector(')) return true;
+        assert.fail('unexpected synthetic group-creation read: ' + expression);
+      },
+    };
+    await assert.rejects(runDesktopMixedGroupUiSmoke(cdp, {
+      root, teamName: mixedDesktopTeamName, models: {} as DesktopMixedModels,
+      launchId: 'TEST-original-launch', assertOwnedRenderer() {}, step() {},
+    }), (error: unknown) => valid ? error === afterSelection :
+      error instanceof assert.AssertionError && error.operator === 'deepStrictEqual', label);
+    assert.equal(selectionPassed, valid, label);
+    assert.equal(checked.length, 3, 'all original selected checkboxes remain required');
+    assert.deepEqual(inserted, ['TEST-mixed-group'], 'no group delivery input after the selection seam');
+    assert.equal(await readFile(path, 'utf8'), saved, 'comparison never reorders or rewrites the saved group');
+  }
+});
+
 const providers = [
   {
     provider: 'codex',
