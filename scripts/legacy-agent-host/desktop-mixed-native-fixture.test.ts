@@ -796,3 +796,100 @@ test('Mixed inference capacity keeps independent model probes bounded without ad
     assert.equal(model.failures.length, 1);
   }
 });
+
+test('Claude CURRENT notice accepts only complete reminder transport around the exact original input', async (t) => {
+  const f = await notificationFiles(t),
+    selected = noticeProviders[0],
+    source = f.sources['team-lead']!;
+  // Verbatim transport block retained in this run's actual Member SDK request.
+  const reminder =
+    '<system-reminder>\n<total_tokens>15000000 tokens left</total_tokens>\n</system-reminder>';
+  const cases: { label: string; content: unknown; status: number }[] = [
+    {
+      label: 'actual leading SDK text block',
+      status: 200,
+      content: [
+        { type: 'text', text: reminder + '\n' },
+        { type: 'text', text: source.text },
+      ],
+    },
+    {
+      label: 'complete leading and trailing wrappers',
+      status: 200,
+      content: reminder + '\n\n' + source.text + '\n\n' + reminder,
+    },
+    {
+      label: 'unknown prefix',
+      status: 400,
+      content: 'UNKNOWN\n' + reminder + '\n\n' + source.text,
+    },
+    {
+      label: 'unknown suffix',
+      status: 400,
+      content: reminder + '\n\n' + source.text + '\nUNKNOWN',
+    },
+    {
+      label: 'unknown text between wrappers',
+      status: 400,
+      content: reminder + '\nUNKNOWN\n' + reminder + '\n\n' + source.text,
+    },
+    {
+      label: 'truncated wrapper',
+      status: 400,
+      content: '<system-reminder>unfinished\n' + source.text,
+    },
+    {
+      label: 'duplicate canonical input',
+      status: 400,
+      content: reminder + '\n\n' + source.text + source.text,
+    },
+    { label: 'bare whitespace mutation', status: 400, content: '\n\n' + source.text + '\n' },
+    {
+      label: 'canonical prefix omitted',
+      status: 400,
+      content: reminder + '\n\n' + String((source.input.intent as Record<string, unknown>).content),
+    },
+  ];
+  for (const { label, content, status } of cases) {
+    const model = await startNativeTeamModel({
+      mixedGroups: true,
+      mixedTaskNotifications: createMixedTaskNoticeReader(() => f.root, 'team-lead'),
+      principalId: () => 'TEST-principal',
+    });
+    try {
+      const send = () =>
+        fetch(model.url + selected.route, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            ...noticeRequest(selected, source.text),
+            messages: [
+              { role: 'user', content: selected.one },
+              { role: 'assistant', content: 'original prior business output' },
+              { role: 'user', content },
+            ],
+          }),
+        });
+      const response = await send();
+      assert.equal(response.status, status, label);
+      const wire = await response.text();
+      assert.equal(model.observations.length, 0, 'no historical business fallback');
+      assert.equal(model.notificationObservations?.length, status === 200 ? 1 : 0);
+      if (status === 200) {
+        assert.match(wire, /DONE_TEST_TASK_NOTICE/);
+        assert.doesNotMatch(wire, /"type":"tool_use"|"type":"function_call"|"tool_calls"/);
+        assert.equal(model.notificationObservations![0]!.notice.inputId, source.outbox.inputId);
+        const replay = await send();
+        assert.equal(replay.status, 400, 'decorated original input cannot replay');
+        await replay.text();
+        assert.equal(model.notificationObservations?.length, 1);
+        assert.match(model.failures[0]!, /notification inference is not replayed/);
+      } else {
+        assert.match(model.failures[0]!, /unrecognized CURRENT mixed input/);
+      }
+      assert.equal(model.failures.length, 1);
+    } finally {
+      await model.close();
+    }
+  }
+});

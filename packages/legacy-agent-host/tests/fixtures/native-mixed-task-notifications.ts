@@ -137,6 +137,17 @@ export interface ObservedMixedTaskNotice extends MixedTaskNotice {
   input: MixedNoticeRow;
 }
 export type MixedTaskNoticeReader = (text: string) => ObservedMixedTaskNotice | undefined;
+function currentNoticeTextMatches(text: string, expected: string): boolean {
+  if (text === expected) return true;
+  const start = text.indexOf(expected);
+  if (start < 0 || text.indexOf(expected, start + 1) !== -1) return false;
+  // SDK decoration may surround, but never replace or alter, the original input bytes.
+  const reminders =
+    /^(?:\s*<system-reminder>(?:(?!<\/?system-reminder>)[\s\S])*<\/system-reminder>\s*)+$/;
+  return [text.slice(0, start), text.slice(start + expected.length)].every(
+    (fragment) => fragment === '' || reminders.test(fragment)
+  );
+}
 /** Only the CURRENT original input can qualify; old business/group history never supplies a notice. */
 export function createMixedTaskNoticeReader(
   root: () => string,
@@ -159,7 +170,7 @@ export function createMixedTaskNoticeReader(
         const preparation =
           input.preparation === undefined ? {} : mixedNoticeRow(input.preparation);
         const preparedContent = String(preparation.prefix ?? '') + String(intent.content);
-        if (text !== preparedContent) continue;
+        if (!currentNoticeTextMatches(text, preparedContent)) continue;
         assert.ok(['pending', 'admitted'].includes(String(notice.outbox.phase)));
         assert.ok(
           ['claimed', 'consumed'].includes(String(input.phase)),

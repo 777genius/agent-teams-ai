@@ -66,53 +66,61 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления исходных Create/Launch/Task/group/
 attachment/import/backup путей и точные результаты каждого запуска. Последний
-завершённый combined run — [`40622991863`](https://github.com/777genius/agent-teams-ai/actions/runs/40622991863)
-на точном `b5333889`. **Canonical Full qualification прошёл: 23 895 основных
+завершённый combined run — [`40626350466`](https://github.com/777genius/agent-teams-ai/actions/runs/40626350466)
+на точном `4479718`. **Canonical Full qualification прошёл: 23 895 основных
 тестов, 0 ошибок, 97 пропусков**, все typed lint, workspace/Host и Windows smoke.
-Actual macOS selected-Node gate прошёл **27/27** общих регрессий. **Source Desktop:
-8 из 10 вариантов прошли**, общий результат failed; исходные Mixed и Taskboard
-остаются INCOMPLETE. Все десять ZIP сохранены: 13 workflow receipts,
-11 PASS / 2 INCOMPLETE. Исторические попытки не перезаписаны и не отменены.
+Actual macOS selected-Node gate прошёл **29/29** общих регрессий. **Source Desktop:
+9 из 10 вариантов прошли**, общий результат failed; исходный Mixed остаётся
+INCOMPLETE. Все десять ZIP сохранены: 13 workflow receipts, 12 PASS / 1 INCOMPLETE.
+Исторические попытки не перезаписаны и не отменены.
 
 В этом запуске прошли Create, persistent teammate, оба import-сценария, оба
-Quit/readback, холодный Resume и Review с отдельным cold readback. Их собственные
-команды, продуктовые данные, native входы, source pins и ограничения cleanup
-проверены по собственным raw-артефактам и зафиксированы в checkpoint. Pending-open сохраняет
-UNKNOWN; successful cold Resume не объясняет прежние Launch-отказы.
+Quit/readback, холодный Resume, Review с отдельным cold readback и полный Taskboard
+со всеми тремя cold owner-этапами. Их собственные команды, продуктовые данные,
+native входы, source pins и ограничения cleanup проверены по собственным raw-
+артефактам. Pending-open сохраняет UNKNOWN; active Quit сохраняет неизвестный
+исход активного input при подтверждённом освобождении custody. Review подтверждает
+два Edit и пять явно частичных записей; полный M13 этим не заявляется.
 
-Mixed прошёл исправленную исходную карточку, Edit, renderer reload и один Launch.
-Claude выполнил первый input, Codex стал ready; исходный OpenCode не завершил open
-и остался held/UNKNOWN без возвращённого sessionRef и без inputs. Независимое
-исследование точного frozen provider не обнаружило сохранённой причины внутри
-factory.open или обоснованного конечного исправления. Deadline, retry и custody
-не изменяются. Native проверка receipt-bound Task-уведомлений, group и Restart
-в этом сценарии не достигнута; локальные44 и macOS-регрессии её не заменяют.
+Taskboard прошёл исходный Create/assign/единственный Mark resolved, Review,
+вложения, notification/cross-Team, F08, Trash/Restore и холодные owner-этапы.
+Пассивное TEST-ожидание завершения исходного назначения использует тот же context/
+Team/Task/surface и существующие проверки актуальности. Production guards,
+единственный клик, command assertions и deadlines сохранены. Независимый полный
+raw-аудит подтвердил 1 367 файлов в 17 census, rollback-сохранность всех 6 файлов B
+и 136 файлов A. Все три холодных app завершились естественно с кодом 0; исходная
+обёртка — через SIGTERM. Исторический b533 missed-click остаётся INCOMPLETE;
+новый PASS не устанавливает отсутствующую в старой записи причину.
 
-Taskboard завершился раньше Review/F08/Trash/owner continuation: один исходный
-клик Mark resolved попал в контейнер баннера, команда снятия уточнения не появилась.
-Два критика согласовали узкое TEST-ожидание завершения исходного назначения в том
-же Task detail и принятия актуальных данных команды перед прежним единственным
-кликом. Изменение добавлено в существующий пассивный TEST observer и принято
-независимым ревью; 7/7 Node-проверок, strict scripts TypeScript, lint и source guard
-прошли. Новый native проход ещё предстоит. Запись не доказывает, что причиной
-был временно disabled button. Production guards, исходные deadlines и последующие
-точные проверки команды остаются прежними.
+Mixed прошёл исходную карточку, Edit, renderer reload, Launch и первый Bob Send.
+Claude и Codex выполнили по восемь исходных business-шагов, после чего Claude
+отклонил текущий input. Точная Task-plan/outbox/Runtime цепочка подтверждает
+исходное уведомление Board complete, но тело упавшего HTTP-запроса не сохранено.
+Native проверка уведомлений/group/Restart не завершена. Все target Runtime этого
+запуска затем закрыты/released; прежний OpenCode held/UNKNOWN из b533 сохраняется
+отдельно. Deadline, retry и custody не ослабляются.
 
-Отдельный предыдущий run [`40619252645`](https://github.com/777genius/agent-teams-ai/actions/runs/40619252645)
-на `3d147d2` сохраняет свой полный Taskboard PASS: Task/review/notification/
-cross-Team controls, F08 stale snapshot/feed, Trash/Restore и все три cold owner
-этапа. После rollback исходные A/B завершились под своими владельцами, сравнения
-всех 6 файлов B и 136 файлов A точны. Это собственное доказательство того запуска,
-которое не превращает текущий Taskboard INCOMPLETE в PASS.
+Два критика выявили конечный TEST-дефект на прямых данных успешного Member из
+того же запуска: SDK добавляет complete system-reminder wrappers вокруг точного
+исходного текста, а Mixed notice reader сравнивает raw carrier побайтно. Согласовано
+узкое исправление в двух существующих TEST-файлах: точный canonical текст один раз,
+вокруг только полные служебные wrappers; неизвестный текст, дубли, неполные wrappers,
+неверная привязка и replay по-прежнему отклоняются. Completed receipt/plan, current
+Runtime guards, отсутствие historical fallback и cap16 сохраняются. Actual HTTP
+регрессия воспроизвела 400 вместо 200 на старом helper; после исправления bounded
+Mixed/provider набор прошёл 31/31, strict scripts TypeScript, lint, formatting и
+source guard прошли. Независимое ревью точных хешей и целостной композиции принято;
+следующий шаг — собственный native запуск нового кандидата. Причина сохранённого447
+сбоя не объявлена доказанной.
 
 Точный upstream до `c4c576ce` включён merge `8db2347b`; все 13 upstream-файлов
 сохранены побайтно. Строгий TEST shell согласован с command printf: существующий
-набор воспроизвёл 4 PASS / 1 FAIL, затем прошёл 5/5 локально и текущий macOS gate.
-Provider-архив `2aa5d730…` и OpenCode V1 scope неизменны. Финальное целостное
-source review на b533 принято, но не заменяет незакрытую native квалификацию.
+набор воспроизвёл 4 PASS / 1 FAIL, затем прошёл 5/5 и текущий macOS gate.
+Provider-архив `2aa5d730…` и OpenCode V1 scope неизменны. Целостное source review
+и независимое ревью447 приняты; новый TEST delta получит отдельное ревью.
 
-Frozen dashboard от 23 октября остаётся историческим снимком. Новое исправление
-TEST-предусловия, packed/installed P7/M17 и исходный M19 custody HOLD сохраняют
+Frozen dashboard от 23 октября остаётся историческим снимком. Незакрытая Mixed
+native квалификация, packed/installed P7/M17 и исходный M19 custody HOLD сохраняют
 отдельные обязательства. Этап 1 не объявлен завершённым, PR остаётся Draft.
 
 ## Текущая сводка приёмки
