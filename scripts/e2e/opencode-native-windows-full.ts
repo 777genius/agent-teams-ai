@@ -17,10 +17,11 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { projectV2TerminalFailure, v2TerminalFailureReaderCode } from './opencode-diagnostics/v2-terminal-failure';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
 import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact } from './opencode-native-windows-command';
@@ -2252,6 +2253,7 @@ async function main() {
     nativeV2TranscriptFailure: null as null | {
       observation: 'captured' | 'unavailable'; member: 'alice' | 'bob';
       packet?: ReturnType<typeof projectV2NativeTranscript>;
+      terminalEvent?: ReturnType<typeof projectV2TerminalFailure> | { observation: 'unavailable' };
       failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null; nativeStage?: string | null };
       inputFileRemoved?: boolean;
     },
@@ -2894,6 +2896,29 @@ async function main() {
             selectedModel: model, runtimePromptMessageId,
             command: commandExpectations.get(failedTask.id) });
           capture.observation = 'captured';
+          capture.terminalEvent = { observation: 'unavailable' };
+          try {
+            const sdkRoot = process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT;
+            assert(sdkRoot && path.isAbsolute(sdkRoot) && /(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(sdkRoot) && runtimePromptMessageId);
+            const gitOptions = { env: desktop.env, cwd: desktop.projectPath, timeout: Math.min(5000, Math.max(1, captureDeadline - Date.now())), maxBuffer: 4096, signal: captureController.signal };
+            assert.equal((await execute('git', ['-C', sdkRoot, 'rev-parse', 'HEAD'], gitOptions)).stdout.trim(), bundled.bundledSdkSha);
+            assert.equal((await execute('git', ['-C', sdkRoot, 'status', '--porcelain', '--untracked-files=all', '--ignored=matching', '--', 'src'], gitOptions)).stdout, '');
+            const { stdout: terminal } = await execute(bun,
+              ['--no-env-file', `--config=${bunConfig}`, '--eval', v2TerminalFailureReaderCode(), JSON.stringify({
+                sdkRoot, projectorPath: fileURLToPath(new URL('./opencode-diagnostics/v2-terminal-failure.ts', import.meta.url)),
+                dataRoot: desktop.env.CLAUDE_MULTIMODEL_DATA_HOME, teamId: desktop.teamName,
+                runId: proof.runIds.at(-1), memberId: failedTask.owner, sessionId: nativeSession, nativeInputId: runtimePromptMessageId,
+              })], { env: desktop.env, cwd: desktop.projectPath, timeout: Math.max(1, captureDeadline - Date.now()), maxBuffer: 8192, signal: captureController.signal });
+            const fact = JSON.parse(terminal);
+            // Reproject the child's closed fields; never copy raw child output into proof.
+            assert(fact.source === 'exact_original_owned_native_event');
+            assert(['session.execution.failed', 'session.execution.succeeded', 'session.execution.interrupted'].includes(fact.terminalType));
+            const token = (value: unknown) => typeof value === 'string' && /^[A-Za-z_]{2,90}$/.test(value) ? value : null;
+            capture.terminalEvent = { source: 'exact_original_owned_native_event', terminalType: fact.terminalType,
+              errorType: token(fact.errorType), errorCode: token(fact.errorCode),
+              httpStatus: Number.isInteger(fact.httpStatus) && fact.httpStatus >= 100 && fact.httpStatus <= 599 ? fact.httpStatus : null,
+              lastStepFinish: ['stop', 'tool-calls', 'length', 'error', 'content-filter'].find(item => item === fact.lastStepFinish) ?? null };
+          } catch { /* Missing trusted source, original input or live owner stays unavailable. */ }
         }
         })().finally(async () => {
           // Also retire any setup file whose asynchronous write settled after the cutoff.
