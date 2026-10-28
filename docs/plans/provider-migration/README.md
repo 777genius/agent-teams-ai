@@ -90,6 +90,17 @@ gap, packed P7/M17 и M19 HOLD этой отдельной Codex-проверк�
 ещё требуют собственных результатов; дополнительный tuple diagnostic остаётся
 unqualified и не закрывает P7/M19. Новые формы, OpenCode V2 и этап2 не добавляются.
 
+На точном `1580aca2` [canonical CI40678068306](https://github.com/777genius/agent-teams-ai/actions/runs/40678068306)
+прошёл Full qualification:23 904 PASS /0 FAIL /97 SKIP в root suites и отдельные
+workspace gates. Native результаты этим не подтверждены: Desktop попытки
+останавливались до TEST при получении pinned Node, а unqualified diagnostic —
+при HTTP/2 download headers. После свежего fetch фактический main оказался
+`502d7e5`, тогда как REST PR base ещё показывал `3f52fdf`.
+[Актуальное дополнение](progress/checkpoint-2026-10-27.md#actual-main-merge-and-bounded-ci-transport-candidate)
+сохраняет оба source delta и описывает один следующий CI-only HTTP/1.1 attempt
+с прежними digest/time/size guards. Run1580 сохраняет собственную provenance;
+его результаты не переносятся автоматически на новый merge.
+
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/
 import/backup путей и точные результаты каждого запуска. Последний коммит

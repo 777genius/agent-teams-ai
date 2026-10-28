@@ -6,6 +6,8 @@
  * MarkdownViewer already handles rendering mention:// and team:// links as colored badges.
  */
 
+import { mapMarkdownOutsideCode } from './markdownCodeRanges';
+
 /**
  * Convert `@memberName` in plain text to markdown links with mention:// protocol.
  * Encodes color in the URL so MarkdownViewer can render colored badges without extra context.
@@ -31,12 +33,14 @@ export function linkifyMentionsInMarkdown(
     'gi'
   );
 
-  return text.replace(pattern, (_match: string, prefix: string, name: string) => {
-    // Find the canonical name (case-insensitive lookup)
-    const canonical = canonicalNameByLower.get(name.toLowerCase()) ?? name;
-    const color = memberColorMap.get(canonical) ?? '';
-    return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
-  });
+  return mapMarkdownOutsideCode(text, (prose) =>
+    prose.replace(pattern, (_match: string, prefix: string, name: string) => {
+      // Find the canonical name (case-insensitive lookup)
+      const canonical = canonicalNameByLower.get(name.toLowerCase()) ?? name;
+      const color = memberColorMap.get(canonical) ?? '';
+      return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
+    })
+  );
 }
 
 /**
@@ -64,10 +68,12 @@ export function linkifyTeamMentionsInMarkdown(
     'gi'
   );
 
-  return text.replace(pattern, (_match: string, prefix: string, name: string) => {
-    const canonical = canonicalNameByLower.get(name.toLowerCase()) ?? name;
-    return `${prefix}[${canonical}](team://${encodeURIComponent(canonical)})`;
-  });
+  return mapMarkdownOutsideCode(text, (prose) =>
+    prose.replace(pattern, (_match: string, prefix: string, name: string) => {
+      const canonical = canonicalNameByLower.get(name.toLowerCase()) ?? name;
+      return `${prefix}[${canonical}](team://${encodeURIComponent(canonical)})`;
+    })
+  );
 }
 
 /**

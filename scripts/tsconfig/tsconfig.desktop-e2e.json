@@ -11,6 +11,7 @@
     "../../scripts/e2e/opencode-native-team-port.ts",
     "../../scripts/e2e/select-team-latch-desktop.ts",
     "../../scripts/e2e/openui-desktop.ts",
+    "../../scripts/e2e/openui-live-codex.ts",
     "../../scripts/e2e/opencode-diagnostics/windows-attachments.mts",
     "../../scripts/e2e/group-chats-desktop.ts",
     "../../scripts/e2e/group-no-reply-desktop.ts",

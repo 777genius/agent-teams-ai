@@ -605,6 +605,7 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
+          node scripts/ci/prefill-legacy-host-macos-node.mjs
           pnpm stage:legacy-host-node --platform darwin-arm64
       - name: Prepare exact TEST package manager and reviewed native binaries
         env:
@@ -875,10 +876,11 @@ jobs:
           sw_vers
           uname -m
           test "$(uname -m)" = arm64
+          node scripts/ci/prefill-legacy-host-macos-node.mjs
           node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
           headers="$(mktemp -d /private/tmp/TEST-process-tuple-headers-XXXXXX)"
           archive="$headers/node-v24.21.0-headers.tar.gz"
-          curl --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/dist/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/dist/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
           tar -xzf "$archive" -C "$headers" node-v24.21.0/include/node
           LEGACY_PROCESS_TUPLE_DIAGNOSTIC_GO=1 resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/diagnose-process-tuple.ts /private/tmp "$headers/node-v24.21.0/include/node" "$archive"
       - name: Preserve unqualified tuple inputs and diagnostics

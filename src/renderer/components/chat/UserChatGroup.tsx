@@ -10,10 +10,10 @@ import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { extractFileReferenceTokens } from '@renderer/utils/groupTransformer';
+import { stripAgentBlocksForMarkdown } from '@renderer/utils/markdownCodeRanges';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { parseTaskNotifications } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
 import { format } from 'date-fns';
@@ -425,7 +425,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
   const hasImages = content.images.length > 0;
   // Use rawText to preserve /commands inline
   const textContent = content.rawText ?? content.text ?? '';
-  const stripped = useMemo(() => stripAgentBlocks(textContent), [textContent]);
+  const stripped = useMemo(() => stripAgentBlocksForMarkdown(textContent), [textContent]);
   const isLongContent = stripped.length > 500;
 
   const taskNotifications = useMemo(() => {

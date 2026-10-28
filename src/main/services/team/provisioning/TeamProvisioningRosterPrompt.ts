@@ -1,4 +1,6 @@
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { isLeadMember, isLeadNameAlias, isReservedLeadRole } from '@shared/utils/leadDetection';
+import { protocols } from 'agent-teams-controller';
 
 import type { TeamCreateRequest } from '@shared/types';
 
@@ -85,15 +87,20 @@ export function buildCreateBootstrapUserPrompt(
 ): string {
   const trimmedPrompt = initialUserPrompt.trim();
   const teammates = getTeammateRosterMembers(members);
-  if (!trimmedPrompt || teammates.length === 0) {
+  if (!trimmedPrompt) {
     return trimmedPrompt;
   }
   const roster = buildMembersPrompt(teammates.map(({ workflow: _workflow, ...member }) => member));
   return [
-    'Team roster (authoritative — from the team configuration):',
-    roster,
-    '',
-    buildLeadRosterIntegrityRules(teammates.map((member) => member.name)),
+    wrapAgentBlock(protocols.buildChatVisualizationProtocolText()),
+    ...(teammates.length > 0
+      ? [
+          'Team roster (authoritative — from the team configuration):',
+          roster,
+          '',
+          buildLeadRosterIntegrityRules(teammates.map((member) => member.name)),
+        ]
+      : []),
     '',
     'User instructions:',
     trimmedPrompt,

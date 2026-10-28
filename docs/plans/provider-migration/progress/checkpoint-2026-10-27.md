@@ -5498,3 +5498,98 @@ A fresh plan census gives only an informal engineering orientation: about90%
 code and75%overall, with broad ranges87–96/67–83 using the original weights and
 no credit for future CI. This does not replace the frozen23October79/57 snapshot,
 create a new dashboard or declare completion of any open acceptance/custody gate.
+
+### Actual main merge and bounded CI transport candidate
+
+The frozen P2/Codex-Resume/native-route source was committed and immediately
+pushed as `1580aca2b470f90f55a92ef85879fc6eaf6763b8`, parent `5c803e4e`, tree
+`4847fbf8b2b79c8404616c85bd3b1c57832b5add`. Manual
+[run40678068306](https://github.com/777genius/agent-teams-ai/actions/runs/40678068306)
+is retained on those exact bytes; it was not cancelled or silently replaced.
+Its canonical Full qualification succeeded: root Vitest23,904 PASS /0 FAIL /
+97 SKIP (2,039 passed files /36 skipped), controller421, MCP74, Host797,
+CI/OpenCode runner scripts179, feedback/change-scope119, release-download9 and
+MCP transport E2E24 all passed with0 FAIL /0 SKIP in those separate suites.
+These are results for1580, not for the later main integration below.
+
+Fresh `git ls-remote` and fetch found actual main
+`502d7e5ce97f9a6bb61d36fc232467b50d4ee906`; REST PR base still reported
+`3f52fdf40ea0b323f76dd1a526b6746a1f637b9e`. The earlier ancestry statement was
+correct for that cached3f52 base and does not establish ancestry of actual502d.
+The fetched3f52..502d range has three commits and62 changed files: existing
+OpenUI/chat/Markdown/task-reference/controller/MCP work plus upstream diagnostic
+and release documentation. This creates a real merge to resolve; no GitHub
+metadata failure is assumed.
+
+The sole textual conflict was `agent-teams-controller/src/internal/tasks.js`.
+Resolution preserves the entire1580 file and substitutes exactly one upstream
+bootstrap/empty-queue instruction: an actionable current app request continues
+under its existing reply/visibility rules even with an empty task queue, while
+bootstrap/reconnect with no actionable message stays silent. Bound tool names,
+identity/authority guards, cross-team examples and native process protocol remain
+intact. Independent reviewers checked the initial combined source:57 of62 files
+matched main exactly; the other five preserved this resolution and the prior PR
+native DTO/task-reference helper/test deltas together with upstream changes.
+After the two fixture/style alignments below,55 of62 files remain byte-exact main
+and seven contain those explicitly reviewed compositions. Host
+production source, package/lock, selected provider archive and SPI are unchanged.
+
+The first targeted merged test run reported304 PASS /1 FAIL. The new upstream
+`desktopVisualizationDelivery.integration` fixture supplied a synthetic OpenCode
+run without the existing `isCurrent` callback, so the unchanged fail-closed
+currency guard rejected it before any physical delivery. A one-line TEST-only
+conditional callback now models that stable synthetic OpenCode owner; native/lead
+fallbacks and every delivery/replay assertion remain unchanged. Actual production
+OpenCode proof already supplies this callback. Independent diagnosis and exact
+fixture review accepted this contract alignment; no production guard was relaxed.
+One existing upstream test assertion is wrapped by the repository's mandatory
+Prettier hook style, without semantic change.
+
+The retained1580 native attempts exposed acquisition failures before TEST, not
+native acceptance failures. One unqualified diagnostic staged Node successfully,
+then its single official headers curl failed92 after about57seconds with an
+HTTP/2 stream INTERNAL_ERROR; the diagnostic helper/native child never ran.
+Desktop attempts separately timed out in the existing pinned Node fetch after
+about60seconds before a fixture receipt existed. Other official headers requests
+in the same run returned HTTP200, so no general network outage or proven common
+root cause is claimed. Original raw logs/partial-input evidence remain retained;
+no failed partial archive is reused.
+
+For the next fresh CI attempt only, one CI helper pre-fills the existing Node
+cache before each of the two unchanged macOS staging calls. It requires macOS
+arm64, Node24.21.0 and the exact lock tuple/archive/`bed7eea5…` SHA256. An existing
+bounded nonsymlink regular cache entry is verified or refused. An absent entry
+gets one fresh exclusive0600 partial, one official HTTP/1.1 curl with the same
+15-second connect /60-second total /128MiB bounds, actual transport statistics,
+and SHA verification before atomic publication; its own partial is removed on
+failure. There is no failed-fetch fallback, retry, corrupt-cache repair or
+production stager edit. The original stager still verifies/extracts/checks the
+binary/version/manifest. The diagnostic headers request changes only to
+`--http1.1`, with the same URL and time bounds. Neither transport choice is
+qualified by local syntax checks; actual fresh macOS execution is still required.
+Independent exact helper/YAML review accepted these bounded changes.
+
+Local merge verification completed so far:
+
+- Controller and MCP bundle builds:exit0; full controller423/423 PASS and real
+  controlled MCP transport E2E24/24 PASS,0 FAIL /0 SKIP.
+- Canonical `pnpm typecheck:workspace`:exit0 on the merged tree. The initial
+  restricted execution was killed137 without TypeScript diagnostics; the
+  separately retained escalated execution completed all stages successfully.
+- Source-size guard:4,634 production files /143 frozen exceptions; provisioning
+  architecture guard passed. No source cap or exception increased.
+- CI helper syntax and fast lint passed; YAML parsed and ten selected shell
+  steps passed `bash -n`. Both prefill calls and the one headers transport flag
+  were checked. Required gate needs, native budgets and no-retry policy remain.
+- All staged application-source formatting passed the existing commit-hook
+  preflight. Corrected visualization fixture plus the existing group runtime
+  authority/currency integration suite:37/37 PASS,0 FAIL /0 SKIP, exit0. This is
+  separate from the first304/305 targeted run; no combined305/305 rerun is claimed.
+
+The CI-only helper SHA256 is
+`4f1721f976352024dc15300e7192863049f90604e7876f90c2cb87145411f66c`;
+the workflow SHA256 is
+`d73cacb26c896bcb59f81bec05e96e9693fc094e26af55b60162d22659d8ab12`.
+
+This merge does not add an OpenCodeV2 Host path, new UI, Stage2 implementation,
+SDK custody authority, P7/M17 closure or a native PASS. Draft remains unchanged.

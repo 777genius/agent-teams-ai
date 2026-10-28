@@ -4,11 +4,11 @@ export function buildLeadChatVisualizationProtocol(): string {
   return protocols.buildChatVisualizationProtocolText();
 }
 
-/** Reserve the protocol as one unit; never truncate a component signature. */
+/** Keep ordinary briefing context first; include the full display spec only when both fit. */
 export function buildChatVisualizationBriefing(briefing: string, maxChars: number): string {
   const protocol = protocols.buildChatVisualizationProtocolText();
   const suffix =
-    protocol.length + 2 <= maxChars
+    briefing.length + protocol.length + 2 <= maxChars
       ? protocol
       : protocols.buildChatVisualizationRefreshInstruction();
   const budget = Math.max(0, maxChars - suffix.length - 2);
