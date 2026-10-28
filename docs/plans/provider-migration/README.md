@@ -83,38 +83,35 @@ GitHub auth восстановлена; прежний blocked/unselected handof
 gap, packed P7/M17 и M19 HOLD этой отдельной Codex-проверкой не закрываются.
 Исторические CI/review ниже сохраняют собственные точные source bytes и границы.
 
-Последующее [frozen продолжение](progress/checkpoint-2026-10-27.md#frozen-recovery-correction-and-current-native-acceptance-routes)
-добавляет проверку точного command fingerprint при recovery и один Codex-вариант
-прежнего Resume UI. Полный local Host gate прошёл797/797, связанные fixtures45/45
-и canonical workspace types прошли. Текущие native/UI и OpenCode1.19.4 restore
-ещё требуют собственных результатов; дополнительный tuple diagnostic остаётся
-unqualified и не закрывает P7/M19. Новые формы, OpenCode V2 и этап2 не добавляются.
+**Свежий canonical срез — exact `624a3ec`:**
+[CI40694908161](https://github.com/777genius/agent-teams-ai/actions/runs/40694908161)
+прошёл Full qualification: 24 011 root PASS / 0 FAIL / 98 SKIP; controller423,
+MCP74, Host800 и остальные отдельные gates прошли. Validate включал workspace
+types и build. Этот результат закрывает local resource-limited type gap для624a;
+последующие исправления Launch, product lookup и TEST harness требуют final CI.
 
-На точном `1580aca2` [canonical CI40678068306](https://github.com/777genius/agent-teams-ai/actions/runs/40678068306)
-прошёл Full qualification:23 904 PASS /0 FAIL /97 SKIP в root suites и отдельные
-workspace gates. Native результаты этим не подтверждены: Desktop попытки
-останавливались до TEST при получении pinned Node, а unqualified diagnostic —
-при HTTP/2 download headers. После свежего fetch фактический main оказался
-`502d7e5`, тогда как REST PR base ещё показывал `3f52fdf`.
-[Актуальное дополнение](progress/checkpoint-2026-10-27.md#actual-main-merge-and-bounded-ci-transport-candidate)
-сохраняет оба source delta и описывает один следующий CI-only HTTP/1.1 attempt
-с прежними digest/time/size guards. Run1580 сохраняет собственную provenance;
-его результаты не переносятся автоматически на новый merge.
+**Последний завершённый Desktop11 — exact `27f60f3`:**
+[run40686433576](https://github.com/777genius/agent-teams-ai/actions/runs/40686433576)
+имеет семь scoped PASS и четыре FAIL. Mixed Create/Launch остановился на Node
+acquisition; Taskboard сохранил один `(image)` comment; Claude Resume остановился
+до Launch readiness; Codex — на первом TEST inference protocol mismatch до Resume.
+Ни один failed input не переигрывается. Новые source/TEST corrections приняты
+независимым ревью; [checkpoint](progress/checkpoint-2026-10-27.md) сохраняет точные
+refs, gates и границы. Fresh Desktop/managed-MCP Resume и all-three native restore
+с OpenCode1.19.4 остаются обязательными.
 
-На `da08af6b` официальный `/dist` HTTP/1.1 ответил200, но diagnostic prefill
-получил лишь868 352 из52 909 993 байт за60 секунд и завершился до TEST. Следующий
-[узкий preflight](progress/checkpoint-2026-10-27.md#typed-official-alias-acquisition-preflight)
-проверяет официальный `/download/release` alias с тем же exact SHA и прежними
-bounds; helper переведён в MTS и включён в существующий strict typecheck.
-Local transfer подтвердил точные байты, но Mac setup/native PASS ещё не следует.
-Следующий remote запуск сначала проверяет diagnostic route без11 Desktop rows.
+**Node acquisition и cache seed уже подтверждены на macOS24G624:** diagnostic-only
+40694908161 получил точные official bytes и сохранил cache с полным locked SHA;
+будущий cache hit пока не заявлен. Это unqualified readonly kernel observation
+с одним finite child, а не SDK/P7 qualification. Предыдущие acquisition failures
+сохранены как исторические и не объявлены native failures.
 
-Отдельный [prospective process candidate](progress/checkpoint-2026-10-27.md#prospective-process-artifact-tuple-binding)
-сохраняет явную связь selected manifest → actual native build для24G90/24G624.
-Historical24G90 records читаются без переписывания, но не дают control на24G624.
-Host unit gate прошёл800/800; actual ancestry, нормальный SDK registration/Stop
-и packed proof остаются обязательны до любого P7/support claim. Это не закрывает
-первоначальный M19 root911 HOLD и не включает новый путь по умолчанию.
+[Prospective process candidate](progress/checkpoint-2026-10-27.md#prospective-process-artifact-tuple-binding)
+связывает selected manifest с actual native build для24G90/24G624. Historical90
+records читаются без переписывания, но не дают control на624. Новый normal SDK
+actor подготовлен; actual ancestry, обычный SDK registration/Stop и packed Launch
+ещё нужны до P7/support claim. Первоначальный M19 root911 HOLD остаётся явно
+неразрешённым. Draft, Stage1-only и OpenCodeV1-only scope сохранены.
 
 **Исторические snapshots ниже сохраняют собственные source boundaries.**
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с

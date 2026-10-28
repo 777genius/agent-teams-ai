@@ -5933,3 +5933,22 @@ observations did not prove a product defect. Strict scripts types, scoped lint,
 Node syntax and whitespace checks passed; C independently accepted the exact
 observer diff. Both existing files remain source-pinned. Fresh UI execution is
 still required; this source correction does not relabel the retained attempt.
+
+### Preserve actual main after the scoped corrections
+
+Taskboard observers were committed and immediately pushed as
+`f71a40ea0962212a5dd48727fde47f7b444ab44c`. Fetch then found actual main
+`1b592e28af4ca0b15b9ef38aa60e1b4bfb4de513`, beyond the earlier805003 CI-only
+snapshot. The clean merge preserves its19-path delta: optional workflow policy
+plus incoming installer/dashboard/QuickConnect changes. A independently reviewed
+the actual range and confirmed incoming product blobs and all Stage1 Desktop,
+diagnostic/cache/artifact/native-restore steps; no Host/profile/provider/protocol
+change is introduced by this merge. Upstream behavior is preserved, not expanded
+into an OpenCodeV2 Host integration.
+
+The three concrete incoming installer/UI suites passed186/186; the existing new
+optional-workflow policy test passed10/10. Source-size guard4,637/143, provisioning
+architecture, hook formatting and whitespace checks passed. The current overview
+now distinguishes earlier canonical624a and Desktop27f receipts from the later
+corrected source. No new main fetch is planned during native qualification;
+fresh current-source Desktop, final canonical and P7 chain remain required.
