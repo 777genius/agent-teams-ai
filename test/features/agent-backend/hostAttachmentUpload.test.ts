@@ -13,6 +13,7 @@ import { AttachmentArtifactStore } from '../../../packages/legacy-agent-host/src
 import { TeamOwnerStore } from '../../../packages/legacy-agent-host/src/adapters/team/TeamOwnerStore';
 import { createFilesystemTeamOwner } from '../../../packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner';
 import { createTeamAttachmentComposition } from '../../../packages/legacy-agent-host/src/composition/createTeamAttachmentComposition';
+import { createStoppedImportComposition } from '../../../packages/legacy-agent-host/src/composition/createStoppedImportComposition';
 import { createMemberAttachmentPort } from '../../../packages/legacy-agent-host/src/composition/createMemberAttachmentPort';
 import {
   attachmentUploadSchema,
@@ -36,7 +37,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
-function fixture() {
+function fixture(withImports = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owner-attachment-')));
   roots.push(root);
   const binding = { backendId: 'TEST-owner', teamId: 'TEST-team', teamName: 'TEST-team' };
@@ -109,9 +110,36 @@ function fixture() {
   };
   const definition = { binding, scope, members, grants };
   const hosted = { definition, owner, connection, operatorPrincipalId: 'TEST-human' } as HostedTeam;
+  const imports = withImports
+    ? createStoppedImportComposition({
+        profile: {
+          schemaVersion: 1,
+          owner: profileOwner,
+          principalId: 'TEST-human',
+          creation: { contextIds: ['TEST-project'] },
+          teams: [hosted.definition],
+        },
+        assertCurrent() {},
+        attach() {
+          throw new Error('Unexpected import publication');
+        },
+        validateConfiguration() {
+          throw new Error('Unexpected import configuration');
+        },
+      })
+    : undefined;
+  let importReads = 0;
   const composition = createTeamAttachmentComposition({
     profile: { owner: profileOwner, principalId: 'TEST-human' },
     teams: new Map([[binding.teamId, hosted]]),
+    ...(imports
+      ? {
+          read: (teamId: string, task: unknown, payload: unknown) => {
+            importReads++;
+            return imports.readTaskAttachment(teamId, task, payload);
+          },
+        }
+      : {}),
     assertCurrent() {},
   });
   const envelope = (payload: JsonValue) => ({
@@ -132,11 +160,84 @@ function fixture() {
     upload,
     hosted,
     composition,
+    importReads: () => importReads,
     envelope,
   };
 }
 
 describe('selected Team attachment publication', () => {
+  it('keeps removed ordinary attachment reads null with the real creation-enabled import reader', async () => {
+    const f = fixture(true);
+    const bytes = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=',
+      'base64'
+    );
+    const image = f.upload(bytes, 'TEST-owned-image');
+    f.connection.execute({
+      commandId: 'TEST-add-image',
+      operation: 'task.attachment.add',
+      payload: { taskId: f.taskId, attachment: image },
+    });
+    const commentReference = f
+      .artifacts()
+      .upload({
+        ...f.input(bytes, 'TEST-owned-comment'),
+        attachment: {
+          id: 'TEST-comment-file',
+          filename: 'comment.png',
+          mimeType: 'image/png',
+          size: bytes.length,
+        },
+        offset: 0,
+        base64: bytes.toString('base64'),
+      }).reference!;
+    f.connection.execute({
+      commandId: 'TEST-comment-image',
+      operation: 'task.comment',
+      payload: { taskId: f.taskId, text: 'TEST retained comment', attachments: [commentReference] },
+    });
+    const read = (attachmentId: string) =>
+      f.composition.methods['team.task.attachment.read']!.handle(
+        f.envelope({ taskId: f.taskId, attachmentId, offset: 0 }),
+        { requestId: 'TEST-read', signal: new AbortController().signal }
+      );
+    for (const attachmentId of ['TEST-file', 'TEST-comment-file'])
+      expect(await read(attachmentId)).toMatchObject({
+        ok: true,
+        value: { base64: bytes.toString('base64'), sha256: sha(bytes) },
+      });
+    expect(f.importReads()).toBe(0);
+    const before = f.connection.getTask(f.taskId);
+    f.connection.execute({
+      commandId: 'TEST-remove-image',
+      operation: 'task.attachment.remove',
+      payload: { taskId: f.taskId, attachmentId: 'TEST-file' },
+    });
+    expect(f.connection.getTask(f.taskId).comments).toEqual(before.comments);
+    expect(await read('TEST-file')).toEqual({ ok: true, value: null });
+    expect(await read('TEST-missing')).toEqual({ ok: true, value: null });
+    expect(f.importReads()).toBe(0);
+    expect(await read('TEST-comment-file')).toMatchObject({
+      ok: true,
+      value: { sha256: sha(bytes) },
+    });
+    rmSync(
+      join(
+        f.root,
+        'teams',
+        f.binding.teamName,
+        '.host-owner/attachments',
+        commentReference.artifactId + '.json'
+      )
+    );
+    expect(await read('TEST-comment-file')).toEqual({
+      ok: false,
+      code: 'hold',
+      outcome: 'not-dispatched',
+    });
+    expect(f.importReads()).toBe(1);
+  });
+
   it('uses one captured renderer handle for chunked comment upload and canonical facade publication; a context switch prevents publication', async () => {
     const f = fixture();
     const seen: string[] = [];

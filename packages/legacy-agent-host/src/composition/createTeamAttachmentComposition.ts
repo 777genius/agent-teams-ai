@@ -143,9 +143,18 @@ export function createTeamAttachmentComposition(options: {
                   taskPayload.offset,
                   taskPayload.expectedSha256
                 );
+                const referenced = metadata.some(
+                  (item) =>
+                    item !== null &&
+                    typeof item === 'object' &&
+                    'id' in item &&
+                    item.id === taskPayload.attachmentId
+                );
                 value =
                   owned ??
-                  options.read?.(selected.definition.binding.teamId, task, payload) ??
+                  (referenced
+                    ? options.read?.(selected.definition.binding.teamId, task, payload)
+                    : undefined) ??
                   null;
               } else if (imported) {
                 if (!options.read) throw new TeamOwnerError('hold');
