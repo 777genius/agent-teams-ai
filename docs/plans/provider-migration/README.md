@@ -66,6 +66,20 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 
 ## Текущий checkpoint интеграции — 28 октября
 
+**Текущая подготовка после merge main:** `02c2e68b1` уже запушен; он включает
+main `11418fb29` без конфликтов и только пять upstream TEST files. Это обновление
+базы, не новая native приёмка. Независимое ревью TEST fixes подтвердило точный
+H3 profile RED→projected GREEN через production validator и успешный Mixed list
+decoder: 6/6 focused tests, без FAIL/SKIP. Original receipts не изменены.
+Локально meaningful Group RED→GREEN 2/2, Cross-Team RED 2 FAIL / 1 PASS→GREEN
+3/3, fixture models 18/18 и main-merge regressions 25/25 прошли; strict Host
+types, scoped lint и оба guards PASS. Final AST review подтвердил semantic match
+всех 10 source/TEST files. Полный root typecheck остановился local OOM137;
+полный Group file отменён на 90s — это не PASS. Remote Validate/Host обязательны.
+После commit/push обязательны один существующий combined CI (`stage1_desktop=true`,
+`stage1_process_qualification=true`) и manual CodeQL на том же exact head.
+Новый Source11/H3/P7/canonical PASS пока не заявлен.
+
 **Дополнение после свежей проверки `26d17c7`: исправлен отдельный дефект
 холодного Codex Resume с managed MCP.** Новый случайный URL принадлежащего Host
 Team endpoint менял checkpoint compatibility и отклонял исходную native thread.
@@ -83,22 +97,96 @@ GitHub auth восстановлена; прежний blocked/unselected handof
 gap, packed P7/M17 и M19 HOLD этой отдельной Codex-проверкой не закрываются.
 Исторические CI/review ниже сохраняют собственные точные source bytes и границы.
 
-**Последний полностью проверенный canonical срез — exact `8471c25`:**
-[CI40716971821](https://github.com/777genius/agent-teams-ai/actions/runs/40716971821)
-прошёл Full qualification: 24 034 root PASS / 0 FAIL / 98 SKIP; отдельно прошли
-Host813, controller423, MCP74, scripts179, feedback119, release9, MCP E2E24 и
-policy10. Validate включал workspace types и build; все три lint jobs прошли.
-Общий run завершился failure из-за трёх Source UI сценариев; canonical PASS
-не означает принятие всего native matrix. Эти результаты относятся только к8471.
+**Свежий canonical срез — exact `b63ec69`:**
+[CI 40729216816](https://github.com/777genius/agent-teams-ai/actions/runs/40729216816)
+прошёл Full qualification (job 122965649359): 24 034 root PASS / 0 FAIL / 98 SKIP,
+2 046 passed files / 37 skipped. Отдельно прошли Host 813, controller 423, MCP 74,
+scripts 179, feedback 119, release 9, MCP E2E 24 и policy 10; эти counts не прибавляются
+к root total. Это свежий canonical результат после native sidecar closure,
+а не перенос 8471. Original combined run завершился COMPLETED/FAILURE: canonical
+и scoped P7 PASS не заменяют успешные Source11/H3. Их итоговые границы ниже;
+следующая production-композиция ещё не имеет свежей квалификации.
+Отдельный [canonical CI 40735000801](https://github.com/777genius/agent-teams-ai/actions/runs/40735000801)
+также завершился SUCCESS на том же exact b63; Source/P7 в нём были SKIPPED.
 
-**CodeQL на exact `8471c25` прошёл оба анализа:**
-[run40717011954](https://github.com/777genius/agent-teams-ai/actions/runs/40717011954)
-подтвердил исправление591/592 и отсутствие branch-only findings. Оставшиеся187
-open instances совпадают с main baseline; это не заявление об отсутствии alerts
-во всём репозитории. Подавления/dismissals для получения результата не делались.
+**CodeQL на exact `b63ec69` прошёл оба анализа:**
+[run 40729234419](https://github.com/777genius/agent-teams-ai/actions/runs/40729234419)
+завершился SUCCESS для actions и JS/TS. Нет branch-only findings относительно
+main и нет новых относительно exact 8471; в 14 sidecar source paths открытых
+alerts нет. Оставшиеся 187 open instances — inherited baseline, не заявление об
+alert-free репозитории. 591/592 остаются fixed; их last-occurrence commit 7fec
+не переписывается как b63. Подавления/dismissals не выполнялись.
 
-**Последний завершённый Source Desktop11 — exact `8471c25`: восемь scoped PASS,
-три INCOMPLETE.** Mixed завершил исходные native inputs/notices и один group
+**Original Source audit `b63ec69` завершён:** run 40729216816 имеет итог
+COMPLETED/FAILURE; Source jobs — 9 SUCCESS / 2 FAIL, без pending. Primary UI
+receipts отдельно дают 10 scoped ACCEPT / 1 Mixed INCOMPLETE. Codex UI PASS
+не превращает его job в green: этот job завершился FAIL на conditional H3,
+который тоже INCOMPLETE. Полная таблица receipts/artifact IDs — в
+[итоговом Source checkpoint](progress/checkpoint-2026-10-27.md#b63-original-source11-terminal-audit-and-changed-host-requalification).
+
+Codex UI подтвердил ONE8/TWO3, исходную native thread и смену managed MCP URL;
+JSONL/history prefix независимо rehashed, оба original Code Mode helpers после
+Stop физически отсутствуют, native pair и 1 413 source pins неизменны. Claude
+Resume также принят в своей границе, но его native JSONL отсутствует в selective
+artifact: независимый transcript/prefix rehash для Claude не заявлен.
+
+Mixed завершил один Group Create и один directed Bob Send, затем native
+`group_chat_list` вернул forbidden. Реальный дефект composition — сравнение
+canonical HostedTeam с легитимным capturedTeam wrapper. Group guard и existing
+regressions имеют meaningful RED→GREEN / 50 affected PASS; аналогичная native
+Cross-Team correction принята локально с meaningful RED→GREEN 3/3. PairAuthority остаётся строгой.
+TEST decoder успешного list ARRAY независимо принят с actual MCP DTO/structured
+wrapper и строгим exact group ID; это не причина исходного forbidden. Общего
+нового native freeze/ACCEPT или будущего SHA ещё нет; original Mixed
+receipt остаётся INCOMPLETE, member Restart не достигнут, физическое отсутствие
+captured Host отдельно не доказано.
+
+H3 остановился до native observations: artifact-only `codeModeHost` попал в strict
+runtime executable profile. Approved one-line TEST projection только `path`/
+`sha256` сохраняет artifact metadata/pair freeze; actual-validator RED→GREEN,
+29/29 existing tests и scoped gates прошли. Primary original stderr не сохранён:
+причина воспроизведена schema/CLI parse chain. Original H3 остаётся INCOMPLETE,
+cleanup unconfirmed, 0 model observations; fix ещё не делает его native PASS.
+
+Source cleanup scopes различаются: часть app epochs завершается существующим
+identity-checked wrapper SIGTERM. Нет общего claims о natural Quit, нулевых
+signals или отдельном Host exit code. Omitted original Downloads files и Claude
+JSONL не rehashed независимо. Taskboard offline cross/default routing принят
+через три cold epochs с исходными bytes, но не заменяет native Cross-Team proof;
+notification Mark Read остался unavailable/already read. Review сохраняет
+PARTIAL_OR_GAP, fullM13=false и unsafePromotion=false. Captured-stopped import
+использует finite Node Stop fixture, не квалифицирует actual old SDK owner.
+
+**P7 scoped raw ACCEPT — exact `b63ec69` / macOS 24G624 / arm64 / Node 24.21.0.**
+Genuine ancestry и normal SDK Stop подтверждены с Claude SDK 0.3.305, Sonnet 4.6/
+low: original Host 4125 exit 0/null, harness signals 0. Packed business использовал
+тот же SDK, Claude Opus 4.6/medium, один original Launch и один Stop; сохранён
+эффект `ONE\n`, SDK 4895 released/physically absent до Quit.
+
+Cleanup wrapper имеет отдельную границу: перед harness cleanup в исходной app
+group остаётся только app 4452; Host 4480 отсутствует именно в этой группе.
+Глобальное captured Host absence подтверждено только после существующей cleanup,
+достигшей identity-checked SIGTERM attempt для app group. Принятие/доставка сигнала
+не записаны; итог app 0/null и пустая группа не доказывают Quit-only natural reap.
+Packed Host exit code не exposed. Normal SDK proof с нулём harness signals —
+отдельное подтверждение, не свойство packed wrapper.
+
+Official Codex helper archive, три binary copies и exact two-file Codex census
+проверены; packed Codex business/Code Mode lifecycle не выполнялись. Сверены
+1 419 Git source pins, packed 1 413 before/after, 120 packages и 15 708 unique
+archive pins. Renderer/terminal concatenated tree hashes независимо повторно
+не вычислялись; original runner final checks PASS сохранены. Полный artifact
+stream 12835327021 проверен, точные hashes и cleanup limits — в
+[checkpoint](progress/checkpoint-2026-10-27.md#b63-p7-scoped-raw-accept-with-wrapper-cleanup-boundary).
+Это scoped candidate-synthetic proof; не real-auth/other-OS/release приёмка.
+
+**Сохранённый snapshot 8471:** следующий исходный summary относится к своему
+checkpoint. Текущий terminal b63 результат указан выше; старые source refs и
+receipt limits не переписываются.
+
+**Исходный Source Desktop11 — exact `8471c25`: восемь scoped PASS,
+три INCOMPLETE; общий run 40716971821 завершился FAILURE.** Этот исходный
+результат не переписывается новым запуском. Mixed завершил native inputs/notices и один group
 Create, затем остановился на TEST assertion порядка membership; group delivery
 и Restart не квалифицированы. Taskboard завершил image add, затем остановился
 на неподходящей pending-only проверке уже in-progress comment stage до focus/
@@ -136,8 +224,14 @@ Source отдельно наблюдает исходный own-PGID helper до
 без новых действий/signals. H3/Mixed direct MCP проверяют только native payload,
 не заявляя live Code Mode witness. Локально43 PASS /0 FAIL /2 Darwin-only SKIP,
 strict types/lint/workflow syntax прошли; фактический native PASS из этого не следует.
-Осталось получить fresh canonical, Source Desktop11 (включая managed-MCP Codex
-Resume/TWO и all-three H3), affected P7 и CodeQL на новой композиции. Draft candidate-synthetic scope,
+Canonical/CodeQL и scoped P7 на original b63 сохраняют собственные source и
+artifact refs. Новые production Host corrections отменяют прежнюю H3-only reuse
+границу для rebuilt candidate: обязательны fresh Source11 с Mixed delivery/
+Restart, actual all-three H3, canonical, CodeQL и новый P7 ancestry/normal SDK/
+packed candidate на выбранном ref. Existing manual flags достаточны; нового
+selector/framework нет. Эта docs-подготовка ничего не квалифицирует, не выбирает
+будущий SHA и не запускает rerun.
+Draft candidate-synthetic scope,
 Stage1-only и OpenCodeV1-only сохранены. Real auth, другие native OS tuples,
 release/default activation остаются unqualified/отдельным решением.
 **Исходный M19 root911 остаётся immutable HOLD: не adopted, не replayed и не closed.**

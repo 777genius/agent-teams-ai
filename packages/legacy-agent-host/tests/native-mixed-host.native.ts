@@ -313,7 +313,7 @@ stream_max_retries = 0
             provider: 'codex',
             protocolRevision: '0.162.0',
             model: 'mock-model',
-            executable: executables.codex,
+            executable: { path: executables.codex.path, sha256: executables.codex.sha256 },
             environment: {
               ...environment('bob'),
               CODEX_HOME: join(root, 'bob/config'),
@@ -929,9 +929,16 @@ stream_max_retries = 0
         await Promise.allSettled(modelRows.map((model) => model.close()));
         try {
           codexNativeInputsAfterCleanup = await captureCodexNativeInputs(executables.codex.path);
-          assert.deepEqual(codexNativeInputsAfterCleanup, codexNativeInputs, 'original Codex native pair remains frozen after H3 cleanup');
+          assert.deepEqual(
+            codexNativeInputsAfterCleanup,
+            codexNativeInputs,
+            'original Codex native pair remains frozen after H3 cleanup'
+          );
         } catch (error) {
-          nativeInputFreezeFailure = error instanceof Error ? error.message.slice(0, 1000) : 'native pair freeze unavailable';
+          nativeInputFreezeFailure =
+            error instanceof Error
+              ? error.message.slice(0, 1000)
+              : 'native pair freeze unavailable';
         }
         await writeFile(
           join(root, 'receipt.json'),
@@ -985,6 +992,10 @@ stream_max_retries = 0
         );
       }
     }
-    assert.equal(nativeInputFreezeFailure, undefined, 'original H3 native inputs changed; inspect retained receipt');
+    assert.equal(
+      nativeInputFreezeFailure,
+      undefined,
+      'original H3 native inputs changed; inspect retained receipt'
+    );
   }
 );

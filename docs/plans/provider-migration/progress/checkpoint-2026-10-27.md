@@ -6341,3 +6341,321 @@ final review accepted this exact delta and gates. The prior43-pass functional
 suite is retained as its own run, not presented as a new broad rerun. Final
 source-freeze SHA256 is30c8809767aa0f142ab8aaa5679f46683f8ef78a1a1653da6cc6bfb47eb41369;
 main smoke SHA256 is40520f3467642aa401560a83d087700b10518d476d22ad48c0615b957310a257.
+
+
+### Intermediate b63 canonical and CodeQL results; native audit pending
+
+The reviewed official native closure was committed and immediately pushed as
+`b63ec69ddcea8b63974d97f4a6bdc4c53eae364e` (parent d61e2a0, tree
+`86bec00c239ca11ae624f0cb050b092c108d4fea`). Only root dispatched fresh
+[CI 40729216816](https://github.com/777genius/agent-teams-ai/actions/runs/40729216816)
+and [CodeQL 40729234419](https://github.com/777genius/agent-teams-ai/actions/runs/40729234419)
+on that exact source. This is documentation preparation only, not final delivery
+or overall native acceptance.
+
+Canonical Full job 122965649359 is SUCCESS: root 24,034 PASS / 98 SKIP / 0 FAIL,
+2,046 passed files / 37 skipped. Separate fresh suites passed Host 813,
+controller 423, MCP 74, scripts 179, feedback 119, release 9, MCP E2E 24 and policy 10;
+separate counts are not folded into the root total. Exact report
+`checks/ci-40729216816-canonical-counts.json` was read and SHA256 verified as
+`d37593ba3103836e46baf70e056e9b830c818e651f1b34e01c95c31034ad0ff2`.
+No native acceptance/cleanup count is inferred from its scheduling snapshot.
+
+Actual CodeQL actions and JS/TS analyses on b63 completed SUCCESS. Open sets
+contain no branch-only finding versus main and none new versus exact 8471;
+187 remaining are inherited, with no open alert in the 14 changed sidecar paths.
+591/592 fixed-instance records retain the actual last-occurrence 7fec commit;
+we do not invent a b63 fixed-instance occurrence. Exact assessment
+`checks/codeql-40729234419-assessment.json` was read and SHA256 verified as
+`3ef8025bc5f1aed3318b4f59553fca137b7a5bfdf7f8a8cab37bb027535f3c61`.
+
+Native is not final: only the appointed auditor's teammate Source proof (1/11)
+has been accepted at this preparation boundary; other Source handoffs and H3
+remain pending. P7 proof step success precedes upload and independent raw audit,
+which are still in progress; no b63 P7 acceptance is claimed. Native counts and
+cleanup will come only from the assigned original-receipt audit handoffs, not
+from the older canonical-report census. Original 8471 remains a completed
+8/11 Source snapshot with three INCOMPLETE and overall FAILURE; its Claude-only
+P7 proof is neither rewritten nor substituted for fresh b63 qualification.
+
+No code/inventory/git mutation, native check or artifact re-download is part of
+this two-file docs preparation. Historical README snapshots remain byte-exact;
+Oct 23 percentages, original root911 immutable HOLD and real-auth/other-OS debt
+are untouched. Draft, Stage1-only and OpenCodeV1-only scope remains. Publication
+waits for complete audit handoff or separate root GO.
+
+
+### b63 P7 scoped raw ACCEPT with wrapper cleanup boundary
+
+Independent final_current_critic accepted the original b63 P7 raw proof at
+macOS 24G624/arm64/Node 24.21.0, retaining the unchanged provider e3 and Session
+SPI pins. Core audit `checks/ci-40729216816-p7/core-audit.json` SHA256
+`abb0cc3609e819372cc8db0cc51af37e66681c26a41de2349c6e2a31e471dc5a`
+and stream audit SHA256
+`48b919a38f8f52d160f65c0adc52b1791f54fa2fa1ae4b9918cd3aff795f5461`
+were read/verified from existing files, without re-downloading the artifact.
+Artifact 12835327021 contains 3,151,795,644 bytes; full-stream SHA256 is
+`1e66b21cc042a5f482cbf8f40eb7071e9b3019ef57eab44655b6fa283303d3cf`.
+Original P7 receipt SHA256 was reverified as
+`401374523151798c0fc6762e024df7b9624085bc5174663570ff844e6db4708a`.
+
+Genuine ancestry and normal SDK registration/Stop passed with Claude SDK 0.3.305,
+Sonnet 4.6/low. The original saved processRef/command and healthy neighbor are
+preserved; normal Host 4125 exited 0/null, harness signals 0, no recapture/adoption.
+Packed business used Claude SDK 0.3.305, Opus 4.6/medium with one original Launch
+and Stop and the original four-byte ONE\n effect. SDK 4895 was physically absent
+and its custody released before Quit.
+
+The packed wrapper cleanup limit is explicit. beforeHarnessCleanup contains
+only app 4452 in the original app group; Host 4480 is absent from that group,
+not independently proven globally absent before fallback. Existing immutable
+cleanup reaches an identity-checked app-group SIGTERM attempt; signal acceptance/
+delivery is not recorded. Final app exit 0/null, empty group and global
+capturedHostAbsent=true are after this cleanup. Packed Host exit code is not
+exposed. These facts do not prove Quit-only autonomous wrapper reaping, nor do
+we transfer the normal standalone Host's zero-harness-signal result to packed.
+
+Official helper archive and all three 65,408,016-byte binary copies match the
+reviewed hashes, and the candidate retains the exact two-file Codex directory.
+This verifies closure bytes, not packed Codex Code Mode business or helper
+lifecycle. Source pins 1,419 Git and packed 1,413 before/after, 120 packages and
+15,708 unique archive pins matched. Independent renderer/terminal concatenated
+tree recomputation was not performed; original runner final tree/candidate
+checks retain PASS. The scoped audit limitations remain visible.
+
+This accepted P7 handoff supersedes only the earlier b63 P7 audit-pending note.
+Source is still only 1/11 accepted teammate, ten pending; H3 pending. No overall
+Source11 or new-head qualification is claimed. Original 8471 8/11/overall FAILURE
+and its separate P7 proof stay unchanged. Draft/Stage1/V1-only, real-auth/other-OS/
+release limitations and original root911 immutable HOLD remain. Only these two
+docs files are prepared; commit/push remains HOLD pending complete Source/H3
+handoff or separate root GO. No new code, inventory, native run or test was added.
+
+
+### H3 runtime executable projection finding and approved TEST correction
+
+The original b63 Codex UI proof and its subsequent H3 result are distinct. Four
+primary UI raw proofs currently pass: teammate, pending Quit, Codex Resume and
+Create; seven Source results/final handoffs remain pending. Codex UI completed
+ONE8/TWO3 on the same native thread, rehashed JSONL/original history prefix,
+observed both original helpers physically absent after their Stop epochs, and
+matched all 1,413 immutable UI source pins. Whole Codex job failed only at H3;
+this UI PASS is not an H3 or whole-job green result.
+
+Original H3 root TEST-native-mixed-host-KWY5F5 remains INCOMPLETE with cleanup
+unconfirmed and zero model observations. Retained receipt SHA256 is
+`b96a4aaf8a59158036beb51575178bfe48a8c08e2afb99748a749223387ef4c4`;
+retained profile SHA256 is
+`3f3a8652a949cb1f06c8716ac4b7231b25bd662d9a69b6e4940eb86536cefff5`.
+The enriched artifact Codex executable object leaked its private codeModeHost
+field into runtime.members[1].executable. Exact production readTeamHostProfile
+rejects the original full profile with only that unrecognized key. Projecting
+only path/sha256 accepts the same full profile. The production CLI parse/catch
+chain explains exit before handshake; primary original stderr was not retained,
+so no raw stderr text or direct original-log proof is invented.
+
+The approved TEST change is exactly one assignment in
+packages/legacy-agent-host/tests/native-mixed-host.native.ts: explicit executable
+path/sha256 projection for Bob. Nested artifact/sidecar metadata and the before/
+after native-pair freeze remain unchanged; production strict schema, close guard,
+provider/SPI/archive, actions, budgets and selectors are untouched. Exact source
+SHA256 is `1e0aceadff10399cc25da1f0889720f231619c01bd51bfcce489eeb2c54398e1`;
+patch SHA256 is `b2c3edfbd2b8349454f64e5496faaccb77ef3479a97854edc6462f455137a718`.
+Independent final_current_critic accepted the source and actual-validator
+RED→projected GREEN. Existing tests passed 29/29, 0 FAIL / 0 SKIP; strict Host test
+types, scoped lint, source-size guard and diff check exited 0. Handoff
+checks/h3-b63-profile-projection-handoff.json SHA256 was verified as
+`7724ae3a4020493076532620a989aa7ff8d6648c6b2cbf88ffca744b0e7e11d1`.
+
+Fresh actual H3 and final canonical on the future selected ref are mandatory.
+Unaffected b63 proofs retain their own immutable source/artifact refs; the H3
+file is outside the 1,413 UI source census. There is no H3-only workflow selector;
+root will choose the existing Source11 route after original remaining jobs,
+without a new selector/framework or replay of the original failed attempt.
+No native rerun, source/inventory write, Git mutation or delivery is performed
+in this docs preparation. Code+docs commit/push remains HOLD until root GO.
+Historical receipt/root boundaries and Oct 23 percentages remain untouched;
+Draft, Stage1-only, OpenCodeV1-only and original root911 immutable HOLD remain.
+
+
+### b63 original Source11 terminal audit and changed Host requalification
+
+Original run 40729216816 on exact b63 is COMPLETED/FAILURE, updated
+2026-10-28 18:30:06Z. Appointed Source audit is complete: nine successful jobs
+and two failed jobs; ten primary UI raw SCOPED_ACCEPT receipts and one Mixed
+INCOMPLETE. Conditional H3 is separate and INCOMPLETE inside the failed Codex
+job; its primary Codex UI receipt remains accepted. This explicitly supersedes
+earlier pending Source counts in this preparation, not original receipt bytes.
+
+Existing report checks/ci-40729216816-source/audit-summary.json, 40,079 bytes,
+SHA256 `5fdadc194aaadecd55034486c43da9e4347bddf5ae04bce023ac346df73b354b`,
+was read without new artifact downloads. All eleven cases match the 1,413-file
+immutable b63 Git source basis before/after; no changing-worktree source basis
+is substituted. Exact primary receipt/artifact table:
+
+| Case | Primary UI raw verdict | Job | Artifact ID | Original receipt SHA256 |
+|---|---|---|---|---|
+| active-quit | ACCEPT | SUCCESS | 12840287606 | `9b63995db3ef0df0b5b4059afa30d59f148abf70f29c4579707e994e1e0bb443` |
+| mixed | INCOMPLETE | FAIL | 12840107914 | `2c5ea4b9178b5e9b60738ccd9ca95b9244669e7aeeaeae2553c9c67dd8fc90a4` |
+| pending-quit | ACCEPT | SUCCESS | 12836599724 | `8fea2fec6b13ba260f1f172f5922f77b07f7321a509d9393daa5dd274dd4cc24` |
+| claude-resume | ACCEPT | SUCCESS | 12839397692 | `e1f41b842347f13c4ea7aca2d9a16bdf205e7ac084b319805d65ac3448bd6026` |
+| taskboard | ACCEPT | SUCCESS | 12840151107 | `19d24c83983fba81b52d8882085a3243d934c582b98b31fb6e93f5ea767e0bf1` |
+| create | ACCEPT | SUCCESS | 12838565807 | `9623b028237ab0179311b30758df8eb3ff162dee4264bb945fbf32b234898a64` |
+| codex-resume | ACCEPT | FAIL | 12836304468 | `fc793cd2cf72da5bdcd3b8cf1f9aa08cf36dbd6854859c22c0c01bb5a5bcbe07` |
+| teammate | ACCEPT | SUCCESS | 12834213582 | `c823fd2903e3fbd7dc5e5c94b9d0418dafb9441c13fa8514182403dcdd339085` |
+| review-cold | ACCEPT | SUCCESS | 12842070053 | `fc65c3284e1121d02e60c8c8b7b2abfae7f328750e372d696287506eeb2ddd3d` |
+| import-only | ACCEPT | SUCCESS | 12840869275 | `ecbb285e1013abf7bb33727d996281a901ffd51a77c2cef6c061749443426e16` |
+| import-launch | ACCEPT | SUCCESS | 12840877457 | `e488bb3762177bd55b27dda75f377cf43a8abbc938953b951f23a654580f578d` |
+
+H3 receipt `b96a4aaf8a59158036beb51575178bfe48a8c08e2afb99748a749223387ef4c4`
+remains INCOMPLETE, cleanupConfirmed=false, no captured Hosts and zero model
+observations. Source/payload freeze succeeded but is not native execution or
+cleanup proof. The approved one-line profile projection and its actual-validator
+RED→GREEN/29-test result are recorded above; no primary original stderr is invented.
+
+Important per-proof limits remain part of acceptance:
+
+- Final captured Host absence is unproven for Mixed (capturedHostObserved=false);
+  closed/sealed/released Runtime records do not substitute physical identity.
+- Taskboard, Create, teammate, review and import primary app epochs use the
+  established wrapper SIGTERM boundary. Resume/active-Quit/pending-Quit scopes
+  retain their empty beforeHarnessCleanup facts; no universal signals-zero,
+  autonomous Quit or separately exposed Host exit code is claimed.
+- Downloads original files omitted from selective artifacts are not independently
+  rehashed; retained canonical payload/receipt verification is distinguished.
+  Claude checkpoint payloads are rehashed, but omitted native JSONL means no
+  independent Claude transcript/prefix rehash. Codex JSONL/prefix was rehashed.
+- Taskboard offline cross-Team/default routing subaudit accepted 17 nonempty
+  manifests, 1,367 physical file copies, two empty B manifests and four binding
+  snapshots; all 25 original A command bytes remain across three cold epochs
+  (24 completed, one rejected). These epochs closed within their captured wrapper
+  limits and do not qualify a live native Cross-Team provider path. Mark Read
+  remained unavailable/already read; no extra action is credited.
+- Review cold readback has no replay/allocation and preserves physical decisions,
+  but PARTIAL_OR_GAP, fullM13=false and unsafePromotion=false remain explicit.
+- Pending-open UNKNOWN/debtRetained=true and active-input UNKNOWN outcomes are
+  preserved; released custody does not forgive uncertain input outcome.
+  Captured-stopped import is a finite Node Stop fixture, not old SDK ownership.
+  Original M19 root911 remains unchanged HOLD without adoption/retry/promotion.
+
+Mixed executed Group Create and directed Bob Send once before native
+group_chat_list returned forbidden. The confirmed production composition defect
+compares the canonical HostedTeam to its legitimate capturedTeam wrapper.
+D's bounded group guard + existing regressions have meaningful RED→GREEN and
+50/50 affected PASS; analogous native Cross-Team correction is in GREEN testing.
+PairAuthority stays strict. A separately investigates the successful-list ARRAY
+decoder TEST boundary; it is not the cause of original forbidden. No combined
+new source freeze/acceptance or future selected SHA is asserted here.
+
+The new production Host bytes invalidate the prior H3-only reuse conclusion for
+a rebuilt candidate. Fresh Source11 including successful Mixed group delivery/
+Restart, actual conditional all-three H3, final canonical/CodeQL and fresh P7
+ancestry + normal SDK + actual selected packed candidate are mandatory. Original
+b63 canonical/CodeQL and scoped original-binary P7 remain accepted only on their
+own refs and limits. Existing manual flags suffice; no selector/framework is
+added. This conclusion supersedes the earlier narrow H3-only requalification
+note; it does not rewrite that earlier snapshot or any original evidence.
+
+Only README and this checkpoint are prepared; Git/commit HOLD remains. No code,
+inventory, build, types, tests, native action or rerun is part of this docs task.
+Historical README suffix and committed checkpoint prefix stay byte-exact;
+Oct 23 percentages, Draft/Stage1/V1 scope, real-auth/other-OS/release limits and
+original root911 HOLD remain unchanged.
+
+### Current merged base and independent TEST-fix audit
+
+The current working candidate now includes pushed merge `02c2e68b1` of main
+`11418fb29`. The merge had no conflicts and brought only five upstream TEST
+files; its independent merge review accepted that finite scope. This does not
+transfer any earlier native result to the merged candidate. The two previously
+prepared plan-file diffs above were carried into this checkout without copying
+other files. Their former docs-only HOLD described that earlier preparation;
+root now owns the next source-plus-checkpoint commit and immediate push.
+
+The independent E2E auditor re-queried GitHub with `gh` and confirmed original
+combined run 40729216816 is completed/failure, Source jobs are nine success and
+two failure, and conditional H3 is the failing step after primary Codex UI PASS.
+All eleven original primary receipt hashes and the original H3 receipt hash
+were independently rechecked against their retained files and matched. Exact
+b63 canonical-only run 40735000801 is completed/success with Source/P7 skipped;
+CodeQL 40729234419 is completed/success for both analyses. None qualifies the
+pending changed Host bytes.
+
+Independent TEST-fix review accepted the following finite boundaries:
+
+- H3: the exact retained original profile hash `3f3a8652...` was passed through
+  production `readTeamHostProfile`. Its sole schema rejection is `codeModeHost`
+  at `runtime.members[1].executable`; projecting only `path`/`sha256` in a copy
+  accepts the same complete profile. The original file rehash stayed unchanged.
+  No original stderr or native execution is inferred from this reproduction.
+- Mixed: actual `createGroupMcpTools`/`formatToolResult` returns list DTO arrays
+  and a `{result: groups}` structured wrapper. The TEST decoder validates that
+  production DTO and the exact current group ID once; it rejects forbidden/error
+  wrappers, malformed, oversize and duplicate payloads. Generic command receipt
+  checks and ACK/send operation checks remain unchanged. The independently run
+  `native-codex-team/model.test.ts` completed six PASS / zero FAIL / zero SKIP.
+- `git diff --check` passed. These are TEST/source review results, not a new
+  native Mixed group delivery/Restart, H3, process-custody or packed acceptance.
+
+The independent E2E/candidate/process review found no new material source defect
+in native pair staging/census, packed capture/final freeze, current qualified
+process identity, requested-before-signal persistence or cold no-recapture
+lookup. Existing wrapper cleanup limits remain explicit. Under §9, the finite
+native Cross-Team composition correction is checked at the affected real
+store/MCP boundary: canonical and captured Team wrappers, original forward/reply
+receipts, deduplication, revoke and replacement/no-write guards. Retained native
+M05 keeps only its original refs; this does not claim current-head native
+Cross-Team acceptance. No new selector or redundant native scenario is required
+without a concrete finding in the unchanged provider/transport boundary.
+
+The remaining current plan is bounded:
+
+1. Finish the reviewed Host and TEST corrections with their required local
+   gates, then commit and immediately push the selected source plus this plan.
+2. Dispatch the existing `ci.yml` once on that pushed branch with
+   `stage1_desktop=true`, `stage1_process_diagnostic=false` and
+   `stage1_process_qualification=true`. Retain the exact selected run head.
+3. Dispatch existing `codeql.yml` on the same head: draft PR analysis jobs are
+   skipped automatically, so its manual run is a separate required gate.
+4. Audit original new artifacts: all eleven Source primary receipts, successful
+   Mixed group delivery and isolated Restart, actual all-three H3 restore, kernel
+   ancestry, normal SDK Stop and the actual rebuilt unsigned packed candidate.
+   Compare source/payload freezes to immutable Git blobs of that selected head.
+
+Exact existing commands, not yet dispatched at this checkpoint:
+
+```sh
+gh workflow run ci.yml --repo 777genius/agent-teams-ai --ref feat/provider-migration-stage-1 -f stage1_desktop=true -f stage1_process_diagnostic=false -f stage1_process_qualification=true
+gh workflow run codeql.yml --repo 777genius/agent-teams-ai --ref feat/provider-migration-stage-1
+```
+
+`Full qualification` depends on canonical jobs only, so its green status does
+not replace Source11/P7. H3 runs only after successful Codex UI acceptance and
+requires original PASS, `cleanupConfirmed=true` and restore selections exactly
+alice/bob/carol. P7 remains fail-closed on the selected macOS build 24G624/arm64/
+Node24.21.0 tuple; a runner-image change is not permission to relax that gate.
+The existing acquisition/build steps provide pinned Node, Host/controller/MCP,
+Codex plus its official companion, OpenCodeV1, Corepack and P7 terminal/headers
+inputs. No new selector, retry framework or metadata/guard bypass is needed.
+
+Original b63 scoped results, wrapper cleanup limits, uncertain input outcomes,
+partial review provenance and original root911 HOLD remain unchanged. Fresh
+results may qualify only their own selected candidate; they cannot close the
+original M19 custody obligation. Draft/Stage1/OpenCodeV1 and sandbox/test-project
+scope remain; no merge, release, publication or default activation is authorized.
+
+### Final local correction gates before source delivery
+
+Pinned Node 24.21 Group regression is meaningful RED→GREEN two/two; native
+Cross-Team regression is RED two FAIL / one PASS→GREEN three/three. Fixture
+models pass 18/18; upstream main-merge regressions pass 25/25. Strict Host types,
+scoped lint and both source-size/provisioning guards pass. Independent review
+confirms all ten final formatted source/TEST ASTs match the approved fixes;
+no guard, budget, selector or unrelated semantic change was introduced.
+
+Full root `pnpm typecheck` ended with local OOM137; the full Group file attempt
+was cancelled at 90s. Neither is PASS. The shared cgroup has 8GiB capacity and
+about 7.3GiB used under unrelated load; no code workaround or gate relaxation is
+added. Fresh remote Validate/Host and the already planned Source11/H3/P7/CodeQL
+remain mandatory. Root now commits this source/checkpoint and immediately pushes;
+the future commit SHA and native outcomes are not guessed here.

@@ -287,16 +287,31 @@ export function createHostCrossTeamComposition(options: {
     binding: RuntimeMemberBinding,
     isCurrent: () => boolean
   ): TeamMcpCrossTeamPort {
-    const captured = structuredClone(binding);
+    const captured = structuredClone(binding),
+      teamId = captured.teamId,
+      backendId = captured.backendId,
+      canonical = options.teams.get(teamId),
+      owner = source.owner,
+      connection = source.connection,
+      teamBinding = digest(source.definition.binding);
     const guard = () => {
       options.assertCurrent();
       if (
         !isCurrent() ||
-        options.teams.get(source.definition.binding.teamId) !== source ||
-        !source.owner.authorizeRuntimeAccess(principalId, captured, 'read')
+        !canonical ||
+        options.teams.get(teamId) !== canonical ||
+        source.definition.binding.teamId !== teamId ||
+        source.definition.binding.backendId !== backendId ||
+        digest(source.definition.binding) !== teamBinding ||
+        digest(canonical.definition.binding) !== teamBinding ||
+        source.owner !== owner ||
+        canonical.owner !== owner ||
+        source.connection !== connection ||
+        canonical.connection !== connection ||
+        !owner.authorizeRuntimeAccess(principalId, captured, 'read')
       )
         throw new TeamOwnerError('forbidden');
-      const actor = source.owner.crossTeamIdentity(principalId);
+      const actor = owner.crossTeamIdentity(principalId);
       const member = actor.members.find((row) => row.name === actor.actor);
       if (
         !member?.delivery ||
@@ -312,7 +327,7 @@ export function createHostCrossTeamComposition(options: {
     const catalog = () => {
       guard();
       return [...options.teams.values()]
-        .filter((team) => team !== source)
+        .filter((team) => team !== canonical)
         .flatMap((team) => {
           try {
             return [{ team, side: authority.target(team, options.profile.principalId) }];
@@ -340,10 +355,10 @@ export function createHostCrossTeamComposition(options: {
       async send(raw) {
         hint(raw.teamName);
         const input = structuredClone(raw),
-          actor = source.owner.crossTeamIdentity(principalId).actor;
+          actor = owner.crossTeamIdentity(principalId).actor;
         if (input.fromMember !== undefined && input.fromMember !== actor)
           throw new TeamOwnerError('forbidden');
-        const old = source.owner.crossTeamCommands(principalId).lookup(input.commandId);
+        const old = owner.crossTeamCommands(principalId).lookup(input.commandId);
         const selected = old
           ? { side: old.intent.pair.target }
           : catalog().find((row) => row.side.resourceRef === input.toTeam);
@@ -371,7 +386,7 @@ export function createHostCrossTeamComposition(options: {
           ...(input.chainDepth === undefined ? {} : { chainDepth: input.chainDepth }),
           ...(taskRefs === undefined ? {} : { taskRefs }),
         };
-        const service = coordinator(source, principalId, guard, () => {
+        const service = coordinator(canonical!, principalId, guard, () => {
           const chosen = catalog().find((row) => row.side.resourceRef === input.toTeam);
           if (!chosen) throw new TeamOwnerError('hold');
           return chosen.side;
@@ -380,11 +395,11 @@ export function createHostCrossTeamComposition(options: {
       },
       lookup(commandId) {
         guard();
-        return lookup(source, principalId, commandId, guard);
+        return lookup(canonical!, principalId, commandId, guard);
       },
       getOutbox(input) {
         hint(input?.teamName);
-        return history(source, principalId, guard);
+        return history(canonical!, principalId, guard);
       },
     };
   }

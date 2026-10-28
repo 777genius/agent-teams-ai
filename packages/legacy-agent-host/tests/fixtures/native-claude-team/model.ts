@@ -163,7 +163,9 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
-  const nativeMember = options.nativeMemberCreation ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt) : undefined;
+  const nativeMember = options.nativeMemberCreation
+    ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt)
+    : undefined;
   const crossTeam = options.crossTeam ? nativeCrossTeamScript(options.crossTeam) : undefined;
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
@@ -296,7 +298,10 @@ export async function startNativeTeamModel(
         probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
         tools.length === 0
       ) {
-        assert.ok(probes.length < (nativeMember ? 9 : 8), 'finite native model probe request budget');
+        assert.ok(
+          probes.length < (nativeMember ? 9 : 8),
+          'finite native model probe request budget'
+        );
         probes.push({
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
           ...(typeof record(body.output_config).effort === 'string'
@@ -313,7 +318,12 @@ export async function startNativeTeamModel(
       }
       const memberBlock = nativeMember?.respond(body, tools);
       if (memberBlock) {
-        emitResponse(response, ++sequence, memberBlock, typeof body.model === 'string' ? body.model : undefined);
+        emitResponse(
+          response,
+          ++sequence,
+          memberBlock,
+          typeof body.model === 'string' ? body.model : undefined
+        );
         return;
       }
       if (options.allowModelProbes && tools.length === 0 && unexpectedNoToolsRequests.length < 2) {
@@ -373,7 +383,10 @@ export async function startNativeTeamModel(
             turn = 'TEST_TASK_NOTICE:' + notice.inputId;
             break;
           }
-          assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
+          assert.ok(
+            group || peer || match,
+            'unrecognized CURRENT mixed input; no historical fallback'
+          );
         }
         if (group || peer || match) {
           mixedGroup = group;
@@ -385,15 +398,20 @@ export async function startNativeTeamModel(
       assert.ok(turn, 'request is tied to a deliberate TEST input');
       const step = counters.get(turn) ?? 0;
       if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
-        assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
+        assert.ok(
+          step <= (turn.endsWith('_ONE') ? 7 : 2),
+          'finite original business input; no replay'
+        );
       const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
       if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       const nativeAttachments =
         options.chatAttachments && turn === 'NATIVE_TEAM_TWO' && step === 0
           ? assertNativeChatAttachments(messages)
           : undefined;
-      const nativePdf = options.pdfAttachment && turn === 'NATIVE_TEAM_TWO' && step === 0
-        ? assertNativeMessagePdf(messages) : undefined;
+      const nativePdf =
+        options.pdfAttachment && turn === 'NATIVE_TEAM_TWO' && step === 0
+          ? assertNativeMessagePdf(messages)
+          : undefined;
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'alice') : undefined;
       const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
       const expectedMessageId = options.uiGeneratedMessageIds
@@ -419,7 +437,7 @@ export async function startNativeTeamModel(
       const last = results.at(-1);
       if (mixedGroup && step > 0) {
         assert.notEqual(last?.is_error, true);
-        assertMixedGroupReceipt(mixedGroup, step, nativeToolReceipt(last?.content));
+        assertMixedGroupReceipt(mixedGroup, step, last?.content, nativeToolReceipt);
       }
       if (
         (turn === 'NATIVE_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
@@ -551,9 +569,9 @@ export async function startNativeTeamModel(
           input: { commandId: 'native-reply-two', to: 'user', text: 'REPLY_NATIVE_TWO' },
         },
       ];
-      const action = notice ? undefined : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[
-        step
-      ];
+      const action = notice
+        ? undefined
+        : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(

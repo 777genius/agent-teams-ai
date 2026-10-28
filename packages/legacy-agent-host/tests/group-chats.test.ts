@@ -9,6 +9,14 @@ import {
   readGroupCommand,
 } from '../dist/group-chats/publicValues.js';
 import { selectCurrentGroupEntry } from '../dist/composition/readGroupRuntime.js';
+import { createHostGroupComposition } from '../dist/composition/createHostGroupComposition.js';
+import { capturedTeam } from '../dist/composition/runtimeCaptureSource.js';
+import { createMemberEntry } from '../dist/composition/createMemberEntry.js';
+import { captureMemberProviderAuthority } from '../dist/composition/captureMemberProviderAuthority.js';
+import { captureNativeInputAuthority } from '../dist/composition/captureNativeInputAuthority.js';
+import { emptySession } from '../dist/runtime/sessionState.js';
+import { deliveryFingerprint, runtimeDigest } from '../dist/runtime/identity.js';
+import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import assert from 'node:assert/strict';
 import {
   existsSync,
@@ -513,6 +521,270 @@ test('native source projection reads the human-owned receipt only through the ex
       }),
     /forbidden/
   );
+});
+
+async function capturedGroupPort(t: TestContext) {
+  const f = fixture(t);
+  await f.human.execute('TEST-create', f.create, guard);
+  await f.human.execute('TEST-send', f.send, guard);
+  const canonical: HostedTeam = {
+    owner: f.owner,
+    connection: f.owner.connect('human'),
+    definition: {
+      binding: f.binding,
+      members: f.options.members,
+      grants: f.options.grants,
+      scope: {
+        projectId: 'TEST-project',
+        workspaceId: 'TEST-workspace',
+        teamId: f.binding.teamId,
+        runId: 'TEST-run',
+        memberId: 'human',
+        generation: '1',
+      },
+    },
+  };
+  const source = {
+    commandId: 'TEST-capture',
+    rosterCommandId: 'TEST-roster',
+    configurationRevision: 'a'.repeat(64),
+    savedSettings: { cwd: f.root },
+    members: f.options.members.map((member) => ({
+      memberId: member.memberId,
+      name: member.name,
+      role: member.role,
+      settings: {},
+      recipeDigest: 'b'.repeat(64),
+    })),
+  };
+  const captured = capturedTeam(canonical, source, {
+    commandId: source.commandId,
+    configurationRevision: source.configurationRevision,
+    launchId: 'TEST-run',
+    members: f.options.members.map((member) => ({
+      memberId: member.memberId,
+      principalId: member.name,
+      delivery: member.delivery,
+    })),
+  });
+  const entry = createMemberEntry({
+    root: f.root,
+    ownerId: f.binding.backendId,
+    team: captured,
+    baseProfile: {
+      provider: 'claude',
+      teamId: f.binding.teamId,
+      memberId: 'alice',
+      principalId: 'alice',
+      sessionId: 'TEST-native-session',
+      generation: 1,
+      configRevision: 'TEST-captured-config',
+      model: 'TEST-model',
+      accountBinding: 'TEST-local',
+      cwd: f.root,
+      environment: { HOME: f.root },
+      executable: { path: join(f.root, 'TEST-never-executed'), sha256: 'c'.repeat(64) },
+      nativeTools: [],
+      autoAllowedTools: [],
+      limits: {
+        queuedInputs: 2,
+        inputBytes: 8192,
+        outputBytes: 8192,
+        outputEvents: 100,
+        pendingInteractions: 2,
+        timeoutMs: 1000,
+      },
+    },
+  });
+  const raw = f.owner
+    .connect('human')
+    .pendingDeliveries()
+    .find((value) => value.binding.memberId === 'alice')!;
+  const intent = {
+    binding: entry.binding,
+    deliveryId: raw.deliveryId,
+    inputId: raw.inputId,
+    messageId: raw.messageId,
+    content: raw.content,
+  };
+  const record = emptySession(entry.binding, 'TEST-profile', 'TEST-host');
+  Object.assign(record, {
+    config: entry.config,
+    phase: 'allocated',
+    custody: 'owned',
+    nativeReady: true,
+    sessionRef: 'TEST-original-session',
+    openFingerprint: runtimeDigest({ profileId: 'TEST-profile', config: entry.config }),
+  });
+  record.inputs = [
+    {
+      intent,
+      fingerprint: deliveryFingerprint(intent),
+      operationRef: 'TEST-original-operation',
+      phase: 'consumed',
+    },
+  ];
+  let current = true;
+  const authority = captureMemberProviderAuthority({
+    entry,
+    request: entry.config,
+    profileId: 'TEST-profile',
+    hostIncarnation: 'TEST-host',
+    assertCurrent() {
+      assert.ok(current, 'TEST current member authority');
+    },
+    readRuntime: () => ({ record, attached: true }),
+  });
+  const teams = new Map([[f.binding.teamId, canonical]]);
+  const composition = createHostGroupComposition({
+    profile: {
+      principalId: 'human',
+      owner: {
+        ownerId: f.binding.backendId,
+        revision: 'TEST-revision',
+        storageRoot: f.root,
+        profileId: 'TEST-profile',
+        protocolVersion: 1,
+        buildId: 'TEST-build',
+        nodeSha256: 'd'.repeat(64),
+        hostEntrySha256: 'e'.repeat(64),
+      },
+    },
+    teams,
+    assertCurrent() {},
+    getRun: async (_team, member) => f.runtime.getRun(member),
+    kick() {},
+  });
+  const makePort = () =>
+    composition.member(
+      entry,
+      (requireLead = false) =>
+        captureNativeInputAuthority({
+          binding: entry.binding,
+          profileId: 'TEST-profile',
+          hostIncarnation: 'TEST-host',
+          config: entry.config,
+          readRuntime: () => ({ record, attached: true }),
+          assertCurrent: authority.assertCurrent,
+          captureTeam: (value) =>
+            f.owner.captureNativeMcpAuthority('alice', entry.delivery, value, requireLead),
+        }),
+      () => current && authority.isCurrent()
+    );
+  const snapshot = (directory = f.root): unknown =>
+    readdirSync(directory, { withFileTypes: true }).flatMap((item) =>
+      item.isDirectory()
+        ? [[item.name, snapshot(join(directory, item.name))]]
+        : [[item.name, readFileSync(join(directory, item.name))]]
+    );
+  return {
+    ...f,
+    canonical,
+    captured,
+    entry,
+    teams,
+    port: makePort(),
+    makePort,
+    raw,
+    record,
+    snapshot,
+    stale() {
+      current = false;
+    },
+  };
+}
+
+test('native group port accepts the actual captured Team snapshot and preserves original relay authority', async (t) => {
+  const f = await capturedGroupPort(t);
+  assert.notEqual(f.captured, f.canonical);
+  assert.equal(f.captured.owner, f.canonical.owner);
+  assert.equal(f.captured.connection, f.canonical.connection);
+  assert.equal(readGroupList(await f.port.list())[0]!.id, id);
+  const before = f.snapshot();
+  await assert.rejects(
+    f.port.execute('TEST-wrong-relay', {
+      operation: 'reaction.ack',
+      groupChatId: id,
+      relayOfMessageId: postId,
+    }),
+    /forbidden/
+  );
+  assert.deepEqual(f.snapshot(), before, 'logical ID cannot replace the original physical relay');
+  const result = readGroupCommand(
+    await f.port.execute('TEST-original-captured-ack', {
+      operation: 'reaction.ack',
+      groupChatId: id,
+      relayOfMessageId: f.raw.messageId,
+    }),
+    'TEST-original-captured-ack'
+  );
+  assert.equal(result.phase, 'completed');
+  assert.equal(result.commandId, 'TEST-original-captured-ack');
+  const receipt = f.store.fenced(
+    () => f.store.read<GroupCommandReceipt>(teamCommandPath(result.commandId))!
+  );
+  assert.equal(receipt.principalId, 'alice');
+  assert.equal(receipt.actor, 'alice');
+  assert.deepEqual(receipt.binding, f.binding);
+});
+
+test('native group port never adopts a missing or replaced canonical Team or stale captured authority', async (t) => {
+  const changes: ((f: Awaited<ReturnType<typeof capturedGroupPort>>) => void)[] = [
+    (f) => {
+      f.teams.delete(f.binding.teamId);
+    },
+    (f) => {
+      f.teams.set(f.binding.teamId, { ...f.canonical });
+    },
+    (f) => {
+      f.canonical.owner = fixture(t).owner;
+    },
+    (f) => {
+      f.canonical.connection = f.owner.connect('human');
+    },
+    (f) => {
+      f.canonical.definition.binding = { ...f.binding, backendId: 'TEST-foreign-owner' };
+    },
+    (f) => {
+      f.captured.definition.binding = { ...f.binding, teamId: 'TEST-foreign-team' };
+    },
+    (f) => {
+      f.entry.binding = { ...f.entry.binding, teamId: 'TEST-other-team' };
+    },
+    (f) => {
+      f.entry.binding = { ...f.entry.binding, generation: 'TEST-stale-generation' };
+    },
+    (f) => {
+      f.stale();
+    },
+  ];
+  for (const change of changes) {
+    const f = await capturedGroupPort(t),
+      before = f.snapshot();
+    change(f);
+    await assert.rejects(async () => f.port.list(), /forbidden/);
+    assert.throws(() => f.port.lookup('TEST-original-captured-ack'), /forbidden/);
+    await assert.rejects(
+      f.port.execute('TEST-never-adopt', {
+        operation: 'reaction.ack',
+        groupChatId: id,
+        relayOfMessageId: f.raw.messageId,
+      }),
+      /forbidden/
+    );
+    assert.deepEqual(f.snapshot(), before, 'refused port performs no canonical writes');
+  }
+  const late = await capturedGroupPort(t),
+    before = late.snapshot();
+  late.teams.delete(late.binding.teamId);
+  const unbound = late.makePort();
+  late.teams.set(late.binding.teamId, late.canonical);
+  await assert.rejects(
+    async () => unbound.list(),
+    /forbidden/,
+    'a port cannot adopt a later canonical incarnation'
+  );
+  assert.deepEqual(late.snapshot(), before);
 });
 test('held archive after publication never overwrites a newer opposite user action', async (t) => {
   const f = fixture(t);

@@ -88,10 +88,11 @@ export async function startOpenCodeModel(
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
       assert.equal(request.method, 'POST');
       assert.match(request.url ?? '', /\/v1\/chat\/completions$/);
-      if (!options.mixedTaskNotifications) assert.ok(
-        observations.length < (options.peerMessaging ? 48 : 16),
-        'finite model request budget'
-      );
+      if (!options.mixedTaskNotifications)
+        assert.ok(
+          observations.length < (options.peerMessaging ? 48 : 16),
+          'finite model request budget'
+        );
       let bytes = 0;
       const chunks: Buffer[] = [];
       for await (const raw of request) {
@@ -189,7 +190,11 @@ export async function startOpenCodeModel(
         response.end('data: [DONE]\n\n');
         return;
       }
-      if (options.mixedTaskNotifications) assert.ok(observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16), 'finite mixed inference budget');
+      if (options.mixedTaskNotifications)
+        assert.ok(
+          observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
+          'finite mixed inference budget'
+        );
       let turn = '';
       let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
@@ -212,7 +217,10 @@ export async function startOpenCodeModel(
             turn = 'TEST_TASK_NOTICE:' + notice.inputId;
             break;
           }
-          assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
+          assert.ok(
+            group || peer || match,
+            'unrecognized CURRENT mixed input; no historical fallback'
+          );
         }
         if (group || capture || peer || match) {
           mixedGroup = group;
@@ -229,7 +237,10 @@ export async function startOpenCodeModel(
       assert.ok(turn, 'native request retains deliberate TEST business input');
       const step = counts.get(turn) ?? 0;
       if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
-        assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
+        assert.ok(
+          step <= (turn.endsWith('_ONE') ? 7 : 2),
+          'finite original business input; no replay'
+        );
       const nativeImage =
         options.nativeMessageImage && turn === 'OPENCODE_TEAM_TWO'
           ? assertNativeMessageImage(messages, 'opencode')
@@ -275,7 +286,7 @@ export async function startOpenCodeModel(
         .map((tool) => String(record(tool.function).name));
       if (mixedGroup && step > 0) {
         const last = messages.filter((item) => item.role === 'tool').at(-1);
-        assertMixedGroupReceipt(mixedGroup, step, nativeToolReceipt(last?.content));
+        assertMixedGroupReceipt(mixedGroup, step, last?.content, nativeToolReceipt);
       }
       if (
         (turn === 'OPENCODE_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
@@ -380,10 +391,12 @@ export async function startOpenCodeModel(
                 },
               ]
         : undefined;
-      const action = notice ? undefined : (groupActions ??
-        captureActions ??
-        peerActions ??
-        (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
+      const action = notice
+        ? undefined
+        : (groupActions ??
+            captureActions ??
+            peerActions ??
+            (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
       let delta: Record<string, unknown>;
       if (action) {
         const chosen = tools.find((name) =>

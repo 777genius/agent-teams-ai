@@ -3,6 +3,11 @@ import { codexFailedShellCaptureFixture } from './capture.ts';
 import { CAPTURE_FAILED_AFTER, assertCaptureFailedShellOutput } from './model.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createGroupMcpTools } from '../../../dist/mcp/groupChatTools.js';
+import { formatToolResult } from '../../../dist/mcp/toolDefinition.js';
+import { readGroupList } from '../../../dist/group-chats/publicValues.js';
+import { nativeToolReceipt } from '../native-claude-team/model.ts';
+import { assertMixedGroupReceipt, MIXED_GROUP_INPUT } from '../native-mixed-groups.ts';
 
 import {
   CAPTURE_BEFORE,
@@ -13,6 +18,104 @@ import {
   startCodexModel,
   isCodexModelProbeInput,
 } from './model.ts';
+
+test('Mixed list consumes actual MCP DTO arrays and pinned Codex structured output without weakening receipts', async () => {
+  const id = '10000000-0000-4000-8000-000000000001';
+  const groups = readGroupList([
+    {
+      id,
+      name: 'TEST mixed group',
+      createdAt: '2026-10-28T00:00:00Z',
+      membership: { kind: 'fixed', memberNames: ['team-lead', 'bob', 'carol'] },
+      archivedAt: null,
+      memberNames: ['team-lead', 'bob', 'carol'],
+      availableRecipientNames: ['team-lead', 'bob', 'carol'],
+      canSend: true,
+    },
+  ]);
+  const list = createGroupMcpTools({
+    list: async () => groups,
+    async execute() {
+      throw new Error('No mutation in list formatter verification');
+    },
+    lookup() {
+      throw new Error('No lookup in list formatter verification');
+    },
+  }).find((tool) => tool.definition.name === 'group_chat_list')!;
+  const result = formatToolResult(await list.invoke({}), list.mutation);
+  assert.deepEqual(result.structuredContent, { result: groups });
+  const group = { actor: 'bob' as const, turn: 'TEST group', context: { groupChatId: id } };
+  assertMixedGroupReceipt(group, 1, result.content, nativeToolReceipt);
+  const structured = JSON.stringify(result.structuredContent);
+  assertMixedGroupReceipt(group, 1, structured, nativeToolReceipt);
+  assert.throws(() => nativeToolReceipt(result.content), /missing or incomplete/);
+  assert.deepEqual(nativeToolReceipt(structured), {}, 'generic object receipt guard is unchanged');
+  for (const invalid of [
+    JSON.stringify({ code: 'FORBIDDEN', message: id }),
+    JSON.stringify({ result: groups, isError: true }),
+    JSON.stringify({ result: 'not a list' }),
+    JSON.stringify(42),
+    JSON.stringify([{ id }]),
+    JSON.stringify([{ ...groups[0], id: '20000000-0000-4000-8000-000000000001', name: id }]),
+    JSON.stringify([groups[0], groups[0]]),
+    '{"result":[',
+    structured + '\nUNKNOWN',
+    JSON.stringify({ result: groups }) + ' '.repeat(256 * 1024),
+    [
+      { type: 'text', text: structured },
+      { type: 'text', text: structured },
+    ],
+  ])
+    assert.throws(() => assertMixedGroupReceipt(group, 1, invalid, nativeToolReceipt));
+
+  const context = {
+    to: 'bob',
+    from: 'user',
+    source: 'user_sent',
+    text: MIXED_GROUP_INPUT,
+    groupChatProtocolVersion: 1,
+    groupChatId: id,
+    messageId: id + ':g:' + 'a'.repeat(24),
+    groupMessageId: id,
+    groupRunKey: 'host-group-v1:' + 'b'.repeat(64),
+    groupRecipientRunKeys: { bob: 'host-group-v1:' + 'b'.repeat(64) },
+  };
+  const model = await startCodexModel({ mixedGroups: true });
+  const input: unknown[] = [{ role: 'user', content: 'Group context: ' + JSON.stringify(context) }];
+  const next = () =>
+    fetch(model.url + '/v1/responses', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        instructions: CONTEXT_MARKER,
+        input,
+        tools: [
+          { type: 'function', name: 'mcp__team__group_chat_list' },
+          { type: 'function', name: 'mcp__team__group_chat_react' },
+        ],
+      }),
+    });
+  try {
+    const first = await next();
+    assert.equal(first.status, 200);
+    assert.match(await first.text(), /mcp__team__group_chat_list/);
+    // Pinned c138 models.rs2316-2323 prefers structuredContent; tools/context.rs adds timing.
+    input.push({
+      type: 'function_call_output',
+      output: 'Wall time: 0.0001 seconds\nOutput:\n' + structured,
+    });
+    const second = await next();
+    assert.equal(second.status, 200);
+    assert.match(await second.text(), /mcp__team__group_chat_react/);
+    assert.deepEqual(
+      model.observations.map((row) => row.step),
+      [0, 1]
+    );
+    assert.deepEqual(model.failures, []);
+  } finally {
+    await model.close();
+  }
+});
 
 test('Codex oracle refuses a failed MCP reply instead of fabricating a successful final turn', async () => {
   const model = await startCodexModel();

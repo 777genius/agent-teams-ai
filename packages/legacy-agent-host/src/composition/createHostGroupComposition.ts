@@ -98,10 +98,31 @@ export function createHostGroupComposition(options: {
     isCurrent: () => boolean
   ): TeamMcpGroupPort {
     const team = entry.team,
-      principal = entry.profile.principalId;
+      principal = entry.profile.principalId,
+      teamId = entry.binding.teamId,
+      backendId = entry.binding.backendId,
+      canonical = options.teams.get(teamId),
+      owner = team.owner,
+      connection = team.connection,
+      teamBinding = digest(team.definition.binding);
     const guard = () => {
       options.assertCurrent();
-      if (!isCurrent() || options.teams.get(entry.binding.teamId) !== team)
+      if (
+        !isCurrent() ||
+        !canonical ||
+        options.teams.get(teamId) !== canonical ||
+        entry.team !== team ||
+        entry.binding.teamId !== teamId ||
+        entry.binding.backendId !== backendId ||
+        team.definition.binding.teamId !== teamId ||
+        team.definition.binding.backendId !== backendId ||
+        digest(team.definition.binding) !== teamBinding ||
+        digest(canonical.definition.binding) !== teamBinding ||
+        team.owner !== owner ||
+        canonical.owner !== owner ||
+        team.connection !== connection ||
+        canonical.connection !== connection
+      )
         throw new TeamOwnerError('forbidden');
     };
     const service = () => commands(team, principal);

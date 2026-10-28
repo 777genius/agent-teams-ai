@@ -16,8 +16,16 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 import { nativeToolReceipt } from '../native-claude-team/model.ts';
-import { codeModeCall, codeModeReceipt, codeModeResult, commandExit, linkedOutput,
-  originalCallIds, retainUiRequest, uiPalette } from './responses-ui.ts';
+import {
+  codeModeCall,
+  codeModeReceipt,
+  codeModeResult,
+  commandExit,
+  linkedOutput,
+  originalCallIds,
+  retainUiRequest,
+  uiPalette,
+} from './responses-ui.ts';
 export type RecordValue = Record<string, unknown>;
 export const record = (value: unknown): RecordValue =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -37,14 +45,16 @@ interface Tool {
   namespace?: string;
 }
 /** Codex's pinned McpToolOutput adds this native timing header before MCP data. */
-export function codexToolReceipt(output: unknown): RecordValue {
+function codexToolContent(output: unknown): unknown {
   if (typeof output === 'string')
-    return nativeToolReceipt(output.replace(/^Wall time: [0-9.]+ seconds\nOutput:\n?/, ''));
-  const content = (Array.isArray(output) ? output : [])
+    return output.replace(/^Wall time: [0-9.]+ seconds\nOutput:\n?/, '');
+  return (Array.isArray(output) ? output : [])
     .map(record)
     .filter((block) => block.type === 'input_text' || block.type === 'text')
     .map((block) => ({ type: 'text', text: block.text }));
-  return nativeToolReceipt(content);
+}
+export function codexToolReceipt(output: unknown): RecordValue {
+  return nativeToolReceipt(codexToolContent(output));
 }
 export function flattenTools(value: unknown): Tool[] {
   return (Array.isArray(value) ? value : []).flatMap((raw) => {
@@ -122,8 +132,14 @@ export async function startCodexModel(
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
   if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers)
-    assert.ok(!options.mixedGroups && !options.mixedTaskNotifications && !options.peerMessaging &&
-      !options.captureFileUpdate && !options.nativeMessageImage, 'one original single-member UI scenario');
+    assert.ok(
+      !options.mixedGroups &&
+        !options.mixedTaskNotifications &&
+        !options.peerMessaging &&
+        !options.captureFileUpdate &&
+        !options.nativeMessageImage,
+      'one original single-member UI scenario'
+    );
   if (options.captureFileUpdate)
     assert.match(
       options.captureFileUpdate.workspace,
@@ -172,12 +188,20 @@ export async function startCodexModel(
       const raw = Buffer.concat(chunks);
       if (options.requestEvidenceDirectory) {
         const lite = request.headers['x-openai-internal-codex-responses-lite'];
-        requests.push(retainUiRequest(options.requestEvidenceDirectory(), requests.length + 1,
-          raw, request.url ?? '', typeof lite === 'string' ? lite : undefined));
+        requests.push(
+          retainUiRequest(
+            options.requestEvidenceDirectory(),
+            requests.length + 1,
+            raw,
+            request.url ?? '',
+            typeof lite === 'string' ? lite : undefined
+          )
+        );
       }
       assert.equal(request.method, 'POST');
       assert.match(request.url ?? '', /\/v1\/responses$/);
-      if (!options.mixedTaskNotifications) assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
+      if (!options.mixedTaskNotifications)
+        assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
       const body = record(JSON.parse(raw.toString('utf8')) as unknown);
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
       const palette = options.uiGeneratedMessageIds ? uiPalette(body) : undefined;
@@ -228,8 +252,13 @@ export async function startCodexModel(
         );
         return;
       }
-      if (options.mixedTaskNotifications) assert.ok(observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16), 'finite mixed inference budget');
-      let turn = '', turnText = '';
+      if (options.mixedTaskNotifications)
+        assert.ok(
+          observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
+          'finite mixed inference budget'
+        );
+      let turn = '',
+        turnText = '';
       let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of input.toReversed()) {
@@ -249,7 +278,10 @@ export async function startCodexModel(
             turn = 'TEST_TASK_NOTICE:' + notice.inputId;
             break;
           }
-          assert.ok(group || peer || match, 'unrecognized CURRENT mixed input; no historical fallback');
+          assert.ok(
+            group || peer || match,
+            'unrecognized CURRENT mixed input; no historical fallback'
+          );
         }
         if (group || capture || peer || match) {
           turnText = messageText(message) ?? '';
@@ -267,21 +299,40 @@ export async function startCodexModel(
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
       const previousId = `native_${turn}_${step - 1}`;
-      const previous = palette && step > 0
-        ? linkedOutput(input, previousId, palette.exec !== undefined, issued.get(previousId)) : undefined;
+      const previous =
+        palette && step > 0
+          ? linkedOutput(input, previousId, palette.exec !== undefined, issued.get(previousId))
+          : undefined;
       if (previous) assert.ok(issued.has(previousId), 'original emitted call exists');
-      const previousValue = previous && palette?.exec ? codeModeResult(previous.output) : previous?.output;
-      const previousReceipt = () => previous && palette?.exec
-        ? codeModeReceipt(record(previousValue))
-        : codexToolReceipt(previous ? previousValue : input.filter(item => item.type === 'function_call_output').at(-1)?.output);
-      if ((options.mixedTaskNotifications || options.uiGeneratedMessageIds) && /_TEAM_(ONE|TWO)$/.test(turn))
-        assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
+      const previousValue =
+        previous && palette?.exec ? codeModeResult(previous.output) : previous?.output;
+      const previousReceipt = () =>
+        previous && palette?.exec
+          ? codeModeReceipt(record(previousValue))
+          : codexToolReceipt(
+              previous
+                ? previousValue
+                : input.filter((item) => item.type === 'function_call_output').at(-1)?.output
+            );
+      if (
+        (options.mixedTaskNotifications || options.uiGeneratedMessageIds) &&
+        /_TEAM_(ONE|TWO)$/.test(turn)
+      )
+        assert.ok(
+          step <= (turn.endsWith('_ONE') ? 7 : 2),
+          'finite original business input; no replay'
+        );
       const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
-      const visibleReplyContract = turnText.includes('message_send tool to="user", including commandId and text') &&
+      const visibleReplyContract =
+        turnText.includes('message_send tool to="user", including commandId and text') &&
         turnText.includes('Do not reuse the incoming messageId as a reply commandId') &&
-        typeof incomingMessageId === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(incomingMessageId);
+        typeof incomingMessageId === 'string' &&
+        /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(incomingMessageId);
       if (options.uiGeneratedMessageIds && turn === 'CODEX_TEAM_TWO')
-        assert.ok(visibleReplyContract, 'original Composer reply contract reaches the actual native request');
+        assert.ok(
+          visibleReplyContract,
+          'original Composer reply contract reaches the actual native request'
+        );
       const nativeImage =
         options.nativeMessageImage && turn === 'CODEX_TEAM_TWO'
           ? assertNativeMessageImage(input, 'codex')
@@ -315,7 +366,10 @@ export async function startCodexModel(
           } else if (capture.failedShell) {
             const result = codexToolReceipt(last.output);
             assert.equal(result.phase, 'completed');
-            assert.equal(result.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
+            assert.equal(
+              result.principalId,
+              options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`
+            );
           } else if (step === 2) {
             assert.ok(
               JSON.stringify(last.output).includes(CAPTURE_BEFORE.trim().replaceAll('\n', '\\n')),
@@ -340,13 +394,24 @@ export async function startCodexModel(
       );
       const tools = palette?.tools ?? flattenTools(body.tools);
       let toolResultError = false;
-      if (palette && ((turn === 'CODEX_TEAM_ONE' && step === 4) ||
-        (turn === 'CODEX_TEAM_TWO' && step === 1)))
-        toolResultError = commandExit(previousValue, palette.exec !== undefined,
-          turn === 'CODEX_TEAM_ONE' ? 7 : 0) !== 0;
+      if (
+        palette &&
+        ((turn === 'CODEX_TEAM_ONE' && step === 4) || (turn === 'CODEX_TEAM_TWO' && step === 1))
+      )
+        toolResultError =
+          commandExit(
+            previousValue,
+            palette.exec !== undefined,
+            turn === 'CODEX_TEAM_ONE' ? 7 : 0
+          ) !== 0;
       if (mixedGroup && step > 0) {
         const last = input.filter((item) => item.type === 'function_call_output').at(-1);
-        assertMixedGroupReceipt(mixedGroup, step, codexToolReceipt(last?.output));
+        assertMixedGroupReceipt(
+          mixedGroup,
+          step,
+          codexToolContent(last?.output),
+          nativeToolReceipt
+        );
       }
       if (
         (turn === 'CODEX_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
@@ -359,12 +424,18 @@ export async function startCodexModel(
           'completed',
           'native MCP action must succeed before scripted continuation'
         );
-        assert.equal(completed.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
+        assert.equal(
+          completed.principalId,
+          options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`
+        );
       }
       if (turn === 'CODEX_TEAM_ONE' && step === 1) {
         const receipt = previousReceipt();
         assert.equal(receipt.phase, 'completed');
-        assert.equal(receipt.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
+        assert.equal(
+          receipt.principalId,
+          options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`
+        );
         taskId = String(record(receipt.effects).taskId);
         assert.ok(taskId && taskId !== 'undefined');
       }
@@ -375,15 +446,31 @@ export async function startCodexModel(
         contextEffective,
         priorTurn: JSON.stringify(input).includes('CODEX_TEAM_ONE'),
         tools,
-        ...(options.uiGeneratedMessageIds ? {
-          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
-          ...(typeof record(body.reasoning).effort === 'string' ? { requestedEffort: String(record(body.reasoning).effort) } : {}),
-          toolResultError,
-          visibleReplyContract,
-          ...(incomingMessageId === undefined ? {} : { incomingMessageId }),
-        } : {}),
-        ...(options.captureHistoryMarkers ? { priorNativeToolIds: palette ? originalCallIds(input) : input.filter(item => item.type === 'function_call' &&
-          typeof item.call_id === 'string' && /^native_CODEX_TEAM_ONE_[0-6]$/.test(item.call_id)).map(item => String(item.call_id)) } : {}),
+        ...(options.uiGeneratedMessageIds
+          ? {
+              ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+              ...(typeof record(body.reasoning).effort === 'string'
+                ? { requestedEffort: String(record(body.reasoning).effort) }
+                : {}),
+              toolResultError,
+              visibleReplyContract,
+              ...(incomingMessageId === undefined ? {} : { incomingMessageId }),
+            }
+          : {}),
+        ...(options.captureHistoryMarkers
+          ? {
+              priorNativeToolIds: palette
+                ? originalCallIds(input)
+                : input
+                    .filter(
+                      (item) =>
+                        item.type === 'function_call' &&
+                        typeof item.call_id === 'string' &&
+                        /^native_CODEX_TEAM_ONE_[0-6]$/.test(item.call_id)
+                    )
+                    .map((item) => String(item.call_id)),
+            }
+          : {}),
       };
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
@@ -392,7 +479,10 @@ export async function startCodexModel(
           name: 'task_create',
           input: { commandId: 'codex-task-create', subject: 'Native Codex TEST task' },
         },
-        { name: 'task_set_owner', input: { commandId: 'codex-task-assign', taskId, owner: options.memberName ?? 'bob' } },
+        {
+          name: 'task_set_owner',
+          input: { commandId: 'codex-task-assign', taskId, owner: options.memberName ?? 'bob' },
+        },
         { name: 'task_start', input: { commandId: 'codex-task-start', taskId } },
         {
           name: 'exec_command',
@@ -476,12 +566,15 @@ export async function startCodexModel(
                 },
               ]
         : undefined;
-      const action = notice ? undefined : (groupActions ??
-        captureActions ??
-        peerActions ??
-        (turn === 'CODEX_TEAM_ONE' ? one : two))[step];
+      const action = notice
+        ? undefined
+        : (groupActions ??
+            captureActions ??
+            peerActions ??
+            (turn === 'CODEX_TEAM_ONE' ? one : two))[step];
       let output: RecordValue;
-      if (action && palette?.exec) output = codeModeCall(palette.exec, action, `native_${turn}_${step}`);
+      if (action && palette?.exec)
+        output = codeModeCall(palette.exec, action, `native_${turn}_${step}`);
       else if (action) {
         const chosen = tools.find((tool) =>
           action.name === 'exec_command'

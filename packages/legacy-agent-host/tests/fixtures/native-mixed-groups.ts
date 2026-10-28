@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readGroupList } from '../../dist/group-chats/publicValues.js';
 
 export const MIXED_GROUP_INPUT = 'TEST_MIXED_GROUP_UI_REQUEST_V1';
 export const MIXED_GROUP_REPLY = 'TEST_MIXED_GROUP_NATIVE_REPLY_V1';
@@ -9,17 +10,28 @@ const row = (value: unknown): Row => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Row;
 };
-const text = (value: unknown): string => typeof value === 'string' ? value
-  : Array.isArray(value) ? value.map(row).filter(item => ['text', 'input_text'].includes(String(item.type)))
-      .map(item => String(item.text)).join('\n') : '';
+const text = (value: unknown): string =>
+  typeof value === 'string'
+    ? value
+    : Array.isArray(value)
+      ? value
+          .map(row)
+          .filter((item) => ['text', 'input_text'].includes(String(item.type)))
+          .map((item) => String(item.text))
+          .join('\n')
+      : '';
 export interface MixedGroupTurn {
   turn: string;
   actor: MixedGroupActor;
   context: Row;
 }
 /** One finite group turn per provider; transport adapters still execute every real MCP call. */
-export function readMixedGroupTurn(content: unknown, actor: MixedGroupActor): MixedGroupTurn | undefined {
-  const input = text(content), expected = actor === 'bob' ? MIXED_GROUP_INPUT : MIXED_GROUP_REPLY;
+export function readMixedGroupTurn(
+  content: unknown,
+  actor: MixedGroupActor
+): MixedGroupTurn | undefined {
+  const input = text(content),
+    expected = actor === 'bob' ? MIXED_GROUP_INPUT : MIXED_GROUP_REPLY;
   if (!input.includes('Group context: ') || !input.includes(expected)) return;
   const matches = [...input.matchAll(/Group context: (\{[^\n]+\})/g)];
   assert.equal(matches.length, 1);
@@ -33,30 +45,84 @@ export function readMixedGroupTurn(content: unknown, actor: MixedGroupActor): Mi
   assert.notEqual(context.messageId, context.groupMessageId);
   assert.match(String(context.groupRunKey), /^host-group-v1:[a-f0-9]{64}$/);
   assert.equal(row(context.groupRecipientRunKeys)[actor], context.groupRunKey);
-  return { turn: 'TEST_MIXED_GROUP_' + actor + '_' + String(context.messageId).replaceAll(':', '_'), actor, context };
+  return {
+    turn: 'TEST_MIXED_GROUP_' + actor + '_' + String(context.messageId).replaceAll(':', '_'),
+    actor,
+    context,
+  };
 }
 export function mixedGroupActions(group: MixedGroupTurn) {
   const { actor, context } = group;
-  const ack = { name: 'group_chat_react', input: {
-    commandId: 'TEST-mixed-group-ack-' + actor,
-    groupChatId: context.groupChatId,
-    relayOfMessageId: context.messageId,
-  } };
-  return actor === 'bob' ? [
-    { name: 'group_chat_list', input: {} }, ack,
-    { name: 'group_chat_send', input: {
-      commandId: 'TEST-mixed-group-reply', messageId: MIXED_GROUP_REPLY_ID,
-      groupChatId: context.groupChatId, text: MIXED_GROUP_REPLY,
+  const ack = {
+    name: 'group_chat_react',
+    input: {
+      commandId: 'TEST-mixed-group-ack-' + actor,
+      groupChatId: context.groupChatId,
       relayOfMessageId: context.messageId,
-    } },
-  ] : [ack];
+    },
+  };
+  return actor === 'bob'
+    ? [
+        { name: 'group_chat_list', input: {} },
+        ack,
+        {
+          name: 'group_chat_send',
+          input: {
+            commandId: 'TEST-mixed-group-reply',
+            messageId: MIXED_GROUP_REPLY_ID,
+            groupChatId: context.groupChatId,
+            text: MIXED_GROUP_REPLY,
+            relayOfMessageId: context.messageId,
+          },
+        },
+      ]
+    : [ack];
 }
-/** Read native tool output via its existing provider-specific decoder, never manufacture an ACK. */
-export function assertMixedGroupReceipt(group: MixedGroupTurn, step: number, receipt: Row) {
+/** List is product data, not a command receipt; require the actual DTO and exact group identity. */
+function assertGroupList(content: unknown, expectedId: unknown) {
+  const blocks =
+    typeof content === 'string'
+      ? [{ type: 'text', text: content }]
+      : Array.isArray(content)
+        ? content.map(row)
+        : [];
+  assert.equal(blocks.length, 1, 'one native group-list JSON payload');
+  const block = blocks[0]!;
+  assert.ok(block.type === 'text' || block.type === 'input_text');
+  assert.equal(typeof block.text, 'string');
+  assert.ok(Buffer.byteLength(block.text as string) <= 256 * 1024);
+  const parsed: unknown = JSON.parse(block.text as string);
+  const value = Array.isArray(parsed)
+    ? parsed
+    : (() => {
+        const wrapped = row(parsed);
+        assert.deepEqual(
+          Object.keys(wrapped),
+          ['result'],
+          'only the native structured-content wrapper'
+        );
+        return wrapped.result;
+      })();
+  const groups = readGroupList(value);
+  assert.equal(typeof expectedId, 'string');
+  assert.equal(
+    groups.filter((group) => group.id === expectedId).length,
+    1,
+    'actual native group list contains the exact current group once'
+  );
+}
+/** Read native output only for its original operation; never manufacture an ACK. */
+export function assertMixedGroupReceipt(
+  group: MixedGroupTurn,
+  step: number,
+  content: unknown,
+  readReceipt: (content: unknown) => Row
+) {
   if (group.actor === 'bob' && step === 1) {
-    assert.ok(JSON.stringify(receipt).includes(String(group.context.groupChatId)));
+    assertGroupList(content, group.context.groupChatId);
     return;
   }
+  const receipt = readReceipt(content);
   assert.equal(receipt.kind, 'group-chat-command');
   assert.equal(receipt.phase, 'completed');
   assert.equal(receipt.operation, group.actor === 'bob' && step === 3 ? 'send' : 'reaction.ack');
