@@ -6035,3 +6035,26 @@ checks passed; retained static log SHA256 is
 `65bb770a88b3d479a75db0368eb2262c964c537a978050927277634065348f43`.
 Actual corrected P7 execution remains pending. The separate retained-rich
 product regression work is excluded from this workflow-only delivery.
+
+
+### Explicit read-only Codex smoke workflow permissions
+
+The one-line P7 prerequisite heap alignment was committed and immediately
+pushed as `0971259f3`. Obsolete7fec run40710322762 was subsequently cancelled
+with all11 Desktop rows still queued/no steps started. P7 had failed in the
+pre-native prerequisite build; Full failed cancelled required prerequisites.
+Validate, all three lint jobs and shards3/4 and4/4 passed, while the other two
+shards/Windows were cancelled. This partial source boundary is not Full/native
+acceptance; the original attempts remain retained.
+
+CodeQL alert591 has a real instance on the reviewed7fec branch: the inherited
+Codex runtime smoke workflow omitted explicit token permissions. Its existing
+checkout/public-registry install/local build and smoke steps require only read
+access. The exact three-line correction adds workflow-root `contents: read`,
+without changing events, jobs or steps and without adding any write scope.
+C independently accepted workflow SHA256
+`7fc06c76949e0677e79ef0efa60d702d8d3dd588c86b35c8da9edfec2b401ef3`;
+YAML parse/equality excluding that exact permission map and diff checks passed.
+This current inherited finding is not attributed to the new product correction.
+Fresh exact-head CodeQL analysis must establish scanner resolution; local source
+review does not claim it. Uncommitted retained-rich source/tests are excluded.
