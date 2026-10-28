@@ -37,11 +37,12 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE: '1'
       PRIVATE_HTTP_QUALIFY_COMPILED: '1'
-      PRIVATE_HTTP_TEST_CACHE: ${{ runner.temp }}/private-http-storage
-      PRIVATE_ACL_QUALIFY_FOREIGN_OWNER: ${{ runner.os == 'Linux' && '1' || '' }}
+      PRIVATE_ACL_QUALIFY_FOREIGN_OWNER: ${{ matrix.os == 'ubuntu-latest' && '1' || '' }}
     steps:
       - name: Create job-owned synthetic fixture and cache root
-        run: node -e "const fs=require('node:fs'); const root=process.env.PRIVATE_HTTP_TEST_CACHE; fs.mkdirSync(root,{recursive:true,mode:448}); fs.appendFileSync(process.env.GITHUB_ENV,['TMPDIR','TEMP','TMP'].map(k=>k+'='+root).join('\n')+'\n')"
+        env:
+          PRIVATE_HTTP_TEST_CACHE: ${{ runner.temp }}/private-http-storage
+        run: node -e "const fs=require('node:fs'); const root=process.env.PRIVATE_HTTP_TEST_CACHE; fs.mkdirSync(root,{recursive:true,mode:448}); fs.appendFileSync(process.env.GITHUB_ENV,['PRIVATE_HTTP_TEST_CACHE='+root,...['TMPDIR','TEMP','TMP'].map(k=>k+'='+root)].join('\n')+'\n')"
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
