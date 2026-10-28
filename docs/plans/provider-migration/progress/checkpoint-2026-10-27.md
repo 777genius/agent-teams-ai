@@ -2358,3 +2358,382 @@ same-A snapshot/cold owner-default continuation. No extra native variant, automa
 retry or timeout/readiness relaxation is added. P7's qualified tuple, original M19
 custody and the unexplained historical initial-Launch/OpenCode traces remain explicit
 until their own accepted evidence establishes a different result.
+
+
+The documentation-only checkpoint commit is
+`82ace7e51452ec058552abb92a479154e1d5b85c`, immediately pushed with clean
+local/remote equality. Root dispatched exactly one combined full CI + ten existing
+source Desktop variants at **2026-10-28 00:32:43 UTC**:
+[run 40609431219](https://github.com/777genius/agent-teams-ai/actions/runs/40609431219),
+verified exact head `82ace7e51452ec058552abb92a479154e1d5b85c`.
+The reviewed production/TEST source remains `7b72d9f09f0e379670f24f8a16c82fb1433fd35c`.
+Results are pending and will be recorded from this run's own original artifacts.
+No prior failed run is relabeled, no native attempt is repeated inside a scenario,
+and no new production change is made to the unresolved initial-Launch trace.
+
+
+## 28 October — current source Taskboard passes; cold owner census stops
+
+The original Taskboard epoch in run `40609431219` on exact head
+`82ace7e51452ec058552abb92a479154e1d5b85c` completes **PASS**. Its separately
+retained `owner-routing/original-epoch-receipt.json` has SHA-256
+`c6be5e7d621f380ea74011cf2cd2f17466ae10f90902223725ca4dced33c6c8b`.
+The enclosing receipt remains **INCOMPLETE**, SHA-256
+`408319ca7fa329f8e6ae58a3efd5a476268ff7dae616056e7670d9dd42399ec8`,
+artifact `12782456532`; it must not be promoted by the original epoch's result.
+
+An independent raw audit accepts the original attachments, Task/review/notification,
+cross-Team, F08 and Trash/Restore scope. All nine real F08 response records have
+`physicalCalls: 1`, exact parsed `resultJson` and independently recomputed hashes.
+The direct original public same-A stale/new reads have distinct command IDs on
+one stream with sequence 20 → 21. The original stale response produces exactly
+`Host read crossed a mutation boundary`; selected data/cache and the original UI
+surface remain unchanged. One original comment has one completed canonical receipt
+and matching effect in the raw Task. Stale feed, response loss and cursor gap retain
+their original records; four actual later observer readbacks complete without another
+business command. Pending reads settle to zero and the original invoke is restored.
+This is the selected direct public read plus existing UI scope, not first-global
+subscriber or automatic surviving-client rebind qualification.
+
+All 1,395 recorded source pins match before/after and the reviewed source bytes;
+the original and default-B compiled bundles are identical. Original cleanup has
+app exit 0 without signal, captured Host absent, empty process group, no refused
+sentinel calls and no post-Quit sentinel activity. The ordinary removed-attachment
+path now completes through the actual creation-enabled composition after `ae6c46a`.
+
+The cold default-B epoch actually switches both `defaultOwner` and `creation.owner`
+to B, performs the original A Task action in A, then publishes the original save-only
+B Create in B. The independent audit checks every file in the original A 127-file
+manifest and pre-B-Create A 131-file manifest, all 31 original command bytes in two
+later copies, and all three original binding files. B remains empty across the A
+mutation. The actual B registry, Team and stored Main binding agree on B's physical
+root/owner/profile; no B namespace appears in A. The 112 retained non-backup A files
+remain byte-identical through B Create and cleanup. These are partial facts only:
+there is no completed post-B census/public binding checkpoint, and unavailable-A
+and rollback-A epochs are not reached.
+
+The exact failure is `ENOENT ... scandir .../teams/test-desktop-backend/.host-owner/
+authority.lock-transition-v2`. Root and two independent source/raw reviews identify
+the same finite TEST defect: recursive `readdir` descends before later file filtering,
+while the actual controller's authorized read fence creates and removes that exact
+transition gate. This is not evidence of a product routing error. Both captured
+Hosts nevertheless exit, the app exits 0 without signal, and the epoch process group
+is empty. The proposed correction is only an explicit bounded TEST walk that prunes
+the exact established authority lock namespace before descent; product/state/command
+files, symlink/type checks, strict missing-file errors, byte bounds, cleanup and all
+original UI actions remain. No broad ENOENT catch, retry, epoch reset, or product
+lock change is authorized. The new original receipt remains INCOMPLETE permanently;
+a later corrected candidate requires its own evidence.
+
+
+### Exact-head canonical CI and current stopped-import/native Launch
+
+Run `40609431219` completes **Full qualification PASS** on
+`82ace7e51452ec058552abb92a479154e1d5b85c`, job `122560058077`.
+Validate, all three typed lint jobs, all four root shards and the Windows smoke pass.
+The original shard logs report 5,807 / 6,083 / 5,773 / 6,220 passed tests and
+26 / 31 / 17 / 18 skipped: **23,883 PASS, 0 FAIL, 92 SKIP** total.
+Workspace controller 421, MCP 74, portable Host 794, CI/scripts 179 and feedback
+policy 119 pass. Windows groups report 110 PASS/1 SKIP, 11 PASS, and
+1,247 PASS/5 SKIP. Desktop jobs remain independent; this canonical result does not
+promote their incomplete native/UI receipts.
+
+The new stopped-import/native Launch job passes with its own artifact `12780989640`,
+receipt SHA-256 `4d550e655070c8b2e2b21c4ea4cfa9f7bea702aaf3bd3239fb2d369d573c5f6c`.
+An independent raw audit accepts 38 continuity/publication/runtime/cleanup checks
+plus the reconstructed raw native census. Original source marker
+`3b2af8d3-c65f-4987-a6c7-e1dae211e809` remains exact; final source config SHA
+`fb4aa745a2f2abbd489496af9fa81045d7b1009b2379f86e63663449b437231e`
+equals the pre-Stop hash. The original captured TEST child 3777/PGID 3777 is stopped
+with SIGTERM; source native inputs remain zero. Native census digest
+`148736d6057632482b224c21592017cd2b0d523e2ffcaa9304f49e7b3ab66cdb`
+and release digest `fad7a3341a8a185adc19fd922889bad9e8dc5c3152decbbfd6b1b67e594e616a`
+are independently recomputed from their original raw inputs/order and match freshness.
+
+All ten recorded source files remain equal before import, after import and after
+native flow. Seven original source files are directly retained; the other three
+attachment paths have recorded source censuses and retained snapshot/copied bytes,
+not separately retained original files. Nine destination publication files and seven
+backup import-publication files exactly match their recorded bytes/hashes. The new
+marker `cf2fc35a-75cb-5e5a-b132-96785405aa86` equals the target Team ID and differs
+from the preserved source marker.
+
+The target starts without a native session, then has one original claimed launch,
+no retry, one new SDK session `471e305d-3117-5230-9d87-3194dd384dcc`, and exactly
+one successful `NATIVE_TEAM_ONE` input. Seven raw command receipts have unique IDs
+and complete; the actual new Task completes and native file bytes equal `ONE\n`.
+Imported Task and source session are not replayed. Saved settings/reload match.
+Eight Sonnet 4.6/low model observations and no additional reload observations are
+executed assertions of the pinned oracle; their request bodies are not serialized
+in this ZIP and are not presented as independently reread raw records.
+
+Original target Stop releases captured child 6020, leaving the actual session
+closed/released/sealed and the unused baseline runtime unallocated. Wrapper cleanup
+uses SIGTERM; captured Host 4040 is absent and group 3892 empty. Nine sentinel calls
+are allowed, with no late/refused invocation. The defunct original-app observer is
+not used, so its recovery branch is not newly qualified. All 1,395 source pins agree.
+This proof is synthetic legacy product/run metadata plus a real captured TEST-child
+Stop, followed by a new real target SDK/CLI workflow. It does not establish original
+vendor-source inference, session adoption, or release historical M19 custody HOLD.
+
+
+### Current Mixed: original OpenCode open remains UNKNOWN
+
+Artifact `12783455400`, receipt
+`031328ac91173e0ff68f2241a142a8c7fe273123d37c7e2ba81d00a12a13d08b`,
+root `d5ws7c`, is **INCOMPLETE** at `all3 original native sessions allocated`.
+Root and the independent backend critic inspect this attempt's own raw records.
+The original mixed Launch is clicked once and has one captured three-member roster.
+Claude and Codex become allocated/owned/ready. Claude completes its original
+`NATIVE_TEAM_ONE`; Codex has zero business inputs. Carol/OpenCode records opening
+at 00:40:26.020, disconnected at 00:41:11.494 after the original 45-second bound,
+and held/unknown with `open-unknown` at 00:41:17.167. It has no allocated/ready event,
+no sessionRef and no business input. This is not the earlier transient-opening
+oracle error, and it occurs before the corrected Back-to-chats navigation.
+
+Raw model evidence contains eight successful Claude Opus/medium requests with the
+selected context setting, zero Codex/OpenCode business requests, and one successful
+management probe for each peer. All three final foreground probes complete with
+`ok: true` and `resourceHeld: false`. Those probes are separate management opens;
+they do not qualify the original runtime open. Raw original Carol native stage,
+error, stdout and stderr are absent. The driver spans server start, config/session
+qualification and original native readiness; the outer catch normalizes failure to
+`open-unknown`. Missing sessionRef therefore cannot establish which stage failed or
+prove that no physical allocation occurred. No finite production cause is established.
+
+Failure Quit leaves the app naturally exited 0 without signal and group 3908 empty,
+but no separate original Host PID witness was captured. Carol stays sealed/held with
+unknown custody. No retry, timeout increase, fail-open rule or recovery is introduced.
+The original attempt remains UNKNOWN; a later candidate cannot release its custody
+or retroactively qualify its unexecuted peer/group/restart/navigation paths.
+
+
+### Reviewed finite owner-census correction pushed
+
+Commit `f0f00528936b3b4a277de9a7f1de92a68124a5b6` is immediately pushed;
+local and remote agree. Four TEST/CI files change: the existing owner helper,
+one focused Node regression, its explicit source pin, and its filename in the
+existing Desktop Node test command. No production file, UI action, comparator,
+backup behavior, lease cleanup or deadline changes.
+
+The bounded explicit walk omits only exact canonical authority-lock files, transition
+gates and PID/UUID candidates under `teams/<safe-name>/.host-owner` before descent.
+Candidate spelling is the actual lower-case 8-4-4-4-12 UUID form. Symlinks and wrong
+sidecar types refuse; same-name files outside that parent and malformed lookalikes
+remain copied. Every ordinary read/descent still propagates ENOENT and preserves
+its bytes/hash. The 2,048-entry and 1 MiB file bounds remain. No retry or catch is added.
+The old recursive implementation produces 3/5 red cases; the new focused regression
+passes 5/5, and the exact existing-plus-new CI Node command passes 10/10. Strict script
+typecheck, format, YAML/shell syntax, source-size guard and diff checks pass. Scoped
+lint has zero errors and one unchanged cleanup warning. Root and the fresh holistic
+critic accept the actual final four-file diff. Helper SHA-256 is
+`454cfd42b27c344062d4942aa981ecb14d7a7123a70e9d5b2365c28ed0f7e11f`;
+regression SHA-256 is `d5cb5af7279eda58296f48b729cd8f2e6080669f1ec3f90af00474e964c816ed`.
+The new helper has not yet received a Desktop PASS.
+
+A separate raw check finds final A backup-only differences after the failed epoch:
+three manifest/registry timestamps and copying the already-created A Task into its
+backup. Their timestamps coincide with shutdown, not a demonstrated pre-comparison
+background write. All 112 non-backup A files remain identical. This does not justify
+weakening the full before/after product comparator; no such change is made.
+
+### Current pending-open Quit and same-profile cold readback
+
+Artifact `12782587715` independently qualifies both original receipts:
+warm `15f4bcc9ef7db50d831ed7b2ef88f73500527d866be939adedf83681596e6049`,
+cold `2173c2bc45baac12a1c3626ae6848dd002ced69d21e87b6bf4157679f7dd4178`.
+Each is PASS in its selected guarded-shutdown/readback scope. There is one original
+claimed launch, no retry, actual child 4500 observed before Quit, zero inputs and
+interactions, and no published allocation/nativeReady/sessionRef. Three raw warm
+events move opening → sealed held/unknown → open-unknown. The final raw session
+after cold startup and second Quit exactly equals warm after-Quit state; no new
+runtime event, product command or delivery appears. The only product command is
+the original offline seed. Five original product digests independently recompute
+and match before/after; the pinned oracle records zero model observations.
+
+Both apps exit naturally 0 without signal, groups 3913 and 4743 are empty before
+fallback, and captured Hosts 4086 and 4891 are absent. Original child absence and
+writer-lock release are checked before cold startup; the second writer is released
+before completion. CDP 9222 is checked free before each spawn, and cold has fresh
+app/listener/renderer identity; there is no separate post-cold port census. Warm five
+and cumulative cold ten sentinel invocations match raw log, with no late/refused
+calls. All 1,395 source pins/profile/descriptor checks agree; originalAppReap is unused.
+
+Raw custody remains held/unknown with debt retained. The generic cold cleanup label
+`saved closed Runtime readback` is not an authority to call this record closed; the
+per-flow raw session is authoritative. This pending-open proof does not qualify
+active-plus-queued behavior, automatic app.relaunch or historical M19 cleanup.
+
+### Current Resume: the complete original draft snapshot is now retained
+
+Artifact `12783101931`, receipt
+`ff9c8c2e8669e679525e998ca05647743524ca4de21fd9b97e12bca98f69868d`,
+is INCOMPLETE before the first original Launch submission. The new bounded inspector
+reads all 683 hooks, including current draft ref 627, without truncation. Its exact
+current-draft signature is identical in the before/after snapshots. Both selected
+provider-check state and ref move checking → ready/verified while their captured
+readiness and captured draft signature remain null. The button stays disabled through
+the original 30-second UI read budget. This narrows the missing evidence but still
+does not retain the original final Main prepare promise result/publication sequence.
+Independent Main and renderer reviews now inspect this exact trace. No guard, TTL,
+retry or timeout change is inferred merely from the verified model badge.
+
+
+### Current Create and persistent native member: independent raw acceptance
+
+Create artifact `12783456834` has PASS receipt
+`d17fd9ea9e88c7eb508698f29138229c54832eaf7b9eded3a1d1690a91169d12`.
+The raw registry/bootstrap, saved Opus 4.6/medium choices, capture, exact owner binding
+and lead grant agree. There is one actual SDK session, one original successful
+`NATIVE_TEAM_ONE`, seven unique completed canonical commands, one completed native
+Task and exact `ONE\n` file. Original Stop releases child 4915 and preserves the
+closed/released/sealed session and input; reload preserves settings/capture.
+
+Member artifact `12783261792` has PASS receipt
+`69018a0fab0d068fa6e9b0c77710237a9d456c7197ccfbe071b764cefc898711`.
+The independent audit verifies one original native-creation command from the exact
+second lead input in Do mode, same-command lookup, preserved original lead/grants/
+captures, one new peer delivery/grant and one native addition. There are two actual
+sessions, four successful lead inputs plus one successful directed peer input, and
+15 unique completed commands. The peer reply is canonical. One roster reminder is
+represented on the next original lead input; follow-up does not duplicate the
+reminder or create hidden inputs. Creation, member projection and saved settings
+remain exact after reload. Both stopped session records match their raw files and
+preserve input identities; original Stop releases children 4946 and 5189.
+
+Both wrappers finish with SIGTERM, not natural exit 0; their captured Hosts 4015 and
+4108 are absent and process groups empty. Create has five allowed sentinel calls,
+Member eight, with no late/refused call. Neither flow uses originalAppReap or retains
+a separate post-Quit writer-lock/reacquisition proof; the other Quit flow's lease
+qualification is not imported. All 1,395 source pins and raw profile/descriptor hashes
+agree. Eight initial Create and eleven member-continuation model observations are
+pinned oracle assertions; complete raw request bodies are not separately retained.
+This is actual SDK/CLI with controlled TEST inference, not vendor authentication,
+mixed-provider, Resume or whole-Stage1 qualification.
+
+### Current active-plus-queued Quit and cold readback
+
+Artifact `12782543482` retains warm PASS
+`9c5d5c8fd4772d374503aeb599da76f4340f68c976367865f5614a050d212dda`
+and cold PASS `a8b290e2d195b3844597284db0cfc5f6132c6b0ba24510616b443dd82c67318c`.
+An independent raw audit checks 21 core invariants plus exact command/outbox linkage.
+The active consumed input becomes UNKNOWN with original operationRef
+`1a97b308-53de-46a9-9b46-f14a7b7bc9e1`; the queued admitted input becomes cancelled
+without dispatch, retaining `cbe56cd7-7f99-4b9a-9426-bb916026ae88`. Original intents,
+bindings, fingerprints and message/delivery/input identities remain exact.
+
+The actual session finishes closed/released/sealed, while the active input outcome
+remains UNKNOWN. `debtRetained: false` concerns this session's custody, not fabricated
+input success/failure. Final raw session equals warm after-Quit state; all 15 raw
+events precede the cold startup and there is no new allocation/input/event/command.
+Five product digests independently match before/after; the inbox digest deliberately
+projects away read/readAt metadata, not a claim of whole-file equality. The pinned
+oracle retains one held model observation and no native tool effect.
+
+Child 4329 is absent before fallback; both apps exit naturally 0 without signal,
+groups 3878/4808 are empty and Hosts 3984/4948 absent. Original writer-lock release
+is asserted before cold startup and after second Quit. Sentinel counts five/ten
+match raw log with no late/refused calls; 1,395 source pins/profile/descriptor agree.
+The defunct recovery observer is unused. Historical M19 custody remains separate.
+
+### New Review diagnostic and explicit bounded uncertainty decision
+
+Review artifact `12783397872` has INCOMPLETE receipt
+`0aae821bb28a4068b2604542638f789c80101b8d7c5d3aa956dca893db80b3ee`.
+A fresh independent UI critic verifies both complete 683-hook snapshots. The exact
+current draft is unchanged across 30,314 ms; ready/verified Sonnet state/ref checks
+have null captured proof and signature, and the original Launch remains disabled.
+The only management journal is completed/ok/released, with its command-path digest,
+input fingerprint and record digest independently matching. Its validity is still
+87,680 ms before the wait and 57,366 ms after failure. No model switch/cancellation
+or expiry explains this selected trace.
+
+No initial Launch click, runtime capture or business input is recorded. The single
+seed Task command and zero-input unconfigured baseline runtime are unchanged;
+model observations are zero, with one probe. Before/after 1,395 pins agree. Cleanup
+has natural app exit 0, absent captured Host, empty group and no refused sentinel
+call; a separate late-activity conclusion is not inferred from missing baseline.
+
+Two independent Main/renderer reviews and the fresh UI raw review find no finite
+production cause. The complete current draft is stable, and original Resume command
+IDs, model selection/configuration and management digests match. However, the final
+Main prepare response/publication is not retained. Compatibility diagnostics emit
+ready model progress before awaiting deep preparation; that progress clears proof
+and signature. The final wrapper always attaches a captured draft signature, so
+these snapshots cannot distinguish still-pending preparation from supersession or
+an uncommitted final result.
+
+The initially suggested passive `api.teams.prepareProvisioning` wrapper is rejected
+after actual proxy review: its get trap reads the frozen legacy preload method and
+ignores assignment to the proxy target. F08's writable renderer backend.invoke is
+a different path; Main's preparation bypasses it. There is no existing exposed safe
+original-call observer or retained final promise handle. No observer, API replacement,
+private hook mutation, new product diagnostic seam, timeout/TTL change or retry is
+added. Per the owner's instruction, this hard uncertainty and the original OpenCode
+opening UNKNOWN are explicitly deferred rather than given a speculative fix.
+
+Commit `d569a812e6fb072e939686d09c76c833851ab867` separately corrects only the
+false generic cold cleanup label to `saved Runtime readback; consult per-flow custody
+and allocation evidence`. Root reviews the exact one-literal diff against the actual
+pending-open UNKNOWN evidence; it is immediately pushed. No custody/classification,
+branch, behavior or test changes. Diff check passes; redundant tests are not added.
+
+## Completed exact 82ace7e qualification and next corrected source candidate
+
+Run `40609431219` is complete: canonical **Full qualification PASS**, overall
+**FAIL**, with **6/10 source Desktop jobs PASS**. Its ten original ZIP artifacts
+are retained and indexed as 12 workflow receipts: eight PASS and four INCOMPLETE.
+The separate original Taskboard epoch PASS is retained inside its overall incomplete
+owner/default artifact and is not counted as a completed extra job.
+
+| Original Desktop job | Result | Artifact |
+| --- | --- | --- |
+| Stopped legacy import and native Launch | PASS | `12780989640` |
+| Existing Taskboard/cross-Team plus cold owner/default | INCOMPLETE; original epoch PASS, cold TEST census race | `12782456532` |
+| Mixed Create/Launch | INCOMPLETE; original OpenCode opening UNKNOWN | `12783455400` |
+| Create with native Launch | PASS | `12783456834` |
+| Pending-open Quit and cold readback | PASS | `12782587715` |
+| Native persistent teammate | PASS | `12783261792` |
+| Cold selected Resume | INCOMPLETE before initial Launch | `12783101931` |
+| Active-input Quit and cold readback | PASS | `12782543482` |
+| Native Review and cold readback | INCOMPLETE before initial Launch | `12783397872` |
+| Saved legacy import only | PASS; raw audit follows | `12782778388` |
+
+Current pushed source is `d569a812e6fb072e939686d09c76c833851ab867`. Since the
+completed 82ace7e run, only the independently reviewed TEST census correction,
+its regression/CI invocation/source pin and the truthful cleanup label change.
+Reviewed production source remains `7b72d9f09f0e379670f24f8a16c82fb1433fd35c`.
+The next coherent candidate will exercise the corrected original owner/default
+continuation in the existing ten-variant workflow. Current failures are not rerun
+inside their original scenarios or relabeled. P7/M17's qualified macOS tuple and
+original M19 custody HOLD remain explicit; Stage 1 is not declared complete.
+
+
+The final saved-import artifact `12782778388` independently passes raw audit, receipt
+`2d9b048ae82960fab68321db2a40f4a4425cec2f258a739c96374305c94da12d`.
+Snapshot digest and original intent fingerprint recompute; one published import,
+eight destination files and six immutable publication files match exact retained
+bytes/hashes. Binding/members/settings/grants match the product-only definition,
+with runtimeNeverLaunched, no delivery bindings and no runtime capture. Source
+before/after seven-entry census agrees; four physical original JSON files are
+retained and independently hashed. Three original blobs are not separately retained;
+their captured snapshot payloads and destination bytes verify, not a physical re-read
+of all originals. Original lookup, reload, Task reference navigation and attachments
+remain in the same import proof. Only the original offline seed Task command exists;
+there are no imported-Team commands or outboxes and no Launch Submit.
+
+Two allowed Sonnet/low management probes occur, with zero business observations.
+Pre-Quit runtime proof is empty; final storage contains an unconfigured, closed,
+released zero-input tombstone for the original fixture. Zero runtime allocation is
+not misreported as zero final ledger files. Wrapper cleanup uses SIGTERM with null
+exit code, empty group and captured Host absent; natural exit is not claimed. Six
+allowed sentinel calls have no late/refused calls. All 1,395 source pins, profile,
+descriptor, seed and five screenshot hashes match. This is a never-launched draft
+import proof, separate from original native Stop/import and other run receipts.
+
+The README current checkpoint now reflects 28 October and the completed exact-head
+results; historical evidence tables/dashboard remain unchanged. The documentation
+checkpoint below freezes these completed outcomes before the corrected candidate's
+one combined qualification. No additional production change or new diagnostic seam
+is included. PR #982 remains OPEN/Draft and MERGEABLE against unchanged incorporated
+main `7eb878f88af355334547ab526034ca1c2bf961ab` at this checkpoint.

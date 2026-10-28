@@ -20,7 +20,7 @@ PR #1 остаётся Draft; новый runtime/native/UI PASS из локал�
 Этап 2 по-прежнему не входит в работу.
 
 
-Обновлено: 25 октября 2026, Europe/Kiev.
+Обновлено: 28 октября 2026, UTC.
 
 **Направление согласовано владельцем. Этап 1 реализуется и проверяется в изолированных lanes.**
 Есть работающий legacy-host и принятые scoped E2E; полная приёмка этапа 1 ещё не завершена.
@@ -61,15 +61,27 @@ consumer. [P4.4](stage-1-legacy-host.md#p4-полноценные-несколь
 workflows, pending/revoke/control guards и product approvals. Это не заявление о
 поддержке native questions всеми тремя providers и не удаление прежнего UI.
 
-## Текущий checkpoint интеграции — 27 октября
+## Текущий checkpoint интеграции — 28 октября
 
-[Checkpoint от 27 октября](progress/checkpoint-2026-10-27.md) фиксирует merge с
-main, подтверждённые исправления Create/Edit/ссылок на Task/неактивного roster и
-презентации Host members, новые scoped проверки и фактические результаты CI.
+[Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
+main, независимое ревью конфликтов, исправления исходных Create/Launch/Task/group/
+attachment/import/backup путей и точные результаты каждого запуска. Полный CI
+на `82ace7e` прошёл: **23 883 основных теста, 0 ошибок, 92 пропуска**, все проверки
+типов/lint, workspace/Host и Windows smoke. Из десяти source Desktop вариантов
+прошли шесть; общий combined run `40609431219` остаётся failed.
+
+Исходный Taskboard, включая вложения, F08 stale snapshot/feed и Trash/Restore,
+прошёл. Его cold owner/default продолжение остановилось на временном каталоге
+блокировки в TEST-сборщике; узкое исправление `f0f0052` прошло red/green regression
+и независимое ревью, его Desktop-проверка ещё предстоит. В Mixed исходный OpenCode
+open остался UNKNOWN. Resume/Review остановились перед первым Launch; сохранённый
+текущий черновик не изменился, но финальный результат подготовки не установлен.
+Эти неопределённости не заменяются успехом model probe или прежних запусков.
+
 Frozen dashboard/данные от 23 октября остаются историческим снимком. Последующие
-изменения не наследуют прежний native/UI PASS; финальная exact-head приёмка,
-packed/installed и исходный M19 custody HOLD остаются отдельными обязательствами.
-Этап 1 пока не объявлен завершённым, PR остаётся Draft.
+изменения не наследуют прежний native/UI PASS. Финальная проверка исправленного
+candidate, packed/installed P7/M17 и исходный M19 custody HOLD остаются отдельными
+обязательствами. Этап 1 пока не объявлен завершённым, PR остаётся Draft.
 
 ## Текущая сводка приёмки
 
@@ -142,8 +154,10 @@ macOS arm64 без Desktop UI, vendor auth и независимой whole-tree 
 Прежние UNKNOWN/INCOMPLETE, включая unconfirmed Host exit `68e0f5…`, и M19 SDK HOLD
 сохранены; полные M03/M06/M13 и итоговые Stage1 gates этим proof не закрыты.
 
-Текущая оставшаяся приёмка: mixed UI, итоговый frontend CI и packed проверка
-нынешнего набора изменений. Task11 принят в своём
+Текущие незакрытые проверки и неопределённости перечислены в checkpoint выше:
+исправленное cold owner/default продолжение, исходные Mixed/Launch traces и
+итоговая проверка текущего candidate, а также packed tuple и исходный M19 custody.
+Task11 принят в своём
 offline scope; [обычные Claude warm/cold review](evidence/m13-existing-native-review-warm-cold-ui-handoff.json)
 `57c477…` / `4bd123…` (RO0002) приняты в указанной границе. Retention manifests:
 `723c190…` / `eb0a10…`, collection/qualification errors 0.
