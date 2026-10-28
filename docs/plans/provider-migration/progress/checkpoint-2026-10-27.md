@@ -1931,3 +1931,430 @@ failure propagation); all three new files passed formatting, and the production
 source guard passed for 4,625 files with the unchanged 800-line cap. Syntax and
 diff checks passed. This is prepared TEST coverage, not a new Desktop/native PASS;
 the next clean combined source run must execute the original scenarios.
+
+
+## Combined candidate dispatched after the reviewed corrections
+
+At **23:35 UTC on 27 October**, after confirming clean local/remote equality,
+Draft/MERGEABLE state and the unchanged incorporated base, root dispatched one
+full CI plus the ten existing source Desktop variants on exact candidate
+`b6a79dd773f51df1a266e7b93d57ab6eada55a4a`:
+[40603138928](https://github.com/777genius/agent-teams-ai/actions/runs/40603138928).
+Its production/TEST source is `fcb7b8bd18d0cf4e247c8b16b5d411180c5059c9`;
+the candidate's final commit contains only the reviewed progress append. No
+original attempt is retried or reclassified. Two independent holistic reviewers
+are examining the integrated frontend/shell and backend while this run executes.
+
+
+The final holistic backend reviewer returned **STATIC ACCEPT** for source
+`fcb7b8bd18d0cf4e247c8b16b5d411180c5059c9`. Independent comparison of 1,180
+retained a044 production source pins finds only the two already reviewed native
+Stop marker files changed. The review reread current owner/authority/receipt
+interactions, group admission/replay, stopped-source maintenance and publication,
+restore/purge, captured mutations and transport sealing/disposal. Source backup
+identity remains archive data and does not become destination authority. No new
+actionable regression was found. The reviewer's own TEST observations helper is
+excluded from that independent verdict; its root/lead reviews remain separate.
+This static verdict does not replace the running current-candidate CI or Desktop
+proofs, and preserves P7's qualified-tuple boundary and original M19 custody HOLD.
+
+
+A fresh independent frontend/shell reviewer also returned **integrated ACCEPT**
+for the same source, confirming that the candidate delta is documentation only.
+The actual-code pass traced immutable Task Create/comment and lookup recovery,
+group associations and owner-qualified references, captured Create/Launch/readiness,
+Task Trash/Restore, ordinary and graph lead coordination, product/feed ordering,
+shutdown/reload and the cold owner/default proof. No confirmed regression or code
+change was requested. The reviewer preserves exact selected proof scopes and
+separates pending native results, P7 and original M19 from static acceptance.
+
+
+## Original b6 Mixed outcome: navigation boundary after native readiness
+
+The original Mixed job in run 40603138928 failed with a later TEST navigation
+omission. Artifact `12780230469` retains receipt SHA-256
+`b264c52fa7a73a25a4dc4081aa064534f5352a940ff425e6ea2dbfaab1d8a938`,
+status INCOMPLETE. All three original initial native attempts reached owned,
+ready/context-applied/usable without retry. One lead `NATIVE_TEAM_ONE` input
+succeeded with eight actual business model requests; Bob/Carol had zero business
+inputs/observations, with only their one model probe each. Independent raw review
+verified original member IDs, capture deliveries and live principal grants. The
+previously fixed Codex principal lookup succeeded before the new UI timeout.
+
+Root and a fresh UI critic inspected the original screenshot and steps: the lead
+DM and exact reply are visible, while the left chat-list buttons are unmounted.
+The loop then seeks Bob's chat-list button without using the existing Back to
+chats control. No Bob click or Send was attempted. The bounded downstream review
+found the same omission between providers in the later member-restart loop.
+Only those original TEST navigation sequences are being corrected; no model,
+readiness, authority, timeout, input replay or alternative UI route is changed.
+
+Failure Quit, rather than ordinary scenario Stop, closes/releases all three
+runtimes. The original app exits naturally with 0/no signal and its group is
+empty. A separately captured Host PID witness is unavailable, and the missing
+pre-Quit sentinel baseline makes late-invocation classification unavailable;
+eight allowed invocations and zero refused invocations are retained. This is
+not peer/group/restart/ordinary-Stop acceptance and does not release earlier
+UNKNOWN obligations. The other original jobs continue without cancellation.
+
+
+The exact two-loop navigation correction is committed and immediately pushed as
+`fe3d6c7e0548162a98253666de2d331763b5c746`. Only the two existing TEST helpers
+change: each uses the original Back control before Codex/OpenCode selection,
+preserving the first lead and final Carol surfaces. Root, a fresh UI critic and
+lead reviewed the actual twenty-line diff; strict scripts TypeScript, scoped
+lint/format and diff checks passed. No native PASS is inferred before execution.
+
+The current b6 canonical run also exposes one stale expectation in the existing
+TeamBackupService maintenance-consumer test with `pending backup=true`. Its old
+backup retains identity X, while the marker-enriched captured source correctly
+has a distinct valid identity Y. Existing restore inspection therefore returns
+foreign and refuses the protected pending restore before participant/writes.
+The test still expects the former missing-marker error rather than the actual
+`Stale backup has protected work-sync restore pending` refusal. Independent
+root/backend inspection agrees on a TEST-only correction; no production guard
+is relaxed. The additional unexpected-console assertion is a consequence of the
+first failing expectation skipping the test's mock cleanup, not a second product
+defect. Original shard 4 remains failed (6216 passed, one failed, 18 skipped).
+
+
+`f5c6ba8b64589fa224ba50a1fdd9797e975f56f0` commits the separately reviewed
+single-file backup TEST correction. The two affected original parameter cases
+pass, with 70 unrelated cases filtered; the original failing case was reproduced
+before the exact edit. The test now also verifies distinct old/new identities and
+the retained original pending generation. Root/backend actual reviews accept it.
+Scoped lint is blocked solely by the same preexisting import-sort error present
+in HEAD; imports were not reordered and no lint PASS is claimed for that command.
+No production file changes. The commit was immediately pushed.
+
+The b6 root shard counts are 5806/6083/5773/6216 passed, with 26/31/17/18 skipped:
+**23,878 passed, one failed, 92 skipped**. Validation, all three typed lint jobs
+and Windows ledger smoke pass; the canonical Full qualification remains failed
+because of the retained one-case TEST expectation. Shard 1 separately reports
+421 and 74 workspace tests, 791 Host tests, 179 CI/script checks and 119 feedback
+policy checks, all passing in their respective suites.
+
+| New b6 passing receipt | Artifact | SHA-256 | Bounded result |
+| --- | --- | --- | --- |
+| Active-input Quit | 12780690777 | `153c5a16aed2d49ef15da22bc50eefceecc244d27f3b93cc6dbed2ee579d04a1` | PASS; active input UNKNOWN, queued input cancelled; natural app exit 0. |
+| Active-input cold readback | 12780690777 | `26c32ee2f9ba030cf4d3a608c28bb86f11fb2a902baad5fa49ac604444d96c02` | PASS; same final runtime/product, no new allocation/input; natural app exit 0. |
+| Pending-open Quit | 12780751324 | `cfe21393f66fb62bfdc1080303db73bcc51c31378206d935f5e3241812d9e4f7` | PASS; original pending custody/debt retained, natural app exit 0. |
+| Pending-open cold readback | 12780751324 | `856b0b1c0e0c7a5ef29eaf0e69100aabb4f363a75ca528fc057b9582058f17e0` | PASS; original preserved scope, natural app exit 0. |
+| Persistent native teammate | 12780372610 | `fe070f7d2ddc1b7f58a4ed634417e4ae5e231b8d666e8fdaaf620a8c7916f100` | PASS; captured Host absent and group empty, final dev-wrapper SIGTERM. |
+
+The independent b6 Active-Quit audit recomputed all five raw product categories
+and the final session, checked the original intents/fingerprints/operation refs,
+and compared all 1,395 source pins across four warm/cold boundaries. One held
+inference remains the only native request; cold startup does not replay it.
+Both apps exit naturally, captured Hosts and groups are absent, and no late/refused
+sentinel invocation or defunct-helper invocation is recorded. Original UNKNOWN
+semantics and historical M19 remain unchanged.
+
+The new original Resume artifact `12779942452`, receipt
+`caf495f5ec89b9c081d1fbc3d5a24dc6e9b5f3abeaf40440c0b7b82b55108fd8`,
+is INCOMPLETE before any Launch click. The image explicitly shows the verified
+model catalog unavailable/stale blocker. The original passive diagnostics progress
+from checking to ready/verified while the button remains disabled; hook traversal
+is still explicitly truncated at 512. A fresh critic verified that all affected
+Launch/readiness/provider-status production source pins match the a044 PASS,
+whose before-submit diagnostic has the same partial/null fields. Progress-ready
+checks alone do not establish final captured-proof publication or identify the
+root cause. Original Main probe records and UI arbitration are being compared;
+no retry, timeout/readiness relaxation or guessed production fix is introduced.
+
+A conditional attempt to supersede only unstarted obsolete jobs refused before
+calling GitHub cancellation: fresh job state showed that the next original native
+step had already begun. No cancellation occurred, and the original run continues.
+
+
+## Continuation on 28 October: retained new evidence and unresolved initial Launch
+
+The independent Pending-Quit audit checks ten raw continuity relations: the
+original binding/config/open fingerprint/incarnation persists from opening UNKNOWN
+to held/sealed/open-unknown with debt retained. There are zero inputs, interactions
+or inference requests; all five product digests agree, and cold readback/second
+Quit adds no native allocation. The original child PID/PGID 4391 is observed before
+Quit and absent afterward; both original app exits are natural 0/no signal. Five
+source and ten cumulative cold sentinel invocations have no late/refused entries.
+Physical absence does not convert the original custody to released.
+
+The persistent-member audit checks fifteen raw relations: two scoped native
+runtimes plus an unused base, original creation/lookup and capture/grants/settings,
+four lead inputs and one addressed peer input, and one prepared/represented roster
+reminder. All inputs succeed; eleven member model requests retain Opus/medium,
+and the original eight Create business requests are unchanged. Ordinary Stop
+closes/releases both observed native children before Quit; reload preserves member
+IDs/settings/creation. The final dev wrapper is SIGTERM, not natural-exit evidence.
+Both artifacts use the current cleanup helper pins but do not invoke its defunct
+observation branch; that branch receives no native qualification from these PASS.
+
+A second bounded Resume audit finds the selected Opus management command completed,
+`ok=true`, `resourceHeld=false`, with 57,916 ms of TTL remaining at the failed UI
+snapshot. Only the previous Sonnet command is cancelled. Both canonical management
+input fingerprints, record digests and command-file addresses recompute exactly.
+The original final readonly Main prepare response/current draft association is not
+retained, so this establishes journal consistency rather than a complete Main
+readiness binding. No expiry, cancelled selected probe or corrupt record explains
+the failure. The earlier a044 PASS has the same initial two-probe outcome shape.
+No guessed production correction, retry, TTL/readiness relaxation or new channel
+is introduced.
+
+Two additional b6 original receipts report PASS: saved-import-only artifact
+`12780697369`, receipt `d357a8bdfe4616dcae4bf64dd59dc9419bc98287c406c57790697ca0422b46c4`,
+and native Create artifact `12779444009`, receipt
+`fc30480e2b51fa3ccc820075e8fe66d820d3ad73a89132c9a044a34fa8eac17f`.
+Their raw source/publication/input/cleanup boundaries are under independent audit.
+
+The original Taskboard artifact `12780343134`, receipt
+`e093cd350a0292a1c7152929f1a2947febae333602ffef42e3a881b88ca7977a`,
+is INCOMPLETE before F08 and the new owner/default continuation. Original image
+and comment attachment reads/download after reload succeeded, and the original
+image removal completed with unchanged comment metadata. The subsequent readonly
+read of the removed image returns `ok=false`, where the TEST expects successful
+null; the helper currently discards that refusal detail. Root inspected the actual
+screenshot and raw completed removal receipt. The cause is being investigated;
+no later routing, Trash or owner/default PASS is inferred from this attempt.
+
+
+The subsequent independent import-only/Create audit accepts each original bounded
+PASS. Import-only verifies twelve raw continuity relations plus seven publication/
+blob checks: seven embedded source files decode correctly, all eight destination
+files and six immutable publication files match raw hashes. Four original source
+files are retained directly; equality of the three original attachment paths at
+the final source census relies on the recorded census (embedded original and
+published bytes are independently available). This is a never-launched draft,
+without source config/backup marker/native Stop, and does not qualify c671's
+marker-bearing stopped-source branch.
+
+Native Create retains one published registry/bootstrap, exact Opus/medium settings,
+one capture and one successful NATIVE_TEAM_ONE input, eight actual business model
+requests, and exact ONE\n file effect. Original Stop releases the observed child
+4970; settings persist after renderer reload. Both Create and import-only use the
+strict original wrapper SIGTERM fallback, with captured Host absent, group empty
+and six sentinels/no late or refused invocations. Neither invokes originalAppReap;
+no defunct-recovery or natural-wrapper-exit qualification is inferred.
+
+The original native-review job also stops before its first Launch click. Artifact
+`12780752501`, receipt
+`54dbf4dfcf95e7e22ca8990058e446d1443f5ae3f6843198940232a8c9190412`,
+is INCOMPLETE; root inspected the screenshot showing the same unavailable/stale
+verified model catalog blocker. This attempt never reaches native review/Changes
+or cold continuation. Its original probe records are being audited independently;
+the earlier a044 review PASS is not transferred to this failed attempt.
+
+
+## Completed b6 run and finite follow-ups
+
+Run [40603138928](https://github.com/777genius/agent-teams-ai/actions/runs/40603138928)
+completed on exact `b6a79dd773f51df1a266e7b93d57ab6eada55a4a` with **6/10 source
+Desktop variants PASS**, four INCOMPLETE. Passing variants are native Create,
+persistent teammate, saved import only, stopped import plus native Launch,
+active-input Quit/cold and pending-open Quit/cold. Mixed fails at its original
+chat-list navigation; Taskboard fails at its original removed-attachment read;
+Resume and native Review stop before their first Launch clicks. The root canonical
+suite retains its one stale protected-backup expectation failure; the corresponding
+TEST correction is already pushed. No original failed receipt is relabeled.
+
+The marker-bearing stopped-import/native-Launch artifact is `12781205203`, receipt
+`aff0fe88c298b0b8c2125dc0938da8c1d2c6538ece2d729711ab94c4098c4512`,
+PASS. Its independent source-marker/Stop/publication/native audit is in progress.
+The retained index contains ten original artifact ZIPs and twelve workflow receipts
+(including the two successful cold continuations): eight PASS and four INCOMPLETE.
+
+Native Review has only one actual Sonnet/low management probe, completed/ok/released;
+there is no initial cancellation or model switch. Its expiry remains 57.124 seconds
+in the future at the later failure-cleanup event. Owner/capture/runtime journals
+show no business launch, native task/tool/review action or business model request;
+the seed file remains byte-identical. Failure Quit exits naturally with 0/no signal,
+the captured Host and app group are absent. Five allowed sentinel invocations and
+zero refusals are recorded, but no pre-Quit baseline exists for a late census.
+The missing final prepare response/current draft association remains the same
+causal limit as Resume. Initial Sonnet cancellation is not necessary for this
+visible symptom. No production readiness correction is justified by these traces.
+
+Commit `2a4d9f03efba80714daaca7a50d68137c997d497` increases only the existing
+passive TEST inspector's hook cap from 512 to 1024. Root and the fresh UI critic
+verified that the current draft ref lies later in the finite existing hook layout;
+the retained projection already matches its exact signature shape. The three-second
+read deadline, 4096-tree-node bound, size filters and explicit truncation flag remain
+unchanged. Strip-types and cooked CDP-expression syntax plus diff checks pass.
+The formatting-neutral literal change does not reformat preexisting file drift.
+This is evidence repair, not a Resume fix or proof of a recovered final Main response.
+The commit was immediately pushed. Native Review is being wired to reuse this
+same passive inspector around its existing single Launch control, without a new
+harness, workflow or readiness bypass.
+
+The Taskboard failure is now reproduced in the existing real attachment-composition
+test. Enabling creation/import support supplies a real FileStoppedTeamImport reader
+for the ordinary Team. After original upload/add/comment/remove, the missing image
+metadata returns null from the owned store, but the unconditional fallback asks the
+import publisher for an ordinary Team with no import intent, producing the observed
+`{ok:false, code:'hold', outcome:'not-dispatched'}`. Both positive owned image and
+comment reads pass before removal. The original remote refusal code was not retained;
+this exact code is from the independent red regression, not reconstructed raw output.
+
+Root and the fresh UI critic independently accept a narrow correction: absence of
+the requested ID in current Task/comment metadata prevents only the imported read
+fallback. The owned-store read still checks duplicates/corruption, and the final
+readRoster/current-owner checks remain. Present references, missing manifests and
+unavailable imported provenance retain their existing checks/HOLD. The publisher's
+exact-one-import rule is unchanged. The affected regression and existing attachment
+suites are being run before actual-diff review and commit.
+
+
+The independent marker-bearing ImportLaunch audit returns **bounded ACCEPT** after
+25 raw checks. Original source marker `05075f0f-70a0-44d7-9989-66f972e0f727`
+is present before the captured TEST child Stop; final source config SHA
+`aaab656868ef40936c45b3d896c9844166b83f9a8cd6873c6c5746bae27e0b48`
+exactly matches pre-Stop bytes. Original PID/PGID 3776 and process identity bind the
+observed SIGTERM; sourceNativeInputs remains zero. Release/freshness digests,
+source run/session/incarnation, canonical current census and retained Node/Electron
+directory identity agree. All nine published destination files match. Seven of ten
+original source files are retained directly; three original attachment paths rely
+on recorded final census plus verified embedded/destination bytes.
+
+The target has a distinct Team/marker, fresh capture and native session. One
+NATIVE_TEAM_ONE succeeds with eight actual Sonnet/low SDK requests and exact ONE\n
+effect; native Task completes. Ordinary Stop releases observed target child 5982,
+final runtime is closed/released and settings persist after renderer reload.
+The source remains synthetic saved product/run data plus an actual captured TEST
+Node child; the target uses actual SDK/CLI. This does not prove original source
+vendor inference or native adoption. Final wrapper SIGTERM/group empty/Host absent
+and nine allowed/no late/refused sentinels are retained; no defunct helper runs.
+
+The reviewer also identifies a TEST-only descriptive inconsistency: the generic
+cleanup.hostExitCode fallback says no provider sessions were configured, although
+this original import continuation has a native target session. Raw session/Stop
+records, not that phrase, support the result. The label is being made truthful by
+stating only that Main's transport exposes no separate Host exit code; no cleanup
+or qualification predicate changes, and the original artifact remains intact.
+
+
+Commit `ae6c46a8838d8763847319f1dba1ee2a948263e7` contains the reviewed
+attachment composition correction and its real creation-enabled regression.
+Root and the fresh independent UI critic accept the actual diff. The regression
+reproduces the original HOLD before the production edit and passes afterward;
+13 tests in the two relevant existing attachment suites pass, including owned
+uploads/comment reads, imported projections/current-authority checks and referenced
+missing-manifest HOLD. A fresh strict Host build/declaration generation passes.
+Only the new source/test ranges are formatted. Scoped production lint and diff
+checks pass; the test file still has the same existing import-sort error as HEAD,
+so no test-file lint PASS is claimed and unrelated imports are not reordered.
+No wider production or publisher rule changes.
+
+
+Commit `5110c6ec4d6f886f101254790ce386d027056ed5` immediately pushes the
+separately reviewed TEST-only diagnostic reuse and truthful Host-exit-code label.
+The Launch and Review helpers call one existing passive inspector with the original
+handle/proof and before-submit/failed-submit phases. The evaluated expression is
+byte-identical for the same handle; 1024 hooks, 4096 nodes, three-second deadline,
+projection/size limits and explicit truncation remain. Root and lead independently
+review the actual diff. Strict scripts TypeScript, scoped lint (one unchanged
+no-unsafe-finally warning), cooked-expression/strip-types syntax and diff checks
+pass. No additional test, mutation, timeout or readiness bypass is introduced.
+Only the root-owned checkpoint remains dirty after these pushes.
+
+## Fresh holistic review: non-Anthropic Create readiness
+
+A fresh independent Sol/xhigh cross-layer reviewer identifies a deterministic
+in-scope Create blocker before the next combined dispatch. The original lead
+selector exposes Codex/OpenCode; solo/inherited drafts contain only the selected
+provider. Main preparation evaluates the entire captured draft and returns its
+exact CreatedTeamReadiness on that provider's check. But the renderer helper
+selects only an Anthropic row and its permits method accepts only Anthropic.
+After a valid Codex-only/OpenCode-only check marks Host proof required, the helper
+cannot retrieve it and blocks the existing Create submit.
+
+Root independently confirms this chain in the existing Create controls, provider
+collector/request mapping, whole-draft Main preparation and hook. P5 preserves
+these provider/model controls; no selected Stage1 exclusion applies. The correction
+is limited to choosing a ready current proof from the actual provider checks,
+while permits(providerId) still requires that provider's own exact-bound proof.
+Open/draft/preparation/selection/expiry and Main/Host authority checks remain.
+The existing focused hook test will reproduce both non-Anthropic cases before the
+edit and retain unrelated-provider/stale/expired/draft-change refusals. No new
+provider implementation, native variant or alternative UI/harness is added.
+The next combined CI dispatch waits for this concrete reviewed fix; the unrelated
+Resume/Review final-readiness trace remains unresolved and receives no guessed fix.
+
+
+## Fresh holistic review: group user-inbox backup version
+
+The same fresh reviewer finds one further concrete cross-layer restore defect;
+root independently verifies the complete static chain. Canonical group sends write
+`inboxes/user.json` directly. Physical normal message.send receipts target selected
+agent inboxes, while the group-chat family receipt is the relevant durable decision
+for the canonical user row. teamBackupResourceVersion currently skips that family;
+configuration contributes nothing for inbox resources and product-change notification
+is volatile. Consequently a user-inbox backup before a newer completed group post
+can retain the same ownerVersion afterward. If the current user inbox disappears,
+the actual restoreMissing resource adapter can accept the old bytes; the completed
+group receipt remains and does not replay the canonical post.
+
+This concerns the existing §11 newer-mutation restore guard and M05/M16, not a new
+backup system. The authorized correction is scoped to group-chat send receipts for
+`inboxes/user.json`: include the completed immutable decision, and retain HOLD for
+prepared/held sends. Other resources, families, ownership/publication fences and
+no-replay behavior remain. The backend author prepares a red-before/green-after
+regression using actual group commands and the actual backup resource adapter in
+one existing test file. Test execution is serialized with the Create fix; root and
+the fresh independent reviewer will inspect the actual patch before the sole Git
+writer commits and immediately pushes it.
+
+The remaining fresh transport/shutdown/legacy-source pass finds no additional
+concrete defect: original client/process ownership and shutdown ordering, immutable
+router binding, source release/census/publication, nested maintenance admission and
+separate provider-custody/profile-lock obligations are retained. Broad scanning stops
+at these two established findings; actual patch review and final qualification follow.
+
+
+Commit `40d101a8d368289be7452fb2ec73c87563521a4f` immediately pushes the
+reviewed Create correction. Both Codex-only and OpenCode-only hook cases fail on
+the prior source and pass after the minimal predicate change; the existing focused
+suite reports **19/19 PASS**. The whole-draft proof selector retains all original
+open/clock/status/draft/preparation/selection/digest/expiry checks. Provider
+permission filters to that provider's own ready current check, so unrelated-provider
+proofs remain insufficient and a stale preceding row cannot hide the valid row.
+Existing owner/close/unknown-intent tests remain. Root and the fresh holistic critic
+accept the actual three-file diff; scoped lint, Prettier and diff checks pass.
+All three files were already covered by the existing source-pin closure. These
+focused checks establish the guard correction; a new all-Codex/all-OpenCode native
+Create UI variant is not claimed or added. Combined qualification remains pending.
+
+
+Commit `7b72d9f09f0e379670f24f8a16c82fb1433fd35c` contains the frozen
+five-line group user-inbox version correction and three actual regressions in the
+existing group suite. Before the fix all three cases reproduce the defect; after
+it **28/28 tests PASS** across group chats (13), backup resource (3), scoped backup
+(8) and queued messages (4), with one worker. The 60.75-second run is dominated
+by the unchanged full-roster case. Fresh Host build, package test typecheck and
+scoped lint pass. Actual root, fresh holistic critic and lead reviews accept the
+exact source `dc3b515cd68b37f5e2c218db6da0da98ba7c9844318df5c5f731f60d7c6d4cfa`
+and test `354cbcd2ffe5c07a6140ef1e339b02fa0bc4a6571ed00cff693a259c31dc9f88`.
+The current proof still restores exact current bytes; old proof, prepared and held
+cases cannot create the missing resource or replay delivery. Other receipts,
+outboxes, peer inboxes and resource kinds remain unchanged. The commit is pushed
+immediately by the sole Git writer; no new native qualification is claimed here.
+
+The fresh final holistic reviewer returns **bounded source ACCEPT** after actual
+review of both corrections. Its integrated pass covers Task/comment immutable
+intent and exact effects, first-admission group association/replay and captured
+fanout source, owner-qualified references/router bindings, deleted reads and
+product/feed/write ordering, existing Create/Launch/Edit submission, lead duplication
+boundaries, attachments, stopped-source identity/import/backup/purge, and captured
+transport/cold/shutdown ordering. It found the two now-corrected defects above and
+requests no further code change. Earlier independent backend/frontend reviews and
+the new exact-diff reviews remain separate; no static verdict is labeled native PASS.
+
+## Candidate frozen for the next combined qualification
+
+The reviewed production/TEST source is `7b72d9f09f0e379670f24f8a16c82fb1433fd35c`.
+The following checkpoint commit changes documentation only and becomes the exact
+source head for the next full CI plus all ten existing source Desktop variants.
+This run must verify the combined ordinary attachment fix, non-Anthropic Create
+readiness guard, group-backup decision version, Mixed navigation, protected-backup
+expectation, passive readiness diagnostics, and the previously unexecuted direct
+same-A snapshot/cold owner-default continuation. No extra native variant, automatic
+retry or timeout/readiness relaxation is added. P7's qualified tuple, original M19
+custody and the unexplained historical initial-Launch/OpenCode traces remain explicit
+until their own accepted evidence establishes a different result.
