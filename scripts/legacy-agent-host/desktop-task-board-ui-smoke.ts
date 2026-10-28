@@ -6,6 +6,10 @@ import { performance } from 'node:perf_hooks';
 
 import { createTeamController } from '../../packages/legacy-agent-host/dist/adapters/team/ControllerAdapter.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import {
+  desktopTaskBoardAssignmentReadyExpression,
+  desktopTaskCommentInputExpression,
+} from './desktop-task-comment-input-target.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -386,6 +390,15 @@ export async function runDesktopTaskBoardUiSmoke(
     `document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,
     'existing clarification banner'
   );
+  const assignmentOwner = record(
+    await ui.waitRead(
+      desktopTaskCommentInputExpression(options.handleId, taskId),
+      'capture the original Task detail owner before assignment'
+    )
+  );
+  const { contextId } = record(assignmentOwner.identity);
+  const { surfaceId } = assignmentOwner;
+  assert.ok(typeof contextId === 'string' && typeof surfaceId === 'string');
   const assigneeDialog = `
     const dialogs=[...document.querySelectorAll('[role="dialog"]')].filter(d=>d.getClientRects().length&&d.querySelector('button[role="combobox"]'));
     if(dialogs.length!==1||!dialogs[0].textContent.includes(${desktopJsLiteral('#' + String(created[0]!.displayId))})||
@@ -421,6 +434,13 @@ export async function runDesktopTaskBoardUiSmoke(
     'task.assign',
     taskId,
     (payload) => payload.owner === 'alice'
+  );
+  proof.assignmentUiReady = await ui.waitRead(
+    desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, {
+      contextId,
+      surfaceId,
+    }),
+    'original assignment refresh and accepted Task owner settle before Mark resolved'
   );
   await ui.waitRead(
     `[...document.querySelectorAll('[role="dialog"] button')].some(e => e.textContent.trim() === ${desktopJsLiteral('#' + String(before[0]!.displayId))})`,

@@ -10,6 +10,7 @@ import { setImmediate } from 'node:timers/promises';
 import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -175,4 +176,201 @@ test('isolated shell fixture emits the actual framed environment and refuses she
   }
   const calls = (await readFile(log, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as { allowed: boolean });
   assert.deepEqual(calls.map(call => call.allowed), [true, true, true, false, false, false]);
+});
+
+function assignmentRuntime() {
+  const identity = {
+    contextId: 'TEST-context',
+    teamName: 'host-team:TEST-owner',
+    taskId: 'TEST-task',
+  };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const controller = {
+    identity,
+    surfaceId: captured.surfaceId,
+    isOwner: true,
+    session: {
+      ownerSurfaceId: captured.surfaceId,
+      commentText: '',
+      submitPending: false,
+      submitError: null,
+      pendingAttachments: [],
+    },
+  };
+  const root = { return: null, stateNode: {} as { current: unknown } };
+  root.stateNode.current = root;
+  const dialogFiber = {
+    return: root,
+    memoizedProps: {
+      open: true,
+      teamName: identity.teamName,
+      task: { id: identity.taskId },
+      sessionController: controller,
+    },
+  };
+  const trigger = {
+    disabled: false,
+    expanded: 'false',
+    textContent: 'alice',
+    getAttribute() {
+      return this.expanded;
+    },
+  };
+  const dialog = {
+    __reactFiber$TEST: dialogFiber,
+    getClientRects: () => [1],
+    querySelectorAll(selector: string): unknown[] {
+      return selector === 'textarea'
+        ? [input]
+        : selector === 'button[role="combobox"]'
+          ? [trigger]
+          : [];
+    },
+  };
+  const input = {
+    id: 'TEST-original-comment',
+    disabled: false,
+    getClientRects: () => [1],
+    closest: () => dialog,
+    __reactFiber$TEST: {
+      return: dialogFiber,
+      memoizedProps: {
+        controller,
+        contextId: identity.contextId,
+        teamName: identity.teamName,
+        taskId: identity.taskId,
+        surfaceId: captured.surfaceId,
+      },
+    },
+  };
+  const detail = {
+    identity: { ...identity },
+    phase: 'ready',
+    loading: false,
+    refreshPending: false,
+    full: { id: identity.taskId, owner: 'alice' },
+  };
+  const state = {
+    activeContextId: identity.contextId,
+    selectedTeamName: identity.teamName,
+    isContextSwitching: false,
+    taskDetailById: { [JSON.stringify(Object.values(identity))]: detail },
+  };
+  const work = { refreshPending: false, teamUnavailable: false };
+  const imports: string[] = [];
+  const expression = desktopTaskBoardAssignmentReadyExpression(
+    'TEST-owner',
+    identity.taskId,
+    captured
+  );
+  assert.equal(
+    expression.match(/await import\(/g)?.length,
+    2,
+    'only the two existing read-only observer modules'
+  );
+  const evaluate = () =>
+    Promise.resolve(
+      runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+        window: { __agentTeamsDevStore: { getState: () => state } },
+        document: {
+          getElementById: () => input,
+          querySelectorAll: (selector: string) =>
+            selector === '[role="dialog"]' ? [dialog] : selector === 'textarea' ? [input] : [],
+        },
+        async __testImport(path: string) {
+          imports.push(path);
+          if (path === '/store/slices/teamSlice.ts')
+            return {
+              isTeamDataRefreshPending(team: string) {
+                assert.equal(team, identity.teamName);
+                return work.refreshPending;
+              },
+            };
+          assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
+          return {
+            captureTaskDetailReadScope(teamName: string, contextId: string) {
+              assert.deepEqual(
+                { teamName, contextId },
+                { teamName: identity.teamName, contextId: captured.contextId }
+              );
+              return { teamName, contextId };
+            },
+            isTaskDetailTeamUnavailable(observed: unknown, team: string, scope: unknown) {
+              assert.equal(observed, state);
+              assert.equal(team, identity.teamName);
+              assert.deepEqual(scope, {
+                teamName: identity.teamName,
+                contextId: captured.contextId,
+              });
+              return work.teamUnavailable;
+            },
+          };
+        },
+      }) as Promise<Record<string, unknown> | null>
+    );
+  return { evaluate, imports, state, detail, controller, trigger, work };
+}
+
+test('original Task assignment prerequisite refuses receipt-only, pending and stale renderer state', async () => {
+  const f = assignmentRuntime();
+  f.work.refreshPending = true;
+  assert.equal(
+    await f.evaluate(),
+    null,
+    'physical receipt does not settle the original UI refresh'
+  );
+  f.work.refreshPending = false;
+  f.detail.refreshPending = true;
+  assert.equal(await f.evaluate(), null);
+  f.detail.refreshPending = false;
+  f.detail.loading = true;
+  assert.equal(await f.evaluate(), null);
+  f.detail.loading = false;
+  f.detail.full.owner = 'bob';
+  assert.equal(await f.evaluate(), null, 'retained pre-assignment full Task is not completion');
+  f.detail.full.owner = 'alice';
+  f.work.teamUnavailable = true;
+  assert.equal(
+    await f.evaluate(),
+    null,
+    'visible Task alone is not current accepted live authority'
+  );
+  f.work.teamUnavailable = false;
+  const result = await f.evaluate();
+  assert.equal(result?.surfaceId, 'TEST-original-surface');
+  assert.equal((result?.identity as { contextId: string }).contextId, 'TEST-context');
+  assert.deepEqual(
+    [...new Set(f.imports)],
+    ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']
+  );
+});
+
+test('original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface', async () => {
+  for (const change of [
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.state.activeContextId = 'foreign-context';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.state.selectedTeamName = 'host-team:foreign';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.detail.identity.taskId = 'foreign-task';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.controller.surfaceId = 'foreign-surface';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.controller.isOwner = false;
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.trigger.expanded = 'true';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.trigger.textContent = 'bob';
+    },
+  ]) {
+    const f = assignmentRuntime();
+    change(f);
+    assert.equal(await f.evaluate(), null);
+  }
 });

@@ -3503,3 +3503,421 @@ receipts (12 PASS,1 INCOMPLETE) plus one separately counted original Taskboard
 epoch. Its local retained JSON SHA is
 `abdae45b556804ced59c57f4920eec33e16ea0499483b93c4e897498bf46c020`.
 No original workflow was cancelled or retried.
+
+
+### Corrected card/main candidate dispatched once at 02:47 UTC
+
+At2026-10-28T02:47:31Z, root dispatched existing ci.yml once with
+stage1_desktop=true for exact pushed head
+`b533388916eb85b489027099010c0eb75d113322`, source merge
+`8db2347bea43cbe5f1c01d9020729d8180bb4553`:
+[run40622991863](https://github.com/777genius/agent-teams-ai/actions/runs/40622991863).
+Preflight verifies a clean working tree, matching remote PR head, Draft/OPEN/
+MERGEABLE state and incorporated mainc4c ancestry. This distinct original attempt
+includes the role-qualified Mixed card and exact new-main shell framing together.
+The selected provider archive remains frozen. Current canonical/native results
+are pending; no prior PASS is transferred and no workflow is cancelled or retried.
+
+
+### Final integrated source review at b533 — ACCEPT, execution pending
+
+The independent UI/cross-layer critic completed a final composition review at
+`b533388916eb85b489027099010c0eb75d113322`, reusing the unchanged3d whole-code
+review and inspecting all final deltas. No actionable product regression or
+Stage1 scope violation was found. Original intent/owner/receipt recovery, stale
+product/feed fences, group/Task backup versions, import/blob authority, current
+Launch proof, selected generation and seal/drain/final-backup/release order remain
+intact. The role-qualified card remains an exact existing control; alias-safe
+framing and strict TEST matching preserve refusal; upstream polling currency
+does not grant readiness. The ordinary runtime pin equals c4c, with unchanged
+CLI compatibility and entire V2 object, and the frozen provider archive remains
+unchanged.
+
+The exact reviewed literal hashes match. Source closure resolves to1,399 existing
+paths. The existing desktop-team-ui-smoke.test.ts runs in selected-Node CI at the
+exact checkout but is not individually listed in this source-pin census; no claim
+that every changed test file is individually pinned is made. This inventory fact
+does not create a product defect or additional native gate. Acceptance remains
+conditional on run40622991863; prior native results, historical UNKNOWN and P7/M19
+limits retain their own scope. No extra tests or source changes were requested.
+
+
+### b533 canonical Full qualification PASS and actual macOS27/27
+
+Exactb533 run40622991863 Full qualification job122603643645 ran its original
+gate at2026-10-28T02:56:13Z and completed SUCCESS at02:56:17Z. Independent
+canonical monitoring extracts the new original root counts: shard1 5,810/26
+skipped; shard2 6,090/36; shard3 5,820/17; shard4 6,175/18. Total:
+**23,895 PASS / 0 FAIL / 97 SKIP**. Controller421, MCP74, Host794, CI/scripts179
+and feedback119 pass. Validate122601442030 passes, including downloader9,
+MCP stdio24, architecture and source guard4,626/143/800. Typed lint renderer
+122601442141, features142 and main165 all pass. Windows122601442010 passes:
+app-lock110 plus1 skip, controller11, ledger/runtime1,247 plus5 skips, and
+startup cleanup25 without skips. These are this merged candidate's own counts.
+
+Root reads the original first macOS job122601213121 log: at02:49:04Z its selected
+Node test step reports27 PASS /0 FAIL /0 SKIP, including the actual strict framed
+shell regression. This checks the corrected fixture on macOS; the whole native
+workflow remains a separate qualification and is still running.
+
+### b533 fresh Review/cold raw audit accepted
+
+Artifact12788341612 has warm receipt
+`1589b954d0dde334ab7031419d430e91923f9b2b138614f4bb9008447f65fa64`
+and separate cold receipt
+`1bbf40949b2000e09554be9fa8dc739a519cacd45695e26487f528aa2a2cdc28`.
+Independent raw review verifies all seven journal rows, two qualified foreground
+Edit input digests and byte chains, all seven causal hashes and13 blob hash/size
+checks. The other five rows remain warned/partial/nonreviewable with no native
+capture proof; both receipts retain unsafePromotion:false and fullM13:false.
+Original TaskStart receipt/plan/Task hash/recipient/outbox and canonical
+task-notification delivery derivation correlate. Both original Runtime inputs
+remain succeeded; the physical target ends closed/sealed/released with a valid
+event digest, while the only base session remains unconfigured and input-empty.
+
+Original Keep/Reject/Undo/Redo/History/reload controls retain exact mixed bytes,
+first-hunk accepted/second rejected decisions, history2/redo0, Git index/stored
+index blob and unrelated dirty bytes. Cold app5757/Host5850 differs from warm
+3919/4095 and links to the exact warm receipt, with zero new allocation/replay
+and unchanged journal/decisions/inputs. Native child4780 is absent before fallback.
+Both warm and cold wrappers use SIGTERM, with absent Hosts and empty groups;
+no natural-exit claim is made. All four1,399-entry pin lists, two screenshot
+hashes and13 raw sentinel rows match with no late/refused calls. This attempt's
+complete683-hook pre-submit snapshot contains ready/proof/signature; older failed
+readiness traces are not explained or relabelled by that fact.
+
+### b533 Mixed passes corrected card path, then retains original OpenCode UNKNOWN
+
+Artifact12788322837 has INCOMPLETE receipt
+`84e335b53515e245fcd562b5430998124348c84da410ea7b9da0a25c8db2c81e`:
+all3 original native sessions allocated. Root and the independent critic confirm
+that this assertion correctly refuses the actual original Carol/OpenCode outcome.
+The role-qualified card now passes actual Create, Edit, renderer reload and Launch
+hydration, followed by exactly one original Launch click. All three capture-member
+bindings and raw event digests/filenames/incarnations/sequences match.
+
+Claude opens02:52:05.377Z, allocates07.533Z, becomes ready07.549Z and completes
+one initial input by12.921Z. Codex opens05.401Z, allocates08.667Z and becomes
+ready09.720Z, with zero inputs. OpenCode opens02:52:05.423Z, then becomes held/
+UNKNOWN/open-unknown at02:52:56.960Z (51.537 seconds), without ever being ready,
+a sessionRef or an input. Failure Quit seals it at02:53:36.040Z while retaining
+held/UNKNOWN. The original45-second launch attempt is unknown/custody-unresolved,
+contextApplied:false and everReady:false, with zero retries; it does not claim
+proven no-allocation. Claude/Codex are closed/released after guarded failure Quit.
+
+Model observations are Claude8 business/0 notices/6 probes, Codex0/0/1 and
+OpenCode0/0/1, with no fixture failures. All nine durable management fingerprints/
+digests/addresses verify and management resources are released, including the
+successful original OpenCode selected-model probe. No subsequent Composer sends,
+group or Restart occur, and no native notification response/final input census
+is qualified. The eight allowed sentinel rows include the current framed probe;
+all1,399 source pins match. App3849 exits naturally0 with empty group and absent
+listener, but the receipt has no separately captured Host-absence witness. Physical
+absence cannot release the retained original Carol UNKNOWN.
+
+Raw Carol events expose only states; Main logs retain no specific original
+OpenCode opening-stage error. The evidence establishes the stopped stage and
+durable outcome, not an internal cause. Independent review finds no finite
+production fix in these artifacts. A bounded additional read-only inspection of
+existing frozen-provider diagnostic seams is underway; no retry, deadline change,
+new interface, provider update or UNKNOWN rewrite is authorized by this evidence.
+
+
+### b533 Active Quit/cold raw audit accepted
+
+Artifact12787839613/root6vjwFs has warm receipt
+`1573bc34fdc19abe7074816b8a27ca6e6f86312d1c090c05b2b8f59aa7e35e92`
+and cold receipt
+`177987ffe54fe68751c6a0938039b97efb64df9cceeb1405bd61704dd2e61d29`.
+The independent critic recomputes20 raw checks, all true. Five product hashes
+match across warm/cold. The single physical Runtime ends closed/sealed/released;
+original active input4d2bf6f4 remains consumed then UNKNOWN, while queued91d667ca
+remains admitted then cancelled. Original intent/fingerprint/opRef are unchanged.
+Two completed human command receipts correlate exactly to two admitted outboxes,
+two inboxes and two Runtime inputs. All15 journal rows retain exact digest,
+writer/binding/sequence and final sequence15 after cold reopen. One held TEAM_ONE
+step0 and zero probes/failures do not imply execution of the queued input.
+
+Native child4387 under Host4002 is absent before fallback. Warm app3843/Host4002
+and cold app4833/Host4957 are distinct and use the same profile; both exit naturally
+with code0/no signal, empty groups and absent captured Hosts. All four1,399-entry
+source pin lists, two screenshot hashes and ten raw sentinel records match;
+the first five are the warm prefix, with no late/refused calls. Released custody
+does not rewrite the original unknown business outcome.
+
+### b533 bounded frozen-provider inspection complete — no supported OpenCode fix
+
+The implementation critic inspects the exact frozen8a provider source and confirms
+that its factory/config/session bytes match archive2aa, OpenCode1.19.4 and the
+unchanged45,000ms timeout. The original failure is inside provider.factory.open,
+before a driver is returned to RuntimeOwner. That factory includes Host startup,
+configuration/model qualification, original session creation and its own readiness/
+MCP connection/exact catalog checks. Absence of a returned sessionRef therefore
+does not prove absence of a created native session. A later Runtime readiness
+failure would instead retain an allocated session with readiness-unavailable.
+
+The provider converts the opening cause to a generic member-unavailable result;
+Runtime preserves open-unknown. Existing startup read loops discard individual
+errors, and the captured stdout/stderr streams are drained without retained stage
+logs. The artifact contains no original provider namespace/native logs, HTTP-stage
+or catalog receipts from which to recover the cause. The successful management
+probe at49317 and failed original runtime at49316 are separate lifecycles. Root,
+UI critic and implementation critic find no finite evidence-backed production
+change. Preserve this original UNKNOWN and defer the unresolved cause; do not
+change the provider archive, deadline, instrumentation, retry policy or custody.
+
+### b533 Taskboard original clarification action incomplete — diagnosis bounded
+
+Artifact12788517024/root2Xkl5y has INCOMPLETE receipt
+`9c0cac3a493a8c0037e22cbd0e7288411e0dfa230e99e760263307b67437f25d`:
+UI read timed out: clarification banner cleared; no mutation retry. The original
+Task0aaf8897-d4e7-56bd-98f0-da1c32e66c30 is created and retains dependency
+on ea4b3e44-332d-5bae-a2ea-3019740aabf4. The original TEST clarification setup
+and assignment03e2b518-1dbb-4f60-8fd7-2333af7a9bc0 are completed. Physical Task
+and backup retain owner alice and needsClarification user. No task.clarification
+command with null value exists.
+
+The last original action measures the enabled Mark resolved BUTTON, moves to it
+at38,750ms and dispatches its single click at38,997ms at997.20703125/185.625.
+Retained trusted pointerdown/pointerup/click events hit the parent clarification
+banner DIV. The final screenshot/snapshot show the enabled button at the same
+center, with no visible covering surface. This proves a missed original target,
+not a completed command followed by stale readback. It does not capture the
+button's disabled state at dispatch or establish the cause. The existing shared
+Button has disabled:pointer-events-none, but ordinary assignment invalidation/
+read start preserves ready phase/full data, and isOwner does not depend on
+loading/refreshPending. A claim that assignment refresh necessarily disabled the
+button would therefore be unsupported. Independent source/owner-lifecycle review
+is continuing within that evidence boundary.
+
+This failure occurs before Review/F08/Trash/owner continuation. The separately
+retained3d full Taskboard and all three owner epochs remain their original PASS;
+they do not qualify b533. Failure Quit appgroup3744 exits naturally0 with an empty
+group, but no separately captured Host-absence witness. No original mutation or
+workflow is retried.
+
+
+### b533 completed original run — canonical PASS, Desktop8/10
+
+Run40622991863 completes FAILURE overall, without cancellation or retry.
+Canonical Full qualification remains23,895 PASS /0 FAIL /97 SKIP. Eight source
+Desktop jobs pass; Mixed and Taskboard retain their own original INCOMPLETE.
+All ten original ZIPs are downloaded and validated. The evidence index contains
+13 workflow receipts:11 PASS and2 INCOMPLETE, with no separate owner epoch from
+this early Taskboard failure. Its retained JSON SHA is
+`113d740bcccf8429d6283cf063c023dc7353696832198f01dc4228fbf0e97d1d`.
+The new Pending Quit/cold and Resume raw reviews are still pending at this entry.
+
+### b533 Create and both imports — own-artifact raw audits accepted
+
+Create artifact12788527968/rootVrt0nO has receipt
+`a052bb04b2843d1765d928db77750567e985eceb7edda161dba39a35cb364dea`.
+Root recomputes exact original capture/Runtime binding, input fingerprint,
+command fingerprints, outbox admission/opRef/content and inbox identity. One
+original a853f20d-5950-5043-98de-9d71f187ede3 input succeeds; all seven product
+commands complete, the physical Task completes and native-effect contains exactly
+ONE plus newline. All eight actual native model steps use captured Opus4.6/medium.
+Four management records retain valid digests and released resources, including
+the original cancelled probes. The physical target ends closed/sealed/released
+with original input bytes unchanged; the base Runtime remains separate. Native
+child4924 under captured Host4110 is retained in the original Stop proof. Appgroup
+3901 uses SIGTERM, with empty group and absent captured Host; no natural-exit claim.
+Both1,399-entry source censuses match each other and current source bytes, as do
+both event journals, the original screenshot and six allowed sentinel rows.
+
+Saved import-only artifact12788432915/rootmKcy1h has receipt
+`d8e22f28591aeb568889d328eff4c63eb26da7167a3a27cbfd27d4a03f715f9e`.
+Root recomputes snapshot digest, original import fingerprint, all seven source
+payload hashes/sizes, all eight destination bytes, origin metadata, physical Task
+and four backup resource/archive hashes. Before/after source census is exact;
+four original JSON files are packaged and rehashed, while three original blob
+paths are not independently packaged (their embedded source and destination bytes
+are verified). Two successful selected-model probes are separate from business
+execution: no Launch, no target Runtime sessions, no native business inputs or
+model steps. The only base Runtime has null config and no inputs. Both1,399-entry
+source lists, five screenshots, six sentinels, event journal and two management
+digests match. Appgroup3839 uses SIGTERM with empty group and absent captured Host.
+
+Stopped import plus native Launch artifact12788717151/rootmkYbMN has receipt
+`1d2ff6df0a50938a571e200f2e0cbbd85cf172663f1fc72d4d8e59148d628ee0`.
+The ten-file original source census is unchanged; eight payloads are included
+and two prior launch publications stay excluded. Snapshot/import fingerprints,
+nine destination byte arrays and seven backup resource/archive hashes verify.
+Seven original JSON files are independently packaged and rehashed; the three
+original blob paths retain the same packaging limitation as above. Original
+captured source child3746 has retained owner/start identity and Stop census;
+its wrapper exits by SIGTERM. Original source backup identity remains2732272d-
+8486-4e03-bdd0-f555266f163e in the retained preparation proof.
+
+One later original native d3c55d14-f8cf-5eeb-9d94-4bfd4caebc83 input completes,
+with exact input/outbox/inbox identities, seven completed command fingerprints,
+eight Sonnet4.6/low business steps, completed physical Task and exact ONE effect.
+The target finishes closed/sealed/released with unchanged input, and native
+child5944 belongs to captured Host4008 before the original Stop. Source census
+is still unchanged after Launch/reload/Stop. Both1,399-entry lists, both event
+journals, five screenshots, one released management probe and nine sentinel rows
+verify. Appgroup3861 uses SIGTERM, with empty group and absent captured Host.
+
+### Taskboard bounded critique accepts only missing TEST assignment prerequisite
+
+Two independent critics trace a separate live-authority path: assignment's
+invalidateTaskDetailSource invalidates the accepted Team snapshot marker;
+isTaskDetailTeamUnavailable observes that marker, and isOwner disables the existing
+button until current authority is accepted. MemberSelect closes immediately after
+calling onChange, and TaskDetailPage intentionally fire-and-forgets updateTaskOwner.
+Thus a physical assignment receipt or closed popup is not proof that the original
+renderer/read-authority chain has completed. Ordinary full-read phase retention
+remains true; the historical dispatch-time disabled state is not captured.
+
+Both critics accept a narrow passive TEST precondition before the same original
+Mark resolved click: the exact original context/Team/task detail shows owner alice,
+ready/full data with no loading/refresh pending, current accepted Team authority
+and idle existing refresh, and the original closed assignee control shows alice.
+Reuse existing DEV store/read-only authority helpers; do not introduce a second
+UI, store mutation, direct action, retry, sleep, timeout change or product guard
+change. The shared click already performs two enabled/hit checks, and exact
+physical clear plus original null-command receipt remain required. Implementation
+and focused regression review are pending. This is not a reproduction or proof
+of the historical disabled-window cause.
+
+
+### b533 Pending Quit/cold independent raw audit accepted
+
+Artifact12789440210 has warm receipt
+`506a3c5ee2f29bc7f6fd0cf2b010ed39bda533dc1a042d9ee0a0a24c82fb1113`
+and cold receipt
+`d1e59ea853cc185fbabcdc35314ff80c0385c2363884780b999cb3ddacf7f8ec`.
+The independent critic recomputes18 raw correlations, all true. All five physical
+product hashes equal the warm before/after census, and final Runtime equals warm
+after with original binding/config/fingerprint/incarnation. It progresses from
+opening to held/sealed UNKNOWN/open-unknown with zero inputs/interactions. All
+three event rows, envelope digest, address, writer incarnation, sequence and final
+state verify. There are no model business observations, probes, failures, outboxes
+or inboxes. Both warm and cold retain original lock-release proof.
+
+Warm app3888/Host4071 and cold app4623/Host4791 are distinct with the same raw
+profile/descriptor pins. Original native child4389 is absent before fallback;
+both app groups exit naturally0 with no signal, empty groups and absent captured
+Hosts. All four1,399-entry source lists, two PNG hashes and ten sentinel rows match,
+with the warm five-row prefix and no late/refused call. Second Quit preserves the
+same original session/product. This qualifies retained UNKNOWN/readback, not an
+active input, automatic relaunch or release of the original M19 custody HOLD.
+
+Root additionally verifies the stopped-import source config hash directly against
+both the original configBeforeStopSha256 and archived config payload. Its original
+_backupIdentityId equals2732272d-8486-4e03-bdd0-f555266f163e exactly. The source
+preparation explicitly reports zero source native inputs: synthetic saved/run
+records with an actual captured TEST Node child and original Stop publication,
+not old-provider inference.
+
+The current GitHub read via gh confirms Draft/OPEN, exact b533 remote head and
+MERGEABLE (checks BLOCKED, not textual conflicts). Both existing review threads
+are resolved; no additional unresolved GitHub review comment is present.
+
+
+### b533 cold selected Resume independent raw audit accepted
+
+Artifact12789166655/roothtn4Z7 has receipt
+`abe550069b7f98cc8e66a4bc6aa4f0b0f1fb72467edd550d605c05272d75f203`.
+The independent critic verifies24 substantive correlations. Original Launch/Stop,
+actual same-profile cold app3910/Host4015 to app5445/Host5596, explicit checkpoint
+selection, one follow-up Send and second Stop are retained. Both app epochs exit
+naturally0/no signal, groups empty and captured Hosts absent, with first writer
+lock released. Original capture/settings and product launch5f399276 remain exact.
+Source generation capture-1e7ff0d1 remains unchanged; selected restore-668feb uses
+a new Host incarnation and the exact cp1-23752f checkpoint, then publishes
+cp1-176403 after Stop. Both raw checkpoint file/body/reference/history-operation
+digests verify and identify the same native session5090a1bc.
+
+Each generation has exactly one succeeded original input. Two completed human
+message commands and two admitted outboxes match their input fingerprints and
+identities; two agent replies are separate expected effects, each present once.
+The native Task is unchanged and physical native-effect is exactly ONE newline
+TWO newline. All three event journals verify binding/filename/digest/incarnation
+and sequences1/42/27. The before-Stop launch-journal hash reconstructs exactly;
+final raw journal equals the recovery snapshot/hash, with valid preparation
+fingerprint and zero retry entries. Eight initial plus three follow-up native
+model observations, three probes and zero failures are retained. Every follow-up
+request contains the original seven-tool history marker, exact incoming message
+identity and selected Opus/medium settings.
+
+Both1,399-entry source lists, two screenshots and ten allowed raw sentinel rows
+match, without late/refused calls. Native JSONL and first-epoch bundle copies are
+not separately packaged; their before/after hash and prefix assertions remain
+harness evidence, supported by actual resumed native request history. The683-hook
+pre-submit snapshot shows checking/null proof before the later original bounded
+click succeeds. This original PASS neither explains earlier ready/null deadlines
+nor clears historical UNKNOWN/M19 obligations.
+
+
+### Original assignment completion prerequisite implemented and independently accepted
+
+The final candidate changes four existing TEST/pin paths only. Before the original
+assignee selection, the existing current-root React Task comment/owner observer
+captures that exact context and surface. After the completed physical assignment
+receipt, one passive ui.waitRead reuses the captured identity and existing
+isTeamDataRefreshPending/captureTaskDetailReadScope/isTaskDetailTeamUnavailable
+read helpers. It requires the original current owner/surface, exact detail key,
+ready settled full Task assigned to alice, current accepted live authority and a
+closed enabled assignee combobox showing alice. The retained raw b533 snapshot
+and MemberSelect source confirm that exact visible label. No application action,
+refresh API, retry, arbitrary sleep, replacement intent or product change is added.
+The existing shared single click and exact physical clear/null-receipt assertions
+remain unchanged. Original wait limits are not increased.
+
+| Existing path | Final reviewed SHA-256 |
+| --- | --- |
+| `desktop-task-comment-input-target.ts` | `c95762e66f52063c7013d14ff7b3982ec224ddad2763dcb68a92f75cafb557ba` |
+| `desktop-task-board-ui-smoke.ts` | `7a5de06d58f64c1f97cba0a2f4e8307f8590eef528dce47622aac655cb0a3d85` |
+| `desktop-team-ui-smoke.test.ts` | `37b1b0713d32aec4468a84de75c6a6895100494d1051303988dc3dab6bfc09b5` |
+| `desktop-proof-supplementary-sources.ts` | `29aa8138c34eec293f7a2525e157a4a81e7821a6bc50ecfe24aaf3388ba4887c` |
+
+The existing selected-Node suite passes7/7. Two focused cases execute the actual
+expression/current-root owner walker, replacing only the two dynamic-import
+resolution ports. Receipt-only pending refresh, detail loading/refresh, stale
+full.owner, unavailable authority, foreign context/Team/Task/surface and open or
+wrong assignee refuse; the settled exact original state succeeds. These checks
+verify the added prerequisite, not a reproduction of the unobserved historical
+disabled state. Strict scripts TypeScript, scoped fast lint of all four paths
+(0 diagnostics), source guard4,626/143/800 and diff checks pass. The board stays
+at785 lines. Three exact existing sources are added to the finite pin roster:
+the newly read authority module, MemberSelect and the executed test. Root resolves
+the actual exported roster to1,402 existing files, with no filesystem discovery.
+
+Root and the independent critic recompute all four final hashes and accept the
+actual diff and focused tests. Final composition review reuses the unchanged b533
+whole-source review and inspects the complete new delta; no actionable regression
+or scope violation is found. No additional optional test or product change is
+requested. b533 remains8/10 with its original Taskboard INCOMPLETE; fresh corrected
+native qualification is still pending and historical cause remains unproven.
+
+
+### b533 persistent teammate independent raw audit accepted; all original flows audited
+
+Artifact12788483367/roottowG1o has receipt
+`82573d7911db87f2f68f83b9e3be0848c4586ed87fa0e44e608b06d0e8fe0c51`.
+The implementation critic independently verifies physical owner/creation/lookup,
+original lead binding/open fingerprint/first input/grants/runtime capture, and
+exactly one new persistent peer/allocation. Original receipt, Stop/reload product
+identities and settings remain exact. The model retains eight ordinary plus eleven
+member observations, all19 Opus4.6/medium, five probes and empty failure/no-tool
+arrays. Lead4 and peer1 successful terminal inputs correlate to five admitted
+outboxes by actual IDs/content/fingerprint/operation/binding; all15 distinct
+product commands complete. One prepared current-roster input is attached to the
+existing original continuation; created member/revision agrees with the original
+lookup. Physical ONE output and exact completed Task/comment verify.
+
+All three Runtime ledgers, including the unconfigured input-empty base, finish
+closed/sealed/released. All three raw event envelope digests and124 event rows
+verify. Both1,399-entry lists and raw profile/descriptor/screenshot hashes match.
+Native children4908 and5104 belong to captured Host4085 in the original Stop proof.
+Appgroup3890 uses SIGTERM with empty group and absent captured Host. Of eight
+allowed sentinel rows, five precede Quit and three are retained post-Quit/cleanup
+version-only calls: OpenCode, Codex, OpenCode. None is refused. Those late calls
+are explicitly retained; no zero-late-call, natural-Quit, separate Host-exit or
+full fork-free claim is made.
+
+All ten b533 workflows now have their own completed raw audit: eight scoped PASS
+and the two preserved original INCOMPLETE. The narrow reviewed assignment TEST
+candidate does not rewrite those results. All four source/test hashes and local
+gates above remain frozen; no additional implementation change was requested.

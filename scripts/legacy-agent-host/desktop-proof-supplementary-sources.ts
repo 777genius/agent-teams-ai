@@ -1,5 +1,8 @@
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'src/renderer/store/team/taskDetailReadAuthority.ts',
+  'src/renderer/components/ui/MemberSelect.tsx',
+  'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts',
   'packages/legacy-agent-host/tests/fixtures/native-mixed-task-notifications.ts',
   'scripts/legacy-agent-host/desktop-mixed-input-proof.ts',
   'scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts',

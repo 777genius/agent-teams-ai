@@ -45,3 +45,29 @@ export function desktopTaskCommentInputExpression(handleId: string, taskId: stri
     return matches[0]??null;
   })()`;
 }
+
+/** Observe completion of the original board assignment before another Task action. */
+export function desktopTaskBoardAssignmentReadyExpression(
+  handleId: string,
+  taskId: string,
+  captured: { contextId: string; surfaceId: string }
+): string {
+  assert.ok(captured.contextId && captured.surfaceId);
+  return `(async()=>{
+    const {isTeamDataRefreshPending}=await import('/store/slices/teamSlice.ts');
+    const {captureTaskDetailReadScope,isTaskDetailTeamUnavailable}=await import('/store/team/taskDetailReadAuthority.ts');
+    const owner=${desktopTaskCommentInputExpression(handleId, taskId)};
+    if(!owner||owner.identity.contextId!==${desktopJsLiteral(captured.contextId)}||owner.surfaceId!==${desktopJsLiteral(captured.surfaceId)})return null;
+    const s=window.__agentTeamsDevStore.getState(),i=owner.identity;
+    const detail=s.taskDetailById[JSON.stringify([i.contextId,i.teamName,i.taskId])];
+    if(s.isContextSwitching||s.activeContextId!==i.contextId||s.selectedTeamName!==i.teamName||
+      !detail||detail.identity.contextId!==i.contextId||detail.identity.teamName!==i.teamName||detail.identity.taskId!==i.taskId||
+      detail.phase!=='ready'||detail.loading||detail.refreshPending||detail.full?.id!==i.taskId||detail.full.owner!=='alice'||
+      isTeamDataRefreshPending(i.teamName,window.__agentTeamsDevStore.getState)||
+      isTaskDetailTeamUnavailable(s,i.teamName,captureTaskDetailReadScope(i.teamName,i.contextId)))return null;
+    const input=document.getElementById(owner.inputId),dialog=input?.closest('[role="dialog"]');
+    const triggers=dialog?.querySelectorAll('button[role="combobox"]');
+    if(triggers?.length!==1||triggers[0].disabled||triggers[0].getAttribute('aria-expanded')!=='false'||triggers[0].textContent.trim()!=='alice')return null;
+    return owner;
+  })()`;
+}
