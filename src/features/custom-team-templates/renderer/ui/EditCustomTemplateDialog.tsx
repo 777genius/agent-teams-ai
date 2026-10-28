@@ -13,7 +13,7 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
-import { AlertTriangle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Plus, RefreshCw, Trash2 } from 'lucide-react';
 
 import { useEditTemplate } from '../hooks/useEditTemplate';
 
@@ -47,6 +47,7 @@ export const EditCustomTemplateDialog = ({
     issues,
     revisionConflict,
     canSave,
+    canRecheck,
     setName,
     setDescription,
     setTeamPrompt,
@@ -54,6 +55,7 @@ export const EditCustomTemplateDialog = ({
     updateMember,
     removeMember,
     save,
+    recheck,
     acceptRevisionConflict,
     overwriteRevisionConflict,
   } = useEditTemplate({
@@ -105,16 +107,27 @@ export const EditCustomTemplateDialog = ({
       !i.field.startsWith('members')
   );
 
-  const getMemberIssues = (index: number) =>
+  const getMemberIssues = (index: number): CustomTeamTemplateValidationIssue[] =>
     issues.filter((i) => i.field.startsWith(`members[${index}]`));
 
   const saving = status === 'saving';
+  const unresolved = status === 'unresolvedWriteOutcome';
+  const locked = saving || unresolved;
   const closeDisabled = saving;
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     const success = await save();
     if (success) {
       // Auto-close on successful save
+      onClose();
+    }
+  };
+
+  const handleRecheck = async (): Promise<void> => {
+    const confirmed = await recheck();
+    if (confirmed) {
+      // A persisted row at the exact next revision with the intended content
+      // is the only evidence that the original update committed.
       onClose();
     }
   };
@@ -243,9 +256,22 @@ export const EditCustomTemplateDialog = ({
               className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <div>
+              <div className="min-w-0 flex-1 space-y-2">
                 <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
                 <p>{t('customTemplates.states.unresolvedMutationBody')}</p>
+                <div className="pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-testid="edit-template-recheck"
+                    disabled={!canRecheck}
+                    onClick={() => void handleRecheck()}
+                  >
+                    <RefreshCw className="size-3.5" />
+                    {t('customTemplates.actions.recheck')}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -277,7 +303,7 @@ export const EditCustomTemplateDialog = ({
             <Input
               id="edit-template-name"
               value={name}
-              disabled={saving}
+              disabled={locked}
               aria-invalid={nameIssues.length > 0 || undefined}
               aria-describedby={nameIssues.length > 0 ? 'edit-template-name-error' : undefined}
               onChange={(e) => setName(e.target.value)}
@@ -297,7 +323,7 @@ export const EditCustomTemplateDialog = ({
             <Textarea
               id="edit-template-description"
               value={description}
-              disabled={saving}
+              disabled={locked}
               aria-invalid={descriptionIssues.length > 0 || undefined}
               aria-describedby={
                 descriptionIssues.length > 0 ? 'edit-template-description-error' : undefined
@@ -318,7 +344,7 @@ export const EditCustomTemplateDialog = ({
               id="edit-template-prompt"
               value={teamPrompt}
               rows={3}
-              disabled={saving}
+              disabled={locked}
               placeholder={t('customTemplates.edit.promptPlaceholder')}
               aria-invalid={promptIssues.length > 0 || undefined}
               aria-describedby={promptIssues.length > 0 ? 'edit-template-prompt-error' : undefined}
@@ -340,7 +366,7 @@ export const EditCustomTemplateDialog = ({
                 variant="outline"
                 size="sm"
                 className="gap-1 text-xs"
-                disabled={saving}
+                disabled={locked}
                 onClick={() => addMember()}
               >
                 <Plus className="size-3.5" />
@@ -376,7 +402,7 @@ export const EditCustomTemplateDialog = ({
                           variant="ghost"
                           size="sm"
                           className="h-6 px-1.5 text-red-400 hover:text-red-300"
-                          disabled={saving}
+                          disabled={locked}
                           aria-label={t('customTemplates.actions.removeMember')}
                           onClick={() => removeMember(index)}
                         >
@@ -395,7 +421,7 @@ export const EditCustomTemplateDialog = ({
                           <Input
                             id={`member-${index}-name`}
                             value={member.name}
-                            disabled={saving}
+                            disabled={locked}
                             placeholder={t('customTemplates.edit.memberNamePlaceholder')}
                             onChange={(e) => updateMember(index, { name: e.target.value })}
                           />
@@ -411,7 +437,7 @@ export const EditCustomTemplateDialog = ({
                           <Input
                             id={`member-${index}-role`}
                             value={member.role ?? ''}
-                            disabled={saving}
+                            disabled={locked}
                             placeholder={t('customTemplates.edit.memberRolePlaceholder')}
                             onChange={(e) => updateMember(index, { role: e.target.value })}
                           />
@@ -427,7 +453,7 @@ export const EditCustomTemplateDialog = ({
                           <Input
                             id={`member-${index}-workflow`}
                             value={member.workflow ?? ''}
-                            disabled={saving}
+                            disabled={locked}
                             placeholder={t('customTemplates.edit.memberWorkflowPlaceholder')}
                             onChange={(e) => updateMember(index, { workflow: e.target.value })}
                           />

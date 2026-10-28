@@ -4,10 +4,11 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateTemplate = vi.hoisted(() => vi.fn());
+const listTemplates = vi.hoisted(() => vi.fn());
 
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
-  api: { customTeamTemplates: { updateTemplate } },
+  api: { customTeamTemplates: { updateTemplate, listTemplates } },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -95,19 +96,36 @@ function saveButton(): HTMLButtonElement {
   return found;
 }
 
+function recheckButton(): HTMLButtonElement {
+  const found = host.querySelector<HTMLButtonElement>('[data-testid="edit-template-recheck"]');
+  if (!found) throw new Error(`recheck button not found\n${host.textContent}`);
+  return found;
+}
+
 async function save(): Promise<void> {
   await act(async () => {
     saveButton().click();
   });
 }
 
+async function recheck(): Promise<void> {
+  await act(async () => {
+    recheckButton().click();
+  });
+}
+
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   updateTemplate.mockReset();
+  listTemplates.mockReset();
   updateTemplate.mockResolvedValue({
     status: 'updated',
     template: { ...template, revision: 6 },
   } satisfies UpdateCustomTeamTemplateResult);
+  listTemplates.mockResolvedValue({
+    status: 'ready',
+    templates: [{ ...template, revision: 6 }],
+  });
   onClose = vi.fn();
   onSaved = vi.fn();
   host = document.createElement('div');
@@ -168,15 +186,81 @@ describe('EditCustomTemplateDialog', () => {
     expect(onSaved).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
 
-    // The user's unsaved edits survive so they can be recovered or retried.
+    // The user's unsaved edits survive so they can be recovered or re-checked.
     expect(field('#edit-template-name').value).toBe('Unsaved draft');
     expect(field('#edit-template-prompt').value).toBe('Draft prompt.');
     expect(updateTemplate).toHaveBeenCalledTimes(1);
 
+    // Save stays disabled: resending with the stale revision would race the
+    // operation that may still be committing.
+    expect(saveButton().disabled).toBe(true);
     await save();
-    expect(updateTemplate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ templateId: 'tmpl-1', expectedRevision: 5 })
-    );
+    expect(updateTemplate).toHaveBeenCalledTimes(1);
+
+    // A read-only re-check is the offered recovery route.
+    expect(recheckButton().disabled).toBe(false);
+    expect(recheckButton().textContent).toContain('customTemplates.actions.recheck');
+  });
+
+  it('confirms the update only when the re-check finds the exact next revision and content', async () => {
+    updateTemplate.mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'));
+
+    await render();
+    await act(async () => {
+      setText('#edit-template-name', 'Recovered name');
+      setText('#edit-template-prompt', 'Recovered prompt.');
+    });
+    await save();
+
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The persisted row is still the old revision, which does not prove the
+    // in-flight server operation failed. The outcome stays unknown.
+    listTemplates.mockResolvedValueOnce({ status: 'ready', templates: [template] });
+    await recheck();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+
+    // The exact intended content at expectedRevision + 1 proves the update.
+    listTemplates.mockResolvedValueOnce({
+      status: 'ready',
+      templates: [
+        {
+          ...template,
+          name: 'Recovered name',
+          description: 'Ship it.',
+          teamPrompt: 'Recovered prompt.',
+          members: [{ name: 'alice', role: 'reviewer' }],
+          revision: 6,
+        },
+      ],
+    });
+    await recheck();
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(host.querySelector('[data-testid="edit-template-saved"]')).not.toBeNull();
+  });
+
+  it('keeps the unknown outcome when the re-check cannot establish success', async () => {
+    updateTemplate.mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'));
+
+    await render();
+    await act(async () => {
+      setText('#edit-template-name', 'Still unsaved');
+    });
+    await save();
+
+    listTemplates.mockResolvedValueOnce({ status: 'storageUnavailable' });
+    await recheck();
+
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-testid="edit-template-unresolved"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="edit-template-saved"]')).toBeNull();
+    expect(field('#edit-template-name').value).toBe('Still unsaved');
   });
 
   it('shows visible feedback when the stored record cannot be read', async () => {

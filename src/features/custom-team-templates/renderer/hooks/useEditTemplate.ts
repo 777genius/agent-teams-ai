@@ -5,6 +5,7 @@ import {
   type CustomTeamTemplateV1,
   type CustomTeamTemplateValidationIssue,
   resolveTemplateRevision,
+  type UpdateCustomTeamTemplateFields,
 } from '@features/custom-team-templates/contracts';
 import { api } from '@renderer/api';
 
@@ -37,6 +38,7 @@ export interface UseEditTemplateResult {
   issues: readonly CustomTeamTemplateValidationIssue[];
   revisionConflict: CustomTeamTemplateV1 | null;
   canSave: boolean;
+  canRecheck: boolean;
   setName: (value: string) => void;
   setDescription: (value: string) => void;
   setTeamPrompt: (value: string) => void;
@@ -44,9 +46,54 @@ export interface UseEditTemplateResult {
   updateMember: (index: number, patch: Partial<CustomTeamTemplateMemberV1>) => void;
   removeMember: (index: number) => void;
   save: () => Promise<boolean>;
+  recheck: () => Promise<boolean>;
   reset: () => void;
   acceptRevisionConflict: () => void;
   overwriteRevisionConflict: () => void;
+}
+
+/** The exact update that was dispatched, retained while its outcome is unknown. */
+interface PendingUpdate {
+  expectedRevision: number;
+  fields: UpdateCustomTeamTemplateFields;
+}
+
+function normalizeDescription(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function membersMatch(
+  stored: readonly CustomTeamTemplateMemberV1[],
+  intended: readonly CustomTeamTemplateMemberV1[]
+): boolean {
+  if (stored.length !== intended.length) return false;
+  return stored.every((member, index) => {
+    const expected = intended[index];
+    return (
+      member.name === expected.name &&
+      (member.role ?? null) === (expected.role ?? null) &&
+      (member.workflow ?? null) === (expected.workflow ?? null)
+    );
+  });
+}
+
+/**
+ * Confirms that a stored row is the committed result of one dispatched update.
+ *
+ * Only an exact next revision with the exact intended name, description,
+ * prompt and roster proves the operation landed. A row that still carries the
+ * old revision does not prove non-commit: the server may still be running the
+ * mutation after the client stopped waiting.
+ */
+function matchesPendingUpdate(stored: CustomTeamTemplateV1, pending: PendingUpdate): boolean {
+  return (
+    resolveTemplateRevision(stored) === pending.expectedRevision + 1 &&
+    stored.name === pending.fields.name.normalize('NFC').trim() &&
+    (stored.description ?? null) === normalizeDescription(pending.fields.description) &&
+    stored.teamPrompt === pending.fields.teamPrompt &&
+    membersMatch(stored.members, pending.fields.members)
+  );
 }
 
 /**
@@ -80,12 +127,14 @@ export function useEditTemplate({
 
   const requestIdRef = useRef(0);
   const lastTemplateIdRef = useRef<string | null>(null);
+  const pendingUpdateRef = useRef<PendingUpdate | null>(null);
 
   // Initialize draft when opened or when template selection changes
   useEffect(() => {
     if (!open || !template) {
       if (!open) {
         requestIdRef.current += 1;
+        pendingUpdateRef.current = null;
         setBusy(false);
         setStatus('idle');
         setIssues([]);
@@ -98,6 +147,7 @@ export function useEditTemplate({
     if (lastTemplateIdRef.current !== template.templateId) {
       lastTemplateIdRef.current = template.templateId;
       requestIdRef.current += 1;
+      pendingUpdateRef.current = null;
       setNameState(template.name);
       setDescriptionState(template.description ?? '');
       setTeamPromptState(template.teamPrompt);
@@ -151,6 +201,7 @@ export function useEditTemplate({
 
   const reset = useCallback(() => {
     if (!template) return;
+    pendingUpdateRef.current = null;
     setNameState(template.name);
     setDescriptionState(template.description ?? '');
     setTeamPromptState(template.teamPrompt);
@@ -163,6 +214,7 @@ export function useEditTemplate({
 
   const acceptRevisionConflict = useCallback(() => {
     if (!revisionConflict) return;
+    pendingUpdateRef.current = null;
     setNameState(revisionConflict.name);
     setDescriptionState(revisionConflict.description ?? '');
     setTeamPromptState(revisionConflict.teamPrompt);
@@ -175,6 +227,7 @@ export function useEditTemplate({
 
   const overwriteRevisionConflict = useCallback(() => {
     if (!revisionConflict) return;
+    pendingUpdateRef.current = null;
     setExpectedRevision(resolveTemplateRevision(revisionConflict));
     setRevisionConflict(null);
     setStatus('idle');
@@ -182,72 +235,131 @@ export function useEditTemplate({
   }, [revisionConflict]);
 
   const save = useCallback(async (): Promise<boolean> => {
-    if (busy || !template) return false;
+    if (busy || !template || status === 'unresolvedWriteOutcome') return false;
+
+    const fields: UpdateCustomTeamTemplateFields = {
+      name,
+      description: description.trim() ? description : undefined,
+      teamPrompt,
+      members: members.map((m) => ({
+        name: m.name,
+        ...(m.role?.trim() ? { role: m.role.trim() } : {}),
+        ...(m.workflow?.trim() ? { workflow: m.workflow.trim() } : {}),
+      })),
+    };
+    const pending: PendingUpdate = { expectedRevision, fields };
 
     const requestId = ++requestIdRef.current;
+    pendingUpdateRef.current = pending;
     setBusy(true);
     setStatus('saving');
     setIssues([]);
 
+    let result: Awaited<ReturnType<typeof api.customTeamTemplates.updateTemplate>>;
     try {
-      const result = await api.customTeamTemplates.updateTemplate({
+      result = await api.customTeamTemplates.updateTemplate({
         templateId: template.templateId,
         expectedRevision,
-        fields: {
-          name,
-          description: description.trim() ? description : undefined,
-          teamPrompt,
-          members: members.map((m) => ({
-            name: m.name,
-            ...(m.role?.trim() ? { role: m.role.trim() } : {}),
-            ...(m.workflow?.trim() ? { workflow: m.workflow.trim() } : {}),
-          })),
-        },
+        fields,
       });
-
-      if (requestId !== requestIdRef.current) return false;
-
-      switch (result.status) {
-        case 'updated': {
-          setStatus('saved');
-          setExpectedRevision(resolveTemplateRevision(result.template));
-          onSaved?.(result.template);
-          return true;
-        }
-        case 'revisionConflict': {
-          setStatus('revisionConflict');
-          setRevisionConflict(result.current);
-          return false;
-        }
-        case 'nameConflict': {
-          setStatus('nameConflict');
-          return false;
-        }
-        case 'validationFailed': {
-          setStatus('idle');
-          setIssues(result.issues);
-          return false;
-        }
-        case 'notFound':
-        case 'unreadableRecord':
-        case 'storageUnavailable':
-        case 'unresolvedWriteOutcome': {
-          setStatus(result.status);
-          return false;
-        }
-      }
     } catch {
       if (requestId !== requestIdRef.current) return false;
-      setStatus('requestFailed');
+      // The request was dispatched, so a transport failure (timeout, abort,
+      // network loss or malformed response) cannot prove the update did not
+      // commit. Keep the outcome unknown and require a read-only re-check.
+      setStatus('unresolvedWriteOutcome');
       return false;
     } finally {
       if (requestId === requestIdRef.current) {
         setBusy(false);
       }
     }
-  }, [busy, description, expectedRevision, members, name, onSaved, teamPrompt, template]);
 
-  const canSave = !busy && name.trim().length > 0;
+    if (requestId !== requestIdRef.current) return false;
+
+    // Only result processing runs here: an exception from onSaved or any other
+    // UI callback is never mistaken for a transport failure.
+    switch (result.status) {
+      case 'updated': {
+        pendingUpdateRef.current = null;
+        setStatus('saved');
+        setExpectedRevision(resolveTemplateRevision(result.template));
+        onSaved?.(result.template);
+        return true;
+      }
+      case 'revisionConflict': {
+        pendingUpdateRef.current = null;
+        setStatus('revisionConflict');
+        setRevisionConflict(result.current);
+        return false;
+      }
+      case 'nameConflict': {
+        pendingUpdateRef.current = null;
+        setStatus('nameConflict');
+        return false;
+      }
+      case 'validationFailed': {
+        pendingUpdateRef.current = null;
+        setStatus('idle');
+        setIssues(result.issues);
+        return false;
+      }
+      case 'notFound':
+      case 'unreadableRecord':
+      case 'storageUnavailable': {
+        pendingUpdateRef.current = null;
+        setStatus(result.status);
+        return false;
+      }
+      case 'unresolvedWriteOutcome': {
+        // The server could not reconcile its own write either, so keep the
+        // dispatched payload for a later read-only re-check.
+        setStatus('unresolvedWriteOutcome');
+        return false;
+      }
+    }
+  }, [busy, description, expectedRevision, members, name, onSaved, status, teamPrompt, template]);
+
+  const recheck = useCallback(async (): Promise<boolean> => {
+    const pending = pendingUpdateRef.current;
+    if (busy || !template || status !== 'unresolvedWriteOutcome' || !pending) return false;
+
+    const requestId = ++requestIdRef.current;
+    setBusy(true);
+
+    let stored: CustomTeamTemplateV1 | null = null;
+    try {
+      const result = await api.customTeamTemplates.listTemplates();
+      if (requestId !== requestIdRef.current) return false;
+      if (result.status === 'ready' || result.status === 'hasUnreadableRecords') {
+        const candidate = result.templates.find(
+          (entry) => entry.templateId === template.templateId
+        );
+        if (candidate && matchesPendingUpdate(candidate, pending)) {
+          stored = candidate;
+        }
+      }
+    } catch {
+      // A failed read proves nothing about the write; the outcome stays unknown.
+      return false;
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setBusy(false);
+      }
+    }
+
+    if (requestId !== requestIdRef.current || !stored) return false;
+
+    pendingUpdateRef.current = null;
+    setStatus('saved');
+    setExpectedRevision(resolveTemplateRevision(stored));
+    onSaved?.(stored);
+    return true;
+  }, [busy, onSaved, status, template]);
+
+  const canSave = !busy && name.trim().length > 0 && status !== 'unresolvedWriteOutcome';
+  const canRecheck =
+    !busy && status === 'unresolvedWriteOutcome' && pendingUpdateRef.current !== null;
 
   return {
     name,
@@ -260,6 +372,7 @@ export function useEditTemplate({
     issues,
     revisionConflict,
     canSave,
+    canRecheck,
     setName,
     setDescription,
     setTeamPrompt,
@@ -267,6 +380,7 @@ export function useEditTemplate({
     updateMember,
     removeMember,
     save,
+    recheck,
     reset,
     acceptRevisionConflict,
     overwriteRevisionConflict,
