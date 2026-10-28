@@ -58,6 +58,7 @@ export async function desktopProofEvidence(options: {
     ...(codexResumeModel ? { model: {
       observations: codexResumeModel.observations, probes: codexResumeModel.probes,
       failures: codexResumeModel.failures,
+      requests: codexResumeModel.requests ?? [],
       inference: 'Local scripted model only; actual native Codex app-server executes all tools',
     } } : {}),
     ...(conversationModel

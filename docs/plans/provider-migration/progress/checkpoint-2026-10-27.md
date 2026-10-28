@@ -5886,3 +5886,33 @@ independent exact-source review accepted D's frozen three-file correction.
 Opaque initial isolated startup failures are not the claimed RED. The successful
 624a canonical run remains scoped to its earlier bytes; current final CI is still
 required. Unfinished Codex/Taskboard/workflow changes are excluded from this slice.
+
+### Codex Lite and Code Mode TEST protocol
+
+The retained lookup correction was committed and immediately pushed as
+`0b230bf0639ae7120eb9d5592c93ec069ffeb072`. The original27f Codex UI attempt
+remains INCOMPLETE before Resume/TWO. Its empty flattened tools array did not
+establish absence of native tools: pinned0.162 model/source tests specify Lite
+`additional_tools` and mandatory Code Mode for the actual selected model.
+
+The existing UI-only oracle now reads that actual palette and emits one custom
+exec per original authoritative action, with the same7+2 actions and8+3 request
+budgets. It checks exact issued call ID/type/name/namespace/input against one
+matching output, whole completed-script JSON, real MCP content/structuredContent/
+isError/principal/task ID, command exit7/0 without a yielded session, and paired
+original history call/output IDs. Default Bob/mixed/capture direct paths remain.
+Documented prefixed/non-prefixed tool names are selected uniquely from actual
+ALL_TOOLS; ambiguous or foreign names invoke nothing. No model/config/provider
+mapper change or extra discovery/business turn is introduced.
+
+Bounded raw request bytes and census are written0600 before protocol assertions
+and referenced live by the failure receipt. Existing2MB/request and24 total
+(16business+8probe) limits remain. Artifacts add only this fresh TEST Codex
+config.toml and sessions; no auth/global config paths are collected.
+
+Focused final protocol/default/UI tests passed13/13,0 FAIL /0 SKIP; strict Host
+test types, strict legacy scripts, scoped lint and whitespace checks passed.
+New tests join the default Host inventory and both new files join source pins.
+C independently accepted the exact source and final alias case. This is local
+transport/oracle validation; fresh native UI/cold Resume and final CI remain
+required, with no promotion of the original failed input or old canonical run.

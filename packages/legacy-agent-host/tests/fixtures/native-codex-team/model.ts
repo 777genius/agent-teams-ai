@@ -16,6 +16,8 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 import { nativeToolReceipt } from '../native-claude-team/model.ts';
+import { codeModeCall, codeModeReceipt, codeModeResult, commandExit, linkedOutput,
+  originalCallIds, retainUiRequest, uiPalette } from './responses-ui.ts';
 export type RecordValue = Record<string, unknown>;
 export const record = (value: unknown): RecordValue =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -115,6 +117,7 @@ export async function startCodexModel(
     memberName?: 'alice';
     uiGeneratedMessageIds?: boolean;
     captureHistoryMarkers?: boolean;
+    requestEvidenceDirectory?: () => string;
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
@@ -152,13 +155,12 @@ export async function startCodexModel(
   })[] = [];
   const failures: string[] = [];
   const counts = new Map<string, number>();
+  const issued = new Map<string, RecordValue>();
+  const requests: ReturnType<typeof retainUiRequest>[] = [];
   let taskId: string | undefined;
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
-      assert.equal(request.method, 'POST');
-      assert.match(request.url ?? '', /\/v1\/responses$/);
-      if (!options.mixedTaskNotifications) assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
       let bytes = 0;
       const chunks: Buffer[] = [];
       for await (const raw of request) {
@@ -167,8 +169,18 @@ export async function startCodexModel(
         assert.ok(bytes < 2_000_000);
         chunks.push(chunk);
       }
-      const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
+      const raw = Buffer.concat(chunks);
+      if (options.requestEvidenceDirectory) {
+        const lite = request.headers['x-openai-internal-codex-responses-lite'];
+        requests.push(retainUiRequest(options.requestEvidenceDirectory(), requests.length + 1,
+          raw, request.url ?? '', typeof lite === 'string' ? lite : undefined));
+      }
+      assert.equal(request.method, 'POST');
+      assert.match(request.url ?? '', /\/v1\/responses$/);
+      if (!options.mixedTaskNotifications) assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
+      const body = record(JSON.parse(raw.toString('utf8')) as unknown);
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
+      const palette = options.uiGeneratedMessageIds ? uiPalette(body) : undefined;
       if (
         options.allowModelProbes &&
         isCodexModelProbeInput(input, options.modelProbeWorkspace?.())
@@ -182,7 +194,7 @@ export async function startCodexModel(
             ? { requestedEffort: String(record(body.reasoning).effort) }
             : {}),
           ...(typeof body.service_tier === 'string' ? { serviceTier: body.service_tier } : {}),
-          advertisedToolCount: flattenTools(body.tools).length,
+          advertisedToolCount: palette?.tools.length ?? flattenTools(body.tools).length,
         });
         const id = `TEST-codex-probe-${probes.length}`;
         const events = [
@@ -254,6 +266,14 @@ export async function startCodexModel(
       }
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
+      const previousId = `native_${turn}_${step - 1}`;
+      const previous = palette && step > 0
+        ? linkedOutput(input, previousId, palette.exec !== undefined, issued.get(previousId)) : undefined;
+      if (previous) assert.ok(issued.has(previousId), 'original emitted call exists');
+      const previousValue = previous && palette?.exec ? codeModeResult(previous.output) : previous?.output;
+      const previousReceipt = () => previous && palette?.exec
+        ? codeModeReceipt(record(previousValue))
+        : codexToolReceipt(previous ? previousValue : input.filter(item => item.type === 'function_call_output').at(-1)?.output);
       if ((options.mixedTaskNotifications || options.uiGeneratedMessageIds) && /_TEAM_(ONE|TWO)$/.test(turn))
         assert.ok(step <= (turn.endsWith('_ONE') ? 7 : 2), 'finite original business input; no replay');
       const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
@@ -318,7 +338,12 @@ export async function startCodexModel(
         contextEffective,
         'actual native request contains fixed role/team/workspace instructions'
       );
-      const tools = flattenTools(body.tools);
+      const tools = palette?.tools ?? flattenTools(body.tools);
+      let toolResultError = false;
+      if (palette && ((turn === 'CODEX_TEAM_ONE' && step === 4) ||
+        (turn === 'CODEX_TEAM_TWO' && step === 1)))
+        toolResultError = commandExit(previousValue, palette.exec !== undefined,
+          turn === 'CODEX_TEAM_ONE' ? 7 : 0) !== 0;
       if (mixedGroup && step > 0) {
         const last = input.filter((item) => item.type === 'function_call_output').at(-1);
         assertMixedGroupReceipt(mixedGroup, step, codexToolReceipt(last?.output));
@@ -328,8 +353,7 @@ export async function startCodexModel(
         (turn === 'CODEX_TEAM_TWO' && step === 2) ||
         (peerActions && step > 0 && step <= peerActions.length)
       ) {
-        const result = input.filter((item) => item.type === 'function_call_output').at(-1);
-        const completed = codexToolReceipt(result?.output);
+        const completed = previousReceipt();
         assert.equal(
           completed.phase,
           'completed',
@@ -338,8 +362,7 @@ export async function startCodexModel(
         assert.equal(completed.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
       }
       if (turn === 'CODEX_TEAM_ONE' && step === 1) {
-        const result = input.filter((item) => item.type === 'function_call_output').at(-1);
-        const receipt = codexToolReceipt(result?.output);
+        const receipt = previousReceipt();
         assert.equal(receipt.phase, 'completed');
         assert.equal(receipt.principalId, options.principalId?.() ?? `${options.memberName ?? 'bob'}-session`);
         taskId = String(record(receipt.effects).taskId);
@@ -355,11 +378,11 @@ export async function startCodexModel(
         ...(options.uiGeneratedMessageIds ? {
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
           ...(typeof record(body.reasoning).effort === 'string' ? { requestedEffort: String(record(body.reasoning).effort) } : {}),
-          toolResultError: /Process exited with code [1-9]\d*/.test(JSON.stringify(input.filter(item => item.type === 'function_call_output').at(-1)?.output)),
+          toolResultError,
           visibleReplyContract,
           ...(incomingMessageId === undefined ? {} : { incomingMessageId }),
         } : {}),
-        ...(options.captureHistoryMarkers ? { priorNativeToolIds: input.filter(item => item.type === 'function_call' &&
+        ...(options.captureHistoryMarkers ? { priorNativeToolIds: palette ? originalCallIds(input) : input.filter(item => item.type === 'function_call' &&
           typeof item.call_id === 'string' && /^native_CODEX_TEAM_ONE_[0-6]$/.test(item.call_id)).map(item => String(item.call_id)) } : {}),
       };
       if (notice) notificationObservations.push({ ...observation, notice });
@@ -458,7 +481,8 @@ export async function startCodexModel(
         peerActions ??
         (turn === 'CODEX_TEAM_ONE' ? one : two))[step];
       let output: RecordValue;
-      if (action) {
+      if (action && palette?.exec) output = codeModeCall(palette.exec, action, `native_${turn}_${step}`);
+      else if (action) {
         const chosen = tools.find((tool) =>
           action.name === 'exec_command'
             ? tool.name === action.name
@@ -481,6 +505,10 @@ export async function startCodexModel(
           content: [{ type: 'output_text', text: `DONE_${turn}` }],
         };
       counts.set(turn, step + 1);
+      if (action && palette) {
+        assert.equal(issued.has(String(output.call_id)), false);
+        issued.set(String(output.call_id), output);
+      }
       const id = `TEST-codex-response-${observations.length + notificationObservations.length}`;
       const events = [
         { type: 'response.created', response: { id } },
@@ -519,6 +547,7 @@ export async function startCodexModel(
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,
+    ...(options.requestEvidenceDirectory ? { requests } : {}),
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();

@@ -227,6 +227,7 @@ export async function prepareDesktopProofMode(
     memberName: 'alice', uiGeneratedMessageIds: true, captureHistoryMarkers: true,
     allowModelProbes: true,
     modelProbeWorkspace: () => join(fixtureRoot(), 'workspace'),
+    requestEvidenceDirectory: () => fixtureRoot(),
     principalId: () => {
       const state = record(JSON.parse(readFileSync(join(fixtureRoot(), 'hoststore/teams/test-desktop-backend/.host-owner/state.json'), 'utf8')));
       assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);

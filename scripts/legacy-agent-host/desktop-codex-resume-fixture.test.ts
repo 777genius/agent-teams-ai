@@ -98,16 +98,27 @@ test('Codex UI oracle records actual model/effort, original call IDs and incomin
   const messageId = '019a1234-5678-7000-8000-123456789def';
   const input: Record<string, unknown>[] = [
     { role: 'developer', content: CONTEXT_MARKER },
-    ...callIds.map(call_id => ({ type: 'function_call', call_id, name: 'TEST-original-native-tool', arguments: '{}' })),
+    ...callIds.flatMap((call_id, index) => [
+      { type: 'function_call', call_id, name: 'TEST-original-native-tool', arguments: '{}' },
+      { type: 'function_call_output', call_id, output: index === 3 ? 'Process exited with code 7\n' :
+        JSON.stringify({ phase: 'completed', principalId: 'TEST-actual-captured-Alice' }) },
+    ]),
     { role: 'user', content: `CODEX_TEAM_TWO {"messageId":"${messageId}"} message_send tool to="user", including commandId and text. Do not reuse the incoming messageId as a reply commandId` },
   ];
   const next = () => fetch(model.url + '/v1/responses', { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model: 'TEST-retained-native-launch-model', reasoning: { effort: 'medium' }, input,
       tools: [{ type: 'function', name: 'exec_command' }, { type: 'namespace', name: 'mcp__team', tools: REQUIRED_TOOLS.map(name => ({ name })) }] }) });
-  const shell = await next(); assert.equal(shell.status, 200); await shell.text();
-  input.push({ type: 'function_call_output', output: 'Process exited with code 0\nFinal output:\n' });
-  const reply = await next(); assert.equal(reply.status, 200); assert.match(await reply.text(), /REPLY_CODEX_TWO/);
-  input.push({ type: 'function_call_output', output: JSON.stringify({ phase: 'completed', principalId: 'TEST-actual-captured-Alice' }) });
+  const nativeCall = async (response: Response) => {
+    const text = await response.text();
+    const events = text.split('\n').filter(line => line.startsWith('data: '))
+      .map(line => JSON.parse(line.slice(6)) as { type: string; item?: Record<string, unknown> });
+    const call = events.find(event => event.type === 'response.output_item.done')!.item!;
+    assert.equal(call.type, 'function_call'); input.push(call); return text;
+  };
+  const shell = await next(); assert.equal(shell.status, 200); await nativeCall(shell);
+  input.push({ type: 'function_call_output', call_id: 'native_CODEX_TEAM_TWO_0', output: 'Process exited with code 0\nFinal output:\n' });
+  const reply = await next(); assert.equal(reply.status, 200); assert.match(await nativeCall(reply), /REPLY_CODEX_TWO/);
+  input.push({ type: 'function_call_output', call_id: 'native_CODEX_TEAM_TWO_1', output: JSON.stringify({ phase: 'completed', principalId: 'TEST-actual-captured-Alice' }) });
   const terminal = await next(); assert.equal(terminal.status, 200); assert.match(await terminal.text(), /DONE_CODEX_TEAM_TWO/);
   assert.deepEqual(model.observations.map(value => value.step), [0, 1, 2]);
   for (const value of model.observations) {
