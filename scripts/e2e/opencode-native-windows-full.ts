@@ -2492,10 +2492,10 @@ async function main() {
         owner: 'bob',
         commentToken: `TASK_COMMENT:${nonce.bob}`,
         work: [
+          `First send your own distinct outbound challenge to Alice. Any earlier ACK you sent for Alice's challenge does not satisfy this step. Call agent-teams_message_send with these JSON arguments: ${JSON.stringify({ teamName: desktop.teamName, from: 'bob', to: 'alice', text: `CHALLENGE:${nonce.bob}` })}. The text property must contain only the challenge string, byte-for-byte, with no prose, quotes, backticks, whitespace, task references or agent blocks.`,
           'Own only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it.',
           "Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1'].",
           verificationInstruction(command('bob-verify.cjs')),
-          `Call agent-teams_message_send with these JSON arguments: ${JSON.stringify({ teamName: desktop.teamName, from: 'bob', to: 'alice', text: `CHALLENGE:${nonce.bob}` })}. The text property must contain only the challenge string, byte-for-byte, with no prose, quotes, backticks, whitespace, task references or agent blocks.`,
         ],
       }),
     });
