@@ -58,6 +58,7 @@ export function captureOpenCodeTranscriptBindings(
     };
     if (member.name !== memberName || !Object.values(binding).every(exactIdentity)) continue;
     const candidate = member.appManagedBootstrapCandidate;
+    if (member.bootstrapEvidenceSource === 'app_managed_bootstrap' && !candidate) continue;
     if (
       candidate &&
       (candidate.teamName !== snapshot.teamName ||

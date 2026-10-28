@@ -174,6 +174,11 @@ describe('TeamLaunchStateStore', () => {
     );
     fs.writeFileSync(getTeamLaunchStatePath('demo'), JSON.stringify(current));
     expect((await new TeamLaunchStateStore().beginStop('demo')).transcriptBindings).toEqual([]);
+    current.publicationRunId = 'current-app';
+    current.members.Builder.bootstrapEvidenceSource = 'app_managed_bootstrap';
+    current.members.Builder.appManagedBootstrapCandidate = undefined;
+    fs.writeFileSync(getTeamLaunchStatePath('demo'), JSON.stringify(current));
+    expect((await new TeamLaunchStateStore().beginStop('demo')).transcriptBindings).toEqual([]);
   });
 
   it('rejects a versioned snapshot whose persisted team identity does not match its path', async () => {
