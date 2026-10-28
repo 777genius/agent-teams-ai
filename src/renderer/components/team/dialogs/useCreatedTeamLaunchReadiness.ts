@@ -114,8 +114,12 @@ export function useCreatedTeamLaunchReadiness(input: {
       );
     },
     permits(providerId: string, now: number): boolean {
-      return (
-        providerId === 'anthropic' && Boolean(currentCreatedTeamReadiness(scope, input.checks, now))
+      return Boolean(
+        currentCreatedTeamReadiness(
+          scope,
+          input.checks.filter((check) => check.providerId === providerId),
+          now
+        )
       );
     },
   };

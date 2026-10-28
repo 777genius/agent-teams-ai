@@ -14,9 +14,10 @@ import {
   resetContextScopedRequestEpochForTests,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { IpcError } from '@renderer/utils/unwrapIpc';
+import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { CreatedTeamReadiness, TeamCreateRequest } from '@shared/types/team';
+import type { CreatedTeamReadiness, TeamCreateRequest, TeamProviderId } from '@shared/types/team';
 
 const { context, createConfig } = vi.hoisted(() => ({
   context: { activeContextId: 'TEST-local' },
@@ -75,15 +76,10 @@ function mount() {
     unmount: () => act(() => root.render(null)),
     run,
     render,
-    async settle() {
+    async settle(providerId: TeamProviderId = 'anthropic') {
       const proof: CreatedTeamReadiness = {
         preparationId: output.context.preparationId!,
-        selectionSignature: JSON.stringify({
-          cwd: '/TEST-create',
-          members: [],
-          prompt: 'ONE',
-          teamName: 'TEST-create',
-        }),
+        selectionSignature: createdTeamSelectionSignature(input.request),
         draftDigest: 'TEST-host-digest',
         expiresAt: Date.now() + 60_000,
       };
@@ -98,7 +94,7 @@ function mount() {
         { cacheKey: 'TEST', requestSignature: 'TEST' },
         {} as never
       );
-      input.checks = [{ providerId: 'anthropic', ...result }];
+      input.checks = [{ providerId, ...result }];
       render();
       return proof;
     },
@@ -127,6 +123,54 @@ describe('original Create launch flow scoped evidence', () => {
       updateProviderCheck(f.input.checks.slice(), 'anthropic', { status: 'checking' })[0]!
         .createdTeamReadiness
     ).toBeUndefined();
+  });
+  it.each(['codex', 'opencode'] as const)(
+    'accepts only the exact current %s Create proof for its selected provider',
+    async (providerId) => {
+      const f = mount();
+      f.input.request = { ...f.input.request, providerId };
+      f.render();
+      const guard = () => createLaunchGuard([providerId], new Map(), undefined, f.output());
+      expect(guard().blocked(true)).toBe(true);
+      const proof = await f.settle(providerId);
+      expect(f.output().readiness).toEqual(proof);
+      expect(f.output().blocksSubmission).toBe(false);
+      expect(guard().blocked(true)).toBe(false);
+      expect(f.output().permits('anthropic', Date.now())).toBe(false);
+      expect(f.output().permits(providerId === 'codex' ? 'opencode' : 'codex', Date.now())).toBe(
+        false
+      );
+      expect(guard().blocked(true, proof.expiresAt)).toBe(true);
+      const [ready] = f.input.checks;
+      f.input.checks = [{ ...ready!, status: 'checking' }];
+      f.render();
+      expect(guard().blocked(true)).toBe(true);
+      expect(f.output().readiness).toBeUndefined();
+      f.input.checks = [ready!];
+      f.input.request = { ...f.input.request, prompt: 'changed after preparation' };
+      f.render();
+      expect(f.output().blocksSubmission).toBe(true);
+      expect(guard().blocked(true)).toBe(true);
+    }
+  );
+  it('finds a current provider proof after unrelated stale evidence without granting that provider', async () => {
+    const f = mount();
+    f.input.request = { ...f.input.request, providerId: 'codex' };
+    f.render();
+    const proof = await f.settle('codex');
+    const [current] = f.input.checks;
+    f.input.checks = [
+      {
+        ...current!,
+        providerId: 'anthropic',
+        createdTeamReadiness: { ...proof, preparationId: 'TEST-old-preparation' },
+      },
+      current!,
+    ];
+    f.render();
+    expect(f.output().readiness).toEqual(proof);
+    expect(f.output().permits('codex', Date.now())).toBe(true);
+    expect(f.output().permits('anthropic', Date.now())).toBe(false);
   });
   it('invalidates expired observations without repeating probes and rejects late green after closing', async () => {
     vi.useFakeTimers();

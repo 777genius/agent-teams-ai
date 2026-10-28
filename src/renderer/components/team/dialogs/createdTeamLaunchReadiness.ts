@@ -13,16 +13,17 @@ export function currentCreatedTeamReadiness(
   now: number
 ): CreatedTeamReadiness | undefined {
   if (!scope.open || !Number.isFinite(now)) return undefined;
-  const check = checks.find((row) => row.providerId === 'anthropic');
-  const proof = check?.createdTeamReadiness;
-  return check?.status === 'ready' &&
-    proof &&
-    check.createdTeamDraftSignature === scope.draftSignature &&
-    proof.preparationId === scope.preparationId &&
-    proof.selectionSignature === scope.selectionSignature &&
-    Boolean(proof.draftDigest) &&
-    Number.isFinite(proof.expiresAt) &&
-    proof.expiresAt > now
-    ? proof
-    : undefined;
+  return checks.find((check) => {
+    const proof = check.createdTeamReadiness;
+    return (
+      check.status === 'ready' &&
+      proof &&
+      check.createdTeamDraftSignature === scope.draftSignature &&
+      proof.preparationId === scope.preparationId &&
+      proof.selectionSignature === scope.selectionSignature &&
+      Boolean(proof.draftDigest) &&
+      Number.isFinite(proof.expiresAt) &&
+      proof.expiresAt > now
+    );
+  })?.createdTeamReadiness;
 }
