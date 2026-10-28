@@ -43,6 +43,7 @@ export const modulePaths = [
   'src/renderer/main.tsx',
   'src/renderer/App.tsx',
   'src/main/services/infrastructure/HttpServer.ts',
+  'src/main/services/infrastructure/HttpServerAuth.ts',
   'src/main/services/infrastructure/FileWatcher.ts',
   'src/main/index.ts',
   'src/preload/index.ts',
@@ -117,6 +118,8 @@ export class Cdp {
   >();
   readonly counts = new Map<string, number>();
   readonly activeSseRequests = new Set<string>();
+  readonly responses: Array<{ path: string; status: number; corsHeaderPresent: boolean }> = [];
+  readonly corsFailures: string[] = [];
   credentialUrlDetected = false;
   private constructor(
     private socket: WebSocket,
@@ -162,6 +165,49 @@ export class Cdp {
           typeof message.params.requestId === 'string'
         )
           this.activeSseRequests.delete(message.params.requestId);
+        if (
+          message.method === 'Network.responseReceived' &&
+          record(message.params) &&
+          record(message.params.response) &&
+          typeof message.params.response.url === 'string' &&
+          typeof message.params.response.status === 'number'
+        ) {
+          const response = message.params.response,
+            url = new URL(response.url as string);
+          if (
+            url.origin === this.apiOrigin &&
+            url.pathname.startsWith('/api/') &&
+            this.responses.length < 40
+          )
+            this.responses.push({
+              path: url.pathname,
+              status: response.status as number,
+              corsHeaderPresent:
+                record(response.headers) &&
+                Object.keys(response.headers).some(
+                  (name) => name.toLowerCase() === 'access-control-allow-origin'
+                ),
+            });
+        }
+        if (
+          message.method === 'Network.loadingFailed' &&
+          record(message.params) &&
+          record(message.params.corsErrorStatus) &&
+          this.corsFailures.length < 10
+        ) {
+          const error = message.params.corsErrorStatus.corsError;
+          this.corsFailures.push(
+            typeof error === 'string' &&
+              [
+                'MissingAllowOriginHeader',
+                'PreflightMissingAllowOriginHeader',
+                'AllowOriginMismatch',
+                'PreflightAllowOriginMismatch',
+              ].includes(error)
+              ? error
+              : 'other-cors-error'
+          );
+        }
         if (typeof message.id !== 'number') return;
         const item = this.pending.get(message.id);
         if (!item) return;
@@ -426,7 +472,7 @@ async function enterBrowserKey(cdp: Cdp, key: string, expected: string): Promise
   await until(
     async () =>
       (await cdp.inspect('window.__ownedDesktopAuthProbe.session.getSnapshot()')) === expected,
-    'Browser form did not reach expected auth state'
+    'Browser form did not reach expected auth state: ' + expected
   );
   await until(
     async () =>
@@ -632,7 +678,7 @@ export async function qualify(args: unknown): Promise<boolean> {
       route: string,
       headers: Record<string, string> = {},
       body?: string
-    ): Promise<{ status: number; body: string; type: string }> {
+    ): Promise<{ status: number; body: string; type: string; allowedOrigin: string }> {
       const url = new URL(route, apiOrigin);
       check(url.origin === apiOrigin && route.startsWith('/api/'), 'Foreign HTTP route');
       return new Promise((resolve, reject) => {
@@ -652,6 +698,7 @@ export async function qualify(args: unknown): Promise<boolean> {
               status: res.statusCode ?? 0,
               body: Buffer.concat(chunks).toString('utf8'),
               type: String(res.headers['content-type'] ?? ''),
+              allowedOrigin: String(res.headers['access-control-allow-origin'] ?? ''),
             });
           });
           res.on('error', () => {
@@ -687,6 +734,23 @@ export async function qualify(args: unknown): Promise<boolean> {
         );
         denied.push({ path: route, authorization, status: result.status });
       }
+    // Trusted cross-origin browser clients must be able to observe rejection status.
+    // A 401 without this header becomes a fetch network failure instead of expired.
+    for (const authorization of ['missing', 'wrong']) {
+      const result = await request('GET', '/api/auth/ready', {
+        Origin: rendererOrigin,
+        ...(authorization === 'wrong' ? { Authorization: `Bearer ${wrong}` } : {}),
+      });
+      check(
+        result.status === 401 && result.allowedOrigin === rendererOrigin,
+        'Trusted-Origin auth rejection is not readable by browser'
+      );
+      denied.push({
+        path: '/api/auth/ready',
+        authorization: authorization + '-trusted-origin',
+        status: result.status,
+      });
+    }
     const update = JSON.stringify({
       section: 'general',
       data: { theme: 'light' },
@@ -973,6 +1037,16 @@ export async function qualify(args: unknown): Promise<boolean> {
     failure = phase;
     failureCode = error instanceof QualificationFailure ? error.message : 'operation-failed';
   } finally {
+    let browserFailureState: unknown = null;
+    if (!succeeded && desktopCdp && cdp) {
+      try {
+        browserFailureState = await cdp.inspect(
+          "(() => { const state = window.__ownedDesktopAuthProbe?.session.getSnapshot(); return { state: ['required','checking','ready','expired'].includes(state) ? state : 'unknown', keyGateVisible: !!document.querySelector('#api-access-key'), errorAlertVisible: !!document.querySelector('#root [role=alert]') }; })()"
+        );
+      } catch {
+        /* Retain only protocol status if the renderer is unavailable. */
+      }
+    }
     if (cdp) {
       try {
         await cdp.call(retireBrowserProbe);
@@ -987,6 +1061,9 @@ export async function qualify(args: unknown): Promise<boolean> {
       failureCode,
       denied,
       requestCounts: cdp ? Object.fromEntries(cdp.counts) : {},
+      responses: cdp?.responses ?? [],
+      corsFailures: cdp?.corsFailures ?? [],
+      browserFailureState,
       sourceRechecked: succeeded,
       sseRequestsStillActive: cdp?.activeSseRequests.size ?? 0,
       appLaunchPerformed: true,

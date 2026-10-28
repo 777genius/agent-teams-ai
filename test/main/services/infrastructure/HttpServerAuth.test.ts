@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import {
   buildHttpAccessUrl,
   createHttpAuthToken,
@@ -21,6 +22,13 @@ async function createFixture() {
     origins: ['http://localhost:5173'],
     authorities: () => ['localhost:80'],
   });
+  // Match production ordering: authentication can finish before CORS runs.
+  await server.register(cors, {
+    origin: ['http://localhost:5173', 'http://localhost:80'],
+    credentials: false,
+    allowedHeaders: ['content-type', 'authorization', 'x-agent-teams-app-context'],
+  });
+  server.get('/api/auth/ready', async () => ({ ready: true, service: 'api' }));
   server.get('/api/session-secret', async () => ({ session: 'private' }));
   server.post('/api/execute', async () => {
     executions.count += 1;
@@ -43,7 +51,31 @@ describe('HttpServerAuth', () => {
     expect(response.json()).toEqual({ error: 'Authentication required' });
     expect(response.headers['www-authenticate']).toContain('Bearer');
     expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.headers['access-control-allow-origin']).toBeUndefined();
     expect(mutation.statusCode).toBe(401);
+    expect(mutation.headers['access-control-allow-origin']).toBeUndefined();
+    expect(executions.count).toBe(0);
+  });
+
+  it('exposes authentication rejections only to admitted browser origins before handlers run', async () => {
+    const { server, executions } = await createFixture();
+
+    for (const origin of ['http://localhost:5173', 'http://localhost:80']) {
+      for (const authorization of [undefined, 'Bearer wrong-token']) {
+        const headers = { host: 'localhost:80', origin, ...(authorization ? { authorization } : {}) };
+        const readiness = await server.inject({ method: 'GET', url: '/api/auth/ready', headers });
+        const mutation = await server.inject({ method: 'POST', url: '/api/execute', headers });
+
+        for (const response of [readiness, mutation]) {
+          expect(response.statusCode).toBe(401);
+          expect(response.headers['access-control-allow-origin']).toBe(origin);
+          expect(response.headers.vary).toBe('Origin');
+          expect(response.headers['access-control-allow-credentials']).toBeUndefined();
+          expect(response.headers['www-authenticate']).toContain('Bearer');
+          expect(response.json()).toEqual({ error: 'Authentication required' });
+        }
+      }
+    }
     expect(executions.count).toBe(0);
   });
 
@@ -98,6 +130,8 @@ describe('HttpServerAuth', () => {
         headers: { ...headers, authorization: `Bearer ${TOKEN}` },
       });
       expect(response.statusCode).toBe(403);
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
+      expect(response.headers.vary).toBeUndefined();
     }
     expect(executions.count).toBe(0);
     const allowed = await server.inject({

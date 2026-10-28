@@ -90,6 +90,10 @@ export function registerHttpApiAuth(
       Buffer.byteLength(supplied) !== Buffer.byteLength(expected) ||
       !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
     ) {
+      // This hook rejects before the CORS plugin can expose the response to a trusted browser.
+      if (origin) {
+        void reply.header('Access-Control-Allow-Origin', origin).header('Vary', 'Origin');
+      }
       return reply
         .header('WWW-Authenticate', 'Bearer realm="agent-teams-local"')
         .code(401)
