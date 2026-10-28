@@ -112,10 +112,14 @@ export async function seedWindowsTestModelOutputLimit(
   const separator = model.indexOf('/');
   const provider = model.slice(0, separator);
   const modelId = model.slice(separator + 1);
-  // Public OpenRouter catalogue captured 2026-10-16; both official pins agree.
-  const context = model === 'openrouter/nvidia/nemotron-3-super-120b-a12b:free'
-    ? 262_144
-    : 32_000;
+  // Preserve qualified capacities: nemotron from the 2026-10-16 catalogue;
+  // GLM/GPT-4.1 mini from the bundled official @opencode/core 2.1.4 catalogue.
+  const qualifiedContexts: Record<string, number> = {
+    'openrouter/nvidia/nemotron-3-super-120b-a12b:free': 262_144,
+    'openrouter/~z-ai/glm-flash-latest': 1_048_576,
+    'openrouter/openai/gpt-4.1-mini': 1_047_576,
+  };
+  const context = qualifiedContexts[model] ?? 32_000;
   await mkdir(directory, { recursive: true });
   await protectWindowsTestDirectory(directory);
   await writeFile(
