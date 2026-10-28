@@ -21,6 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { projectTaskPersistenceDifference } from './opencode-diagnostics/task-persistence';
 import { projectV2TerminalErrorCode, projectV2TerminalErrorType, projectV2TerminalFailure, v2TerminalFailureReaderCode } from './opencode-diagnostics/v2-terminal-failure';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
@@ -2243,6 +2244,7 @@ async function main() {
     peersConfirmed: false,
     heldStopConfirmed: false,
     persistenceConfirmed: false,
+    persistenceDifference: null as ReturnType<typeof projectTaskPersistenceDifference> | null,
     heldAssignmentReleasedAfterPersistence: false,
     relaunchConfirmed: false,
     finalStopConfirmed: false,
@@ -2706,6 +2708,7 @@ async function main() {
     await checkpoint('held-stop');
     const held = await hold('initial');
     proof.heldStopConfirmed = true;
+    await checkpoint('restart-persistence');
     await app.close();
     assert(/^[a-zA-Z0-9_-]+$/.test(held.task.id));
     const retainedPath = path.join(
@@ -2725,8 +2728,11 @@ async function main() {
     assert.equal(await app.call('processAlive'), false);
     assert(Object.values((await app.call('getRuntime')).members).every((member) => !member.alive));
     const loaded = (await app.call('getData')).tasks.find((task) => task.id === held.task.id);
+    const persistedAfterRestart = JSON.parse(await readFile(retainedPath, 'utf8'));
+    proof.persistenceDifference = projectTaskPersistenceDifference(retained, persistedAfterRestart);
+    await checkpoint('restart-persistence');
     assert(loaded && loaded.owner === retained.owner && loaded.status === retained.status);
-    assert.deepEqual(JSON.parse(await readFile(retainedPath, 'utf8')), retained);
+    assert.deepEqual(persistedAfterRestart, retained);
     assert.equal(await readFile(held.marker, 'utf8'), held.markerBytes);
     proof.persistenceConfirmed = true;
     await checkpoint('restart-persistence');
