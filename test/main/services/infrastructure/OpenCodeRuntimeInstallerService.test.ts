@@ -312,6 +312,41 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   });
 
+  it.each([false, true])(
+    'cold PATH V2 support-only intent preserves native selection (repair=%s)',
+    async (repair) => {
+      const binaryPath = path.join(tempRoot!, 'TEST-path-v2', getTestNativeOpenCodeBinaryName());
+      await mkdir(path.dirname(binaryPath), { recursive: true });
+      await writeFile(binaryPath, 'selected native bytes', { mode: 0o755 });
+      process.env.PATH = path.dirname(binaryPath);
+      execCliMock.mockResolvedValue({ stdout: '2.9.0\n', stderr: '' });
+      let ready = repair;
+      const support = {
+        withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => ({
+          ...status,
+          v2Support: ready ? ('ready' as const) : ('required' as const),
+        })),
+        install: vi.fn(async () => {
+          ready = true;
+        }),
+      };
+      const status = await new OpenCodeRuntimeInstallerService(support).install(
+        repair ? { supportOnly: true } : undefined
+      );
+      expect(status).toMatchObject({
+        installed: true,
+        binaryPath,
+        version: '2.9.0',
+        source: 'path',
+        v2Support: 'ready',
+      });
+      expect(support.install).toHaveBeenCalledWith('2.9.0', expect.any(Function));
+      expect(fetch).not.toHaveBeenCalled();
+      expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+      expect(await readFile(binaryPath, 'utf8')).toBe('selected native bytes');
+    }
+  );
+
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
@@ -2095,6 +2130,46 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
     return { packageName, version };
   }
+
+  it('keeps the prior native selection when fresh V2 support acquisition fails', async () => {
+    await mockV2Download();
+    const support = {
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => status),
+      install: vi.fn(async () => {
+        throw new Error('TEST support acquisition failed');
+      }),
+    };
+    const status = await new OpenCodeRuntimeInstallerService(support).install({ generation: 'v2' });
+    expect(status).toMatchObject({ state: 'failed', error: 'TEST support acquisition failed' });
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+  });
+
+  it('refuses native activation when a new explicit selection appears during support acquisition', async () => {
+    await mockV2Download();
+    const selected = path.join(tempRoot!, 'TEST-new-selection');
+    await writeFile(selected, 'new explicit native selection');
+    const support = {
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => status),
+      install: vi.fn(async () => {
+        vi.stubEnv('CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH', selected);
+      }),
+    };
+    try {
+      const status = await new OpenCodeRuntimeInstallerService(support).install({
+        generation: 'v2',
+      });
+      expect(status).toMatchObject({
+        installed: true,
+        binaryPath: selected,
+        source: 'override',
+        state: 'failed',
+      });
+      expect(status.error).toContain('selection changed during installation');
+      expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 
   it('installs qualified V2 with native package identity and activates it ahead of PATH', async () => {
     const { packageName, version } = await mockV2Download();

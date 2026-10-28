@@ -688,6 +688,17 @@ function runtimeStatus(overrides: Partial<OpenCodeRuntimeStatus> = {}): OpenCode
 }
 
 describe('runtimeProviderQuickConnect domain policy', () => {
+  it('keeps a selected native V2 unavailable until its separate support is ready', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ version: '2.9.0', v2Support: 'required' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('missing');
+  });
+
   it('compares OpenCode versions without treating newer minor versions as outdated', () => {
     expect(isOpenCodeProviderOAuthBridgeOutdated(runtimeStatus({ version: '1.15.6' }))).toBe(true);
     expect(isOpenCodeProviderOAuthBridgeOutdated(runtimeStatus({ version: '1.15.7' }))).toBe(false);

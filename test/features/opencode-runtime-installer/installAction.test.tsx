@@ -16,6 +16,21 @@ function render(status: OpenCodeRuntimeStatus): string {
 }
 
 describe('V2 installation choice', () => {
+  it.each(['required', 'ready'] as const)(
+    'exposes support-only install/repair for native V2 with %s availability',
+    (v2Support) => {
+      const markup = render({
+        installed: true,
+        source: 'override',
+        state: 'ready',
+        version: '2.9.0',
+        v2Support,
+      });
+      expect(markup).toContain(v2Support === 'required' ? 'v2SupportInstall' : 'v2SupportRepair');
+      expect(markup).toContain('<button');
+    }
+  );
+
   it('offers the pinned V2 only for an unsupported installed runtime', () => {
     expect(
       render({

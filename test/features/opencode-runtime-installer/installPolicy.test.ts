@@ -24,6 +24,8 @@ describe('OpenCode installation policy', () => {
     'v2',
     [],
     { generation: 'latest' },
+    { supportOnly: 'yes' },
+    { generation: 'v1', supportOnly: true },
     { version: '2.99.0' },
     { generation: 'v2', url: 'https://other.test' },
   ])('rejects invalid install options %j', (input) => {

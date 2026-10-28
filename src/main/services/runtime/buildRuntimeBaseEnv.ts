@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { OPENCODE_V2_SUPPORT_ROOT_ENV } from '@features/opencode-runtime-installer';
+import { getOpenCodeV2SupportRoot } from '@features/opencode-runtime-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { ensureWindowsSpawnBaseDirEnv } from '@main/utils/cliProcessDefaults';
@@ -71,6 +73,8 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   const appConfig = configManager.getConfig();
   applyConfiguredRuntimeBackendsEnv(env, appConfig.runtime);
   Object.assign(env, options.env ?? {});
+  // Cache location is app-owned projection only; runtime's embedded descriptor is authority.
+  env[OPENCODE_V2_SUPPORT_ROOT_ENV] = getOpenCodeV2SupportRoot();
   if (mergedPath) {
     env.PATH = mergedPath;
   }

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
 import { extractArchive as extractRuntimeArchive } from './lib/runtime-payload-cache.mjs';
+import { verifyExternalOpenCodeV2Base } from './lib/opencode-v2-base-inventory.mts';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -210,6 +211,10 @@ function verifyStagedRuntime(runtimeLock, asset, platformKey) {
 
 async function stageRuntime(options) {
   const runtimeLock = readRuntimeLock();
+  // Validate a present external map before any network or cleanup effect.
+  const { readOpenCodeV2DeliveryMap } =
+    await import('../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts');
+  readOpenCodeV2DeliveryMap(runtimeLock);
   const platformKey = options.platform?.trim() || getDefaultPlatformKey();
   const asset = runtimeLock.assets?.[platformKey];
   if (!asset) {
@@ -244,6 +249,7 @@ async function stageRuntime(options) {
     extractArchive(archivePath, extractDir, asset.archiveKind);
 
     const payloadDir = findRuntimePayloadDir(extractDir, asset.binaryName);
+    verifyExternalOpenCodeV2Base(payloadDir, runtimeLock, platformKey);
     cleanRuntimeDir();
     fs.cpSync(payloadDir, runtimeDir, { recursive: true });
     if (process.platform !== 'win32' && !platformKey.startsWith('win32-')) {
