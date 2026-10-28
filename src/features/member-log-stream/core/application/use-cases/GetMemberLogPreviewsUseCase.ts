@@ -20,6 +20,8 @@ import type {
 } from '../ports/MemberLogPreviewSource';
 
 export interface GetMemberLogPreviewsInput {
+  /** Main-owned provider admission identity; never a renderer selector. */
+  sourceIdentity?: string;
   teamName: string;
   memberNames: string[];
   maxItemsPerMember?: number;
@@ -44,7 +46,7 @@ function normalizeMemberName(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function normalizeMembers(
+export function normalizeMemberLogPreviewRequests(
   memberNames: readonly string[],
   laneIdsByMember: Record<string, string> | undefined,
   maxMembers: number
@@ -68,6 +70,7 @@ function normalizeMembers(
 }
 
 function stableInputKey(input: {
+  sourceIdentity?: string;
   teamName: string;
   members: readonly NormalizedMemberRequest[];
   maxItems: number;
@@ -82,6 +85,7 @@ function stableInputKey(input: {
       return left[1].localeCompare(right[1]);
     });
   return JSON.stringify([
+    input.sourceIdentity ?? '',
     input.teamName,
     memberKeys,
     input.maxItems,
@@ -114,7 +118,7 @@ export class GetMemberLogPreviewsUseCase {
   async execute(input: GetMemberLogPreviewsInput): Promise<MemberLogPreviewResponse> {
     const maxItems = clampMemberLogPreviewItemLimit(input.maxItemsPerMember, this.budget);
     const textLimit = clampMemberLogPreviewTextLimit(input.textLimit, this.budget);
-    const members = normalizeMembers(
+    const members = normalizeMemberLogPreviewRequests(
       input.memberNames,
       input.laneIdsByMember,
       this.budget.maxMembers
@@ -124,6 +128,7 @@ export class GetMemberLogPreviewsUseCase {
     }
 
     const key = stableInputKey({
+      sourceIdentity: input.sourceIdentity,
       teamName: input.teamName,
       members,
       maxItems,

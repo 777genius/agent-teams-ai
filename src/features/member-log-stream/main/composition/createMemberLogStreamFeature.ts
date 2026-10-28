@@ -7,15 +7,25 @@ import {
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '../../contracts';
-import { GetMemberLogPreviewsUseCase } from '../../core/application/use-cases/GetMemberLogPreviewsUseCase';
+import {
+  GetMemberLogPreviewsUseCase,
+  normalizeMemberLogPreviewRequests,
+} from '../../core/application/use-cases/GetMemberLogPreviewsUseCase';
 import { GetMemberLogStreamUseCase } from '../../core/application/use-cases/GetMemberLogStreamUseCase';
 import { SetMemberLogStreamTrackingUseCase } from '../../core/application/use-cases/SetMemberLogStreamTrackingUseCase';
+import { DEFAULT_MEMBER_LOG_PREVIEW_BUDGET } from '../../core/domain/models/MemberLogPreviewBudget';
+import { inferMemberLogStreamSource } from '../../core/domain/policies/memberLogStreamMergePolicy';
 import { ClaudeMemberTranscriptPreviewSource } from '../adapters/output/sources/ClaudeMemberTranscriptPreviewSource';
 import { ClaudeMemberTranscriptStreamSource } from '../adapters/output/sources/ClaudeMemberTranscriptStreamSource';
 import { CodexNativeMemberTracePreviewSource } from '../adapters/output/sources/CodexNativeMemberTracePreviewSource';
 import { CodexNativeMemberTraceStreamSource } from '../adapters/output/sources/CodexNativeMemberTraceStreamSource';
+import { OPENCODE_NATIVE_RUNTIME_LABEL } from '../adapters/output/sources/memberLogStreamSourceUtils';
 import { OpenCodeMemberRuntimePreviewSource } from '../adapters/output/sources/OpenCodeMemberRuntimePreviewSource';
 import { OpenCodeMemberRuntimeStreamSource } from '../adapters/output/sources/OpenCodeMemberRuntimeStreamSource';
+import {
+  OpenCodeMemberTranscriptBindingReader,
+  unavailableOpenCodeTranscriptWarning,
+} from '../adapters/output/sources/OpenCodeMemberTranscriptBindingReader';
 import { MemberRuntimeLogTailReader } from '../application/MemberRuntimeLogTailReader';
 import { isMemberLogStreamReadEnabled } from '../featureGates';
 
@@ -68,6 +78,7 @@ export function createMemberLogStreamFeature(deps: {
   const strictParser = new BoardTaskExactLogStrictParser();
   const configReader = deps.configReader ?? new TeamConfigReader();
   const runtimeLogTailReader = deps.runtimeLogTailReader ?? new MemberRuntimeLogTailReader();
+  const bindingReader = new OpenCodeMemberTranscriptBindingReader();
   const sources = [
     new ClaudeMemberTranscriptStreamSource(
       deps.logsFinder,
@@ -75,12 +86,24 @@ export function createMemberLogStreamFeature(deps: {
       chunkBuilder,
       deps.logger
     ),
-    new OpenCodeMemberRuntimeStreamSource(deps.runtimeBridge, chunkBuilder),
+    new OpenCodeMemberRuntimeStreamSource(
+      deps.runtimeBridge,
+      chunkBuilder,
+      undefined,
+      undefined,
+      bindingReader
+    ),
     new CodexNativeMemberTraceStreamSource(configReader),
   ];
   const previewSources = [
     new ClaudeMemberTranscriptPreviewSource(deps.logsFinder, strictParser, deps.logger),
-    new OpenCodeMemberRuntimePreviewSource(deps.runtimeBridge),
+    new OpenCodeMemberRuntimePreviewSource(
+      deps.runtimeBridge,
+      undefined,
+      undefined,
+      undefined,
+      bindingReader
+    ),
     new CodexNativeMemberTracePreviewSource(configReader),
   ];
   const getUseCase = new GetMemberLogStreamUseCase({
@@ -102,13 +125,77 @@ export function createMemberLogStreamFeature(deps: {
       if (!isMemberLogStreamReadEnabled()) {
         return createEmptyMemberLogStreamResponse();
       }
-      return getUseCase.execute(input);
+      const binding = await bindingReader.read(input);
+      const result = await getUseCase.execute({ ...input, sourceIdentity: binding.cacheKey });
+      if (await bindingReader.isCurrent(input, binding)) return result;
+      const segments = result.segments.filter(
+        (segment) =>
+          segment.source.provider !== 'opencode_runtime' ||
+          segment.source.label !== OPENCODE_NATIVE_RUNTIME_LABEL
+      );
+      if (segments.length === result.segments.length) return result;
+      return {
+        ...result,
+        segments,
+        source: inferMemberLogStreamSource(segments),
+        coverage: result.coverage.map((coverage) =>
+          coverage.provider === 'opencode_runtime'
+            ? { ...coverage, status: 'skipped' as const, reason: 'opencode_runtime_unavailable' }
+            : coverage
+        ),
+        warnings: [...result.warnings, unavailableOpenCodeTranscriptWarning()],
+      };
     },
     getMemberLogPreviews: async (input) => {
       if (!isMemberLogStreamReadEnabled()) {
         return createEmptyMemberLogPreviewResponse();
       }
-      return getPreviewsUseCase.execute(input);
+      const admissions = await Promise.all(
+        normalizeMemberLogPreviewRequests(
+          input.memberNames,
+          input.laneIdsByMember,
+          DEFAULT_MEMBER_LOG_PREVIEW_BUDGET.maxMembers
+        ).map(async (member) => {
+          const request = { teamName: input.teamName, ...member };
+          return { request, binding: await bindingReader.read(request) };
+        })
+      );
+      const result = await getPreviewsUseCase.execute({
+        ...input,
+        sourceIdentity: JSON.stringify(
+          admissions.map(({ request, binding }) => [request.memberName, binding.cacheKey])
+        ),
+      });
+      const members = await Promise.all(
+        result.members.map(async (member) => {
+          const admission = admissions.find(
+            (entry) => entry.request.memberName === member.memberName
+          );
+          if (!admission || (await bindingReader.isCurrent(admission.request, admission.binding)))
+            return member;
+          const items = member.items.filter(
+            (item) =>
+              item.provider !== 'opencode_runtime' ||
+              item.sourceLabel !== OPENCODE_NATIVE_RUNTIME_LABEL
+          );
+          if (items.length === member.items.length) return member;
+          return {
+            ...member,
+            items,
+            coverage: member.coverage.map((coverage) =>
+              coverage.provider === 'opencode_runtime'
+                ? {
+                    ...coverage,
+                    status: 'skipped' as const,
+                    reason: 'opencode_runtime_unavailable',
+                  }
+                : coverage
+            ),
+            warnings: [...member.warnings, unavailableOpenCodeTranscriptWarning()],
+          };
+        })
+      );
+      return { ...result, members };
     },
     getMemberRuntimeLogTail: async (input) => {
       if (!isMemberLogStreamReadEnabled()) {

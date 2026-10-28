@@ -11,7 +11,15 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import { extractMemberLogPreviewItems } from '../../../../core/domain/policies/memberLogPreviewExtractor';
 
-import { normalizeMemberName } from './memberLogStreamSourceUtils';
+import {
+  classifyOpenCodeTranscriptError,
+  normalizeMemberName,
+  OPENCODE_NATIVE_RUNTIME_LABEL,
+} from './memberLogStreamSourceUtils';
+import {
+  OpenCodeMemberTranscriptBindingReader,
+  unavailableOpenCodeTranscriptWarning,
+} from './OpenCodeMemberTranscriptBindingReader';
 import {
   type OpenCodeMemberVisibleActivityEntry,
   OpenCodeMemberVisibleActivityReader,
@@ -24,6 +32,10 @@ import type {
   MemberLogPreviewSourceInput,
   MemberLogPreviewSourceResult,
 } from '../../../../core/application/ports/MemberLogPreviewSource';
+import type {
+  OpenCodeMemberTranscriptBinding,
+  OpenCodeTranscriptBindingReader,
+} from './OpenCodeMemberTranscriptBindingReader';
 import type { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 
 const OPENCODE_PROMPT_DELIVERY_LEDGER_FILE = 'opencode-prompt-delivery-ledger.json';
@@ -91,42 +103,6 @@ class FileOpenCodePromptDeliveryLedgerPreviewReader implements OpenCodePromptDel
 
 const DEFAULT_LEDGER_PREVIEW_READER = new FileOpenCodePromptDeliveryLedgerPreviewReader();
 const DEFAULT_VISIBLE_ACTIVITY_READER = new OpenCodeMemberVisibleActivityReader();
-
-function classifyOpenCodePreviewError(error: unknown): MemberLogStreamWarning {
-  const message = error instanceof Error ? error.message : String(error);
-  const record = error && typeof error === 'object' ? (error as Record<string, unknown>) : null;
-  const code = typeof record?.code === 'string' ? record.code : '';
-  const signal = typeof record?.signal === 'string' ? record.signal : '';
-  const killed = record?.killed === true ? 'killed' : '';
-  const normalized = [message, code, signal, killed].join(' ').toLowerCase();
-  if (
-    normalized.includes('timed out') ||
-    normalized.includes('timeout') ||
-    normalized.includes('code 143') ||
-    normalized.includes('signal sigterm') ||
-    normalized.includes('killed')
-  ) {
-    return {
-      code: 'opencode_runtime_timeout',
-      message: 'OpenCode runtime preview timed out; graph preview will use other sources.',
-    };
-  }
-  if (
-    normalized.includes('ambiguous') ||
-    normalized.includes('without a safe lane') ||
-    normalized.includes('requires --lane') ||
-    (normalized.includes('multiple') && normalized.includes('lane'))
-  ) {
-    return {
-      code: 'opencode_ambiguous_lane',
-      message: 'OpenCode runtime session is ambiguous without a safe lane id.',
-    };
-  }
-  return {
-    code: 'opencode_runtime_unavailable',
-    message: `OpenCode runtime preview is unavailable: ${message}`,
-  };
-}
 
 function parseTimestampMs(value: string | null | undefined): number {
   if (!value) return 0;
@@ -415,11 +391,29 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
     private readonly runtimeBridge: ClaudeMultimodelBridgeService,
     private readonly binaryResolver: BinaryResolverLike = ClaudeBinaryResolver,
     private readonly ledgerReader: OpenCodePromptDeliveryLedgerPreviewReader = DEFAULT_LEDGER_PREVIEW_READER,
-    private readonly visibleActivityReader: OpenCodeMemberVisibleActivityReader = DEFAULT_VISIBLE_ACTIVITY_READER
+    private readonly visibleActivityReader: OpenCodeMemberVisibleActivityReader = DEFAULT_VISIBLE_ACTIVITY_READER,
+    private readonly bindingReader: OpenCodeTranscriptBindingReader = new OpenCodeMemberTranscriptBindingReader()
   ) {}
 
   async loadPreview(input: MemberLogPreviewSourceInput): Promise<MemberLogPreviewSourceResult> {
+    const binding = await this.bindingReader.read(input);
+    const currentResult = async (
+      result: MemberLogPreviewSourceResult
+    ): Promise<MemberLogPreviewSourceResult> => {
+      if (await this.bindingReader.isCurrent(input, binding)) return result;
+      const items = result.items.filter(
+        (item) => item.sourceLabel !== OPENCODE_NATIVE_RUNTIME_LABEL
+      );
+      return {
+        ...result,
+        items,
+        status: items.length > 0 ? 'included' : 'skipped',
+        reason: items.length > 0 ? undefined : 'opencode_runtime_unavailable',
+        warnings: dedupeWarnings([...result.warnings, unavailableOpenCodeTranscriptWarning()]),
+      };
+    };
     const cacheKey = [
+      binding.cacheKey,
       input.teamName,
       normalizeMemberName(input.memberName),
       input.laneId ?? '',
@@ -431,17 +425,17 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
     if (!input.forceRefresh) {
       const cached = this.cache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
-        return cached.result;
+        return currentResult(cached.result);
       }
     }
 
     const inFlightKey = input.forceRefresh ? `${cacheKey}::force` : cacheKey;
     const existing = this.inFlight.get(inFlightKey);
     if (existing) {
-      return existing;
+      return currentResult(await existing);
     }
 
-    const promise = this.buildResult(input)
+    const promise = this.buildResult(input, binding)
       .then((result) => {
         this.cache.set(cacheKey, {
           expiresAt: Date.now() + input.budget.cacheTtlMs,
@@ -453,11 +447,12 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
         this.inFlight.delete(inFlightKey);
       });
     this.inFlight.set(inFlightKey, promise);
-    return promise;
+    return currentResult(await promise);
   }
 
   private async buildResult(
-    input: MemberLogPreviewSourceInput
+    input: MemberLogPreviewSourceInput,
+    binding: OpenCodeMemberTranscriptBinding
   ): Promise<MemberLogPreviewSourceResult> {
     if (!input.laneId) {
       return {
@@ -465,13 +460,21 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
         status: 'skipped',
         reason: 'opencode_safe_lane_unavailable',
         items: [],
-        warnings: [],
+        warnings: [unavailableOpenCodeTranscriptWarning(binding)],
         truncated: false,
         overflowCount: 0,
       };
     }
 
+    const stoppedTranscript =
+      binding.kind === 'bound' && binding.mode === 'stopped'
+        ? await this.buildTranscriptResult(input, [], binding)
+        : undefined;
+    if (stoppedTranscript?.status === 'included') return stoppedTranscript;
     const ledgerResult = await this.buildLedgerResult(input);
+    if (stoppedTranscript) ledgerResult.warnings.push(...stoppedTranscript.warnings);
+    if (binding.kind === 'unavailable')
+      ledgerResult.warnings.push(unavailableOpenCodeTranscriptWarning(binding));
     const visibleActivityResult = await this.buildVisibleActivityResult(input, ledgerResult);
     if (visibleActivityResult.status === 'included') {
       return visibleActivityResult;
@@ -483,9 +486,19 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
       };
     }
 
+    if (stoppedTranscript)
+      return {
+        ...stoppedTranscript,
+        warnings: dedupeWarnings([
+          ...stoppedTranscript.warnings,
+          ...ledgerResult.warnings,
+          ...visibleActivityResult.warnings,
+        ]),
+      };
     return this.buildTranscriptResult(
       input,
-      dedupeWarnings([...ledgerResult.warnings, ...visibleActivityResult.warnings])
+      dedupeWarnings([...ledgerResult.warnings, ...visibleActivityResult.warnings]),
+      binding
     );
   }
 
@@ -593,8 +606,13 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
 
   private async buildTranscriptResult(
     input: MemberLogPreviewSourceInput,
-    extraWarnings: readonly MemberLogStreamWarning[]
+    extraWarnings: readonly MemberLogStreamWarning[],
+    binding: OpenCodeMemberTranscriptBinding
   ): Promise<MemberLogPreviewSourceResult> {
+    if (binding.kind === 'unavailable') {
+      const warning = unavailableOpenCodeTranscriptWarning(binding);
+      return this.skipped(warning.code, warning.message, undefined, extraWarnings);
+    }
     const binaryPath = await this.binaryResolver.resolve();
     if (!binaryPath) {
       return this.skipped(
@@ -613,7 +631,9 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
         teamId: input.teamName,
         memberName: input.memberName,
         limit: input.budget.openCodeMessageLimit,
-        laneId: input.laneId,
+        laneId: binding.laneId,
+        runId: binding.runId,
+        sessionId: binding.sessionId,
         timeoutMs: input.budget.openCodeTimeoutMs,
       });
       const projectedMessages = transcript?.logProjection?.messages ?? [];
@@ -642,7 +662,7 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
         maxItems: input.maxItems,
         textLimit: input.textLimit,
         sourceId: sessionId,
-        sourceLabel: 'OpenCode runtime',
+        sourceLabel: OPENCODE_NATIVE_RUNTIME_LABEL,
         sessionId,
         laneId: input.laneId,
       });
@@ -657,7 +677,7 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
         overflowCount: extracted.overflowCount,
       };
     } catch (error) {
-      const warning = classifyOpenCodePreviewError(error);
+      const warning = classifyOpenCodeTranscriptError(error);
       return this.skipped(warning.code, warning.message, warning, extraWarnings);
     }
   }

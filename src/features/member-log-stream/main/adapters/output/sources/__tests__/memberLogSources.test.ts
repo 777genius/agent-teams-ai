@@ -26,6 +26,29 @@ import type { MemberLogStreamSourceInput } from '../../../../../core/application
 import type { EnhancedChunk, ParsedMessage } from '@main/types';
 import type { InboxMessage } from '@shared/types';
 
+// Source adapter fixtures isolate binding storage; the real authority reader has its own tests.
+vi.mock('../OpenCodeMemberTranscriptBindingReader', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../OpenCodeMemberTranscriptBindingReader')>();
+  return {
+    ...actual,
+    OpenCodeMemberTranscriptBindingReader: class {
+      async read(input: { memberName: string; laneId?: string }) {
+        return {
+          kind: 'bound',
+          mode: 'active',
+          runId: 'original-lane-run',
+          sessionId: 'opencode-session',
+          laneId: input.laneId ?? 'primary',
+          cacheKey: JSON.stringify(input),
+        };
+      }
+      async isCurrent() {
+        return true;
+      }
+    },
+  };
+});
+
 function parsedMessage(uuid: string, timestamp: string): ParsedMessage {
   return {
     uuid,
@@ -385,7 +408,7 @@ describe('OpenCodeMemberRuntimeStreamSource', () => {
     );
   });
 
-  it('reports ambiguous OpenCode lane errors as skipped provider warnings', async () => {
+  it('never derives lane ambiguity from arbitrary CLI error messages', async () => {
     await createTempClaudeRoot();
     const source = new OpenCodeMemberRuntimeStreamSource(
       {
@@ -404,8 +427,9 @@ describe('OpenCodeMemberRuntimeStreamSource', () => {
       status: 'skipped',
       warnings: [
         {
-          code: 'opencode_ambiguous_lane',
-          message: 'OpenCode runtime session is ambiguous without a safe lane id.',
+          code: 'opencode_runtime_unavailable',
+          message:
+            'OpenCode native runtime history is unavailable; showing retained member activity only.',
         },
       ],
     });
@@ -556,7 +580,7 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
       status: 'skipped',
       reason: 'opencode_safe_lane_unavailable',
       items: [],
-      warnings: [],
+      warnings: [expect.objectContaining({ code: 'opencode_runtime_unavailable' })],
     });
     expect(resolve).not.toHaveBeenCalled();
     expect(getOpenCodeTranscript).not.toHaveBeenCalled();
@@ -1285,7 +1309,7 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
     expect(result.warnings[0]?.code).toBe('opencode_runtime_unavailable');
   });
 
-  it('classifies killed OpenCode transcript calls as timeouts even when command text includes --lane', async () => {
+  it('does not derive timeout from arbitrary command text containing code 143', async () => {
     await createTempClaudeRoot();
     const laneId = 'secondary:opencode:alice';
     const getOpenCodeTranscript = vi
@@ -1300,7 +1324,7 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
     const result = await source.loadPreview(previewInput({ laneId }));
 
     expect(result.status).toBe('skipped');
-    expect(result.warnings[0]?.code).toBe('opencode_runtime_timeout');
+    expect(result.warnings[0]?.code).toBe('opencode_runtime_unavailable');
   });
 
   it('classifies exec timeout objects as OpenCode runtime timeouts', async () => {
