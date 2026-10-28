@@ -66,6 +66,22 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 
 ## Текущий checkpoint интеграции — 28 октября
 
+**Выбранный `0950160dc`:** в [CI 40750146585](https://github.com/777genius/agent-teams-ai/actions/runs/40750146585)
+прошли все четыре root shards: 24 045 PASS / 98 SKIP; отдельно Host 816/816,
+workspace Validate и все три lint scopes PASS. [CodeQL 40750215229](https://github.com/777genius/agent-teams-ai/actions/runs/40750215229)
+прошёл оба анализа: 187 open alerts совпадают с b63, branch-only относительно main — 0;
+подавления не выполнялись. Остальные original jobs `095` продолжаются; новый общий
+Source11/H3/P7 PASS до проверки исходных артефактов не заявляется.
+
+**Mixed `095` остаётся INCOMPLETE:** native group proof — PASS, но до клика Restart
+строгая проверка direct children исходного Host получила `4 !== 3`; старый census
+с commands не сохранён, причина четвёртого child не установлена. Независимо принятый
+TEST-only diagnostic сохраняет уже прочитанные pre/post census в existing receipt,
+перенося существующие command reads перед прежним `assert3`, без его ослабления,
+нового probe, delay или догадки о процессе. Готовится свежий existing Source11 с
+`stage1_process_qualification=false`: production bytes не меняются; доказательства
+`095` сохраняют только проверенную собственную границу. Draft/Stage1/V1 и root911 HOLD сохранены.
+
 **Текущая подготовка после merge main:** `02c2e68b1` уже запушен; он включает
 main `11418fb29` без конфликтов и только пять upstream TEST files. Это обновление
 базы, не новая native приёмка. Независимое ревью TEST fixes подтвердило точный
@@ -75,7 +91,8 @@ decoder: 6/6 focused tests, без FAIL/SKIP. Original receipts не измен�
 3/3, fixture models 18/18 и main-merge regressions 25/25 прошли; strict Host
 types, scoped lint и оба guards PASS. Final AST review подтвердил semantic match
 всех 10 source/TEST files. Полный root typecheck остановился local OOM137;
-полный Group file отменён на 90s — это не PASS. Remote Validate/Host обязательны.
+полный Group file отменён на 90s — это не PASS и не regression evidence: прежний
+принятый 50-test gate занимал 121.88s. Remote Validate/Host обязательны.
 После commit/push обязательны один существующий combined CI (`stage1_desktop=true`,
 `stage1_process_qualification=true`) и manual CodeQL на том же exact head.
 Новый Source11/H3/P7/canonical PASS пока не заявлен.

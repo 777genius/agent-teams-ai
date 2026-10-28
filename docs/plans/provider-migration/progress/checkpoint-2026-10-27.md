@@ -6648,14 +6648,39 @@ scope remain; no merge, release, publication or default activation is authorized
 
 Pinned Node 24.21 Group regression is meaningful RED→GREEN two/two; native
 Cross-Team regression is RED two FAIL / one PASS→GREEN three/three. Fixture
-models pass 18/18; upstream main-merge regressions pass 25/25. Strict Host types,
+models pass 18/18 in 1.88s; upstream main-merge regressions pass 25/25. Strict Host types,
 scoped lint and both source-size/provisioning guards pass. Independent review
 confirms all ten final formatted source/TEST ASTs match the approved fixes;
 no guard, budget, selector or unrelated semantic change was introduced.
 
 Full root `pnpm typecheck` ended with local OOM137; the full Group file attempt
-was cancelled at 90s. Neither is PASS. The shared cgroup has 8GiB capacity and
+was cancelled at 90s. Neither is PASS. The retained accepted 50-test gate took
+121.88s, including 116.72s for its pre-existing full-roster projection; the shorter
+local budget's cancellation is not regression evidence. No timeout code changes
+are introduced. The shared cgroup has 8GiB capacity and
 about 7.3GiB used under unrelated load; no code workaround or gate relaxation is
 added. Fresh remote Validate/Host and the already planned Source11/H3/P7/CodeQL
 remain mandatory. Root now commits this source/checkpoint and immediately pushes;
 the future commit SHA and native outcomes are not guessed here.
+
+### Selected 095 gates and the next finite Mixed diagnostic
+
+Selected `0950160dc7d3df621e01a8aecf3b4f693ffacc2c` now has all four root shards
+PASS in [CI 40750146585](https://github.com/777genius/agent-teams-ai/actions/runs/40750146585):
+24,045 tests passed / 98 skipped, with Host separately 816/816, workspace Validate
+and all three lint scopes PASS. [CodeQL 40750215229](https://github.com/777genius/agent-teams-ai/actions/runs/40750215229)
+passed both analyses; its 187 open alert IDs match b63 and all exist on main,
+with zero branch-only additions and no dismissals. Unrelated original `095` jobs
+continue; no new overall Source11/H3/P7 acceptance is inferred before raw audit.
+
+Original Mixed receipt remains INCOMPLETE: its native group proof is PASS, but
+the strict pre-Restart Host child census asserted `4 !== 3` before any Restart
+click. That old numeric/command census was not retained, so the fourth child is
+unidentified. The independently reviewed TEST-only diagnostic retains existing
+pre/post census through `options.step`, moves existing command reads before the
+unchanged `assert3`, and reuses their cache for the unchanged Bob predicate; it
+adds no process probe, delay, signal, action or budget. Strict scripts types,
+scoped lint and diff check pass. The next existing Source11 uses
+`stage1_process_qualification=false` because production bytes are unchanged;
+original `095` production/P7 evidence retains only its independently confirmed
+scope. Draft/Stage1/V1 and original root911 HOLD remain unchanged.

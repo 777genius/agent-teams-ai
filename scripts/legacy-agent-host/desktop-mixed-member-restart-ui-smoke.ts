@@ -66,12 +66,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
     (value) => row(value.binding).runId === options.launchId
   );
   assert.equal(before.length, 3);
-  assert.ok(
-    before.every(
-      (value) =>
-        value.phase === 'allocated' && value.custody === 'owned'
-    )
-  );
+  assert.ok(before.every((value) => value.phase === 'allocated' && value.custody === 'owned'));
   assertMixedInputAccounting(options.root, before, options.models, initialMixedBusinessTurns);
   const bob = one(rows(beforeOwner.members), (value) => value.name === 'bob');
   const source = one(before, (value) => row(value.binding).memberId === bob.memberId);
@@ -91,9 +86,20 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   assert.equal(hosts.length, 1);
   const hostPid = hosts[0]!.pid,
     childrenBefore = processTable().filter((value) => value.ppid === hostPid);
+  const childCommandsBefore = new Map(
+    childrenBefore.map((value) => [value.pid, command(value.pid)])
+  );
+  options.step({
+    observation: 'original Host children before isolated Bob Restart',
+    host: hosts[0]!,
+    children: childrenBefore.map((value) => ({
+      ...value,
+      command: childCommandsBefore.get(value.pid)!,
+    })),
+  });
   assert.equal(childrenBefore.length, 3);
   const bobChildren = childrenBefore.filter((value) =>
-    command(value.pid).startsWith(codexPath + ' ')
+    childCommandsBefore.get(value.pid)!.startsWith(codexPath + ' ')
   );
   assert.equal(bobChildren.length, 1, 'original Codex child under this exact TEST Host');
   const oldBobChild = bobChildren[0]!,
@@ -204,6 +210,11 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   );
   const tableAfter = processTable(),
     childrenAfter = tableAfter.filter((value) => value.ppid === hostPid);
+  options.step({
+    observation: 'original Host children after isolated Bob Restart',
+    host: hosts[0]!,
+    children: childrenAfter,
+  });
   assert.equal(childrenAfter.length, 3);
   assert.ok(!tableAfter.some((value) => value.pid === oldBobChild.pid));
   for (const peer of peers)
@@ -308,12 +319,26 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   while (Date.now() < finishedBy) {
     options.assertOwnedRenderer();
     continued = await current();
-    if (mixedInputAccounting(options.root, continued, options.models, continuedMixedBusinessTurns, currentBindings).ready)
+    if (
+      mixedInputAccounting(
+        options.root,
+        continued,
+        options.models,
+        continuedMixedBusinessTurns,
+        currentBindings
+      ).ready
+    )
       break;
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
   }
   assert.equal(continued.length, 3);
-  const inputAccounting = assertMixedInputAccounting(options.root, continued, options.models, continuedMixedBusinessTurns, currentBindings);
+  const inputAccounting = assertMixedInputAccounting(
+    options.root,
+    continued,
+    options.models,
+    continuedMixedBusinessTurns,
+    currentBindings
+  );
   assert.deepEqual(
     [options.models.claude, options.models.codex, options.models.opencode].map(
       (model) => model.observations.length
@@ -334,7 +359,8 @@ export async function runDesktopMixedMemberRestartUiSmoke(
       (value) => row(value.intent).inputId === row(row(proof.input).intent).inputId
     );
   return {
-    status: 'PASS', inputAccounting,
+    status: 'PASS',
+    inputAccounting,
     action,
     beforeLaunch,
     afterLaunch,
