@@ -1,7 +1,14 @@
 import { statSync } from 'node:fs';
 
-type ManifestSelection = { binaryPath: string };
-type ManagedProjection = { manifest: string; file: string; generation: number; path: string };
+interface ManifestSelection {
+  binaryPath: string;
+}
+interface ManagedProjection {
+  manifest: string;
+  file: string;
+  generation: number;
+  path: string;
+}
 let projection: ManagedProjection | null = null;
 
 export function managedFileIdentity(file: string): string | null {

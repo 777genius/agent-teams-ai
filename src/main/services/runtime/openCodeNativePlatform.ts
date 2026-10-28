@@ -84,7 +84,7 @@ async function linuxLibc(arch: string): Promise<OpenCodeNativeFacts['libc']> {
       interpreters.push(bytes.subarray(0, -1).toString('utf8'));
     }
     if (interpreters.length !== 1) return 'unknown';
-    const declared = classifyOpenCodeInterpreter(interpreters[0]!);
+    const declared = classifyOpenCodeInterpreter(interpreters[0] ?? '');
     const maps = (await boundedRead('/proc/self/maps', MAX_KERNEL_BYTES)).toString('utf8');
     // Conflicting loader evidence is not permission to cross libc variants.
     if (declared === 'glibc' && /\/ld-musl-[^/\s]+\.so\.1(?:\s|$)/m.test(maps)) return 'unknown';
@@ -115,14 +115,14 @@ async function acquireNativeFacts(signal?: AbortSignal): Promise<OpenCodeNativeF
       if (facts.arch !== 'x64') return;
       if (facts.platform === 'linux') {
         const text = (await boundedRead('/proc/cpuinfo', MAX_KERNEL_BYTES)).toString('utf8');
-        const flags = [...text.matchAll(/^flags\s*:\s*(.*)$/gm)].map((match) => match[1]!);
+        const flags = [...text.matchAll(/^flags\s*:\s*(.*)$/gm)].map((match) => match[1] ?? '');
         if (flags.length)
           facts.avx2 = flags.every((value) => value.split(/\s+/).includes('avx2')) ? 'yes' : 'no';
       } else if (facts.platform === 'darwin') {
         const value = await runOpenCodeNativeProbe(
           '/usr/sbin/sysctl',
           ['-n', 'hw.optional.avx2_0'],
-          { signal }
+          signal ? { signal } : {}
         );
         facts.avx2 = value === '1' ? 'yes' : value === '0' ? 'no' : 'unknown';
       } else if (facts.platform === 'win32') {
@@ -143,7 +143,7 @@ async function acquireNativeFacts(signal?: AbortSignal): Promise<OpenCodeNativeF
             '-EncodedCommand',
             Buffer.from(script, 'utf16le').toString('base64'),
           ],
-          { signal }
+          signal ? { signal } : {}
         );
         facts.avx2 = value === '1' ? 'yes' : value === '0' ? 'no' : 'unknown';
       }

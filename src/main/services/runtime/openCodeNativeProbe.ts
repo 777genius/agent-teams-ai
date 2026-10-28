@@ -19,7 +19,7 @@ export function isNativeProbeFatal(error: unknown): boolean {
 export function runOpenCodeNativeProbe(
   binary: string,
   args: string[],
-  options: { signal?: AbortSignal | undefined; timeoutMs?: number } = {}
+  options: { signal?: AbortSignal; timeoutMs?: number } = {}
 ): Promise<string> {
   if (options.signal?.aborted) return Promise.reject(canceled());
   return new Promise((resolve, reject) => {

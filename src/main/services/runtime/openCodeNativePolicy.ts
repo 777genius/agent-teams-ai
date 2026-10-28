@@ -1,9 +1,9 @@
-export type OpenCodeNativeFacts = {
+export interface OpenCodeNativeFacts {
   platform: string;
   arch: string;
   libc: 'glibc' | 'musl' | 'unknown' | null;
   avx2: 'yes' | 'no' | 'unknown';
-};
+}
 
 export const OPEN_CODE_NATIVE_POLICY_VERSION = 1;
 
@@ -29,6 +29,10 @@ export function compareOpenCodeNativeVersions(left: string, right: string): numb
   const a = parse(left),
     b = parse(right);
   if (!a || !b) return null;
-  for (let index = 0; index < 3; index++) if (a[index] !== b[index]) return a[index]! - b[index]!;
+  for (const [index, leftPart] of a.entries()) {
+    const rightPart = b[index];
+    if (rightPart === undefined) return null;
+    if (leftPart !== rightPart) return leftPart - rightPart;
+  }
   return 0;
 }
