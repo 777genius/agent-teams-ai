@@ -101,7 +101,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
             })});
           };
           let hook=field(component,'memoizedState'),count=0;
-          for(;hook&&count<512;hook=field(hook,'next'),count++){
+          for(;hook&&count<1024;hook=field(hook,'next'),count++){
             const value=field(hook,'memoizedState'),current=field(value,'current');
             projectChecks(value,count,'state');projectChecks(current,count,'ref');
             if(typeof current!=='string'||current.length>65536)continue;
