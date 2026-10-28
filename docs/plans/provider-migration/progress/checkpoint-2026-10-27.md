@@ -6015,3 +6015,23 @@ passed unchanged. The exported source list contains the runner exactly once.
 Initial sandbox invocations stopped at git-child EPERM before validation; the
 same normal commands completed with exit0 under standard execution permission.
 No broad build/test rerun was added for the inventory/documentation change.
+
+
+### P7 prerequisite renderer heap alignment
+
+The prepared P7 chain was committed and immediately pushed as
+`7fecff326a20c1a23715b804e9c9c0e1176f522a`. Its first combined
+[run40710322762](https://github.com/777genius/agent-teams-ai/actions/runs/40710322762)
+reached a P7 prerequisite renderer-build out-of-memory failure before native
+qualification. This is not an ancestry/SDK/packed result; the retained attempt
+is not relabelled. The single command now uses the same existing
+`--max-old-space-size=8192` V8 flag as package.json's canonical build. No native
+actor environment, deadline, signal behavior or production source changes.
+
+C independently accepted the exact one-line workflow delta, SHA256
+`4079b44a98d38332a444a4df343d8847813b933ca8cc0633d70201876b603d39`.
+YAML structural equality after removing that sole flag, bash syntax and diff
+checks passed; retained static log SHA256 is
+`65bb770a88b3d479a75db0368eb2262c964c537a978050927277634065348f43`.
+Actual corrected P7 execution remains pending. The separate retained-rich
+product regression work is excluded from this workflow-only delivery.

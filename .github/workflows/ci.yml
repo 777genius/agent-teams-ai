@@ -954,7 +954,7 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
-          node node_modules/electron-vite/bin/electron-vite.js build
+          node --max-old-space-size=8192 node_modules/electron-vite/bin/electron-vite.js build
       - name: Prepare the existing exact private TEST inputs
         env:
           GH_TOKEN: ${{ github.token }}
