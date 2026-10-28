@@ -5666,3 +5666,41 @@ The meaningful current macOS setup proof remains the
 next diagnostic-only run of the existing workflow, with stage1_desktop=false;
 it must complete before another eleven-row native matrix is attempted. Local
 success does not close P7/M17, the original M19 SDK HOLD, or any UI/restore gate.
+
+### Exact archive cache and early acquisition
+
+The typed official-alias correction was committed and immediately pushed as
+`27f60f3c9036862a0c8824f509d21e40a45e266c`. Its diagnostic-only
+[run40685536064](https://github.com/777genius/agent-teams-ai/actions/runs/40685536064)
+completed on actual24G624: exact Node24.21.0, native source unchanged, one newly
+owned finite Node child observed same-live, then natural exit0/no signal and
+absent. Receipt SHA256 is
+`036b30fd5be323f950d6ec6f82b41e79a8754b05a312a15f6c84f58e7c5f5dbe`.
+It remains qualification:false/signals:0; this does not qualify actual SDK
+registration/Stop, historical M19 custody, packed P7/M17 or a production selector.
+
+The subsequent eleven-row27f
+[run40686433576](https://github.com/777genius/agent-teams-ai/actions/runs/40686433576)
+retains its own source boundary. Its observed mixed Create/Launch attempt again
+failed before TEST: the official alias acquisition returned HTTP0/0 bytes after
+60.005678seconds. No reliable common network cause is inferred from one
+successful diagnostic followed by a failed acquisition.
+
+The bounded CI-only next change restores/saves exactly the official
+`.legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz` through the existing
+Actions cache service in both macOS jobs. Both use one identical key containing
+platform, version and full locked SHA256; there are no restore prefixes. The
+unchanged helper always checks any hit and refuses corrupt bytes; a miss retains
+exactly one bounded official acquisition. Production stage-node and every pin,
+checksum, time/size bound and partial-cleanup guard remain unchanged.
+
+Desktop runs that same prefill and direct builtins-only stager immediately after
+setup-node and cache restore, before dependency installation. The later copies
+are removed. This is a fail-fast ordering choice, not evidence that installation
+caused the transport failures. Diagnostic behavior otherwise remains unchanged.
+Standard Actions cache publication occurs only after a successful job; no cache
+hit or save is claimed before actual metadata/post-step evidence exists. Root
+will first run the existing diagnostic-only route on this same branch to seed
+and verify a successful save before dispatching another eleven-row matrix.
+Uncommitted prospective process-tuple source work is excluded from this CI-only
+commit and does not acquire acceptance from the retained27f runs.
