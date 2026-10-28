@@ -36,6 +36,8 @@ export function desktopTaskCommentInputExpression(handleId: string, taskId: stri
           matches.push({teamName:owner,taskId,identity:{contextId:identity.contextId,teamName:identity.teamName,taskId:identity.taskId},
             surfaceId:controller.surfaceId,inputId:input.id,commentText:controller.session.commentText,
             submitPending:controller.session.submitPending,submitError:controller.session.submitError,
+            ownerRevision:controller.session.ownerRevision,partRevisions:{commentText:controller.session.partRevisions.commentText,pendingAttachments:controller.session.partRevisions.pendingAttachments},
+            pendingPreparationCount:controller.session.pendingAttachmentPreparationIds.length,canSubmit:controller.canSubmit,attachmentError:controller.attachmentError,
             pendingAttachmentCount:controller.session.pendingAttachments.length,selector:'[role="dialog"] textarea[id='+JSON.stringify(input.id)+']'});
           break;
         }

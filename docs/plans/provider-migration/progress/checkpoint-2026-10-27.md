@@ -5916,3 +5916,20 @@ New tests join the default Host inventory and both new files join source pins.
 C independently accepted the exact source and final alias case. This is local
 transport/oracle validation; fresh native UI/cold Resume and final CI remain
 required, with no promotion of the original failed input or old canonical run.
+
+### Taskboard comment input observation
+
+The bounded Codex TEST protocol slice was committed and immediately pushed as
+`3e0d8a345cd639fc214f000a798e032625d4e6ad`. A separate two-file Taskboard observer
+now waits for the original owner/detail refresh after PNG upload, verifies one
+trusted focus click, and requires the exact DOM and controller text after one
+insert, after file preparation and before one Comment click. Five bounded latest
+snapshots retain owner/part revisions, pending preparation and focus/value facts.
+No setter, retype/resubmit, product UI or action/deadline change is introduced;
+the complete later canonical/reload/download/remove verification tail is intact.
+
+The original27f completed '(image)' comment remains FAIL; missing input/value
+observations did not prove a product defect. Strict scripts types, scoped lint,
+Node syntax and whitespace checks passed; C independently accepted the exact
+observer diff. Both existing files remain source-pinned. Fresh UI execution is
+still required; this source correction does not relabel the retained attempt.

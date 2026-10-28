@@ -1,4 +1,7 @@
-import { desktopTaskCommentInputExpression } from './desktop-task-comment-input-target.ts';
+import {
+  desktopTaskBoardAssignmentReadyExpression,
+  desktopTaskCommentInputExpression,
+} from './desktop-task-comment-input-target.ts';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
@@ -100,6 +103,7 @@ export async function runDesktopTaskBoardAttachmentsUi(
     assert.equal(typeof target.selector, 'string');
     commentInput = String(target.selector); // Re-resolve after reload: the original surface ID changes.
     options.step({ assertion: 'exact original Task comment owner/surface', ...target });
+    return target;
   };
   const imageSelector = `[role="dialog"] img[alt=${JSON.stringify(imageName)}]`;
   const imageLoaded = () =>
@@ -172,7 +176,7 @@ export async function runDesktopTaskBoardAttachmentsUi(
     return ref;
   };
 
-  await openDetail();
+  const originalCommentOwner = await openDetail();
   const imageInput =
     '[role="dialog"] input[type="file"][accept="image/png,image/jpeg,image/gif,image/webp"]';
   if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(imageInput)}))`))) {
@@ -200,10 +204,54 @@ export async function runDesktopTaskBoardAttachmentsUi(
   proof.imageBeforeReload = await verifyImage();
   proof.addedScreenshot = await options.screenshot('ui-task-board-attachment-added.png');
 
+  const commentText = 'TEST attachment comment original';
+  const readyCommentExpression = desktopTaskBoardAssignmentReadyExpression(options.handleId, options.taskId, {
+    contextId: String(row(originalCommentOwner.identity).contextId),
+    surfaceId: String(originalCommentOwner.surfaceId),
+  });
+  const commentInputObservations: Row = {};
+  proof.commentInputObservations = commentInputObservations;
+  const readCommentInput = async (stage: string) => {
+    options.assertOwnedRenderer();
+    const observed = row(await cdp.evaluate(`(async()=>{
+      const settled=await ${readyCommentExpression},owner=${commentExpression};
+      const input=owner?document.querySelector(owner.selector):null,active=document.activeElement;
+      return {owner,settled:Boolean(settled&&owner&&settled.inputId===owner.inputId&&settled.ownerRevision===owner.ownerRevision),
+        domValue:input?.value??null,inputEnabled:input instanceof HTMLTextAreaElement&&!input.disabled,
+        focused:input!==null&&active===input,documentFocused:document.hasFocus(),visibility:document.visibilityState,
+        activeElement:active?{tag:active.tagName,id:active.id}:null,timeMs:Math.round(performance.now())};
+    })()`));
+    commentInputObservations[stage] = observed;
+    return observed;
+  };
+  const commentReady = (observed: Row, expectedText: string, attachmentCount: number) => {
+    const owner = observed.owner ? row(observed.owner) : undefined;
+    return observed.settled === true && observed.inputEnabled === true && observed.visibility === 'visible' &&
+      observed.domValue === expectedText && owner && owner.selector === commentInput &&
+      owner.commentText === expectedText && owner.submitPending === false && owner.submitError === null &&
+      owner.pendingAttachmentCount === attachmentCount && owner.pendingPreparationCount === 0 &&
+      owner.canSubmit === true && owner.attachmentError === null;
+  };
+  const settledComment = await options.waitProduct(
+    () => readCommentInput('after image refresh'),
+    (value) => Boolean(commentReady(value, '', 0)),
+    'same original Task comment owner and empty draft after image refresh'
+  );
+  commentInput = String(row(settledComment.owner).selector);
   await ui.scrollTo(commentInput, 'original Task comment Composer');
   await ui.click(commentInput, 'focus original Task comment');
+  const focusedComment = await readCommentInput('after one focus click');
+  assert.ok(commentReady(focusedComment, '', 0), 'same settled empty comment input before typing');
+  assert.equal(focusedComment.focused, true, 'one focus click reaches the exact original textarea');
+  assert.equal(focusedComment.documentFocused, true, 'original document is focused before typing');
   options.assertOwnedRenderer();
-  await cdp.send('Input.insertText', { text: 'TEST attachment comment original' });
+  options.step({ action: 'Input.insertText', text: commentText, selector: commentInput, state: 'attempted' });
+  await cdp.send('Input.insertText', { text: commentText });
+  await options.waitProduct(
+    () => readCommentInput('after one text insertion'),
+    (value) => Boolean(commentReady(value, commentText, 0)),
+    'one original comment insertion reaches both DOM and current controller session'
+  );
   await setOriginalFileInput(
     '[role="dialog"] input[type="file"][accept="*/*"]',
     join(directory, textName)
@@ -212,7 +260,14 @@ export async function runDesktopTaskBoardAttachmentsUi(
     `document.querySelector('[role="dialog"]')?.textContent.includes(${desktopJsLiteral(textName)})`,
     'original pending comment file preview'
   );
+  await options.waitProduct(
+    () => readCommentInput('after file preparation'),
+    (value) => Boolean(commentReady(value, commentText, 1)),
+    'prepared original file preserves exact DOM and controller comment text'
+  );
   await ui.scrollTo('[role="dialog"] button', 'original Comment submit', 'Comment');
+  assert.ok(commentReady(await readCommentInput('immediately before submit'), commentText, 1),
+    'exact original text and prepared file are still current before the one Comment click');
   await ui.click('[role="dialog"] button', 'submit original comment and file once', 'Comment');
   const commentedTask = await options.waitProduct(
     () => options.task(options.taskId),
