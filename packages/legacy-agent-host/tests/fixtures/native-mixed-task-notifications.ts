@@ -137,15 +137,33 @@ export interface ObservedMixedTaskNotice extends MixedTaskNotice {
   input: MixedNoticeRow;
 }
 export type MixedTaskNoticeReader = (text: string) => ObservedMixedTaskNotice | undefined;
+function sdkReminderTransportOnly(fragment: string): boolean {
+  const opening = '<system-reminder>',
+    closing = '</system-reminder>';
+  let cursor = 0,
+    decorated = false;
+  while (cursor < fragment.length) {
+    while (cursor < fragment.length && /\s/u.test(fragment[cursor]!)) cursor++;
+    if (cursor === fragment.length) return decorated;
+    if (!fragment.startsWith(opening, cursor)) return false;
+    cursor += opening.length;
+    while (cursor < fragment.length && !fragment.startsWith(closing, cursor)) {
+      if (fragment.startsWith(opening, cursor)) return false;
+      cursor++;
+    }
+    if (cursor === fragment.length) return false;
+    cursor += closing.length;
+    decorated = true;
+  }
+  return decorated;
+}
 function currentNoticeTextMatches(text: string, expected: string): boolean {
   if (text === expected) return true;
   const start = text.indexOf(expected);
   if (start < 0 || text.indexOf(expected, start + 1) !== -1) return false;
   // SDK decoration may surround, but never replace or alter, the original input bytes.
-  const reminders =
-    /^(?:\s*<system-reminder>(?:(?!<\/?system-reminder>)[\s\S])*<\/system-reminder>\s*)+$/;
   return [text.slice(0, start), text.slice(start + expected.length)].every(
-    (fragment) => fragment === '' || reminders.test(fragment)
+    (fragment) => fragment === '' || sdkReminderTransportOnly(fragment)
   );
 }
 /** Only the CURRENT original input can qualify; old business/group history never supplies a notice. */

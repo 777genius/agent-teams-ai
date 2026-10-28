@@ -4598,3 +4598,284 @@ rejection both drain, and no new wait cycle is identified. The concrete source
 blocker is resolved by this reviewed correction; original a98 failure remains
 retained. The corrected production candidate requires its own canonical/native
 qualification, separate from accepted a98 Taskboard and other original receipts.
+
+
+### 8465 production drain candidate committed, immediately pushed and dispatched once
+
+The four reviewed paths are committed as
+`8465a0a8f7e2dfc208abd214881edfd067933756`
+(`fix: drain work-sync audit writes before stop completes`) and immediately pushed
+normally. Local HEAD and origin match, with clean worktree/index and unchanged
+630dd7/19f7f8 source/test hashes. Root verifies exact remote Draft/MERGEABLE,
+c4c ancestry, unchanged2aa provider archive and only the authorized four paths.
+
+Root dispatches one original combined ci.yml run with stage1_desktop=true at
+2026-10-28T04:15:45.993875Z:
+https://github.com/777genius/agent-teams-ai/actions/runs/40631328410 .
+Reported head is exact8465a0a8f7e2dfc208abd214881edfd067933756. Initial native
+jobs are pending Quit122628136119, Resume122628136136, Create122628136163,
+Mixed122628136170, active Quit122628136241, Member122628136242,
+import Launch122628136318, import-only122628136334, Taskboard122628136389 and
+Review122628136420. Canonical monitoring is independently assigned to the lead.
+Previous a98 still finishes its remaining original native jobs; it is not cancelled
+or retried. The new production change requires its own full qualification, and
+no a98 native result is transferred automatically.
+
+
+### Additional original a98 outcomes: Mixed preparation timeout, Resume incomplete
+
+Original Mixed job122622403456 starts04:11:08Z and completes failure04:13:09Z.
+Host/controller/MCP builds succeed, then pinned stage-node fetch times out at
+04:13:06.446Z after starting04:12:06.385Z. TEST/native preparation and UI are
+skipped. There is no Mixed receipt or native attempt, so the reminder-carrier
+correction still lacks its own native continuation proof in this run. Sanitized
+original job-log SHA256 is
+`19e8ba15a9260a93de4091b90a7ea637b340028e22e34ef90e6791f8b61fdfc4`.
+This is the third distinct pre-TEST acquisition timeout, not a repeated native
+input or a new OpenCode custody result. The pinned downloader is unchanged.
+
+Original Resume job122622403426 does execute its original UI and fails at
+04:11:38Z before the first Launch submission. Artifact12791288034/root sYyapU
+retains INCOMPLETE receipt
+`b0b630430e2c19c15c1d8a103a18539a4cd6453c888329cecf193a78fd02715c`:
+`UI read timed out: submit original Launch team once; no mutation retry`.
+Model has zero business observations, two probes and no unexpected/failure rows.
+Appgroup4086 exits naturally0/no signal and ends empty; no separately captured
+Host-absence witness is retained. Root preserves original job log SHA256
+`b3d25004d4f990fd7e81f3f4c10faa5981fc4a6e2256f00583761416e50645d2`.
+An independent bounded readiness/source diagnosis is assigned; no historical
+cause, timeout change, readiness relaxation or replacement Launch is asserted.
+
+
+### a98 completed combined index: three PASS variants, one incomplete UI, six unattempted UI variants
+
+Run40629530746 is completed/failure on exact a98. Four original artifact ZIPs
+contain four workflow receipts:3 PASS /1 INCOMPLETE, plus the separately retained
+original Taskboard epoch PASS. Desktop jobs are3 PASS /7 failed. Six failures
+occur before TEST/native preparation and UI at pinned Node acquisition; they have
+no workflow receipts and are not counted as attempted native business failures.
+The remaining failure is the original Resume Launch wait described above.
+Completed index SHA256:
+`86d371322499345e39e2943554dc0d4542f7585de2383f832aa3727fb625d8e0`.
+It explicitly retains the six unattempted variants and original sanitized job-log
+hashes, alongside canonical23,894 PASS /1 FAIL /97 SKIP.
+
+The final three acquisition failures are active Quit/job122622403579,
+04:13:57.452Z→04:14:57.504Z, log SHA
+`8dec3f46974456bb3c19c1419c9c8cb9557338d3b49454e3e3d9f95aa4d50a71`;
+import Launch/job122622403636,04:15:38.378Z→04:16:38.448Z, SHA
+`8c0a308982c03db6ce2397528b931a42712f96e3081b9230f7db38b4b156d290`;
+and Review/job122622403643,04:16:21.960Z→04:17:22.026Z, SHA
+`a0ae9693bfb0865a40cd2bf6fb77995a32da58b9665425f57804bb8b8638f194`.
+In each, prerequisite builds succeed, pinned acquisition aborts at its existing60s
+limit, and all TEST/native/UI/cold stages are skipped. No zero-allocation custody
+claim is needed for an unstarted fixture; no prior receipt is substituted.
+
+A bounded read-only acquisition check confirms the lock's selected official URL
+https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz and SHA
+bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057.
+The official checksum file agrees. Container/proxy HEAD checks near04:20Z return
+200, with52,909,993-byte archive size; this verifies that endpoint from that network
+at that time, not earlier macOS runner reachability or a global outage cause.
+The AbortSignal also applies during body consumption; original logs do not
+identify whether headers or body stalled. Existing cache validation is exact,
+but this checkout has no retained verified archive to reuse. No downloader,
+checksum, URL, cache, deadline or retry behavior is changed.
+
+
+### a98 Resume independent raw diagnosis and bounded source hypothesis review
+
+Both actual readiness snapshots are complete:683 hooks,76 ancestors, no ancestor
+truncation and2,378/2,387 visited nodes. Current draft signature at hook627 remains
+exact. Before waiting it is checking with null captured signature/proof and disabled
+Launch. After30,153ms it is ready/verified while BOTH captured fields remain null
+and Launch disabled; footer reports verified model catalog unavailable/stale.
+Both Main probe record addresses/digests/canonical input fingerprints verify:
+Sonnet cancelled, selected Opus completed/ok/released, same profile/config/resource/
+selection digest. Opus is unexpired by58,107ms at the failed snapshot. The final
+Main preparation response/current deep-stage association is not retained.
+
+No original submit click, Launch response/capture or business inference exists.
+The sole physical Runtime is the descriptor predecessor, closed/sealed/released,
+null config and empty inputs. All1,402 pins match a98 Git objects and before/after.
+Compared with the independently audited447 Resume PASS, only the two Mixed TEST
+pins differ; actual Launch/readiness Main and renderer sources are identical.
+That earlier attempt also began checking/null/disabled and later completed its
+own original bounded click; it does not explain this failure. Failure Quit is
+acknowledged and its listener disappears. App4086 before/final groups are empty
+and natural0/no signal, but HostObserved=false/HostAbsent=null. Five allowed raw
+sentinels, no refusals, and no retained pre-Quit boundary are stated precisely.
+
+A separate bounded source check excludes the proposed late same-request progress
+overwrite: providerPrepareDiagnostics invokes all progress callbacks synchronously
+within the awaited core path, including finally, before the wrapping captured-
+readiness/fence promises resolve. Launch awaits runPreflight before final proof
+commit. No detached/timer progress producer exists. Different requests/providers
+have generation/signature/provider-sequence and draft-currency guards. A mock
+calling progress after the real producer has completed would invent a source-
+absent interleaving. No deterministic counterexample or additional code/test is
+warranted. Ready progress alone remains insufficient final authority; the retained
+historical failure is still ambiguous. No deadline/TTL/retry/readiness relaxation
+or speculative instrumentation is introduced.
+
+
+### 8465 early canonical gates and first pre-TEST acquisition failure
+
+All three typed lint jobs pass. Validate122628392138 completes SUCCESS at
+04:20:31Z with guard4,626/143/800, architecture, downloaderNode9 and MCP stdio24.
+Windows122628392147 completes SUCCESS at04:20:43Z with app-lock110 plus1 skip,
+controller11, ledger/runtime1,247 plus5 skips and cleanupNode25. Root shards are
+still active at this entry; no final root count is claimed yet.
+
+Original8465 Resume job122628136136 records its own macOS15.7.5 /24G624 /arm64
+at04:18:19Z beside exact8465 SHA. It fails pinned Node acquisition at
+04:20:06.124Z after starting04:19:06.068Z. TEST preparation/UI/cold steps are
+skipped; no receipt or current macOS selected-Node gate count exists for this job.
+Original sanitized log SHA256:
+`86904a3227619520660994ad90e9f2bf3e08ef16933b0111742b181bb5b79757`.
+This adds no readiness evidence and does not repeat the original a98 Launch intent.
+
+
+### 8465 canonical Full qualification PASS on the exact corrected production source
+
+Run40631328410 Full qualification job122630639499 concludes SUCCESS. Its original
+gate line is2026-10-28T04:24:37.7119534Z and the job completes04:24:42Z. Exact
+head is8465a0a8f7e2dfc208abd214881edfd067933756. Original root shard results:
+shard1/job122628392307 5,810 PASS /26 SKIP;
+shard2/job122628392176 6,090 PASS /36 SKIP;
+shard3/job122628392240 5,820 PASS /17 SKIP;
+shard4/job122628392283 6,176 PASS /18 SKIP.
+Total **23,896 PASS /0 FAIL /97 SKIP**.
+
+The actual shard4 log explicitly passes all72 TeamBackupService tests at04:19:23Z,
+including the unchanged formerly failing public startup-scan case, and all27
+MemberWorkSyncEventQueue tests at04:19:53Z, including the new audit-drain regression.
+Controller421, MCP74, Host794, CI/scripts179 and feedback119 pass. All three typed
+lint jobs pass. Validate122628392138 passes source4,626/143/800, architecture,
+downloaderNode9 and MCP stdio24. Windows122628392147 passes app-lock110 plus1
+skip, controller11, ledger/runtime1,247 plus5 skips and cleanupNode25.
+Canonical monitoring is complete and stopped, without a retry.
+
+This is fresh canonical qualification of the corrected production candidate,
+not a relabeling of a98's original failure. Current macOS tuple is independently
+recorded on exact8465 as15.7.5/24G624/arm64. The completed Resume job has no
+selected-Node summary because its acquisition failed before that stage; no30/30
+count is transferred from a98. Native jobs continue with their own pending or
+failed preparation states, separately from canonical PASS.
+
+
+### 8465 source/report composition accepted after canonical PASS
+
+Independent final review verifies exact8465 HEAD and all four accepted queue /
+queue-test / Mixed-reader / Mixed-HTTP-test hashes. Only README/progress are dirty.
+Current narrative and unpublished PR draft distinguish fresh canonical23,896/0/97
+from native pending/preparation failures, a98's3 PASS/six unstarted UI/one Resume
+INCOMPLETE, and447's own9/10. No positive macOS Node count or older receipt is
+transferred to8465. Packed tuple, original M19 HOLD and unresolved historical cause
+limits remain explicit. No concrete source blocker remains after the reviewed
+drain correction. The critic identifies one stale adjective in the older README
+narrative:3d147d2 was still called current. Root changes only that qualifier to
+separate historical, preserving its original proof and the frozen dashboard.
+
+
+### 8465 completed combined run: canonical PASS, all ten Desktop preparations blocked
+
+Original run40631328410 completes with overall failure after the final import-only
+job122628136334 ends at2026-10-28T04:40:07Z. This does not change the independently
+completed canonical Full qualification PASS:23,896 passed /0 failed /97 skipped,
+including all72 TeamBackupService and27 queue cases.
+
+All ten original Desktop jobs fail at the same existing pinned Node acquisition
+step, before TEST/native preparation or any original UI/cold control. Each original
+step result is checked; stage-node starts, the existing60,000ms AbortSignal expires,
+and TEST/package/native preparation and UI/cold stages are skipped. The downstream
+receipt verifier reports a missing log because its fixture never ran. There are
+**0 artifact ZIPs,0 workflow receipts,0 native/UI executions and0 native PASS**.
+No synthetic INCOMPLETE receipt, business-input outcome, allocation or custody
+claim is manufactured for these unstarted fixtures. The failed jobs are preparation
+failures, not ten executed runtime scenarios.
+
+All original job logs are retained with ANSI control sequences removed; the hashes
+below identify those sanitized bytes. Times are UTC on28 October2026.
+
+| Variant | Original job | stage-node start → timeout | Sanitized log SHA256 |
+| --- | --- | --- | --- |
+| Pending Quit | 122628136119 | 04:24:14.1967060Z → 04:25:14.2571600Z | `f9de052d20a18c478cd92e979411ade78c975a854624165ef156dffd04eee694` |
+| Resume | 122628136136 | 04:19:06.0685220Z → 04:20:06.1244290Z | `86904a3227619520660994ad90e9f2bf3e08ef16933b0111742b181bb5b79757` |
+| Create | 122628136163 | 04:27:12.6239580Z → 04:28:12.6734550Z | `82052f1a0d5fd49c422c4831fdd8248b9d5687817b6e53cc9dbda56246de14fe` |
+| Mixed | 122628136170 | 04:29:45.4527550Z → 04:30:45.5208890Z | `fa653bfe23efcf6fc805a738bc0d2c8c3a015c93840eec80f73ca31d481603a8` |
+| Active Quit | 122628136241 | 04:36:01.6103720Z → 04:37:01.6697950Z | `dcd593f77a5afe1ed173334fd6c766378aa1dcd108ae7112e61a8daaf815c0e9` |
+| Member | 122628136242 | 04:32:48.4760430Z → 04:33:48.5381120Z | `b5cdf0c0e095553b590b6917c7c0838d9af16a520767fb9ff8845c52bfece098` |
+| Import Launch | 122628136318 | 04:37:10.2707220Z → 04:38:10.3404170Z | `2959db568a26875828199766698d77e7c9151d8d3bc4698f2cc7983dc48e0a0b` |
+| Import only | 122628136334 | 04:39:04.9693210Z → 04:40:05.0273180Z | `4489472c7b35c44a6b6998a5f6de4dcd9f08279eefa809a8cbe9ab1fdb111393` |
+| Taskboard | 122628136389 | 04:33:48.6331790Z → 04:34:48.6950470Z | `8738a5a372b29ca7a18addfde88fec746a65b1d9e1a6a43e68130a9f3abfa72b` |
+| Review | 122628136420 | 04:30:08.4696810Z → 04:31:08.5376950Z | `35ab8754491f187b47f19c484f75eb6ed01bddd16df94bfc01ffeb115a87f4e5` |
+
+The completed evidence index has SHA256 `9da3daaa9d4c32656b9d5d3985e2739850867d1a23ae4e9f9224e0dae1e401c3`. It records
+all ten original job IDs, exact source8465, skipped TEST/UI/cold stages, zero
+artifacts/receipts and the separate successful canonical gate. The run summary
+and all ten logs are retained beside it. There is no current selected-Node macOS
+test PASS to transfer from a98 or447. Existing Node URL/SHA/deadline/retry/cache
+behavior remains unchanged. The logs identify acquisition timeout, not whether
+headers or body stalled and not its transport cause. Original runs are not
+cancelled, retried or overwritten.
+
+### New current CodeQL finding identified in final PR preflight
+
+After the source review, a fresh complete GraphQL review-thread preflight finds
+three threads, of which exactly one is current/unresolved: CodeQL alert590,
+thread PRRT_kwDORVTEtM6w-k6T, comment4396768812, created04:04:35Z. The private
+Mixed TEST reminder regex at native-mixed-task-notifications.ts:146 can backtrack
+exponentially on repeated complete wrappers separated by spaces. This is a real
+finite TEST implementation issue; it does not establish the missing historical
+failed HTTP body or a native product defect. The implementation lead is assigned
+the smallest deterministic scanner replacement; an independent critic reviews
+exact accepted/rejected language and complexity before any commit. Canonical
+8465 and older native results remain tied to their exact tested bytes.
+
+
+### CodeQL590 bounded scanner correction: local gates and independent acceptance
+
+The private TEST matcher now scans each decoration fragment with one monotone
+cursor and fixed literal opening/closing checks. No nested or repeated regex
+quantifier remains. It preserves empty-side acceptance, rejection of nonempty
+whitespace-only fragments, ECMAScript whitespace, first exact closing tag and
+refusal of nested exact opening tags, incomplete wrappers and outside text.
+Incomplete tag-like text inside a complete wrapper retains the old grammar.
+The canonical expected bytes still occur verbatim exactly once; preparation,
+current Runtime input, plan/receipt/outbox/binding, acknowledgment/replay and
+cap16 guards are unchanged. No public API, product source, source-pin inventory,
+workflow or downloader behavior changes.
+
+The existing affected Node HTTP/fixture suite passes **14/14**, zero skips. Its
+carrier test has14 internal cases, not14 new tests. Five added cases cover4,097
+complete wrappers on both sides, the exact CodeQL-shaped repeated-wrapper invalid
+tail, Unicode ECMAScript whitespace, non-whitespace U+0085 and exact nested tags.
+Existing unknown prefix/suffix/inter-wrapper text, truncation, duplicate canonical
+input, omitted preparation, bare whitespace and replay refusals remain exercised.
+The old pathological regex is not executed unbounded merely to demonstrate RED.
+
+Strict scripts TypeScript, scoped fastlint on2 files with zero diagnostics,
+Prettier on2 files, git diff --check and source guard4,626/143/800 pass. Final
+formatted bytes inspected by root:
+
+- native-mixed-task-notifications.ts SHA256
+  `4efed16db3c2c6040d214ecf27237968a625382b3e92f3f187edb1a67198b8b1`;
+- desktop-mixed-native-fixture.test.ts SHA256
+  `786b14afc8b6a7709394a1f4b3e8311d04ada774235c097e93fb9b1e905303e5`.
+
+Root and the independent critic accept the actual scanner's semantic equivalence
+and linear traversal. Queue source/test remain exactly the canonical8465 hashes
+630dd7a7… /19f7f886…; the reviewed integration and frozen provider archive are
+unchanged. Source review composes with the earlier whole-code reviews; this new
+TEST correction is recorded separately from their previously accepted bytes.
+
+After the correction is committed and immediately pushed, automatic CodeQL and
+one canonical-only workflow dispatch will verify its current source. The Mixed
+Node script suite is explicitly selected in Desktop preparation after acquisition;
+local14/14 is not reported as new remote carrier execution. Ten just-completed
+original native preparations have failed before that stage, with no established
+transport fix. No further blind native dispatch is needed to validate this
+language-preserving TEST correction; fresh native qualification remains open.
+The original a98 Resume ambiguity, Mixed continuation, packed24G90 custody and
+original M19 HOLD are not relaxed or relabeled.

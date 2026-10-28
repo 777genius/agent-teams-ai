@@ -804,6 +804,8 @@ test('Claude CURRENT notice accepts only complete reminder transport around the 
   // Verbatim transport block retained in this run's actual Member SDK request.
   const reminder =
     '<system-reminder>\n<total_tokens>15000000 tokens left</total_tokens>\n</system-reminder>';
+  const emptyReminder = '<system-reminder></system-reminder>';
+  const repeated = emptyReminder + (' ' + emptyReminder).repeat(4096);
   const cases: { label: string; content: unknown; status: number }[] = [
     {
       label: 'actual leading SDK text block',
@@ -817,6 +819,38 @@ test('Claude CURRENT notice accepts only complete reminder transport around the 
       label: 'complete leading and trailing wrappers',
       status: 200,
       content: reminder + '\n\n' + source.text + '\n\n' + reminder,
+    },
+    {
+      label: 'long complete wrapper sequences on both sides',
+      status: 200,
+      content: repeated + source.text + repeated,
+    },
+    {
+      label: 'CodeQL repeated wrappers with a nonmatching tail',
+      status: 400,
+      content: repeated + ' UNKNOWN ' + source.text,
+    },
+    {
+      label: 'ECMAScript Unicode transport whitespace',
+      status: 200,
+      content:
+        '\u00a0\u2028' +
+        emptyReminder +
+        '\ufeff' +
+        source.text +
+        '\u2029' +
+        emptyReminder +
+        '\u3000',
+    },
+    {
+      label: 'non-ECMAScript whitespace remains semantic',
+      status: 400,
+      content: '\u0085' + emptyReminder + source.text,
+    },
+    {
+      label: 'nested reminder wrapper',
+      status: 400,
+      content: '<system-reminder>' + reminder + '</system-reminder>' + source.text,
     },
     {
       label: 'unknown prefix',
