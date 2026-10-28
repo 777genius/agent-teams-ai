@@ -34,7 +34,7 @@ export function desktopShellEnvironmentProbeSource(node: string, sentinelLog: st
     desktopNodeScriptHeader(node) +
     String.raw`import {appendFileSync} from 'node:fs';
 const args=process.argv.slice(2);
-const frame=/^printf '\\0%s\\0' '(AGENT_TEAMS_SHELL_ENV_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})_START' && env -0 && printf '\\0%s\\0' '\1_END'$/u.exec(args[1]??'');
+const frame=/^command printf '\\0%s\\0' '(AGENT_TEAMS_SHELL_ENV_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})_START' && env -0 && command printf '\\0%s\\0' '\1_END'$/u.exec(args[1]??'');
 const allowed=args.length===2&&['-lic','-ic'].includes(args[0])&&(args[1]==='env -0'||frame!==null);
 appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:'shell-env',allowed,argc:args.length,flags:args.filter(x=>x.startsWith('-'))})+'\n',{mode:0o600});
 if(!allowed){process.stderr.write('TEST shell refuses execution\n');process.exit(78)}

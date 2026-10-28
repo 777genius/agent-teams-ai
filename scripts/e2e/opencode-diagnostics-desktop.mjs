@@ -368,6 +368,19 @@ if (mode === 'seed-packaged') {
         record.outcome = 'missing-from-identity-snapshot';
         continue;
       }
+      assert(
+        entry.pid === current.pid &&
+          typeof entry.birth === 'string' &&
+          Number.isFinite(Date.parse(entry.birth)) &&
+          typeof current.birth === 'string' &&
+          Number.isFinite(Date.parse(current.birth)),
+        'Invalid process birth identity; refusing signal'
+      );
+      if (entry.birth !== current.birth) {
+        // The original process retired; its PID grants no authority over its replacement.
+        record.outcome = 'pid-reused-original-retired';
+        continue;
+      }
       sameIdentity(entry, current);
       try {
         process.kill(entry.pid, 'SIGTERM');

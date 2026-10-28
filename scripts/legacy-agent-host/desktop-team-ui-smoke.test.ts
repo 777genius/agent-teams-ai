@@ -142,7 +142,7 @@ test('isolated shell fixture emits the actual framed environment and refuses she
   const script = join(root, 'shell-probe.mjs'), log = join(root, 'sentinel.ndjson');
   await writeFile(script, desktopShellEnvironmentProbeSource(process.execPath, log));
   const nonce = 'AGENT_TEAMS_SHELL_ENV_12345678-1234-1234-1234-123456789abc';
-  const command = `printf '\\0%s\\0' '${nonce}_START' && env -0 && printf '\\0%s\\0' '${nonce}_END'`;
+  const command = `command printf '\\0%s\\0' '${nonce}_START' && env -0 && command printf '\\0%s\\0' '${nonce}_END'`;
   const env = { TEST_ONLY_VALUE: 'exact fixture value' };
   const assertDump = (dump: string) => {
     assert.ok(dump.endsWith('\0'), 'the actual environment dump remains NUL terminated');
