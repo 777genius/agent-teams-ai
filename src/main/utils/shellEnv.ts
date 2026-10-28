@@ -12,6 +12,7 @@
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { spawn } from 'child_process';
+import { randomUUID } from 'crypto';
 import { accessSync, constants as fsConstants } from 'fs';
 
 const logger = createLogger('Utils:shellEnv');
@@ -176,9 +177,17 @@ function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
 /**
  * Spawn the given shell with args and resolve its exported environment.
  */
-async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.ProcessEnv> {
+async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<NodeJS.ProcessEnv> {
+  const nonce = `AGENT_TEAMS_SHELL_ENV_${randomUUID()}`;
+  const startMarker = `\0${nonce}_START\0`;
+  const endMarker = `\0${nonce}_END\0`;
+  // Only a successful env command prints the matching end marker. Startup and
+  // logout output outside the frame cannot masquerade as exported variables.
+  // `command` bypasses printf aliases/functions from the user's startup files.
+  // Quoted printable constants and && work in sh, bash, zsh and modern fish.
+  const command = `command printf '\\0%s\\0' '${nonce}_START' && env -0 && command printf '\\0%s\\0' '${nonce}_END'`;
   const envDump = await new Promise<string>((resolve, reject) => {
-    const child = spawn(shellPath, args, {
+    const child = spawn(shellPath, [mode, command], {
       env: process.env,
       stdio: ['ignore', 'pipe', 'ignore'],
       windowsHide: true,
@@ -221,17 +230,25 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
       }
       if (!settled) {
         settled = true;
-        if (chunks.length === 0 && (code !== 0 || signal)) {
+        const content = Buffer.concat(chunks).toString('utf8');
+        const startIndex = content.indexOf(startMarker);
+        const dumpStart = startIndex + startMarker.length;
+        const endIndex = startIndex < 0 ? -1 : content.indexOf(endMarker, dumpStart);
+        const dump = endIndex < 0 ? null : content.slice(dumpStart, endIndex);
+        if (dump === null || (dump.length > 0 && !dump.endsWith('\0'))) {
           reject(
             new Error(
               signal
                 ? `shell env command exited with signal ${signal}`
-                : `shell env command exited with code ${code}`
+                : code !== 0
+                  ? `shell env command exited with code ${code}`
+                  : 'shell env command did not complete its environment dump'
             )
           );
           return;
         }
-        resolve(Buffer.concat(chunks).toString('utf8'));
+        // A complete frame remains usable when a later logout hook fails.
+        resolve(dump);
       }
     });
   });
@@ -265,7 +282,7 @@ export async function resolveInteractiveShellEnv(
     const shellPath = resolveDefaultLoginShellPath();
     try {
       emitProgress(options, 'shell-env-login', 'Reading login shell environment...');
-      const loginEnv = await readShellEnv(shellPath, ['-lic', 'env -0']);
+      const loginEnv = await readShellEnv(shellPath, '-lic');
       cachedInteractiveShellEnv = loginEnv;
       clearShellEnvFailure();
       return loginEnv;
@@ -273,7 +290,7 @@ export async function resolveInteractiveShellEnv(
       const loginMessage = loginError instanceof Error ? loginError.message : String(loginError);
       try {
         emitProgress(options, 'shell-env-interactive', 'Trying interactive shell environment...');
-        const interactiveEnv = await readShellEnv(shellPath, ['-ic', 'env -0']);
+        const interactiveEnv = await readShellEnv(shellPath, '-ic');
         cachedInteractiveShellEnv = interactiveEnv;
         clearShellEnvFailure();
         return interactiveEnv;
@@ -366,6 +383,17 @@ export async function resolveInteractiveShellEnvBestEffort(
       clearTimeout(timeoutHandle);
     }
   }
+}
+
+/** Wait for an existing probe's successful cache result, or null when it fails. */
+export async function waitForPendingShellEnv(): Promise<NodeJS.ProcessEnv | null> {
+  const pending = shellEnvResolvePromise;
+  if (!pending) return cachedInteractiveShellEnv;
+  const resolved = await pending;
+  // Strict resolution returns an uncached {} on failure. Preserve a joiner's
+  // fallback in that case, without confusing a successfully cached empty env
+  // or substituting another probe's cache if discovery was cleared meanwhile.
+  return resolved === cachedInteractiveShellEnv ? resolved : null;
 }
 
 /**

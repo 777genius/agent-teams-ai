@@ -4,14 +4,17 @@ import { getDesktopMcpChildEnvironment } from '@features/external-agent-connecti
 import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
-import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv';
+import {
+  resolveTeamProviderId,
+  shouldResolveAnthropicShellEnv,
+} from '@main/services/runtime/providerRuntimeEnv';
 import {
   getAppDataPath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
 } from '@main/utils/pathDecoder';
-import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort, waitForPendingShellEnv } from '@main/utils/shellEnv';
 import {
   AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
@@ -119,6 +122,7 @@ export interface TeamProvisioningEnvBuilderPorts {
   processEnv?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   resolveInteractiveShellEnvBestEffort?: typeof resolveInteractiveShellEnvBestEffort;
+  waitForPendingShellEnv?: typeof waitForPendingShellEnv;
   getHomeDir?: typeof getHomeDir;
   getClaudeBasePath?: typeof getClaudeBasePath;
   getAutoDetectedClaudeBasePath?: typeof getAutoDetectedClaudeBasePath;
@@ -310,14 +314,23 @@ export async function buildProvisioningEnv({
 }: BuildProvisioningEnvInput): Promise<ProvisioningEnvResolution> {
   const processEnv = ports.processEnv ?? process.env;
   const platform = ports.platform ?? process.platform;
-  const shellEnv = await (
+  const discoverShellEnv = !options?.gatewayMember && shouldResolveAnthropicShellEnv(providerId);
+  let shellEnv = await (
     ports.resolveInteractiveShellEnvBestEffort ?? resolveInteractiveShellEnvBestEffort
   )({
     source: 'team-provisioning',
     timeoutMs: 1_500,
     fallbackEnv: processEnv,
-    background: false,
+    background: discoverShellEnv,
   });
+  if (discoverShellEnv) {
+    // Active launches must wait for already-running auth discovery. Injected
+    // resolvers own their pending work instead of reading the global cache.
+    const waitForShellEnv =
+      ports.waitForPendingShellEnv ??
+      (ports.resolveInteractiveShellEnvBestEffort ? undefined : waitForPendingShellEnv);
+    shellEnv = (await waitForShellEnv?.()) ?? shellEnv;
+  }
   // getHomeDir() uses Electron's app.getPath('home') which handles Unicode
   // correctly on Windows. Prefer it over process.env which may be garbled.
   const electronHome = (ports.getHomeDir ?? getHomeDir)();

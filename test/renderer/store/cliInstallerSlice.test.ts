@@ -255,6 +255,7 @@ describe('cliInstallerSlice', () => {
 
   afterEach(async () => {
     // Clear module-owned watchdog handles before replacing their timer clock.
+    useStore.setState({ cliStatus: null });
     await useStore.getState().invalidateCliStatus();
     vi.useRealTimers();
     vi.restoreAllMocks();

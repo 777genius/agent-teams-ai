@@ -86,7 +86,19 @@ vi.mock('@main/utils/directoryPresence', async (importOriginal) => ({
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: () => resolveInteractiveShellEnvMock(),
   resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvMock(),
+  waitForPendingShellEnv: () => Promise.resolve(null),
 }));
+
+vi.mock('@main/services/infrastructure/ConfigManager', () => {
+  const configManager = {
+    getConfig: () => ({
+      providerConnections: {
+        anthropic: { authMode: 'auto', compatibleEndpoint: { enabled: false } },
+      },
+    }),
+  };
+  return { ConfigManager: { getInstance: () => configManager }, configManager };
+});
 
 vi.mock('fs', () => ({
   default: {
@@ -1037,7 +1049,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       'codex',
       'opencode',
     ]);
-    expect(calls).toEqual([
+    expect([...calls].sort()).toEqual([
       'runtime status --json --provider anthropic --summary',
       'runtime status --json --provider codex --summary',
       'runtime status --json --provider opencode --summary',

@@ -422,6 +422,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       selectedModel: MODEL,
       requireExecutionProbe: true,
       skipPermissions: true,
+      freshExecutionProofRequestId: 'run-valid',
     });
     const handshakeEnvelope = traces[1].envelope as unknown as {
       body: {
