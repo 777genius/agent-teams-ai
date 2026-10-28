@@ -1,3 +1,4 @@
+import { protocols } from 'agent-teams-controller';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -103,6 +104,8 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(bob?.contextText).toContain('Codex Native visible messaging rule');
     expect(bob?.contextText).toContain('mcp__agent-teams__task_get');
     expect(bob?.contextText).not.toContain('notify your team lead via SendMessage');
+    expect(bob?.contextText).toContain(protocols.buildChatVisualizationRefreshInstruction());
+    expect(bob?.contextText).not.toContain('AVAILABLE DISPLAY LIBRARY SPEC');
     expect(alice?.contextHash).toBe(hashNativeBootstrapText(alice?.contextText ?? ''));
   });
 
@@ -291,5 +294,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(context).toContain('- developer (role: Backend engineer) [you]');
     expect(context).toContain('- reviewer (role: Security reviewer)');
     expect(context).not.toContain('removed-reviewer');
+    expect(context).toContain(protocols.buildChatVisualizationProtocolText());
+    expect(context).not.toContain('CHAT VISUALIZATION REFRESH REQUIRED');
   });
 });

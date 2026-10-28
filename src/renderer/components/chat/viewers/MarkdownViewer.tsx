@@ -27,6 +27,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { resolveFilePath } from '@renderer/store/utils/pathResolution';
+import { MAX_MARKDOWN_CHARS } from '@renderer/utils/markdownLimits';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
@@ -823,7 +824,6 @@ function createViewerMarkdownComponents(
 // - for medium/large content: disable syntax highlighting
 // - for very large content: show a raw preview instead of parsing markdown
 const DISABLE_HIGHLIGHT_CHARS = 12_000;
-const MAX_MARKDOWN_CHARS = 60_000;
 const LARGE_PREVIEW_CHARS = 30_000;
 
 // =============================================================================

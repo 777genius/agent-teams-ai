@@ -4,6 +4,7 @@ import {
   extractAgentBlockContents,
   stripAgentBlocks,
   unwrapAgentBlock,
+  wrapAgentBlock,
 } from '@shared/constants/agentBlocks';
 
 describe('agentBlocks', () => {
@@ -46,5 +47,11 @@ describe('agentBlocks', () => {
       'Do not use SendMessage.',
       'Use agent-teams_message_send.',
     ]);
+  });
+
+  it('can remove all reserved blocks without changing surrounding whitespace', () => {
+    const text = `Before\n\n\n${wrapAgentBlock('hidden')}\n\n\nAfter`;
+    expect(stripAgentBlocks(text, { normalizeWhitespace: false })).toBe('Before\n\n\n\n\nAfter');
+    expect(stripAgentBlocks(text)).toBe('Before\n\nAfter');
   });
 });

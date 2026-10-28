@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { summarizeVisualizationFences } from '../../../src/features/chat-visualizations/contracts';
@@ -10,11 +13,79 @@ import {
   guardChatVisualizationNode,
   guardChatVisualizationProgram,
 } from '../../../src/features/chat-visualizations/renderer/programGuards';
-import { chatVisualizationLibrary } from '../../../src/features/chat-visualizations/renderer/protocol';
+import {
+  chatVisualizationInstructions,
+  chatVisualizationLibrary,
+} from '../../../src/features/chat-visualizations/renderer/protocol';
 
 const finalProgram =
   'root = Stack([Card([CardHeader("Report", "Summary"), Table([Col("Name", ["Alpha", "Beta"], "string"), Col("Value", [10, 20], "number")]), BarChart(["Alpha", "Beta"], [Series("Count", [10, 20])])])]);';
 describe('real OpenUI display contract', () => {
+  it('accepts every canonical agent example through the production parser and display guards', () => {
+    const examples = chatVisualizationInstructions.match(/^root = .+$/gm) ?? [];
+    expect(examples.length).toBeGreaterThanOrEqual(2);
+    const displayTypes = new Set<string>();
+    for (const source of examples) {
+      const parsed = parseChatVisualization(source);
+      expect(parsed.meta.errors, source).toEqual([]);
+      expect(guardChatVisualizationProgram(parsed, 'closed'), source).toEqual({ status: 'ready' });
+      expect(
+        evaluateChatVisualization(createChatVisualizationParser(), source, 'closed'),
+        source
+      ).toEqual({ status: 'content', canRender: true });
+      const cards = parsed.root?.props.children as {
+        props: { children: { typeName: string }[] };
+      }[];
+      for (const card of cards) {
+        for (const content of card.props.children) displayTypes.add(content.typeName);
+      }
+    }
+    for (const type of ['Table', 'BarChart', 'LineChart', 'PieChart']) {
+      expect(displayTypes.has(type), type).toBe(true);
+    }
+  });
+  it('accepts the same full variant gallery sent by the built MCP transport test', async () => {
+    const source = await readFile(
+      resolve(__dirname, '../../../mcp-server/test/fixtures/visualization-gallery.openui'),
+      'utf8'
+    );
+    const parsed = parseChatVisualization(source);
+    expect(parsed.meta.errors).toEqual([]);
+    expect(guardChatVisualizationProgram(parsed, 'closed')).toEqual({ status: 'ready' });
+    expect(evaluateChatVisualization(createChatVisualizationParser(), source, 'closed')).toEqual({
+      status: 'content',
+      canRender: true,
+    });
+    const cards = parsed.root?.props.children as {
+      props: { children: { typeName: string; props: Record<string, unknown> }[] };
+    }[];
+    const content = cards.flatMap((card) => card.props.children);
+    const variants = (type: string) =>
+      content.filter((node) => node.typeName === type).map((node) => node.props.variant);
+    expect(variants('BarChart')).toEqual(['grouped', 'stacked']);
+    expect(variants('LineChart')).toEqual(['linear', 'natural', 'step']);
+    expect(
+      content
+        .filter((node) => node.typeName === 'PieChart')
+        .map((node) => [node.props.variant, node.props.appearance])
+    ).toEqual([
+      ['pie', 'circular'],
+      ['pie', 'semiCircular'],
+      ['donut', 'circular'],
+      ['donut', 'semiCircular'],
+    ]);
+    expect(
+      content.filter((node) => node.typeName === 'TextContent').map((node) => node.props.size)
+    ).toEqual(['small', 'default', 'large', 'small-heavy', 'large-heavy']);
+    const table = content.find((node) => node.typeName === 'Table');
+    const columns = table?.props.columns as { props: { data: unknown[] } }[];
+    expect(columns.map((column) => column.props.data)).toEqual([
+      ['Alpha', 'Beta'],
+      [10, 20],
+      [true, false],
+      [null, 'Available'],
+    ]);
+  });
   it('serializes references and parses independent title/table/chart data', () => {
     expect(Object.keys(chatVisualizationLibrary.toSpec().components)).toHaveLength(10);
     expect(() => chatVisualizationLibrary.toJSONSchema()).not.toThrow();
@@ -43,6 +114,28 @@ describe('real OpenUI display contract', () => {
         ],
       },
     });
+  });
+  it('advertises the inclusive source/message caps and enforces the source cap in JavaScript string units', () => {
+    expect(chatVisualizationInstructions).toContain(
+      "each openui-lang block's source at or below 32,000 UTF-16 code units (JavaScript string.length)"
+    );
+    expect(chatVisualizationInstructions).toContain(
+      'the complete enclosing message, including prose and fences, at or below 60,000 in the same units'
+    );
+    const prefix = 'root = Stack([Card([Table([Col("Rows", ["';
+    const suffix = '"], "string")])])]);';
+    const source = prefix + 'x'.repeat(32_000 - prefix.length - suffix.length - 2) + '😀' + suffix;
+    expect(source.length).toBe(32_000);
+    expect(guardChatVisualizationProgram(parseChatVisualization(source), 'closed')).toEqual({
+      status: 'ready',
+    });
+    expect(evaluateChatVisualization(createChatVisualizationParser(), source, 'closed')).toEqual({
+      status: 'content',
+      canRender: true,
+    });
+    expect(
+      evaluateChatVisualization(createChatVisualizationParser(), source + '\n', 'closed')
+    ).toEqual({ status: 'limit', canRender: false });
   });
   it('resolves forward references progressively on one parser', () => {
     const parser = createChatVisualizationParser();

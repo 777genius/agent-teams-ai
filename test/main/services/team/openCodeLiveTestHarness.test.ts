@@ -1,9 +1,23 @@
 import * as manifestReader from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { promises as fs } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import { createOpenCodePromptDeliveryLedgerStore } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
+import {
+  buildOpenCodeMemberInboxAlreadyReadResult,
+  buildOpenCodeMemberInboxQueuedBehindResult,
+  buildOpenCodeMemberWorkSyncReadWaitingResult,
+  createOpenCodeMemberInboxRelayResult,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeMemberInboxRelayResults';
 
-import { buildLiveTeamControlApiServices, getRuntimeTranscript } from './openCodeLiveTestHarness';
+import {
+  buildLiveTeamControlApiServices,
+  getRuntimeTranscript,
+  isOpenCodeLiveRelayComplete,
+} from './openCodeLiveTestHarness';
 
 import type { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 
@@ -45,6 +59,67 @@ function createServiceDouble(): TeamProvisioningService {
 
 describe('openCodeLiveTestHarness', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it('accepts a scoped reply committed by a background relay before the live poll', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-live-relay-test-'));
+    try {
+      const ledger = createOpenCodePromptDeliveryLedgerStore({
+        filePath: path.join(tempDir, 'ledger.json'),
+      });
+      const now = '2026-10-28T00:00:00.000Z';
+      const pending = await ledger.ensurePending({
+        teamName: 'TEST-team',
+        memberName: 'visualizer',
+        laneId: 'primary',
+        inboxMessageId: 'TEST-request',
+        inboxTimestamp: now,
+        source: 'ui-send',
+        replyRecipient: 'user',
+        payloadHash: 'TEST-payload',
+        now,
+      });
+      await ledger.applyDestinationProof({
+        id: pending.id,
+        visibleReplyInbox: 'user',
+        visibleReplyMessageId: 'TEST-reply',
+        visibleReplyCorrelation: 'relayOfMessageId',
+        semanticallySufficient: true,
+        observedAt: now,
+      });
+      const committed = await ledger.markInboxReadCommitted({
+        id: pending.id,
+        committedAt: now,
+      });
+      const replay = buildOpenCodeMemberInboxAlreadyReadResult(committed);
+      expect(replay.relayed).toBe(0);
+      expect(replay.lastDelivery).toMatchObject({
+        accepted: true,
+        responsePending: false,
+        visibleReplyMessageId: 'TEST-reply',
+        visibleReplyCorrelation: 'relayOfMessageId',
+      });
+      expect(isOpenCodeLiveRelayComplete(replay)).toBe(true);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps incomplete relay states pending while accepting a newly committed delivery', () => {
+    expect(isOpenCodeLiveRelayComplete(createOpenCodeMemberInboxRelayResult({ relayed: 1 }))).toBe(
+      true
+    );
+    for (const pending of [
+      buildOpenCodeMemberInboxAlreadyReadResult(),
+      buildOpenCodeMemberInboxQueuedBehindResult({
+        relayKey: 'TEST-team/visualizer',
+        messageId: 'TEST-request',
+      }),
+      buildOpenCodeMemberWorkSyncReadWaitingResult('TEST-request'),
+      createOpenCodeMemberInboxRelayResult({ failed: 1 }),
+    ]) {
+      expect(isOpenCodeLiveRelayComplete(pending)).toBe(false);
+    }
+  });
 
   it('wires runtime-control callbacks into the live team control API services', () => {
     const svc = createServiceDouble();

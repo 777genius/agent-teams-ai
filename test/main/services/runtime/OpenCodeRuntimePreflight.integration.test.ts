@@ -58,6 +58,7 @@ vi.mock('@features/codex-runtime-installer/main', () => ({
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock(),
 }));
 
+import mcpPackage from '../../../../mcp-server/package.json';
 import { resolveVerifiedOpenCodeRuntimeBinaryPath } from '../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '../../../../src/main/services/runtime/openCodeBridgeRuntimeEnv';
 import { buildProviderAwareCliEnv } from '../../../../src/main/services/runtime/providerAwareCliEnv';
@@ -271,7 +272,14 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
     expect((await stat(entry!)).size).toBeGreaterThan(0);
     expect(
       JSON.parse(await readFile(path.join(path.dirname(entry!), 'package.json'), 'utf8'))
-    ).toEqual({ type: 'module' });
+    ).toEqual({
+      name: mcpPackage.name,
+      version: mcpPackage.version,
+      private: true,
+      type: 'module',
+      main: 'index.js',
+      engines: mcpPackage.engines,
+    });
     expect(
       JSON.parse(providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON ?? 'null')
     ).toEqual([entry]);

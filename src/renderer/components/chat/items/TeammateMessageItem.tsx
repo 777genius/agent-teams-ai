@@ -14,9 +14,9 @@ import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { detectOperationalNoise } from '@renderer/utils/agentMessageFormatting';
 import { formatTokensCompact } from '@renderer/utils/formatters';
+import { stripAgentBlocksForMarkdown } from '@renderer/utils/markdownCodeRanges';
 import { buildMemberColorMap, resolveMemberIdentityColor } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { format } from 'date-fns';
 import { ChevronRight, CornerDownLeft, MessageSquare, RefreshCw } from 'lucide-react';
@@ -129,7 +129,7 @@ export const TeammateMessageItem = memo(
     );
 
     const displayContent = useMemo(() => {
-      const stripped = stripAgentBlocks(teammateMessage.content);
+      const stripped = stripAgentBlocksForMarkdown(teammateMessage.content);
       return linkifyAllMentionsInMarkdown(stripped, memberColorMap, teamNames);
     }, [teammateMessage.content, memberColorMap, teamNames]);
 
