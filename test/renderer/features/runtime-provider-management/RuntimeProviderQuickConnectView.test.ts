@@ -431,15 +431,14 @@ describe('RuntimeProviderQuickConnectView', () => {
   });
 
   it.each([
-    { name: 'a ready V2 runtime', version: '2.0.32', gate: 'ready' as const, shown: true },
-    { name: 'a V1 runtime', version: '1.19.4', gate: 'ready' as const, shown: false },
+    { name: 'a ready V2 runtime', version: '2.2.0', gate: 'ready' as const },
+    { name: 'a V1 runtime', version: '1.19.4', gate: 'ready' as const },
     {
       name: 'a V2 runtime that is not ready',
       version: '2.0.32',
       gate: 'error' as const,
-      shown: false,
     },
-  ])('shows the V2 launch notice only for $name', async ({ version, gate, shown }) => {
+  ])('does not show a V2 launch warning for $name', async ({ version, gate }) => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnectView, {
@@ -462,9 +461,8 @@ describe('RuntimeProviderQuickConnectView', () => {
       );
     });
 
-    expect(host.querySelector('[data-testid="provider-quick-opencode-v2-launch"]') !== null).toBe(
-      shown
-    );
+    expect(host.querySelector('[data-testid="provider-quick-opencode-v2-launch"]')).toBeNull();
+    expect(host.textContent).not.toContain('cliStatus.quickConnect.openCodeV2Launch');
   });
 
   it('keeps provider setup disabled until OpenCode is installed', async () => {
