@@ -5,6 +5,8 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/qualify-process-normal-sdk.ts',
   'scripts/legacy-agent-host/run-process-qualification.ts',
   'packages/legacy-agent-host/tests/fixtures/native-codex-team/responses-ui.ts',
+  'packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-input-capture.ts',
   'packages/legacy-agent-host/tests/codex-responses-ui.test.ts',
   'src/renderer/store/team/taskDetailReadAuthority.ts',
   'src/renderer/components/ui/MemberSelect.tsx',

@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
+import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
 import { codexRuntimeEndpointHash, runDesktopResumeUiSmoke } from './desktop-resume-ui-smoke.ts';
@@ -283,11 +284,17 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const hostPid = hostRows[0]!.pid;
   const children = processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
+  if (codex) proof.codeModeHost = { status: 'capture-attempted' };
+  const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs) : undefined;
+  if (helper) proof.codeModeHost = helper;
   if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture);
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');
-  await poll(capturedSessions, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
-  await poll(async () => processTable(), rows => children.every(child => !rows.some(row => row.pid === child.pid)), 'captured native children physically absent');
+  await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
+  await poll(async () => {
+    const rows = processTable(), observed = helper && observeCodexCodeModeProcess(helper);
+    return { rows, helperAbsent: !observed || observed.state === 'absent' };
+  }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'captured native children and original helper physically absent');
   proof.stop = { nativeChildren: children, releasedBeforeQuit: true };
   if (options.restartAfterStop) {
     assert.equal(evidence.mode, 'native-resume-ui', 'cold boundary belongs only to explicit Resume proof');

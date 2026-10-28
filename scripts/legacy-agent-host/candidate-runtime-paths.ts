@@ -111,6 +111,10 @@ export async function readCandidateRuntimePaths(
   )
     throw new Error('Candidate provider artifact census unavailable');
   const natives = manifest.nativeArtifacts;
+  if (natives?.codex?.path !== 'native/codex/codex' ||
+      natives.codex.codeModeHost?.path !== 'native/codex/codex-code-mode-host' ||
+      !hash(natives.codex.codeModeHost.sha256))
+    throw new Error('Candidate Codex code-mode census unavailable');
   if (
     !natives ||
     !hash(natives.captureSha256) ||
@@ -120,7 +124,7 @@ export async function readCandidateRuntimePaths(
   )
     throw new Error('Candidate native census unavailable');
   for (const [directory, expected] of [
-    [natives.codex.path.slice(0, natives.codex.path.lastIndexOf('/')), ['codex']],
+    [natives.codex.path.slice(0, natives.codex.path.lastIndexOf('/')), ['codex', 'codex-code-mode-host']],
     [natives.opencode.path.slice(0, natives.opencode.path.lastIndexOf('/')), ['opencode']],
     [natives.processCustody.directory, ['manifest.json', 'registered-process.node']],
   ] as const) {
@@ -134,6 +138,7 @@ export async function readCandidateRuntimePaths(
     )
       throw new Error('Candidate native directory census mismatch');
   }
+  await verified(natives.codex.codeModeHost.path, natives.codex.codeModeHost.sha256, true);
   const processCustody = {
     directory: await path(natives.processCustody.directory),
     manifestSha256: natives.processCustody.manifestSha256,

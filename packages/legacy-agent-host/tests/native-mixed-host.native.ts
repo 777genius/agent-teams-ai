@@ -28,6 +28,7 @@ import {
   startOpenCodeModel,
 } from './fixtures/native-opencode-team/model.ts';
 import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
+import { captureCodexNativeInputs } from './fixtures/codex-native-closure.ts';
 import { FileCheckpointStorage } from '../dist/adapters/runtime/FileCheckpointStorage.js';
 import { readdir } from 'node:fs/promises';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
@@ -94,9 +95,10 @@ test(
     const codexPath = process.env.LEGACY_NATIVE_CODEX_PATH;
     const openCodePath = process.env.LEGACY_NATIVE_OPENCODE_PATH;
     assert.ok(codexPath && openCodePath);
+    const codexNativeInputs = await captureCodexNativeInputs(await realpath(codexPath));
     const executables = {
       claude: { path: claudePath, sha256: await fileHash(claudePath) },
-      codex: { path: await realpath(codexPath), sha256: await fileHash(codexPath) },
+      codex: { ...codexNativeInputs[0]!, codeModeHost: codexNativeInputs[1]! },
       opencode: { path: await realpath(openCodePath), sha256: await fileHash(openCodePath) },
     };
     assert.equal(
@@ -410,6 +412,8 @@ stream_max_retries = 0
       return digest(String(value));
     };
     let crossProof: Awaited<ReturnType<typeof runNativeCrossTeamProof>> | undefined;
+    let codexNativeInputsAfterCleanup: typeof codexNativeInputs | undefined;
+    let nativeInputFreezeFailure: string | undefined;
     let launch: Record<string, unknown> = {},
       passed = false,
       cleanupConfirmed = true;
@@ -923,11 +927,17 @@ stream_max_retries = 0
         }
       } finally {
         await Promise.allSettled(modelRows.map((model) => model.close()));
+        try {
+          codexNativeInputsAfterCleanup = await captureCodexNativeInputs(executables.codex.path);
+          assert.deepEqual(codexNativeInputsAfterCleanup, codexNativeInputs, 'original Codex native pair remains frozen after H3 cleanup');
+        } catch (error) {
+          nativeInputFreezeFailure = error instanceof Error ? error.message.slice(0, 1000) : 'native pair freeze unavailable';
+        }
         await writeFile(
           join(root, 'receipt.json'),
           JSON.stringify(
             {
-              status: passed ? 'PASS' : 'INCOMPLETE',
+              status: passed && !nativeInputFreezeFailure ? 'PASS' : 'INCOMPLETE',
               root,
               artifacts: {
                 source,
@@ -940,6 +950,8 @@ stream_max_retries = 0
               launch,
               hosts,
               cleanupConfirmed,
+              codexNativeInputsAfterCleanup,
+              ...(nativeInputFreezeFailure ? { nativeInputFreezeFailure } : {}),
               exerciseRestore,
               exercisePeers,
               exerciseCrossTeam,
@@ -973,5 +985,6 @@ stream_max_retries = 0
         );
       }
     }
+    assert.equal(nativeInputFreezeFailure, undefined, 'original H3 native inputs changed; inspect retained receipt');
   }
 );

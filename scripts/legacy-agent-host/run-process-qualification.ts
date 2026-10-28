@@ -10,6 +10,7 @@ import { buildProcessNativeArtifact } from '../../packages/legacy-agent-host/scr
 import { treeHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { captureCandidateElectron, readCapturedCandidateElectron } from './candidate-electron.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
+import { captureDesktopCodexNativeInputs } from './desktop-source-freeze.ts';
 import { stageCandidate } from './stage-candidate.ts';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
@@ -101,6 +102,10 @@ export async function runProcessQualification(inputsDirectory: string) {
     assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk'); assert.equal(sdkPackage.version, '0.3.305');
     const claude = await pin(await realpath(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude')));
     const codex = await pin(await realpath(join(inputsDirectory, 'codex/codex-aarch64-apple-darwin')));
+    const codeModeHost = (await captureDesktopCodexNativeInputs(codex.path))[1]!;
+    const codeModeHostArchive = await pin(join(inputsDirectory, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz'));
+    assert.equal(codeModeHostArchive.sha256, '9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2');
+    proof.codexNativeInputs = { executable: codex, codeModeHost, archive: codeModeHostArchive };
     const opencode = await pin(await realpath(join(inputsDirectory, 'opencode/opencode')));
     for (const [actual, expected] of [[claude.sha256, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'],
       [codex.sha256, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'],
@@ -156,7 +161,7 @@ export async function runProcessQualification(inputsDirectory: string) {
       { flag: 'wx', mode: 0o600 });
     const nativeCapture = join(root, 'candidate-native-capture.json');
     await writeFile(nativeCapture, JSON.stringify({ schemaVersion: 1, platform: 'darwin-arm64',
-      codex: { ...codex, protocolRevision: '0.162.0' }, opencode: { ...opencode, protocolRevision: '1.19.4' },
+      codex: { ...codex, protocolRevision: '0.162.0', codeModeHost }, opencode: { ...opencode, protocolRevision: '1.19.4' },
       processCustody: selection }), { flag: 'wx', mode: 0o600 });
     const electronRoot = dirname(await realpath(require.resolve('electron/package.json')));
     const electronDist = await realpath(join(electronRoot, 'dist'));
@@ -167,7 +172,7 @@ export async function runProcessQualification(inputsDirectory: string) {
       terminalLockPath, terminalArchive, join(repository, 'scripts/stage-terminal-platform-runtime.mjs'),
       compiler.path, sdkSettings.path, source.path, actorSource, actor, headersArchive, ...headerNames.map(name => join(headersRoot, name)),
       normalCapture, nativeCapture, join(artifact.directory, 'manifest.json'), join(artifact.directory, 'registered-process.node'), copiedSource,
-      claude.path, codex.path, opencode.path, corepack.entry.path, corepack.package.path, corepack.library.path,
+      claude.path, codex.path, codeModeHost.path, codeModeHostArchive.path, opencode.path, corepack.entry.path, corepack.package.path, corepack.library.path,
       join(electronRoot, 'package.json'), join(electronDist, 'Electron.app/Contents/MacOS/Electron'), builderCli])];
     const treeInputs = [[join(repository, 'packages/legacy-agent-host/src'), '.ts'],
       [join(repository, 'packages/legacy-agent-host/dist'), '.js'], [join(repository, 'agent-teams-controller/src'), '.js'],

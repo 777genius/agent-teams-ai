@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
+import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
@@ -228,6 +229,9 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   await revealDesktopReply(cdp, firstReply, { assertOwnedRenderer: options.assertOwnedRenderer, step });
   const hosts = processTable().filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hosts.length, 1); const children = processTable().filter(row => row.ppid === hosts[0]!.pid); assert.ok(children.length >= 1);
+  if (codex) proof.codeModeHost = { status: 'capture-attempted' };
+  const helper = codex ? await captureCodexCodeModeProcess(hosts[0]!.pid, codex.nativeInputs) : undefined;
+  if (helper) proof.codeModeHost = helper;
   const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })); assert.equal(typeof screenshot.data, 'string');
   const screenshotPath = join(fixture.root, 'ui-original-resume-native.png'); await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), { mode: 0o600 });
   const stopObservations: Record<string, unknown>[] = [];
@@ -250,8 +254,11 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   proof.phase = 'second-stop-attempted';
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop after Resume');
   await ui.click('button[aria-label="Stop"]', 'second original Stop exactly once', 'Stop');
-  const stopped = await poll(async () => { const values = await sessions(); observeStop(values); return values; }, values => values.length === 2 && values.every(row => row.phase === 'closed' && row.custody === 'released'), 'source and resumed custody released before Quit');
-  await poll(async () => processTable(), values => children.every(child => !values.some(row => row.pid === child.pid)), 'resumed native children physically absent before Quit');
+  const stopped = await poll(async () => { const values = await sessions(); if (helper) observeCodexCodeModeProcess(helper); observeStop(values); return values; }, values => values.length === 2 && values.every(row => row.phase === 'closed' && row.custody === 'released'), 'source and resumed custody released before Quit');
+  await poll(async () => {
+    const rows = processTable(), observed = helper && observeCodexCodeModeProcess(helper);
+    return { rows, helperAbsent: !observed || observed.state === 'absent' };
+  }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'resumed native children and original helper physically absent before Quit');
   assert.deepEqual(stopped.find(row => record(row.binding).generation === sourceBinding.generation), source);
   assert.deepEqual((await allSessions()).filter(row => record(row.binding).runId !== firstCapture.launchId), staticPredecessors);
   const finalSession = stopped.find(row => record(row.binding).generation === selectedBinding.generation)!;

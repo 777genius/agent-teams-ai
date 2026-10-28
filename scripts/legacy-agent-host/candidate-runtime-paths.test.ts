@@ -10,6 +10,39 @@ import { captureCandidateElectron, readCapturedCandidateElectron } from './candi
 import { prepareDesktopSkillsFixture } from './desktop-skills-fixture.ts';
 import { readCandidateRuntimePaths } from './candidate-runtime-paths.ts';
 
+test('candidate reader refuses old or rebound code-mode metadata before native bridge admission', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST candidate helper census ')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const native = 'host/packages/native/claude';
+  await mkdir(join(root, 'host/packages/native'), { recursive: true });
+  await writeFile(join(root, native), 'TEST-claude', { mode: 0o755 });
+  const manifest = {
+    schemaVersion: 2, platform: `${process.platform}-${process.arch}`,
+    node: { version: '24.21.0', binarySha256: 'a'.repeat(64) }, hostEntrySha256: 'b'.repeat(64),
+    packages: [
+      { name: '@anthropic-ai/claude-agent-sdk', version: 'TEST-1', path: 'packages/sdk', files: [], dependencies: {} },
+      { name: `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`, version: 'TEST-1', path: 'packages/native',
+        files: [{ path: 'claude', executable: true, sha256: await candidateDigest(join(root, native)) }], dependencies: {} },
+    ],
+    artifacts: ['@agent-teams/provider-implementations', '@agent-teams/provider-session-contracts'].map(name => ({ name, sha256: 'c'.repeat(64) })),
+    nativeArtifacts: {
+      captureSha256: 'd'.repeat(64),
+      codex: { path: 'native/codex/codex', sha256: 'e'.repeat(64), protocolRevision: '0.162.0',
+        codeModeHost: { path: 'native/codex/foreign-helper', sha256: 'f'.repeat(64) } },
+      opencode: { path: 'native/opencode/opencode', sha256: '0'.repeat(64), protocolRevision: '1.19.4' },
+      processCustody: { directory: 'intentionally-unavailable-bridge', library: 'registered-process.node',
+        manifestSha256: '1'.repeat(64), binarySha256: '2'.repeat(64) },
+    },
+  };
+  const check = async (value: unknown) => {
+    const path = join(root, 'candidate.json'); await writeFile(path, JSON.stringify(value));
+    await assert.rejects(readCandidateRuntimePaths(root, await candidateDigest(path)), /Codex code-mode/);
+  };
+  await check(manifest);
+  const { codeModeHost: _missing, ...mainOnly } = manifest.nativeArtifacts.codex;
+  await check({ ...manifest, nativeArtifacts: { ...manifest.nativeArtifacts, codex: mainOnly } });
+});
+
 test(
   'packed paths with spaces come only from captured resources; private runtime dirs remain caller-owned',
   { skip: process.platform !== 'darwin' || process.arch !== 'arm64' },
@@ -26,6 +59,7 @@ test(
       ['native/codex/codex', 'TEST-codex', true],
       ['native/opencode/opencode', 'TEST-opencode', true],
       ['process-custody/registered-process.node', 'TEST-M19-native', false],
+      ['native/codex/codex-code-mode-host', 'TEST-code-mode-host', true],
     ] as const;
     for (const [name, bytes, executable] of files) {
       const target = join(resources, name);
@@ -80,6 +114,7 @@ test(
           path: files[4][0],
           sha256: await candidateDigest(join(resources, files[4][0])),
           protocolRevision: '0.162.0',
+          codeModeHost: { path: files[7][0], sha256: await candidateDigest(join(resources, files[7][0])) },
         },
         opencode: {
           path: files[5][0],
@@ -224,7 +259,7 @@ test(
     assert.equal(selected.codexExecutable, join(resources, files[4][0]));
     assert.equal(selected.openCodeExecutable, join(resources, files[5][0]));
     assert.equal(selected.processCustody.directory, join(resources, 'process-custody'));
-    for (const item of [files[4], files[5], files[6]]) {
+    for (const item of [files[4], files[5], files[6], files[7]]) {
       await writeFile(join(resources, item[0]), 'CHANGED-native-bytes');
       await assert.rejects(readCandidateRuntimePaths(resources, digest), /file mismatch/);
       await writeFile(join(resources, item[0]), item[1]);

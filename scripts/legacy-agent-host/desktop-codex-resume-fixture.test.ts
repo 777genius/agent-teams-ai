@@ -1,16 +1,72 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { checkpoint, digest, jsonDigest, originalHistoryMarker } from './desktop-resume-records.ts';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import { seedDesktopCodexResumeOwner } from './desktop-codex-resume-fixture.ts';
+import { verifyDesktopNativeFreeze } from './desktop-source-freeze.ts';
+import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 
 const thread = '019a1234-5678-7000-8000-123456789abc';
 const callIds = Array.from({ length: 7 }, (_, index) => `native_CODEX_TEAM_ONE_${index}`);
+
+test('original CodeMode helper witness binds parent, executable and birth without adopting a reused PID', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST codex helper identity ')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const nativeInputs = await Promise.all(['codex', 'codex-code-mode-host'].map(async name => {
+    const path = join(root, name), bytes = `TEST-${name}; never executed`;
+    await writeFile(path, bytes, { mode: 0o755 });
+    return { path, sha256: digest(bytes) };
+  }));
+  const codex = { pid: 300, parentPid: 200, groupId: 300, birth: 'Wed Oct 28 16:00:00 2026', command: nativeInputs[0]!.path };
+  const helper = { pid: 301, parentPid: 300, groupId: 301, birth: 'Wed Oct 28 16:00:01 2026', command: nativeInputs[1]!.path };
+  const witness = await captureCodexCodeModeProcess(200, nativeInputs, () => [codex, helper]);
+  assert.deepEqual(witness.helper, helper); assert.deepEqual(witness.codex, codex);
+  assert.equal(observeCodexCodeModeProcess(witness, () => [codex, helper]).state, 'same-live');
+  assert.equal(observeCodexCodeModeProcess(witness, () => [codex]).state, 'absent');
+  for (const changed of [{ ...helper, birth: 'Wed Oct 28 16:01:01 2026' },
+    { ...helper, parentPid: 1 }, { ...helper, command: nativeInputs[0]!.path }, { ...helper, groupId: 300 }])
+    assert.equal(observeCodexCodeModeProcess(witness, () => [codex, changed]).state, 'identity-mismatch');
+  assert.deepEqual(witness.firstIdentityMismatch, { ...helper, birth: 'Wed Oct 28 16:01:01 2026' });
+  assert.equal(observeCodexCodeModeProcess(witness, () => [codex]).state, 'absent');
+  assert.deepEqual(witness.helper, helper, 'original saved identity is never adopted or replaced');
+  assert.deepEqual(witness.firstIdentityMismatch, { ...helper, birth: 'Wed Oct 28 16:01:01 2026' }, 'absence retains the first drift fact');
+  await assert.rejects(captureCodexCodeModeProcess(200, nativeInputs, () => [codex]), /helper must be observed/);
+  await assert.rejects(captureCodexCodeModeProcess(200, nativeInputs, () => [codex, { ...helper, parentPid: 999 }]), /helper must be observed/);
+  await assert.rejects(captureCodexCodeModeProcess(200, nativeInputs, () => [codex, helper, { ...helper, pid: 302 }]), /helper must be observed/);
+});
+
+test('external native pair freeze retains a failed flow and refuses changed or missing companions after cleanup', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST codex native freeze ')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const before = await Promise.all(['codex', 'codex-code-mode-host'].map(async name => {
+    const path = join(root, name), bytes = `TEST-${name}; never executed`;
+    await writeFile(path, bytes, { mode: 0o755 });
+    return { path, sha256: digest(bytes) };
+  }));
+  const originalFailure = 'TEST original business failure';
+  const good: Record<string, unknown> = { status: 'INCOMPLETE', originalFailure };
+  await verifyDesktopNativeFreeze(before, good);
+  assert.deepEqual(good.selectedNativeInputHashesAfterCleanup, before);
+  assert.equal(good.nativeInputFreezeFailure, undefined);
+  for (const change of [
+    () => writeFile(before[1]!.path, 'CHANGED helper'),
+    () => rm(before[1]!.path),
+    () => symlink(before[0]!.path, before[1]!.path),
+    async () => { await rm(before[1]!.path); await writeFile(before[1]!.path, 'TEST-codex-code-mode-host; never executed'); await chmod(before[1]!.path, 0o644); },
+  ]) {
+    await change();
+    const failed: Record<string, unknown> = { status: 'PASS', originalFailure };
+    await verifyDesktopNativeFreeze(before, failed);
+    assert.equal(failed.status, 'INCOMPLETE');
+    assert.equal(failed.originalFailure, originalFailure);
+    assert.equal(typeof failed.nativeInputFreezeFailure, 'string');
+  }
+});
 
 test('Codex sidebar seed persists final settings once without a roster or delivery transition', async t => {
   const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-codex-seed-'));

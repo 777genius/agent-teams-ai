@@ -83,43 +83,65 @@ GitHub auth восстановлена; прежний blocked/unselected handof
 gap, packed P7/M17 и M19 HOLD этой отдельной Codex-проверкой не закрываются.
 Исторические CI/review ниже сохраняют собственные точные source bytes и границы.
 
-**Свежий canonical срез — exact `624a3ec`:**
-[CI40694908161](https://github.com/777genius/agent-teams-ai/actions/runs/40694908161)
-прошёл Full qualification: 24 011 root PASS / 0 FAIL / 98 SKIP; controller423,
-MCP74, Host800 и остальные отдельные gates прошли. Validate включал workspace
-types и build. Этот результат закрывает local resource-limited type gap для624a;
-последующие исправления Launch, product lookup и TEST harness требуют final CI.
+**Последний полностью проверенный canonical срез — exact `8471c25`:**
+[CI40716971821](https://github.com/777genius/agent-teams-ai/actions/runs/40716971821)
+прошёл Full qualification: 24 034 root PASS / 0 FAIL / 98 SKIP; отдельно прошли
+Host813, controller423, MCP74, scripts179, feedback119, release9, MCP E2E24 и
+policy10. Validate включал workspace types и build; все три lint jobs прошли.
+Общий run завершился failure из-за трёх Source UI сценариев; canonical PASS
+не означает принятие всего native matrix. Эти результаты относятся только к8471.
 
-**Последний завершённый Desktop11 — exact `27f60f3`:**
-[run40686433576](https://github.com/777genius/agent-teams-ai/actions/runs/40686433576)
-имеет семь scoped PASS и четыре FAIL. Mixed Create/Launch остановился на Node
-acquisition; Taskboard сохранил один `(image)` comment; Claude Resume остановился
-до Launch readiness; Codex — на первом TEST inference protocol mismatch до Resume.
-Ни один failed input не переигрывается. Новые source/TEST corrections приняты
-независимым ревью; [checkpoint](progress/checkpoint-2026-10-27.md) сохраняет точные
-refs, gates и границы. Fresh Desktop/managed-MCP Resume и all-three native restore
-с OpenCode1.19.4 остаются обязательными.
-Позднее исправлен воспроизведённый product defect: strict retained-delivery schema
-не принимала поддерживаемые attachment refs, блокируя Trash/discard rich messages.
-Matching RED/GREEN2/2 и affected32/32 прошли; свежий final CI ещё требуется.
+**CodeQL на exact `8471c25` прошёл оба анализа:**
+[run40717011954](https://github.com/777genius/agent-teams-ai/actions/runs/40717011954)
+подтвердил исправление591/592 и отсутствие branch-only findings. Оставшиеся187
+open instances совпадают с main baseline; это не заявление об отсутствии alerts
+во всём репозитории. Подавления/dismissals для получения результата не делались.
 
-**Node acquisition и cache seed уже подтверждены на macOS24G624:** diagnostic-only
-40694908161 получил точные official bytes и сохранил cache с полным locked SHA;
-exact452b run40706671986 также подтвердил cache HIT и проверку locked SHA.
-Этот source run отменён после четырёх prerequisite fixture failures до UI;
-оставшиеся семь Desktop rows не начали steps, Full PASS не получен. Принятое
-пятистрочное дополнение TEST mock прошло тот же complete prerequisite30/30.
-Это unqualified readonly kernel observation
-с одним finite child, а не SDK/P7 qualification. Предыдущие acquisition failures
-сохранены как исторические и не объявлены native failures.
+**Последний завершённый Source Desktop11 — exact `8471c25`: восемь scoped PASS,
+три INCOMPLETE.** Mixed завершил исходные native inputs/notices и один group
+Create, затем остановился на TEST assertion порядка membership; group delivery
+и Restart не квалифицированы. Taskboard завершил image add, затем остановился
+на неподходящей pending-only проверке уже in-progress comment stage до focus/
+typing/Comment. Codex остановился из-за отсутствующего native Code Mode sidecar
+(ENOENT), без TWO; последующий all-three native restore H3 был SKIPPED.
+Прежний Claude Resume gap закрыт scoped PASS этого8471, но current-head/native
+приёмка целиком ещё не завершена. Исходные failed inputs не переигрываются.
 
-[Prospective process candidate](progress/checkpoint-2026-10-27.md#prospective-process-artifact-tuple-binding)
-связывает selected manifest с actual native build для24G90/24G624. Historical90
-records читаются без переписывания, но не дают control на624. Normal SDK actor и отдельный default-false manual P7 workflow подготовлены;
-он связывает genuine artifact, два native qualifier processes и последующий
-unsigned packed Launch через исходные controls. Actual ancestry, обычный SDK
-registration/Stop и packed Launch ещё нужны до P7/support claim. Первоначальный M19 root911 HOLD остаётся явно
-неразрешённым. Draft, Stage1-only и OpenCodeV1-only scope сохранены.
+Mixed TEST correction опубликован в `709f123`, Taskboard TEST correction —
+в `d61e2a0`; matching RED/GREEN и полные prerequisite31/31 и32/32 прошли.
+Свежего UI результата для этих исправлений пока нет. Rich retained-delivery
+product correction вошёл в8471 и его canonical gate. Точные source refs,
+receipts, локальные gates и ограничения сохранены в
+[checkpoint](progress/checkpoint-2026-10-27.md).
+
+**P7 принят в точной исходной границе `8471c25` / macOS24G624 / arm64:**
+независимый raw audit подтвердил genuine kernel ancestry, обычный SDK process
+registration/Stop и unsigned packed Launch/Stop/public-close через существующий
+Claude Opus4.6/medium путь. Normal SDK Host завершился0/null; packed app —0/null,
+её process group пуст, отсутствие captured Host наблюдалось. Artifact stream и
+file census проверены; отдельного независимого пересчёта renderer/terminal
+concatenated tree hashes после stream не заявлено. Packed Codex Code Mode этим
+Claude-only сценарием не квалифицирован. Sidecar closure меняет native candidate
+и требует свежей affected P7 проверки; старый PASS на новый HEAD не переносится.
+
+Node acquisition/cache MISS→SAVE и последующий locked-SHA HIT уже подтверждены
+на24G624. Это отдельные setup/diagnostic proofs; они не заменяют SDK/native/UI
+приёмку. [Process candidate binding](progress/checkpoint-2026-10-27.md#prospective-process-artifact-tuple-binding)
+сохраняет exact selected-manifest/native-build equality для24G90/24G624;
+historical90 records не переписываются и не дают control на624.
+
+Reviewed official Codex sidecar closure подготовлен: exact pinned companion
+сохраняется рядом с native Codex и проходит candidate capture/stage/reader census;
+Source отдельно наблюдает исходный own-PGID helper до Stop и его отсутствие,
+без новых действий/signals. H3/Mixed direct MCP проверяют только native payload,
+не заявляя live Code Mode witness. Локально43 PASS /0 FAIL /2 Darwin-only SKIP,
+strict types/lint/workflow syntax прошли; фактический native PASS из этого не следует.
+Осталось получить fresh canonical, Source Desktop11 (включая managed-MCP Codex
+Resume/TWO и all-three H3), affected P7 и CodeQL на новой композиции. Draft candidate-synthetic scope,
+Stage1-only и OpenCodeV1-only сохранены. Real auth, другие native OS tuples,
+release/default activation остаются unqualified/отдельным решением.
+**Исходный M19 root911 остаётся immutable HOLD: не adopted, не replayed и не closed.**
+Исторические проценты за23октября и прежние receipt boundaries не пересчитаны.
 
 **Исторические snapshots ниже сохраняют собственные source boundaries.**
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с

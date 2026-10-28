@@ -9,6 +9,7 @@ import { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist
 import { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import { desktopBackendEnvironment, digest, fileDigest } from './desktop-backend-fixture.ts';
 import { record } from './desktop-resume-records.ts';
+import { captureDesktopCodexNativeInputs } from './desktop-source-freeze.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { CodexMemberProfile } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
@@ -32,6 +33,7 @@ export async function prepareDesktopCodexResumeFixture(
   assert.equal(await fileDigest(base.descriptorPath), base.pins.descriptorSha256);
   assert.equal(await realpath(options.executable), options.executable);
   assert.equal(await fileDigest(options.executable), CODEX_SHA256);
+  const nativeInputs = await captureDesktopCodexNativeInputs(options.executable);
   const url = new URL(options.modelUrl);
   assert.equal(url.protocol, 'http:'); assert.equal(url.hostname, '127.0.0.1');
   assert.ok(url.port); assert.equal(url.origin, options.modelUrl);
@@ -131,9 +133,10 @@ stream_max_retries = 0
   const seeded = await seedDesktopCodexResumeOwner(base.root, profile);
   return { ...base, uiSeed: seeded.uiSeed,
     codexResume: { modelId: selected.id, model: selected.model, displayName: selected.displayName,
-      effort: 'medium' as const, catalog, savedSettings: seeded.savedSettings },
+      effort: 'medium' as const, catalog, savedSettings: seeded.savedSettings, nativeInputs },
     pins: { ...base.pins, profileSha256: digest(profileBytes), descriptorSha256: digest(descriptorBytes),
-      codexConfigSha256: digest(finalConfigBytes), codexExecutableSha256: CODEX_SHA256 },
+      codexConfigSha256: digest(finalConfigBytes), codexExecutableSha256: CODEX_SHA256,
+      codexCodeModeHostSha256: nativeInputs[1]!.sha256 },
     appEnvironment: desktopBackendEnvironment(base.root, base.node, base.descriptorPath, digest(descriptorBytes)),
   };
 }

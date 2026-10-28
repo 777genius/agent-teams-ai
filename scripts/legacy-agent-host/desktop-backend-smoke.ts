@@ -24,7 +24,7 @@ import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
-import { verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
+import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
 import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
@@ -119,6 +119,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
+  const nativeInputs = mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
@@ -195,17 +196,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.nativeProcessReadbackSource = processReadbackSource;
     evidence.scope = 'Separate original M19 cold UI continuation only: no model server, native allocation, input, launch or crash replay; original pre-app INCOMPLETE/HOLD retained';
   }
-  const frozenSources = desktopProofSources;
-  const selectedSourceHashes = await Promise.all(
-    frozenSources.map(async (path) => ({ path, sha256: await fileDigest(join(repo, path)) }))
-  );
+  const selectedSourceHashes = await captureDesktopSourceHashes(repo, desktopProofSources);
   evidence.selectedSourceHashesBeforeApp = selectedSourceHashes;
+  if (nativeInputs.length) evidence.selectedNativeInputHashesBeforeApp = nativeInputs;
   const artifacts = desktopReadbackArtifacts({ readbackMode, nativeReviewContinuationMode, nativeReviewReadbackMode, reviewReadbackMode });
   const receiptPath = join(fixture.root, artifacts.receipt);
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
   await qualifyPreparedProcessRegistration({ enabled: processUiMode && !processReadbackMode, fixture, model: processModel, evidence, receiptPath,
-    verifySourceFreeze: () => verifyDesktopSourceFreeze(repo, frozenSources, selectedSourceHashes, evidence) });
+    verifySourceFreeze: () => verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence) });
   const log = createWriteStream(
     join(fixture.root, artifacts.appLog),
     { mode: 0o600 }
@@ -649,7 +648,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     throw error;
   } finally {
     evidence.quitRequested = quitRequested;
-    await verifyDesktopSourceFreeze(repo, frozenSources, selectedSourceHashes, evidence);
+    await verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence);
     if (cdp) await bounded(cdp.close(), 3000, 'disconnect test renderer').catch(() => undefined);
     let remaining: ProcessIdentity[] | null = null;
     let cleanupFailure: string | undefined;
@@ -776,6 +775,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     }
+    await verifyDesktopNativeFreeze(nativeInputs, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
@@ -786,7 +786,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   }
   if (mode === 'task-board-cross-team-ui') {
     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');
-    return { fixture, repo, invocation, cdpLibrary, evidence, receiptPath, frozenSources, selectedSourceHashes };
+    return { fixture, repo, invocation, cdpLibrary, evidence, receiptPath, frozenSources: desktopProofSources, selectedSourceHashes };
   }
 }
 

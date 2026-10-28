@@ -1,20 +1,20 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, chmod, copyFile, lstat, mkdir, readFile, realpath } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
 import { candidateDigest } from './candidate-closure.ts';
 
 export interface CandidateNativeCapture {
   schemaVersion: 1;
   platform: string;
-  codex: { path: string; sha256: string; protocolRevision: '0.162.0' };
+  codex: { path: string; sha256: string; protocolRevision: '0.162.0'; codeModeHost: { path: string; sha256: string } };
   opencode: { path: string; sha256: string; protocolRevision: '1.18.35' | '1.19.4' };
   processCustody: { directory: string; manifestSha256: string };
 }
 export interface CandidateNativeArtifacts {
   captureSha256: string;
-  codex: { path: string; sha256: string; protocolRevision: '0.162.0' };
+  codex: CandidateNativeCapture['codex'];
   opencode: { path: string; sha256: string; protocolRevision: '1.18.35' | '1.19.4' };
   processCustody: {
     directory: string;
@@ -51,6 +51,21 @@ export async function stageCandidateNativeArtifacts(
     !['1.18.35', '1.19.4'].includes(input.opencode?.protocolRevision)
   )
     throw new Error('Candidate native tuple unavailable');
+  const helper = input.codex.codeModeHost;
+  if (!helper || typeof helper.path !== 'string' || !hash(helper.sha256) ||
+      typeof input.codex.path !== 'string' ||
+      helper.path !== join(dirname(input.codex.path), 'codex-code-mode-host'))
+    throw new Error('Candidate Codex code-mode capture invalid');
+  try {
+    const stat = await lstat(helper.path);
+    if (!isAbsolute(helper.path) || (await realpath(helper.path)) !== helper.path ||
+        !stat.isFile() || stat.isSymbolicLink() || !(stat.mode & 0o111) ||
+        (await candidateDigest(helper.path)) !== helper.sha256)
+      throw new Error('mismatch');
+    await access(helper.path, constants.X_OK);
+  } catch {
+    throw new Error('Candidate Codex code-mode executable mismatch');
+  }
   const binary = async (name: 'codex' | 'opencode') => {
     const value = input[name];
     if (
@@ -94,9 +109,15 @@ export async function stageCandidateNativeArtifacts(
   });
   if ((await candidateDigest(copied.path)) !== bridge.sha256)
     throw new Error('Candidate M19 copy mismatch');
+  const codex = (await binary('codex')) as Omit<CandidateNativeArtifacts['codex'], 'codeModeHost'>;
+  const codeModeHost = { path: 'native/codex/codex-code-mode-host', sha256: helper.sha256 };
+  await copyFile(helper.path, join(resourceRoot, codeModeHost.path), constants.COPYFILE_EXCL);
+  await chmod(join(resourceRoot, codeModeHost.path), 0o755);
+  if ((await candidateDigest(join(resourceRoot, codeModeHost.path))) !== codeModeHost.sha256)
+    throw new Error('Candidate Codex code-mode copy mismatch');
   return {
     captureSha256: selected.sha256,
-    codex: (await binary('codex')) as CandidateNativeArtifacts['codex'],
+    codex: { ...codex, codeModeHost },
     opencode: (await binary('opencode')) as CandidateNativeArtifacts['opencode'],
     processCustody: {
       directory,

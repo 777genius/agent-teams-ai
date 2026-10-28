@@ -633,10 +633,16 @@ jobs:
           printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
           pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
           gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
           gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
           printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
           printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
           tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
+          mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"
+          test -f "$selected_inputs/codex/codex-code-mode-host" && test ! -L "$selected_inputs/codex/codex-code-mode-host" && test -x "$selected_inputs/codex/codex-code-mode-host"
+          printf '%s  %s\n' 0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a "$selected_inputs/codex/codex-code-mode-host" | shasum -a 256 -c -
           unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
           STAGE1_SELECTED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -654,10 +660,12 @@ jobs:
           assert.equal(sdkPackage.version, '0.3.305');
           const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude'));
           const codex = realpathSync(join(selected, 'codex/codex-aarch64-apple-darwin'));
+          const codexCodeModeHost = realpathSync(join(selected, 'codex/codex-code-mode-host'));
           const opencode = realpathSync(join(selected, 'opencode/opencode'));
           for (const [path, expected] of [
             [claude, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'],
             [codex, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'],
+            [codexCodeModeHost, '0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a'],
             [opencode, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'],
           ]) assert.equal(digest(path), expected, 'exact reviewed native executable');
           const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
@@ -689,7 +697,8 @@ jobs:
             ...(process.env.STAGE1_MODE === 'native-resume-ui' ? { resumeProvider: process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude' } : {}),
             node: { path: node, sha256: digest(node) },
             host: { path: host, sha256: digest(host) },
-            native: [claude, codex, opencode].map(path => ({ path, sha256: digest(path) })),
+            native: [claude, codex, codexCodeModeHost, opencode].map(path => ({ path, sha256: digest(path) })),
+            nativeArchives: [{ path: join(selected, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz'), sha256: digest(join(selected, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz')) }],
             corepackVersion: JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version,
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
@@ -967,13 +976,19 @@ jobs:
           printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
           pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
           gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
           gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
           gh release download v0.3.3 --repo 777genius/terminal-platform --pattern terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz --dir "$selected_inputs"
           printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
           printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
           printf '%s  %s\n' b78da8494e2ee9b46b9bd2e002b7b6d27a2431fbac5f8bcd52d7940c408702cd "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz" | shasum -a 256 -c -
           node scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 --archive "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz"
           tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
+          mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"
+          test -f "$selected_inputs/codex/codex-code-mode-host" && test ! -L "$selected_inputs/codex/codex-code-mode-host" && test -x "$selected_inputs/codex/codex-code-mode-host"
+          printf '%s  %s\n' 0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a "$selected_inputs/codex/codex-code-mode-host" | shasum -a 256 -c -
           unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
           archive="$selected_inputs/node-v24.21.0-headers.tar.gz"
           curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"

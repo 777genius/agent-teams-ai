@@ -6236,3 +6236,108 @@ changes may require affected P7 requalification. None of these8471 proofs is
 promoted to the later HEAD; original root911 HOLD remains immutable/unresolved.
 Delivery source-size guard passed4,638 production files with the unchanged143
 frozen exceptions/800-line cap. No new paths or inventory/cap changes were made.
+
+
+### Exact8471 terminal qualification summary before sidecar closure
+
+The Taskboard comment-stage TEST correction was committed and immediately
+pushed as `d61e2a05e8b244f6bcc606f399879a60703faaa5`. The completed original
+[run40716971821](https://github.com/777genius/agent-teams-ai/actions/runs/40716971821)
+on exact8471 has overall conclusion FAILURE (updated16:05:15Z), despite canonical
+Full qualification and P7 success: its Source matrix ended8 scoped PASS /
+3 INCOMPLETE, not an all-native PASS. The three gaps are Mixed membership TEST
+assertion (fixed709f123), Taskboard comment-stage TEST readiness (fixedd61e2a0),
+and Codex native Code Mode sidecar ENOENT. No TWO followed the Codex failure;
+the subsequent current all-three restore H3 step was SKIPPED. New TEST commits
+have local proofs only; their fresh UI/native results are pending.
+
+Canonical8471 Full job122922416041 passed with24,034 root PASS /98 SKIP /0 FAIL,
+plus separately Host813/controller423/MCP74/scripts179/feedback119/release9/
+MCP E2E24/policy10. Workspace types/build, three lint jobs and Windows gates
+passed. Counts SHA256 `debf1e704dd57cb6258c3efd32f96e841990ebe4c37b1c8448a289b995fad4d1`.
+Actual [CodeQL40717011954](https://github.com/777genius/agent-teams-ai/actions/runs/40717011954)
+passed actions and JS/TS analysis on the same8471;591/592 are fixed and no open
+finding is branch-only. The187 remaining instances are shared main baseline,
+not an alert-free repository claim. Assessment SHA256
+`12b2de5fddbdfc51b81379be8398e44147440f729f46a2529daf4af557d73488`.
+
+The independently accepted original P7 raw proof remains narrowly8471/24G624/
+arm64, genuine ancestry + normal SDK Stop + existing unsigned packed Claude
+Opus4.6/medium Launch/Stop/close. Core audit SHA256
+`27837a4104beb73fa988e8bcdf77d1690d105d5239dd71aa4eeee221692968ad` retains
+its original-custody, archive census and tree-hash observation limits. It does
+not qualify packed Codex Code Mode, real auth, another native OS tuple, release
+or new candidate bytes. Official sidecar acquisition/source/candidate closure
+is being corrected separately; its final source gates/review and fresh affected
+native/P7/canonical/CodeQL run remain necessary. No new main fetch, historical
+root/Oct23 percentage rewrite, original911 adoption/replay/closure or default
+activation is introduced by this documentation update.
+
+
+### Official Codex Code Mode native closure delivery
+
+The original8471 Codex failure was a missing executable, not a malformed
+Code Mode result: the pinned native requested an unsuffixed sibling
+`codex-code-mode-host` and received ENOENT. The official rust-v0.162.0 companion
+archive is `codex-code-mode-host-aarch64-apple-darwin.tar.gz`, SHA256
+`9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2`.
+Its single regular0755 executable is65,408,016 bytes, SHA256
+`0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a`.
+The main0.162 executable remains SHA256
+`8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57`.
+
+The reviewed14-file TEST/candidate correction acquires and verifies that exact
+companion in both existing Source/P7 input blocks, retains it beside the selected
+Codex before metadata/launch, and freezes the pair through Source, conditional
+H3 and P7. Candidate capture/staging/copy/reader now require exactly the two-file
+Codex directory, including executable/no-symlink/hash checks; no PATH fallback,
+production installer/provider/SPI or selected e3 archive change is introduced.
+H3/Mixed use direct MCP and do not exercise a live Code Mode helper; they validate
+the paired payload before/finally only. H3 retains a native-input freeze failure
+separately and downgrades its receipt instead of concealing earlier failure.
+
+For the two Source Codex epochs, a read-only witness captures the actual helper
+under the exact selected original Codex/Host, including birth/parent/own-PGID and
+command identity before Stop. A reparented/reused identity is recorded as mismatch,
+never as absence; the original witness and first drift remain retained while
+existing bounded observation waits for physical absence. This observation grants
+no process-control authority and introduces no new actor, signal, UI effect,
+retry, cleanup fallback, action or deadline increase. No live-helper witness is
+claimed for H3/Mixed or the Claude-only packed flow.
+
+C and final_current_critic independently accepted the final source/local-gate
+boundary; the independent holistic production review on d61/e3 also accepted the
+current Team/Runtime/Resume/evidence/OpenCodeV1 boundaries without a new defect.
+Final selected Node24.21 focused gates completed43 PASS /0 FAIL /2 existing
+Darwin-arm64-only SKIP. Strict Host and scripts types exited0; scoped lint exited0
+with one retained no-unsafe-finally warning; both acquisition bash blocks and the
+embedded input-census JavaScript syntax checks exited0. The original-source
+missing/rebound companion test is meaningful RED at the stager's early closure
+validation boundary; opaque isolated startup and sandbox listen/spawn attempts
+remain separate infrastructure attempts, not native failures or exploit proof.
+
+Author freeze `checks/codex-sidecar-source-freeze.json`,14 accepted paths, SHA256
+`de7608979cbb9b6a0b9b0e3d5e19058d779cfa9103c8e63b33006e6b39b549c1`;
+handoff SHA256 `406f3d06311ceaa612cb762b2c8370000a49138d94affb029ea125a1f4aeefd1`;
+focused log SHA256 `7fea8d2dad6abb195a2b79a5949333edb90ae8d6158ca6dd7953daf91273a7fe`.
+The existing finite supplementary inventory now explicitly includes the final
+codex-native-closure.ts helper and its existing native-input-capture.ts dependency,
+using the two exact handoff JSON paths; each occurs once in the exported list.
+The obsolete draft helper path is absent. All14 source hashes were reverified.
+Fresh exact-head canonical, Source11/Codex Resume/TWO/conditional H3, affected P7
+and CodeQL remain required; old8471 receipts are immutable and not promoted.
+No historical percentage/root mutation, root911 adoption/replay/closure, main
+fetch, release/default activation or local native run accompanies this delivery.
+
+The delivery ratchet initially refused desktop-backend-smoke.ts at803 lines.
+The author readably extracted its existing ordered Promise.all hash capture into
+desktop-source-freeze.ts and removed a redundant alias, retaining the same frozen
+sources property. No blank-line compression, cap increase or exception was added.
+Only these two source hashes changed; the other12 accepted files remain exact.
+The final main smoke is800 lines, source-size guard passes4,638 files with the
+same143 exceptions, and the affected fixture passes6/6 after this extraction.
+Strict scripts types and two-file lint exit0 (one existing warning); independent
+final review accepted this exact delta and gates. The prior43-pass functional
+suite is retained as its own run, not presented as a new broad rerun. Final
+source-freeze SHA256 is30c8809767aa0f142ab8aaa5679f46683f8ef78a1a1653da6cc6bfb47eb41369;
+main smoke SHA256 is40520f3467642aa401560a83d087700b10518d476d22ad48c0615b957310a257.
