@@ -6,12 +6,12 @@ import { configureDesktopMcpEnvironment } from '@features/external-agent-connect
 import { DEFAULT_TEAM_GROUP_CHAT_ID, GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
 import { createDesktopTeamGroupChats, registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
 import { createGroupChatRuntimePorts, createOpenCodeGroupChatRunGetter, registerTeamGroupChatsHttp } from '@features/team-group-chats/main';
+import * as groupAtomicWrite from '@main/services/team/atomicWrite';
 import { createOpenCodeBridgeHandshakeIdentityHash, type OpenCodeBridgeHandshake } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { buildGroupPlainTextVisibleReplyMessageId, buildPlainTextVisibleReplyMessageId } from '@main/services/team/opencode/delivery/OpenCodeGroupVisibleReply';
 import { createOpenCodePromptDeliveryLedgerStore } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import { OpenCodeVisibleReplyProofService } from '@main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
-import * as groupAtomicWrite from '@main/services/team/atomicWrite';
 import { buildOpenCodeRuntimeMessageText } from '@main/services/team/runtime/OpenCodeRuntimeMessageText';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
