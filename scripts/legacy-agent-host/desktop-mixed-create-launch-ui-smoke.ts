@@ -212,7 +212,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   proof.probesBeforeLaunch = probesBeforeLaunch;
   await ui.click('button[aria-label="More actions"]', 'original menu after Create');
   await ui.click('button', 'original Teams list after Create', 'Teams');
-  const teamSelector = `[data-team-name=${JSON.stringify(key)}]`;
+  const teamSelector = `[role="button"][data-team-name=${JSON.stringify(key)}]`;
   await ui.scrollTo(teamSelector, 'original newly created Team card');
   await ui.click(teamSelector, 'open original newly created Team');
   const edited = await runMixedEditTeamUi(cdp, {
