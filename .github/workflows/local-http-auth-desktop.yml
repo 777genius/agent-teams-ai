@@ -1,0 +1,69 @@
+name: Local HTTP auth desktop
+run-name: 'Desktop auth proof: PR=${{ github.event.pull_request.number || 0 }} head=${{ github.event.pull_request.head.sha || github.sha }} tested=${{ github.sha }}'
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'src/features/local-http-auth/**'
+      - 'src/main/http/**'
+      - 'src/main/services/infrastructure/HttpServer.ts'
+      - 'src/main/services/infrastructure/FileWatcher.ts'
+      - 'src/main/index.ts'
+      - 'src/preload/index.ts'
+      - 'src/renderer/api/**'
+      - 'src/renderer/App.tsx'
+      - 'scripts/e2e/local-http-auth/**'
+      - 'scripts/tsconfig/tsconfig.local-http-auth-desktop.json'
+      - '.github/workflows/local-http-auth-desktop.yml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'runtime.lock.json'
+      - 'terminal-platform.lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: local-http-auth-desktop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  desktop:
+    name: Linux Electron + browser auth / watcher SSE
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: desktop
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.22.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Desktop system prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libnss3 libgtk-3-0 libgbm1 libasound2t64
+      - name: Frozen desktop dependencies and Electron native postinstall
+        run: pnpm install --frozen-lockfile
+      - name: Configure the installed Electron Chromium sandbox
+        run: |
+          sandbox_path="$(node -p 'require("path").join(require("path").dirname(require.resolve("electron/package.json")), "dist", "chrome-sandbox")')"
+          sudo chown root:root "$sandbox_path"
+          sudo chmod 4755 "$sandbox_path"
+      - name: Typecheck the desktop harness
+        run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.local-http-auth-desktop.json
+      - name: Real dev:mcp desktop auth qualification
+        run: pnpm exec tsx scripts/e2e/local-http-auth/run.mts
+      - name: Upload credential-free qualification receipts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: local-http-auth-desktop-${{ github.sha }}
+          path: |
+            artifacts/local-http-auth-desktop/BEFORE.json
+            artifacts/local-http-auth-desktop/RESULT.json
+            artifacts/local-http-auth-desktop/LAUNCH.json
+          if-no-files-found: warn
+          retention-days: 7
