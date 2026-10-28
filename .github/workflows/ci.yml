@@ -64,6 +64,8 @@ jobs:
           node-version-file: .node-version
       - name: "CI source proof: PR=${{ github.event.pull_request.number || 0 }} | base=${{ github.event.pull_request.base.sha || 'none' }} | head=${{ github.event.pull_request.head.sha || github.sha }}"
         run: echo 'Source event identity recorded in job metadata'
+      - name: Test optional workflow lifecycle policy
+        run: node --test test/scripts/ciOptionalWorkflows.test.mts
       - name: Plan feedback and verify reusable evidence
         id: plan
         env:
