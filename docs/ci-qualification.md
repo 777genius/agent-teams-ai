@@ -20,7 +20,7 @@ Title/body-only PR edits after full qualification retain the existing authentica
 
 Keep an in-progress PR as a **Draft**. Main CI already runs fast feedback
 (typecheck, fast lint and architecture guards); draft feedback cannot qualify
-`Full qualification` for merge. Translate the PR to **Ready for review** when it
+`Full qualification` for merge. Mark the PR **Ready for review** when it
 is ready to run full or scope-selected qualification.
 
 CodeQL, Codex runtime installation, public runtime bootstrap, OpenCode desktop

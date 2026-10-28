@@ -67,7 +67,7 @@ test('announcement validation still runs on drafts, with PR-only cancellation', 
 
 test('policy tests run before main CI planning, without dependency installation', () => {
   const source = workflow('ci').split('\n  feedback:')[0];
-  assert.match(source, /run: node --test test\/scripts\/ciOptionalWorkflows.test.mts/);
+  assert.match(source, /node --test test\/scripts\/ciOptionalWorkflows.test.mts/);
   assert.ok(
     source.indexOf('ciOptionalWorkflows.test.mts') < source.indexOf('ci-feedback.mts plan')
   );

@@ -64,14 +64,14 @@ jobs:
           node-version-file: .node-version
       - name: "CI source proof: PR=${{ github.event.pull_request.number || 0 }} | base=${{ github.event.pull_request.base.sha || 'none' }} | head=${{ github.event.pull_request.head.sha || github.sha }}"
         run: echo 'Source event identity recorded in job metadata'
-      - name: Test optional workflow lifecycle policy
-        run: node --test test/scripts/ciOptionalWorkflows.test.mts
       - name: Plan feedback and verify reusable evidence
         id: plan
         env:
           GH_TOKEN: ${{ github.token }}
           CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
-        run: node scripts/ci/ci-feedback.mts plan
+        run: |
+          node --test test/scripts/ciOptionalWorkflows.test.mts
+          node scripts/ci/ci-feedback.mts plan
 
   feedback:
     name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback' }}
