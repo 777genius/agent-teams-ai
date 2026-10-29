@@ -2217,7 +2217,7 @@ async function main() {
           executable,
           process.env.OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST ?? ''
         )
-      : { bundledSdkSha: '', runtimeDigests: {} };
+      : { bundledSdkSha: '', runtimeDigests: {} as Record<string, string> };
   const taskOwners = new Map<string, 'alice' | 'bob'>();
   const commandExpectations = new Map<string, NativeCommandExpectation>();
   const commandResultFiles: { name: string; expected: string }[] = [];

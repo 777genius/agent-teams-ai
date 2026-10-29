@@ -152,8 +152,11 @@ export function packagedArguments(args, platform = process.platform) {
     );
     options.set(args[index], args[index + 1]);
   }
-  if (options.has('--runtime-setup')) assert.equal(options.get('--runtime-setup'), 'app-install');
+  if (options.has('--runtime-setup'))
+    assert(['app-install', 'app-install-v2-repair'].includes(options.get('--runtime-setup')));
   const candidateEvidence = options.get('--candidate-evidence');
+  assert(options.get('--runtime-setup') !== 'app-install-v2-repair' || !candidateEvidence,
+    'Published V2 repair cannot use candidate evidence');
   if (candidateEvidence)
     assert(
       /^[a-z]:[\\/]/i.test(candidateEvidence) &&
@@ -162,7 +165,7 @@ export function packagedArguments(args, platform = process.platform) {
     );
   return {
     executable,
-    runtimeSetup: options.has('--runtime-setup') ? 'app-install' : 'none',
+    runtimeSetup: options.get('--runtime-setup') ?? 'none',
     ...(candidateEvidence ? { candidateEvidence } : {}),
   };
 }
@@ -681,20 +684,26 @@ export async function installerPublicationSnapshot(data) {
   for (const name of names.filter((name) => prefix.test(name))) {
     const directory = await metadata(name);
     assert(directory.kind === 'directory', 'Installer staging is not a directory');
-    const executable = await metadata(`${name}/opencode.exe`);
+    const executableRelative = data.runtimeSetup === 'app-install-v2-repair'
+      ? `${name}/bin/opencode.exe` : `${name}/opencode.exe`;
+    const executable = await metadata(executableRelative);
     assert(
       executable.state === 'missing' || executable.kind === 'file',
       'Installer leaf is not regular'
     );
     staging.push({ name, directory, executable });
-    exactExecutables.add(path.join(runtime, name, 'opencode.exe').toLowerCase());
+    exactExecutables.add(path.join(runtime, executableRelative).toLowerCase());
   }
-  const target = `versions/${WINDOWS_NATIVE_TEST_PIN.version}/opencode-windows-x64`;
-  const targetDirectory = await metadata(target);
-  const targetExecutable = await metadata(`${target}/opencode.exe`);
-  assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
-  assert(targetExecutable.state === 'missing' || targetExecutable.kind === 'file');
-  exactExecutables.add(path.join(runtime, target, 'opencode.exe').toLowerCase());
+  let targetEvidence = { generation: 'v2', state: 'selection-not-assumed' };
+  if (data.runtimeSetup !== 'app-install-v2-repair') {
+    const target = `versions/${WINDOWS_NATIVE_TEST_PIN.version}/opencode-windows-x64`;
+    const targetDirectory = await metadata(target);
+    const targetExecutable = await metadata(`${target}/opencode.exe`);
+    assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
+    assert(targetExecutable.state === 'missing' || targetExecutable.kind === 'file');
+    exactExecutables.add(path.join(runtime, target, 'opencode.exe').toLowerCase());
+    targetEvidence = { directory: targetDirectory, executable: targetExecutable };
+  }
   const current = await metadata('current.json');
   assert(current.state === 'missing' || current.kind === 'file');
   const matching = snapshot.filter(
@@ -707,7 +716,7 @@ export async function installerPublicationSnapshot(data) {
     app: { pid: app.pid, parent: app.parent, birth: app.birth, executable: app.executable },
     runtime: runtimeMetadata,
     staging,
-    target: { directory: targetDirectory, executable: targetExecutable },
+    target: targetEvidence,
     current,
     rejectedStagingNames: names.filter(
       (name) => name.startsWith('installing-') && !prefix.test(name)

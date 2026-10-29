@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { isDeepStrictEqual } from 'node:util';
 import { clickControl, correlateReport } from './catalog.mjs';
+import { v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
 import {
   runtimeProvenance,
   packagedEnvironment,
@@ -736,7 +737,9 @@ export async function verifyPackaged({
   preloadScripts,
   scriptMetadata,
 }) {
-  assert(['cold', 'warm-1', 'warm-2'].includes(data.run), 'Use the explicit packaged runner');
+  const v2Repair = data.runtimeSetup === 'app-install-v2-repair';
+  assert(['cold', 'warm-1', 'warm-2', ...(v2Repair ? ['support-repair', 'support-repair-restart'] : [])]
+    .includes(data.run), 'Use the explicit packaged runner');
   const evidence = {
     passed: false,
     mode: 'packaged',
@@ -818,12 +821,14 @@ export async function verifyPackaged({
     );
     await probe('invalidateVersion', 'window.electronAPI.openCodeRuntime.invalidateStatus()');
     let version = await probe('opencodeVersion', 'window.electronAPI.openCodeRuntime.getStatus()');
+    if (v2Repair && data.run === 'cold')
+      assert(!version.installed && version.source === 'missing', 'Published V2 cold profile must be empty');
     // Explicit future runner option only. This is the app's registry/integrity installer;
     // the harness never supplies a URL, runtime binary, manifest or credentials.
     if (
       !version.installed &&
       version.source === 'missing' &&
-      data.runtimeSetup === 'app-install' &&
+      ['app-install', 'app-install-v2-repair'].includes(data.runtimeSetup) &&
       data.run === 'cold'
     ) {
       evidence.installerPublication = {
@@ -845,7 +850,9 @@ export async function verifyPackaged({
         } catch {
           evidence.installerPublication.progressSubscriptionFailed = true;
         }
-        await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
+        await probe('runtimeSetup', v2Repair
+          ? 'window.electronAPI.openCodeRuntime.install({generation:"v2"})'
+          : 'window.electronAPI.openCodeRuntime.install()', 180000);
       } finally {
         try {
           const progress = await evaluate(`(() => {
@@ -865,6 +872,26 @@ export async function verifyPackaged({
         'opencodeInstalledVersion',
         'window.electronAPI.openCodeRuntime.getStatus()'
       );
+    }
+    if (v2Repair && data.run === 'support-repair') {
+      const before = await v2SupportSnapshot(data, 'none');
+      assert.deepEqual(before.native, data.supportRepair?.before?.native,
+        'Native selection changed before support-only repair');
+      assert.deepEqual(before.receipt, data.supportRepair?.before?.receipt,
+        'Support selection changed before support-only repair');
+      await probe('supportRepair',
+        'window.electronAPI.openCodeRuntime.install({generation:"v2",supportOnly:true})', 180000);
+      await probe('invalidateRepairedVersion', 'window.electronAPI.openCodeRuntime.invalidateStatus()');
+      version = await probe('opencodeRepairedVersion', 'window.electronAPI.openCodeRuntime.getStatus()');
+    }
+    if (v2Repair) {
+      assert(version.installed && /^2\.\d+\.\d+$/.test(version.version) && version.v2Support === 'ready',
+        'Published native V2 and support must be ready');
+      evidence.v2Support = data.run.startsWith('support-repair')
+        ? await verifyV2SupportRepair(data, data.run === 'support-repair-restart')
+        : await v2SupportSnapshot(data);
+      assert.equal(version.version, evidence.v2Support.native.version);
+      assert.equal(version.binaryPath.toLowerCase(), evidence.v2Support.native.binaryPath.toLowerCase());
     }
     if (version.binaryPath) evidence.opencode = await runtimeProvenance(version, data, 'opencode');
     assert(

@@ -8,6 +8,10 @@ on:
         type: choice
         options: [x64, arm64]
         default: x64
+      v2_support_repair:
+        description: Qualify published V2 fresh install, warm starts and support-only repair; no candidate fixture
+        type: boolean
+        default: false
       native_sdk_ref:
         description: 'Exact reviewed SDK SHA required for native tasks, source-only and provider-only; empty with both flags off keeps diagnostics'
         type: string
@@ -42,6 +46,7 @@ on:
     paths:
       - .github/workflows/opencode-packaged-e2e.yml
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
+      - scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
@@ -81,7 +86,12 @@ jobs:
           SELECTED_MODEL: ${{ inputs.native_model }}
           PROVIDER_ONLY: ${{ inputs.native_provider_only }}
           VERSIONS: ${{ inputs.native_versions }}
+          V2_SUPPORT_REPAIR: ${{ inputs.v2_support_repair }}
         run: |
+          if [[ "$V2_SUPPORT_REPAIR" == 'true' ]]; then
+            echo '::error::Published V2 support repair cannot be combined with native SDK, source-only or provider-only scenarios'
+            exit 1
+          fi
           case "$VERSIONS" in
             all|v1|current) ;;
             *) echo '::error::Unknown Windows version selection'; exit 1 ;;
@@ -112,7 +122,11 @@ jobs:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   packaged-windows:
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && inputs.native_sdk_ref == '' && !inputs.native_source_only && !inputs.native_provider_only
-    runs-on: windows-latest
+    runs-on: ${{ inputs.native_arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
+    env:
+      NATIVE_ARCH: ${{ inputs.native_arch || 'x64' }}
+      NATIVE_PLATFORM: win32-${{ inputs.native_arch || 'x64' }}
+      NATIVE_APP_DIRECTORY: ${{ inputs.native_arch == 'arm64' && 'release/win-arm64-unpacked' || 'release/win-unpacked' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -123,18 +137,29 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      - name: Validate native packaged qualification inputs
+        shell: pwsh
+        env:
+          V2_SUPPORT_REPAIR: ${{ inputs.v2_support_repair }}
+          CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+        run: |
+          $nativeIdentity = node -p 'process.platform + "-" + process.arch'
+          if ($LASTEXITCODE -ne 0 -or $nativeIdentity -cne $env:NATIVE_PLATFORM) { throw 'Pinned Node native Windows architecture mismatch' }
+          if ($env:NATIVE_ARCH -eq 'arm64' -and $env:V2_SUPPORT_REPAIR -ne 'true') { throw 'ARM64 published diagnostics require explicit V2 support repair qualification' }
+          if (($env:NATIVE_ARCH -eq 'arm64' -or $env:V2_SUPPORT_REPAIR -eq 'true') -and ($env:CANDIDATE_RUN -or $env:CANDIDATE_SHA)) { throw 'ARM64 candidate teams use the native SDK workflow; published diagnostics accept no candidate fixture' }
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/v2-support-repair.test.mjs
       - name: Typecheck admission diagnostic
         run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - name: Stage pinned runtime
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
-        run: node scripts/stage-runtime.mjs --platform win32-x64
+        run: node scripts/stage-runtime.mjs --platform $env:NATIVE_PLATFORM
       - name: Stage verified test-only runtime candidate
         if: inputs.runtime_candidate_run != '' || inputs.runtime_candidate_sha != ''
         env:
@@ -146,13 +171,13 @@ jobs:
       - name: Stage pinned terminal runtime
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
+        run: node scripts/stage-terminal-platform-runtime.mjs --platform $env:NATIVE_PLATFORM
       - name: Build application
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
       - name: Stage native OpenCode wrapper
-        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform $env:NATIVE_PLATFORM --require
       - name: Verify wrapper native handle and job isolation
         shell: pwsh
         run: |
@@ -164,17 +189,17 @@ jobs:
           & $fixture (Resolve-Path resources/runtime/opencode-console/opencode.exe).Path
           if ($LASTEXITCODE -ne 0) { throw 'Native wrapper handle/job isolation failed' }
       - name: Package without publishing
-        run: pnpm pack:win:x64 --dir --publish never
+        run: pnpm "pack:win:$($env:NATIVE_ARCH)" --dir --publish never
       - name: Verify packaged candidate identity
         if: inputs.runtime_candidate_run != ''
         shell: pwsh
         run: |
           $candidate = Get-Content runtime-candidate-evidence.json | ConvertFrom-Json
-          $env:PACKAGED_CANDIDATE_ROOT = (Resolve-Path 'release/win-unpacked/resources/runtime').Path
+          $env:PACKAGED_CANDIDATE_ROOT = (Resolve-Path (Join-Path $env:NATIVE_APP_DIRECTORY resources/runtime)).Path
           node --input-type=module -e "import {readFile} from 'node:fs/promises'; import {verifyCandidatePayload} from './scripts/e2e/opencode-diagnostics/stage-candidate.mjs'; await verifyCandidatePayload(process.env.PACKAGED_CANDIDATE_ROOT, JSON.parse(await readFile('runtime-candidate-evidence.json','utf8')), {packaged:true});"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate bundle
-        run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
+        run: node scripts/electron-builder/verifyBundle.cjs $env:NATIVE_APP_DIRECTORY win32 $env:NATIVE_ARCH
       - name: Prove compiled legacy Windows saved-file read and native image on loopback model
         if: inputs.runtime_candidate_run != ''
         shell: pwsh
@@ -182,7 +207,7 @@ jobs:
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
-          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          $executable = (Resolve-Path (Join-Path $env:NATIVE_APP_DIRECTORY AgentTeamsAI.exe)).Path
           $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
           pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -190,13 +215,15 @@ jobs:
         id: qualify
         env:
           RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          V2_SUPPORT_REPAIR: ${{ inputs.v2_support_repair }}
         shell: pwsh
         run: |
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
-          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          $options = @('--packaged-executable', $executable, '--runtime-setup', 'app-install')
+          $executable = (Resolve-Path (Join-Path $env:NATIVE_APP_DIRECTORY AgentTeamsAI.exe)).Path
+          $runtimeSetup = if ($env:V2_SUPPORT_REPAIR -eq 'true') { 'app-install-v2-repair' } else { 'app-install' }
+          $options = @('--packaged-executable', $executable, '--runtime-setup', $runtimeSetup)
           if ($env:RUNTIME_CANDIDATE_RUN) { $options += @('--candidate-evidence', (Resolve-Path 'runtime-candidate-evidence.json').Path) }
           node scripts/e2e/opencode-diagnostics/run-packaged.mjs @options | Tee-Object -Variable qualificationOutput
           $qualificationExit = $LASTEXITCODE
@@ -240,7 +267,7 @@ jobs:
           SDK_CHECKOUT_OUTCOME: ${{ steps.sdk_source.outcome }}
         run: |
           $sdk = Join-Path $env:GITHUB_WORKSPACE '.test-tmp/sdk-admission'
-          $packaged = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked'
+          $packaged = Join-Path $env:GITHUB_WORKSPACE $env:NATIVE_APP_DIRECTORY
           $bun = Join-Path $packaged 'resources/runtime/bun/bun.exe'
           $receipt = Join-Path $env:RUNNER_TEMP 'selected-identity-diagnostic.json'
           if (!(Test-Path $bun)) {
@@ -254,7 +281,7 @@ jobs:
         shell: pwsh
         run: |
           $archive = "AgentTeamsAI-windows-test-$env:GITHUB_SHA.zip"
-          Compress-Archive -Path release/win-unpacked -DestinationPath "release/$archive"
+          Compress-Archive -Path $env:NATIVE_APP_DIRECTORY -DestinationPath "release/$archive"
           $digest = (Get-FileHash "release/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$digest  $archive" | Set-Content release/test-build-SHA256SUMS.txt
           @"
@@ -302,3 +329,7 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.txt
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/*.ndjson
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/warm-*/desktop.log
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/desktop.log

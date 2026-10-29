@@ -321,6 +321,13 @@ test('explicit packaged arguments are bounded, Windows-only and never accept run
       .runtimeSetup,
     'app-install'
   );
+  assert.equal(packagedArguments([
+    '--packaged-executable', exe, '--runtime-setup', 'app-install-v2-repair',
+  ], 'win32').runtimeSetup, 'app-install-v2-repair');
+  assert.throws(() => packagedArguments([
+    '--packaged-executable', exe, '--runtime-setup', 'app-install-v2-repair',
+    '--candidate-evidence', 'C:\\TEST\\runtime-candidate-evidence.json',
+  ], 'win32'), /Published V2 repair cannot use candidate evidence/);
   for (const bad of [
     'agent.exe',
     'C:agent.exe',
