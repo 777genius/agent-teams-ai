@@ -479,6 +479,7 @@ describe('selected-project dashboard proof', () => {
     await act(async () => {
       callbackA({ projectPath: '/sandbox/b', freshUntil });
       callbackA({ projectPath: '/sandbox/a', freshUntil: new Date(0).toISOString() });
+      callbackA({ projectPath: '/sandbox/a', freshUntil: 'TEST-invalid-timestamp' });
     });
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
     await act(async () => root.render(<Probe projectPath="/sandbox/b" />));

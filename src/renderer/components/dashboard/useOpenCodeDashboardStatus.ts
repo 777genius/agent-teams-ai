@@ -165,12 +165,14 @@ export function useOpenCodeDashboardStatus(input: {
   const onCatalogRecovery = useCallback(
     (receipt: { projectPath: string | null; freshUntil: string | null }) => {
       const current = recovery.current;
+      const freshUntil = Date.parse(receipt.freshUntil ?? '');
       if (
         current?.context !== recoveryContext ||
         !current.enabled ||
         !projectPath ||
         receipt.projectPath?.trim() !== projectPath ||
-        !(Date.parse(receipt.freshUntil ?? '') > Date.now()) ||
+        !Number.isFinite(freshUntil) ||
+        freshUntil <= Date.now() ||
         (current.status?.supported &&
           ['authoritative', 'model_only'].includes(current.status.statusCheckOutcome ?? '') &&
           current.status.statusCheckErrorCode == null)
