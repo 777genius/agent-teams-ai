@@ -68,10 +68,12 @@ describe('OpenCode installation policy', () => {
 
   it('does not upgrade a V1 installation to a different generation via npm latest', async () => {
     await expect(
-      selectOpenCodeInstallPackage('v1', '2.0.32', [], async () => ({
-        name: 'opencode-ai',
-        version: '2.0.32',
-      }))
+      selectOpenCodeInstallPackage('v1', '2.0.32', [], () =>
+        Promise.resolve({
+          name: 'opencode-ai',
+          version: '2.0.32',
+        })
+      )
     ).rejects.toThrow('selected generation');
   });
 });

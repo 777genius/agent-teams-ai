@@ -54,11 +54,8 @@ function forEachPinnedPlatform(
           !openCodeV2ContractCovers(contract, version)
         )
           return null;
-        return pinnedQualified[key].includes(version)
-          ? version
-          : flexible
-            ? (pinnedQualified[key].at(-1) ?? null)
-            : null;
+        if (pinnedQualified[key].includes(version)) return version;
+        return flexible ? (pinnedQualified[key].at(-1) ?? null) : null;
       };
       check((version) => engine(version) !== null, engine);
     }
