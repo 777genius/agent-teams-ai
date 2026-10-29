@@ -16,6 +16,39 @@ import {
   waitForPackagedRefreshPreparation,
 } from './packaged.mjs';
 
+/** Retain phase boundaries plus the latest download sample, within the same 120-row cap. */
+export function observeInstallerProgress(observation, status) {
+  const record = {
+    at: Date.now(),
+    state: String(status.state).slice(0, 64),
+    phase: status.progress?.phase ? String(status.progress.phase).slice(0, 64) : null,
+    detail:
+      typeof status.progress?.detail === 'string' ? status.progress.detail.slice(0, 256) : null,
+  };
+  const previous = observation.records.at(-1);
+  if (
+    record.phase === 'downloading' &&
+    previous?.phase === record.phase &&
+    previous.state === record.state &&
+    previous.coalesced
+  ) {
+    observation.records[observation.records.length - 1] = { ...record, coalesced: true };
+    return;
+  }
+  if (observation.records.length >= 120) {
+    observation.overflow = true;
+    observation.records[119] = record;
+    return;
+  }
+  observation.records.push(
+    record.phase === 'downloading' &&
+      previous?.phase === record.phase &&
+      previous.state === record.state
+      ? { ...record, coalesced: true }
+      : record
+  );
+}
+
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const refreshControl = `[...document.querySelectorAll('button')].find(b =>
   /re-?check.*opencode|opencode.*re-?check/i.test(b.getAttribute('title') || ''))`;
@@ -841,11 +874,7 @@ export async function verifyPackaged({
         try {
           await evaluate(`window.__packagedInstallObservation = {records:[],overflow:false};
             window.__packagedInstallUnsubscribe = window.electronAPI.openCodeRuntime.onProgress((_event, status) => {
-              const o = window.__packagedInstallObservation;
-              if (o.records.length >= 120) { o.overflow = true; return; }
-              o.records.push({at:Date.now(), state:String(status.state).slice(0,64),
-                phase:status.progress?.phase ? String(status.progress.phase).slice(0,64) : null,
-                detail:typeof status.progress?.detail === 'string' ? status.progress.detail.slice(0,256) : null});
+              (${observeInstallerProgress.toString()})(window.__packagedInstallObservation, status);
             }); void 0`);
         } catch {
           evidence.installerPublication.progressSubscriptionFailed = true;

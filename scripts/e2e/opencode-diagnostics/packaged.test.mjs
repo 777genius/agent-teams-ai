@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EventEmitter } from 'node:events';
+import { runInNewContext } from 'node:vm';
 import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, symlink, rm, stat, readdir } from 'node:fs/promises';
 import os from 'node:os';
@@ -8,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   packagedArguments,
+  installerStagingExecutables,
   closePackagedBrowser,
   packagedStopOrder,
   packagedDrainSnapshot,
@@ -29,6 +31,7 @@ import {
 } from './packaged.mjs';
 import {
   waitForPackagedPreload,
+  observeInstallerProgress,
   matchesPackagedPreload,
   refreshSettled,
   waitForSettledDirectory,
@@ -47,6 +50,76 @@ import {
   qualifyUIRefresh,
   compareCatalogSnapshots,
 } from './packaged-verify.mjs';
+
+test('installer diagnostics detect V1 and V2 leaves independently of the requested default mode', async () => {
+  const name = 'installing-123-TEST';
+  for (const [generation, leaf] of [
+    ['v1', 'opencode.exe'],
+    ['v2', 'bin/opencode.exe'],
+  ]) {
+    const observed = [];
+    const result = await installerStagingExecutables(name, async (relative) => {
+      observed.push(relative);
+      return relative === `${name}/${leaf}`
+        ? { state: 'present', kind: 'file', size: 123 }
+        : { state: 'missing' };
+    });
+    assert.equal(result.generation, generation);
+    assert.equal(result.executableRelative, `${name}/${leaf}`);
+    assert.equal(result.executable.state, 'present');
+    assert.deepEqual(observed, [`${name}/opencode.exe`, `${name}/bin/opencode.exe`]);
+  }
+  const empty = await installerStagingExecutables(name, async () => ({ state: 'missing' }));
+  assert.equal(empty.generation, 'unknown');
+  assert.equal(empty.executableRelative, null);
+  await assert.rejects(
+    installerStagingExecutables(name, async () => ({ state: 'present', kind: 'file' })),
+    /ambiguous/
+  );
+  await assert.rejects(
+    installerStagingExecutables(name, async () => ({ state: 'present', kind: 'directory' })),
+    /not regular/
+  );
+});
+
+test('serialized installer progress retains verification and failure after a download flood within its original cap', () => {
+  // Exercise the actual self-contained function serialized into the renderer callback.
+  const observe = runInNewContext(`(${observeInstallerProgress.toString()})`);
+  const observation = { records: [], overflow: false };
+  for (let sample = 0; sample < 1000; sample++)
+    observe(observation, {
+      state: 'downloading',
+      progress: { phase: 'downloading', detail: `Downloading ${sample}` },
+    });
+  for (const [state, detail] of [
+    ['installing', 'Extracting'],
+    ['installing', 'Verifying'],
+    ['failed', 'EPERM rename'],
+  ])
+    observe(observation, { state, progress: { phase: state, detail } });
+  assert.equal(observation.overflow, false);
+  assert.equal(observation.records.length, 5);
+  assert.equal(observation.records[0].detail, 'Downloading 0');
+  assert.equal(observation.records[1].detail, 'Downloading 999');
+  assert.deepEqual(
+    observation.records.slice(2).map((row) => row.detail),
+    ['Extracting', 'Verifying', 'EPERM rename']
+  );
+  for (let sample = 0; sample < 200; sample++)
+    observe(observation, {
+      state: 'installing',
+      progress: { phase: `unexpected-${sample}`, detail: 'x'.repeat(1000) },
+    });
+  observe(observation, { state: 'failed', progress: { phase: 'failed', detail: 'final refusal' } });
+  assert.equal(observation.overflow, true);
+  assert.equal(observation.records.length, 120);
+  assert.equal(observation.records.at(-1).detail, 'final refusal');
+  assert(
+    observation.records.every(
+      (row) => row.state.length <= 64 && row.phase.length <= 64 && row.detail.length <= 256
+    )
+  );
+});
 
 const exe = 'C:\\test builds\\win-unpacked\\Agent Teams AI.exe';
 const preparationControl = ({ style = {}, rect = {}, ...patch } = {}) => ({

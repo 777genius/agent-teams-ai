@@ -6,7 +6,6 @@ import { lstat, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node
 import path from 'node:path';
 import { verifyCandidatePayload } from './stage-candidate.mjs';
 import { isolatedEnvironment, processes, ownedTree, sameIdentity } from './platform.mjs';
-import { WINDOWS_NATIVE_TEST_PIN } from './native-test-pin.mts';
 
 export function packagedRefreshControlState(control) {
   if (!control)
@@ -620,6 +619,33 @@ export async function closePackagedBrowser({
 }
 
 // Metadata-only TEST observation; never opens executable bytes or changes installer state.
+/** Observe the actual staging layout; ordinary install() may select either generation. */
+export async function installerStagingExecutables(name, metadata) {
+  const candidates = await Promise.all(
+    [
+      ['v1', `${name}/opencode.exe`],
+      ['v2', `${name}/bin/opencode.exe`],
+    ].map(async ([generation, relative]) => ({
+      generation,
+      relative,
+      metadata: await metadata(relative),
+    }))
+  );
+  for (const candidate of candidates)
+    assert(
+      candidate.metadata.state === 'missing' || candidate.metadata.kind === 'file',
+      'Installer leaf is not regular'
+    );
+  const present = candidates.filter((candidate) => candidate.metadata.state === 'present');
+  assert(present.length <= 1, 'Installer staging generation is ambiguous');
+  return {
+    generation: present[0]?.generation ?? 'unknown',
+    executableRelative: present[0]?.relative ?? null,
+    executable: present[0]?.metadata ?? { state: 'missing' },
+    candidates,
+  };
+}
+
 export async function installerPublicationSnapshot(data) {
   assert.equal(process.platform, 'win32');
   assert(containedPath(data.userData, data.root));
@@ -684,26 +710,14 @@ export async function installerPublicationSnapshot(data) {
   for (const name of names.filter((name) => prefix.test(name))) {
     const directory = await metadata(name);
     assert(directory.kind === 'directory', 'Installer staging is not a directory');
-    const executableRelative = data.runtimeSetup === 'app-install-v2-repair'
-      ? `${name}/bin/opencode.exe` : `${name}/opencode.exe`;
-    const executable = await metadata(executableRelative);
-    assert(
-      executable.state === 'missing' || executable.kind === 'file',
-      'Installer leaf is not regular'
-    );
-    staging.push({ name, directory, executable });
-    exactExecutables.add(path.join(runtime, executableRelative).toLowerCase());
+    const executables = await installerStagingExecutables(name, metadata);
+    staging.push({ name, directory, ...executables });
+    for (const candidate of executables.candidates)
+      exactExecutables.add(path.join(runtime, candidate.relative).toLowerCase());
   }
-  let targetEvidence = { generation: 'v2', state: 'selection-not-assumed' };
-  if (data.runtimeSetup !== 'app-install-v2-repair') {
-    const target = `versions/${WINDOWS_NATIVE_TEST_PIN.version}/opencode-windows-x64`;
-    const targetDirectory = await metadata(target);
-    const targetExecutable = await metadata(`${target}/opencode.exe`);
-    assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
-    assert(targetExecutable.state === 'missing' || targetExecutable.kind === 'file');
-    exactExecutables.add(path.join(runtime, target, 'opencode.exe').toLowerCase());
-    targetEvidence = { directory: targetDirectory, executable: targetExecutable };
-  }
+  // The default generation and V2 UUID destination are not known before selection.
+  // Never report a hardcoded V1 package path as the actual installer target.
+  const targetEvidence = { state: 'selection-not-assumed' };
   const current = await metadata('current.json');
   assert(current.state === 'missing' || current.kind === 'file');
   const matching = snapshot.filter(
