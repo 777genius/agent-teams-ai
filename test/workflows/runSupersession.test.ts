@@ -7,6 +7,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { METADATA_GATE } from '../../scripts/ci/ci-feedback.mts';
+
 import {
   type ExpressionValue,
   evaluateWorkflowValue,
@@ -14,11 +16,18 @@ import {
   SUPERSESSION_GROUP,
 } from './runSupersession.mts';
 
+interface Step {
+  name?: string;
+  if?: string;
+  run?: string;
+  'timeout-minutes'?: number;
+}
+
 interface Workflow {
   name: string;
   triggers: string[];
   concurrency?: { group: unknown; cancel: unknown };
-  jobs: Record<string, { name?: string; if?: unknown }>;
+  jobs: Record<string, { name?: string; if?: unknown; steps?: Step[] }>;
 }
 
 function triggerNames(on: unknown): string[] {
@@ -219,6 +228,56 @@ describe('run supersession policy', () => {
     }
     const gate = workflows.get('ci')!.jobs['full-qualification'];
     expect(gate).toMatchObject({ name: 'Full qualification', if: 'always() && !cancelled()' });
+  });
+
+  it('keeps base and unknown PR edits isolated: they run their own CI and never cancel', () => {
+    for (const changes of [
+      { base: { ref: { from: 'release/2.19' } } },
+      { title: { from: 'Old title' }, base: { sha: { from: 'b'.repeat(40) } } },
+      {},
+    ]) {
+      const edit = { action: 'edited', changes };
+      const code = concurrency('ci', pr(7, 411));
+      const first = concurrency('ci', pr(7, 412, edit));
+      const second = concurrency('ci', pr(7, 413, edit));
+      expect(first.cancel, JSON.stringify(changes)).toBe(false);
+      expect(new Set([code.group, first.group, second.group]).size).toBe(3);
+    }
+  });
+
+  // A title/body edit run may wait for the same-input CI run inside the static
+  // required check. It must stay bounded and must never succeed without a
+  // deciding step: a gate job whose steps were all skipped would pass.
+  it('runs exactly one deciding step in Full qualification and bounds the metadata wait', () => {
+    const steps = workflows.get('ci')!.jobs['full-qualification'].steps ?? [];
+    const metadata = steps.find(
+      (step) => step.name === 'Verify completed current-code qualification after metadata edits'
+    );
+    const full = steps.find((step) => step.name === 'Require complete current-code qualification');
+    expect(metadata?.run).toBe('node scripts/ci/ci-feedback.mts metadata-gate');
+    expect(full?.run).toBe('node scripts/ci/ci-feedback.mts gate');
+    expect((metadata?.['timeout-minutes'] ?? Infinity) * 60_000).toBeGreaterThan(
+      METADATA_GATE.waitMs
+    );
+    expect(metadata?.['timeout-minutes']).toBeLessThanOrEqual(120);
+    const values = ['true', 'false', '', 'unknown'];
+    for (const result of ['success', 'failure', 'cancelled', 'skipped'])
+      for (const metadataOutput of values)
+        for (const fullOutput of values)
+          for (const reuse of values) {
+            const context = {
+              needs: {
+                plan: {
+                  result,
+                  outputs: { metadata: metadataOutput, full: fullOutput, reuse },
+                },
+              },
+            };
+            const runs = [metadata!, full!].filter((step) =>
+              evaluateWorkflowValue(`\${{ ${step.if} }}`, context)
+            );
+            expect(runs.length, JSON.stringify(context)).toBe(1);
+          }
   });
 
   it('keeps Pages publication latest-per-ref', () => {
