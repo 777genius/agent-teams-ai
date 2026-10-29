@@ -14,7 +14,17 @@ Source narrowing is intentionally limited to UI primitives. Root tests remain br
 
 DMG artwork uses a disposable app bundle and never launches the application or an agent runtime. It verifies the installer layout with the pinned electron-builder implementation. Platform packaging still runs for dependency or packaging logic changes.
 
-Title/body-only PR edits after full qualification retain the existing authenticated same-head/base evidence. The edit run still reports `Full qualification` for the head, and it passes only when that earlier full qualification is re-authenticated. A title/body edit without reusable full evidence, for example after a focused qualification, classifies the unchanged diff again and runs the same scoped checks as a push would. Label changes are classified the same way. Base changes and unknown edits run full CI. Legal texts and issue templates under `.github/` run full CI, so their wording is never reformatted to pass the focused check. Scoped evidence reuse is intentionally not introduced. Postmerge reuse still requires complete full-tier evidence; a focused pass cannot qualify unrelated code or a different tree.
+Title/body-only PR edits retain the authenticated CI run for the same head, base and synthetic merge instead of repeating it. The edit run skips the heavy jobs but still reports `Full qualification` for the head. On a ready PR that check passes only after the same-input run has completed full qualification and that result is re-authenticated. If the edit arrives while that run is still queued or running, which is the usual case for bot-written descriptions, the check waits for it (at most 90 minutes, polling only the run status) and then verifies it. It fails when the awaited run fails, is cancelled without a newer same-input run, the PR head or target branch moves, or the deadline passes. It never passes or skips early. A title/body edit without reusable full evidence, for example after a focused qualification, a failed or cancelled run, or while a scoped run is still running, classifies the unchanged diff again and runs the same scoped checks as a push would. Label changes are classified the same way. Base changes and unknown edits run full CI. Legal texts and issue templates under `.github/` run full CI, so their wording is never reformatted to pass the focused check. Scoped evidence reuse is intentionally not introduced. Postmerge reuse still requires complete full-tier evidence; a focused pass cannot qualify unrelated code or a different tree.
+
+| PR event (same head)                                    | Edit run does                                                  | `Full qualification` of the edit run      |
+| ------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| Title/body edit, same-input full run completed green    | Plan only                                                      | Passes after re-authenticating that run   |
+| Title/body edit, same-input full run queued or running  | Plan only                                                      | Waits, then passes or fails with that run |
+| Title/body edit, latest same-input run failed/cancelled | Classifies the diff and runs its checks                        | Result of its own checks                  |
+| Title/body edit, scoped diff, scoped run not reusable   | Runs the scoped checks again                                   | Result of its own checks                  |
+| Title/body edit on a draft                              | Plan only                                                      | Fails, as for every draft                 |
+| Base change or unknown edit                             | Full CI                                                        | Result of its own checks                  |
+| Proof cannot be completed (API, identity, ambiguity)    | Classifies the diff and runs its checks (plan) or fails (gate) | Never passes without complete evidence    |
 
 ## Small intermediate commits
 
@@ -62,7 +72,10 @@ keeps a PR number, branch name and run ID from colliding.
 Explicit variants:
 
 - `CI` appends an edit suffix: each `edited` run gets its own group and never
-  cancels code checks, as before.
+  cancels code checks, as before. Later edits do not cancel edit runs either:
+  the metadata and postmerge proofs never cross a cancelled run on the same
+  head, so a later edit or the post-merge main run would repeat full CI.
+  Title/body edit runs stay cheap instead (see above).
 - `Electron packaged CI` runs only for PRs and isolates only title/body edits;
   a base change runs its code checks and supersedes older ones.
 - Landing deployment keeps one cancelling group per ref, so a newer push or

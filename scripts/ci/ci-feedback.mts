@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -12,7 +13,11 @@ import {
   WORKFLOW,
 } from './ci-feedback-reuse.mts';
 import type { GitHubRead } from './ci-feedback-reuse.mts';
-import { collectChangeScope, type ChangeScope } from './ci-change-scope.mts';
+import {
+  collectChangeScope,
+  type ChangeClassification,
+  type ChangeScope,
+} from './ci-change-scope.mts';
 import { proveMetadataProducer } from './ci-feedback-metadata-proof.mts';
 
 export type Plan = {
@@ -132,23 +137,97 @@ export function isMetadataOnlyPrEdit(eventName: unknown, event: unknown): boolea
   }
 }
 
-export async function qualifyMetadata(
-  env: Record<string, string | undefined>,
-  event: unknown,
-  read: GitHubRead
-): Promise<boolean> {
+/**
+ * Bounds for the required gate of a title/body edit run. It may start while the
+ * same-input CI run is still running, so it waits for that run instead of
+ * repeating it. The workflow step timeout must stay above `waitMs`.
+ */
+export const METADATA_GATE = {
+  waitMs: 90 * 60_000,
+  pollMs: 30_000,
+  retryMs: 20_000,
+  rejections: 3,
+} as const;
+
+export interface GateClock {
+  now: () => number;
+  sleep: (ms: number) => Promise<unknown>;
+}
+const realClock: GateClock = { now: () => Date.now(), sleep: (ms) => sleep(ms) };
+
+function isReadyMetadataEdit(env: Record<string, string | undefined>, event: unknown): boolean {
   return (
     env.GITHUB_REPOSITORY === REPOSITORY &&
     isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
-    object(object(event).pull_request).draft === false &&
-    (await proveMetadataProducer(env, event, read, true))
+    object(object(event).pull_request).draft === false
   );
 }
+
+/** Cheap status polling only; the caller re-authenticates every outcome. */
+async function untilProducerSettles(
+  read: GitHubRead,
+  producer: number,
+  deadline: number,
+  clock: GateClock
+): Promise<void> {
+  while (clock.now() < deadline) {
+    await clock.sleep(Math.min(METADATA_GATE.pollMs, deadline - clock.now()));
+    try {
+      if (object(await read(`repos/${REPOSITORY}/actions/runs/${producer}`)).status === 'completed')
+        return;
+    } catch {
+      return;
+    }
+  }
+}
+
+/**
+ * Passes only after the canonical producer for the same head, base and merge
+ * has completed full qualification. While it runs, only its run status is polled;
+ * every decision is a fresh complete proof. A failed, cancelled or superseded
+ * producer, a moved PR head or base, repeated proof failures and the deadline
+ * all fail the gate, never pass or skip it.
+ */
+export async function awaitMetadataQualification(
+  env: Record<string, string | undefined>,
+  event: unknown,
+  read: GitHubRead,
+  clock: GateClock = realClock,
+  log: (line: string) => void = console.log
+): Promise<{ ok: boolean; reason: string }> {
+  if (!isReadyMetadataEdit(env, event)) {
+    return {
+      ok: false,
+      reason: 'Only a ready PR title/body edit can carry existing qualification',
+    };
+  }
+  const deadline = clock.now() + METADATA_GATE.waitMs;
+  let rejections = 0;
+  for (;;) {
+    const proof = await proveMetadataProducer(env, event, read);
+    if (proof.state === 'completed') return { ok: true, reason: proof.reason };
+    rejections = proof.state === 'rejected' ? rejections + 1 : 0;
+    if (rejections >= METADATA_GATE.rejections) return { ok: false, reason: proof.reason };
+    if (clock.now() >= deadline) {
+      return { ok: false, reason: `Deadline reached before qualification: ${proof.reason}` };
+    }
+    if (proof.state === 'rejected') {
+      log(`Metadata proof failed (${rejections}/${METADATA_GATE.rejections}): ${proof.reason}`);
+      await clock.sleep(METADATA_GATE.retryMs);
+    } else {
+      // Re-proved only after the awaited run settles or a status read fails.
+      log(`Waiting for https://github.com/${REPOSITORY}/actions/runs/${proof.producer}`);
+      await untilProducerSettles(read, proof.producer, deadline, clock);
+    }
+  }
+}
+
 export async function planFeedback(
   env: Record<string, string | undefined>,
   event: unknown,
   read: GitHubRead,
-  now = Date.now()
+  now = Date.now(),
+  classify: (env: Record<string, string | undefined>) => ChangeClassification = collectChangeScope
 ): Promise<Plan> {
   const fallback: Plan = {
     scope: 'full',
@@ -167,29 +246,37 @@ export async function planFeedback(
   } catch {
     return fallback;
   }
-  if (
-    isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event) &&
-    (await proveMetadataProducer(
-      env,
-      event,
-      read,
-      object(object(event).pull_request).draft === false
-    ))
-  ) {
-    return {
+  if (isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event)) {
+    const ready = object(object(event).pull_request).draft === false;
+    const proof = await proveMetadataProducer(env, event, read);
+    const preserve = (reason: string): Plan => ({
       ...fallback,
       full: false,
       metadata: true,
-      reason: 'Title/body edit with an authenticated same-head/base producer; preserve code checks',
-    };
+      reason,
+    });
+    if (proof.state === 'completed' || (proof.state === 'pending' && !ready)) {
+      return preserve(
+        'Title/body edit with an authenticated same-head/base producer; preserve code checks'
+      );
+    }
+    // A title/body edit that cannot reuse full evidence qualifies its unchanged
+    // immutable diff again, so a focused PR stays focused.
+    const change = classify(env);
+    if (proof.state === 'pending' && change.scope === 'full') {
+      // The required gate of this run waits for the running producer and then
+      // demands its complete full evidence. Scoped evidence is never reused.
+      return preserve(
+        `Title/body edit while same-input CI run ${proof.producer} is running; the required gate waits for it`
+      );
+    }
+    const unavailable = proof.state === 'rejected' ? `; no reusable producer: ${proof.reason}` : '';
+    return { ...fallback, scope: change.scope, reason: `${change.reason}${unavailable}` };
   }
-  // A title/body edit that cannot reuse full evidence qualifies its unchanged
-  // immutable diff again, so a focused PR stays focused. Other edits run full CI.
+  // Base changes and unknown or malformed edits run full CI.
   try {
     if (env.GITHUB_EVENT_NAME === 'pull_request' && object(event).action === 'edited') {
-      if (!isMetadataOnlyPrEdit(env.GITHUB_EVENT_NAME, event)) return fallback;
-      const change = collectChangeScope(env);
-      return { ...fallback, scope: change.scope, reason: change.reason };
+      return fallback;
     }
   } catch {
     return fallback;
@@ -393,13 +480,13 @@ async function main(): Promise<void> {
     return;
   }
   if (process.argv[2] === 'metadata-gate') {
-    const qualified = await qualifyMetadata(process.env, readEvent(), read);
+    const gate = await awaitMetadataQualification(process.env, readEvent(), read);
     console.log(
-      qualified
-        ? 'Authenticated completed current-code qualification'
-        : 'Metadata qualification failed'
+      gate.ok
+        ? `Authenticated completed current-code qualification: ${gate.reason}`
+        : `Metadata qualification failed: ${gate.reason}`
     );
-    if (!qualified) process.exitCode = 1;
+    if (!gate.ok) process.exitCode = 1;
     return;
   }
   if (process.argv[2] === 'gate') {
@@ -419,7 +506,9 @@ async function main(): Promise<void> {
     if (!gate.ok) process.exitCode = 1;
     return;
   }
-  if (process.argv[2] !== 'plan') throw new Error('Expected plan, gate, image or windows');
+  if (process.argv[2] !== 'plan') {
+    throw new Error('Expected plan, gate, metadata-gate, image or windows');
+  }
   const plan = await planFeedback(process.env, readEvent(), read);
   output(
     `scope=${plan.scope ?? 'full'}\nfull=${plan.full}\nmetadata=${plan.metadata}\nreuse=${plan.reuse}\nsource_run=${plan.source_run}\nimage=${plan.image}\nlinux_arch=${plan.linux_arch}\n`

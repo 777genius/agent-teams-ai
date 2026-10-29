@@ -501,6 +501,9 @@ jobs:
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required
   # context "Expected" although earlier runs for the same head had passed.
+  # A title/body edit run skips the heavy jobs and its gate waits for the
+  # same-input CI run instead of repeating it; it passes only on that run's
+  # authenticated complete success. See docs/ci-qualification.md.
   full-qualification:
     name: Full qualification
     needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
@@ -513,8 +516,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+      # The script deadline (METADATA_GATE.waitMs, 90 min) fails the gate first;
+      # this timeout only bounds a hung API call. Either outcome is a failure.
       - name: Verify completed current-code qualification after metadata edits
         if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'
+        timeout-minutes: 100
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci/ci-feedback.mts metadata-gate
