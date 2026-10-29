@@ -15,11 +15,16 @@ describe('OpenCode installation policy', () => {
     expect(chooseOpenCodeInstallGeneration(undefined, '1.18.3', '2.1.4')).toBe('v1');
     expect(chooseOpenCodeInstallGeneration(undefined, '2.9.0', '2.1.4')).toBe('v2');
     expect(chooseOpenCodeInstallGeneration('v1', '2.1.4', '2.1.4')).toBe('v1');
-    expect(getLatestQualifiedOpenCodeV2Version('win32', 'arm64')).toBeNull();
     const unshipped = getLatestQualifiedOpenCodeV2Version('linux', 'arm64');
     expect(unshipped).toBeNull();
     expect(chooseOpenCodeInstallGeneration(undefined, undefined, unshipped)).toBe('v1');
     expect(getLatestQualifiedOpenCodeV2Version('unsupported', 'x64')).toBeNull();
+  });
+
+  it('uses the actual pinned ARM64 qualification for a fresh default V2 installation', () => {
+    const qualified = getLatestQualifiedOpenCodeV2Version('win32', 'arm64');
+    expect(qualified).toBe('2.1.4');
+    expect(chooseOpenCodeInstallGeneration(undefined, undefined, qualified)).toBe('v2');
   });
 
   it.each([
