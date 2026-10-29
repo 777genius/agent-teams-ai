@@ -130,14 +130,16 @@ async function main() {
     }
     toolCount = tools.result.tools.length;
   } finally {
-    child.stdin.destroy();
     try {
+      // Keep stdio alive until the strict pre-signal ownership census completes.
       await terminateChild(child, closePromise, platform, 2_000, ownership);
     } catch (error) {
       console.error(
         `[smokePackagedMcp] Preserved TEST sandbox after cleanup failure: ${testProject}`
       );
       throw error;
+    } finally {
+      child.stdin.destroy();
     }
     fs.rmSync(testProject, { recursive: true, force: true });
   }

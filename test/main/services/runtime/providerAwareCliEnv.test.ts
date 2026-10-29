@@ -122,6 +122,7 @@ describe('buildProviderAwareCliEnv', () => {
       const options = {
         providerId: 'opencode' as const,
         env: {
+          CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT: '/stale/support',
           HOME: '/sandbox/home',
           CLAUDE_CONFIG_DIR: '/sandbox/auth-namespace',
           AGENT_TEAMS_MCP_CLAUDE_DIR: '/stale/root',
@@ -150,6 +151,11 @@ describe('buildProviderAwareCliEnv', () => {
           AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/private-claude',
           CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:4569',
         });
+        const { getAppDataPath } = await import('@main/utils/pathDecoder');
+        expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT).toBe(
+          path.join(getAppDataPath(), 'runtimes', 'opencode-v2')
+        );
+        expect(options.env.CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT).toBe('/stale/support');
         expect(result.env.HOME).toBe('/sandbox/home');
         expect(result.env.CLAUDE_CONFIG_DIR).toBe('/sandbox/auth-namespace');
         expect(options.env.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/stale/root');

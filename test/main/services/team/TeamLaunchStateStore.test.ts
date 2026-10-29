@@ -1,3 +1,4 @@
+import { parseTeamLaunchFreshness } from '@main/services/team/TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
   getTeamLaunchStatePath,
@@ -61,6 +62,125 @@ describe('TeamLaunchStateStore', () => {
 
   afterEach(() => {
     fs.rmSync(mocks.teamsBasePath, { recursive: true, force: true });
+  });
+
+  it('keeps Stop final while rejecting oversized or incomplete optional historical identity', () => {
+    const marker = {
+      version: 1,
+      teamName: 'demo',
+      kind: 'stop',
+      stopId: 'stop',
+      transcriptBindings: [
+        { memberName: 'Builder', laneId: 'primary', runId: 'sdk', sessionId: 'ses_original' },
+      ],
+    };
+    expect(parseTeamLaunchFreshness('demo', marker)).toMatchObject({
+      kind: 'stop',
+      transcriptBindings: [],
+    });
+    expect(
+      parseTeamLaunchFreshness('demo', {
+        ...marker,
+        stoppedRunId: 'app',
+        transcriptBindings: Array(129).fill(marker.transcriptBindings[0]),
+      })
+    ).toMatchObject({ kind: 'stop', transcriptBindings: [] });
+  });
+
+  it('captures original member identities before cleanup and retains them through repeated STOP', async () => {
+    mocks.atomicWriteAsync.mockImplementation(async (target: string, content: string) => {
+      await fs.promises.writeFile(target, content);
+    });
+    const store = new TeamLaunchStateStore();
+    const current = snapshot();
+    current.publicationRunId = 'app-publication';
+    current.members.Builder = {
+      ...current.members.Builder!,
+      providerId: 'opencode',
+      laneId: 'primary',
+      laneKind: 'primary',
+      laneOwnerProviderId: 'opencode',
+      runtimeRunId: 'sdk-original',
+      runtimeSessionId: 'ses_member',
+    };
+    current.members['team-lead'] = {
+      ...current.members.Builder,
+      name: 'team-lead',
+      runtimeSessionId: 'ses_lead',
+    };
+    current.members.skipped = {
+      ...current.members.Builder,
+      name: 'skipped',
+      runtimeSessionId: undefined,
+    };
+    const freshnessPath = path.join(mocks.teamsBasePath, 'demo', 'launch-freshness.json');
+    fs.writeFileSync(
+      freshnessPath,
+      JSON.stringify({ version: 1, teamName: 'demo', kind: 'launch', runId: 'app-publication' })
+    );
+    fs.writeFileSync(getTeamLaunchStatePath('demo'), JSON.stringify(current));
+    const admitted = await store.beginStop('demo');
+    expect(admitted.transcriptBindings).toEqual([
+      { memberName: 'Builder', laneId: 'primary', runId: 'sdk-original', sessionId: 'ses_member' },
+      { memberName: 'team-lead', laneId: 'primary', runId: 'sdk-original', sessionId: 'ses_lead' },
+    ]);
+    // The runtime lane and live publication can disappear before markStopped runs.
+    fs.rmSync(getTeamLaunchStatePath('demo'));
+    await store.markStopped('demo', admitted);
+    expect(JSON.parse(fs.readFileSync(freshnessPath, 'utf8'))).toMatchObject({
+      kind: 'stop',
+      stoppedRunId: 'app-publication',
+      transcriptBindings: admitted.transcriptBindings,
+    });
+    const repeated = await store.beginStop('demo');
+    await store.markStopped('demo', repeated);
+    expect(JSON.parse(fs.readFileSync(freshnessPath, 'utf8')).transcriptBindings).toEqual(
+      admitted.transcriptBindings
+    );
+    await store.beginLaunch('demo', 'successor-app', ['Builder'], () => true);
+    expect(JSON.parse(fs.readFileSync(freshnessPath, 'utf8'))).toEqual({
+      version: 1,
+      teamName: 'demo',
+      kind: 'launch',
+      runId: 'successor-app',
+    });
+    await store.markStopped('demo', admitted);
+    expect(JSON.parse(fs.readFileSync(freshnessPath, 'utf8')).kind).toBe('launch');
+  });
+
+  it('never retains another publication or a conflicting member candidate at STOP admission', async () => {
+    const current = snapshot();
+    current.publicationRunId = 'old-app';
+    current.members.Builder = {
+      ...current.members.Builder!,
+      providerId: 'opencode',
+      laneId: 'primary',
+      runtimeRunId: 'sdk-original',
+      runtimeSessionId: 'ses_member',
+      appManagedBootstrapCandidate: {
+        teamName: 'demo',
+        memberName: 'Builder',
+        laneId: 'primary',
+        runId: 'other-sdk',
+        runtimeSessionId: 'ses_member',
+      } as never,
+    };
+    fs.writeFileSync(
+      path.join(mocks.teamsBasePath, 'demo', 'launch-freshness.json'),
+      JSON.stringify({
+        version: 1,
+        teamName: 'demo',
+        kind: 'launch',
+        runId: 'current-app',
+      })
+    );
+    fs.writeFileSync(getTeamLaunchStatePath('demo'), JSON.stringify(current));
+    expect((await new TeamLaunchStateStore().beginStop('demo')).transcriptBindings).toEqual([]);
+    current.publicationRunId = 'current-app';
+    current.members.Builder.bootstrapEvidenceSource = 'app_managed_bootstrap';
+    current.members.Builder.appManagedBootstrapCandidate = undefined;
+    fs.writeFileSync(getTeamLaunchStatePath('demo'), JSON.stringify(current));
+    expect((await new TeamLaunchStateStore().beginStop('demo')).transcriptBindings).toEqual([]);
   });
 
   it('rejects a versioned snapshot whose persisted team identity does not match its path', async () => {

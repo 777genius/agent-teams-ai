@@ -25,6 +25,8 @@ import type { ResolvedTeamMember } from '../../../../../src/shared/types';
 const TEAM_NAME = 'relay-works-10';
 const MEMBER_NAME = 'jack';
 const LANE_ID = 'secondary:opencode:jack';
+// Original SDK run recorded by the fixture's runtime_bootstrap_checkin tool.
+const FIXTURE_RUN_ID = 'daa545ee-f5f6-4562-a952-8c5b88bbf990';
 const GENERATED_AT = '2026-04-24T20:40:00.000Z';
 const FIXTURE_PATH = path.resolve(
   process.cwd(),
@@ -196,8 +198,19 @@ async function createFixtureUseCase(): Promise<{
 }> {
   const claudeRef = await createClaudeTranscriptRef();
   const openCodeTranscript = await loadOpenCodeFixtureTranscript();
+  const sessionId = openCodeTranscript.sessionId;
+  if (!sessionId) throw new Error('OpenCode fixture has no original native session identity');
   const findRecentMemberLogFileRefsByMember = vi.fn(() => Promise.resolve([claudeRef]));
   const getOpenCodeTranscript = vi.fn(() => Promise.resolve(openCodeTranscript));
+
+  const binding = {
+    kind: 'bound' as const,
+    mode: 'active' as const,
+    runId: FIXTURE_RUN_ID,
+    laneId: LANE_ID,
+    sessionId,
+    cacheKey: `${FIXTURE_RUN_ID}:${LANE_ID}:${sessionId}`,
+  };
 
   const chunkBuilder = new BoardTaskExactLogChunkBuilder();
   const sources = [
@@ -210,7 +223,19 @@ async function createFixtureUseCase(): Promise<{
     new OpenCodeMemberRuntimeStreamSource(
       { getOpenCodeTranscript } as never,
       chunkBuilder,
-      { resolve: vi.fn(() => Promise.resolve('/Users/tester/agent_teams_orchestrator')) }
+      { resolve: vi.fn(() => Promise.resolve('/Users/tester/agent_teams_orchestrator')) },
+      undefined,
+      {
+        read: (input) => {
+          expect(input).toMatchObject({
+            teamName: TEAM_NAME,
+            memberName: MEMBER_NAME,
+            laneId: LANE_ID,
+          });
+          return Promise.resolve(binding);
+        },
+        isCurrent: (_, original) => Promise.resolve(original.cacheKey === binding.cacheKey),
+      }
     ),
   ];
 
@@ -255,9 +280,7 @@ function stubMatchMedia(): void {
   vi.stubGlobal('matchMedia', matchMedia);
 }
 
-function expectCapturedResponse(
-  value: MemberLogStreamResponse | null
-): MemberLogStreamResponse {
+function expectCapturedResponse(value: MemberLogStreamResponse | null): MemberLogStreamResponse {
   expect(value).not.toBeNull();
   return value!;
 }
@@ -270,9 +293,9 @@ describe('MemberLogStreamSection real fixture e2e', () => {
     apiState.onTeamChange.mockReset();
     vi.unstubAllGlobals();
     await Promise.all(
-      tempDirs.splice(0, tempDirs.length).map((dirPath) =>
-        rm(dirPath, { recursive: true, force: true })
-      )
+      tempDirs
+        .splice(0, tempDirs.length)
+        .map((dirPath) => rm(dirPath, { recursive: true, force: true }))
     );
   });
 
@@ -364,6 +387,8 @@ describe('MemberLogStreamSection real fixture e2e', () => {
         teamId: TEAM_NAME,
         memberName: MEMBER_NAME,
         laneId: LANE_ID,
+        runId: FIXTURE_RUN_ID,
+        sessionId: 'ses_23edf9243ffeSNYPWObDloBJyQ',
         limit: 400,
         timeoutMs: 5_000,
       })

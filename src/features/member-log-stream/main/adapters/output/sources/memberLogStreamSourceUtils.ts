@@ -1,6 +1,10 @@
 import { createHash } from 'crypto';
 
-import type { MemberLogStreamProvider, MemberLogStreamSegmentSource } from '../../../../contracts';
+import type {
+  MemberLogStreamProvider,
+  MemberLogStreamSegmentSource,
+  MemberLogStreamWarning,
+} from '../../../../contracts';
 import type { MemberLogFileRef } from '@main/services/team/TeamMemberLogsFinder';
 import type {
   BoardTaskLogActor,
@@ -14,6 +18,31 @@ export function normalizeMemberName(value: string): string {
 
 export function normalizeTeamName(value: string): string {
   return value.trim().toLowerCase();
+}
+
+export const OPENCODE_NATIVE_RUNTIME_LABEL = 'OpenCode runtime';
+export const OPENCODE_NATIVE_HISTORY_UNAVAILABLE_WARNING: MemberLogStreamWarning = {
+  code: 'opencode_runtime_unavailable',
+  message: 'OpenCode native runtime history is unavailable; showing retained member activity only.',
+};
+
+/** Exec messages can contain minified Bun source. Only finite process metadata is authority. */
+export function classifyOpenCodeTranscriptError(error: unknown): MemberLogStreamWarning {
+  const record = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
+  if (
+    record.killed === true ||
+    record.signal === 'SIGTERM' ||
+    record.signal === 'SIGKILL' ||
+    record.code === 'ETIMEDOUT' ||
+    record.code === 'ERR_CHILD_PROCESS_TIMEOUT' ||
+    record.code === 143
+  ) {
+    return {
+      code: 'opencode_runtime_timeout',
+      message: 'OpenCode runtime transcript timed out; showing retained member activity only.',
+    };
+  }
+  return OPENCODE_NATIVE_HISTORY_UNAVAILABLE_WARNING;
 }
 
 function isPreferredRef(candidate: MemberLogFileRef, existing: MemberLogFileRef): boolean {

@@ -34,7 +34,7 @@
     "pinia": "^3.0.4",
     "swiper": "^12.1.2",
     "vue": "3.5.43",
-    "vue-i18n": "^11.2.8",
+    "vue-i18n": "11.4.16",
     "vue-router": "^4.6.4",
     "vuetify": "^3.11.6"
   },
@@ -56,6 +56,9 @@
     "vitepress-plugin-llms": "^1.12.2"
   },
   "overrides": {
+    "@intlify/core": "11.4.16",
+    "@intlify/message-compiler": "11.4.16",
+    "@intlify/shared": "11.4.16",
     "@nuxt/devtools": "3.4.1",
     "@nuxt/schema": "3.21.11",
     "@vue/server-renderer": "3.5.43",
@@ -79,6 +82,7 @@
     "devalue": "5.9.4",
     "vite": "$vite",
     "vue": "3.5.43",
+    "vue-i18n": "$vue-i18n",
     "markdown-it": "14.3.3"
   }
 }

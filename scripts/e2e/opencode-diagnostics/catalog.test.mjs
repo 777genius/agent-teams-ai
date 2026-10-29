@@ -4,7 +4,8 @@ import { spawnSync } from 'node:child_process';
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { readPendingArtifact } from './catalog.mjs';
+import { clickControl, readPendingArtifact } from './catalog.mjs';
+import { waitForPackagedRefreshPreparation } from './packaged.mjs';
 import {
   assertSettledDirectoryPage,
   qualifyCatalogReadExpectation,
@@ -375,4 +376,19 @@ test('V2 settings requires the same native identity and an actually observed fal
     invalidate(invalid);
     assert.throws(() => qualifySettings(invalid, expectation));
   }
+});
+
+test('Settings refresh waits for a remounted control before exactly one mouse sequence', async () => {
+  const points = [null, null, { x: 31, y: 42 }];
+  const sent = []; let clock = 0;
+  await clickControl(async () => points.shift(), async (_method, event) => sent.push(event), 'control', async readPoint => {
+    const result = await waitForPackagedRefreshPreparation(async () => {
+      const point = await readPoint();
+      return { point, requestsSettled: true, catalog: { state: 'ready' }, control: { present: Boolean(point), connected: Boolean(point), rendered: Boolean(point), disabled: !point } };
+    }, { phase: 'settings', now: () => clock, pause: async ms => { clock += ms; } });
+    assert(result.ready); return result.point;
+  });
+  assert.equal(clock, 500);
+  assert.deepEqual(sent.map(event => event.type), ['mousePressed', 'mouseReleased']);
+  assert(sent.every(event => event.x === 31 && event.y === 42));
 });

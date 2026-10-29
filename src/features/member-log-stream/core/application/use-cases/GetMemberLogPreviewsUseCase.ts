@@ -7,11 +7,13 @@ import {
 import { buildMemberLogPreviewMember } from '../../domain/policies/memberLogPreviewMergePolicy';
 
 import type {
+  MemberLogPreviewMember,
   MemberLogPreviewResponse,
   MemberLogStreamProvider,
   MemberLogStreamWarning,
 } from '../../../contracts';
 import type { MemberLogPreviewBudget } from '../../domain/models/MemberLogPreviewBudget';
+import type { MemberLogPreviewSourceMergeResult } from '../../domain/policies/memberLogPreviewMergePolicy';
 import type { ClockPort } from '../ports/ClockPort';
 import type { LoggerPort } from '../ports/LoggerPort';
 import type {
@@ -20,6 +22,8 @@ import type {
 } from '../ports/MemberLogPreviewSource';
 
 export interface GetMemberLogPreviewsInput {
+  /** Main-owned provider admission identity; never a renderer selector. */
+  sourceIdentity?: string;
   teamName: string;
   memberNames: string[];
   maxItemsPerMember?: number;
@@ -44,7 +48,7 @@ function normalizeMemberName(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function normalizeMembers(
+export function normalizeMemberLogPreviewRequests(
   memberNames: readonly string[],
   laneIdsByMember: Record<string, string> | undefined,
   maxMembers: number
@@ -68,6 +72,7 @@ function normalizeMembers(
 }
 
 function stableInputKey(input: {
+  sourceIdentity?: string;
   teamName: string;
   members: readonly NormalizedMemberRequest[];
   maxItems: number;
@@ -82,6 +87,7 @@ function stableInputKey(input: {
       return left[1].localeCompare(right[1]);
     });
   return JSON.stringify([
+    input.sourceIdentity ?? '',
     input.teamName,
     memberKeys,
     input.maxItems,
@@ -105,16 +111,39 @@ function warningForSourceFailure(
 
 export class GetMemberLogPreviewsUseCase {
   private readonly budget: MemberLogPreviewBudget;
+  private readonly mergeInputs = new WeakMap<
+    MemberLogPreviewMember,
+    Parameters<typeof buildMemberLogPreviewMember>[0]
+  >();
   private readonly inFlight = new Map<string, Promise<MemberLogPreviewResponse>>();
 
   constructor(private readonly deps: GetMemberLogPreviewsUseCaseDeps) {
     this.budget = { ...DEFAULT_MEMBER_LOG_PREVIEW_BUDGET, ...(deps.budget ?? {}) };
   }
 
+  /** Reproject admitted source inputs after a main-owned freshness fence, before the display cap. */
+  mapMemberSources(
+    member: MemberLogPreviewMember,
+    map: (source: MemberLogPreviewSourceMergeResult) => MemberLogPreviewSourceMergeResult
+  ): MemberLogPreviewMember {
+    const input = this.mergeInputs.get(member);
+    return input
+      ? this.buildMember({ ...input, sourceResults: input.sourceResults.map(map) })
+      : member;
+  }
+
+  private buildMember(
+    input: Parameters<typeof buildMemberLogPreviewMember>[0]
+  ): MemberLogPreviewMember {
+    const member = buildMemberLogPreviewMember(input);
+    this.mergeInputs.set(member, input);
+    return member;
+  }
+
   async execute(input: GetMemberLogPreviewsInput): Promise<MemberLogPreviewResponse> {
     const maxItems = clampMemberLogPreviewItemLimit(input.maxItemsPerMember, this.budget);
     const textLimit = clampMemberLogPreviewTextLimit(input.textLimit, this.budget);
-    const members = normalizeMembers(
+    const members = normalizeMemberLogPreviewRequests(
       input.memberNames,
       input.laneIdsByMember,
       this.budget.maxMembers
@@ -124,6 +153,7 @@ export class GetMemberLogPreviewsUseCase {
     }
 
     const key = stableInputKey({
+      sourceIdentity: input.sourceIdentity,
       teamName: input.teamName,
       members,
       maxItems,
@@ -190,7 +220,7 @@ export class GetMemberLogPreviewsUseCase {
           })
         );
 
-        return buildMemberLogPreviewMember({
+        return this.buildMember({
           memberName: member.memberName,
           sourceResults: sourceResults.map((result) => ({
             coverage: {
