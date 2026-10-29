@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +19,11 @@ import {
   retainPackagedLineage,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
-import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
+import {
+  catalogScenarios,
+  verifyCatalog,
+  waitForReadyCatalog,
+} from './opencode-diagnostics/catalog.mjs';
 import {
   processes,
   sameIdentity,
@@ -181,7 +185,8 @@ async function assertOwnedDebugEndpoint(receipt) {
 if (mode === 'seed-packaged') {
   const options = packagedArguments(process.argv.slice(3));
   const artifact = await packagedArtifact(options.executable, options.candidateEvidence);
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
+  // Canonicalize only this newly created TEST directory, before deriving owned paths.
+  const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-')));
   const data = {
     root: dir,
     home: path.join(dir, 'home'),
@@ -202,7 +207,8 @@ if (mode === 'seed-packaged') {
   const seededScenario = root || 'version-exit';
   assert(['version-exit', cleanupScenario].includes(seededScenario), 'Unsupported seed scenario');
   if (seededScenario === cleanupScenario) assert.equal(process.platform, 'win32');
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-'));
+  // Canonicalize only this newly created TEST directory, before deriving owned paths.
+  const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-')));
   const data = {
     root: dir,
     home: path.join(dir, 'home'),
@@ -634,6 +640,8 @@ if (mode === 'seed-packaged') {
             refreshClicked && recovered && !found,
             'Retry did not complete a fresh successful version probe'
           );
+          // Do not relabel still-running catalog children when the recipe switches fixtures.
+          await waitForReadyCatalog({ root, started: verifyStarted, evaluate, send });
           console.log(JSON.stringify({ passed: true, scenario, platform: process.platform }));
           const screenshot = await send('Page.captureScreenshot');
           await writeFile(path.join(root, 'ready.png'), Buffer.from(screenshot.data, 'base64'));

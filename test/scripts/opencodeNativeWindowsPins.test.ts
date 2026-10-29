@@ -30,9 +30,9 @@ async function sdkWith(qualified: Readonly<Record<string, readonly string[]>> | 
   return root;
 }
 
-function resolvePins(sdk: string, versions: string) {
+function resolvePins(sdk: string, versions: string, platform?: string) {
   // A synchronous child blocks the test timer; bound it explicitly.
-  const child = spawnSync(process.execPath, [script, sdk, versions], { encoding: 'utf8', timeout: 10_000 });
+  const child = spawnSync(process.execPath, [script, sdk, versions, ...(platform ? [platform] : [])], { encoding: 'utf8', timeout: 10_000 });
   const outputs = Object.fromEntries(child.stdout.split('\n').filter(Boolean).map((line) => {
     const index = line.indexOf('=');
     return [line.slice(0, index), line.slice(index + 1)];
@@ -45,6 +45,24 @@ afterEach(async () => {
 });
 
 describe('native Windows OpenCode pins from the selected runtime registry', () => {
+  it('targets ARM64 only when the newest V2 release is qualified for ARM64', async () => {
+    const result = resolvePins(await sdkWith({ 'win32-x64': ['2.1.4'], 'win32-arm64': ['2.1.4'] }), 'current', 'win32-arm64');
+    expect(result.status).toBe(0);
+    expect(result.outputs).toMatchObject({ current: '2.1.4' });
+    expect(JSON.parse(result.outputs.contract!)).toMatchObject({ qualified: { 'win32-arm64': ['2.1.4'] } });
+    const unqualified = resolvePins(await sdkWith({ 'win32-x64': ['2.1.4'], 'win32-arm64': [] }), 'current', 'win32-arm64');
+    expect(unqualified.status).not.toBe(0);
+    expect(unqualified.stderr).toContain('Newest OpenCode V2 2.1.4 is not qualified for win32-arm64');
+    expect(unqualified.outputs).toEqual({});
+  });
+
+  it.each(['all', 'v1'])('refuses ARM64 %s before reading the SDK', (versions) => {
+    const result = resolvePins(path.join(os.tmpdir(), 'TEST-windows-pins-missing-sdk'), versions, 'win32-arm64');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Windows ARM64 qualifies V2 only');
+    expect(result.outputs).toEqual({});
+  });
+
   it('targets the newest recorded V2 release once the runtime qualifies it for Windows', async () => {
     const result = resolvePins(await sdkWith({ 'darwin-arm64': ['2.0.0', '2.1.4'], 'win32-x64': ['2.0.0', '2.0.32', '2.1.4'] }), 'all');
     expect(result.status).toBe(0);
