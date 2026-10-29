@@ -1099,6 +1099,12 @@ async function completed(
     420_000
   );
 }
+type NativeCommandProof = {
+  kind: 'paired-native-shell-result'; actorMatches: boolean; sessionMatches: boolean;
+  modelMatches: boolean; nativeExact: boolean; allowedForm: boolean;
+  expectedNodeExact: boolean; programExact: boolean;
+  resultPaired: boolean; resultSucceeded: boolean; markerMatches: boolean;
+};
 async function commandEvidence(
   app: App,
   taskId: string,
@@ -1106,9 +1112,9 @@ async function commandEvidence(
   session: string,
   program: string,
   marker: string,
-  version: string,
+  executable: string,
   expectedModel: string
-) {
+): Promise<NativeCommandProof> {
   return waitFor(
     async () => {
       const stream = await app.call('getTaskLogStream', taskId);
@@ -1125,22 +1131,21 @@ async function commandEvidence(
             'Actual assistant inference used a different model'
           );
           if (!assistantModels.includes(expectedModel)) continue;
-          const native = chunk.toolExecutions.filter((execution) =>
-            nativeCommandMatch(execution, program, marker).nativeMatches);
-          const succeeded = (execution: (typeof chunk.toolExecutions)[number]) =>
-            nativeCommandMatch(execution, program, marker).succeeded;
-          if (native.some(succeeded)) return 'paired-native-shell-result';
-          // V2 canonical CodeMode metadata proves an actual native invocation but
-          // deliberately provides no child result. Keep the successful composite
-          // output separate; never manufacture a paired nested result/status.
-          if (
-            version.startsWith('2.') &&
-            native.length &&
-            chunk.toolExecutions.some(
-              (execution) => execution.toolCall.name === 'execute' && succeeded(execution)
-            )
-          )
-            return 'code-mode-outer-result-plus-native-invocation';
+          for (const execution of chunk.toolExecutions) {
+            const match = nativeCommandMatch(execution, program, marker, executable);
+            // An outer CodeMode result never substitutes for this native call's
+            // own paired result. Unpaired invocations remain failure observations.
+            if (!match.succeeded) continue;
+            return { kind: 'paired-native-shell-result' as const,
+              actorMatches: segment.actor.memberName === member,
+              sessionMatches: segment.actor.sessionId === session,
+              modelMatches: assistantModels.includes(expectedModel),
+              nativeExact: match.nativeExact, allowedForm: match.commandShape.allowedForm,
+              expectedNodeExact: match.commandShape.expectedNodeExact,
+              programExact: match.commandShape.programExact,
+              resultPaired: match.resultPaired, resultSucceeded: match.resultSucceeded,
+              markerMatches: match.markerMatches };
+          }
         }
       }
       return null;
@@ -2265,7 +2270,8 @@ async function main() {
       ReturnType<ReturnType<typeof electronTeamPort>['getSafeStopFailure']>
     > | null,
     peerObservation: null as PeerObservation | null,
-    commandEvidenceConfirmed: [] as { member: string; kind: string }[],
+    commandEvidencePolicy: 'exact-staged-node-script-paired-own-result-v1',
+    commandEvidenceConfirmed: [] as (NativeCommandProof & { member: string })[],
     commandEvidenceLiveness: commandEvidenceLivenessRows,
     runIds: [] as string[],
     taskIds: [] as string[],
@@ -2459,7 +2465,7 @@ async function main() {
     });
     proof.taskIds.push(alice.id);
     taskOwners.set(alice.id, 'alice');
-    commandExpectations.set(alice.id, { session: sessions[0], program: path.join(desktop.projectPath, 'alice-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.alice, model, comment: `TASK_COMMENT:${nonce.alice}` });
+    commandExpectations.set(alice.id, { session: sessions[0], executable: testNode.executable, program: path.join(desktop.projectPath, 'alice-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.alice, model, comment: `TASK_COMMENT:${nonce.alice}` });
     await completed(app, alice.id, 'alice', `TASK_COMMENT:${nonce.alice}`, recordCompletion);
     const aliceCommandEvidence = await commandEvidence(
       app,
@@ -2468,10 +2474,10 @@ async function main() {
       sessions[0],
       path.join(desktop.projectPath, 'alice-verify.cjs'),
       'COMMAND_EXEC:' + nonce.alice,
-      version,
+      testNode.executable,
       model
     );
-    proof.commandEvidenceConfirmed.push({ member: 'alice', kind: aliceCommandEvidence });
+    proof.commandEvidenceConfirmed.push({ member: 'alice', ...aliceCommandEvidence });
     if (short) {
       proof.fileHashes['alice-result.txt'] = await exactFile(
         desktop.projectPath,
@@ -2524,7 +2530,7 @@ async function main() {
     });
     proof.taskIds.push(bob.id);
     taskOwners.set(bob.id, 'bob');
-    commandExpectations.set(bob.id, { session: sessions[1], program: path.join(desktop.projectPath, 'bob-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.bob, model, comment: `TASK_COMMENT:${nonce.bob}` });
+    commandExpectations.set(bob.id, { session: sessions[1], executable: testNode.executable, program: path.join(desktop.projectPath, 'bob-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.bob, model, comment: `TASK_COMMENT:${nonce.bob}` });
     await completed(app, bob.id, 'bob', `TASK_COMMENT:${nonce.bob}`, recordCompletion);
     const bobCommandEvidence = await commandEvidence(
       app,
@@ -2533,10 +2539,10 @@ async function main() {
       sessions[1],
       path.join(desktop.projectPath, 'bob-verify.cjs'),
       'COMMAND_EXEC:' + nonce.bob,
-      version,
+      testNode.executable,
       model
     );
-    proof.commandEvidenceConfirmed.push({ member: 'bob', kind: bobCommandEvidence });
+    proof.commandEvidenceConfirmed.push({ member: 'bob', ...bobCommandEvidence });
     for (const name of ['alice', 'bob'] as const)
       proof.fileHashes[`${name}-result.txt`] = await exactFile(
         desktop.projectPath,
@@ -2840,7 +2846,7 @@ async function main() {
     });
     proof.taskIds.push(task.id);
     taskOwners.set(task.id, 'alice');
-    commandExpectations.set(task.id, { session: newSessions[0], program: path.join(desktop.projectPath, 'new-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.new, model, comment: `TASK_COMMENT:${nonce.new}` });
+    commandExpectations.set(task.id, { session: newSessions[0], executable: testNode.executable, program: path.join(desktop.projectPath, 'new-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.new, model, comment: `TASK_COMMENT:${nonce.new}` });
     await completed(app, task.id, 'alice', `TASK_COMMENT:${nonce.new}`, recordCompletion);
     const freshCommandEvidence = await commandEvidence(
       app,
@@ -2849,10 +2855,10 @@ async function main() {
       newSessions[0],
       path.join(desktop.projectPath, 'new-verify.cjs'),
       'COMMAND_EXEC:' + nonce.new,
-      version,
+      testNode.executable,
       model
     );
-    proof.commandEvidenceConfirmed.push({ member: 'alice-fresh', kind: freshCommandEvidence });
+    proof.commandEvidenceConfirmed.push({ member: 'alice-fresh', ...freshCommandEvidence });
     proof.fileHashes['new-result.txt'] = await exactFile(
       desktop.projectPath,
       'new-result.txt',

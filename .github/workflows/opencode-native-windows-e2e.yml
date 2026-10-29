@@ -321,6 +321,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows process identity probe failed before packaging; no model task submitted' }
           pnpm exec vitest run test/scripts/opencodeNativeWindowsCandidate.test.ts
           if ($LASTEXITCODE -ne 0) { throw 'Candidate split delivery regression failed before packaging; no model task submitted' }
+          pnpm exec vitest run test/scripts/opencodeNativeCommandMatch.test.ts test/scripts/opencodeNativeV2Transcript.test.ts test/main/services/team/OpenCodeNativeTeamPort.test.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Strict native command evidence regression failed before packaging; no model task submitted' }
       - name: Qualify TEST Node staging on Windows
         if: ${{ inputs.source_only && !inputs.provider_only && inputs.versions != 'v1' }}
         shell: pwsh
