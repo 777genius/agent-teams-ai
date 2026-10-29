@@ -614,11 +614,13 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     }
 
     const preview = await preparedPreview({ gateway: library.gateway });
+    const create = vi.spyOn(library.gateway, 'customTeamTemplateCreate');
     await expect(
       useCase({ gateway: library.gateway }, preview.store).execute({ previewToken: preview.token })
     ).resolves.toEqual({ status: 'templateIdConflict', templateId: PREVIEW_ID });
 
     // The bounded search never writes over an occupied identity.
+    expect(create).not.toHaveBeenCalled();
     expect(library.rows.size).toBe(candidates.length);
     expect(library.rows.has(PREVIEW_ID)).toBe(true);
     for (const templateId of candidates) {
