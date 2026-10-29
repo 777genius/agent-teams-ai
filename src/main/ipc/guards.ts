@@ -1,3 +1,4 @@
+export { validateTaskId } from '@agent-teams/task-change-ledger/review-writer';
 /**
  * IPC guard utilities for runtime validation and coercion.
  *
@@ -7,13 +8,11 @@
  */
 
 import { isValidProjectId } from '@main/utils/pathDecoder';
-import { isWindowsReservedFileName } from '@main/utils/pathValidation';
 
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const NOTIFICATION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRIGGER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const TASK_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/;
 const MESSAGE_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
 const FROM_FIELD_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
@@ -52,12 +51,6 @@ function validateString(
   }
 
   return { valid: true, value: trimmed };
-}
-
-function rejectWindowsReserved(value: string, fieldName: string): ValidationResult<never> | null {
-  return isWindowsReservedFileName(value)
-    ? { valid: false, error: `${fieldName} is reserved on Windows` }
-    : null;
 }
 
 export function validateProjectId(projectId: unknown): ValidationResult<string> {
@@ -120,24 +113,6 @@ export function validateTriggerId(triggerId: unknown): ValidationResult<string> 
 
   if (!TRIGGER_ID_PATTERN.test(basic.value!)) {
     return { valid: false, error: 'triggerId contains invalid characters' };
-  }
-
-  return { valid: true, value: basic.value };
-}
-
-export function validateTaskId(taskId: unknown): ValidationResult<string> {
-  const basic = validateString(taskId, 'taskId', 64);
-  if (!basic.valid) {
-    return basic;
-  }
-
-  if (!TASK_ID_PATTERN.test(basic.value!)) {
-    return { valid: false, error: 'taskId contains invalid characters' };
-  }
-
-  const reserved = rejectWindowsReserved(basic.value!, 'taskId');
-  if (reserved) {
-    return reserved;
   }
 
   return { valid: true, value: basic.value };

@@ -1,0 +1,256 @@
+{
+  "status": "PASS",
+  "acceptance": "Scoped existing native chat attachment UI; does not close full M03 or Stage1",
+  "scope": "Existing direct alice Composer/Send, expand original sent message header, actual PNG preview/TXT download and original Stop after two native Claude inputs",
+  "originalJobId": "1f05d66bfb93c20aab75bd355bb8b479",
+  "collectorJobId": "b718ed19386b6079642b675a9b8fcda9",
+  "retention": {
+    "path": "/Volumes/Transcend/dev/TEST-chat5-binding-retainer-_b7lik9r/retainer/retained-chat-attachments-1f05d66bfb93c20aab75bd355bb8b479/retention.json",
+    "sha256": "89a72e60f40a96dd967b79c3d8c97c02a02573e5aad767a0c83bb8eb0a2f65ac",
+    "status": "RETAINED_SCOPED_UI_WORKFLOW",
+    "retentionComplete": true,
+    "workflowQualified": true,
+    "qualificationIssues": [],
+    "retainedFiles": 2591,
+    "logsRetained": true
+  },
+  "actualNative": {
+    "transport": "Official Claude SDK/CLI to finite localhost Anthropic-compatible fixture; actual native MCP/Bash work",
+    "nativeInputs": 2,
+    "modelObservations": 11,
+    "turnSteps": {
+      "NATIVE_TEAM_ONE": 8,
+      "NATIVE_TEAM_TWO": 3
+    },
+    "modelFailures": [],
+    "nativeExecutableSha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
+    "canonicalMessageIds": [
+      "176bd52f-fccd-43a0-aa64-9f601b1289f5",
+      "f58cc29d-e4d9-489f-ac2a-99f42815dca4"
+    ],
+    "runtimeBinding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-PsX11K",
+      "teamId": "TEST-desktop-team",
+      "runId": "TEST-run-TEST-desktop-backend-PsX11K",
+      "memberId": "alice-id",
+      "generation": "1"
+    }
+  },
+  "attachments": {
+    "sourcePng": {
+      "filename": "TEST-native-chat.png",
+      "mimeType": "image/png",
+      "size": 71,
+      "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+    },
+    "preparedCanonicalNativePng": {
+      "source": "Existing Composer canvas preparation, observed before Send; exact prepared/canonical/native bytes",
+      "size": 90,
+      "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+      "width": 2,
+      "height": 1,
+      "fixedPixels": "opaque red then green RGBA; independent bounded PNG semantic validation"
+    },
+    "preview": {
+      "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+      "width": 2,
+      "height": 1
+    },
+    "sourceAndNativeText": {
+      "filename": "TEST-native-chat.txt",
+      "mimeType": "text/plain",
+      "size": 40,
+      "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af"
+    },
+    "download": {
+      "filename": "TEST-native-chat.txt",
+      "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+      "size": 40
+    },
+    "originalSentUi": {
+      "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-PsX11K",
+      "messageId": "f58cc29d-e4d9-489f-ac2a-99f42815dca4",
+      "from": "user",
+      "to": "alice",
+      "text": "NATIVE_TEAM_TWO",
+      "expanded": true,
+      "attachments": [
+        {
+          "id": "78b94ecc-2290-4c8e-945a-1ad861256c36",
+          "filename": "TEST-native-chat.png",
+          "mimeType": "image/png",
+          "size": 90
+        },
+        {
+          "id": "8c0a5a5f-f6d5-48b4-9c47-f7e5f7711dd9",
+          "filename": "TEST-native-chat.txt",
+          "mimeType": "text/plain",
+          "size": 40
+        }
+      ]
+    },
+    "canonicalChain": "Each canonical message receipt→Team outbox→Runtime input intent retains exact original IDs/bindings/refs; attachment manifests and stored blobs equal prepared PNG90/source TXT40. Native request PNG equals prepared/canonical PNG exactly. No separate Claude staging file is claimed."
+  },
+  "nativeStopBeforeQuit": {
+    "uiStopMonotonicMs": 119811,
+    "nativeAbsentAndClosedAssertionMs": 122830,
+    "capturedNativePid": 29324,
+    "nativeChildAbsentBeforeQuit": true,
+    "phase": "closed",
+    "custody": "released",
+    "sealed": true,
+    "nativeReady": false,
+    "closeClaimed": true,
+    "diagnosticRetained": "observe-ended",
+    "inputsTerminalSucceeded": 2,
+    "source": "Retained original Stop step/absence assertion and persisted Runtime session; independent of later app cleanup"
+  },
+  "outerCleanup": {
+    "appExitCode": 0,
+    "appSignal": null,
+    "capturedHostAbsent": true,
+    "observedRemaining": [],
+    "writerReleased": true
+  },
+  "productionDelta": {
+    "path": "src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts",
+    "linesAdded": 3,
+    "behavior": "Preserve existing validated public message attachment metadata via projectAttachmentMetadata; private paths omitted. Existing UI/footer behavior preserved."
+  },
+  "provenance": {
+    "retainedRawReceiptSha256": "0604a72af1614c759e52c607b9f8b9f08f2b57eb1c2ecd0afcec507d80ecb04d",
+    "retainedRetainerSha256": "4b77ec7838af1f1f74620546571b723444405e53fd29d3bb9ec0bcfe7499c1f2",
+    "originalSourcePinCount": 1290,
+    "beforeAfterSourcePinsEqual": true,
+    "originalMainPreloadBundlePinCount": 14,
+    "bundleProvenance": "original-startup-pins",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "providerArchiveSha256": "dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce",
+    "selectedSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-chat-attachments-ui.ts",
+        "sha256": "84d37cf30d2531537252dba40d8503d37df8b14452b57ed8bbcdf563a0072723"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+        "sha256": "57fc401498b4bdc307fd1d871dcfb3bae5580177ecf3841b71832a7f0a76421f"
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts",
+        "sha256": "c548b9b2775ca66a7d4e2407b8877b214ab8b35e7415f93e1690d4655f935858"
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostMessageAttachmentRead.ts",
+        "sha256": "b7c8f0a5fffb6be1efb45a62632287810bc2847fc92f8516a203a11a0640e94d"
+      },
+      {
+        "path": "src/renderer/components/team/attachments/AttachmentDisplay.tsx",
+        "sha256": "24f69b58c30b4e70e17a35ef5ff4350ea7e812cf0ab2486c7f54c59a5260b28f"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-claude-team/chat-attachments.ts",
+        "sha256": "e56cc0a2636239c45184e8b889c78aab38b40f9e8f7c8f8736180af9b591cd73"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts",
+        "sha256": "d40097f992fb78fb3449ff5cc3c8d090075aa3674a2347bcac180a30284e5f6d"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+        "sha256": "59923783c4f4c1b7bab320e7b68e0641fa1e15101a31f373a4d7ca735debd5c6"
+      }
+    ],
+    "fullPinTables": "Retained desktop-backend-receipt.json selectedSourceHashesBeforeApp/AfterFlow and compiledBundleHashesAfterStartup; Host/dependency full trees are frozen retention snapshots, not retrospective whole-tree startup pins."
+  },
+  "classClosure": {
+    "qualified": "One captured idle Claude member alice-id generation1 after two successful inputs; original Stop proves captured native PID absence and Runtime closed/released before any Quit",
+    "notQualified": "Pending/inflight/error/cold/other-provider SDK process classes, global Quit/root cleanup and original M19 SDK HOLD. observe-ended diagnostic remains recorded."
+  },
+  "diagnosticAndLegacyBoundary": {
+    "fixtureSetup": "Native launch via explicit TEST setup API; ordinary Launch dialog is not qualified here",
+    "uiVerification": "Read-only CDP geometry/current committed original message props; existing header/Send/Download/Stop are actual user controls, not direct state mutation",
+    "attachmentApi": "Existing TeamsAPI.getAttachments shape routes selected Host key through createHostMessageAttachmentRead→message.attachments.read/chunk reads; no legacy attachment fallback is invoked",
+    "allowedLegacyDiagnostics": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "codex",
+        "allowed": true,
+        "argc": 1,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "opencode",
+        "allowed": true,
+        "argc": 1,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "shell-env",
+        "allowed": true,
+        "argc": 2,
+        "flags": [
+          "-lic"
+        ]
+      }
+    ],
+    "refusedSentinelInvocations": [],
+    "qualification": "Version/shell probes are diagnostic compatibility traffic, not legacy provider execution or full fork-free/P5 proof."
+  },
+  "rawFailuresPreserved": [
+    {
+      "attempt": "Chat2",
+      "originalStatus": "INCOMPLETE",
+      "receiptPath": "/Volumes/Transcend/dev/TEST-chat-attachments-ui-v2-sWs3G7En/tmp/TEST-desktop-launch-issuer-YcfSwD/tmp/TEST-desktop-backend-bLoZls/desktop-backend-receipt.json",
+      "sha256": "fa18038cc9d993355fea51cc5d40141af2cdbf7925e0f3e3ff7cec7075ac1c72",
+      "upgraded": false
+    },
+    {
+      "attempt": "Chat3",
+      "originalStatus": "INCOMPLETE",
+      "receiptPath": "/Volumes/Transcend/dev/TEST-chat-png-review-d_0uqy_u/retainer/retained-chat-attachments-045cd292adeccc2ae740ed67b072098d/desktop-backend-receipt.json",
+      "sha256": "93dd33325b00568512ac87429e398e05c98f2854005b72b8e1b173722ff44c91",
+      "upgraded": false,
+      "originalJobId": "045cd292adeccc2ae740ed67b072098d"
+    },
+    {
+      "attempt": "Chat4",
+      "originalStatus": "INCOMPLETE",
+      "receiptPath": "/Volumes/Transcend/dev/TEST-chat-png-review-d_0uqy_u/retainer/retained-chat-attachments-701385d78a35953f0694c48575e5346f/desktop-backend-receipt.json",
+      "sha256": "1cbc32c51f42d58b1b895c349227dfb614145b54493c06c3bb828353b2b26ea5",
+      "upgraded": false,
+      "originalJobId": "701385d78a35953f0694c48575e5346f"
+    }
+  ],
+  "failedCollectorPreserved": {
+    "jobId": "39d146f3457691b99acc0d2d4dd80340",
+    "path": "/Volumes/Transcend/dev/TEST-chat-png-review-d_0uqy_u/retainer/retained-chat-attachments-1f05d66bfb93c20aab75bd355bb8b479/retention-refusal.json",
+    "sha256": "d3ca540e142a73af8997da373d134265d3f1eb729eb5c7f350ac8016cbdadb02",
+    "status": "RETENTION_INCOMPLETE",
+    "reason": "Collector compared five-field Runtime binding to full Host outbox including teamName",
+    "originalWorkflowStill": "PASS; only corrected collector ran on same original successful job, no workflow/model/SDK/UI replay"
+  },
+  "excluded": [
+    "Vendor authentication/inference",
+    "Native picker",
+    "Boundary-size/lost-ACK matrix",
+    "Other OS tuples or packed/release build",
+    "Group/mixed-provider or cold/restart chat attachments",
+    "Ordinary Launch dialog or global/natural Quit",
+    "Full M03/M04/Stage1 and final CI",
+    "Original M19 SDK HOLD resolution",
+    "Stage2, merge, publication/release"
+  ],
+  "environment": "Isolated TEST HOME/TMP, macOS arm64 Electron dev:mcp, pinned Node24.21.0; localhost finite API fixture, no vendor credentials"
+}

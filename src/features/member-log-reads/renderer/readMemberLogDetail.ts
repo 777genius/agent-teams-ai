@@ -8,6 +8,7 @@ export async function readMemberLogDetail(
   log: MemberLogSummary,
   fresh: boolean
 ): Promise<EnhancedChunk[] | null> {
+  if (log.kind === 'host_activity') return null;
   const options = fresh ? { bypassCache: true } : undefined;
   if (log.kind === 'subagent') {
     const detail = await api.getSubagentDetail(

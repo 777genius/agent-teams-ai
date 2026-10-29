@@ -47,6 +47,7 @@ import {
 import { waitFor } from './release-updater/cdp.mts';
 import { nativeCommandMatch } from './opencode-native-team-port';
 import type { electronTeamPort, NativeCommandExpectation } from './opencode-native-team-port';
+import type { BoardTaskLogStreamResponse } from '@shared/types/teamBoardTask';
 
 const execute = promisify(execFile);
 // The qualified Windows candidate retains over 82k files and about 15 MiB of digests.
@@ -1110,7 +1111,10 @@ async function commandEvidence(
 ) {
   return waitFor(
     async () => {
-      const stream = await app.call('getTaskLogStream', taskId);
+      const response = await app.call('getTaskLogStream', taskId);
+      assert(!('kind' in response) && 'segments' in response && Array.isArray(response.segments),
+        'Native Task log stream required');
+      const stream: BoardTaskLogStreamResponse = response;
       for (const segment of stream.segments) {
         if (segment.actor.memberName !== member || segment.actor.sessionId !== session) continue;
         for (const chunk of segment.chunks) {

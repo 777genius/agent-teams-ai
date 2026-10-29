@@ -55,6 +55,14 @@ export class TeamDataReadWork<T> {
     return { promise: request, started: true };
   }
 
+  /** A fresh physical read supersedes this join target without cancelling its original caller. */
+  retireRead(team: string, mode: SnapshotMode, scope: TeamReadScope): void {
+    const owner = this.lookup(team, scope);
+    if (!owner) return;
+    delete owner.active[mode];
+    this.prune(team, owner);
+  }
+
   hasRead(team: string, mode: SnapshotMode, scope: TeamReadScope): boolean {
     return this.lookup(team, scope, true)?.active[mode] !== undefined;
   }

@@ -16,19 +16,15 @@ import {
   type RuntimeTurnSettledTargetResolverPort,
 } from '../../core/application';
 import { MemberWorkSyncTaskImpactResolver } from '../adapters/input/MemberWorkSyncTaskImpactResolver';
-import { MemberWorkSyncTeamChangeRouter } from '../adapters/input/MemberWorkSyncTeamChangeRouter';
 import { TeamInboxMemberWorkSyncNudgeSink } from '../adapters/output/TeamInboxMemberWorkSyncNudgeSink';
 import { TeamRuntimeTurnSettledTargetResolver } from '../adapters/output/TeamRuntimeTurnSettledTargetResolver';
 import { TeamTaskAgendaSource } from '../adapters/output/TeamTaskAgendaSource';
 import { TeamTaskStallJournalWorkSyncCooldown } from '../adapters/output/TeamTaskStallJournalWorkSyncCooldown';
-import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
 import { ClaudeStopHookPayloadNormalizer } from '../infrastructure/ClaudeStopHookPayloadNormalizer';
 import { CodexNativeTurnSettledPayloadNormalizer } from '../infrastructure/CodexNativeTurnSettledPayloadNormalizer';
 import { CompositeRuntimeTurnSettledPayloadNormalizer } from '../infrastructure/CompositeRuntimeTurnSettledPayloadNormalizer';
-import { FileMemberWorkSyncAuditJournal } from '../infrastructure/FileMemberWorkSyncAuditJournal';
 import { FileRuntimeTurnSettledEventStore } from '../infrastructure/FileRuntimeTurnSettledEventStore';
 import { HmacMemberWorkSyncReportTokenAdapter } from '../infrastructure/HmacMemberWorkSyncReportTokenAdapter';
-import { createAlwaysCurrentJsonMemberWorkSyncPurgeLifecycle } from '../infrastructure/JsonMemberWorkSyncActiveStatePurger';
 import { MemberWorkSyncEventQueue } from '../infrastructure/MemberWorkSyncEventQueue';
 import { MemberWorkSyncNudgeDispatchScheduler } from '../infrastructure/MemberWorkSyncNudgeDispatchScheduler';
 import {
@@ -38,7 +34,6 @@ import {
 import { MemberWorkSyncStorePaths } from '../infrastructure/MemberWorkSyncStorePaths';
 import { NodeHashAdapter } from '../infrastructure/NodeHashAdapter';
 import { OpenCodeTurnSettledPayloadNormalizer } from '../infrastructure/OpenCodeTurnSettledPayloadNormalizer';
-import { QuiescingMemberWorkSyncAuditJournal } from '../infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import { RuntimeTurnSettledDrainScheduler } from '../infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RuntimeTurnSettledSpoolInitializer } from '../infrastructure/RuntimeTurnSettledSpoolInitializer';
 import { SystemClockAdapter } from '../infrastructure/SystemClockAdapter';
@@ -47,12 +42,15 @@ import { bindMemberWorkSyncUseCaseDeps } from './bindMemberWorkSyncUseCaseDeps';
 import { createDefaultMemberWorkSyncRuntimeTicketAdmission } from './createDefaultMemberWorkSyncRuntimeTicketAdmission';
 import { createMemberWorkSyncBusySignal } from './createMemberWorkSyncBusySignal';
 import { createMemberWorkSyncPersistence } from './createMemberWorkSyncPersistence';
+import { type MemberWorkSyncRestoreParticipant } from './createMemberWorkSyncRestoreParticipant';
 import {
-  createMemberWorkSyncRestoreParticipant,
-  type MemberWorkSyncRestoreParticipant,
-} from './createMemberWorkSyncRestoreParticipant';
+  createLegacySourceWorkSyncAdmission,
+  createLegacyWorkSyncConfigReader,
+  withLegacySourceReadFence,
+} from './legacySourceWorkSyncAdmission';
 import {
   buildProofMissingRecoveryIntentKey,
+  emptyMemberWorkSyncSchedulerHealth,
   normalizeRecoveryTaskRefs,
 } from './memberWorkSyncFeatureContracts';
 import {
@@ -62,6 +60,8 @@ import {
 } from './memberWorkSyncFeatureStatusRefresh';
 import { MemberWorkSyncTeamDeletionCoordinator } from './MemberWorkSyncTeamDeletionCoordinator';
 import { refreshMemberWorkSyncStatus } from './refreshMemberWorkSyncStatus';
+
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   type MemberWorkSyncFeatureFacade,
@@ -93,6 +93,7 @@ import type { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 const PROOF_MISSING_RECOVERY_RECENT_WINDOW_MS = 10 * 60_000;
 
 export function createMemberWorkSyncFeature(deps: {
+  sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
   teamsBasePath: string;
   lifecycleIdentity: ConstructorParameters<typeof HmacMemberWorkSyncReportTokenAdapter>[1];
   operationGate?: MemberWorkSyncTeamOperationGate;
@@ -126,16 +127,11 @@ export function createMemberWorkSyncFeature(deps: {
   const clock = new SystemClockAdapter();
   const hash = new NodeHashAdapter();
   const operationGate = deps.operationGate ?? new MemberWorkSyncTeamOperationGate();
-  const configReaderForReadOnlySync = {
-    listTeams: () =>
-      typeof deps.configReader.listTeams === 'function'
-        ? deps.configReader.listTeams()
-        : Promise.resolve([]),
-    getConfig: (teamName: string) =>
-      typeof deps.configReader.getConfigSnapshot === 'function'
-        ? deps.configReader.getConfigSnapshot(teamName)
-        : deps.configReader.getConfig(teamName),
-  };
+  const sourceAdmission = createLegacySourceWorkSyncAdmission(
+    operationGate,
+    deps.sourceWriteAdmission
+  );
+  const configReaderForReadOnlySync = createLegacyWorkSyncConfigReader(deps.configReader);
   const agendaSource = new TeamTaskAgendaSource({
     configReader: configReaderForReadOnlySync,
     taskReader: deps.taskReader,
@@ -145,16 +141,18 @@ export function createMemberWorkSyncFeature(deps: {
     clock,
   });
   const storePaths = new MemberWorkSyncStorePaths(deps.teamsBasePath);
-  const auditJournal = new QuiescingMemberWorkSyncAuditJournal(
-    new FileMemberWorkSyncAuditJournal(storePaths, deps.logger)
-  );
-  const { store, jsonStore, reportJournal, authority } = createMemberWorkSyncPersistence({
-    storePaths,
-    auditJournal,
-    lifecycleIdentity: deps.lifecycleIdentity,
-    ...(deps.internalStorageBackend ? { internalStorageBackend: deps.internalStorageBackend } : {}),
-    logger: deps.logger,
-  });
+  const auditJournal = sourceAdmission.createAudit(storePaths, deps.logger);
+  const { store, reportJournal, authority, capturePurgeTeam, purgeTeam, restoreParticipant } =
+    createMemberWorkSyncPersistence({
+      storePaths,
+      auditJournal,
+      lifecycleIdentity: deps.lifecycleIdentity,
+      sourceWriteAdmission: deps.sourceWriteAdmission,
+      ...(deps.internalStorageBackend
+        ? { internalStorageBackend: deps.internalStorageBackend }
+        : {}),
+      logger: deps.logger,
+    });
   const runtimeTurnSettledSpool = new RuntimeTurnSettledSpoolInitializer(deps.teamsBasePath);
   const runtimeTurnSettledStore = new FileRuntimeTurnSettledEventStore({
     paths: runtimeTurnSettledSpool.getPaths(),
@@ -169,11 +167,10 @@ export function createMemberWorkSyncFeature(deps: {
     new TeamRuntimeTurnSettledTargetResolver({
       teamSource: configReaderForReadOnlySync,
       membersMetaStore: deps.membersMetaStore,
+      captureSourceExecution: sourceAdmission.captureExecution,
     });
   const reportToken = new HmacMemberWorkSyncReportTokenAdapter(storePaths, deps.lifecycleIdentity);
-  deps.bindRestoreParticipant?.(
-    createMemberWorkSyncRestoreParticipant(store, reportToken, storePaths)
-  );
+  deps.bindRestoreParticipant?.(restoreParticipant(reportToken));
   const watchdogCooldown = new TeamTaskStallJournalWorkSyncCooldown(deps.teamsBasePath);
   const { busySignal, noteTeamChange } = createMemberWorkSyncBusySignal({
     teamsBasePath: deps.teamsBasePath,
@@ -399,7 +396,7 @@ export function createMemberWorkSyncFeature(deps: {
         ? createScheduledTeamDispatchSignal(teamName, options.signal)
         : null;
       try {
-        const teamSummary = await operationGate.run(teamName, (admission) =>
+        const teamSummary = await sourceAdmission.run(teamName, (admission) =>
           dispatchNudgesForAdmittedTeam(
             teamName,
             claimedBy,
@@ -436,8 +433,9 @@ export function createMemberWorkSyncFeature(deps: {
     return summary;
   };
   const queue = new MemberWorkSyncEventQueue({
+    captureExecutionScope: deps.sourceWriteAdmission?.bindExecution,
     reconcile: async (request, context: MemberWorkSyncReconcileContext) => {
-      await operationGate.run(request.teamName, async (admission) => {
+      await sourceAdmission.run(request.teamName, async (admission) => {
         await new MemberWorkSyncReconciler(bindDeps(request.teamName, admission)).execute(
           request,
           context
@@ -464,14 +462,11 @@ export function createMemberWorkSyncFeature(deps: {
     kanbanManager: deps.kanbanManager,
     activeMemberSource: agendaSource,
   });
-  const router = new MemberWorkSyncTeamChangeRouter(
+  const router = sourceAdmission.createRouter(
     agendaSource,
     queue,
-    {
-      materializeMember: (teamName, memberName) =>
-        storePaths.ensureMemberWorkSyncDir(teamName, memberName),
-    },
-    taskImpactResolver
+    taskImpactResolver,
+    deps.teamsBasePath
   );
   const deletionCoordinator = new MemberWorkSyncTeamDeletionCoordinator({
     teamsBasePath: deps.teamsBasePath,
@@ -485,14 +480,10 @@ export function createMemberWorkSyncFeature(deps: {
     resumeAudit: (teamName) => auditJournal.resumeTeam(teamName),
     quiesceRouter: (teamName) => router.quiesceTeam(teamName),
     resumeRouter: (teamName) => router.resumeTeam(teamName),
-    enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),
-    purgeTeam: (teamName, deletionIdentityId) =>
-      store instanceof BackendSelectingMemberWorkSyncStore
-        ? store.purgeTeam(teamName, deletionIdentityId)
-        : jsonStore.purgeActiveState(
-            teamName,
-            createAlwaysCurrentJsonMemberWorkSyncPurgeLifecycle()
-          ),
+    enqueueStartupScan: (teamNames) =>
+      sourceAdmission.scan(teamNames, (name) => router.enqueueStartupScan([name])),
+    capturePurgeTeam,
+    purgeTeam,
   });
   let acceptsRuntimeTurnSettledReconcile = true;
   const runtimeTurnSettledIngestor = new RuntimeTurnSettledIngestor({
@@ -522,7 +513,7 @@ export function createMemberWorkSyncFeature(deps: {
     };
     for (const teamName of teamNames) {
       try {
-        const summary = await operationGate.run(teamName, (admission) =>
+        const summary = await sourceAdmission.run(teamName, (admission) =>
           new MemberWorkSyncPendingReportIntentReplayer(bindDeps(teamName, admission)).replayTeam(
             teamName
           )
@@ -558,7 +549,7 @@ export function createMemberWorkSyncFeature(deps: {
             })
           ),
         observeDue: async (teamName) => {
-          await operationGate.run(teamName, (admission) =>
+          await sourceAdmission.run(teamName, (admission) =>
             refreshBackgroundStaleStatuses(teamName, bindDeps(teamName, admission))
           );
         },
@@ -700,7 +691,7 @@ export function createMemberWorkSyncFeature(deps: {
     teamName: string,
     work: (commands: MemberWorkSyncRecoveryCommands) => Promise<MemberWorkSyncRecoveryCommandResult>
   ) =>
-    operationGate.run(teamName, async (admission) => {
+    sourceAdmission.run(teamName, async (admission) => {
       const result = await work(new MemberWorkSyncRecoveryCommands(bindDeps(teamName, admission)));
       if (!result.ok) {
         throw new Error(result.code);
@@ -710,7 +701,7 @@ export function createMemberWorkSyncFeature(deps: {
   return {
     startBackground,
     getStatus: (request) =>
-      operationGate.run(request.teamName, (admission) =>
+      sourceAdmission.run(request.teamName, (admission) =>
         readStatusWithStaleRefresh(request, bindDeps(request.teamName, admission))
       ),
     refreshStatus: (request) =>
@@ -718,32 +709,40 @@ export function createMemberWorkSyncFeature(deps: {
         request,
         teamsBasePath: deps.teamsBasePath,
         nowIso: clock.now().toISOString(),
-        run: (teamName, work) => operationGate.run(teamName, work),
+        run: (teamName, work) => sourceAdmission.run(teamName, work),
         bindDeps,
       }),
     getMetrics: (request) =>
-      operationGate.run(request.teamName, (admission) =>
+      sourceAdmission.run(request.teamName, (admission) =>
         new MemberWorkSyncMetricsReader(bindDeps(request.teamName, admission)).execute(request)
       ),
     report: (request) =>
-      operationGate.run(request.teamName, (admission) =>
+      sourceAdmission.run(request.teamName, (admission) =>
         new MemberWorkSyncReporter(bindDeps(request.teamName, admission)).execute(request)
       ),
     scheduleProofMissingRecovery: (request) =>
-      operationGate.run(request.teamName, () => scheduleProofMissingRecovery(request)),
+      sourceAdmission.run(request.teamName, () => scheduleProofMissingRecovery(request)),
+    withStoppedImportFence: (teamName, read) =>
+      withLegacySourceReadFence(teamName, read, {
+        gate: operationGate,
+        router,
+        queue,
+        audit: auditJournal,
+      }),
     prepareTeamDeletion: (teamName, deletionIdentityId, options) =>
       deletionCoordinator.prepare(teamName, deletionIdentityId, options),
     completeTeamDeletion: (teamName) => deletionCoordinator.complete(teamName),
     resumeTeam: (teamName) => deletionCoordinator.resume(teamName),
-    noteTeamChange: (event) => {
-      noteTeamChange(event);
-      if (deletionCoordinator.interceptTeamChange(event)) return;
-      router.noteTeamChange(event);
-      if (event.type === 'process' || event.type === 'member-spawn') {
-        void replayPendingReports([event.teamName]);
-      }
-    },
-    enqueueStartupScan: (teamNames) => router.enqueueStartupScan(teamNames),
+    noteTeamChange: (event) =>
+      sourceAdmission.notify(
+        event,
+        noteTeamChange,
+        (change) => deletionCoordinator.interceptTeamChange(change),
+        (change) => router.noteTeamChange(change),
+        replayPendingReports
+      ),
+    enqueueStartupScan: (teamNames) =>
+      sourceAdmission.scan(teamNames, (name) => router.enqueueStartupScan([name])),
     replayPendingReports,
     dispatchDueNudges: (teamNames) =>
       dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}`),
@@ -754,12 +753,7 @@ export function createMemberWorkSyncFeature(deps: {
     drainRuntimeTurnSettledEvents: () => runtimeTurnSettledIngestor.drainPending(),
     getQueueDiagnostics: () => queue.getDiagnostics(),
     getSchedulerHealth: () =>
-      nudgeDispatchScheduler?.getHealth() ?? {
-        pendingDiscovery: 0,
-        retainedDispatches: 0,
-        lastDiscoveryAt: null,
-        discoveryCapacityExhausted: false,
-      },
+      nudgeDispatchScheduler?.getHealth() ?? emptyMemberWorkSyncSchedulerHealth(),
     stopAutoResume: (input) => runRecovery(input.teamName, (commands) => commands.stop(input)),
     resumeAutoResume: (input) => runRecovery(input.teamName, (commands) => commands.resume(input)),
     continueManually: async (input) => {
@@ -773,7 +767,7 @@ export function createMemberWorkSyncFeature(deps: {
       return status;
     },
     recordStallObservation: async (input) => {
-      await operationGate.run(input.teamName, async (admission) => {
+      await sourceAdmission.run(input.teamName, async (admission) => {
         await new MemberWorkSyncRecoveryCommands(
           bindDeps(input.teamName, admission)
         ).recordStallObservation(input);

@@ -231,6 +231,14 @@ const EventContent = ({
           <ReviewStateBadge state="needsFix" />
         </span>
       );
+    case 'review_disapproved':
+      return (
+        <span className="flex items-center gap-1">
+          <ArrowRight size={10} className="text-amber-400" />
+          Disapprove
+          <ReviewStateBadge state="none" />
+        </span>
+      );
     case 'review_approved':
       return (
         <span className="flex items-center gap-1">
@@ -320,6 +328,7 @@ function dotColor(event: TaskHistoryEvent): string {
     case 'review_started':
       return 'bg-purple-400';
     case 'review_changes_requested':
+    case 'review_disapproved':
       return 'bg-amber-400';
     case 'review_approved':
       return 'bg-emerald-400';

@@ -64,7 +64,7 @@ import { queueTaskDetailReview } from '../team/taskDetailReviewRoute';
 
 import type { TaskDetailReviewRequest } from '../team/taskDetailReviewRoute';
 import type { AppState } from '../types';
-import type { TeamTaskWithKanban } from '@shared/types';
+import type { AddTaskCommentRequest, TeamTaskWithKanban } from '@shared/types';
 import type { StateCreator } from 'zustand';
 
 export interface TeamTaskDetailSlice {
@@ -135,12 +135,16 @@ export interface TeamTaskDetailSlice {
       | 'subjectDraft'
       | 'descriptionDraft']
   ) => void;
-  beginTaskDetailSubmitSession: (identity: TaskDetailIdentity) => number;
+  beginTaskDetailSubmitSession: (
+    identity: TaskDetailIdentity,
+    request?: AddTaskCommentRequest
+  ) => number;
   completeTaskDetailSubmitSession: (identity: TaskDetailIdentity, revision: number) => void;
   failTaskDetailSubmitSession: (
     identity: TaskDetailIdentity,
     revision: number,
-    error: string
+    error: string,
+    provenNoEffect?: boolean
   ) => void;
   beginTaskDetailSaveSession: (
     identity: TaskDetailIdentity,
@@ -538,13 +542,13 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
-  beginTaskDetailSubmitSession: (rawIdentity) => {
+  beginTaskDetailSubmitSession: (rawIdentity, request) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
     let revision = 0;
     set((state) => {
       const current = state.taskDetailSessionById[key] ?? EMPTY_TASK_DETAIL_SESSION;
-      const next = beginTaskDetailSubmit(current, current);
+      const next = beginTaskDetailSubmit(current, current, request);
       revision = next.submitRevision;
       return { taskDetailSessionById: { ...state.taskDetailSessionById, [key]: next } };
     });
@@ -566,7 +570,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
     });
   },
 
-  failTaskDetailSubmitSession: (rawIdentity, revision, error) => {
+  failTaskDetailSubmitSession: (rawIdentity, revision, error, provenNoEffect) => {
     const identity = normalizeTaskDetailIdentity(rawIdentity);
     const key = taskDetailKey(identity);
     set((state) => {
@@ -575,7 +579,7 @@ export const createTeamTaskDetailSlice: StateCreator<AppState, [], [], TeamTaskD
       return {
         taskDetailSessionById: {
           ...state.taskDetailSessionById,
-          [key]: failTaskDetailSubmit(current, revision, error),
+          [key]: failTaskDetailSubmit(current, revision, error, provenNoEffect),
         },
       };
     });

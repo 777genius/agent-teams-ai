@@ -1,0 +1,7 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt8.tar.gz",
+  "archiveSha256": "b8a4349ca6121b8c104b912f28c818290c3e5859c39861f0785cb289eeb4c92b",
+  "receiptSha256": "86d0927c26d7772b77d29d52d219a5b1ff3f4c6c38bfd5a0dfaaa47cfca48c81",
+  "scope": "Task created once through UI; same canonical task survived reload and sidebar count2. Post-reload hover layout measurement waited for throttled requestAnimationFrame and timed out before click. Original flow INCOMPLETE; captured group and Host retired.",
+  "status": "INCOMPLETE"
+}

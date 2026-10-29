@@ -1,0 +1,686 @@
+{
+  "status": "ACCEPTED_SCOPED_OFFLINE_UI_WORKFLOW",
+  "scope": "Task11 existing desktop UI; human product actions against a canonical offline Host owner",
+  "originalJobId": "db1ce363944b1789a2021640a6c8fb49",
+  "originalExitCode": 0,
+  "mode": "task-board-cross-team-ui",
+  "retainerJobId": "2bc20b6293664319b598f87fa9e7d065",
+  "retentionRoot": "/Volumes/Transcend/dev/TEST-task10-retainer-recovered-tool-d8g5w71o/retained-task-board-cross-team-ui-db1ce363944b1789a2021640a6c8fb49",
+  "retention": {
+    "path": "/Volumes/Transcend/dev/TEST-task10-retainer-recovered-tool-d8g5w71o/retained-task-board-cross-team-ui-db1ce363944b1789a2021640a6c8fb49/retention.json",
+    "sha256": "b8d99b2ea14c664d156e33b3b0273c9729560a335754247adc68117d5cfbc347",
+    "retentionComplete": true,
+    "workflowQualified": true,
+    "qualificationIssues": [],
+    "retainedManifestFileCount": 2665,
+    "fullHashCensusRepeated": false
+  },
+  "originalReceipt": {
+    "path": "/Volumes/Transcend/dev/TEST-task10-retainer-recovered-tool-d8g5w71o/retained-task-board-cross-team-ui-db1ce363944b1789a2021640a6c8fb49/desktop-backend-receipt.json",
+    "sha256": "d3b865c02e0e551972a7ab9a0ddf8e2a2f43448223703dfc8ead7aff43ec96e1",
+    "status": "PASS"
+  },
+  "task": {
+    "id": "29278847-7da4-5fcf-b633-095164e1c79c",
+    "ownerSelection": "host-team:TEST-desktop-handle-TEST-desktop-backend-pMB8Yw",
+    "assignee": "alice",
+    "finalStatus": "completed",
+    "finalReviewState": "none",
+    "doneControlsVisible": true
+  },
+  "proofs": {
+    "board": {
+      "status": "PASS",
+      "scope": "Original Create Task dependency picker, Task assignee/Mark resolved, sortable TODO cards and blocked Start/Complete controls; offline canonical Host persistence",
+      "blockedStart": {
+        "commandId": "89634f63-237f-4d64-ab70-c22cb5276b63",
+        "phase": "rejected",
+        "reason": "Cannot set task #29278847 to in_progress: unresolved dependencies #4445e3ec (pending). Wait or work on another task, then retry once dependencies are resolved. Ask the lead if a dependency is incorrect."
+      },
+      "createCommandId": "fde07e63-7089-40d8-aab1-b3190d51efca",
+      "assignCommandId": "c2f77602-47a4-47c4-8178-1b39ae87261d",
+      "orderCommandId": "e5f8fd96-94c3-42c4-805d-bb0f6c90f747"
+    },
+    "attachments": {
+      "status": "PASS",
+      "scope": "Existing Task image upload/preview, comment text-file upload/download, reload and Task image remove; offline canonical owner",
+      "fixtureFiles": [
+        {
+          "filename": "TEST-task-owned.png",
+          "size": 71,
+          "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+        },
+        {
+          "filename": "TEST-comment-owned.txt",
+          "size": 39,
+          "sha256": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b"
+        }
+      ],
+      "commands": {
+        "addReceipt": "035d0afe-d96d-41ee-a260-4a1dfc47127b",
+        "commentReceipt": "72281747-9989-4ca4-8682-36779d1ae8da",
+        "removeReceipt": "12078d38-03ab-4fe3-9075-13d03ad11aac"
+      },
+      "imageBeforeReload": {
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+        "width": 2,
+        "height": 1
+      },
+      "imageAfterReload": {
+        "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+        "width": 2,
+        "height": 1
+      },
+      "ownerReads": {
+        "imageOwnerRead": {
+          "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+          "size": 71
+        },
+        "commentOwnerRead": {
+          "sha256": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b",
+          "size": 39
+        }
+      },
+      "commentComposerCompleted": {
+        "commentText": "",
+        "submitPending": false,
+        "submitError": null,
+        "pendingAttachmentCount": 0
+      },
+      "durableDraftEmptyBeforeReload": true,
+      "emptyAfterReload": "PASS in original executed helper; empty composer also visible in retained reloaded screenshot",
+      "download": {
+        "retainedPath": "home/Downloads/TEST-comment-owned.txt",
+        "size": 39,
+        "sha256": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b",
+        "policyMethod": "Page.setDownloadBehavior",
+        "policyAcknowledged": true
+      },
+      "removePhase": "completed",
+      "excluded": [
+        "boundary-size qualification",
+        "native image delivery",
+        "chat attachments",
+        "native picker",
+        "cold app restart",
+        "blob garbage collection"
+      ]
+    },
+    "reviewCycle": {
+      "status": "PASS",
+      "scope": "Same original UI-created Task: Complete, Request review, Request Changes, Start, correction comment, Complete, Request review, Approve, canonical history/notifications and reload; original Disapprove returns approved Task to Done",
+      "canonicalReceipts": [
+        {
+          "commandId": "64c61616-bdaf-461c-93b7-edabd7d768e1",
+          "operation": "task.lifecycle",
+          "action": "complete",
+          "taskStatusAfter": "completed",
+          "reviewStateAfter": "none",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/947abeb1d95530b0e46ffbe2183fa28fa95312f7b6c8f3d5d8b21a383f411d38.json"
+        },
+        {
+          "commandId": "71874a66-7f6b-48f7-ab8d-4db7ff9faf6b",
+          "operation": "task.review",
+          "action": "request",
+          "taskStatusAfter": "completed",
+          "reviewStateAfter": "review",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/8d6091bf1b75afbfb26df6bb66033b12c05e68308433a38cd126a8d267c9629c.json"
+        },
+        {
+          "commandId": "fe1ec595-ff41-4116-88c6-f819f55bd465",
+          "operation": "task.review",
+          "action": "request_changes",
+          "taskStatusAfter": "pending",
+          "reviewStateAfter": "needsFix",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/fa55348020b23e10a3c5e801509372a5ec1b78393d6415c17870f660f329b14a.json"
+        },
+        {
+          "commandId": "1a49628c-9cca-4357-a28d-381041fbc301",
+          "operation": "task.start",
+          "action": null,
+          "taskStatusAfter": "in_progress",
+          "reviewStateAfter": "none",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/4c43f0ab492166066e0d6b9b5e20e9425549c30fc5dc6de709022a6abc30cebe.json"
+        },
+        {
+          "commandId": "aecb8da2-9767-4766-b776-c3fef3f78f88",
+          "operation": "task.comment",
+          "action": null,
+          "taskStatusAfter": "in_progress",
+          "reviewStateAfter": "none",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/02eb8a07690339b2f259c9b3dad36930503988f4b090c211369f920712a07537.json"
+        },
+        {
+          "commandId": "92aae474-baef-4128-8ccc-858de03e19a6",
+          "operation": "task.lifecycle",
+          "action": "complete",
+          "taskStatusAfter": "completed",
+          "reviewStateAfter": "none",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/4ad7137d95d2cc98fed724fb1f84efe1d4b64965a118cf2c09e164d507a89c85.json"
+        },
+        {
+          "commandId": "52857d1c-db08-4473-938d-50b3a20b4b85",
+          "operation": "task.review",
+          "action": "request",
+          "taskStatusAfter": "completed",
+          "reviewStateAfter": "review",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/42cf57ae83b78c5aefb5199e825e3124a6fec9eee618515991c2f800aeb711f3.json"
+        },
+        {
+          "commandId": "34afec8a-04ee-481f-9419-1eb8d325320b",
+          "operation": "task.review",
+          "action": "approve",
+          "taskStatusAfter": "completed",
+          "reviewStateAfter": "approved",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/c3dd28c2fd1a3c0fa92edfc9644fdd4dfe712131e5ba9758f365470ea9e480f2.json"
+        },
+        {
+          "commandId": "f7220ee7-c45d-4d60-886d-a8dd60e27624",
+          "operation": "task.review",
+          "action": "disapprove",
+          "taskStatusAfter": "completed",
+          "reviewStateAfter": "none",
+          "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/61faa2fdd03ebae0272b9f2b763a16ed438befc942484397a847feada9129385.json"
+        }
+      ],
+      "approvedToDone": {
+        "status": "PASS",
+        "commandId": "f7220ee7-c45d-4d60-886d-a8dd60e27624",
+        "statusAfter": "completed",
+        "reviewStateAfter": "none",
+        "doneControlsVisible": true
+      },
+      "authorship": "All nine receipts use TEST-human; review history actors are user. The correction is a product-only human comment, not native agent work."
+    },
+    "notifications": {
+      "status": "PASS",
+      "notificationId": "d08ed42f-e79e-4a25-ba5e-8cf172f369a1",
+      "target": {
+        "kind": "task",
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-pMB8Yw",
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "focus": "detail"
+      },
+      "navigate": "PASS",
+      "delete": "PASS",
+      "markRead": "PASS"
+    },
+    "crossTeam": {
+      "status": "PASS",
+      "scope": "Original existing Messages cross-Team selector/Send, target Reply through same Composer, canonical source/target receipts and reload",
+      "commandIds": [
+        "2903477f-997e-468e-a650-6ada6b660ddc",
+        "62afa7c1-6cb6-4991-befa-adb5e5d63b13"
+      ],
+      "conversationId": "f0ec48ba-cb96-44d8-9f5e-4387ee35395e",
+      "canonicalReceiptPhases": [
+        "completed",
+        "completed"
+      ],
+      "rendererReloadReadback": "PASS in original existing workflow",
+      "excluded": [
+        "native provider input/response",
+        "cross-owner protocol",
+        "full M05",
+        "Stage2"
+      ]
+    }
+  },
+  "canonicalCommandCensus": {
+    "total": 27,
+    "phases": {
+      "completed": 26,
+      "rejected": 1
+    },
+    "operations": {
+      "task.create": 4,
+      "message.send": 2,
+      "cross-team": 2,
+      "task.comment": 2,
+      "task.review": 5,
+      "task.lifecycle": 3,
+      "task.start": 3,
+      "task.board.order": 1,
+      "task.clarification": 2,
+      "task.attachment.add": 1,
+      "task.assign": 1,
+      "task.attachment.remove": 1
+    },
+    "perTeam": {
+      "test-cross-alpha": 3,
+      "test-cross-beta": 3,
+      "test-desktop-backend": 21
+    },
+    "interpretation": "Includes explicit TEST setup and derived cross-Team message deliveries; not a count of UI actions or native-authored actions. One rejected receipt is the expected unresolved-dependency Start refusal."
+  },
+  "canonicalReceipts": [
+    {
+      "path": "hoststore/teams/test-cross-alpha/.host-owner/commands/0b383e38c660fa402dbbed177011d04d78d38a20f1e79200b6424db5ae89d434.json",
+      "commandId": "TEST-cross-seed-0",
+      "team": "test-cross-alpha",
+      "operation": "task.create",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "subject": "TEST Cross Alpha seed"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-cross-alpha/.host-owner/commands/2abfff4939d58704704e79c16d223cd9224f42e043ece0acabd05438f9863465.json",
+      "commandId": "5cdffcba-e553-534a-a2e2-6763dd3350e1",
+      "team": "test-cross-alpha",
+      "operation": "message.send",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "to": "team-lead",
+        "text": "TEST_CROSS_TEAM_TWO",
+        "messageId": "5cdffcba-e553-534a-a2e2-6763dd3350e1",
+        "summary": "TEST_CROSS_TEAM_TWO",
+        "actionMode": "delegate",
+        "taskRefs": []
+      }
+    },
+    {
+      "path": "hoststore/teams/test-cross-alpha/.host-owner/commands/4c92f8e678ed231d70828d2a4dcf3f3cf3df11b763de4c076d6aabc84f0b36b2.json",
+      "commandId": "2903477f-997e-468e-a650-6ada6b660ddc",
+      "team": "test-cross-alpha",
+      "operation": "cross-team",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": null
+    },
+    {
+      "path": "hoststore/teams/test-cross-beta/.host-owner/commands/02f356fa6667de4692c1422074948e64f4cf4e44cf1554d4c0078d81283aa749.json",
+      "commandId": "62afa7c1-6cb6-4991-befa-adb5e5d63b13",
+      "team": "test-cross-beta",
+      "operation": "cross-team",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": null
+    },
+    {
+      "path": "hoststore/teams/test-cross-beta/.host-owner/commands/a6f78cd71b8fc72cfaf96d2052594f3f33b6e38d80c3acaada61f8d6300114db.json",
+      "commandId": "5d4b3ce0-ddea-5ed2-86f3-7b7d226c44c2",
+      "team": "test-cross-beta",
+      "operation": "message.send",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "to": "team-lead",
+        "text": "TEST_CROSS_TEAM_ONE",
+        "messageId": "5d4b3ce0-ddea-5ed2-86f3-7b7d226c44c2",
+        "summary": "TEST_CROSS_TEAM_ONE",
+        "actionMode": "delegate",
+        "taskRefs": []
+      }
+    },
+    {
+      "path": "hoststore/teams/test-cross-beta/.host-owner/commands/f3895928856013b10a6025236a7c01b7e32e358342206da3457f49a27d235df2.json",
+      "commandId": "TEST-cross-seed-1",
+      "team": "test-cross-beta",
+      "operation": "task.create",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "subject": "TEST Cross Beta seed"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/02eb8a07690339b2f259c9b3dad36930503988f4b090c211369f920712a07537.json",
+      "commandId": "aecb8da2-9767-4766-b776-c3fef3f78f88",
+      "team": "test-desktop-backend",
+      "operation": "task.comment",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "text": "TEST review correction addressed in this product-only task cycle",
+        "taskRefs": []
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/0bc92fa7069cbc176abb818bf3159e7207986a91c2d1055957015747c6d6cf2a.json",
+      "commandId": "72281747-9989-4ca4-8682-36779d1ae8da",
+      "team": "test-desktop-backend",
+      "operation": "task.comment",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "text": "TEST attachment comment original",
+        "attachments": [
+          {
+            "artifactId": "222e9591cee4b6864b05aacdc7a1c2e78a5d098dd003fd8700065c4befc520e7",
+            "mimeType": "text/plain",
+            "byteLength": 39,
+            "digest": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b"
+          }
+        ],
+        "taskRefs": []
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/42cf57ae83b78c5aefb5199e825e3124a6fec9eee618515991c2f800aeb711f3.json",
+      "commandId": "52857d1c-db08-4473-938d-50b3a20b4b85",
+      "team": "test-desktop-backend",
+      "operation": "task.review",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "request"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/4ad7137d95d2cc98fed724fb1f84efe1d4b64965a118cf2c09e164d507a89c85.json",
+      "commandId": "92aae474-baef-4128-8ccc-858de03e19a6",
+      "team": "test-desktop-backend",
+      "operation": "task.lifecycle",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "complete"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/4c43f0ab492166066e0d6b9b5e20e9425549c30fc5dc6de709022a6abc30cebe.json",
+      "commandId": "1a49628c-9cca-4357-a28d-381041fbc301",
+      "team": "test-desktop-backend",
+      "operation": "task.start",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "notification": "user"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/551b912a7ee5f195bf9a1b4f833f84e9267f32c7cfec163124aa10dc9fa4820a.json",
+      "commandId": "e5f8fd96-94c3-42c4-805d-bb0f6c90f747",
+      "team": "test-desktop-backend",
+      "operation": "task.board.order",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "columnId": "todo",
+        "orderedTaskIds": [
+          "29278847-7da4-5fcf-b633-095164e1c79c",
+          "4445e3ec-99be-53f2-a488-5ec9136c227f"
+        ]
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/61faa2fdd03ebae0272b9f2b763a16ed438befc942484397a847feada9129385.json",
+      "commandId": "f7220ee7-c45d-4d60-886d-a8dd60e27624",
+      "team": "test-desktop-backend",
+      "operation": "task.review",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "disapprove"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/6ccad26367b79261d2f959ecaccf3c82744361e7342ee4d7420cc6ef90dd33f4.json",
+      "commandId": "0ebab94b-b61c-4873-b943-d9fdc341bf42",
+      "team": "test-desktop-backend",
+      "operation": "task.clarification",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "value": null
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/6d2e11e7e2dd171f2b66063c0b1fcbc57e05986dc2d623dbe92ce2c78f7f36d9.json",
+      "commandId": "035d0afe-d96d-41ee-a260-4a1dfc47127b",
+      "team": "test-desktop-backend",
+      "operation": "task.attachment.add",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "attachment": {
+          "artifactId": "82aaa7721cf3e6746c84cce85a3ca981a0ce0323b8fcbfe838203f1d5ad09d91",
+          "mimeType": "image/png",
+          "byteLength": 71,
+          "digest": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+        }
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/72ce7fce83a2e7bf6324fc73ee405180a279d28725ffb06643871201fef7277f.json",
+      "commandId": "40265895-90d5-4765-aae9-6621fe43a67f",
+      "team": "test-desktop-backend",
+      "operation": "task.start",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "notification": "user"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "commandId": "TEST-ui-offline-seed",
+      "team": "test-desktop-backend",
+      "operation": "task.create",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "subject": "TEST persisted Host sidebar seed"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/8d6091bf1b75afbfb26df6bb66033b12c05e68308433a38cd126a8d267c9629c.json",
+      "commandId": "71874a66-7f6b-48f7-ab8d-4db7ff9faf6b",
+      "team": "test-desktop-backend",
+      "operation": "task.review",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "request"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/947abeb1d95530b0e46ffbe2183fa28fa95312f7b6c8f3d5d8b21a383f411d38.json",
+      "commandId": "64c61616-bdaf-461c-93b7-edabd7d768e1",
+      "team": "test-desktop-backend",
+      "operation": "task.lifecycle",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "complete"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/961a83a02f8f34ece03ea91afeb4042c1ad54e3d39b7e1c6a96d99b2d5543731.json",
+      "commandId": "c2f77602-47a4-47c4-8178-1b39ae87261d",
+      "team": "test-desktop-backend",
+      "operation": "task.assign",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "owner": "alice"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/9d1c00e7d559dc9e3bd888745de60c08add08f13aaf062228b6d4ca543eb5e33.json",
+      "commandId": "TEST-task-board-clarification-setup",
+      "team": "test-desktop-backend",
+      "operation": "task.clarification",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "value": "user"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/b742fd6097af5abfafe17a5be30240f88d0c6cbc633c39ea1ecf7a9969396450.json",
+      "commandId": "fde07e63-7089-40d8-aab1-b3190d51efca",
+      "team": "test-desktop-backend",
+      "operation": "task.create",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "subject": "TEST ordinary dependent board task",
+        "blockedBy": [
+          "4445e3ec-99be-53f2-a488-5ec9136c227f"
+        ],
+        "descriptionTaskRefs": []
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/c3dd28c2fd1a3c0fa92edfc9644fdd4dfe712131e5ba9758f365470ea9e480f2.json",
+      "commandId": "34afec8a-04ee-481f-9419-1eb8d325320b",
+      "team": "test-desktop-backend",
+      "operation": "task.review",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "approve",
+        "notifyOwner": true,
+        "suppressTaskComment": true
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/c7688f64c95efd96a49a79aa8f594c2ab3798322b2a613cc2704b91ba578faa1.json",
+      "commandId": "12078d38-03ab-4fe3-9075-13d03ad11aac",
+      "team": "test-desktop-backend",
+      "operation": "task.attachment.remove",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "attachmentId": "96266416-2ded-4732-8e99-03f61da4dfa4"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/cd6dd6b80bb84231a92cbe856780ae7e168cc153d07b73a637348207d9796ce7.json",
+      "commandId": "89634f63-237f-4d64-ab70-c22cb5276b63",
+      "team": "test-desktop-backend",
+      "operation": "task.start",
+      "phase": "rejected",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "notification": "user"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/eaef6f0c682c3135ff116d99bc96a456be8454d7dbceea03afeae98f5f22f955.json",
+      "commandId": "a3964520-eab8-43d9-bff9-8bbb2ca7e072",
+      "team": "test-desktop-backend",
+      "operation": "task.lifecycle",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "4445e3ec-99be-53f2-a488-5ec9136c227f",
+        "action": "complete"
+      }
+    },
+    {
+      "path": "hoststore/teams/test-desktop-backend/.host-owner/commands/fa55348020b23e10a3c5e801509372a5ec1b78393d6415c17870f660f329b14a.json",
+      "commandId": "fe1ec595-ff41-4116-88c6-f819f55bd465",
+      "team": "test-desktop-backend",
+      "operation": "task.review",
+      "phase": "completed",
+      "principalId": "TEST-human",
+      "payload": {
+        "taskId": "29278847-7da4-5fcf-b633-095164e1c79c",
+        "action": "request_changes",
+        "comment": "TEST fix the review edge case",
+        "taskRefs": []
+      }
+    }
+  ],
+  "runtimeSessions": [],
+  "screenshots": [
+    {
+      "path": "ui-cross-team-reply.png",
+      "sha256": "9f6a01acf16693fe1b4b53da5bc70802f32b6e16ab3a79d1b54f50b5f70b4982",
+      "visualInspection": "Alpha/Beta tabs and original Send/reply rows visible; full reply text is established by canonical evidence, not the truncated preview."
+    },
+    {
+      "path": "ui-task-board-assigned-blocked.png",
+      "sha256": "bfcab60737a2f377d31807cfc62aa0edbc31e334ca98628a741fa919dc47d7e0",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-board-attachment-added.png",
+      "sha256": "f298f60eaf777c5db3f5552c365866fffcbffe268fbc495ea4aa6d13e27ffcc7",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-board-attachment-removed.png",
+      "sha256": "a527795d3a2c635e63acc184391291190ed0e58d5d6f54964453c055afe0e963",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-board-attachments-reloaded.png",
+      "sha256": "c1ecff6d1ee55898b4b27c54b4df2d067f3b0d4d9d8c58aa6e8ab57f00f9448f",
+      "visualInspection": "Exact Task/owner detail: Alice, dependency, image thumbnail and empty comment composer visible."
+    },
+    {
+      "path": "ui-task-board-blocked-start.png",
+      "sha256": "69b5d3de1a090958c158d4b40131d7bfe9d161781795f281631c8a998a8e6d5a",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-board-initial.png",
+      "sha256": "98d4b4f55fc07b119865c991d38db242542f8f10cd08ee15093b02af7396281d",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-board-reloaded.png",
+      "sha256": "0937cf41b0c98ebc7fc1a639ecd6f2837dfd19dc0eba67564fbb04cfe27204e8",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-board-reordered.png",
+      "sha256": "c14567cf001ce183de7d19bfe583c5ddedcfc4c8c1b513b2e4a32b373b27c7cc",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-notification-quick-actions.png",
+      "sha256": "f1d82f62882c0b82309d37ec55a27362ba7d476c78cac8e1b63a3cacefcf11a2",
+      "visualInspection": "Retained; not independently visually inspected in this handoff."
+    },
+    {
+      "path": "ui-task-review-approved.png",
+      "sha256": "aa5e2305bbb17d14beead97dc3b4390da693f7239afb721c894b45b0bbf1b90c",
+      "visualInspection": "Original Task is in APPROVED; blocker seed is in DONE. This precedes Disapprove."
+    }
+  ],
+  "cleanup": {
+    "writerReleased": true,
+    "remaining": [],
+    "appExitCode": null,
+    "appSignalCode": "SIGTERM",
+    "naturalElectronOrHostExitQualified": false,
+    "capturedHostAbsent": true,
+    "meaning": "Guarded Quit was requested, then the dev wrapper/app was terminated by scoped SIGTERM. Empty owned process group and writer release do not qualify natural Electron/Host exit."
+  },
+  "excluded": [
+    "actual agent/runtime allocation or native input/reply",
+    "native Task authorship or agent code correction",
+    "native image/chat attachment delivery",
+    "cold app restart",
+    "natural Electron or Host exit",
+    "cross-owner messaging",
+    "attachment boundary sizes or blob garbage collection",
+    "whole M13",
+    "full Stage1"
+  ],
+  "previousAttempts": "Task7/8/9/10 original failures and their raw retained evidence remain unchanged; Task11 is a fresh successful attempt, not a reclassification or replay.",
+  "publication": "Outside-only documentation proposal; Root owns later integration."
+}

@@ -1,0 +1,11 @@
+{
+  "oldSha256": "d6a2351a672efe91d359356c4ed56b6b8aa28dbf5e05a0557de2716dea7b404f",
+  "newSha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151",
+  "runtimeAndDeclarationBytesIdentical": true,
+  "fileSetIdentical": true,
+  "changedPath": ["package/package.json"],
+  "changedManifestKeys": ["scripts"],
+  "changedScriptKeys": ["test"],
+  "nativeReexecutionRequired": false,
+  "reason": "Only package test command gains --test-concurrency=1; all packed dist, type declarations, dependencies, engines, exports and runtime bytes identical"
+}

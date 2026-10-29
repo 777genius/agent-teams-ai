@@ -26,6 +26,19 @@ on:
       ]
   merge_group:
   workflow_dispatch:
+    inputs:
+      stage1_desktop:
+        description: Run existing Stage 1 source Desktop controls with isolated localhost fixtures
+        type: boolean
+        default: false
+      stage1_process_diagnostic:
+        description: Record an unqualified current macOS tuple diagnostic with one owned finite Node child
+        type: boolean
+        default: false
+      stage1_process_qualification:
+        description: Run fresh TEST kernel ancestry, normal SDK Stop and unsigned packed Launch on the exact prospective tuple
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -191,6 +204,14 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
+      - name: Setup captured Host Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+
+      - name: Capture exact Host test runtime
+        run: echo "AGENT_BACKEND_TEST_NODE=$(node -p 'process.execPath')" >> "$GITHUB_ENV"
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -240,7 +261,12 @@ jobs:
 
       - name: Test workspace packages
         if: matrix.shard == 1
-        run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
+        run: |
+          set -euo pipefail
+          pnpm --filter agent-teams-controller test
+          pnpm --filter agent-teams-mcp test
+          # The portable Host test script requires Node 24; reuse the runtime captured above.
+          PATH="$(dirname "$AGENT_BACKEND_TEST_NODE"):$PATH" pnpm --filter @agent-teams/legacy-agent-host test
 
       - name: Test CI scripts and OpenCode proof runner safety
         if: matrix.shard == 1
@@ -250,6 +276,9 @@ jobs:
 
       - name: Build MCP server for root integration tests
         run: pnpm --filter agent-teams-mcp build
+
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Test root shard
         run: pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/4
@@ -310,6 +339,9 @@ jobs:
 
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Restore ESLint cache
         uses: actions/cache@v5
@@ -383,6 +415,10 @@ jobs:
       - name: Install dependencies
         if: steps.windows.outputs.reuse != 'true'
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+
+      - name: Build captured Host and ledger prerequisites
+        if: steps.windows.outputs.reuse != 'true'
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Test crash-safe app lock publication
         if: steps.windows.outputs.reuse != 'true'
@@ -497,6 +533,524 @@ jobs:
         run: node scripts/ci/install-dependencies-with-retry.mjs
       - name: Build and mount DMG fixture
         run: node scripts/ci/verify-dmg-artwork.mts
+
+  stage1-desktop:
+    name: Stage 1 source Desktop (${{ matrix.label }})
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_desktop
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: native-mixed-create-launch-ui
+            label: mixed Create and Launch
+          - mode: native-create-ui
+            label: Create with native launch
+          - mode: native-create-ui
+            variant: native-create-member
+            label: solo Create and native persistent teammate
+            native_member_create: '1'
+          - mode: stopped-import-ui
+            label: saved legacy import only
+          - mode: stopped-import-ui
+            variant: stopped-import-native-launch
+            label: stopped legacy import and native Launch
+            import_launch: '1'
+          - mode: native-quit-ui
+            variant: native-quit-active-readback
+            label: active input Quit and cold readback
+            readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-quit-pending-open-readback
+            label: pending open Quit and cold readback
+            quit_scenario: pending-open
+            readback: native-quit-readback-ui
+          - mode: native-resume-ui
+            label: cold selected Resume
+          - mode: native-resume-ui
+            variant: native-codex-resume-ui
+            label: cold selected Codex Resume
+            resume_provider: codex
+          - mode: native-review-ui
+            label: native review and cold readback
+            readback: native-review-readback-ui
+          - mode: task-board-cross-team-ui
+            label: existing Task board and cross-Team controls
+    env:
+      TMPDIR: /private/tmp
+      STAGE1_MODE: ${{ matrix.mode }}
+      STAGE1_VARIANT: ${{ matrix.variant || matrix.mode }}
+      STAGE1_READBACK_MODE: ${{ matrix.readback || '' }}
+      STAGE1_QUIT_SCENARIO: ${{ matrix.quit_scenario || '' }}
+      LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
+      LEGACY_DESKTOP_NATIVE_MEMBER_CREATE: ${{ matrix.native_member_create || '' }}
+      LEGACY_DESKTOP_RESUME_PROVIDER: ${{ matrix.resume_provider || '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Record actual macOS tuple before native qualification
+        run: |
+          set -euo pipefail
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          printf 'Actual build: '
+          sw_vers -buildVersion
+          git rev-parse HEAD
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Verify and stage pinned Node before Desktop dependencies
+        run: |
+          set -euo pipefail
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install Desktop dependencies including Electron
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build existing Host, controller and MCP prerequisites
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+      - name: Prepare exact TEST package manager and reviewed native binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-setup-$STAGE1_VARIANT.log") 2>&1
+          selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)"
+          printf 'STAGE1_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
+          printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
+          tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
+          mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"
+          test -f "$selected_inputs/codex/codex-code-mode-host" && test ! -L "$selected_inputs/codex/codex-code-mode-host" && test -x "$selected_inputs/codex/codex-code-mode-host"
+          printf '%s  %s\n' 0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a "$selected_inputs/codex/codex-code-mode-host" | shasum -a 256 -c -
+          unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
+          STAGE1_SELECTED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join, resolve } from 'node:path';
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const selected = process.env.STAGE1_SELECTED_INPUTS;
+          // These ESM-only packages intentionally expose no require-condition entrypoint.
+          // Frozen pnpm installs each dependency beside its requesting scoped package.
+          const providerRoot = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
+          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
+          const sdkPackage = JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8'));
+          assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk');
+          assert.equal(sdkPackage.version, '0.3.305');
+          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude'));
+          const codex = realpathSync(join(selected, 'codex/codex-aarch64-apple-darwin'));
+          const codexCodeModeHost = realpathSync(join(selected, 'codex/codex-code-mode-host'));
+          const opencode = realpathSync(join(selected, 'opencode/opencode'));
+          for (const [path, expected] of [
+            [claude, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'],
+            [codex, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'],
+            [codexCodeModeHost, '0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a'],
+            [opencode, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'],
+          ]) assert.equal(digest(path), expected, 'exact reviewed native executable');
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const host = realpathSync('packages/legacy-agent-host/dist/cli.js');
+          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
+          const pnpm = join(corepack, 'dist/pnpm.js');
+          const values = {
+            LEGACY_DESKTOP_BACKEND_GO: '1',
+            LEGACY_DESKTOP_PROOF_MODE: process.env.STAGE1_MODE,
+            LEGACY_DESKTOP_CLAUDE_PATH: claude,
+            ...(process.env.STAGE1_MODE === 'native-mixed-create-launch-ui' ? {
+              LEGACY_DESKTOP_CODEX_PATH: codex, LEGACY_DESKTOP_OPENCODE_PATH: opencode,
+            } : {}),
+            ...(process.env.LEGACY_DESKTOP_RESUME_PROVIDER === 'codex' ? { LEGACY_DESKTOP_CODEX_PATH: codex } : {}),
+            LEGACY_DESKTOP_NODE_SHA256: digest(node),
+            LEGACY_DESKTOP_HOST_ENTRY_SHA256: digest(host),
+            LEGACY_DESKTOP_PNPM_PATH: pnpm,
+            LEGACY_DESKTOP_PNPM_SHA256: digest(pnpm),
+            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: digest(join(corepack, 'package.json')),
+            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: digest(join(corepack, 'dist/lib/corepack.cjs')),
+          };
+          for (const [key, value] of Object.entries(values)) {
+            assert.equal(typeof value, 'string');
+            assert.ok(!/[\r\n]/u.test(value));
+            appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          }
+          writeFileSync(join(selected, 'input-pins.json'), JSON.stringify({
+            mode: process.env.STAGE1_MODE,
+            ...(process.env.STAGE1_MODE === 'native-resume-ui' ? { resumeProvider: process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude' } : {}),
+            node: { path: node, sha256: digest(node) },
+            host: { path: host, sha256: digest(host) },
+            native: [claude, codex, codexCodeModeHost, opencode].map(path => ({ path, sha256: digest(path) })),
+            nativeArchives: [{ path: join(selected, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz'), sha256: digest(join(selected, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz')) }],
+            corepackVersion: JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version,
+            qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
+          }, null, 2));
+          NODE
+      - name: Check existing UI fixtures and run original Desktop controls once
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/desktop-owner-routing-product.test.ts scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts
+          if [ "$LEGACY_DESKTOP_RESUME_PROVIDER" = codex ]; then
+            "$selected_node" --test scripts/legacy-agent-host/desktop-codex-resume-fixture.test.ts
+          fi
+          if [ -n "$STAGE1_QUIT_SCENARIO" ]; then
+            export LEGACY_DESKTOP_QUIT_SCENARIO="$STAGE1_QUIT_SCENARIO"
+          fi
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-$STAGE1_VARIANT.log"
+      - name: Capture original successful lifecycle receipt for cold readback
+        if: ${{ matrix.readback }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_VARIANT}.log`), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'exactly one original lifecycle attempt');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const bytes = readFileSync(path), receipt = JSON.parse(bytes.toString('utf8'));
+          assert.equal(receipt.mode, process.env.STAGE1_MODE);
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(realpathSync(receipt.root), dirname(path));
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_DESKTOP_READBACK_ROOT=${receipt.root}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_DESKTOP_READBACK_RECEIPT_SHA256=${createHash('sha256').update(bytes).digest('hex')}\n`);
+          NODE
+      - name: Reopen the same owner through the existing cold readback controls
+        if: ${{ matrix.readback }}
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          LEGACY_DESKTOP_PROOF_MODE="$STAGE1_READBACK_MODE" "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-readback-$STAGE1_VARIANT.log"
+      - name: Require the original retained receipt to report PASS
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          function verify(phase, expectedMode) {
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-${phase}-${process.env.STAGE1_VARIANT}.log`), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original prepared Desktop proof, no automatic retry');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-(?:backend|readback|native-review-readback)-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.mode, expectedMode);
+          assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          if (phase === 'desktop' && expectedMode === 'native-resume-ui') {
+            const provider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude';
+            assert.equal(receipt.resumeProvider, provider);
+            assert.equal(receipt.resumeNativeProfile?.provider, provider);
+            assert.equal(receipt.launchDialogProof?.provider, provider);
+            assert.equal(receipt.resumeDialogProof?.provider, provider);
+            assert.equal(receipt.coldResumeBoundary?.provider, provider);
+            const pins = JSON.parse(readFileSync(join(process.env.STAGE1_INPUTS, 'input-pins.json'), 'utf8'));
+            assert.equal(pins.resumeProvider, provider);
+            if (provider === 'codex') {
+              assert.equal(receipt.resumeNativeProfile.managedMcp, true);
+              const selected = receipt.codexResumeCatalog;
+              assert.ok(selected?.catalog.models.some(row => row.id === selected.modelId && row.model === selected.model && !row.hidden));
+              assert.equal(receipt.launchDialogProof.savedSettings.model, selected.model);
+              const resumed = receipt.resumeDialogProof;
+              assert.equal(resumed.status, 'PASS');
+              assert.equal(resumed.source.nativeSession, resumed.secondStop.nativeSession);
+              assert.match(resumed.runtimeMcpEndpoints.originalSha256, /^[a-f0-9]{64}$/);
+              assert.match(resumed.runtimeMcpEndpoints.resumedSha256, /^[a-f0-9]{64}$/);
+              assert.notEqual(resumed.runtimeMcpEndpoints.originalSha256, resumed.runtimeMcpEndpoints.resumedSha256);
+            }
+          }
+          if (phase === 'desktop' && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1') {
+            const added = receipt.createLaunchDialogProof?.nativeMemberCreationProof;
+            assert.equal(added?.status, 'PASS', 'ordinary solo Create alone does not qualify native addition');
+            assert.equal(added.currentRosterReminderExactlyOnce, true);
+            assert.equal(added.retainedAfterReload, true);
+            assert.equal(added.stoppedSessions?.length, 2);
+            assert.ok(added.stoppedSessions.every(value => value.phase === 'closed' && value.custody === 'released'));
+          }
+          if (phase === 'desktop' && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') {
+            const imported = receipt.stoppedImportUiProof;
+            assert.equal(imported?.status, 'PASS');
+            assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
+            assert.equal(imported.nativeLaunch?.status, 'PASS');
+            assert.equal(imported.nativeLaunch.sourcePreparation?.sourceNativeInputs, 0,
+              'source preparation never claims old provider inference');
+            const seedBytes = readFileSync(join(dirname(path), 'stopped-import-ui-seed.json'));
+            assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
+            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'captured-stopped-solo');
+          }
+          console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
+            variant: process.env.STAGE1_VARIANT, receipt: path }));
+          }
+          verify('desktop', process.env.STAGE1_MODE);
+          if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
+          NODE
+      - name: Verify current native mixed history restore after Codex Desktop acceptance
+        if: ${{ success() && matrix.resume_provider == 'codex' }}
+        env:
+          LEGACY_NATIVE_MIXED_HOST_GO: '1'
+          LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: e3a45cde75062840a74ac0b036b0ccc074654adfd5b46bf19e384eb62c34f3f3
+        run: |
+          set -euo pipefail
+          unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO
+          export LEGACY_NATIVE_CODEX_PATH="$STAGE1_INPUTS/codex/codex-aarch64-apple-darwin"
+          export LEGACY_NATIVE_OPENCODE_PATH="$STAGE1_INPUTS/opencode/opencode"
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          export LEGACY_NATIVE_HOST_SOURCE_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/src", ".ts"));')"
+          export LEGACY_NATIVE_HOST_DIST_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/dist", ".js"));')"
+          "$selected_node" --test packages/legacy-agent-host/tests/native-mixed-host.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-native-restore.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore.log'), 'utf8');
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-mixed-host-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'one original native restore attempt');
+          const path = realpathSync(matches[0][1]);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.exerciseRestore, true);
+          assert.equal(receipt.exercisePeers, false); assert.equal(receipt.exerciseCrossTeam, false);
+          assert.equal(receipt.cleanupConfirmed, true);
+          assert.deepEqual(Object.keys(receipt.restoreSelections).sort(), ['alice', 'bob', 'carol']);
+          assert.equal(receipt.artifacts.providerSha256, process.env.LEGACY_NATIVE_PROVIDER_SHA256);
+          assert.equal(receipt.artifacts.executables.opencode.sha256, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b');
+          assert.ok(receipt.excluded.includes('Desktop controls'));
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore-inputs.json'), JSON.stringify({
+            receipt: path, providerScope: 'Claude/Codex/OpenCode V1 1.19.4 native history only; Desktop controls separate',
+            sourceSha256: process.env.LEGACY_NATIVE_HOST_SOURCE_SHA256,
+            distSha256: process.env.LEGACY_NATIVE_HOST_DIST_SHA256,
+            artifacts: receipt.artifacts,
+          }, null, 2));
+          NODE
+      - name: Preserve original source Desktop diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-source-desktop-${{ matrix.variant || matrix.mode }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-readback-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-native-restore.log
+            ${{ runner.temp }}/stage1-native-restore-inputs.json
+            /private/tmp/TEST-stage1-inputs-*/input-pins.json
+            /private/tmp/TEST-desktop-backend-*/*.json
+            /private/tmp/TEST-desktop-backend-*/*.png
+            /private/tmp/TEST-desktop-backend-*/*.log
+            /private/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-desktop-backend-*/owner-routing/**
+            /private/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
+            /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+            /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+            /private/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
+            /private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
+            /private/tmp/TEST-desktop-backend-*/home/Downloads/**
+            /private/tmp/TEST-desktop-backend-*/native-codex/config/config.toml
+            /private/tmp/TEST-desktop-backend-*/native-codex/config/sessions/**
+            /private/tmp/TEST-native-mixed-host-*/**
+
+  stage1-process-diagnostic:
+    name: Stage 1 process tuple diagnostic (unqualified)
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_diagnostic
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 10
+    env:
+      TMPDIR: /private/tmp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Record current tuple without production qualification or signals
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/process-tuple-diagnostic.log") 2>&1
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+          headers="$(mktemp -d /private/tmp/TEST-process-tuple-headers-XXXXXX)"
+          archive="$headers/node-v24.21.0-headers.tar.gz"
+          curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          tar -xzf "$archive" -C "$headers" node-v24.21.0/include/node
+          LEGACY_PROCESS_TUPLE_DIAGNOSTIC_GO=1 resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/diagnose-process-tuple.ts /private/tmp "$headers/node-v24.21.0/include/node" "$archive"
+      - name: Preserve unqualified tuple inputs and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-tuple-diagnostic-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/process-tuple-diagnostic.log
+            /private/tmp/TEST-process-tuple-*/**
+
+  stage1-process-qualification:
+    name: Stage 1 current-tuple process and packed qualification
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 45
+    env:
+      TMPDIR: /private/tmp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Verify and stage the existing pinned Node
+        run: |
+          set -euo pipefail
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          git rev-parse HEAD
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install Desktop dependencies including Electron
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build all existing prerequisites before qualification freeze
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          node --max-old-space-size=8192 node_modules/electron-vite/bin/electron-vite.js build
+      - name: Prepare the existing exact private TEST inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-process-qualification-setup.log") 2>&1
+          selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-p7-inputs-XXXXXX)"
+          printf 'STAGE1_P7_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
+          gh release download v0.3.3 --repo 777genius/terminal-platform --pattern terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz --dir "$selected_inputs"
+          printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
+          printf '%s  %s\n' b78da8494e2ee9b46b9bd2e002b7b6d27a2431fbac5f8bcd52d7940c408702cd "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz" | shasum -a 256 -c -
+          node scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 --archive "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz"
+          tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
+          mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"
+          test -f "$selected_inputs/codex/codex-code-mode-host" && test ! -L "$selected_inputs/codex/codex-code-mode-host" && test -x "$selected_inputs/codex/codex-code-mode-host"
+          printf '%s  %s\n' 0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a "$selected_inputs/codex/codex-code-mode-host" | shasum -a 256 -c -
+          unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
+          archive="$selected_inputs/node-v24.21.0-headers.tar.gz"
+          curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          printf '%s  %s\n' 57c6bee2e30bbbee5bd51d6cc343eb992e174b56a2a1d0eab7a7510771c20ea2 "$archive" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$selected_inputs" node-v24.21.0/include/node
+      - name: Run the two existing native proofs and original packed controls once
+        env:
+          LEGACY_STAGE1_P7_GO: '1'
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/run-process-qualification.ts "$STAGE1_P7_INPUTS" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification.log"
+      - name: Qualify controlled native child cold Host and existing Processes UI Stop separately
+        env:
+          LEGACY_PROCESS_COLD_UI_GO: '1'
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --test scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts scripts/legacy-agent-host/desktop-native-process-ui.test.ts
+          original_p7_log_sha256="$(shasum -a 256 "$RUNNER_TEMP/stage1-process-qualification.log" | cut -d ' ' -f 1)"
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/qualify-process-cold-ui.ts "$RUNNER_TEMP/stage1-process-qualification.log" "$original_p7_log_sha256" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification-cold-ui.log"
+      - name: Preserve original process and packed proof receipts separately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-qualification-proof-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-process-qualification*.log
+            /private/tmp/TEST-stage1-p7-*/*.json
+            /private/tmp/TEST-stage1-p7-*/*.log
+            /private/tmp/TEST-stage1-p7-*/process-artifact/manifest.json
+            /private/tmp/TEST-stage1-p7-*/process-artifact/registered-process-darwin.c
+            /private/tmp/TEST-stage1-p7-*/process-artifact/registered-process.node
+            /private/tmp/TEST-stage1-p7-*/candidate/electron-builder.candidate.json
+            /private/tmp/TEST-stage1-p7-*/candidate/legacy-agent-host/candidate.json
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-native-ancestry-*/proof.ndjson
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.json
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.log
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.png
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
+      - name: Preserve exact TEST inputs, original receipts and incomplete custody
+        if: always()
+        uses: actions/upload-artifact@v4
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        with:
+          name: stage1-process-qualification-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-process-qualification*.log
+            /private/tmp/TEST-stage1-p7-*/**
 
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required

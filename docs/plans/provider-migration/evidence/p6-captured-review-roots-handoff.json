@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "status": "bounded-captured-workspace-review-roots-watch-git-actor-and-restoration-pass",
+  "artifact": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/.artifacts/provider-migration/captured-review-roots-v2/final-receipt.json",
+  "artifactSha256": "c5d4a8db2f5d8094d77e63c7f62df638a20b4f1e82fe91edab99b871859a2ffa",
+  "archive": "docs/plans/provider-migration/evidence/p6-captured-review-roots-v2.tar.gz",
+  "archiveSha256": "9c7e314b8fc247f5457820d9be932963060402a9e8230c139fe0a16e7cf96050",
+  "canonicalBuild": "Root f8d7214f PASS",
+  "checks": {
+    "hostTests": {
+      "passed": 17,
+      "jobId": "aa7dd5e836f971a7605909cda6b3c86c"
+    },
+    "transportTests": {
+      "passed": 23,
+      "jobId": "1bf8c64dde1f25dcd876d1322ef47f08"
+    },
+    "fastLint": {
+      "status": "pass",
+      "jobId": "94ee56aaf8a9aa07421dbcb029029419"
+    },
+    "hostTestTypes": "pass"
+  },
+  "qualified": [
+    "Same-file original named Task save then named agent save survives review reopen/main cwd change; existing single writer finalized its owned link via separate writer-owner fix",
+    "Scoped watch/Git resolve original B roots and actual reviewed files; caller project hints never grant roots; unknown scope remains main-only",
+    "Immutable original actorId maps to validated source/current unique known Team label; raw evidence and fingerprints unchanged",
+    "Stale root inode/source config/actor rename/current grant/context and symlink refuse without editing replacement",
+    "Real Team registration and Runtime checkpoint/stop/selected restore keep original captured input/event/actor IDs, source B and exact history through a fake provider boundary",
+    "Original per-view subscription epochs, HTTP resync and stop-only cleanup preserved; per-file in-flight notification reauthorization bounded"
+  ],
+  "retainedRawFailures": [
+    "df7fbcff0966d1a6b10ccc49c0c4b381 real repeat-save defect; original temp disk removed by normal test cleanup; failure logs retained",
+    "75c8998662182eae5038cc11a3bd16c0 TEST first-input oracle selected unattributed bootstrap input; corrected exact original command\u2192persisted outbox\u2192Runtime input selection; no root action executed in failed case",
+    "eb2049a1633b10cd19901c5ed1fbf935 checkpoint correctly held while another actual fake-provider input remained consumed; fixture now completes every original input by its actual ID before checkpoint"
+  ],
+  "limits": [
+    "No actual native/Electron qualification in this worker slice; global/full M13 and Stage1 remain unclaimed",
+    "Missing/ambiguous source or directory holds; no archived-byte implicit disk grant",
+    "Selected Git/direct census, external/background/global capture gaps retained"
+  ],
+  "productionFrozen": true
+}

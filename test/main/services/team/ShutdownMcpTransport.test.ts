@@ -472,6 +472,7 @@ describe('shutdown MCP transport authority', () => {
     };
     const finished = new Error('bounded shutdown completed MCP teardown');
     const stopStartupAdmission = vi.fn();
+    const legacyMaintenance = vi.fn().mockResolvedValue(true);
     const disposeTokenUsage = vi.fn();
     const prepareShutdownCleanup = vi.fn();
     const drainCatalog = vi.fn(async () => {});
@@ -490,6 +491,8 @@ describe('shutdown MCP transport authority', () => {
     const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
       shutdownPromise: null,
       stopAdmittingOpenCodeStartupCleanup: stopStartupAdmission,
+      nativeLegacyMaintenanceRequired: legacyMaintenance,
+      shutdownDesktopAgentBackend: vi.fn().mockResolvedValue(undefined),
       openCodeLifecycleBridge: { prepareShutdownCleanup },
       runtimeProviderManagementFeature: { shutdown: drainCatalog },
       externalAgentConnection: {
@@ -501,7 +504,7 @@ describe('shutdown MCP transport authority', () => {
       },
       removeExternalAgentConnectionIpc: noOp,
       ipcMain: {},
-      logger: { info: noOp },
+      logger: { info: noOp, diagnostic: noOp },
       announcementsLifecycle: { dispose: noOp },
       tokenUsageFeature: { dispose: disposeTokenUsage },
       runShutdownStep: async (_name: string, step: () => unknown) => {
@@ -516,7 +519,15 @@ describe('shutdown MCP transport authority', () => {
       openCodePromptDeliveryContinuityScan: { stop: stopContinuityScan },
       stopPeriodicOpenCodeHostStartupLockPurge: null,
       teamRuntimeRecoveryFeature: null,
-      teamProvisioningService: { setRuntimeRecoveryFailureObserver: noOp, stopAllTeams: stop },
+      teamProvisioningService: {
+        setRuntimeRecoveryFailureObserver: noOp,
+        hasTrackedRuntimeObligations: () => true,
+        stopAllTeams: () => {
+          // Capture late legacy work before stopAll removes the owner maps.
+          expect(legacyMaintenance).toHaveBeenCalledTimes(2);
+          return stop();
+        },
+      },
       cleanupOpenCodeHostsForLifecycle: stop,
       agentTeamsMcpHttpServer: server,
       killTrackedCliProcesses: () => {
@@ -565,6 +576,81 @@ describe('shutdown MCP transport authority', () => {
       teardown.mockRestore();
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it('seals the captured backend before the first shutdown await and on repeated entry', async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const drain = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const finished = new Error('stop after verifying backend drain');
+    const backend = vi.fn(() => {
+      order.push('backend-sealed');
+      return drain;
+    });
+    const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
+      shutdownPromise: null,
+      stopAdmittingOpenCodeStartupCleanup: () => order.push('legacy-admission-sealed'),
+      nativeLegacyMaintenanceRequired: () => {
+        order.push('legacy-census-captured');
+        return Promise.resolve(false);
+      },
+      shutdownDesktopAgentBackend: backend,
+      tokenUsageFeature: null,
+      rendererRecoveryController: null,
+      openCodePromptDeliveryContinuityScan: null,
+      removeExternalAgentConnectionIpc: vi.fn(),
+      ipcMain: {},
+      openCodeLifecycleBridge: null,
+      clearStartupTimers: () => order.push('startup-timers-cleared'),
+      clearInboxNotifyTimers: () => order.push('inbox-timers-cleared'),
+      stopPeriodicOpenCodeHostStartupLockPurge: () => order.push('purge-stopped'),
+      runtimeProviderManagementFeature: {
+        shutdown: async () => {
+          order.push('catalog-sealed');
+        },
+      },
+      externalAgentConnection: { closeAdmission: vi.fn() },
+      logger: { info: vi.fn() },
+      runShutdownStep: async (name: string, step: () => unknown) => {
+        order.push(name);
+        if (
+          name !== 'provider model catalog drain' &&
+          name !== 'agent backend cleanup' &&
+          name !== 'external connection admission drain'
+        )
+          throw finished;
+        await step();
+      },
+    }) as () => Promise<void>;
+    const first = shutdown();
+    const rejectedFirst = expect(first).rejects.toBe(finished);
+    expect(order).toEqual([
+      'legacy-admission-sealed',
+      'legacy-census-captured',
+      'backend-sealed',
+      'startup-timers-cleared',
+      'inbox-timers-cleared',
+      'purge-stopped',
+      'provider model catalog drain',
+      'catalog-sealed',
+    ]);
+    const repeated = shutdown();
+    const rejectedRepeated = expect(repeated).rejects.toBe(finished);
+    expect(backend).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => {
+      expect(order.filter((entry) => entry === 'agent backend cleanup')).toHaveLength(1);
+    });
+    expect(order.indexOf('provider model catalog drain')).toBeLessThan(
+      order.indexOf('external connection admission drain')
+    );
+    expect(order.indexOf('external connection admission drain')).toBeLessThan(
+      order.indexOf('agent backend cleanup')
+    );
+    release();
+    await rejectedFirst;
+    await rejectedRepeated;
   });
 
   it.each([true, false])(

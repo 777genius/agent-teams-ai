@@ -29,13 +29,16 @@ vi.mock('electron', async () => {
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({ debug: vi.fn(), warn: vi.fn(), error: vi.fn(), info: vi.fn() }),
 }));
-vi.mock('fs/promises', () => ({
-  readFile: vi.fn().mockRejectedValue({ code: 'ENOENT' }),
-  writeFile: vi.fn(),
-  rename: vi.fn(),
-  rm: vi.fn(),
-  mkdir: vi.fn(),
-}));
+vi.mock('fs/promises', () => {
+  const filesystem = {
+    readFile: vi.fn().mockRejectedValue({ code: 'ENOENT' }),
+    writeFile: vi.fn(),
+    rename: vi.fn(),
+    rm: vi.fn(),
+    mkdir: vi.fn(),
+  };
+  return { ...filesystem, default: filesystem };
+});
 vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => '/test-fixtures/agent-teams-notifications',
   getAppDataPath: () => '/test-fixtures/agent-teams-notifications',

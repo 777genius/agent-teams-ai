@@ -139,6 +139,9 @@ jobs:
         timeout-minutes: 6
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+
       - name: Download and verify the selected archive before extraction
         timeout-minutes: 4
         env:

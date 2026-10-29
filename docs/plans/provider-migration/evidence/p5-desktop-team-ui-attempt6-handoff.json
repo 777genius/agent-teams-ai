@@ -1,0 +1,7 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt6.tar.gz",
+  "archiveSha256": "d11c415a9ed7c37bb3837fe6f2fd23698b8feac545ba918c80d496e82023acc9",
+  "receiptSha256": "4051a1551a39e83813ad45bc61797e77076f23044e1f8bb02742cf5bdf9b99cf",
+  "scope": "Failed actual Desktop UI attempt6; no UI inputs, no business commands; source frozen; native sample is post-harness diagnostic and does not prove initial cause",
+  "status": "INCOMPLETE"
+}

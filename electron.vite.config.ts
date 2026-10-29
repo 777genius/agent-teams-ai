@@ -236,6 +236,10 @@ export default defineConfig({
       }
     },
     build: {
+      // Sandboxed preload can require Electron only; inline the portable group DTO/constants.
+      externalizeDeps: {
+        exclude: ['@agent-teams/legacy-agent-host']
+      },
       outDir: 'dist-electron/preload',
       rollupOptions: {
         input: {
@@ -256,7 +260,9 @@ export default defineConfig({
       esbuildOptions: {
         target: rendererDependencyEsbuildTarget,
       },
-      include: ['@codemirror/language-data'],
+      // Lazy Task dialogs use floating-ui. Discovering it after navigation would
+      // force a full dev reload and discard the current in-memory tabs.
+      include: ['@codemirror/language-data', '@floating-ui/dom'],
       exclude: [
         '@claude-teams/agent-graph',
         '@terminal-platform/design-tokens',

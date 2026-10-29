@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "scope": "Existing group Create/directed Send/native source-create/ACK/reply/Bob ACK, human reaction/archive/reload/restore and ordinary Stop of both actors",
+  "sourceHead": "606ed2785f2773c562982def66be4bba304dd6dc",
+  "originalJobId": "b40fe85cfd71c9e7b737f9317e2bc765",
+  "retentionJobId": "45b4f3186f984fe8cf637893e6adde66",
+  "retentionSha256": "22cceaa48c7c084c6711073799362ba291ddc53c1901296c9a6f4f410428e661",
+  "retainedRoot": "/Volumes/Transcend/dev/TEST-native-group-retainer-reconstructed-14hwo9jl/retained-native-conversation-ui-b40fe85cfd71c9e7b737f9317e2bc765",
+  "native": {
+    "provider": "pinned Claude SDK0.3.305/nativeCLI, deterministic localhost model",
+    "actors": [
+      "alice",
+      "bob"
+    ],
+    "requests": 7,
+    "nativeInputs": 2,
+    "eachInput": "terminal succeeded",
+    "eachSession": "closed/released before Quit",
+    "sourceAndPhysicalInboxOutboxRunKeyProofs": true
+  },
+  "ui": [
+    "Create fixed membership",
+    "directed Send Alice",
+    "source-authorized native group creation",
+    "Alice ACK/reply Bob ACK",
+    "human reaction",
+    "archive/read-only",
+    "renderer reload",
+    "restore",
+    "remove human reaction",
+    "ordinary Stop both captured actors"
+  ],
+  "cleanup": {
+    "HostAbsent": true,
+    "writerReleased": true,
+    "processGroupEmpty": true,
+    "devWrapperSignal": "SIGTERM",
+    "naturalAppQuitQualified": false
+  },
+  "retainedFiles": 2574,
+  "excluded": [
+    "ordinary Launch UI",
+    "cold app restart",
+    "vendor authentication/inference",
+    "Stage2",
+    "full Stage1",
+    "Mixed-provider group UI",
+    "Whole M05 and Stage1 qualification",
+    "Natural dev wrapper exit"
+  ],
+  "provenanceLimit": [
+    "original app terminated by signal: SIGTERM",
+    "Host/dependency trees are frozen retention snapshots; original Host entry hash verified, no retrospective whole-tree startup pin claim"
+  ]
+}

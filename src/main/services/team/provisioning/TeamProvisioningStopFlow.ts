@@ -7,6 +7,7 @@ import {
   type LeadRelayCaptureOwner,
 } from './TeamProvisioningLeadRelayCancellation';
 
+import type { LegacyNativeStopPublication } from './LegacyNativeStopPublication';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 interface StopLogger {
@@ -98,8 +99,9 @@ export function getOrphanPersistedTeamNames(
 
 async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
-  ports: TeamProvisioningStopTeamPorts<TRun>
-): Promise<void> {
+  ports: TeamProvisioningStopTeamPorts<TRun>,
+  deferCleanup: boolean
+): Promise<(() => void) | undefined> {
   ports.invalidateRuntimeSnapshotCaches(teamName);
   // A task-clock write must never prevent retirement of the owned processes.
   // Runtime callbacks may still resume an interval until teardown drains below.
@@ -177,6 +179,8 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
     ]);
     await (ports.cleanupRunOwnedAnthropicApiKeyHelper?.(run) ??
       cleanupRunOwnedAnthropicApiKeyHelper(run));
+    const stoppedRun = run;
+    if (deferCleanup) return () => ports.cleanupRun(stoppedRun);
     ports.cleanupRun(run);
     return;
   }
@@ -192,13 +196,17 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
     cleanupRunOwnedAnthropicApiKeyHelper(run));
   // Secondary lane cleanup revalidates immutable run ownership after async
   // adapter calls. Keep the owning run tracked until those checks complete.
+  const stoppedRun = run;
+  if (deferCleanup) return () => ports.cleanupRun(stoppedRun);
   ports.cleanupRun(run);
 }
 
 export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
-  ports: TeamProvisioningStopTeamPorts<TRun>
+  ports: TeamProvisioningStopTeamPorts<TRun>,
+  publication?: LegacyNativeStopPublication | null
 ): Promise<void> {
+  let cleanup: (() => void) | undefined;
   // Keep the team lock until both branches settle, including runtime-owned
   // cleanup on runtime success even when durable cancellation fails.
   let stopFailed = false;
@@ -206,10 +214,19 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   try {
     await awaitAllOwnedProcessStops([
       ports.cancelOpenCodePromptDeliveries(teamName),
-      stopTeamRuntimeFlow(teamName, ports).then(() =>
-        ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName)
-      ),
+      stopTeamRuntimeFlow(teamName, ports, Boolean(publication)).then(async (deferredCleanup) => {
+        cleanup = deferredCleanup;
+        await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+      }),
     ]);
+    if (publication) {
+      if (!(await publication.complete())) {
+        throw new Error(
+          'Team process stopped; native release publication is unconfirmed. Retry Stop to confirm original ownership release.'
+        );
+      }
+      cleanup?.();
+    }
   } catch (error) {
     stopFailed = true;
     stopFailure = error;

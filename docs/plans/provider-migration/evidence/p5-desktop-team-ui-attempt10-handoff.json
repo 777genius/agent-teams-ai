@@ -1,0 +1,7 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt10.tar.gz",
+  "archiveSha256": "b0456e83c813e835f49790d7d6962665a66c93d234534370bfd6f11eddfb316e",
+  "receiptSha256": "9be1da16c712ae3f956bdad5aecab9249b060c89457259a7185a472206ef46d2",
+  "scope": "Task creation/canonical persistence passed; post-reload CDP mouse commands delivered no DOM pointer/click events while document.visibilityState hidden, despite Page.bringToFront and hasFocus true. Captured group retired. No business resubmit.",
+  "status": "INCOMPLETE"
+}

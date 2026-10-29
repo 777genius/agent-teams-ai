@@ -56,8 +56,8 @@ function assertKanbanColumnAllowed(context, task, column, options = {}) {
   }
 }
 
-function getKanbanState(context) {
-  return kanbanStore.readKanbanState(context.paths, context.teamName);
+function getKanbanState(context, options) {
+  return kanbanStore.readKanbanState(context.paths, context.teamName, options);
 }
 
 function setKanbanColumn(context, taskId, column, options = {}) {

@@ -464,6 +464,64 @@ controller.messages.sendMessage({
     expect(controller.taskBoard.listTasks()).toHaveLength(0);
   });
 
+  it('permits only trusted user review authority without replacing the recorded actor', () => {
+    const claudeDir = makeClaudeDir();
+    const trusted = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: true,
+    });
+    const member = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: false,
+    });
+    const task = trusted.taskBoard.createTask({ subject: 'Trusted review', owner: 'bob' });
+    trusted.taskBoard.completeTask(task.id, 'bob');
+    expect(() => member.taskBoard.requestReview(task.id, { from: 'user' })).toThrow(
+      'Unknown review requester'
+    );
+    trusted.taskBoard.requestReview(task.id, { from: 'user', reviewer: 'alice' });
+    const legacyReviewInbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json'), 'utf8')
+    );
+    expect(legacyReviewInbox.at(-1).text).toContain('teamName: "my-team"');
+    expect(legacyReviewInbox.at(-1).text).toContain('from: "<your-name>"');
+    expect(legacyReviewInbox.at(-1).text).not.toContain('commandId:');
+
+    expect(() => member.taskBoard.startReview(task.id, { from: 'bob' })).toThrow(
+      'assigned to reviewer'
+    );
+    expect(() => member.taskBoard.approveReview(task.id, { from: 'user' })).toThrow(
+      'Unknown review actor'
+    );
+    expect(() =>
+      member.taskBoard.requestChanges(task.id, { from: 'bob', comment: 'Forged decision' })
+    ).toThrow('assigned to reviewer');
+    trusted.taskBoard.startReview(task.id, { from: 'user' });
+    trusted.taskBoard.startReview(task.id, { from: 'user' });
+    const changed = trusted.taskBoard.requestChanges(task.id, { from: 'user', comment: 'Fix it' });
+    expect(changed.status).toBe('pending');
+    expect(changed.reviewState).toBe('needsFix');
+    trusted.taskBoard.startTask(task.id, 'bob');
+    trusted.taskBoard.completeTask(task.id, 'bob');
+    trusted.taskBoard.requestReview(task.id, { from: 'user', reviewer: 'alice' });
+    const approved = trusted.taskBoard.approveReview(task.id, {
+      from: 'user',
+      'notify-owner': true,
+    });
+    expect(approved.reviewState).toBe('approved');
+    expect(approved.historyEvents.filter((e) => e.type === 'review_started')).toHaveLength(1);
+    expect(
+      approved.historyEvents
+        .filter((e) => e.type.startsWith('review_'))
+        .every((e) => e.actor === 'user')
+    ).toBe(true);
+    expect(() =>
+      trusted.taskBoard.requestReview(task.id, { from: 'user', reviewer: 'user' })
+    ).toThrow();
+  });
+
   it('keeps request-changes and restart semantics behind taskBoard', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -3298,6 +3356,92 @@ controller.messages.sendMessage({
     expect(bobBriefing).toContain('actionOwner=@bob');
   });
 
+  it('removes approval only through the explicit trusted-user action without reopening work', () => {
+    const claudeDir = makeClaudeDir();
+    const member = createController({ teamName: 'my-team', claudeDir, allowUserMessageSender: false });
+    const human = createController({ teamName: 'my-team', claudeDir, allowUserMessageSender: true });
+    const task = member.taskBoard.createTask({ subject: 'Disapprove original task', owner: 'bob' });
+    member.taskBoard.completeTask(task.id, 'bob');
+    member.taskBoard.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    member.taskBoard.approveReview(task.id, { from: 'alice' });
+    const before = member.taskBoard.getTask(task.id);
+    expect(() => member.taskBoard.clearKanban(task.id)).toThrow('reviewState=approved');
+    expect(() => member.taskBoard.disapproveReview(task.id, { from: 'user' })).toThrow();
+    expect(() => human.taskBoard.disapproveReview(task.id, { from: 'alice' })).toThrow();
+    expect(member.taskBoard.getTask(task.id)).toEqual(before);
+    const after = human.taskBoard.disapproveReview(task.id, { from: 'user' });
+    expect(after.status).toBe('completed');
+    expect(after.reviewState).toBe('none');
+    expect(after.id).toBe(task.id);
+    expect(after.owner).toBe(before.owner);
+    expect(after.workIntervals).toEqual(before.workIntervals);
+    expect(after.historyEvents.slice(0, -1)).toEqual(before.historyEvents);
+    expect(after.historyEvents.at(-1)).toMatchObject({ type: 'review_disapproved', from: 'approved', to: 'none', actor: 'user' });
+    expect(human.taskBoard.getKanbanState().tasks[task.id]).toBeUndefined();
+    expect(() => human.taskBoard.disapproveReview(task.id, { from: 'user' })).toThrow('must be completed and approved');
+    expect(human.taskBoard.getTask(task.id)).toEqual(after);
+    expect(human.taskBoard.requestReview(task.id, { from: 'user' }).reviewState).toBe('review');
+  });
+
+  it.each(['history append', 'final Task write'])(
+    'restores exact approval preimages after synchronous Disapprove failure at %s',
+    (failurePoint) => {
+      const claudeDir = makeClaudeDir();
+      const human = createController({ teamName: 'my-team', claudeDir, allowUserMessageSender: true });
+      const task = human.taskBoard.createTask({ subject: 'Rollback original approval', owner: 'bob' });
+      const neighbor = human.taskBoard.createTask({ subject: 'Unrelated original task', owner: 'bob' });
+      human.taskBoard.completeTask(task.id, 'bob');
+      human.taskBoard.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+      human.taskBoard.approveReview(task.id, { from: 'alice' });
+      human.taskBoard.updateColumnOrder('approved', [task.id]);
+      human.taskBoard.updateColumnOrder('todo', [neighbor.id]);
+      const taskPath = path.join(human.context.paths.tasksDir, `${task.id}.json`);
+      const neighborPath = path.join(human.context.paths.tasksDir, `${neighbor.id}.json`);
+      const boardPath = human.context.paths.kanbanPath;
+      // Raw formatting and timestamps are part of the original preimages.
+      for (const file of [taskPath, boardPath]) {
+        fs.writeFileSync(file, `\n${JSON.stringify(JSON.parse(fs.readFileSync(file, 'utf8')), null, 4)}\n\n`);
+      }
+      const beforeTask = fs.readFileSync(taskPath), beforeBoard = fs.readFileSync(boardPath);
+      const beforeNeighbor = fs.readFileSync(neighborPath);
+      const before = human.taskBoard.getTask(task.id);
+      const failure = Object.assign(new Error(`TEST Disapprove ${failurePoint} failed`), { code: 'EIO' });
+      let injected = 0, taskWrites = 0;
+      const originalRename = fs.renameSync;
+      const spy = failurePoint === 'history append'
+        ? vi.spyOn(require('../src/internal/tasks.js'), 'appendHistoryEvent').mockImplementationOnce(() => {
+            injected++;
+            throw failure;
+          })
+        : vi.spyOn(fs, 'renameSync').mockImplementation((from, to) => {
+            if (to === taskPath && ++taskWrites === 2) {
+              injected++;
+              throw failure;
+            }
+            return originalRename(from, to);
+          });
+      try {
+        expect(() => human.taskBoard.disapproveReview(task.id, { from: 'user' })).toThrow(failure);
+      } finally {
+        spy.mockRestore();
+      }
+      expect(injected).toBe(1);
+      expect(fs.readFileSync(taskPath)).toEqual(beforeTask);
+      expect(fs.readFileSync(boardPath)).toEqual(beforeBoard);
+      expect(fs.readFileSync(neighborPath)).toEqual(beforeNeighbor);
+      expect(human.taskBoard.getTask(task.id)).toEqual(before);
+      expect(() => human.taskBoard.clearKanban(task.id)).toThrow('reviewState=approved');
+      const retried = human.taskBoard.disapproveReview(task.id, { from: 'user' });
+      expect(retried.status).toBe('completed');
+      expect(retried.reviewState).toBe('none');
+      expect(retried.workIntervals).toEqual(before.workIntervals);
+      expect(retried.historyEvents.filter((event) => event.type === 'review_disapproved')).toHaveLength(1);
+      expect(human.taskBoard.getKanbanState().tasks[task.id]).toBeUndefined();
+      expect(human.taskBoard.getKanbanState().columnOrder.todo).toEqual([neighbor.id]);
+      expect(fs.readFileSync(neighborPath)).toEqual(beforeNeighbor);
+    }
+  );
+
   it('guards direct kanban_clear against active review state while keeping no-op clears safe', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -4113,7 +4257,11 @@ controller.messages.sendMessage({
       advance(1);
       controller.tasks.completeTask(task.id, 'alice');
       advance(1);
-      const final = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'ALL DONE' });
+      const final = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'ALL DONE',
+      });
       expect(final.deduplicated).toBeUndefined();
 
       // A paraphrase from a later memoryless turn is suppressed with a success-shaped result.
@@ -4142,7 +4290,11 @@ controller.messages.sendMessage({
 
       // The human wrote again: the answer is delivered.
       advance(1);
-      controller.messages.sendMessage({ to: 'alice', from: 'user', text: 'thanks, anything else?' });
+      controller.messages.sendMessage({
+        to: 'alice',
+        from: 'user',
+        text: 'thanks, anything else?',
+      });
       advance(1);
       const answer = controller.messages.sendMessage({
         to: 'user',
@@ -4180,7 +4332,11 @@ controller.messages.sendMessage({
 
       // Window expiry: a message half an hour later is delivered again.
       advance(31);
-      const late = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Late status note.' });
+      const late = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Late status note.',
+      });
       expect(late.deduplicated).toBeUndefined();
       expect(readUserInbox()).toEqual([
         'Delegated; working on it.',
@@ -4198,7 +4354,11 @@ controller.messages.sendMessage({
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     const first = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Hello' });
-    const second = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Hello again' });
+    const second = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'Hello again',
+    });
     expect(first.deduplicated).toBeUndefined();
     expect(second.deduplicated).toBeUndefined();
 
@@ -4207,7 +4367,11 @@ controller.messages.sendMessage({
     controller.tasks.completeTask(done.id, 'alice');
     controller.tasks.createTask({ subject: 'Still open', owner: 'bob' });
     const third = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'One done' });
-    const fourth = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Still one open' });
+    const fourth = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'Still one open',
+    });
     expect(third.deduplicated).toBeUndefined();
     expect(fourth.deduplicated).toBeUndefined();
   });
@@ -4512,7 +4676,9 @@ controller.messages.sendMessage({
 
     controller.tasks.completeTask(task.id, 'bob');
     expect(boardNotices()).toHaveLength(1);
-    expect(controller.messages.lookupMessage(boardNotices()[0].messageId).store).toBe('inbox:alice');
+    expect(controller.messages.lookupMessage(boardNotices()[0].messageId).store).toBe(
+      'inbox:alice'
+    );
 
     // The next task to finish the board still gets its own notice.
     const second = controller.tasks.createTask({ subject: 'Review the note', owner: 'bob' });

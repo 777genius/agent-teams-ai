@@ -3,11 +3,12 @@ import {
   createEncodedTaskReference,
   extractTaskRefsFromText,
   linkifyTaskIdsInMarkdown,
+  navigateTaskReference,
   parseTaskLinkHref,
   resolveTaskReferenceCandidate,
   stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { TaskRef } from '@shared/types';
 
@@ -245,6 +246,42 @@ describe('taskReferenceUtils', () => {
     it('parseTaskLinkHref handles task:// without query', () => {
       const r = parseTaskLinkHref('task://tid-1');
       expect(r).toEqual({ taskId: 'tid-1' });
+    });
+  });
+  describe('owner-qualified TaskRef navigation', () => {
+    const selection = 'host-team:TEST-imported-owner';
+    it.each([undefined, selection])(
+      'keeps an internal reference on its destination (%s)',
+      (teamName) => {
+        const local = vi.fn(),
+          global = vi.fn();
+        const parsed = parseTaskLinkHref(
+          teamName
+            ? buildTaskLinkHref({ taskId: 'internal', displayId: '18', teamName })
+            : 'task://internal'
+        )!;
+        navigateTaskReference(parsed, selection, local, global);
+        expect(local).toHaveBeenCalledExactlyOnceWith('internal');
+        expect(global).not.toHaveBeenCalled();
+      }
+    );
+    it.each([
+      'other-owner',
+      `${selection}:source-archive:legacy-archive%3ATEST`,
+      `${selection}:source-gap:legacy-gap%3ATEST`,
+    ])('preserves the explicit owner %s without local scrolling', (teamName) => {
+      const local = vi.fn(),
+        global = vi.fn();
+      const parsed = parseTaskLinkHref(
+        buildTaskLinkHref({
+          taskId: 'same-id',
+          displayId: '99',
+          teamName,
+        })
+      )!;
+      navigateTaskReference(parsed, selection, local, global);
+      expect(global).toHaveBeenCalledExactlyOnceWith(teamName, 'same-id');
+      expect(local).not.toHaveBeenCalled();
     });
   });
 });

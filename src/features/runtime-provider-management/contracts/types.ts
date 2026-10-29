@@ -1,6 +1,7 @@
 import type { RuntimeErrorDetails } from './errorDiagnostics';
 
-export type RuntimeProviderManagementRuntimeId = 'opencode';
+export type RuntimeProviderManagementRuntimeId = 'opencode' | 'claude';
+export type RuntimeProviderModelTestRuntimeId = RuntimeProviderManagementRuntimeId | 'claude';
 
 export const RUNTIME_PROVIDER_COMPANION_IDS = ['kiro-cli', 'cursor-agent'] as const;
 
@@ -142,6 +143,8 @@ export interface RuntimeProviderSetupAuthOptionDto {
 export type RuntimeProviderSetupFormSourceDto = 'opencode-auth' | 'curated' | 'oauth' | 'manual';
 
 export interface RuntimeProviderSetupFormDto {
+  /** Opaque, short-lived Main capture of this exact form owner/context. */
+  connectionContextToken?: string;
   runtimeId: RuntimeProviderManagementRuntimeId;
   providerId: string;
   displayName: string;
@@ -482,17 +485,19 @@ export interface RuntimeProviderModelTestResultDto {
 
 export interface RuntimeProviderManagementModelTestResponse {
   schemaVersion: 1;
-  runtimeId: RuntimeProviderManagementRuntimeId;
+  runtimeId: RuntimeProviderModelTestRuntimeId;
   result?: RuntimeProviderModelTestResultDto;
   error?: RuntimeProviderManagementErrorDto;
 }
 
 export interface RuntimeProviderManagementLoadViewInput {
+  connectionContextToken?: string;
   runtimeId: RuntimeProviderManagementRuntimeId;
   projectPath?: string | null;
 }
 
 export interface RuntimeProviderManagementLoadDirectoryInput {
+  connectionContextToken?: string;
   runtimeId: RuntimeProviderManagementRuntimeId;
   summary?: boolean | null;
   projectPath?: string | null;
@@ -511,12 +516,14 @@ export interface RuntimeProviderManagementConnectApiKeyInput {
 }
 
 export interface RuntimeProviderManagementLoadSetupFormInput {
+  connectionContextToken?: string;
   runtimeId: RuntimeProviderManagementRuntimeId;
   providerId: string;
   projectPath?: string | null;
 }
 
 export interface RuntimeProviderManagementConnectInput {
+  connectionContextToken?: string;
   runtimeId: RuntimeProviderManagementRuntimeId;
   providerId: string;
   method: RuntimeProviderSetupMethodDto;
@@ -543,6 +550,7 @@ export interface RuntimeProviderManagementOAuthControlResponse {
 }
 
 export interface RuntimeProviderManagementForgetInput {
+  connectionContextToken?: string;
   runtimeId: RuntimeProviderManagementRuntimeId;
   providerId: string;
   projectPath?: string | null;
@@ -562,7 +570,7 @@ export interface RuntimeProviderManagementLoadModelsInput {
 }
 
 export interface RuntimeProviderManagementTestModelInput {
-  runtimeId: RuntimeProviderManagementRuntimeId;
+  runtimeId: RuntimeProviderModelTestRuntimeId;
   providerId: string;
   modelId: string;
   projectPath?: string | null;

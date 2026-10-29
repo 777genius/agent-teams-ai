@@ -4063,6 +4063,20 @@ describe('TeamDataService', () => {
     });
   });
 
+  it('routes legacy Disapprove once through its existing trusted controller and leaves generic remove guarded', async () => {
+    const disapproveReview = vi.fn(), clearKanban = vi.fn(() => { throw new Error('approved guard'); });
+    const controllerFactory = vi.fn(() => ({ taskBoard: { disapproveReview, clearKanban } }) as never);
+    const service = new TeamDataService({} as never, {} as never, {} as never, {} as never,
+      {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, controllerFactory);
+    await service.updateKanban('TEST-team', 'TEST-task', { op: 'disapprove' });
+    expect(controllerFactory).toHaveBeenCalledExactlyOnceWith('TEST-team');
+    expect(disapproveReview).toHaveBeenCalledExactlyOnceWith('TEST-task', { from: 'user' });
+    expect(clearKanban).not.toHaveBeenCalled();
+    await expect(service.updateKanban('TEST-team', 'TEST-task', { op: 'remove' })).rejects.toThrow('approved guard');
+    expect(controllerFactory).toHaveBeenLastCalledWith('TEST-team');
+    expect(disapproveReview).toHaveBeenCalledTimes(1);
+  });
+
   it('propagates leadSessionId for kanban-driven review transitions', async () => {
     const requestReviewMock = vi.fn();
     const approveReviewMock = vi.fn();
@@ -4437,6 +4451,11 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      const forwarding = (
+        inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls[0]?.[2] as { shouldStillWrite: () => boolean };
+      expect(forwarding).toEqual({ shouldStillWrite: expect.any(Function) });
+      expect(forwarding.shouldStillWrite()).toBe(true);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
         'my-team',
         expect.objectContaining({
@@ -4448,7 +4467,8 @@ describe('TeamDataService', () => {
           leadSessionId: 'lead-1',
           taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }],
           messageId: 'task-comment-forward:my-team:task-1:comment-1',
-        })
+        }),
+        forwarding
       );
       const firstSendRequest = (
         inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
@@ -5368,6 +5388,11 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      const forwarding = (
+        inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls[0]?.[2] as { shouldStillWrite: () => boolean };
+      expect(forwarding).toEqual({ shouldStillWrite: expect.any(Function) });
+      expect(forwarding.shouldStillWrite()).toBe(true);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
         'my-team',
         expect.objectContaining({
@@ -5375,7 +5400,8 @@ describe('TeamDataService', () => {
           summary: 'Comment on #abcd1234',
           messageKind: 'task_comment_notification',
           messageId: 'task-comment-forward:my-team:task-1:comment-2',
-        })
+        }),
+        forwarding
       );
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];

@@ -19,6 +19,7 @@ import {
   stripSelectedModelPrefix,
 } from './providerPrepareModelReasons';
 import { resolveScopedModelReason } from './providerPrepareReasonCodes';
+import { withCapturedTeamReadiness } from './withCapturedTeamReadiness';
 
 import type {
   ProviderPrepareCheckStatus,
@@ -44,7 +45,6 @@ export {
   buildReusableProviderPrepareModelResults,
   mergeReusableProviderPrepareModelResults,
 } from './providerPrepareDiagnosticsModels';
-
 type PrepareProvisioningFn = (
   cwd?: string,
   providerId?: TeamProviderId,
@@ -54,7 +54,6 @@ type PrepareProvisioningFn = (
   modelVerificationMode?: TeamProvisioningModelVerificationMode,
   selectedModelChecks?: TeamProvisioningModelCheckRequest[]
 ) => Promise<TeamProvisioningPrepareResult>;
-
 interface ProviderPrepareDiagnosticsProgress {
   status: ProviderPrepareCheckStatus | 'checking';
   details: string[];
@@ -63,7 +62,6 @@ interface ProviderPrepareDiagnosticsProgress {
 }
 
 type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
-
 function uniquePrepareLines(lines: (string | null | undefined)[]): string[] {
   const seen = new Set<string>();
   const uniqueLines: string[] = [];
@@ -77,7 +75,6 @@ function uniquePrepareLines(lines: (string | null | undefined)[]): string[] {
   }
   return uniqueLines;
 }
-
 function isOpenCodeBridgeNoOutputDiagnostic(value: string | null | undefined): boolean {
   const lower = value?.trim().toLowerCase() ?? '';
   return (
@@ -843,7 +840,10 @@ function shouldSurfaceProviderRuntimeFailureInsteadOfModelFailure(params: {
   return !canTreatAsLegacySingleModelFailure;
 }
 
-export async function runProviderPrepareDiagnostics({
+export const runProviderPrepareDiagnostics = withCapturedTeamReadiness(
+  runProviderPrepareDiagnosticsCore
+);
+async function runProviderPrepareDiagnosticsCore({
   cwd,
   providerId,
   selectedModelIds,

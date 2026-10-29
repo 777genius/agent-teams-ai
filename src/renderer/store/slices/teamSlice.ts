@@ -41,6 +41,7 @@ import { createLogger } from '@shared/utils/logger';
 import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
+import { createHostTeamFromDialog } from '../team/createHostTeamFromDialog';
 import {
   holdSelectTeamLoadForProvisioning,
   isSelectedTeamLoadStillCurrent,
@@ -251,6 +252,7 @@ import type {
   TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
+  TeamCreateResponse,
   TeamGetDataOptions,
   TeamLaunchDiagnosticItem,
   TeamLaunchRequest,
@@ -895,6 +897,7 @@ function fetchTeamDataFresh(
     (token) => {
       if (!isCurrent()) return Promise.reject(new Error('team data read scope superseded'));
       recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), token);
+      teamDataReadWork.retireRead(teamName, getTeamDataSnapshotMode(options), requestScope);
       return fetchTeamDataPhysical(teamName, options);
     },
     { forceNew: true }
@@ -1606,7 +1609,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
-  createTeam: (request: TeamCreateRequest) => Promise<string>;
+  createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
   cancelProvisioning: (runId: string) => Promise<void>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
@@ -3354,7 +3357,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         get().invalidateTaskChangePresence(invalidationState.cacheKeys);
       }
       if (invalidationState.taskIds.length > 0) {
-        await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
+        void api.review
+          .invalidateTaskChangeSummaries(teamName, invalidationState.taskIds)
+          .catch(() => undefined);
       }
     } catch (error) {
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {
@@ -3703,7 +3708,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const requestScope = captureContextRequestScope(get);
     set({ crossTeamTargetsLoading: true });
     try {
-      const targets = await api.crossTeam.listTargets();
+      const sourceTeam = get().selectedTeamName;
+      const targets = await api.crossTeam.listTargets(sourceTeam ?? undefined);
+      if (get().selectedTeamName !== sourceTeam) return false;
       if (!isContextRequestScopeCurrent(get, requestScope)) {
         return false;
       }
@@ -4186,6 +4193,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   createTeam: async (request: TeamCreateRequest) => {
+    if (request.createdTeamReadiness)
+      return createHostTeamFromDialog(request, get, pollProvisioningStatus);
     const analyticsStartedAtMs = Date.now();
     const launchAnalyticsContext = buildTeamCreateLaunchAnalyticsContext(
       request,
@@ -4362,7 +4371,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       void pollProvisioningStatus(get, response.runId);
       teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
-      return response.runId;
+      return response;
     } catch (error) {
       const message =
         error instanceof IpcError

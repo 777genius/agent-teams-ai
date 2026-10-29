@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import { DEFAULT_TEAM_GROUP_CHAT_ID, GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
+import { GroupChatStorage } from '@features/team-group-chats/main/infrastructure/GroupChatStorage';
 import { createDesktopTeamGroupChats, registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
 import { createGroupChatRuntimePorts, createOpenCodeGroupChatRunGetter, registerTeamGroupChatsHttp } from '@features/team-group-chats/main';
 import * as groupAtomicWrite from '@main/services/team/atomicWrite';
@@ -18,7 +19,7 @@ import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
 import Fastify from 'fastify';
-import { mkdir, mkdtemp, readFile, rename, rm,writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rename, rm,writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -174,6 +175,39 @@ describe('group chat main authority and durable identity', () => {
   const registryFile = () => join(state.root, 'sandbox', 'group-chats.json');
   const stageOriginal = async (patch: Record<string, unknown> = {}) =>
     writeFile(sourceFile(), JSON.stringify([original(patch)]));
+
+  it('lists original registry records without publishing lock files or altering missing/malformed storage', async () => {
+    const writer = vi.spyOn(GroupChatStorage.prototype, 'withRegistry');
+    const teamRoot = join(state.root, 'sandbox');
+    const originalPaths = (await readdir(teamRoot, { recursive: true })).sort();
+    expect(await feature.list({ teamName: 'sandbox' })).toEqual([]);
+    expect((await readdir(teamRoot, { recursive: true })).sort()).toEqual(originalPaths);
+    const group = {
+      id: '10000000-0000-4000-8000-000000000001',
+      name: 'Original read-only group',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      archivedAt: null,
+      membership: { kind: 'fixed', memberNames: ['lead', 'alice'] },
+    };
+    const bytes = JSON.stringify({ version: 1, groups: [group] });
+    await writeFile(registryFile(), bytes);
+    const registryPaths = (await readdir(teamRoot, { recursive: true })).sort();
+    expect(await feature.list({ teamName: 'sandbox' })).toEqual([
+      expect.objectContaining({
+        ...group,
+        memberNames: ['lead', 'alice'],
+        availableRecipientNames: ['lead', 'alice'],
+        canSend: true,
+      }),
+    ]);
+    expect((await readdir(teamRoot, { recursive: true })).sort()).toEqual(registryPaths);
+    expect(await readFile(registryFile(), 'utf8')).toBe(bytes);
+    await writeFile(registryFile(), 'null');
+    await expect(feature.list({ teamName: 'sandbox' })).rejects.toMatchObject({ code: 'storage-unavailable' });
+    expect((await readdir(teamRoot, { recursive: true })).sort()).toEqual(registryPaths);
+    expect(await readFile(registryFile(), 'utf8')).toBe('null');
+    expect(writer).not.toHaveBeenCalled();
+  });
 
   // Red on duplicate creation, payload adoption, membership expansion on archived retry or fanout.
   it('creates once from the original, preserves immutable retries and keeps metadata private', async () => {

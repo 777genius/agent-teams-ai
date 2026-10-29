@@ -116,7 +116,7 @@ function isCodexSnapshotPending(
   return provider.providerId === 'codex' && codexSnapshotPending;
 }
 
-export const ExtensionStoreView = (): React.JSX.Element => {
+const ExtensionStoreContent = (): React.JSX.Element => {
   const { t } = useAppTranslation('extensions');
   const isElectron = useMemo(() => isElectronMode(), []);
   const tabId = useTabIdOptional();
@@ -710,4 +710,9 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       </div>
     </TooltipProvider>
   );
+};
+
+export const ExtensionStoreView = (): React.JSX.Element => {
+  const contextId = useStore((state) => state.activeContextId);
+  return <ExtensionStoreContent key={contextId} />;
 };

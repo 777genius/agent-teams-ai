@@ -1,3 +1,4 @@
+import { createAgentBackendBridge } from '@features/agent-backend/preload';
 import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
@@ -386,6 +387,7 @@ import type {
   TeamClaudeLogsResponse,
   TeamConfig,
   TeamCreateConfigRequest,
+  TeamCreateConfigResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamForceStopResult,
@@ -511,6 +513,7 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
+  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
@@ -970,7 +973,8 @@ const electronAPI: ElectronAPI = {
       selectedModels?: string[],
       limitContext?: boolean,
       modelVerificationMode?: TeamProvisioningModelVerificationMode,
-      selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+      selectedModelChecks?: TeamProvisioningModelCheckRequest[],
+      context?: Parameters<ElectronAPI['teams']['prepareProvisioning']>[7]
     ) => {
       return invokeIpcWithResult<TeamProvisioningPrepareResult>(
         TEAM_PREPARE_PROVISIONING,
@@ -980,7 +984,8 @@ const electronAPI: ElectronAPI = {
         selectedModels,
         limitContext,
         modelVerificationMode,
-        selectedModelChecks
+        selectedModelChecks,
+        ...(context === undefined ? [] : [context])
       );
     },
     getWorktreeGitStatus: async (projectPath: string) => {
@@ -1001,6 +1006,7 @@ const electronAPI: ElectronAPI = {
     createTeam: async (request: TeamCreateRequest) => {
       return invokeIpcWithResult<TeamCreateResponse>(TEAM_CREATE, request);
     },
+    createTeamResult: (request: TeamCreateRequest) => ipcRenderer.invoke(TEAM_CREATE, request),
     launchTeam: async (request: TeamLaunchRequest) => {
       return invokeIpcWithResult<TeamLaunchResponse>(TEAM_LAUNCH, request);
     },
@@ -1114,8 +1120,10 @@ const electronAPI: ElectronAPI = {
       );
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
-      return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);
+      return invokeIpcWithResult<void | TeamCreateConfigResponse>(TEAM_CREATE_CONFIG, request);
     },
+    createConfigResult: (request: TeamCreateConfigRequest) =>
+      ipcRenderer.invoke(TEAM_CREATE_CONFIG, request),
     getMemberLogs: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_MEMBER_LOGS, teamName, memberName);
     },

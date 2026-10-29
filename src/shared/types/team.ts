@@ -1,3 +1,4 @@
+import type { CliProviderModelCatalogSource } from './cliInstaller';
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { OpenCodeStopHandshakeFailureFacts } from './openCodeStopHandshakeFailure';
 import type { TaskRef } from './teamBoardTask';
@@ -13,6 +14,25 @@ import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
+export type {
+  FileLineStats,
+  LeadActivitySnapshot,
+  LeadActivityState,
+  LeadContextUsage,
+  LeadContextUsageSnapshot,
+  LegacyMemberLogSummary,
+  MemberActivityMetaEntry,
+  MemberFullStats,
+  MemberLeadSessionLogSummary,
+  MemberLogKind,
+  MemberLogSummary,
+  MemberLogSummaryBase,
+  MemberSessionLogSummary,
+  MemberStatsResult,
+  MemberSubagentLogSummary,
+  MemberSubagentSummary,
+  TeamMemberActivityMeta,
+} from './teamObservability';
 export type * from './teamProvisioning';
 export type {
   AttachmentFileData,
@@ -197,6 +217,12 @@ export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   note?: string;
 }
 
+export interface TaskReviewDisapprovedEvent extends TaskHistoryEventBase {
+  type: 'review_disapproved';
+  from: 'approved';
+  to: 'none';
+}
+
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
   type: 'review_started';
   from: TeamReviewState;
@@ -210,6 +236,7 @@ export type TaskHistoryEvent =
   | TaskReviewRequestedEvent
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
+  | TaskReviewDisapprovedEvent
   | TaskReviewStartedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
@@ -382,7 +409,7 @@ export interface TaskAttachmentMeta {
   /** File size in bytes. */
   size: number;
   /** ISO timestamp when the attachment was added. */
-  addedAt: string;
+  addedAt?: string;
   /** Absolute path to the file on disk. Null/absent for metadata-only references. */
   filePath?: string | null;
 }
@@ -441,6 +468,13 @@ export interface ToolActivityEventPayload {
 }
 
 export interface InboxMessage extends GroupChatEnvelope {
+  /** Captured Host scope navigation; absence of a key means unavailable, never a name lookup. */
+  crossTeamNavigation?: {
+    fromTeamName: string;
+    toTeamName: string;
+    fromTeamKey?: string;
+    toTeamKey?: string;
+  };
   from: string;
   to?: string;
   text: string;
@@ -661,6 +695,8 @@ export interface DiscardQueuedUserMessagesResult {
 }
 
 export interface AddTaskCommentRequest {
+  /** One immutable comment intent across uncertain acknowledgement and explicit lookup. */
+  command?: ApplicationCommandRequestIdentity;
   text: string;
   attachments?: CommentAttachmentPayload[];
   taskRefs?: TaskRef[];
@@ -703,9 +739,14 @@ export interface KanbanState {
 export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
+  | { op: 'disapprove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
 export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
+  /** Presentation provenance only; does not assert native liveness or grant control. */
+  runtimeOwner?: 'captured-host';
+  /** Opaque configured-state token from an application owner, never native identity. */
+  configuredSettingsFingerprint?: string;
   agentId?: string;
   status: MemberStatus;
   currentTaskId: string | null;
@@ -761,7 +802,15 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
   observedAt?: string;
   nextReviewAt?: string;
 }
+export interface CapturedTeamProcessStop {
+  processRef: string;
+  originalCommandId?: string;
+}
 export interface TeamProcess {
+  processRef?: string;
+  observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';
+  canTerminate?: boolean;
+  pendingStop?: { commandId: string; originalProcessRef: string; native: 'unknown' | 'accepted' };
   id: string;
   port?: number;
   url?: string;
@@ -775,6 +824,10 @@ export interface TeamProcess {
 }
 export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
+  /** Presentation provenance only; does not assert native liveness or grant control. */
+  runtimeOwner?: 'captured-host';
+  /** Opaque configured-state token from an application owner, never native identity. */
+  configuredSettingsFingerprint?: string;
   agentId?: string;
   currentTaskId: string | null;
   taskCount: number;
@@ -804,20 +857,6 @@ export type TeamMemberConfiguredRuntimeSettings = Pick<
   TeamMember,
   'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
 >;
-
-export interface MemberActivityMetaEntry {
-  memberName: string;
-  lastAuthoredMessageAt: string | null;
-  messageCountExact: number;
-  latestAuthoredMessageSignalsTermination: boolean;
-}
-
-export interface TeamMemberActivityMeta {
-  teamName: string;
-  computedAt: string;
-  members: Record<string, MemberActivityMetaEntry>;
-  feedRevision: string;
-}
 
 export interface TeamGetDataOptions {
   /**
@@ -866,13 +905,7 @@ export interface ProviderModelLaunchIdentity {
   selectedModelKind: 'default' | 'explicit';
   resolvedLaunchModel: string | null;
   catalogId: string | null;
-  catalogSource:
-    | 'anthropic-models-api'
-    | 'anthropic-compatible-api'
-    | 'app-server'
-    | 'static-fallback'
-    | 'runtime'
-    | 'unavailable';
+  catalogSource: CliProviderModelCatalogSource | 'runtime' | 'unavailable';
   catalogFetchedAt: string | null;
   selectedEffort: EffortLevel | null;
   resolvedEffort: EffortLevel | null;
@@ -883,6 +916,9 @@ export interface ProviderModelLaunchIdentity {
 
 export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
   teamName: string;
+  /** One existing-dialog launch intent, including its confirmed saved-roster operation. */
+  command?: ApplicationCommandRequestIdentity;
+  savedRosterCommandId?: string;
   cwd: string;
   prompt?: string;
   providerId?: TeamProviderId;
@@ -934,39 +970,6 @@ export interface CreateTaskRequest {
   prompt?: string;
   promptTaskRefs?: TaskRef[];
   startImmediately?: boolean;
-}
-
-export type LeadActivityState = 'active' | 'idle' | 'offline';
-
-export interface LeadActivitySnapshot {
-  state: LeadActivityState;
-  runId: string | null;
-}
-
-export interface LeadContextUsage {
-  /** Prompt-side tokens currently occupying the context window. */
-  promptInputTokens: number | null;
-  /** Tokens generated in the latest response. */
-  outputTokens: number | null;
-  /** Total occupied context window tokens (prompt input + output). */
-  contextUsedTokens: number | null;
-  /** Model's context window size */
-  contextWindowTokens: number | null;
-  /** Context usage percentage (0-100) */
-  contextUsedPercent: number | null;
-  /** Which usage contract produced the prompt-side numbers. */
-  promptInputSource:
-    | 'anthropic_usage'
-    | 'openai_responses_usage'
-    | 'openai_chat_usage'
-    | 'unavailable';
-  /** ISO timestamp of last update */
-  updatedAt: string;
-}
-
-export interface LeadContextUsageSnapshot {
-  usage: LeadContextUsage | null;
-  runId: string | null;
 }
 
 export interface PersistedTeamLaunchMemberSources {
@@ -1337,6 +1340,8 @@ export interface TeamWorktreeGitStatus {
 }
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  command?: ApplicationCommandRequestIdentity;
+  createdTeamReadiness?: CreatedTeamReadiness;
   /** Read-only saved defaults token returned by getSavedRequest. */
   savedSettingsFingerprint?: string;
   teamName: string;
@@ -1362,6 +1367,8 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
 }
 
 export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSelectionVersioned {
+  /** One save intent, retained across an uncertain transport response. */
+  command?: ApplicationCommandRequestIdentity;
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1384,18 +1391,54 @@ export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSe
   extraCliArgs?: string;
 }
 
+export interface TeamCreateConfigResponse {
+  /** Canonical owner-qualified selection for navigation after Host creation. */
+  teamName: string;
+}
+
 export interface TeamCreateResponse {
   runId: string;
+  /** Canonical owner-qualified selection returned by the selected Host. */
+  teamName?: string;
   launchStatus?: 'started' | 'already_launching' | 'already_running';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
+}
+
+/** UI destination and desired model choices, never native configuration/authority. */
+export type TeamProvisioningPrepareContext =
+  | {
+      kind: 'team';
+      teamName: string;
+      selectedModelChecks?: TeamProvisioningModelCheckRequest[];
+      preparationId?: string;
+    }
+  | { kind: 'create'; preparationId?: string; draft?: TeamCreateDraft };
+
+export type TeamCreateDraft = Omit<
+  TeamCreateRequest,
+  'command' | 'savedSettingsFingerprint' | 'createdTeamReadiness'
+>;
+
+/** Scoped presentation evidence; Host rechecks the original private probe records. */
+export interface CreatedTeamReadiness {
+  preparationId: string;
+  selectionSignature: string;
+  draftDigest: string;
+  expiresAt: number;
 }
 
 export interface TeamProvisioningModelCheckRequest {
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
+  /** UI references only; the captured owner resolves authoritative member IDs. */
+  targets?: TeamProvisioningModelTarget[];
 }
+
+export type TeamProvisioningModelTarget =
+  | { kind: 'lead' }
+  | { kind: 'member'; name: string; originalName?: string };
 
 /** Why an OpenCode model route cannot be used, derived from structured runtime data. */
 export type OpenCodeModelAccessReasonCode =
@@ -1429,7 +1472,19 @@ export interface TeamProvisioningSupportDiagnostic {
   createdAt: string;
 }
 
+/** A current observation from one captured Team preparation, never global provider authority. */
+export interface CapturedTeamReadiness {
+  handleId: string;
+  preparationId: string;
+  launchId: string;
+  rosterRevision: string;
+  selectionSignature: string;
+  expiresAt: number;
+}
+
 export interface TeamProvisioningPrepareResult {
+  capturedTeamReadiness?: CapturedTeamReadiness;
+  createdTeamReadiness?: CreatedTeamReadiness;
   ready: boolean;
   message: string;
   details?: string[];
@@ -1527,80 +1582,6 @@ export interface GlobalTask extends TeamTaskWithKanban {
   teamDeleted?: boolean;
 }
 
-export interface MemberSubagentSummary {
-  subagentId: string;
-  sessionId: string;
-  projectId: string;
-  description: string;
-  memberName: string | null;
-  startTime: string;
-  durationMs: number;
-  messageCount: number;
-  isOngoing: boolean;
-}
-
-export type MemberLogKind = 'subagent' | 'lead_session' | 'member_session';
-
-export interface MemberLogSummaryBase {
-  kind: MemberLogKind;
-  sessionId: string;
-  projectId: string;
-  description: string;
-  memberName: string | null;
-  startTime: string;
-  durationMs: number;
-  messageCount: number;
-  isOngoing: boolean;
-  /** Absolute path to JSONL file when known (avoids redundant findMemberLogPaths scan). */
-  filePath?: string;
-  /** Short preview of the last assistant output (truncated). */
-  lastOutputPreview?: string;
-  /** Short preview of the last thinking block (truncated). */
-  lastThinkingPreview?: string;
-  /** Recent thinking/output previews with timestamps for task-scoped filtering. */
-  recentPreviews?: { text: string; timestamp: string; kind: 'thinking' | 'output' }[];
-}
-
-export interface MemberSubagentLogSummary extends MemberLogSummaryBase {
-  kind: 'subagent';
-  subagentId: string;
-}
-
-export interface MemberLeadSessionLogSummary extends MemberLogSummaryBase {
-  kind: 'lead_session';
-}
-
-export interface MemberSessionLogSummary extends MemberLogSummaryBase {
-  kind: 'member_session';
-}
-
-export type MemberLogSummary =
-  | MemberSubagentLogSummary
-  | MemberLeadSessionLogSummary
-  | MemberSessionLogSummary;
-
-export interface FileLineStats {
-  added: number;
-  removed: number;
-}
-
-export interface MemberFullStats {
-  linesAdded: number;
-  linesRemoved: number;
-  filesTouched: string[];
-  fileStats: Record<string, FileLineStats>;
-  toolUsage: Record<string, number>;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  costUsd: number;
-  tasksCompleted: number;
-  messageCount: number;
-  totalDurationMs: number;
-  sessionCount: number;
-  computedAt: string;
-}
-
 export interface AddMemberRequest {
   name: string;
   role?: string;
@@ -1625,6 +1606,12 @@ export interface UpdateMemberRoleRequest {
 
 export interface ReplaceMembersRequest {
   members: TeamProvisioningMemberInput[];
+  /** Caller identity and source configuration captured by the existing dialog. */
+  command?: ApplicationCommandRequestIdentity;
+  configuration?: {
+    expectedRevision: string;
+    savedSettings?: Omit<TeamCreateDraft, 'teamName' | 'members'>;
+  };
   /** Optional compare-and-swap intent from the member settings relaunch dialog. */
   memberSettingsRelaunch?: {
     memberName: string;
@@ -1778,6 +1765,8 @@ export interface ToolApprovalDismiss {
   teamName: string;
   /** Only dismiss approvals from this specific run. */
   runId: string;
+  /** Host interactions dismiss only this exact UI request; omitted keeps legacy run dismissal. */
+  requestId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -1823,6 +1812,13 @@ export type ToolApprovalEvent =
   | ToolApprovalRequest
   | ToolApprovalDismiss
   | ToolApprovalAutoResolved;
+
+/** Existing approval UI identity; Host privately resolves the captured Runtime interaction. */
+export interface ToolApprovalReadScope {
+  teamName: string;
+  runId: string;
+  requestId: string;
+}
 
 /** Result of reading a file for tool approval diff preview. */
 export interface ToolApprovalFileContent {

@@ -1,6 +1,8 @@
 import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contracts/teamSelection';
+import { HostReviewOperationError } from '../../../src/features/agent-backend/renderer/HostReviewOperationError';
 import { selectTaskDetailResourceEntry } from '../../../src/renderer/store/slices/taskDetailResourcesSlice';
 import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
 import {
@@ -112,6 +114,62 @@ describe('task detail origin and loading postconditions', () => {
     expect(apiMock.teams.getData).not.toHaveBeenCalled();
     expect(apiMock.teams.getTask).not.toHaveBeenCalled();
     expect(store.getState().taskDetailById).toEqual({});
+  });
+
+  it('keeps fresh Host Task authority after assignment when derived review cache invalidation is held', async () => {
+    const store = createTestStore();
+    const teamName = hostTeamSelectionKey('TEST-review-cache-hold');
+    const identity = { contextId: 'local', teamName, taskId: 'X' };
+    const key = taskDetailKey(identity);
+    const original = {
+      id: 'X',
+      subject: 'TEST assigned Task',
+      status: 'pending' as const,
+      needsClarification: 'user' as const,
+    };
+    const assigned = { ...original, owner: 'alice' };
+    const metadata = (task: typeof original): TeamViewSnapshot => {
+      const base = snapshot('/TEST-review-cache-hold');
+      return {
+        ...base,
+        teamName,
+        config: { ...base.config, name: teamName },
+        tasks: [task],
+        kanbanState: { ...base.kanbanState, teamName },
+      };
+    };
+    store.setState({ activeContextId: identity.contextId, selectedTeamName: teamName });
+    apiMock.teams.getData
+      .mockResolvedValueOnce(metadata(original))
+      .mockResolvedValueOnce(metadata(assigned));
+    apiMock.teams.getTask.mockResolvedValueOnce(original).mockResolvedValueOnce(assigned);
+    await store.getState().ensureTaskDetail(identity);
+    expect(store.getState().taskDetailById[key]).toMatchObject({ phase: 'ready', full: original });
+    const reviewHold = new HostReviewOperationError('hold', 'unknown', {
+      handle: { handleId: 'TEST-review-cache-hold' },
+      commandId: 'TEST-derived-invalidation',
+      operation: 'review.invalidateSummaries',
+      payload: { taskIds: ['X'] },
+    });
+    apiMock.review.invalidateTaskChangeSummaries.mockRejectedValueOnce(reviewHold);
+
+    await store.getState().ensureTaskDetail(identity);
+
+    expect(apiMock.review.invalidateTaskChangeSummaries).toHaveBeenCalledWith(teamName, ['X']);
+    expect(apiMock.teams.getTask).toHaveBeenCalledTimes(2);
+    expect(store.getState().taskDetailById[key]).toMatchObject({
+      phase: 'ready',
+      error: null,
+      full: assigned,
+    });
+    expect(store.getState().selectedTeamData?.tasks[0].owner).toBe('alice');
+    expect(
+      isTaskDetailTeamUnavailable(
+        store.getState(),
+        teamName,
+        captureTaskDetailReadScope(teamName, identity.contextId)
+      )
+    ).toBe(false);
   });
 
   it('rejects deferred A/B/A stale callbacks after an epoch reset', async () => {
@@ -353,6 +411,50 @@ describe('task detail origin and loading postconditions', () => {
       expect.objectContaining({ timeoutAction: 'wait', timeoutSeconds: 30 })
     );
   });
+  it('does not reuse a retired metadata predecessor after a newer full snapshot was accepted', async () => {
+    const store = createTestStore();
+    const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };
+    const key = taskDetailKey(identity);
+    const older = deferred<TeamViewSnapshot>();
+    const newer = deferred<TeamViewSnapshot>();
+    apiMock.teams.getData
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise)
+      .mockResolvedValue(snapshot('/TEST-detail-current'));
+    apiMock.teams.getTask.mockResolvedValue({
+      id: 'X',
+      subject: 'TEST current full task',
+      status: 'in_progress',
+    });
+    const predecessor = store.getState().refreshTeamData(identity.teamName, { withDedup: true });
+    const replacement = store.getState().refreshTeamData(identity.teamName, { withDedup: false });
+    let detail: Promise<void> | undefined;
+    try {
+      newer.resolve(snapshot('/TEST-newer-accepted'));
+      await replacement;
+      expect(store.getState().teamDataCacheByName[identity.teamName]?.config.projectPath).toBe(
+        '/TEST-newer-accepted'
+      );
+      detail = store.getState().ensureTaskDetail(identity);
+      older.resolve(snapshot('/TEST-retired-predecessor'));
+      await Promise.all([predecessor, detail]);
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+      expect(apiMock.teams.getTask).toHaveBeenCalledTimes(1);
+      expect(store.getState().taskDetailById[key]).toMatchObject({
+        phase: 'ready',
+        error: null,
+        full: { id: 'X', subject: 'TEST current full task' },
+      });
+      expect(store.getState().teamDataCacheByName[identity.teamName]?.config.projectPath).toBe(
+        '/TEST-detail-current'
+      );
+    } finally {
+      older.resolve(snapshot('/TEST-retired-predecessor'));
+      newer.resolve(snapshot('/TEST-newer-accepted'));
+      await Promise.allSettled([predecessor, replacement, detail]);
+    }
+  });
+
   it('waits for queued live metadata before reading a cold task behind a thin selection', async () => {
     const store = createTestStore();
     const identity = { contextId: 'local', teamName: 'shared-team', taskId: 'X' };

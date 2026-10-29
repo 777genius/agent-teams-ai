@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_HISTORICAL_NATIVE_PASS_RECONCILED",
+  "scope": "Original explicit Task Start -> actual OpenCode read/edit -> qualified ledger -> cold Reject restoring dirty bytes",
+  "actualRun": {
+    "jobId": "006ae732b7a2fce94c4af3e3c69c733e",
+    "rawStatus": "PASS",
+    "exitCode": 0,
+    "startedAt": "2026-10-23T07:50:36Z",
+    "finishedAt": "2026-10-23T07:52:10Z",
+    "sourceEpoch": "888176ea472e265b09bb71ee0fecd75639ef8af78519e35adfb366ef954518d2",
+    "distEpoch": "df4fc4c84cb931017ee1591c687381328dc795ac8d8d9267a466317f4d275169",
+    "nativeVersion": "1.19.4",
+    "nativeSha256": "417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b",
+    "providerArchiveSha256": "466f7ad08099d7a530c6df7b4ac1155a01ab9e21fbbe486b38a34ce59aba0880"
+  },
+  "effects": {
+    "originalInputs": 2,
+    "modelRequests": 4,
+    "qualifiedLedgerEvents": 1,
+    "beforeSha256": "2680de9293e39eacab7485ce9d1640616572d50d79f1da3f6f9447fc1d710570",
+    "afterSha256": "fca2ef382d6c511ae1d257cd96d1737fcc0832d819820a5f24354d7c77fb9204",
+    "toolInputDigest": "444dfef6858b5d4c00d97954bc17738ac530f77b0fe227ce80d1749809216fad",
+    "nativeAnchors": "Original native identities retained privately; not copied into this handoff",
+    "coldReview": {
+      "applied": 1,
+      "skipped": 0,
+      "conflicts": 0,
+      "errors": []
+    },
+    "indexAndUnrelatedBytesPreserved": true,
+    "hostExitCode": 0,
+    "hostSignal": null,
+    "nativeAbsence": "Retained original qualified observation; no new process adoption",
+    "coverage": "partial; executionSeq0; reviewableCompletefalse"
+  },
+  "retentionVerification": {
+    "filesVerified": 1185,
+    "bytesVerified": 9253419,
+    "mismatches": [],
+    "eventEqualsRawReceipt": true,
+    "beforeAfterBlobsMatchEventDigests": true,
+    "noticesEqualRawReceipt": true,
+    "currentObservationDoesNotReplayAnything": true
+  },
+  "selectedCurrentComparison": {
+    "opencodeProtocolJs": 50,
+    "all50ByteEqual": "v2 retained provider tar == current W selected installed pair == current D dist",
+    "HostCaptureSourceAndJs": {
+      "exactlyEqual": 14,
+      "compared": 15
+    },
+    "exception": "OpenCodeMemberProvider wrapper later adds MCP-policy/source fences, canonical agent permissions, extra args, registered-process callback and captured-policy submit preflight. Evidence port assignment remains. Composition moved into createRuntimeMemberProviderFactory. Original proof does not qualify later lifecycle/wrapper or whole current Host epoch."
+  },
+  "originalFailure": "Original ENOENT remains failed. Its exact root is absent and v1 retained no store/notices/native payload, so exact capture refusal cannot be recovered. Both failed and PASS profiles omit reviewTransport; capture is unconditional and reviewTransport only exposes review RPC. Same provider artifact/test capture fixture, unchanged qualifier/binder/snapshot/journal; only capture warning diagnostics differ. No causal production fix can be inferred.",
+  "evidence": {
+    "ignoredRoot": ".artifacts/provider-migration/native-parity-attempts-v2",
+    "receiptSha256": "4735f326d1ceb77befec5bec15428f5d3c7f3147cd1bd7f312432b90930481b3",
+    "verificationSha256": "73658bc2ae60426b3c26dcc7be8070f5587ae0114774aab08f97a7f591070c69",
+    "originalJobStateSha256": "344c6aaee7afd6152e9285ddeee7a21b8e439b5e7c194a6ec92f67bc529bc0be",
+    "ledgerEventSha256": "e79133f4dcd5bf68e373b9c80ca3ce9b61afa37f6b6ad973f5347ae923b9fc7e",
+    "noticesSha256": "eae1d6131fd4c0f491976b028c0053efb0152e8ad858f3b4b38b3d6aa27994a8",
+    "detailedReconciliation": {
+      "path": "/private/tmp/TEST-m13-opencode-host-reconciliation-qihcffit/handoff.json",
+      "sha256": "ab6a0c402e40d1f398b0cc79fd4da6677b25e4c52548b605a32cfce316e4c309"
+    },
+    "summarySha256": "eb06b65cc05f12b70ac4e04a0c82368551928dab5a5a2438fb49329aafbbb62b"
+  },
+  "notClaimed": [
+    "Later full current Host/wrapper epoch",
+    "Desktop Changes UI",
+    "vendor auth",
+    "create/delete/rename/multifile/CRLF/binary",
+    "failed/background/post-hook denominator",
+    "full M13",
+    "full Stage1",
+    "Stage2"
+  ]
+}

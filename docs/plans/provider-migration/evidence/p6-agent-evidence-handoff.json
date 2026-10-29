@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "slice": "P6 canonical agent-wide captured evidence, including original generic message inputs",
+  "status": "implemented; canonical compiled focused checks passed; source frozen",
+  "architecture": {
+    "owner": "Existing Host evidence writer and Team authority fence",
+    "genericArtifact": ".board-task-changes/agents/<encoded immutable memberId>/{events,notices}.jsonl; schemaVersion1, artifactKind agent-input, no Task identity",
+    "taskAggregation": "Bounded canonical journals selected by immutable event.agentId, never current Task assignee/name/status",
+    "content": "Existing shared SHA-checked blob store, portable projection and ledger-only FileContentResolver",
+    "recovery": "Cold reads use persisted original Runtime input and validated Team message/outbox command identity; no transcript/Git reconstruction or native redispatch"
+  },
+  "sourceSha256": {
+    "packages/task-change-ledger/src/AgentChangeLedgerReader.ts": "4725df94681292eab830babf6a9452d8a64018c2376d23ed688cb2c9b824f8c5",
+    "packages/task-change-ledger/src/ledgerTypes.ts": "9d00de1cad3b89350aa50d60072743b678dd2bf4def16c7cdbaadbff4dc9b9f7",
+    "packages/task-change-ledger/src/eventProjection.ts": "8c2daf523b8440a44e998e6a91c89cbf0f220ab1a01626e190b16a5fd14cacad",
+    "packages/task-change-ledger/src/diagnostics.ts": "b6622589c4d634224df4685dfa7b8b9245e17d229e10f164e893469c8043604e",
+    "packages/task-change-ledger/src/contracts.ts": "38890c13190d4302318c593bdcc43eb2469cfcd7fa45dbc3793dc69034294435",
+    "packages/task-change-ledger/src/LedgerArtifactReader.ts": "2d4de97b316893f4d4781367b4c13c7734e0c4be1f2192c22354971e8835f18d",
+    "packages/task-change-ledger/src/index.ts": "a592daa0c01dd7ddf260d45049bf675fea8d0d9ac0a7e77e422a5f41d1be4251",
+    "packages/legacy-agent-host/src/team/lookupEvidenceCause.ts": "ea49ec8afb8c87a516b99bbc31cbdccf59f2f49de336ea41a3ba8ce5519b7b2d",
+    "packages/legacy-agent-host/src/team/TeamOwner.ts": "f57bfe7d4bc7fb4d3aea79cce5e275e3f9dbcd68f04e7879b52e35765cdd3872",
+    "packages/legacy-agent-host/src/evidence/bindTaskToolEvidence.ts": "0b64df7fb9c558c0e58695e0619833b25c2fedb421f76f3a46e36fbd25b78043",
+    "packages/legacy-agent-host/src/evidence/TaskEvidenceJournal.ts": "f40ba04a1aa6185eea0f35a81ebd285655f2ee975d4d0d1f73bdbb9c388c566f",
+    "packages/legacy-agent-host/src/composition/createClaudeEvidenceCapture.ts": "b92399dc3a88aa2dc8c71627e03512486ec24dbc07ad9febf39d29f66b82024e",
+    "packages/legacy-agent-host/src/composition/HostTeamReview.ts": "22cce31960a9f90be2247d7ef4346eb8430297f10c68b40efae1dace09daae34",
+    "src/renderer/components/team/review/ChangeReviewDialog.tsx": "301168011e602b775414f236b098e1e6caa8c2fd8d219fd0af436a1b58e5e462",
+    "src/features/agent-backend/main/adapters/output/projectReviewResult.ts": "27c8c0d10ed341eba0cf21121fc7a5d65e07360998fe142bbaa3a0d5668ca9f5",
+    "src/renderer/components/team/review/ReviewToolbar.tsx": "25d70bf2df39813c02e1f9b1d7e5234d4d1b587c5186f54f6c82b49923066dda",
+    "packages/legacy-agent-host/tests/agent-tool-evidence.test.ts": "369bf130cb7618afe3b8df5ed93d813d9ce938423624fab099b55a2f7379af3b",
+    "packages/legacy-agent-host/tests/claude-evidence-composition.test.ts": "c6c024cc3c68cf6ff4c51c27e6b7f1214ae194f0dbd6094d246edb1f7caec085",
+    "packages/legacy-agent-host/tests/task-tool-evidence-binding.test.ts": "4debd84d5187e639f457f62706caf64ac2ee6313391f63ba2b6e9d760e8fc346",
+    "packages/legacy-agent-host/tests/team-code-review.test.ts": "695b88ea6543e359d476c8b20a4fe1443bc6d9f6dfbaa2a07d02c0c51f4ef8c1",
+    "test/renderer/components/team/review/ReviewToolbar.stats.test.tsx": "96264d49b55d22d2c4e80dbb2a130d22928b0c01cc18734e5054aa2e7fb55c95"
+  },
+  "verification": {
+    "coreFocusedCases": {
+      "count": 45,
+      "counting": "45 distinct cases across focused runs, not one aggregate green run; final compiled agent5 rechecked after stats followup",
+      "groups": {
+        "agent-tool-evidence": 5,
+        "claude-evidence-composition": 5,
+        "task-tool-evidence-binding": 8,
+        "task-tool-evidence-writer": 16,
+        "team-code-review": 9,
+        "portable-reader": 2
+      },
+      "jobs": {
+        "initial": "f23ff8120d8994319dba01c4cdf404e1",
+        "review-positive": "70d3b76ec6fdca20020f8b10ab5d9eb3",
+        "agent-composition-final": "ae2bca9507ba8ed98606f85492e51bfa"
+      }
+    },
+    "toolbarAndWarningCases": {
+      "count": 3,
+      "job": "c7ba46ac2f4a083b972d022470b0e7b1",
+      "finalUnavailableMarkerRecheck": {
+        "count": 1,
+        "job": "ef16068d71b15747be3f7b59750bf556",
+        "assertions": "partial empty ?, unavailable captured file ?, positive partial ~, legacy complete +0"
+      }
+    },
+    "sourceNoEmit": {
+      "portable": "PASS",
+      "rootWithPortableContractsSourceAlias": "PASS",
+      "job": "34fd03b48fc837106b5fd2129b0b0eff"
+    },
+    "affectedLint": "PASS; final exec session15435 after cosmetic test import sort",
+    "compiledHostStatsAssertions": {
+      "status": "PASS",
+      "count": 5,
+      "job": "fab1273646a047ebb4719bbe71a748d5",
+      "observations": [
+        "Positive captured stats are partial",
+        "Empty actor inventory stats are unavailable rather than zero"
+      ],
+      "missingBlobRecheck": {
+        "status": "PASS",
+        "caseCount": 1,
+        "execSession": 9765,
+        "observation": "Removed captured blob yields diffStatKnown:false and getChangeStats unavailable; no fabricated zero"
+      }
+    }
+  },
+  "riskCoverage": [
+    "Generic original input capture \u2192 journal \u2192 cold agent query and authoritative content",
+    "Task reassignment cannot transfer immutable actor history",
+    "Revoked recipient and replaced Runtime operation cannot settle late callbacks",
+    "Symlink journal refused with partial diagnostics; journal byte and all-directory-entry traversal caps bounded",
+    "Partial empty/unknown statistics show ?; positive captured partial counts show ~; legacy complete counts unchanged"
+  ],
+  "limitations": [
+    "These are sandbox controlled-port/filesystem tests, not native generic-input execution or Electron agent-review acceptance.",
+    "Native hook interval/external exclusivity/workspace coverage remain unqualified; executionSeq0 denotes unknown; projections always partial.",
+    "Legacy evidence without immutable stable actor ID is not guessed from mutable assignee; incomplete inventory remains diagnostic/partial.",
+    "Bounded whole-Team Task journal scan refuses over-budget inventories rather than silently returning a complete empty result.",
+    "Generic native observation is wired through the existing optional Claude capture port; this slice does not add a capture capability to other providers."
+  ]
+}

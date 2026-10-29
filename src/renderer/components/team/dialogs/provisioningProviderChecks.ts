@@ -1,9 +1,18 @@
-import type { TeamProviderId, TeamProvisioningSupportDiagnostic } from '@shared/types';
+import type {
+  CapturedTeamReadiness,
+  CreatedTeamReadiness,
+  TeamProviderId,
+  TeamProvisioningSupportDiagnostic,
+} from '@shared/types';
 
 export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
 export type ProvisioningPrepareState = 'idle' | 'loading' | 'ready' | 'failed';
 
 export interface ProvisioningProviderCheck {
+  createdTeamReadiness?: CreatedTeamReadiness;
+  createdTeamDraftSignature?: string;
+  capturedTeamReadiness?: CapturedTeamReadiness;
+  capturedTeamDraftSignature?: string;
   providerId: TeamProviderId;
   status: ProvisioningProviderCheckStatus;
   backendSummary?: string | null;
@@ -20,6 +29,14 @@ export function updateProviderCheck(
   return checks.map((check) => {
     if (check.providerId !== providerId) return check;
     const nextCheck = { ...check, ...patch };
+    if (Object.hasOwn(patch, 'status') && !Object.hasOwn(patch, 'createdTeamReadiness')) {
+      delete nextCheck.createdTeamReadiness;
+      delete nextCheck.createdTeamDraftSignature;
+    }
+    if (Object.hasOwn(patch, 'status') && !Object.hasOwn(patch, 'capturedTeamReadiness')) {
+      delete nextCheck.capturedTeamReadiness;
+      delete nextCheck.capturedTeamDraftSignature;
+    }
     if (Object.hasOwn(patch, 'status') && !Object.hasOwn(patch, 'experimentalOverrideAvailable')) {
       delete nextCheck.experimentalOverrideAvailable;
     }
@@ -41,6 +58,10 @@ export function failIncompleteProviderChecks(
       details: check.details.length > 0 ? check.details : [detail],
     };
     delete nextCheck.experimentalOverrideAvailable;
+    delete nextCheck.capturedTeamReadiness;
+    delete nextCheck.capturedTeamDraftSignature;
+    delete nextCheck.createdTeamReadiness;
+    delete nextCheck.createdTeamDraftSignature;
     return nextCheck;
   });
 }

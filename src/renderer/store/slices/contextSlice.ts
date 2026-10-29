@@ -16,6 +16,7 @@ import {
   invalidateContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
 } from '../utils/contextScopedRequestEpoch';
+import { extensionInitialState } from '../utils/extensionsContext';
 import { getContextScopedTeamResetState, getFullResetState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
@@ -56,6 +57,7 @@ function getEmptyContextState(): Partial<AppState> {
   return {
     ...getFullResetState(),
     ...getContextScopedTeamResetState(),
+    ...extensionInitialState(),
     projects: [],
     projectsLoading: false,
     projectsInitialized: false,
@@ -330,6 +332,7 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
           ? {
               ...getFullResetState(),
               ...getContextScopedTeamResetState(),
+              ...extensionInitialState(),
               projects: [],
               projectsLoading: false,
               projectsInitialized: false,
@@ -412,6 +415,7 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
       if (targetSnapshot) {
         set({
           ...getContextScopedTeamResetState(),
+          ...extensionInitialState(),
           projects: targetSnapshot.projects,
           projectsLoading: false,
           projectsInitialized: true,

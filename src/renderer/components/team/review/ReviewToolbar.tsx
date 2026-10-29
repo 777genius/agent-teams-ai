@@ -131,14 +131,34 @@ export const ReviewToolbar = ({
         )}
       </div>
 
-      {/* Change stats */}
-      <div className="flex items-center gap-1 text-xs text-text-muted">
-        <span className="text-green-400">+{changeStats.linesAdded}</span>
-        <span className="text-red-400">-{changeStats.linesRemoved}</span>
-        <span className="ml-1">
-          {t('review.toolbar.stats.acrossFiles', { count: changeStats.filesChanged })}
-        </span>
-      </div>
+      {/* A partial empty capture cannot prove zero changes. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className="flex items-center gap-1 text-xs text-text-muted"
+            data-testid="review-change-stats"
+          >
+            {changeStats.completeness === 'unavailable' ||
+            (changeStats.completeness === 'partial' && changeStats.filesChanged === 0) ? (
+              <span>?</span>
+            ) : (
+              <>
+                <span className="text-green-400">+{changeStats.linesAdded}</span>
+                <span className="text-red-400">-{changeStats.linesRemoved}</span>
+                <span className="ml-1">
+                  {t('review.toolbar.stats.acrossFiles', { count: changeStats.filesChanged })}
+                </span>
+                {changeStats.completeness === 'partial' && <span>~</span>}
+              </>
+            )}
+          </div>
+        </TooltipTrigger>
+        {changeStats.completeness && changeStats.completeness !== 'complete' && (
+          <TooltipContent side="bottom">
+            {changeStats.warnings?.[0] ?? t('review.scope.ledger.limited.detail')}
+          </TooltipContent>
+        )}
+      </Tooltip>
 
       {/* Review progress */}
       {totalChanges > 0 && (

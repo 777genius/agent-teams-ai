@@ -10,6 +10,7 @@ import React, {
 
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { Transaction } from '@codemirror/state';
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
 import {
@@ -21,7 +22,7 @@ import {
   buildReviewExternalReloadState,
   buildReviewRestoreDecisionState,
 } from '@features/review-mutations';
-import { api, isElectronMode } from '@renderer/api';
+import { isElectronMode, reviewApiForTeam } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import {
   AlertDialog,
@@ -65,7 +66,7 @@ import {
 } from '@renderer/utils/taskChangeRequest';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
-import { AlertTriangle, ChevronDown, Clock, FileSearch, Info, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, X } from 'lucide-react';
 
 import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import {
@@ -125,6 +126,7 @@ import {
   getReviewHunkOrder,
   getReviewNavigationFiles,
 } from './reviewEntryNavigation';
+import { handleReviewFileChange } from './reviewFileChangeMonitor';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewFileTree } from './ReviewFileTree';
 import {
@@ -144,6 +146,7 @@ import { selectReviewRestoreSnapshots } from './reviewRestoreSnapshotSelection';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
+import { TaskChangesEmptyState } from './TaskChangesEmptyState';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
 import type {
@@ -152,6 +155,7 @@ import type {
   ReviewDecisionRecords,
   ReviewOperationScopeToken,
 } from './reviewActionState';
+import type { ReviewWriteExpectation } from './reviewFileChangeMonitor';
 import type { EditorView } from '@codemirror/view';
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
@@ -183,11 +187,6 @@ type ReviewUndoActionInput =
   | Omit<Extract<ReviewUndoAction, { kind: 'bulk' }>, 'id' | 'createdAt'>
   | Omit<Extract<ReviewUndoAction, { kind: 'disk' }>, 'id' | 'createdAt'>
   | Omit<Extract<ReviewUndoAction, { kind: 'hunk' }>, 'id' | 'createdAt'>;
-
-interface RecentReviewWrite {
-  at: number;
-  expectedContent: string | null;
-}
 
 interface DraftHistoryHydrationState {
   key: string | null;
@@ -295,8 +294,6 @@ function isLedgerRenameReviewFile(file: FileChangeSummary | undefined): boolean 
   return Boolean(file?.snippets.some((snippet) => snippet.ledger?.relation?.kind === 'rename'));
 }
 
-const REVIEW_LOCAL_WRITE_COOLDOWN_MS = 2000;
-
 interface ChangeReviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -317,65 +314,6 @@ function isTaskChangeSetV2(cs: { teamName: string }): cs is TaskChangeSetV2 {
   return 'scope' in cs;
 }
 
-const TaskChangesEmptyState = ({
-  changeSet,
-}: {
-  changeSet: TaskChangeSetV2 | null;
-}): React.ReactElement => {
-  const { t } = useAppTranslation('team');
-  const status = changeSet ? classifyTaskChangeReviewability(changeSet) : null;
-  const diagnosticMessages =
-    status && status.diagnostics.length > 0
-      ? status.diagnostics.map((diagnostic) => diagnostic.message)
-      : (changeSet?.warnings ?? []);
-  const uniqueMessages = [
-    ...new Set(diagnosticMessages.filter((message) => message.trim().length > 0)),
-  ];
-  const isAttention = status?.reviewability === 'attention_required';
-  const isDiagnosticOnly = status?.reviewability === 'diagnostic_only';
-  const isNoSafeDiff = isAttention || isDiagnosticOnly;
-  const hasDiagnosticContext = uniqueMessages.length > 0;
-  const Icon = isAttention ? AlertTriangle : hasDiagnosticContext ? Info : FileSearch;
-  const title = isDiagnosticOnly
-    ? t('review.empty.noSafeDiff')
-    : isAttention
-      ? t('review.continuousScroll.empty')
-      : t('review.empty.noFileChangesRecorded');
-  const description = isNoSafeDiff
-    ? isDiagnosticOnly
-      ? t('review.empty.noSafeDiffDescription')
-      : t('review.empty.noSafeDiffDiagnosticsDescription')
-    : hasDiagnosticContext
-      ? t('review.empty.noFileEventsYet')
-      : t('review.empty.noFileEvents');
-
-  return (
-    <div className="flex w-full items-center justify-center px-6">
-      <div className="max-w-xl rounded-lg border border-border bg-surface-sidebar px-5 py-4 text-center">
-        <Icon
-          className={cn('mx-auto mb-2 size-5', isAttention ? 'text-amber-300' : 'text-text-muted')}
-        />
-        <div className="text-sm font-medium text-text">{title}</div>
-        <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p>
-        {uniqueMessages.length > 0 && (
-          <div
-            className={cn(
-              'mt-3 space-y-1 rounded border px-3 py-2 text-left text-xs',
-              isAttention
-                ? 'border-amber-500/20 bg-amber-500/10 text-amber-200'
-                : 'border-border bg-surface-raised text-text-muted'
-            )}
-          >
-            {uniqueMessages.map((message, index) => (
-              <div key={`${message}:${index}`}>{message}</div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export const ChangeReviewDialog = ({
   open,
   onOpenChange,
@@ -392,6 +330,10 @@ export const ChangeReviewDialog = ({
   onLifecycleFocus,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
+  const reviewApi = useMemo(
+    () => reviewApiForTeam(teamName, { taskId, memberName }),
+    [teamName, taskId, memberName]
+  );
   const generatedLifecycleHostId = useId();
   const resolvedLifecycleHostId = lifecycleHostId ?? generatedLifecycleHostId;
   const reviewLifecycleSessionId = useMemo(
@@ -454,7 +396,6 @@ export const ChangeReviewDialog = ({
     decisionHydrationStatus,
     globalTasks,
   } = useStore();
-
   const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
   const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
   const decisionScopeToken = useMemo(() => {
@@ -582,7 +523,7 @@ export const ChangeReviewDialog = ({
   const immediatelyPersistedReviewSnapshotRef = useRef<ReviewPersistenceSnapshotIdentity | null>(
     null
   );
-  const recentReviewWritesRef = useRef(new Map<string, RecentReviewWrite>());
+  const recentReviewWritesRef = useRef(new Map<string, ReviewWriteExpectation>());
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const draftDiskBaselineRef = useRef(new Map<string, string | null>());
@@ -638,8 +579,8 @@ export const ChangeReviewDialog = ({
     setReviewConflictRefreshPending(true);
     try {
       const [decisionCandidates, draftCandidates] = await Promise.all([
-        api.review.loadDecisionConflictCandidates(teamName, decisionScopeKey, decisionScopeToken),
-        api.review.loadDraftHistoryConflictCandidates(
+        reviewApi.loadDecisionConflictCandidates(teamName, decisionScopeKey, decisionScopeToken),
+        reviewApi.loadDraftHistoryConflictCandidates(
           teamName,
           decisionScopeKey,
           decisionScopeToken
@@ -651,7 +592,10 @@ export const ChangeReviewDialog = ({
       ) {
         return;
       }
-      if (decisionCandidates.length > 0) {
+      if (
+        decisionCandidates.length > 0 ||
+        useStore.getState().decisionHydrationStatus === 'error'
+      ) {
         await hydrateDecisionsFromDisk(
           teamName,
           decisionScopeKey,
@@ -692,6 +636,7 @@ export const ChangeReviewDialog = ({
       }
     }
   }, [
+    reviewApi,
     decisionHydrationKey,
     decisionScopeKey,
     decisionScopeToken,
@@ -705,7 +650,6 @@ export const ChangeReviewDialog = ({
   const markRecentReviewWrite = useCallback(
     (filePath: string, expectedContent: string | null): void => {
       recentReviewWritesRef.current.set(normalizePathForComparison(filePath), {
-        at: Date.now(),
         expectedContent,
       });
     },
@@ -812,7 +756,7 @@ export const ChangeReviewDialog = ({
           if (!pending) return;
           try {
             const expectedVersion = draftHistoryPersistedVersionsRef.current.get(writeKey);
-            const saved = await api.review.saveDraftHistoryEntry(
+            const saved = await reviewApi.saveDraftHistoryEntry(
               pending.teamName,
               pending.scopeKey,
               pending.scopeToken,
@@ -864,7 +808,7 @@ export const ChangeReviewDialog = ({
         });
       return drain;
     },
-    [refreshReviewConflictCandidates]
+    [reviewApi, refreshReviewConflictCandidates]
   );
 
   const enqueueDraftHistoryWrite = useCallback(
@@ -899,7 +843,7 @@ export const ChangeReviewDialog = ({
       }
       const promotion = (async () => {
         try {
-          await api.review.replaceDraftHistoryConflictCandidate(
+          await reviewApi.replaceDraftHistoryConflictCandidate(
             teamName,
             decisionScopeKey,
             decisionScopeToken,
@@ -934,6 +878,7 @@ export const ChangeReviewDialog = ({
       });
     }
   }, [
+    reviewApi,
     decisionHydrationKey,
     decisionScopeKey,
     decisionScopeToken,
@@ -990,7 +935,7 @@ export const ChangeReviewDialog = ({
             throw new Error('Review scope changed before Undo history could clear.');
           }
           clearedVersion = draftHistoryPersistedVersionsRef.current.get(writeKey);
-          return api.review.clearDraftHistory(
+          return reviewApi.clearDraftHistory(
             teamName,
             decisionScopeKey,
             decisionScopeToken,
@@ -1037,6 +982,7 @@ export const ChangeReviewDialog = ({
       return clear;
     },
     [
+      reviewApi,
       captureReviewOperationScope,
       decisionHydrationKey,
       decisionScopeKey,
@@ -1128,7 +1074,7 @@ export const ChangeReviewDialog = ({
   const readCurrentReviewDiskContent = useCallback(
     async (filePath: string, fallback: string): Promise<string> => {
       try {
-        const result = await api.review.checkConflict(
+        const result = await reviewApi.checkConflict(
           { teamName, taskId, memberName },
           filePath,
           fallback
@@ -1139,7 +1085,7 @@ export const ChangeReviewDialog = ({
         return fallback;
       }
     },
-    [memberName, taskId, teamName]
+    [reviewApi, memberName, taskId, teamName]
   );
 
   const getEditorFilePathForTarget = useCallback((target: Element | null): string | null => {
@@ -1201,7 +1147,7 @@ export const ChangeReviewDialog = ({
 
     void (async () => {
       try {
-        const snapshot = await api.review.loadDraftHistory(
+        const snapshot = await reviewApi.loadDraftHistory(
           teamName,
           decisionScopeKey,
           decisionScopeToken
@@ -1225,7 +1171,7 @@ export const ChangeReviewDialog = ({
           const file = allowedFiles.get(normalizePathForComparison(entry.filePath));
           if (file?.filePath !== entry.filePath) continue;
           const baselineKey = normalizePathForComparison(file.filePath);
-          const conflict = await api.review.checkConflict(
+          const conflict = await reviewApi.checkConflict(
             reviewScope,
             file.filePath,
             entry.diskBaseline ?? ''
@@ -1282,6 +1228,7 @@ export const ChangeReviewDialog = ({
       cancelled = true;
     };
   }, [
+    reviewApi,
     activeChangeSet,
     changeSetEpoch,
     decisionHydrationKey,
@@ -1578,7 +1525,7 @@ export const ChangeReviewDialog = ({
       setResolvingConflictCandidateId(selected.value.id);
       try {
         if (selected.kind === 'decision') {
-          await api.review.resolveDecisionConflictCandidate(
+          await reviewApi.resolveDecisionConflictCandidate(
             teamName,
             decisionScopeKey,
             decisionScopeToken,
@@ -1621,7 +1568,7 @@ export const ChangeReviewDialog = ({
           ) {
             return;
           }
-          const resolved = await api.review.resolveDraftHistoryConflictCandidate(
+          const resolved = await reviewApi.resolveDraftHistoryConflictCandidate(
             teamName,
             decisionScopeKey,
             decisionScopeToken,
@@ -1703,6 +1650,7 @@ export const ChangeReviewDialog = ({
       }
     },
     [
+      reviewApi,
       activeReviewConflictCandidate,
       activeReviewConflictRecoverable,
       captureReviewOperationScope,
@@ -1883,11 +1831,12 @@ export const ChangeReviewDialog = ({
   }, []);
 
   useEffect(() => {
-    if (!open || !projectPath || !isElectronMode()) return;
+    if (!open || !projectPath || (!isElectronMode() && !isHostTeamSelectionKey(teamName))) return;
     let disposed = false;
 
-    const unsubscribe = api.review.onExternalFileChange((event) => {
+    const unsubscribe = reviewApi.onExternalFileChange((event) => {
       const normalizedPath = normalizePathForComparison(event.path);
+      const eventEpoch = useStore.getState().changeSetEpoch;
       const processExternalChange = (): void => {
         if (disposed) return;
         const state = useStore.getState();
@@ -1914,61 +1863,46 @@ export const ChangeReviewDialog = ({
         });
       };
 
-      const recentWrite = recentReviewWritesRef.current.get(normalizedPath);
-      if (recentWrite && Date.now() - recentWrite.at < REVIEW_LOCAL_WRITE_COOLDOWN_MS) {
-        const verifyExpectedWrite = async (): Promise<void> => {
-          if (disposed) return;
-          const pathBusy = [...fileApplyInFlightRef.current].some(
-            (filePath) => normalizePathForComparison(filePath) === normalizedPath
-          );
-          if (pathBusy || undoInFlightRef.current || useStore.getState().applying) {
-            // A slow fsync, antivirus hook, or network volume can legitimately take
-            // longer than the old 2.5s cap. Verify only after our mutation settles.
-            window.setTimeout(() => void verifyExpectedWrite(), 25);
-            return;
-          }
-          const latest = recentReviewWritesRef.current.get(normalizedPath);
-          if (!latest) return;
-          try {
-            const result = await api.review.checkConflict(
-              reviewScope,
-              event.path,
-              latest.expectedContent ?? ''
-            );
-            const matchesExpected =
-              latest.expectedContent === null
-                ? result.hasConflict && result.conflictContent === null
-                : !result.hasConflict;
-            if (matchesExpected) return;
-          } catch {
-            // A failed verification is not evidence that this was our own event.
-          }
-          recentReviewWritesRef.current.delete(normalizedPath);
-          processExternalChange();
-        };
-        void verifyExpectedWrite();
-        return;
-      }
-      processExternalChange();
+      void handleReviewFileChange({
+        isCurrent: () => !disposed && useStore.getState().changeSetEpoch === eventEpoch,
+        isWriteInFlight: () =>
+          [...fileApplyInFlightRef.current].some(
+            (entryKey) =>
+              normalizePathForComparison(
+                getReviewDiskPath(useStore.getState().activeChangeSet?.files ?? [], entryKey) ??
+                  entryKey
+              ) === normalizedPath
+          ) ||
+          undoInFlightRef.current ||
+          useStore.getState().applying,
+        getExpectedWrite: () => recentReviewWritesRef.current.get(normalizedPath),
+        forgetExpectedWrite: () => recentReviewWritesRef.current.delete(normalizedPath),
+        waitForWrite: () => new Promise((resolve) => window.setTimeout(resolve, 25)),
+        checkConflict: (expectedContent) =>
+          reviewApi.checkConflict(reviewScope, event.path, expectedContent),
+        onExternalChange: processExternalChange,
+      });
     });
 
     const initialWatchedFilePaths = watchedReviewFilePathsKeyRef.current
       ? watchedReviewFilePathsKeyRef.current.split('\0')
       : [];
-    void api.review.watchFiles(projectPath, initialWatchedFilePaths);
+    void reviewApi.watchFiles(projectPath, initialWatchedFilePaths);
 
     return () => {
       disposed = true;
       unsubscribe();
-      void api.review.unwatchFiles();
+      void reviewApi.unwatchFiles();
     };
-  }, [open, projectPath, reviewScope]);
+  }, [reviewApi, open, projectPath, reviewScope, teamName]);
 
   useEffect(() => {
-    if (!open || !projectPath || !isElectronMode()) return;
+    if (!open || !projectPath || (!isElectronMode() && !isHostTeamSelectionKey(teamName))) return;
     const watchedFilePaths = watchedReviewFilePathsKey ? watchedReviewFilePathsKey.split('\0') : [];
-    void api.review.watchFiles(projectPath, watchedFilePaths);
-  }, [open, projectPath, watchedReviewFilePathsKey]);
+    void reviewApi.watchFiles(projectPath, watchedFilePaths);
+  }, [reviewApi, open, projectPath, watchedReviewFilePathsKey, teamName]);
+
+  // Tree click → scroll to file
   const handleTreeFileClick = useCallback(
     (filePath: string) => {
       scrollToFile(filePath);
@@ -2376,7 +2310,7 @@ export const ChangeReviewDialog = ({
           restoredDiskContent = null;
           restoreMode = 'create-file';
         } else if (resolveReviewFileIsNew(file, content)) {
-          const current = await api.review.checkConflict(reviewScope, filePath, '');
+          const current = await reviewApi.checkConflict(reviewScope, filePath, '');
           const isMissing = current.hasConflict && current.conflictContent === null;
           if (isMissing) {
             rejectedDiskContent = '';
@@ -2398,7 +2332,7 @@ export const ChangeReviewDialog = ({
           if (baseline === null || baseline === undefined) {
             throw new Error('Original file content is unavailable; unable to restore safely.');
           }
-          const current = await api.review.checkConflict(reviewScope, filePath, baseline);
+          const current = await reviewApi.checkConflict(reviewScope, filePath, baseline);
           if (current.hasConflict && current.conflictContent === null) {
             throw new Error('File is missing on disk; unable to restore safely.');
           }
@@ -2456,7 +2390,7 @@ export const ChangeReviewDialog = ({
         try {
           const state = useStore.getState();
           markRecentReviewWrite(filePath, restoredDiskContent);
-          const committed = await api.review.executeMutation({
+          const committed = await reviewApi.executeMutation({
             scope: reviewScope,
             decisionPersistenceScope: {
               scopeKey: decisionScopeKey,
@@ -2532,6 +2466,7 @@ export const ChangeReviewDialog = ({
       }
     },
     [
+      reviewApi,
       activeChangeSet,
       bindCommittedReviewAction,
       blockReviewMutationForExternalChange,
@@ -3230,7 +3165,7 @@ export const ChangeReviewDialog = ({
             reviewActionHistory: reviewUndoActionsRef.current,
             reviewRedoHistory: reviewRedoActionsRef.current,
           });
-          const committed = await api.review.executeMutation({
+          const committed = await reviewApi.executeMutation({
             scope: reviewScope,
             decisionPersistenceScope: {
               scopeKey: decisionScopeKey,
@@ -3305,6 +3240,7 @@ export const ChangeReviewDialog = ({
       })();
     },
     [
+      reviewApi,
       captureReviewOperationScope,
       clearDraftHistoryForFile,
       decisionScopeKey,
@@ -3342,7 +3278,7 @@ export const ChangeReviewDialog = ({
       setFileApplying(filePath, true);
       void (async () => {
         try {
-          const current = await api.review.checkConflict(reviewScope, filePath, expected);
+          const current = await reviewApi.checkConflict(reviewScope, filePath, expected);
           if (
             !isCurrentReviewOperationScope(operationScope) ||
             useStore.getState().changeSetEpoch !== operationEpoch
@@ -3382,6 +3318,7 @@ export const ChangeReviewDialog = ({
       })();
     },
     [
+      reviewApi,
       captureReviewOperationScope,
       clearReviewFileExternalChange,
       flushDraftHistoryWrites,
@@ -3534,7 +3471,7 @@ export const ChangeReviewDialog = ({
           'undo',
           markRecentReviewWrite,
           () =>
-            api.review.executeMutation({
+            reviewApi.executeMutation({
               scope: reviewScope,
               decisionPersistenceScope: {
                 scopeKey: decisionScopeKey,
@@ -3578,6 +3515,7 @@ export const ChangeReviewDialog = ({
       }
     },
     [
+      reviewApi,
       captureReviewOperationScope,
       decisionScopeKey,
       decisionScopeToken,
@@ -3698,7 +3636,7 @@ export const ChangeReviewDialog = ({
         'redo',
         markRecentReviewWrite,
         () =>
-          api.review.executeMutation({
+          reviewApi.executeMutation({
             scope: reviewScope,
             decisionPersistenceScope: {
               scopeKey: decisionScopeKey,
@@ -3746,6 +3684,7 @@ export const ChangeReviewDialog = ({
       if (isCurrentReviewOperationScope(operationScope)) setUndoInFlight(false);
     }
   }, [
+    reviewApi,
     captureReviewOperationScope,
     completeReviewRedoAction,
     blockReviewMutationForExternalChange,
@@ -3946,7 +3885,7 @@ export const ChangeReviewDialog = ({
           direction,
           markRecentReviewWrite,
           () =>
-            api.review.restoreHistory({
+            reviewApi.restoreHistory({
               scope: reviewScope,
               decisionPersistenceScope: {
                 scopeKey: decisionScopeKey,
@@ -3977,6 +3916,7 @@ export const ChangeReviewDialog = ({
       }
     },
     [
+      reviewApi,
       applyRestoredReviewHistory,
       blockReviewMutationForExternalChange,
       buildCurrentReviewHistoryRestorePlan,
@@ -4016,7 +3956,7 @@ export const ChangeReviewDialog = ({
         getReviewActionDiskSnapshots(action)
       );
       const retryRecovery = () =>
-        api.review.retryMutationRecovery({
+        reviewApi.retryMutationRecovery({
           scope: reviewScope,
           decisionPersistenceScope: {
             scopeKey: decisionScopeKey,
@@ -4107,6 +4047,7 @@ export const ChangeReviewDialog = ({
       }
     },
     [
+      reviewApi,
       applyRestoredReviewHistory,
       buildCurrentReviewHistoryRestorePlan,
       captureReviewOperationScope,
@@ -4421,7 +4362,7 @@ export const ChangeReviewDialog = ({
     setUndoInFlight(true);
     try {
       if (decisionHydrationFailed) {
-        const recovered = await api.review.retryMutationRecovery({
+        const recovered = await reviewApi.retryMutationRecovery({
           scope: reviewScope,
           decisionPersistenceScope: {
             scopeKey: decisionScopeKey,
@@ -4450,6 +4391,7 @@ export const ChangeReviewDialog = ({
       if (isCurrentReviewOperationScope(operationScope)) setUndoInFlight(false);
     }
   }, [
+    reviewApi,
     captureReviewOperationScope,
     decisionHydrationFailed,
     decisionScopeKey,
@@ -4490,7 +4432,7 @@ export const ChangeReviewDialog = ({
       }
       if (draftHistoryHydrationFailed) {
         try {
-          await api.review.clearDraftHistory(teamName, decisionScopeKey, decisionScopeToken);
+          await reviewApi.clearDraftHistory(teamName, decisionScopeKey, decisionScopeToken);
           if (!isCurrentReviewOperationScope(operationScope)) return;
         } catch (error) {
           if (!isCurrentReviewOperationScope(operationScope)) return;
@@ -4520,6 +4462,7 @@ export const ChangeReviewDialog = ({
       }
     }
   }, [
+    reviewApi,
     captureReviewOperationScope,
     clearDecisionsFromDisk,
     decisionHydrationFailed,
@@ -4951,6 +4894,15 @@ export const ChangeReviewDialog = ({
       linesAdded: activeChangeSet.totalLinesAdded,
       linesRemoved: activeChangeSet.totalLinesRemoved,
       filesChanged: activeChangeSet.totalFiles,
+      ...('diffStatCompleteness' in activeChangeSet &&
+      activeChangeSet.diffStatCompleteness === 'partial'
+        ? {
+            completeness: activeChangeSet.files.some((file) => file.diffStatKnown === false)
+              ? ('unavailable' as const)
+              : ('partial' as const),
+          }
+        : {}),
+      ...('warnings' in activeChangeSet ? { warnings: activeChangeSet.warnings } : {}),
     };
   }, [activeChangeSet]);
 
@@ -5198,6 +5150,19 @@ export const ChangeReviewDialog = ({
           sourceKind={taskChangeSet.provenance?.sourceKind}
         />
       )}
+
+      {mode === 'agent' &&
+        activeChangeSet &&
+        'provenance' in activeChangeSet &&
+        'warnings' in activeChangeSet &&
+        activeChangeSet.provenance?.sourceKind === 'ledger' &&
+        (activeChangeSet.warnings?.length ?? 0) > 0 && (
+          <ScopeWarningBanner
+            warnings={activeChangeSet.warnings ?? []}
+            confidence={{ tier: 3, label: 'low', reason: 'Captured agent evidence is partial.' }}
+            sourceKind="ledger"
+          />
+        )}
 
       {reviewConflictLoadError && (
         <div

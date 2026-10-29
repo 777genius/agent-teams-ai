@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { HostTeamOperationError } from '@features/agent-backend/renderer';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/api', () => ({
@@ -10,6 +11,7 @@ vi.mock('@renderer/api', () => ({
       unbindGatewayMember: vi.fn(async () => {}),
     },
     teams: {
+      getSavedRequest: vi.fn(),
       updateConfig: vi.fn(() => Promise.resolve()),
       replaceMembers: vi.fn(() => Promise.resolve()),
       removeMember: vi.fn(() => Promise.resolve()),
@@ -170,7 +172,7 @@ describe('EditTeamDialog canonical settings', () => {
     vi.unstubAllGlobals();
   });
 
-  async function setup() {
+  async function setup(teamName = 'sandbox-team', strict = false) {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -179,21 +181,20 @@ describe('EditTeamDialog canonical settings', () => {
     const members = sourceMembers();
     const render = async (currentMembers = members, open = true) => {
       await act(() => {
-        root.render(
-          React.createElement(EditTeamDialog, {
-            open,
-            teamName: 'sandbox-team',
-            currentName: 'Sandbox',
-            currentDescription: '',
-            currentColor: 'blue',
-            currentMembers,
-            onClose,
-            onSaved: vi.fn(),
-            onChangeLeadRuntime: vi.fn(),
-            isTeamAlive: false,
-            leadMember: { name: 'team-lead', providerId: 'opencode' } as ResolvedTeamMember,
-          })
-        );
+        const dialog = React.createElement(EditTeamDialog, {
+          open,
+          teamName,
+          currentName: 'Sandbox',
+          currentDescription: '',
+          currentColor: 'blue',
+          currentMembers,
+          onClose,
+          onSaved: vi.fn(),
+          onChangeLeadRuntime: vi.fn(),
+          isTeamAlive: false,
+          leadMember: { name: 'team-lead', providerId: 'opencode' } as ResolvedTeamMember,
+        });
+        root.render(strict ? React.createElement(React.StrictMode, null, dialog) : dialog);
         return Promise.resolve();
       });
     };
@@ -259,6 +260,169 @@ describe('EditTeamDialog canonical settings', () => {
     } finally {
       await act(() => Promise.resolve(root.unmount()));
     }
+  });
+
+  function hostSource() {
+    return {
+      teamName: 'host-team:TEST-edit-owner',
+      savedSettingsFingerprint: 'a'.repeat(64),
+      displayName: 'Sandbox',
+      description: '',
+      color: 'blue',
+      cwd: '/TEST-workspace',
+      prompt: 'TEST retained prompt',
+      skipPermissions: false,
+      limitContext: false,
+      members: [
+        { name: 'other', role: 'Reviewer' },
+        { name: 'zai-one', providerId: 'opencode' as const, model: 'zai-coding-plan/glm-5.3' },
+        { name: 'inherited' },
+        {
+          name: 'legacy',
+          providerId: 'opencode' as const,
+          model: 'legacy/model',
+          effort: 'high' as const,
+        },
+      ],
+    };
+  }
+
+  it('saves Host settings and edited roles through one original-revision roster CAS without legacy mutations', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue(saved);
+    const { root, click } = await setup(saved.teamName, true);
+    try {
+      await click('change-member-role');
+      await click('Save');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledOnce();
+      expect(api.teams.replaceMembers).toHaveBeenCalledOnce();
+      const [target, payload] = vi.mocked(api.teams.replaceMembers).mock.calls[0];
+      expect(target).toBe(saved.teamName);
+      expect(payload.configuration).toMatchObject({
+        expectedRevision: saved.savedSettingsFingerprint,
+        savedSettings: {
+          cwd: saved.cwd,
+          prompt: saved.prompt,
+          skipPermissions: false,
+          limitContext: false,
+          displayName: 'Sandbox',
+          description: '',
+          color: 'blue',
+        },
+      });
+      expect(payload.members[0]).toMatchObject({ name: 'other', role: 'Developer' });
+      expect(payload.members[1].model).toBe('zai-coding-plan/glm-5.3');
+      expect(payload.members[2]).toEqual({ name: 'inherited', role: undefined });
+      expect(payload.command?.commandId).toBe(payload.command?.idempotencyKey);
+      expect(payload.command?.commandId).toBeTruthy();
+      expect(api.teams.updateConfig).not.toHaveBeenCalled();
+      expect(api.teams.removeMember).not.toHaveBeenCalled();
+      expect(api.teams.restartMember).not.toHaveBeenCalled();
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('retains the original Host save command after response loss and refuses a replacement payload', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue(saved);
+    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(new Error('TEST outcome unknown'));
+    const { root, click, host } = await setup(saved.teamName);
+    try {
+      await click('change-member-role');
+      await click('Save');
+      const first = vi.mocked(api.teams.replaceMembers).mock.calls[0][1];
+      await click('Save');
+      expect(vi.mocked(api.teams.replaceMembers).mock.calls[1][1]).toEqual(first);
+      expect(api.teams.getSavedRequest).toHaveBeenCalledOnce();
+      await click('change-member-runtime');
+      await click('Save');
+      expect(api.teams.replaceMembers).toHaveBeenCalledTimes(2);
+      expect(host.textContent).toContain('Retry its original settings');
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('does not silently refresh an open Host form to a later owner revision', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest)
+      .mockResolvedValueOnce(saved)
+      .mockResolvedValue({ ...saved, savedSettingsFingerprint: 'b'.repeat(64) });
+    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(new Error('TEST stale revision'));
+    const { root, click } = await setup(saved.teamName);
+    try {
+      await click('Save');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledOnce();
+      expect(
+        vi.mocked(api.teams.replaceMembers).mock.calls[0][1].configuration?.expectedRevision
+      ).toBe(saved.savedSettingsFingerprint);
+      expect(api.teams.updateConfig).not.toHaveBeenCalled();
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('allows correction after a typed pre-admission refusal while preserving the source revision', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue(saved);
+    vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(
+      new HostTeamOperationError('invalid', 'rejected')
+    );
+    const { root, click } = await setup(saved.teamName);
+    try {
+      await click('Save');
+      const first = vi.mocked(api.teams.replaceMembers).mock.calls[0][1];
+      await click('change-member-role');
+      await click('Save');
+      const corrected = vi.mocked(api.teams.replaceMembers).mock.calls[1][1];
+      expect(corrected.command?.commandId).not.toBe(first.command?.commandId);
+      expect(corrected.configuration?.expectedRevision).toBe(saved.savedSettingsFingerprint);
+      expect(corrected.members[0].role).toBe('Developer');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledOnce();
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('rejects a mismatched Host source without replacing its roster or changing the typed draft', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      ...saved,
+      members: saved.members.map((member) => ({ ...member, role: 'Newer role' })),
+    });
+    const { root, click, host } = await setup(saved.teamName);
+    try {
+      await click('change-member-runtime');
+      await click('Save');
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(api.teams.updateConfig).not.toHaveBeenCalled();
+      expect(readDrafts(host)[0].model).toBe('edited/model');
+      expect(host.textContent).toContain('saved team configuration changed');
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('keeps edits made during Host hydration and never dispatches after the dialog unmounts', async () => {
+    const saved = hostSource();
+    let resolve!: (value: typeof saved) => void;
+    vi.mocked(api.teams.getSavedRequest).mockReturnValue(
+      new Promise((done) => {
+        resolve = done;
+      })
+    );
+    const { root, click, host } = await setup(saved.teamName);
+    await click('change-member-runtime');
+    expect(readDrafts(host)[0].model).toBe('edited/model');
+    await click('Save');
+    await act(() => Promise.resolve(root.unmount()));
+    await act(async () => {
+      resolve(saved);
+      await Promise.resolve();
+    });
+    expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+    expect(api.teams.updateConfig).not.toHaveBeenCalled();
   });
 
   it('Cancel discards edits without persistence and reopening restores canonical settings', async () => {

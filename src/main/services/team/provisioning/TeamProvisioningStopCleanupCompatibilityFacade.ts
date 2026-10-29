@@ -1,11 +1,16 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { join } from 'node:path';
 
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { clearOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
+import { nativeReleaseDigest } from './LegacyNativeStopCensus';
+import { captureTrackedLegacyNativeStopPublication } from './LegacyNativeStopPublication';
+import { readLegacyNativeStopRelease } from './LegacyNativeStopRelease';
 import {
   cleanupProvisioningRun,
   finalizeIncompleteLaunchStateBeforeCleanup as finalizeIncompleteLaunchStateBeforeCleanupHelper,
@@ -59,6 +64,7 @@ export interface TeamProvisioningStopCleanupCompatibilityServiceHost<
     options?: MarkUnconfirmedBootstrapMembersFailedOptions
   ): void;
   shutdownCoordination: {
+    hasTrackedRuntimeObligations(): boolean;
     getShutdownTrackedTeamNames(): string[];
     killTransientProbeProcessesForShutdown(): void;
     stopTrackedTeamsForShutdown(label: string): Promise<string[]>;
@@ -184,9 +190,31 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   async stopTeam(teamName: string): Promise<void> {
     const teamKey = teamName.trim().toLowerCase();
     this.stopTeamGenerationByTeam.set(teamKey, this.getStopTeamGeneration(teamName) + 1);
-    await this.stopCleanupServiceHost.withTeamLock(teamName, () =>
-      this.stopFlowBoundary.stopTeam(teamName)
-    );
+    const service = this.stopCleanupServiceHost;
+    await service.withTeamLock(teamName, () => {
+      const store = new TeamLaunchStateStore();
+      const teamsBasePath = getTeamsBasePath();
+      const publication = captureTrackedLegacyNativeStopPublication(teamName, {
+        getTeamsBasePath,
+        getTrackedRunId: (name) => service.runTracking.getTrackedRunId(name),
+        runs: service.runs,
+        hasOtherRuntimeOwner: (name) =>
+          service.runtimeAdapterRunByTeam.has(name) ||
+          service.getSecondaryRuntimeRuns(name).length > 0,
+        beginStop: (name) => store.beginStop(name),
+        publishStopped: async (name, authority, proof) => {
+          await store.markStopped(name, authority, proof);
+          const persisted = readLegacyNativeStopRelease(join(teamsBasePath, name), name);
+          return (
+            persisted !== null && nativeReleaseDigest(persisted) === nativeReleaseDigest(proof)
+          );
+        },
+        unavailable: () => logger.warn('Native Stop release publication remains unconfirmed'),
+      });
+      return publication
+        ? this.stopFlowBoundary.stopTeam(teamName, publication)
+        : this.stopFlowBoundary.stopTeam(teamName);
+    });
   }
 
   protected async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {
@@ -195,6 +223,18 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
 
   protected async stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void> {
     await this.stopFlowBoundary.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
+  }
+
+  readStoppedTeamImportStopFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      rosterMutation: Number(
+        this.activeLiveRosterMutationTokens.has(teamName.trim().toLowerCase())
+      ),
+    };
+  }
+
+  hasTrackedRuntimeObligations(): boolean {
+    return this.stopCleanupServiceHost.shutdownCoordination.hasTrackedRuntimeObligations();
   }
 
   /**

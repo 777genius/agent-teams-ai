@@ -1,0 +1,428 @@
+{
+  "meta": {
+    "title": "Миграция: этап 1",
+    "subtitle": "Этап 1: отказ от форка при сохранении поведения Desktop.",
+    "eyebrow": "Agent Teams · текущая реализация",
+    "snapshot": "2026-10-22T07:15:42.378396+00:00",
+    "scope": "Только этап 1: P0–P8 / M01–M19. Этап 2 с готовыми будущими ядрами отложен и не выполняется в этой задаче.",
+    "scope_id": "provider-migration-stage-1",
+    "scope_version": "P0-P8-M01-M19-v1",
+    "series_id": "provider-migration-stage-1",
+    "evidence_boundary": "HEAD + текущий worktree; измерения и точные refs — ниже.",
+    "locale": "ru",
+    "accent": "#49cfb1",
+    "status": "at-risk",
+    "status_label": "Полная миграция ещё в работе"
+  },
+  "summary": {
+    "headline": "Готовность около 41%; код готов примерно на 53%.",
+    "narrative": "Оценка по acceptance и scoped receipts: ориентир 40–45%. Веса оценочные. Новые UI edits не считаются проверенными по старым тестам.",
+    "blocker": {
+      "title": "Текущий участок: обычный Launch UI",
+      "detail": "Разработка на fixtures продолжается. Не завершены полный UI, review/apply и packed cutover."
+    },
+    "comparison_notes": [
+      "Initial selected model/effort дошли до native HTTP и сохранились после mixed restore.",
+      "231 Host и108 frontend тестов прошли на предыдущем закреплённом tuple.",
+      "Новые configuration.read и ordinary Launch UI ещё проходят реализацию/проверки.",
+      "Уточнение владельца: этап 2 не выполняем; draft PR, без merge в основную/release ветку. Численный scope этапа 1 не изменён."
+    ],
+    "progress": 40.9,
+    "derived_progress": 40.9,
+    "acceptance_progress": 40.9,
+    "global_progress": 40.9,
+    "remaining": 59.1,
+    "code_progress": 53.1,
+    "verification_progress": 40.9,
+    "track_coverage": {
+      "global": {
+        "known_weight": 100.0,
+        "total_weight": 100.0,
+        "percent": 100.0
+      },
+      "acceptance": {
+        "known_weight": 100.0,
+        "total_weight": 100.0,
+        "percent": 100.0
+      },
+      "code": {
+        "known_weight": 100.0,
+        "total_weight": 100.0,
+        "percent": 100.0
+      },
+      "verification": {
+        "known_weight": 100.0,
+        "total_weight": 100.0,
+        "percent": 100.0
+      }
+    },
+    "confidence": 70.6
+  },
+  "code": {
+    "changed": {
+      "total": 38789,
+      "logical": 14771,
+      "tests": 20169,
+      "docs_config": 2997,
+      "generated": 10,
+      "other": 842,
+      "basis": "Измеренный diff vs HEAD + untracked текст в двух worktrees. Это текущий dirty delta, не весь исторический объём программы и не авторство одного агента. Production source diff: 15609; logical — приближённый proxy без blank/comment-only, не исключает formatting/moves. Binary archives исключены из LOC. Пофазное распределение выполненных LOC неизвестно."
+    },
+    "remaining": {
+      "total_min": 37000,
+      "total_max": 75000,
+      "logical_min": 18500,
+      "logical_max": 37500,
+      "confidence": 45.0,
+      "basis": "Грубые bottom-up ranges по незавершённым acceptance; reuse/extraction и полный review/UI cutover дают наибольшую неопределённость. Не использовать как формулу процентов.",
+      "tests_min": 17000,
+      "tests_max": 35000,
+      "docs_config_min": 1500,
+      "docs_config_max": 2500,
+      "logical_mid": 28000,
+      "tests_mid": 26000,
+      "docs_config_mid": 2000,
+      "generated_min": 0,
+      "generated_max": 0,
+      "generated_mid": 0,
+      "other_min": 0,
+      "other_max": 0,
+      "other_mid": 0,
+      "total_mid": 56000
+    }
+  },
+  "tasks": [
+    {
+      "id": "P0",
+      "name": "Sources, mapping и изоляция",
+      "weight": 5.0,
+      "progress": 75.0,
+      "code_progress": 90.0,
+      "verification_progress": 75.0,
+      "status": "active",
+      "confidence": 80.0,
+      "summary": "Зафиксированы donor/artifact pins и worktrees; source→effective mapping и полный inventory ещё требуют завершения.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-source-selection.json — Зафиксированы donor/artifact pins и worktrees; source→effective mapping и полный inventory ещё требуют завершения."
+      ],
+      "remaining_logical_min": 200,
+      "remaining_logical_max": 500,
+      "remaining_lines_min": 400,
+      "remaining_lines_max": 1000,
+      "measurement_unknown": true,
+      "acceptance_progress": 75.0,
+      "global_progress": 75.0,
+      "acceptance_remaining": 25.0,
+      "remaining": 25.0,
+      "global_remaining": 25.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 700,
+      "remaining_logical_mid": 350,
+      "blocked_by": []
+    },
+    {
+      "id": "P1",
+      "name": "Контракты, package closure и walking slice",
+      "weight": 8.0,
+      "progress": 75.0,
+      "code_progress": 90.0,
+      "verification_progress": 75.0,
+      "status": "active",
+      "confidence": 80.0,
+      "summary": "Standalone Host/stdio, pinned Node/D и capture feasibility проверены. CMS/adoption и owning package gates остаются открытыми.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p1-native-capture-feasibility.tar.gz — Standalone Host/stdio, pinned Node/D и capture feasibility проверены. CMS/adoption и owning package gates остаются открытыми."
+      ],
+      "remaining_logical_min": 500,
+      "remaining_logical_max": 1500,
+      "remaining_lines_min": 1000,
+      "remaining_lines_max": 3000,
+      "measurement_unknown": true,
+      "acceptance_progress": 75.0,
+      "global_progress": 75.0,
+      "acceptance_remaining": 25.0,
+      "remaining": 25.0,
+      "global_remaining": 25.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 2000,
+      "remaining_logical_mid": 1000,
+      "blocked_by": []
+    },
+    {
+      "id": "P2",
+      "name": "Team/Task/Message owner и tools",
+      "weight": 18.0,
+      "progress": 40.0,
+      "code_progress": 55.0,
+      "verification_progress": 40.0,
+      "status": "active",
+      "confidence": 65.0,
+      "summary": "Canonical Task/DM, receipts, grants, delivery recovery работают. Group/cross-team, полный lifecycle/roster/trash/backup и все MCP группы ещё не готовы.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/compatibility-matrix.md — Canonical Task/DM, receipts, grants, delivery recovery работают. Group/cross-team, полный lifecycle/roster/trash/backup и все MCP группы ещё не готовы."
+      ],
+      "remaining_logical_min": 5000,
+      "remaining_logical_max": 9000,
+      "remaining_lines_min": 10000,
+      "remaining_lines_max": 18000,
+      "measurement_unknown": true,
+      "acceptance_progress": 40.0,
+      "global_progress": 40.0,
+      "acceptance_remaining": 60.0,
+      "remaining": 60.0,
+      "global_remaining": 60.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 14000,
+      "remaining_logical_mid": 7000,
+      "blocked_by": []
+    },
+    {
+      "id": "P3",
+      "name": "Runtime, control, custody и restore",
+      "weight": 17.0,
+      "progress": 75.0,
+      "code_progress": 85.0,
+      "verification_progress": 75.0,
+      "status": "active",
+      "confidence": 80.0,
+      "summary": "Bounded inputs/control, durable identities, selected checkpoint/restore трёх providers проверены. Все concurrency/attachments/compaction obligations ещё не закрыты.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p4-mixed-native-restore-handoff.json — Bounded inputs/control, durable identities, selected checkpoint/restore трёх providers проверены. Все concurrency/attachments/compaction obligations ещё не закрыты."
+      ],
+      "remaining_logical_min": 1000,
+      "remaining_logical_max": 3000,
+      "remaining_lines_min": 2000,
+      "remaining_lines_max": 6000,
+      "measurement_unknown": true,
+      "acceptance_progress": 75.0,
+      "global_progress": 75.0,
+      "acceptance_remaining": 25.0,
+      "remaining": 25.0,
+      "global_remaining": 25.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 4000,
+      "remaining_logical_mid": 2000,
+      "blocked_by": []
+    },
+    {
+      "id": "P4",
+      "name": "Три providers и headless team workflows",
+      "weight": 14.0,
+      "progress": 40.0,
+      "code_progress": 55.0,
+      "verification_progress": 40.0,
+      "status": "active",
+      "confidence": 70.0,
+      "summary": "Actual Claude/Codex/OpenCode, Task effects, все шесть peer-направлений и mixed restore прошли. Group, вторая Team, shared OpenCode, compaction и solo subagents ещё не приняты.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p4-mixed-native-peers-handoff.json — Actual Claude/Codex/OpenCode, Task effects, все шесть peer-направлений и mixed restore прошли. Group, вторая Team, shared OpenCode, compaction и solo subagents ещё не приняты."
+      ],
+      "remaining_logical_min": 2000,
+      "remaining_logical_max": 4000,
+      "remaining_lines_min": 4000,
+      "remaining_lines_max": 8000,
+      "measurement_unknown": true,
+      "acceptance_progress": 40.0,
+      "global_progress": 40.0,
+      "acceptance_remaining": 60.0,
+      "remaining": 60.0,
+      "global_remaining": 60.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 6000,
+      "remaining_logical_mid": 3000,
+      "blocked_by": []
+    },
+    {
+      "id": "P5",
+      "name": "Обычный Desktop UI и полный routing",
+      "weight": 16.0,
+      "progress": 25.0,
+      "code_progress": 40.0,
+      "verification_progress": 25.0,
+      "status": "active",
+      "confidence": 75.0,
+      "summary": "Обычные Composer/Task/board/Stop, Team snapshot/feed и routing подтверждены в Electron. Launch/Resume в работе; полный config/auth/review/process UI остаётся.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p5-launch-configuration-handoff.json — Обычные Composer/Task/board/Stop, Team snapshot/feed и routing подтверждены в Electron. Launch/Resume в работе; полный config/auth/review/process UI остаётся."
+      ],
+      "remaining_logical_min": 4000,
+      "remaining_logical_max": 8000,
+      "remaining_lines_min": 8000,
+      "remaining_lines_max": 16000,
+      "measurement_unknown": true,
+      "acceptance_progress": 25.0,
+      "global_progress": 25.0,
+      "acceptance_remaining": 75.0,
+      "remaining": 75.0,
+      "global_remaining": 75.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 12000,
+      "remaining_logical_mid": 6000,
+      "blocked_by": []
+    },
+    {
+      "id": "P6",
+      "name": "Git evidence/review и оставшаяся parity",
+      "weight": 12.0,
+      "progress": 5.0,
+      "code_progress": 10.0,
+      "verification_progress": 5.0,
+      "status": "pending",
+      "confidence": 55.0,
+      "summary": "Ранняя capture feasibility не заменяет M13. Review Apply/Reject/Undo/Redo, attribution и полная user-visible parity ещё не реализованы.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-contracts.md — Ранняя capture feasibility не заменяет M13. Review Apply/Reject/Undo/Redo, attribution и полная user-visible parity ещё не реализованы."
+      ],
+      "remaining_logical_min": 5000,
+      "remaining_logical_max": 9000,
+      "remaining_lines_min": 10000,
+      "remaining_lines_max": 18000,
+      "measurement_unknown": true,
+      "acceptance_progress": 5.0,
+      "global_progress": 5.0,
+      "acceptance_remaining": 95.0,
+      "remaining": 95.0,
+      "global_remaining": 95.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 14000,
+      "remaining_logical_mid": 7000,
+      "blocked_by": []
+    },
+    {
+      "id": "P7",
+      "name": "Packed Electron без форка и OS qualification",
+      "weight": 5.0,
+      "progress": 5.0,
+      "code_progress": 10.0,
+      "verification_progress": 5.0,
+      "status": "pending",
+      "confidence": 60.0,
+      "summary": "Node/D staged artifacts есть; legacy --version dependency остаётся. Packed fork-free Electron и supported OS tuples ещё не приняты.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-legacy-host.md — Node/D staged artifacts есть; legacy --version dependency остаётся. Packed fork-free Electron и supported OS tuples ещё не приняты."
+      ],
+      "remaining_logical_min": 500,
+      "remaining_logical_max": 1500,
+      "remaining_lines_min": 1000,
+      "remaining_lines_max": 3000,
+      "measurement_unknown": true,
+      "acceptance_progress": 5.0,
+      "global_progress": 5.0,
+      "acceptance_remaining": 95.0,
+      "remaining": 95.0,
+      "global_remaining": 95.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 2000,
+      "remaining_logical_mid": 1000,
+      "blocked_by": []
+    },
+    {
+      "id": "P8",
+      "name": "Полная E2E матрица, final review и handoff",
+      "weight": 5.0,
+      "progress": 15.0,
+      "code_progress": 25.0,
+      "verification_progress": 15.0,
+      "status": "active",
+      "confidence": 70.0,
+      "summary": "Есть поддерживаемый Electron/native harness и scoped receipts. Полная M01–M19 композиция, final gates/review и packaged Quit/Relaunch ещё впереди.",
+      "evidence": [
+        "План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/compatibility-matrix.md — Есть поддерживаемый Electron/native harness и scoped receipts. Полная M01–M19 композиция, final gates/review и packaged Quit/Relaunch ещё впереди."
+      ],
+      "remaining_logical_min": 300,
+      "remaining_logical_max": 1000,
+      "remaining_lines_min": 600,
+      "remaining_lines_max": 2000,
+      "measurement_unknown": true,
+      "acceptance_progress": 15.0,
+      "global_progress": 15.0,
+      "acceptance_remaining": 85.0,
+      "remaining": 85.0,
+      "global_remaining": 85.0,
+      "done_lines": 0,
+      "done_logical": 0,
+      "remaining_lines_mid": 1300,
+      "remaining_logical_mid": 650,
+      "blocked_by": []
+    }
+  ],
+  "critical_path": [
+    {
+      "name": "Обычные Launch/Resume и runtime settings",
+      "status": "active",
+      "task_id": "P5"
+    },
+    {
+      "name": "Roster/group/cross-team + полный MCP",
+      "status": "active",
+      "task_id": "P2"
+    },
+    {
+      "name": "Review/evidence и остальная parity",
+      "status": "pending",
+      "task_id": "P6"
+    },
+    {
+      "name": "Fork-free packed candidate",
+      "status": "pending",
+      "task_id": "P7"
+    },
+    {
+      "name": "Полный E2E, required gates, final review",
+      "status": "pending",
+      "task_id": "P8"
+    }
+  ],
+  "sources": [
+    {
+      "label": "Принятый план",
+      "value": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-legacy-host.md",
+      "quality": "observed"
+    },
+    {
+      "label": "Матрица M01–M19",
+      "value": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/compatibility-matrix.md",
+      "quality": "observed"
+    },
+    {
+      "label": "Последний полный scoped suite",
+      "value": "02c8236f96d5aa1b2d7ec55d4323b8dd: 231 Host +108 frontend PASS",
+      "note": "Исторический source tuple, не текущие новые UI edits",
+      "quality": "observed"
+    },
+    {
+      "label": "Configured Electron native PASS",
+      "value": "d69e5f179a6d4df72a5e6713e78b9f55 / receipt 34b6bdfb3946d10ba8490f96d26b38d67cbc02b3814d25b2d19ea6f96dad3488",
+      "note": "Начальный launch через TEST API; ordinary Launch UI не квалифицирован",
+      "quality": "observed"
+    },
+    {
+      "label": "Actual mixed selected restore PASS",
+      "value": "d90336c747bb9fadc881617967221a8e / receipt 270e5ff82bf8637cef58aa174db6753d45adde0a64bc51c8864501fb478817d6",
+      "quality": "observed"
+    },
+    {
+      "label": "LOC measurement",
+      "value": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/.artifacts/provider-migration/progress-2026-10-22/loc-measurement.json",
+      "quality": "measured"
+    }
+  ],
+  "methodology": {
+    "notes": [
+      "Проценты фаз и веса оценочные; acceptance остаётся незавершённым до полного выхода фазы.",
+      "Измеренный LOC snapshot снят до последующих UI edits; не является scope или процентом готовности.",
+      "Completed LOC per phase неизвестен; не интерпретировать renderer default0 как отсутствие кода.",
+      "Этап 2 не включён в численный знаменатель: его самостоятельный план ещё не принят."
+    ],
+    "formula": "Σ(task weight × min(acceptance, known code, known verification)) / Σ(weight)"
+  },
+  "generated_at": "2026-10-22T10:52:30+03:00"
+}

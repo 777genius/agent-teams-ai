@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   cancelPendingRuntimeAdapterLaunchesForShutdown,
+  createTeamProvisioningShutdownCoordination,
   getShutdownTrackedTeamNames,
   killTransientProbeProcessesForShutdown,
   stopTrackedTeamsForShutdown,
@@ -75,6 +76,27 @@ function makePorts(
 describe('team provisioning shutdown coordination', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('reports probe-only and accepted pending/stop obligations even without a live team', () => {
+    const probes = new Set<ProbeProcess>([{ id: 'TEST-probe' }]);
+    const pending = new Map<string, TeamProvisioningProgress>();
+    const stopping = new Set<string>();
+    const owner = createTeamProvisioningShutdownCoordination(
+      makeState({ transientProbeProcesses: probes, runtimeAdapterProgressByRunId: pending }),
+      makePorts({ getOpenCodeRuntimeAdapterStopInFlightTeamNames: () => stopping })
+    );
+    expect(owner.getShutdownTrackedTeamNames()).toEqual([]);
+    expect(owner.hasTrackedRuntimeObligations()).toBe(true);
+    probes.clear();
+    expect(owner.hasTrackedRuntimeObligations()).toBe(false);
+    pending.set('pending', makeProgress('pending', 'TEST-pending'));
+    expect(owner.hasTrackedRuntimeObligations()).toBe(true);
+    pending.clear();
+    stopping.add('TEST-stopping');
+    expect(owner.hasTrackedRuntimeObligations()).toBe(true);
+    stopping.clear();
+    expect(owner.hasTrackedRuntimeObligations()).toBe(false);
   });
 
   it('collects tracked team names from live state and pending runtime adapter launches', () => {

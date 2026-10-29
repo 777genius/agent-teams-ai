@@ -1,0 +1,27 @@
+{
+  "status": "scoped-native-pass",
+  "jobId": "bcf29d894b9e4157872858c1556bf24d",
+  "providerArchiveSha256": "5e1e05ed84351b3fb506fd052ca2ad2739eb9ed63d79d5b239f96209717e1e6d",
+  "sdkVersion": "0.3.305",
+  "hostSourceSha256": "3fca00bca2b3ac539804150c7f3e04919e8c96c9afbe36f79ae371373f91078f",
+  "hostDistSha256": "36ba481877019a40d6981b72c0b0a8021abd4b57f5f0b8cc0b16626c6f04c5c4",
+  "retainedManifest": ".artifacts/provider-migration/native-compaction-qualified-v1/manifest.json",
+  "retainedManifestSha256": "b1e6261cae27486004eb5fc52c65307d2f73a9bd510bebc0b9bd1ec8402fa112",
+  "assertions": {
+    "realNativeManualCompactionBoundary": true,
+    "currentRosterAndTaskInNextOriginalInput": true,
+    "originalInputIdentityAndAskSemantics": true,
+    "noHiddenInputOrRepeatedReminder": true,
+    "coldProofWithoutNativeAllocation": true,
+    "originalInputs": 4,
+    "inferenceRequests": 4,
+    "closedHosts": 3,
+    "capturedNativeProcessesAbsent": 3
+  },
+  "limits": [
+    "Local scripted inference, no real account authorization",
+    "Manual compaction and supported stopped/cold roster recapture",
+    "No same-generation hot roster, automatic compaction, Desktop or full M10 claim",
+    "No whole Stage1 completion claim"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "status": "FROZEN_DISTINCT_OPENCODE_D_CANDIDATE_BOUNDED_GO",
+  "archive": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/opencode-input-window/packed-v1/agent-teams-provider-implementations-0.0.0.tgz",
+  "archiveSha256": "9a74867691428fc05a1947d9e693cd520eb61269fa95a5f176cdcd810eb40f77",
+  "archiveIntegrity": "sha512-5ASh1yS5i+njm8aOgGqLg15JcfBjPlOMADJD0u6tdsXTDaHvAI5fXzGg4w8K/YAISCBijohH6Yrnua9Z9Sd4wA==",
+  "producerJob": {
+    "id": "e5b422545ead32405491a288fd1a05c4",
+    "exitCode": 0,
+    "root": "/Users/belief/.codex/plugins/data/agent-plugins/1c1e9d402d2702d970a503b8b40bb29f94f43144d4dd7f794c2ba39db32ac96b/jobs"
+  },
+  "helper": {
+    "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/opencode-input-window/pack.mts",
+    "sha256": "d08bf40dc817944033c53c7657c286fbc83e1214838f759bc7771a2f45505c48",
+    "strictTypes": "PASS before execution"
+  },
+  "packReceipt": {
+    "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/opencode-input-window/packed-v1/pack-receipt.json",
+    "sha256": "1d6efcc952888c35c222bc210e4f3710b9cb0b5c10acb619a50344eb6ec8a39f"
+  },
+  "sourceFreeze": {
+    "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/opencode-input-window/packed-v1/source-freeze.json",
+    "sha256": "de738dd5a6010e18a67bda91d7ca0073584fad39b60169a27b0dc55803eda05c",
+    "files": 154,
+    "unchangedAfterPack": true
+  },
+  "members": 191,
+  "oldMembers": 189,
+  "generatedMembers": 188,
+  "wholePriorArchiveComparison": "Only expected8 OpenCode generated members changed, helper2 added; all other181 old package members byte-preserved, no removed files",
+  "exportsAndDependencies": "unchanged; OpenCodeV1DriverConfig.capture compiled through public OpenCode entry; no new root export",
+  "priorCodexArchive": {
+    "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/codex-input-window/packed-v1/agent-teams-provider-implementations-0.0.0.tgz",
+    "sha256": "b078cdeb0d69cbe64be8a88517b77d14c17292d55bfad761832eb0c632689daf",
+    "members": 189,
+    "preservedOutsideExpectedOpenCodeOutputs": true
+  },
+  "testJobs": {
+    "allOpenCodeV1V2": {
+      "job": "3eeecf2a5e0b558c53ca28176ecfe3bd",
+      "pass": 84
+    },
+    "finalCapture": {
+      "job": "83f840c2a479348fc258026664df5648",
+      "pass": 8
+    },
+    "strictAndAffectedLint": "PASS"
+  },
+  "preservation": "all prior candidates and failed jobs retained; no frontend write/install/native rerun",
+  "unclaimed": [
+    "full installed packed consumer",
+    "Host capture/native/UI M13 parity",
+    "Node26 and fullD check:changed/check:fast/check"
+  ]
+}

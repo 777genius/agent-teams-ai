@@ -63,4 +63,3 @@ export function resolveInboxPath(teamName: string, inboxName: string): string {
 
   return inboxPath;
 }
-
