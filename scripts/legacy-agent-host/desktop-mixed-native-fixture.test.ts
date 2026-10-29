@@ -1,4 +1,8 @@
 import {
+  assertMixedRestartProcessConservation,
+  selectMixedProcessChildren,
+} from './desktop-mixed-process-proof.ts';
+import {
   startNativeTeamModel,
   CONTEXT_MARKER as claudeContext,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -981,4 +985,78 @@ test('Claude CURRENT notice accepts only complete reminder transport around the 
       await model.close();
     }
   }
+});
+
+const processFact = (pid: number, command: string, parentPid = 10) => ({
+  pid,
+  parentPid,
+  groupId: pid,
+  birth: `TEST-birth-${pid}`,
+  command,
+});
+const host = processFact(10, '/TEST/node', 1);
+const management = processFact(11, '/TEST/opencode');
+const claude = processFact(12, '/TEST/claude');
+const codex = processFact(13, '/TEST/codex');
+const opencode = processFact(14, '/TEST/opencode');
+const newCodex = processFact(15, '/TEST/codex');
+const before = [management, claude, codex, opencode];
+const after = [host, management, claude, newCodex, opencode];
+const paths = { claude: '/TEST/claude', codex: '/TEST/codex', opencode: '/TEST/opencode' };
+const managementCommand = '/TEST/opencode serve --hostname 127.0.0.1 --port 49358';
+const commands = new Map([
+  [11, managementCommand],
+  [12, '/TEST/claude --input-format stream-json'],
+  [13, '/TEST/codex app-server --listen stdio://'],
+  [14, '/TEST/opencode serve --hostname 127.0.0.1 --port 49357'],
+]);
+
+test('Mixed separates the exact management endpoint without dropping any original child', () => {
+  const selected = selectMixedProcessChildren(before, paths, managementCommand, commands);
+  assert.deepEqual(selected.managementChild, management);
+  assert.deepEqual(selected.runtimeChildren, [claude, codex, opencode]);
+  assert.throws(() => selectMixedProcessChildren(before, paths, managementCommand + '0', commands));
+  assert.throws(() =>
+    selectMixedProcessChildren(
+      [...before, processFact(16, '/TEST/unknown')],
+      paths,
+      managementCommand,
+      commands
+    )
+  );
+  assert.throws(() =>
+    selectMixedProcessChildren(
+      before.filter((child) => child.pid !== 14),
+      paths,
+      managementCommand,
+      commands
+    )
+  );
+});
+
+test('Mixed Restart conserves the management and both runtime peers while replacing exactly Bob', () => {
+  const proof = assertMixedRestartProcessConservation(host, before, codex, after, paths.codex);
+  assert.deepEqual(proof.peers, [management, claude, opencode]);
+  assert.deepEqual(proof.newBobChild, newCodex);
+  assert.deepEqual(proof.currentHost, host);
+});
+
+test('Mixed Restart refuses old Bob, peer PID reuse, Host replacement and unexplained child changes', () => {
+  for (const changed of [
+    [host, ...before],
+    after.map((child) =>
+      child.pid === management.pid ? { ...child, birth: 'TEST-reused-PID' } : child
+    ),
+    after.map((child) =>
+      child.pid === host.pid ? { ...child, birth: 'TEST-replaced-Host' } : child
+    ),
+    after.filter((child) => child.pid !== opencode.pid),
+    [...after, processFact(16, '/TEST/unknown')],
+    after.map((child) =>
+      child.pid === newCodex.pid ? { ...child, command: '/TEST/other' } : child
+    ),
+  ])
+    assert.throws(() =>
+      assertMixedRestartProcessConservation(host, before, codex, changed, paths.codex)
+    );
 });

@@ -240,7 +240,14 @@ export async function runDesktopTaskBoardAttachmentsUi(
   commentInput = String(row(settledComment.owner).selector);
   await ui.scrollTo(commentInput, 'original Task comment Composer');
   await ui.click(commentInput, 'focus original Task comment');
-  const focusedComment = await readCommentInput('after one focus click');
+  const focusedComment = await options.waitProduct(
+    () => readCommentInput('after one focus click'),
+    (value) =>
+      Boolean(
+        commentReady(value, '', 0) && value.focused === true && value.documentFocused === true
+      ),
+    'same original Task comment owner and empty draft settled after the one focus click'
+  );
   assert.ok(commentReady(focusedComment, '', 0), 'same settled empty comment input before typing');
   assert.equal(focusedComment.focused, true, 'one focus click reaches the exact original textarea');
   assert.equal(focusedComment.documentFocused, true, 'original document is focused before typing');

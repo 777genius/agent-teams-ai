@@ -20,7 +20,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
-import { command, processTable } from './desktop-backend-observations.ts';
+import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import {
@@ -442,17 +442,23 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.ok(tasks.every((row) => row.status === 'completed'));
   proof.tasks = tasks;
   proof.sessionsBeforeStop = await sessions();
-  const hosts = processTable().filter(
-    (row) =>
-      row.pgid === options.appGroup && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
+  const tableBeforeStop = processFacts();
+  const originalHost = restarted.physical.originalHost;
+  assert.deepEqual(
+    tableBeforeStop.find((row) => row.pid === originalHost.pid),
+    originalHost
   );
-  assert.equal(hosts.length, 1);
-  const children = processTable().filter((row) => row.ppid === hosts[0]!.pid);
-  assert.equal(
-    children.length,
-    3,
-    'one native child under the captured Host per launched provider'
+  const allHostChildren = tableBeforeStop.filter((row) => row.parentPid === originalHost.pid);
+  assert.deepEqual(
+    allHostChildren,
+    restarted.physical.childrenAfter,
+    'every captured child identity remains unchanged after the three continuation turns'
   );
+  const managementChild = restarted.physical.managementChild;
+  const children = allHostChildren.filter((child) => child.pid !== managementChild.pid);
+  assert.equal(children.length, 3, 'three exact runtime children, separately from Host management');
+  proof.allHostChildrenBeforeStop = allHostChildren;
+  proof.managementChildBeforeStop = managementChild;
   proof.nativeChildrenBeforeStop = children;
   await ui.click('button[aria-label="Stop"]', 'original whole Team Stop once', 'Stop');
   await poll(
@@ -462,11 +468,26 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
       rows.every((row) => row.phase === 'closed' && row.custody === 'released'),
     'all3 selected custodians confirm released'
   );
-  await poll(
-    async () => processTable(),
+  const tableAfterStop = await poll(
+    async () => processFacts(),
     (rows) => children.every((child) => !rows.some((row) => row.pid === child.pid)),
-    'original native children absent'
+    'all three exact runtime children absent'
   );
+  assert.deepEqual(
+    tableAfterStop.find((row) => row.pid === originalHost.pid),
+    originalHost
+  );
+  assert.deepEqual(
+    tableAfterStop.find((row) => row.pid === managementChild.pid),
+    managementChild,
+    'the original Host management child is separate from stopped Team runtimes'
+  );
+  assert.deepEqual(
+    tableAfterStop.filter((row) => row.parentPid === originalHost.pid),
+    [managementChild],
+    'only the original management child remains under the Host after Team Stop'
+  );
+  proof.managementChildAfterStop = managementChild;
   const timeOrigin = await cdp.evaluate('performance.timeOrigin');
   await cdp.send('Page.reload', { ignoreCache: false });
   await ui.waitRead(

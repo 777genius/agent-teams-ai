@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -11,6 +11,7 @@ import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
+import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -350,6 +351,152 @@ test('original in-progress Task comment prerequisite requires its exact stage wi
   const assignment = assignmentRuntime();
   assignment.triggers.length = 0;
   assert.equal(await assignment.evaluate(), null, 'default assignment still requires its control');
+});
+
+test('Task attachment comment waits for its original focused owner after one click before inserting text', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-attachment-comment-focus-')));
+  try {
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=',
+      'base64'
+    );
+    const { createHash } = await import('node:crypto');
+    const digest = createHash('sha256').update(png).digest('hex');
+    const selector = '[role="dialog"] textarea[id="TEST-original-comment"]';
+    const owner = {
+      selector,
+      identity: { contextId: 'TEST-context' },
+      surfaceId: 'TEST-original-surface',
+      inputId: 'TEST-original-comment',
+      ownerRevision: 3,
+      commentText: '',
+      submitPending: false,
+      submitError: null,
+      pendingAttachmentCount: 0,
+      pendingPreparationCount: 0,
+      canSubmit: true,
+      attachmentError: null,
+    };
+    const ready = {
+      owner,
+      settled: true,
+      domValue: '',
+      inputEnabled: true,
+      visibility: 'visible',
+      focused: true,
+      documentFocused: true,
+    };
+    const afterFocus = [
+      { ...ready, owner: null, settled: false, domValue: null, inputEnabled: false },
+      {
+        ...ready,
+        owner: { ...owner, selector: '[role="dialog"] textarea[id="TEST-rebound-comment"]' },
+      },
+      { ...ready, focused: false },
+      ready,
+    ];
+    let focused = false,
+      focusClicks = 0,
+      postFocusReads = 0,
+      insertions = 0,
+      fileInputs = 0;
+    const inserted = new Error('TEST original insertion reached after readiness');
+    const cdp = {
+      async evaluate(expression: string) {
+        if (expression.includes('const settled=await')) {
+          if (!focused) return { ...ready, focused: false };
+          assert.ok(
+            postFocusReads < afterFocus.length,
+            'no read beyond the original settled focus'
+          );
+          return afterFocus[postFocusReads++]!;
+        }
+        if (expression.startsWith('Boolean(')) return true;
+        if (expression.includes('const currentFiber=')) return owner;
+        if (expression.includes('naturalWidth===2'))
+          return { src: `data:image/png;base64,${png.toString('base64')}`, width: 2, height: 1 };
+        if (expression.includes('let parent=e.parentElement')) return { visible: true };
+        if (expression.includes('const elements =')) return { x: 10, y: 20 };
+        throw new Error('unexpected TEST observer expression');
+      },
+      async send(method: string, params?: Record<string, unknown>) {
+        if (method === 'DOM.getDocument') return { root: { nodeId: 1 } };
+        if (method === 'DOM.querySelectorAll') return { nodeIds: [2] };
+        if (method === 'DOM.setFileInputFiles') {
+          fileInputs++;
+          return {};
+        }
+        if (method === 'Input.dispatchMouseEvent' && params?.type === 'mouseReleased') {
+          focusClicks++;
+          focused = true;
+        }
+        if (method === 'Input.insertText') {
+          insertions++;
+          assert.equal(params?.text, 'TEST attachment comment original');
+          assert.equal(
+            postFocusReads,
+            afterFocus.length,
+            'missing, rebound and unfocused owners were refused'
+          );
+          throw inserted;
+        }
+        return {};
+      },
+    };
+    const image = { filename: 'TEST-task-owned.png', artifactId: digest, mimeType: 'image/png' };
+    await assert.rejects(
+      runDesktopTaskBoardAttachmentsUi(cdp, {
+        root,
+        taskId: 'TEST-task',
+        subject: 'TEST task',
+        handleId: 'TEST-owner',
+        proof: {},
+        assertOwnedRenderer() {},
+        step() {},
+        async task() {
+          return { attachments: [image] };
+        },
+        async commands() {
+          return [];
+        },
+        async receiptFor() {
+          return {
+            phase: 'completed',
+            command: {
+              payload: {
+                attachment: {
+                  artifactId: digest,
+                  byteLength: png.length,
+                  digest,
+                  mimeType: image.mimeType,
+                },
+              },
+            },
+          };
+        },
+        async waitProduct<T>(
+          read: () => Promise<T>,
+          matches: (value: T) => boolean,
+          label: string
+        ) {
+          for (let observation = 0; observation < 6; observation++) {
+            const value = await read();
+            if (matches(value)) return value;
+          }
+          throw new Error(`TEST original readiness did not settle: ${label}`);
+        },
+        async screenshot() {
+          return { path: join(root, 'TEST-image.png'), sha256: digest };
+        },
+      }),
+      (error) => error === inserted
+    );
+    assert.equal(focusClicks, 1, 'the original focus action is never replayed');
+    assert.equal(fileInputs, 1, 'only the original image was uploaded before comment insertion');
+    assert.equal(insertions, 1, 'one insertion follows the exact original readiness');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('original Task assignment prerequisite refuses receipt-only, pending and stale renderer state', async () => {

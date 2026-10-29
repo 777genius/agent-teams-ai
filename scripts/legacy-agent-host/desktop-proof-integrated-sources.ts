@@ -70,6 +70,7 @@ export const desktopProofIntegratedSources = [
   'scripts/legacy-agent-host/desktop-task-review-card-readiness.ts',
   'scripts/legacy-agent-host/desktop-mixed-group-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-mixed-member-restart-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-mixed-process-proof.ts',
   'packages/legacy-agent-host/tests/fixtures/native-mixed-groups.ts',
   'agent-teams-controller/src/index.js',
   'agent-teams-controller/src/internal/kanban.js',

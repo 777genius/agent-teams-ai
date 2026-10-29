@@ -8,7 +8,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
-import { command, processTable } from './desktop-backend-observations.ts';
+import { command } from './desktop-backend-observations.ts';
+import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import {
+  assertMixedRestartProcessConservation,
+  selectMixedProcessChildren,
+} from './desktop-mixed-process-proof.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import {
@@ -72,38 +77,55 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   const source = one(before, (value) => row(value.binding).memberId === bob.memberId);
   const principalId = readMixedCapturedPrincipal(options.root, 'codex');
   const profile = await read(join(options.root, 'host-profile.json'));
-  const codexPath = String(
-    row(
-      one(rows(row(profile.runtime).providerTemplates), (value) => value.provider === 'codex')
-        .executable
-    ).path
-  );
-  const hosts = processTable().filter(
+  const executablePaths = Object.fromEntries(
+    ['claude', 'codex', 'opencode'].map((provider) => [
+      provider,
+      String(
+        row(
+          one(rows(row(profile.runtime).providerTemplates), (value) => value.provider === provider)
+            .executable
+        ).path
+      ),
+    ])
+  ) as { claude: string; codex: string; opencode: string };
+  const codexPath = executablePaths.codex;
+  const managementProfile = one(rows(profile.management), (value) => value.provider === 'opencode');
+  assert.equal(row(managementProfile.executable).path, executablePaths.opencode);
+  const managementEndpoint = new URL(String(managementProfile.endpoint));
+  assert.equal(managementEndpoint.protocol, 'http:');
+  assert.equal(managementEndpoint.hostname, '127.0.0.1');
+  assert.equal(managementEndpoint.origin, managementProfile.endpoint);
+  assert.ok(managementEndpoint.port);
+  const managementCommand = `${executablePaths.opencode} serve --hostname 127.0.0.1 --port ${managementEndpoint.port}`;
+  const tableBefore = processFacts();
+  const hosts = tableBefore.filter(
     (value) =>
-      value.pgid === options.appGroup &&
+      value.groupId === options.appGroup &&
       command(value.pid) === `${options.node} ${options.hostEntry}`
   );
   assert.equal(hosts.length, 1);
-  const hostPid = hosts[0]!.pid,
-    childrenBefore = processTable().filter((value) => value.ppid === hostPid);
+  const originalHost = hosts[0]!,
+    hostPid = originalHost.pid;
+  const childrenBefore = tableBefore.filter((value) => value.parentPid === hostPid);
   const childCommandsBefore = new Map(
     childrenBefore.map((value) => [value.pid, command(value.pid)])
   );
   options.step({
     observation: 'original Host children before isolated Bob Restart',
-    host: hosts[0]!,
+    host: originalHost,
     children: childrenBefore.map((value) => ({
       ...value,
-      command: childCommandsBefore.get(value.pid)!,
+      arguments: childCommandsBefore.get(value.pid)!,
     })),
   });
-  assert.equal(childrenBefore.length, 3);
-  const bobChildren = childrenBefore.filter((value) =>
-    childCommandsBefore.get(value.pid)!.startsWith(codexPath + ' ')
+  const { managementChild, runtimeChildren } = selectMixedProcessChildren(
+    childrenBefore,
+    executablePaths,
+    managementCommand,
+    childCommandsBefore
   );
-  assert.equal(bobChildren.length, 1, 'original Codex child under this exact TEST Host');
-  const oldBobChild = bobChildren[0]!,
-    peers = childrenBefore.filter((value) => value.pid !== oldBobChild.pid);
+  const oldBobChild = runtimeChildren.find((value) => value.command === codexPath)!;
+  assert.ok(childCommandsBefore.get(oldBobChild.pid)!.startsWith(codexPath + ' '));
   // Reuse the exact existing member-card interaction used by desktop-activity-ui-smoke.
   const point = row(
     await ui.waitRead(
@@ -208,26 +230,22 @@ export async function runDesktopMixedMemberRestartUiSmoke(
     principalId,
     'restart preserves the captured native principal and run'
   );
-  const tableAfter = processTable(),
-    childrenAfter = tableAfter.filter((value) => value.ppid === hostPid);
+  const tableAfter = processFacts();
   options.step({
     observation: 'original Host children after isolated Bob Restart',
-    host: hosts[0]!,
-    children: childrenAfter,
+    originalHost,
+    host: tableAfter.find((value) => value.pid === hostPid) ?? null,
+    children: tableAfter.filter((value) => value.parentPid === hostPid),
+    originalBobAfter: tableAfter.find((value) => value.pid === oldBobChild.pid) ?? null,
   });
-  assert.equal(childrenAfter.length, 3);
-  assert.ok(!tableAfter.some((value) => value.pid === oldBobChild.pid));
-  for (const peer of peers)
-    assert.deepEqual(
-      childrenAfter.find((value) => value.pid === peer.pid),
-      peer,
-      'neighbor physical child still owned by original Host'
-    );
-  const newChildren = childrenAfter.filter(
-    (value) => !childrenBefore.some((previous) => previous.pid === value.pid)
+  const { currentHost, childrenAfter, peers, newBobChild } = assertMixedRestartProcessConservation(
+    originalHost,
+    childrenBefore,
+    oldBobChild,
+    tableAfter,
+    codexPath
   );
-  assert.equal(newChildren.length, 1);
-  assert.ok(command(newChildren[0]!.pid).startsWith(codexPath + ' '));
+  assert.ok(command(newBobChild.pid).startsWith(codexPath + ' '));
   assert.deepEqual(
     [options.models.claude, options.models.codex, options.models.opencode].map(
       (model) => model.observations.length
@@ -373,10 +391,14 @@ export async function runDesktopMixedMemberRestartUiSmoke(
     currentBindings,
     physical: {
       hostPid,
+      originalHost,
+      currentHost,
+      managementChild,
+      managementCommand,
       childrenBefore,
       oldBobChild,
       childrenAfter,
-      newBobChild: newChildren[0],
+      newBobChild,
       peers,
     },
     expectedObservations: [13, 15, 13],
