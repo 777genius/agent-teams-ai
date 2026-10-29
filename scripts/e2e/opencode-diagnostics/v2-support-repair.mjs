@@ -59,7 +59,7 @@ function ownedProfile(data) {
 }
 
 /** Observe actual app-installed bytes; no URL, cache import or fixture publisher. */
-export async function v2SupportSnapshot(data, verifyFiles = 'selected') {
+export async function v2SupportSnapshot(data, verifyFiles = 'all') {
   ownedProfile(data);
   assert(['none', 'selected', 'all'].includes(verifyFiles));
   await physical(data.root, 'user-data', true);
@@ -160,7 +160,7 @@ export async function verifyV2SupportRepair(data, restarted = false) {
   ownedProfile(data);
   const repair = data.supportRepair;
   assert(repair?.invalidated?.relative === HELPER, 'Original TEST support invalidation required');
-  const after = await v2SupportSnapshot(data, restarted ? 'selected' : 'all');
+  const after = await v2SupportSnapshot(data, 'all');
   assert.deepEqual(after.native, repair.before.native, 'Support repair changed native selection or bytes');
   assert.deepEqual(after.descriptor, repair.before.descriptor, 'Support repair changed pinned delivery');
   assert.notEqual(after.receipt.instance, repair.before.receipt.instance, 'Support repair reused corrupted instance');

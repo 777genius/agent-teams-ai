@@ -332,4 +332,5 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/*.ndjson
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/support-repair*/desktop.log

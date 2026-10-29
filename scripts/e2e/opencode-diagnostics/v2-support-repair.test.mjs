@@ -90,6 +90,18 @@ test('warm starts require the exact cold native, descriptor and support receipt'
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });
 
+test('cold and warm support snapshots reject corruption outside the known repair helper', async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await v2SupportSnapshot(f.data)).filesVerified, Object.keys(f.files).length);
+    const unrelated = 'local-cli/node_modules/test/index.js';
+    const corrupted = Buffer.from(f.files[unrelated]);
+    corrupted[0] ^= 1;
+    await writeFile(path.join(f.original, unrelated), corrupted);
+    await assert.rejects(v2SupportSnapshot(f.data), /checksum mismatch/);
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
+
 test('support-only repair requires a new fully verified instance and preserves exact native selection through restart', async () => {
   const f = await fixture();
   try {
@@ -107,6 +119,7 @@ test('support-only repair requires a new fully verified instance and preserves e
     assert.deepEqual(await readFile(f.nativeFile), native);
     await writeFile(path.join(repaired, 'local-cli/node_modules/test/index.js'), 'tampered dependency');
     await assert.rejects(verifyV2SupportRepair(f.data));
+    await assert.rejects(verifyV2SupportRepair(f.data, true));
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });
 
