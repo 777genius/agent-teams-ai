@@ -591,6 +591,9 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
           console.log('renderer did-finish-load');
           setInterval(() => {}, 1000);
         } else {
+          // Keep the fake package alive until owned cleanup, as the App fixture does.
+          // Closing stdio must not race its natural exit against the ownership census.
+          setInterval(() => {}, 1000);
           require('node:readline').createInterface({input: process.stdin}).on('line', line => {
             const request = JSON.parse(line);
             if (!request.id) return;
