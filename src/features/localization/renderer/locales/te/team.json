@@ -3157,6 +3157,8 @@
       "action": "Copy to My Templates",
       "copying": "Copying…",
       "description": "Create an independent copy of a built-in template in My Templates.",
+      "membersCount_few": "{{count}} members",
+      "membersCount_many": "{{count}} members",
       "membersCount_one": "{{count}} member",
       "membersCount_other": "{{count}} members",
       "nameFieldLabel": "Template name",
