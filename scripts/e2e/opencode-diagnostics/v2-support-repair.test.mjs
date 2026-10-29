@@ -91,6 +91,18 @@ test('warm starts require the exact cold native, descriptor and support receipt'
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });
 
+test('support proof rejects an otherwise valid native V2 package outside the bundled qualification', async () => {
+  const f = await fixture();
+  try {
+    const currentFile = path.join(f.data.userData, 'data/runtimes/opencode/current.json');
+    const current = JSON.parse(await readFile(currentFile));
+    await writeFile(currentFile, JSON.stringify({ ...current, version: '2.9.0' }));
+    await writeFile(path.join(path.dirname(path.dirname(f.nativeFile)), 'package.json'),
+      JSON.stringify({ name: current.platformPackage, version: '2.9.0' }));
+    await assert.rejects(v2SupportSnapshot(f.data), /absent from the bundled qualification/);
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
+
 test('cold and warm support snapshots reject corruption outside the known repair helper', async () => {
   const f = await fixture();
   try {

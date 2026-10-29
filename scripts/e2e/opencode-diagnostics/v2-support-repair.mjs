@@ -81,6 +81,8 @@ export async function v2SupportSnapshot(data, verifyFiles = 'all') {
   assert(current.schemaVersion === 1 && /^2\.\d+\.\d+$/.test(current.version) &&
     current.platformPackage === `@opencode/cli-${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch}` &&
     /^sha512-[A-Za-z0-9+/]+={0,2}$/.test(current.integrity), 'Verified managed native V2 identity required');
+  assert(descriptor.engineVersions.includes(current.version),
+    'Native V2 package is absent from the bundled qualification');
   const nativeRelative = path.relative(data.userData, current.binaryPath).split(path.sep).join('/');
   assert(nativeRelative.startsWith('data/runtimes/opencode/versions/'));
   const nativeFile = await physical(data.userData, nativeRelative);

@@ -854,8 +854,13 @@ export async function verifyPackaged({
     );
     await probe('invalidateVersion', 'window.electronAPI.openCodeRuntime.invalidateStatus()');
     let version = await probe('opencodeVersion', 'window.electronAPI.openCodeRuntime.getStatus()');
-    if (v2Repair && data.run === 'cold')
+    if (v2Repair && data.run === 'cold') {
       assert(!version.installed && version.source === 'missing', 'Published V2 cold profile must be empty');
+      assert(/^2\.\d+\.\d+$/.test(version.compatibleV2Version ?? ''),
+        'Fresh default installation requires an actually qualified V2 release');
+      evidence.freshDefaultInstall = { requestedGeneration: 'default',
+        qualifiedV2Version: version.compatibleV2Version, observedVersion: null };
+    }
     // Explicit future runner option only. This is the app's registry/integrity installer;
     // the harness never supplies a URL, runtime binary, manifest or credentials.
     if (
@@ -879,9 +884,8 @@ export async function verifyPackaged({
         } catch {
           evidence.installerPublication.progressSubscriptionFailed = true;
         }
-        await probe('runtimeSetup', v2Repair
-          ? 'window.electronAPI.openCodeRuntime.install({generation:"v2"})'
-          : 'window.electronAPI.openCodeRuntime.install()', 180000);
+        // Exercise the same automatic generation policy as a fresh normal install.
+        await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
       } finally {
         try {
           const progress = await evaluate(`(() => {
@@ -919,6 +923,11 @@ export async function verifyPackaged({
       evidence.v2Support = data.run.startsWith('support-repair')
         ? await verifyV2SupportRepair(data, data.run === 'support-repair-restart')
         : await v2SupportSnapshot(data);
+      if (data.run === 'cold') {
+        assert.equal(version.version, evidence.freshDefaultInstall.qualifiedV2Version,
+          'Fresh default install did not select the actual qualified V2 release');
+        evidence.freshDefaultInstall.observedVersion = version.version;
+      }
       assert.equal(version.version, evidence.v2Support.native.version);
       assert.equal(version.binaryPath.toLowerCase(), evidence.v2Support.native.binaryPath.toLowerCase());
     }
