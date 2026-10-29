@@ -6,6 +6,9 @@ import {
 import { api } from '@renderer/api';
 import { createLogger } from '@shared/utils/logger';
 
+import { revokeProviderLaunchAuthority } from './cliInstallerStatusReconciliation';
+import { beginOpenCodeRuntimeReplacement } from './openCodeMetadataPublication';
+
 import type { CliInstallerSlice } from './cliInstallerSlice';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
 
@@ -14,6 +17,7 @@ type RuntimeState = Pick<
   | 'openCodeRuntimeStatus'
   | 'openCodeRuntimeStatusLoading'
   | 'openCodeRuntimeError'
+  | 'cliStatus'
   | 'cliProviderStatusByScope'
   | 'cliProviderStatusScopeRevision'
   | 'cliProviderStatusLoading'
@@ -121,8 +125,22 @@ export function createOpenCodeRuntimeActions(
       if (installInFlight) return installInFlight;
       const startedAt = Date.now();
       const previous = get().openCodeRuntimeStatus;
-      // A previously selected native must not keep project launch authority during replacement.
+      const finishReplacement = beginOpenCodeRuntimeReplacement(get);
+      // Both project and global launch evidence belongs to the previous executable.
       invalidateProjectScopes(false);
+      const cliStatus = get().cliStatus;
+      if (cliStatus) {
+        set({
+          cliStatus: {
+            ...cliStatus,
+            providers: cliStatus.providers.map((provider) =>
+              provider.providerId === 'opencode'
+                ? revokeProviderLaunchAuthority(provider)
+                : provider
+            ),
+          },
+        });
+      }
       applyProgress({
         ...previous,
         installed: previous?.installed ?? false,
@@ -161,6 +179,7 @@ export function createOpenCodeRuntimeActions(
         }
       })().finally(() => {
         if (installInFlight === request) installInFlight = null;
+        finishReplacement();
         // The unscoped follow-up can advance its epoch several times. Notify once after it
         // settles, including failure, so selected projects read under the final epoch.
         invalidateProjectScopes(true);

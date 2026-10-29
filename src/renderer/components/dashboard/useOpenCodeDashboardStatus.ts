@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
@@ -14,23 +14,69 @@ import type {
 } from '@shared/types';
 import type { Dispatch, SetStateAction } from 'react';
 
-/** Global runtime detection permits discovery, but cannot prove a project's models. */
-function pendingProjectStatus(global: CliProviderStatus | null): CliProviderStatus | null {
+/** Global runtime detection cannot prove a project's credentials or models. */
+function projectStatusWithoutAuthority(
+  global: CliProviderStatus | null,
+  pending: boolean
+): CliProviderStatus | null {
   if (!global) return null;
   return {
     ...global,
     authenticated: false,
     authMethod: null,
-    verificationState: 'unknown',
-    statusCheckOutcome: 'pending',
-    statusCheckErrorCode: 'partial_response',
+    verificationState: pending ? 'unknown' : global.verificationState,
+    statusCheckOutcome: pending ? 'pending' : global.statusCheckOutcome,
+    statusCheckErrorCode: pending ? 'partial_response' : global.statusCheckErrorCode,
+    modelVerificationState: 'idle',
+    defaultModel: null,
     effectiveDefaultModel: null,
+    teamLaunchAuthorityRestriction: undefined,
     capabilities: { ...global.capabilities, teamLaunch: false, oneShot: false },
+    backend: null,
+    connection: null,
     models: [],
     modelAvailability: [],
     modelCatalog: null,
-    modelCatalogRefreshState: 'loading',
+    modelCatalogRefreshState: pending ? 'loading' : 'error',
   };
+}
+
+function unavailableProjectStatus(
+  global: CliProviderStatus | null,
+  runtime: OpenCodeRuntimeStatus | null
+): CliProviderStatus | null {
+  if (!global) return null;
+  if (
+    ['checking', 'downloading', 'installing'].includes(runtime?.state ?? '') ||
+    (global.statusCheckOutcome === 'pending' &&
+      runtime?.installed !== false &&
+      runtime?.v2Support !== 'required')
+  ) {
+    return projectStatusWithoutAuthority(global, true);
+  }
+  const hasSettledFailure =
+    global.statusCheckOutcome !== 'pending' &&
+    (!global.supported ||
+      global.statusCheckOutcome === 'transient_error' ||
+      global.statusCheckErrorCode != null);
+  return projectStatusWithoutAuthority(
+    {
+      ...global,
+      supported: false,
+      ...(!hasSettledFailure && {
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: runtime?.installed === false ? 'runtime_missing' : 'unavailable',
+        statusMessage:
+          runtime?.error ??
+          (runtime?.v2Support === 'required'
+            ? 'OpenCode V2 support must be installed.'
+            : 'OpenCode runtime is not installed.'),
+        detailMessage: runtime?.error ?? null,
+      }),
+    },
+    false
+  );
 }
 
 export function useOpenCodeDashboardStatus(input: {
@@ -50,26 +96,47 @@ export function useOpenCodeDashboardStatus(input: {
   );
   const global =
     input.cliStatus?.providers.find((provider) => provider.providerId === 'opencode') ?? null;
+  const canReadCatalog =
+    input.runtimeStatus?.installed !== false &&
+    !['checking', 'downloading', 'installing'].includes(input.runtimeStatus?.state ?? '') &&
+    canLoadOpenCodeDashboardCatalog(global ?? scoped, input.runtimeStatus);
   const providerStatus = useMemo(
-    () => (projectPath ? (scoped ?? pendingProjectStatus(global)) : global),
-    [global, projectPath, scoped]
+    () =>
+      !projectPath
+        ? global
+        : !canReadCatalog
+          ? unavailableProjectStatus(global, input.runtimeStatus)
+          : (scoped ?? projectStatusWithoutAuthority(global, true)),
+    [canReadCatalog, global, input.runtimeStatus, projectPath, scoped]
   );
   const enabled =
-    input.enabled &&
-    input.cliStatus?.flavor === 'agent_teams_orchestrator' &&
-    input.runtimeStatus?.installed !== false &&
-    canLoadOpenCodeDashboardCatalog(providerStatus, input.runtimeStatus);
+    input.enabled && input.cliStatus?.flavor === 'agent_teams_orchestrator' && canReadCatalog;
+  const scopeMissing = scoped === null;
+  const lastRead = useRef<{
+    projectPath: string;
+    revision: number;
+    present: boolean;
+  } | null>(null);
 
   useEffect(() => {
-    if (!enabled || !projectPath) return;
-    // One passive read on entering a project or explicit cache invalidation.
-    // V2 catalog-only staleAt values must not create an automatic retry loop.
+    if (!enabled || !projectPath) {
+      lastRead.current = null;
+      return;
+    }
+    const previous = lastRead.current;
+    const sameContext =
+      previous?.projectPath === projectPath && previous.revision === scopeRevision;
+    const shouldRead = !sameContext || (previous?.present === true && scopeMissing);
+    lastRead.current = { projectPath, revision: scopeRevision, present: !scopeMissing };
+    if (!shouldRead) return;
+    // Read on entry, invalidation, or a real present -> missing cache eviction.
+    // Completion, missing -> missing and V2 staleAt values cannot retry the read.
     void fetchCliProviderStatus('opencode', {
       silent: true,
       checkReason: 'launch_preflight',
       projectPath,
     }).catch(() => undefined);
-  }, [enabled, fetchCliProviderStatus, projectPath, scopeRevision]);
+  }, [enabled, fetchCliProviderStatus, projectPath, scopeMissing, scopeRevision]);
 
   return { enabled, providerStatus };
 }

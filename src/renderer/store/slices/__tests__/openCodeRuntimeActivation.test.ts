@@ -3,6 +3,7 @@ import {
   createLoadingMultimodelCliStatus,
   getCliProviderStatusScopeKey,
 } from '@renderer/store/slices/cliInstallerSlice';
+import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
@@ -38,6 +39,52 @@ const required: OpenCodeRuntimeStatus = {
   v2Support: 'required',
   error: 'OpenCode V2 support download required.',
 };
+
+function verifiedOpenCodeProvider(): CliProviderStatus {
+  const base = createLoadingMultimodelCliStatus().providers.find(
+    (provider) => provider.providerId === 'opencode'
+  )!;
+  const modelId = 'opencode/previous-native';
+  return {
+    ...base,
+    supported: true,
+    authenticated: true,
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    statusCheckErrorCode: undefined,
+    capabilities: { ...base.capabilities, teamLaunch: true, oneShot: true },
+    models: [modelId],
+    defaultModel: modelId,
+    effectiveDefaultModel: modelId,
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: new Date(Date.now() - 1000).toISOString(),
+      staleAt: new Date(Date.now() + 60_000).toISOString(),
+      defaultModelId: modelId,
+      defaultLaunchModel: modelId,
+      models: [
+        {
+          id: modelId,
+          launchModel: modelId,
+          displayName: 'TEST previous native model',
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+        },
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  };
+}
 
 const originalApi = window.electronAPI;
 afterEach(() => {
@@ -218,6 +265,181 @@ describe('OpenCode installation without restarting the renderer', () => {
     });
     store.getState().applyOpenCodeRuntimeProgress(ready);
   });
+
+  it.each(['failed install', 'failed refresh', 'fresh refresh'] as const)(
+    'revokes global launch authority until a new provider check after %s',
+    async (outcome) => {
+      const installing = deferred<OpenCodeRuntimeStatus>();
+      const oldRead = deferred<CliProviderStatus>();
+      const { store } = setup({
+        install: () => installing.promise,
+        invalidateStatus: async () => {
+          if (outcome === 'failed refresh') throw new Error('provider refresh IPC disconnected');
+        },
+      });
+      const cliStatus = createLoadingMultimodelCliStatus();
+      const old = verifiedOpenCodeProvider();
+      const fresh: CliProviderStatus = { ...old, statusMessage: 'TEST new native verified' };
+      const otherProviders = cliStatus.providers.filter(
+        (provider) => provider.providerId !== 'opencode'
+      );
+      const getProviderStatus = vi
+        .fn()
+        .mockReturnValueOnce(oldRead.promise)
+        .mockResolvedValue(fresh);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+        },
+      });
+      const globalProvider = (): CliProviderStatus =>
+        store
+          .getState()
+          .cliStatus!.providers.find((provider) => provider.providerId === 'opencode')!;
+      store.setState({
+        cliStatus: {
+          ...cliStatus,
+          providers: cliStatus.providers.map((provider) =>
+            provider.providerId === 'opencode' ? old : provider
+          ),
+        },
+        openCodeRuntimeStatus: { ...ready, version: '1.9.3' },
+      });
+      // This is the real no-project launch gate, not only a raw capability flag.
+      expect(hasEffectiveProviderLaunchAuthority(globalProvider())).toBe(true);
+      const previousRead = store.getState().fetchCliProviderStatus('opencode', { silent: true });
+      const installation = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+      const duringInstall = globalProvider();
+      oldRead.resolve(old);
+      const oldReadCommitted = await previousRead;
+      const afterOldRead = globalProvider();
+      installing.resolve(
+        outcome === 'failed install'
+          ? { ...missing, state: 'failed', error: 'TEST package download failed' }
+          : ready
+      );
+      await installation;
+
+      expect(hasEffectiveProviderLaunchAuthority(duringInstall)).toBe(false);
+      expect(duringInstall.capabilities.teamLaunch).toBe(false);
+      expect(duringInstall.effectiveDefaultModel).toBeNull();
+      expect(duringInstall.modelCatalog?.status).toBe('stale');
+      expect(oldReadCommitted).toBe(false);
+      expect(afterOldRead).toBe(duringInstall);
+      expect(hasEffectiveProviderLaunchAuthority(globalProvider())).toBe(
+        outcome === 'fresh refresh'
+      );
+      expect(getProviderStatus).toHaveBeenCalledTimes(outcome === 'fresh refresh' ? 2 : 1);
+      expect(
+        store
+          .getState()
+          .cliStatus!.providers.filter((provider) => provider.providerId !== 'opencode')
+      ).toEqual(otherProviders);
+    }
+  );
+
+  it.each([
+    ['bootstrap', 'before', 'snapshot', 'authoritative'],
+    ['fetch', 'before', 'snapshot', 'authoritative'],
+    ['bootstrap', 'during', 'snapshot', 'authoritative'],
+    ['fetch', 'during', 'snapshot', 'authoritative'],
+    ['bootstrap', 'before', 'error', 'authoritative'],
+    ['bootstrap', 'during', 'error', 'authoritative'],
+    ['bootstrap', 'fresh', 'snapshot', 'authoritative'],
+    ['fetch', 'fresh', 'snapshot', 'authoritative'],
+    ['bootstrap', 'during', 'snapshot', 'model_only'],
+    ['bootstrap', 'during', 'error', 'model_only'],
+  ] as const)(
+    'fences OpenCode metadata from %s begun %s install (%s, %s), preserving other hydration',
+    async (entryPoint, timing, response, evidence) => {
+      const installing = deferred<OpenCodeRuntimeStatus>();
+      const metadata = deferred<NonNullable<CliInstallerSlice['cliStatus']>>();
+      const { store } = setup({ install: () => installing.promise });
+      const old = verifiedOpenCodeProvider();
+      if (evidence === 'model_only') {
+        old.authenticated = false;
+        old.verificationState = 'unknown';
+        old.statusCheckOutcome = 'model_only';
+        old.capabilities = { ...old.capabilities, teamLaunch: false, oneShot: false };
+        old.modelCatalog = { ...old.modelCatalog!, status: 'degraded' };
+      }
+      const cliStatus = createLoadingMultimodelCliStatus();
+      const incoming = {
+        ...cliStatus,
+        installedVersion: '0.0.147',
+        providers: cliStatus.providers.map((provider) =>
+          provider.providerId === 'opencode' ? old : provider
+        ),
+      };
+      const getProviderStatus = vi.fn(async (providerId: string) => {
+        if (providerId === 'opencode') return old;
+        const base = cliStatus.providers.find((provider) => provider.providerId === providerId)!;
+        return {
+          ...base,
+          supported: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          statusCheckErrorCode: undefined,
+          models: [`${providerId}/TEST-fresh-hydration`],
+        };
+      });
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: {
+            getStatus: vi.fn(() => metadata.promise),
+            getProviderStatus,
+          },
+        },
+      });
+      store.setState({
+        cliStatus: incoming,
+        openCodeRuntimeStatus: { ...ready, version: evidence === 'model_only' ? '2.1.3' : '1.9.3' },
+      });
+      const readMetadata = (): Promise<void> =>
+        entryPoint === 'bootstrap'
+          ? store.getState().bootstrapCliStatus()
+          : store.getState().fetchCliStatus();
+      let reading: Promise<void> | undefined;
+      if (timing === 'before') reading = readMetadata();
+      const installation = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+      if (timing === 'during') reading = readMetadata();
+      const initialOpenCodeLoading = store.getState().cliProviderStatusLoading.opencode ?? false;
+      installing.resolve({ ...missing, state: 'failed', error: 'TEST download failed' });
+      await installation;
+      expect(
+        hasEffectiveProviderLaunchAuthority(
+          store
+            .getState()
+            .cliStatus!.providers.find((provider) => provider.providerId === 'opencode')
+        )
+      ).toBe(false);
+      if (timing === 'fresh') reading = readMetadata();
+      if (response === 'error') metadata.reject(new Error('TEST delayed metadata failed'));
+      else metadata.resolve(incoming);
+      await reading;
+      await Promise.resolve();
+
+      const final = store.getState().cliStatus!;
+      expect(initialOpenCodeLoading).toBe(false);
+      expect(store.getState().cliProviderStatusLoading.opencode ?? false).toBe(false);
+      expect(
+        hasEffectiveProviderLaunchAuthority(
+          final.providers.find((provider) => provider.providerId === 'opencode')
+        )
+      ).toBe(timing === 'fresh');
+      expect(
+        final.providers.find((provider) => provider.providerId === 'anthropic')?.models
+      ).toEqual(['anthropic/TEST-fresh-hydration']);
+      expect(
+        getProviderStatus.mock.calls.filter(([providerId]) => providerId === 'opencode')
+      ).toHaveLength(timing === 'fresh' && entryPoint === 'fetch' ? 1 : 0);
+      if (response === 'snapshot') expect(final.installedVersion).toBe('0.0.147');
+    }
+  );
 
   it.each(['1.9.3', '2.1.3'])(
     'drops project authority and detached reads from native %s without disturbing another provider',

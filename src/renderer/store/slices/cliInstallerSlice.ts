@@ -18,6 +18,7 @@ import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import {
+  getProviderDisplayName,
   isMultimodelCliStatus,
   reconcileCliProviderSnapshot,
   revokeProviderLaunchAuthority,
@@ -30,6 +31,7 @@ import {
   invalidateCliProviderScopeReads,
   setBoundedScopedProviderStatus,
 } from './cliProviderStatusScope';
+import { captureOpenCodeMetadataRead } from './openCodeMetadataPublication';
 import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
 import type { AppState } from '../types';
@@ -757,19 +759,6 @@ function buildMultimodelCliAuthState(params: {
   };
 }
 
-function getProviderDisplayName(providerId: CliProviderId): string {
-  switch (providerId) {
-    case 'anthropic':
-      return 'Anthropic';
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'opencode':
-      return 'OpenCode (200+ models)';
-  }
-}
-
 function createProviderStatusErrorSnapshot(params: {
   providerId: CliProviderId;
   message: string;
@@ -983,6 +972,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       return get().fetchCliStatus();
     }
 
+    const metadataRead = captureOpenCodeMetadataRead(get);
     const epoch = ++cliStatusEpoch;
     get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     const currentStatus = get().cliStatus;
@@ -994,6 +984,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       MULTIMODEL_PROVIDER_IDS.map((providerId) => [
         providerId,
         hydrateProviders &&
+          metadataRead.canHydrate(providerId) &&
           initialStatus.installed &&
           !isHydratedMultimodelProviderStatus(
             initialStatus.providers.find((provider) => provider.providerId === providerId)
@@ -1013,8 +1004,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     );
 
     try {
-      const metadata = await api.cliInstaller.getStatus(
-        providerStatusMode === 'defer' ? { providerStatusMode } : undefined
+      const metadata = metadataRead.protect(
+        await api.cliInstaller.getStatus(
+          providerStatusMode === 'defer' ? { providerStatusMode } : undefined
+        )
       );
       if (metadata.flavor !== 'agent_teams_orchestrator') {
         set((state) => {
@@ -1046,6 +1039,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           MULTIMODEL_PROVIDER_IDS.map((providerId) => [
             providerId,
             hydrateProviders &&
+              metadataRead.canHydrate(providerId) &&
               !isHydratedMultimodelProviderStatus(
                 nextCliStatus.providers.find((provider) => provider.providerId === providerId)
               ),
@@ -1090,7 +1084,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
 
       await Promise.allSettled(
-        pendingProviderIds.map((providerId) =>
+        pendingProviderIds.filter(metadataRead.canHydrate).map((providerId) =>
           get().fetchCliProviderStatus(providerId, {
             silent: false,
             epoch,
@@ -1106,7 +1100,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     try {
       if (hydrateProviders) {
         await Promise.allSettled(
-          MULTIMODEL_PROVIDER_IDS.map((providerId) =>
+          MULTIMODEL_PROVIDER_IDS.filter(metadataRead.canHydrate).map((providerId) =>
             get().fetchCliProviderStatus(providerId, {
               silent: false,
               epoch,
@@ -1126,6 +1120,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (!api.cliInstaller) return;
     if (cliStatusInFlight) return cliStatusInFlight;
 
+    const metadataRead = captureOpenCodeMetadataRead(get);
     const epoch = ++cliStatusEpoch;
     get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     // Assigned before the first awaited continuation and referenced by its own cleanup.
@@ -1134,7 +1129,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     request = (async () => {
       set({ cliStatusLoading: true, cliStatusError: null });
       try {
-        const status = await api.cliInstaller.getStatus();
+        const status = metadataRead.protect(await api.cliInstaller.getStatus());
         if (epoch !== cliStatusEpoch) {
           return;
         }
@@ -1156,7 +1151,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         scheduleCodexCatalogLoadingRefreshes(get);
         if (status.installed) {
           for (const provider of status.providers) {
-            if (!isActiveMultimodelProviderId(provider.providerId)) {
+            if (
+              !isActiveMultimodelProviderId(provider.providerId) ||
+              !metadataRead.canHydrate(provider.providerId)
+            ) {
               continue;
             }
             void get().fetchCliProviderStatus(provider.providerId, {

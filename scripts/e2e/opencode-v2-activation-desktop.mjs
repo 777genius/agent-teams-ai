@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Opt-in real Electron, public download, native catalog and owned model-Test smoke.
+// Opt-in Linux Electron, public download, native catalog and owned model-Test smoke.
 // Only the model HTTP response is a loopback fixture; no provider keys or external inference.
 // Requires the matching orchestrator source launcher in CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.
 import assert from 'node:assert/strict';
@@ -15,6 +15,11 @@ import { fileURLToPath } from 'node:url';
 
 import { connectCdp } from './announcements/cdp.mjs';
 
+assert.equal(
+  process.platform,
+  'linux',
+  'This desktop lifecycle smoke requires the qualified Linux runner and POSIX process ownership'
+);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const runtime = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
 assert(runtime && path.isAbsolute(runtime), 'Set the exact orchestrator source launcher path');
@@ -382,16 +387,12 @@ try {
     result.electronExecutable = await realpath(electron);
   }
   const port = await requireDevMcpPort();
-  app = spawn(
-    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-    ['dev:mcp', ...(buildEvidence ? ['--rendererOnly'] : [])],
-    {
-      cwd: repo,
-      env,
-      detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }
-  );
+  app = spawn('pnpm', ['dev:mcp', ...(buildEvidence ? ['--rendererOnly'] : [])], {
+    cwd: repo,
+    env,
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   for (const stream of [app.stdout, app.stderr])
     stream.on('data', (chunk) => {
       appLog += chunk.toString();

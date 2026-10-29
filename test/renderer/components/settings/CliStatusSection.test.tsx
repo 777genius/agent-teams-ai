@@ -180,6 +180,61 @@ afterEach(async () => {
 });
 
 describe('Settings OpenCode project status', () => {
+  it.each([
+    ['native missing', false],
+    ['native missing', true],
+    ['support required', false],
+    ['support required', true],
+  ] as const)(
+    'shows the settled %s diagnosis with cached project status=%s',
+    async (reason, cached) => {
+      const message =
+        reason === 'native missing'
+          ? 'OpenCode native runtime is not installed.'
+          : 'OpenCode V2 support must be installed.';
+      const unavailable = {
+        ...provider('GLOBAL', true),
+        supported: false,
+        statusMessage: message,
+        detailMessage: 'Install the required OpenCode runtime from the dashboard.',
+        statusCheckErrorCode: reason === 'native missing' ? 'runtime_missing' : 'unavailable',
+      };
+      globalStatus = { ...globalStatus, providers: [unavailable as CliProviderStatus] };
+      publish({
+        cliStatus: globalStatus,
+        openCodeRuntimeStatus:
+          reason === 'native missing'
+            ? { installed: false, source: 'missing', state: 'idle' }
+            : {
+                installed: true,
+                source: 'app-managed',
+                state: 'idle',
+                version: '2.2.0',
+                v2Support: 'required',
+                error: message,
+              },
+      });
+      if (cached) publishScope('/TEST/A', provider('A-cached', true));
+      await act(async () => root.render(<CliStatusSection />));
+      expect(host.textContent).toContain(message);
+      expect(host.textContent).not.toContain('providerRuntime.connectionUi.status.checking');
+      expect(host.textContent).not.toContain('Connected via');
+      expect(host.textContent).not.toContain('opencode/A-cached');
+      expect(host.textContent).not.toContain('opencode/GLOBAL');
+      expect(mocks.dialog!.providers[0]).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        statusCheckOutcome: 'authoritative',
+        statusCheckErrorCode: unavailable.statusCheckErrorCode,
+        capabilities: { teamLaunch: false, oneShot: false },
+        models: [],
+        modelAvailability: [],
+        modelCatalog: null,
+      });
+      expect(mocks.fetch).not.toHaveBeenCalled();
+    }
+  );
+
   it('updates the actual V1 connection header, model list and provider dialog from the refreshed project', async () => {
     publishScope('/TEST/A', provider('A-before'));
     await act(async () => root.render(<CliStatusSection />));

@@ -242,10 +242,11 @@ describe('useRuntimeProviderManagement', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['startConnect', 'startReconnect', 'closeModelPicker'] as const)(
+  it.each(['startConnect', 'startReconnect', 'closeModelPicker', 'switchProvider'] as const)(
     'cancels all active probe attempts when %s closes the picker',
     async (action) => {
       let resolve!: (response: RuntimeProviderManagementModelTestResponse) => void;
+      const onProviderChanged = vi.fn();
       const cancelModelTest = vi.fn(async () => ({ ok: true }));
       Object.defineProperty(window, 'electronAPI', {
         configurable: true,
@@ -268,13 +269,20 @@ describe('useRuntimeProviderManagement', () => {
       });
       const root = createRoot(host);
       await act(async () => {
-        root.render(React.createElement(Harness));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: false,
+            projectPath: '/tmp/TEST-same-project',
+            onProviderChanged,
+          })
+        );
       });
       await act(async () => {
         void actions?.testModel('test', 'a');
       });
       await act(async () => {
-        actions?.[action]('test');
+        if (action === 'switchProvider') actions?.openModelPicker('next-provider', 'use');
+        else actions?.[action]('test');
       });
       expect(cancelModelTest).toHaveBeenCalledExactlyOnceWith({
         requestGroupId: 'runtime-provider-management:opencode:model-test:test:a:1',
@@ -295,6 +303,7 @@ describe('useRuntimeProviderManagement', () => {
         });
       });
       expect(state?.modelResults.a).toBeUndefined();
+      expect(onProviderChanged).toHaveBeenCalledExactlyOnceWith('model_tested');
     }
   );
 
@@ -4003,65 +4012,72 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.error).toBeNull();
   });
 
-  it('does not refresh global status from a model test belonging to a previous project', async () => {
-    let finish!: (value: RuntimeProviderManagementModelTestResponse) => void;
-    const modelId = 'opencode/big-pickle';
-    const onProviderChanged = vi.fn();
-    Object.defineProperty(window, 'electronAPI', {
-      configurable: true,
-      value: {
-        runtimeProviderManagement: {
-          testModel: vi.fn(
-            () =>
-              new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
-                finish = resolve;
-              })
-          ),
-          cancelModelTest: vi.fn(async () => ({ ok: true })),
-        },
-      } as unknown as ElectronAPI,
-    });
-    const root = createRoot(host);
-    await act(async () => {
-      root.render(
-        React.createElement(ConfigurableHarness, {
-          enabled: false,
-          projectPath: '/tmp/TEST-v2-old-project',
-          onProviderChanged,
-        })
-      );
-    });
-    let pending: ReturnType<RuntimeProviderManagementActions['testModel']> | undefined;
-    await act(async () => {
-      pending = actions?.testModel('opencode', modelId);
-    });
-    await act(async () => {
-      root.render(
-        React.createElement(ConfigurableHarness, {
-          enabled: false,
-          projectPath: '/tmp/TEST-v2-new-project',
-          onProviderChanged,
-        })
-      );
-    });
-    await act(async () => {
-      finish({
-        schemaVersion: 1,
-        runtimeId: 'opencode',
-        result: {
-          providerId: 'opencode',
-          modelId,
-          ok: true,
-          availability: 'available',
-          message: 'Previous project passed',
-          diagnostics: [],
-        },
+  it.each(['project change', 'unmount'] as const)(
+    'does not refresh global status from a model test after %s',
+    async (change) => {
+      let finish!: (value: RuntimeProviderManagementModelTestResponse) => void;
+      const modelId = 'opencode/big-pickle';
+      const onProviderChanged = vi.fn();
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            testModel: vi.fn(
+              () =>
+                new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
+                  finish = resolve;
+                })
+            ),
+            cancelModelTest: vi.fn(async () => ({ ok: true })),
+          },
+        } as unknown as ElectronAPI,
       });
-      await pending;
-    });
-    expect(onProviderChanged).not.toHaveBeenCalled();
-    expect(state?.modelResults[modelId]).toBeUndefined();
-  });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: false,
+            projectPath: '/tmp/TEST-v2-old-project',
+            onProviderChanged,
+          })
+        );
+      });
+      let pending: ReturnType<RuntimeProviderManagementActions['testModel']> | undefined;
+      await act(async () => {
+        pending = actions?.testModel('opencode', modelId);
+      });
+      await act(async () => {
+        if (change === 'unmount') {
+          root.unmount();
+          roots.delete(root);
+        } else
+          root.render(
+            React.createElement(ConfigurableHarness, {
+              enabled: false,
+              projectPath: '/tmp/TEST-v2-new-project',
+              onProviderChanged,
+            })
+          );
+      });
+      await act(async () => {
+        finish({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'opencode',
+            modelId,
+            ok: true,
+            availability: 'available',
+            message: 'Previous project passed',
+            diagnostics: [],
+          },
+        });
+        await pending;
+      });
+      expect(onProviderChanged).not.toHaveBeenCalled();
+      expect(state?.modelResults[modelId]).toBeUndefined();
+    }
+  );
 
   it('keeps failed model probes scoped to the model result instead of a global success banner', async () => {
     const modelId = 'openrouter/anthropic/claude-3.5-haiku';
