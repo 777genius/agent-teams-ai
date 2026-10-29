@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { prepareV2SupportRepair, v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
+import { assertV2SupportWarmReuse, prepareV2SupportRepair, v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const helper = 'local-cli/opencodeV2RunOwner.js';
@@ -63,10 +63,32 @@ async function fixture() {
     return target;
   };
   const original = await publish();
+  const data = { root, userData, packaged: true, runtimeSetup: 'app-install-v2-repair',
+    artifact: { orchestrator: { path: path.join(base, 'claude-multimodel.exe') } } };
+  data.v2SupportCold = await v2SupportSnapshot(data);
   return { root, original, nativeFile, directory, publish, files,
-    data: { root, userData, packaged: true, runtimeSetup: 'app-install-v2-repair',
-      artifact: { orchestrator: { path: path.join(base, 'claude-multimodel.exe') } } } };
+    data };
 }
+
+test('warm starts require the exact cold native, descriptor and support receipt', async () => {
+  const f = await fixture();
+  try {
+    const baseline = f.data.v2SupportCold;
+    assert.doesNotThrow(() => assertV2SupportWarmReuse(baseline, structuredClone(baseline)));
+    for (const [field, key, changed, reason] of [
+      ['receipt', 'instance', randomUUID(), /support selection/],
+      ['native', 'sha256', 'd'.repeat(64), /native selection or bytes/],
+      ['descriptor', 'sourceCommit', 'e'.repeat(40), /pinned delivery/],
+    ]) {
+      const observed = structuredClone(baseline);
+      observed[field][key] = changed;
+      assert.throws(() => assertV2SupportWarmReuse(baseline, observed), reason);
+    }
+    assert.throws(() => assertV2SupportWarmReuse(undefined, baseline), /cold support baseline/);
+    await f.publish();
+    await assert.rejects(prepareV2SupportRepair(f.data), /support selection/);
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
 
 test('support-only repair requires a new fully verified instance and preserves exact native selection through restart', async () => {
   const f = await fixture();

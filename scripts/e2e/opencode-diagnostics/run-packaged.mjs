@@ -13,7 +13,7 @@ import {
   packagedOrphanObservation,
 } from './packaged.mjs';
 import { settingsRefreshFailureSummary } from './packaged-verify.mjs';
-import { prepareV2SupportRepair } from './v2-support-repair.mjs';
+import { assertV2SupportWarmReuse, prepareV2SupportRepair } from './v2-support-repair.mjs';
 import {
   processes,
   listeners,
@@ -126,6 +126,7 @@ for (const run of runs) {
     assert(['provider-inventory', 'transport-only'].includes(evidence.qualification));
     result.qualification = evidence.qualification;
     result.providerQualified = evidence.providerQualified === true;
+    if (options.runtimeSetup === 'app-install-v2-repair') result.v2Support = evidence.v2Support;
     if (run === 'support-repair') result.repairedSupport = evidence.v2Support;
     result.passed = true;
   } catch (error) {
@@ -445,6 +446,15 @@ for (const run of runs) {
       sameIdentity(ownedManifest.launcher, current.launcher);
       delete current.launcher;
       delete current.observedProcesses;
+      if (result.passed && options.runtimeSetup === 'app-install-v2-repair') {
+        if (run === 'cold') {
+          assert(!current.v2SupportCold, 'Cold support baseline already exists');
+          assertV2SupportWarmReuse(result.v2Support, result.v2Support);
+          current.v2SupportCold = result.v2Support;
+        } else if (run === 'warm-1' || run === 'warm-2') {
+          assertV2SupportWarmReuse(current.v2SupportCold, result.v2Support);
+        }
+      }
       if (run === 'support-repair' && result.passed)
         current.supportRepair.after = result.repairedSupport;
       await writeFile(manifestPath, JSON.stringify(current, null, 2));

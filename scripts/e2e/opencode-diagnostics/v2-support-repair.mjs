@@ -125,11 +125,22 @@ export async function v2SupportSnapshot(data, verifyFiles = 'selected') {
       integrity: current.integrity, currentSha256: sha(currentBytes), sha256: await digest(nativeFile) } };
 }
 
+/** Warm starts must reuse the exact successfully installed cold selection. */
+export function assertV2SupportWarmReuse(baseline, observed) {
+  assert(baseline?.native && baseline?.descriptor && baseline?.receipt &&
+    observed?.native && observed?.descriptor && observed?.receipt,
+  'Verified cold support baseline required');
+  assert.deepEqual(observed.native, baseline.native, 'Warm start changed native selection or bytes');
+  assert.deepEqual(observed.descriptor, baseline.descriptor, 'Warm start changed pinned delivery');
+  assert.deepEqual(observed.receipt, baseline.receipt, 'Warm start changed support selection');
+}
+
 /** Only after the runner has proved warm app cleanup; mutate one single-link TEST helper. */
 export async function prepareV2SupportRepair(data) {
   ownedProfile(data);
   assert(!data.launcher, 'Repair invalidation requires completed owned app cleanup');
   const before = await v2SupportSnapshot(data);
+  assertV2SupportWarmReuse(data.v2SupportCold, before);
   const file = await physical(before.instanceRoot, HELPER);
   const handle = await open(file, 'r+');
   try {
