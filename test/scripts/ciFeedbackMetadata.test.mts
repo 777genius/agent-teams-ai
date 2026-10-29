@@ -103,6 +103,7 @@ function fixture(input: JsonObject = event(), status = (input.pull_request as Js
     [jobsEndpoint, { total_count: jobs.length, jobs }],
     [`${prefix}/contents/${WORKFLOW}?ref=${env.GITHUB_WORKFLOW_SHA}`, workflow],
     [`${prefix}/contents/${WORKFLOW}?ref=${headSha}`, workflow],
+    ['rate_limit', { resources: { core: { limit: 1000, remaining: 1000, reset: 0 } } }],
   ]);
 }
 async function plan(input: unknown, override: Record<string, string | undefined> = {}, data?: Map<string, unknown>, scope?: ChangeScope) {
@@ -956,24 +957,32 @@ void test('the edit gate passes only after the running producer completes its au
 });
 
 void test('the edit gate fails closed when the awaited producer fails, is cancelled, or the PR moves', async () => {
-  const input = event();
-  const outcomes: [string, (data: Map<string, unknown>) => void][] = [
-    ['failure', (data) => { source(data).conclusion = 'failure'; }],
-    ['cancelled', (data) => { source(data).conclusion = 'cancelled'; job(data, 'Full qualification').conclusion = 'cancelled'; }],
-    ['failed test shard', (data) => { job(data, 'test (2/2)').conclusion = 'failure'; }],
-    ['skipped heavy job', (data) => { job(data, 'validate').conclusion = 'skipped'; }],
-    ['force-push', (data) => { ((data.get(`${prefix}/pulls/12`) as JsonObject).head as JsonObject).sha = 'd'.repeat(40); }],
-    ['base advanced', (data) => { (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'd'.repeat(40) }; }],
-    ['converted to draft', (data) => { (data.get(`${prefix}/pulls/12`) as JsonObject).draft = true; }],
+  // Each phase has its own event and PR objects, so a mutation cannot leak into the event.
+  const pr = (data: Map<string, unknown>): JsonObject => {
+    const copy = structuredClone(data.get(`${prefix}/pulls/12`)) as JsonObject;
+    data.set(`${prefix}/pulls/12`, copy);
+    return copy;
+  };
+  const outcomes: [string, string, (data: Map<string, unknown>) => void][] = [
+    ['failure', 'Canonical full producer did not succeed', (data) => { source(data).conclusion = 'failure'; }],
+    ['cancelled', 'Canonical full producer did not succeed', (data) => {
+      source(data).conclusion = 'cancelled'; job(data, 'Full qualification').conclusion = 'cancelled'; }],
+    ['failed test shard', 'Canonical full producer did not succeed', (data) => { job(data, 'test (2/2)').conclusion = 'failure'; }],
+    ['skipped heavy job', 'Canonical full producer did not succeed', (data) => { job(data, 'validate').conclusion = 'skipped'; }],
+    ['force-push', 'Current PR inputs changed', (data) => { (pr(data).head as JsonObject).sha = 'd'.repeat(40); }],
+    ['base advanced', 'Synthetic merge base is not the current target tip', (data) => {
+      (data.get(baseRefEndpoint) as JsonObject).object = { type: 'commit', sha: 'd'.repeat(40) }; }],
+    ['converted to draft', 'Current PR inputs changed', (data) => { pr(data).draft = true; }],
   ];
-  for (const [name, mutate] of outcomes) {
-    const finished = fixture(input, 'completed');
+  for (const [name, reason, mutate] of outcomes) {
+    const finished = fixture(event(), 'completed');
     mutate(finished);
     const clock = virtualClock();
-    const read = phases(clock, [[0, fixture(input, 'in_progress')], [10 * 60_000, finished]]);
-    const result = await awaitMetadataQualification(env, input, read, clock, quiet);
-    assert.equal(result.ok, false, name);
+    const read = phases(clock, [[0, fixture(event(), 'in_progress')], [10 * 60_000, finished]]);
+    const result = await awaitMetadataQualification(env, event(), read, clock, quiet);
+    assert.deepEqual(result, { ok: false, reason }, name);
     // Definitive outcomes fail after bounded re-proofs, long before the deadline.
+    assert.ok(clock.now() >= 10 * 60_000, name);
     assert.ok(clock.now() <= 10 * 60_000 + METADATA_GATE.pollMs + METADATA_GATE.retryMs * METADATA_GATE.rejections, name);
   }
 });
@@ -989,7 +998,9 @@ void test('the edit gate follows a newer same-input producer when the awaited on
   for (const [final, expected] of [[replaced, true], [superseded, false]] as const) {
     const clock = virtualClock();
     const read = phases(clock, [[0, fixture(input, 'in_progress')], [5 * 60_000, superseded], [30 * 60_000, final]]);
-    assert.equal(await gate(input, read, clock), expected);
+    const result = await awaitMetadataQualification(env, input, read, clock, quiet);
+    assert.equal(result.ok, expected, result.reason);
+    if (!expected) assert.match(result.reason, /^Deadline reached before qualification: Same-input CI run 300 /);
     assert.ok(clock.now() >= 30 * 60_000, 'the newer producer was awaited');
   }
 });
@@ -1004,6 +1015,69 @@ void test('transient proof failures are retried a bounded number of times', asyn
   const clock = virtualClock();
   assert.equal(await gate(input, apiFailure, clock), false);
   assert.equal(clock.now(), METADATA_GATE.retryMs * (METADATA_GATE.rejections - 1));
+});
+
+void test('the gate re-proves after a failed status read and forgives proof failures separated by waiting', async () => {
+  const { pollMs, retryMs } = METADATA_GATE;
+  // Status reads fail at three poll times; each failure forces a full re-proof that
+  // fails too (same endpoint), so three rejections occur but never consecutively.
+  const first = 3 * pollMs;
+  const failing = [first, first + retryMs + 3 * pollMs, first + 2 * (retryMs + 3 * pollMs)];
+  const completedAt = failing[2] + retryMs + 10 * pollMs;
+  const clock = virtualClock();
+  const timeline = phases(clock, [[0, fixture(event(), 'in_progress')], [completedAt, fixture(event(), 'completed')]]);
+  const read: GitHubRead = (endpoint) =>
+    endpoint === `${prefix}/actions/runs/100` && failing.includes(clock.now()) ? apiFailure() : timeline(endpoint);
+  const result = await awaitMetadataQualification(env, event(), read, clock, quiet);
+  assert.equal(result.ok, true, result.reason);
+  assert.equal(clock.now(), completedAt);
+  // A status read that keeps failing hands over to the full proof, which notices a moved head.
+  const moved = fixture(event(), 'in_progress');
+  ((moved.get(`${prefix}/pulls/12`) as JsonObject).head as JsonObject).sha = 'd'.repeat(40);
+  const blind = virtualClock();
+  const movedTimeline = phases(blind, [[0, fixture(event(), 'in_progress')], [5 * pollMs, moved]]);
+  // A status poll reads the producer right after the budget check; a proof reads the repository first.
+  let previous = '';
+  const statusDown: GitHubRead = (endpoint) => {
+    const poll = endpoint === `${prefix}/actions/runs/100` && previous === 'rate_limit';
+    previous = endpoint;
+    return poll ? apiFailure() : movedTimeline(endpoint);
+  };
+  const stopped = await awaitMetadataQualification(env, event(), statusDown, blind, quiet);
+  assert.deepEqual(stopped, { ok: false, reason: 'Current PR inputs changed' });
+  assert.ok(blind.now() < 10 * pollMs, 'no blind wait until the deadline');
+});
+
+void test('waiting gates pause instead of spending the reserved API budget', async () => {
+  const resetAt = 20 * 60_000;
+  const clock = virtualClock();
+  const low = fixture(event(), 'completed');
+  low.set('rate_limit', { resources: { core: { limit: 1000, remaining: 100, reset: resetAt / 1000 } } });
+  const timeline = phases(clock, [[0, low], [resetAt, fixture(event(), 'completed')]]);
+  const reads: [number, string][] = [];
+  const result = await awaitMetadataQualification(env, event(), (endpoint) => {
+    reads.push([clock.now(), endpoint]);
+    return timeline(endpoint);
+  }, clock, quiet);
+  assert.equal(result.ok, true, result.reason);
+  assert.deepEqual(reads.filter(([time, endpoint]) => time < resetAt && endpoint !== 'rate_limit'), []);
+  assert.ok(reads.filter(([time]) => time < resetAt).length <= 2, 'one budget read per pause');
+  // An unreadable or malformed budget never blocks the gate.
+  for (const budget of [undefined, null, { resources: {} }, { resources: { core: { remaining: 0 } } }]) {
+    const data = fixture(event(), 'completed');
+    if (budget === undefined) data.delete('rate_limit');
+    else data.set('rate_limit', budget);
+    const instant = virtualClock();
+    const read: GitHubRead = (endpoint) => data.has(endpoint) ? Promise.resolve(structuredClone(data.get(endpoint))) : apiFailure();
+    assert.equal(await gate(event(), read, instant), true, JSON.stringify(budget));
+    assert.equal(instant.now(), 0);
+  }
+  // The pause is bounded by the deadline.
+  const exhausted = fixture(event(), 'in_progress');
+  exhausted.set('rate_limit', { resources: { core: { limit: 1000, remaining: 0, reset: 10 * METADATA_GATE.waitMs / 1000 } } });
+  const bounded = virtualClock();
+  assert.equal(await gate(event(), serve(exhausted), bounded), false);
+  assert.ok(bounded.now() <= METADATA_GATE.waitMs + METADATA_GATE.pollMs);
 });
 
 void test('completed real metadata qualification preserves continuity to its completed full producer', async () => {

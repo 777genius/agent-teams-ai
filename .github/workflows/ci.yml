@@ -517,7 +517,7 @@ jobs:
         with:
           node-version-file: .node-version
       # The script deadline (METADATA_GATE.waitMs, 90 min) fails the gate first;
-      # this timeout only bounds a hung API call. Either outcome is a failure.
+      # this timeout bounds the last proof after it. Either outcome is a failure.
       - name: Verify completed current-code qualification after metadata edits
         if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'
         timeout-minutes: 100

@@ -144,9 +144,13 @@ export function isMetadataOnlyPrEdit(eventName: unknown, event: unknown): boolea
  */
 export const METADATA_GATE = {
   waitMs: 90 * 60_000,
-  pollMs: 30_000,
+  pollMs: 60_000,
   retryMs: 20_000,
   rejections: 3,
+  // Waiting gates pause instead of using the last quarter of the token's core
+  // API budget (1000 requests per hour per repository for GITHUB_TOKEN), which
+  // stays available to plans, postmerge proofs and release workflows.
+  apiReserve: 0.25,
 } as const;
 
 export interface GateClock {
@@ -154,6 +158,13 @@ export interface GateClock {
   sleep: (ms: number) => Promise<unknown>;
 }
 const realClock: GateClock = { now: () => Date.now(), sleep: (ms) => sleep(ms) };
+
+interface GateContext {
+  read: GitHubRead;
+  clock: GateClock;
+  deadline: number;
+  log: (line: string) => void;
+}
 
 function isReadyMetadataEdit(env: Record<string, string | undefined>, event: unknown): boolean {
   return (
@@ -163,15 +174,41 @@ function isReadyMetadataEdit(env: Record<string, string | undefined>, event: unk
   );
 }
 
-/** Cheap status polling only; the caller re-authenticates every outcome. */
-async function untilProducerSettles(
-  read: GitHubRead,
-  producer: number,
-  deadline: number,
-  clock: GateClock
-): Promise<void> {
+/** `rate_limit` reads do not count against the budget; unknown budgets do not pause. */
+async function keepApiReserve({ read, clock, deadline, log }: GateContext): Promise<void> {
+  for (;;) {
+    let core: Record<string, unknown>;
+    try {
+      core = object(object(object(await read('rate_limit')).resources).core);
+    } catch {
+      return;
+    }
+    const { limit, remaining, reset } = core;
+    if (
+      typeof limit !== 'number' ||
+      typeof remaining !== 'number' ||
+      typeof reset !== 'number' ||
+      remaining >= limit * METADATA_GATE.apiReserve
+    )
+      return;
+    const pause = Math.min(
+      Math.max(reset * 1000 - clock.now(), METADATA_GATE.pollMs),
+      deadline - clock.now()
+    );
+    if (pause <= 0) return;
+    log(
+      `API budget ${remaining}/${limit} is below the reserve; pausing ${Math.ceil(pause / 1000)}s`
+    );
+    await clock.sleep(pause);
+  }
+}
+
+/** Polls only the run status; the caller re-proves after it settles or a read fails. */
+async function untilProducerSettles(producer: number, context: GateContext): Promise<void> {
+  const { read, clock, deadline } = context;
   while (clock.now() < deadline) {
     await clock.sleep(Math.min(METADATA_GATE.pollMs, deadline - clock.now()));
+    await keepApiReserve(context);
     try {
       if (object(await read(`repos/${REPOSITORY}/actions/runs/${producer}`)).status === 'completed')
         return;
@@ -201,23 +238,23 @@ export async function awaitMetadataQualification(
       reason: 'Only a ready PR title/body edit can carry existing qualification',
     };
   }
-  const deadline = clock.now() + METADATA_GATE.waitMs;
+  const context: GateContext = { read, clock, deadline: clock.now() + METADATA_GATE.waitMs, log };
   let rejections = 0;
   for (;;) {
+    await keepApiReserve(context);
     const proof = await proveMetadataProducer(env, event, read);
     if (proof.state === 'completed') return { ok: true, reason: proof.reason };
     rejections = proof.state === 'rejected' ? rejections + 1 : 0;
     if (rejections >= METADATA_GATE.rejections) return { ok: false, reason: proof.reason };
-    if (clock.now() >= deadline) {
+    if (clock.now() >= context.deadline) {
       return { ok: false, reason: `Deadline reached before qualification: ${proof.reason}` };
     }
     if (proof.state === 'rejected') {
       log(`Metadata proof failed (${rejections}/${METADATA_GATE.rejections}): ${proof.reason}`);
       await clock.sleep(METADATA_GATE.retryMs);
     } else {
-      // Re-proved only after the awaited run settles or a status read fails.
       log(`Waiting for https://github.com/${REPOSITORY}/actions/runs/${proof.producer}`);
-      await untilProducerSettles(read, proof.producer, deadline, clock);
+      await untilProducerSettles(proof.producer, context);
     }
   }
 }
