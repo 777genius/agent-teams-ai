@@ -3,6 +3,11 @@ name: OpenCode packaged Windows E2E
 on:
   workflow_dispatch:
     inputs:
+      native_arch:
+        description: Native Windows architecture; ARM64 qualifies V2 only
+        type: choice
+        options: [x64, arm64]
+        default: x64
       native_sdk_ref:
         description: 'Exact reviewed SDK SHA required for native tasks, source-only and provider-only; empty with both flags off keeps diagnostics'
         type: string
@@ -94,6 +99,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)
     uses: ./.github/workflows/opencode-native-windows-e2e.yml
     with:
+      arch: ${{ inputs.native_arch }}
       sdk_ref: ${{ inputs.native_sdk_ref }}
       model: ${{ inputs.native_model }}
       source_only: ${{ inputs.native_source_only }}

@@ -26,6 +26,7 @@ import { projectTaskPersistenceDifference } from './opencode-diagnostics/task-pe
 import { reprojectV2OwnedSessionDiagnostic, v2TerminalFailureReaderCode } from './opencode-diagnostics/v2-terminal-failure';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
+import { stageNativeCandidateSupport } from './opencode-native-windows-candidate';
 import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact } from './opencode-native-windows-command';
 import {
   realTaskPrompt,
@@ -1175,11 +1176,20 @@ async function bundledRuntime(executable: string, manifestFile: string) {
   assert(stat.isFile() && !stat.isSymbolicLink() && stat.size <= BUNDLED_MANIFEST_MAX_BYTES);
   preproofStage = 'manifest_read';
   const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as {
+    mode: string;
+    appSha: string;
     sdkSha: string;
+    platform: string;
+    runtimeArchiveSha256: string;
     files: Record<string, string>;
   };
   preproofStage = 'manifest_schema';
   assert(
+    manifest.mode === 'candidate_not_public_release' &&
+      /^[a-f0-9]{40}$/.test(manifest.appSha) &&
+      manifest.appSha === process.env.GITHUB_SHA &&
+      manifest.platform === `${process.platform}-${process.arch}` &&
+      /^[a-f0-9]{64}$/.test(manifest.runtimeArchiveSha256) &&
     /^[a-f0-9]{40}$/.test(manifest.sdkSha) &&
       manifest.files &&
       typeof manifest.files === 'object' &&
@@ -1235,7 +1245,9 @@ async function bundledRuntime(executable: string, manifestFile: string) {
   const digests = Object.fromEntries(entries.map(([relative], index) => [relative, observedDigests[index]]));
   preproofStage = 'runtime_commit';
   assert.equal((await readFile(path.join(base, 'COMMIT_SHA'), 'utf8')).trim(), manifest.sdkSha);
-  return { bundledSdkSha: manifest.sdkSha, runtimeDigests: digests };
+  return { bundledSdkSha: manifest.sdkSha, runtimeDigests: digests,
+    appSha: manifest.appSha, nativePlatform: manifest.platform,
+    candidateBaseArchiveSha256: manifest.runtimeArchiveSha256 };
 }
 async function exactFile(project: string, name: string, expected?: string) {
   const file = path.join(project, name);
@@ -2220,6 +2232,7 @@ async function main() {
     version,
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
+    candidateSupport: null as Awaited<ReturnType<typeof stageNativeCandidateSupport>> | null,
     nativeNodeDependency: null as null | { sha256: string; bytes: number },
     commandSyntax: [] as WindowsCommandSyntaxFact[],
     inboxObservations: [] as Awaited<ReturnType<typeof inboxFacts>>[],
@@ -2308,6 +2321,16 @@ async function main() {
   };
   preproofStage = 'proof_write';
   await checkpoint('startup');
+  if (sdk === 'bundled' && version.startsWith('2.')) {
+    preproofStage = 'candidate_support';
+    const archive = process.env.OPENCODE_NATIVE_CANDIDATE_SUPPORT_ARCHIVE;
+    const sdkRoot = process.env.OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT;
+    assert(archive && sdkRoot && path.isAbsolute(archive) && path.isAbsolute(sdkRoot), 'Explicit candidate support selection required');
+    proof.candidateSupport = await stageNativeCandidateSupport({ executable, sdkRoot, archive,
+      userData: desktop.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR!, testRoot: desktop.root,
+      expectedSdkSha: bundled.bundledSdkSha, env: desktop.env });
+    await checkpoint('startup');
+  }
   preproofStage = 'scenario';
   let app = await desktop.launch(executable).catch(async (error: unknown) => {
     proof.status = 'failed';

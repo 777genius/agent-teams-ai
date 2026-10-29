@@ -2,15 +2,15 @@
  * Resolves the exact OpenCode CLI pins for the native Windows real-task gate.
  *
  * The V2 pin is the newest release the selected runtime's registry records on
- * any platform. A runtime that does not yet qualify it for Windows x64 is
+ * any platform. A runtime that does not yet qualify it for the selected Windows target is
  * refused here, so qualifying it means running this gate on a candidate whose
- * registry adds win32-x64. V1 has no runtime registry; its exact TEST pin lives
+ * registry adds the selected platform. V1 has no runtime registry; its exact TEST pin lives
  * only here.
  *
  * The runtime's published release contract is printed too, so a staged
  * candidate pins it in runtime.lock.json the same way a real runtime pin does.
  *
- * Usage: bun scripts/e2e/opencode-native-windows-pins.ts <sdk-root> <all|v1|current>
+ * Usage: bun scripts/e2e/opencode-native-windows-pins.ts <sdk-root> <all|v1|current> [win32-x64|win32-arm64]
  * Prints `key=value` lines for GITHUB_OUTPUT.
  */
 import assert from 'node:assert/strict';
@@ -20,12 +20,14 @@ import { pathToFileURL } from 'node:url';
 
 import { readOpenCodeV2Contract } from '../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 
-const PLATFORM = 'win32-x64';
 const V1_PIN = '1.19.0';
 
-assert(process.argv.length === 4, 'Usage: opencode-native-windows-pins.ts <sdk-root> <versions>');
+assert(process.argv.length === 4 || process.argv.length === 5, 'Expected SDK root, versions and optional Windows platform');
+const PLATFORM = process.argv[4] ?? 'win32-x64';
+assert(['win32-x64', 'win32-arm64'].includes(PLATFORM), 'Unknown native Windows platform');
 const versions = process.argv[3]!;
 assert(['all', 'v1', 'current'].includes(versions), 'Unknown Windows version selection');
+assert(PLATFORM !== 'win32-arm64' || versions === 'current', 'Windows ARM64 qualifies V2 only');
 const lines = [`v1=${V1_PIN}`];
 if (versions !== 'v1') {
   const sdk = await realpath(path.resolve(process.argv[2]!));
