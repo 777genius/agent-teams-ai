@@ -85,6 +85,14 @@ function sqliteGateway(core: InternalStorageWorkerCore): CustomTeamTemplateStora
       Promise.resolve(
         core.handle('customTemplate.getById', request) as ReadCustomTeamTemplateRecordResult
       ),
+    customTeamTemplateUpdate: (request) =>
+      Promise.resolve(
+        core.handle('customTemplate.update', request) as any
+      ),
+    customTeamTemplateDelete: (request) =>
+      Promise.resolve(
+        core.handle('customTemplate.delete', request) as any
+      ),
   };
 }
 

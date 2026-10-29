@@ -70,6 +70,17 @@ describe('custom template count-based messages', () => {
     expect(excluded(22)).toBe('Исключено 22 удалённых участника.');
   });
 
+  it('selects the Russian plural forms for the copy dialog member count', async () => {
+    const t = await translator('ru');
+    const members = (count: number): string =>
+      t('customTemplates.copyBuiltin.membersCount', { count });
+
+    expect(members(1)).toBe('1 участник');
+    expect(members(3)).toBe('3 участника');
+    expect(members(7)).toBe('7 участников');
+    expect(members(21)).toBe('21 участник');
+  });
+
   it('falls back to English when a locale lacks the message', async () => {
     const t = await translator('de');
     expect(t('customTemplates.library.unreadableRecords', { count: 1 })).toBe(

@@ -21,8 +21,12 @@ import type {
   CreateCustomTeamTemplateRecordResult,
   CustomTeamTemplateUnreadableRecord,
   CustomTeamTemplateV1,
+  DeleteCustomTeamTemplateRecordRequest,
+  DeleteCustomTeamTemplateRecordResult,
   ListCustomTeamTemplateRecordsResult,
   ReadCustomTeamTemplateRecordResult,
+  UpdateCustomTeamTemplateRecordRequest,
+  UpdateCustomTeamTemplateRecordResult,
 } from '@features/custom-team-templates/contracts';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
@@ -102,6 +106,73 @@ function parseReadByIdPayload(payload: unknown): string {
   return payload.templateId;
 }
 
+function parseUpdatePayload(payload: unknown): UpdateCustomTeamTemplateRecordRequest {
+  if (!isPlainRecord(payload)) {
+    throw new Error('Invalid customTemplate.update payload: expected an object');
+  }
+  const { templateId, expectedRevision, template, contentHash } = payload;
+  if (typeof templateId !== 'string' || !templateId) {
+    throw new Error('Invalid customTemplate.update payload: templateId must be a non-empty string');
+  }
+  if (typeof expectedRevision !== 'number' || !Number.isInteger(expectedRevision)) {
+    throw new Error('Invalid customTemplate.update payload: expectedRevision must be an integer');
+  }
+  if (!isPlainRecord(template)) {
+    throw new Error('Invalid customTemplate.update payload: template must be an object');
+  }
+  const { name, description, schemaVersion, teamPrompt, members } = template;
+  if (typeof name !== 'string' || !name.trim()) {
+    throw new Error('Invalid customTemplate.update payload: name must be a non-blank string');
+  }
+  if (description !== undefined && typeof description !== 'string') {
+    throw new Error('Invalid customTemplate.update payload: description must be a string');
+  }
+  if (schemaVersion !== CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION) {
+    throw new Error(
+      `Invalid customTemplate.update payload: unsupported schemaVersion ${String(schemaVersion)}`
+    );
+  }
+  if (typeof teamPrompt !== 'string') {
+    throw new Error('Invalid customTemplate.update payload: teamPrompt must be a string');
+  }
+  const parsedMembers = parseTemplateMembers(members);
+  if (!parsedMembers) {
+    throw new Error('Invalid customTemplate.update payload: members must be allowlisted entries');
+  }
+  if (typeof contentHash !== 'string' || !contentHash) {
+    throw new Error(
+      'Invalid customTemplate.update payload: contentHash must be a non-empty string'
+    );
+  }
+  return {
+    templateId,
+    expectedRevision,
+    template: {
+      templateId,
+      name,
+      ...(description !== undefined ? { description } : {}),
+      schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+      teamPrompt,
+      members: parsedMembers,
+    },
+    contentHash,
+  };
+}
+
+function parseDeletePayload(payload: unknown): DeleteCustomTeamTemplateRecordRequest {
+  if (!isPlainRecord(payload)) {
+    throw new Error('Invalid customTemplate.delete payload: expected an object');
+  }
+  const { templateId, expectedRevision } = payload;
+  if (typeof templateId !== 'string' || !templateId) {
+    throw new Error('Invalid customTemplate.delete payload: templateId must be a non-empty string');
+  }
+  if (typeof expectedRevision !== 'number' || !Number.isInteger(expectedRevision)) {
+    throw new Error('Invalid customTemplate.delete payload: expectedRevision must be an integer');
+  }
+  return { templateId, expectedRevision };
+}
+
 /** Dispatches one `customTemplate.*` worker op; mirrors the other op families. */
 export function handleCustomTeamTemplateOp(
   ops: CustomTeamTemplateWorkerOps,
@@ -115,6 +186,10 @@ export function handleCustomTeamTemplateOp(
       return ops.list();
     case 'customTemplate.getById':
       return ops.getById(payload);
+    case 'customTemplate.update':
+      return ops.update(payload);
+    case 'customTemplate.delete':
+      return ops.remove(payload);
     default:
       throw new Error(`Unknown internal-storage op: ${op}`);
   }
@@ -203,6 +278,53 @@ export class CustomTeamTemplateWorkerOps {
       : { status: 'unreadable', templateId };
   }
 
+  /**
+   * Compare-and-swap update (Phase 2 / A3).
+   *
+   * The whole read-compare-write runs in one worker-side transaction: the
+   * stored revision must still equal `expectedRevision`, otherwise the
+   * current record is returned as `revisionConflict` and nothing is written.
+   * A successful update bumps the revision by exactly one and keeps the
+   * original `createdAt` (creation time is history, not editable content).
+   * The unique name index enforces the case-insensitive name policy; a clash
+   * with another template id surfaces as `nameTaken` instead of overwriting.
+   */
+  update(payload: unknown): UpdateCustomTeamTemplateRecordResult {
+    const request = parseUpdatePayload(payload);
+    const nameNormalized = normalizeTemplateNameKey(request.template.name);
+    if (!nameNormalized) {
+      throw new Error('Invalid customTemplate.update payload: name must not normalize to empty');
+    }
+    try {
+      return this.runUpdateTransaction(request, nameNormalized);
+    } catch (error) {
+      if (isSqliteBusyError(error)) {
+        return { status: 'retryable', reason: 'databaseBusy' };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Compare-and-swap delete (Phase 2 / A3).
+   *
+   * Deletes exactly one row when its stored revision still equals
+   * `expectedRevision`. There is deliberately no cascade: teams, tasks,
+   * messages, inboxes, sessions and histories live outside this table and are
+   * untouched — deleting a template only ever removes its own record.
+   */
+  remove(payload: unknown): DeleteCustomTeamTemplateRecordResult {
+    const request = parseDeletePayload(payload);
+    try {
+      return this.runDeleteTransaction(request);
+    } catch (error) {
+      if (isSqliteBusyError(error)) {
+        return { status: 'retryable', reason: 'databaseBusy' };
+      }
+      throw error;
+    }
+  }
+
   private runCreateTransaction(
     row: StoredCustomTeamTemplateRow
   ): CreateCustomTeamTemplateRecordResult {
@@ -279,5 +401,78 @@ export class CustomTeamTemplateWorkerOps {
       .where(eq(customTeamTemplates.nameNormalized, nameNormalized))
       .all() as StoredCustomTeamTemplateRow[];
     return rows[0] ?? null;
+  }
+
+  private runUpdateTransaction(
+    request: UpdateCustomTeamTemplateRecordRequest,
+    nameNormalized: string
+  ): UpdateCustomTeamTemplateRecordResult {
+    const orm = this.getOrm();
+    return orm.transaction((): UpdateCustomTeamTemplateRecordResult => {
+      const existing = this.selectById(orm, request.templateId);
+      if (!existing) {
+        return { status: 'notFound', templateId: request.templateId };
+      }
+      const stored = readStoredTemplate(existing);
+      if (stored.status !== 'readable') {
+        return { status: 'unreadable', templateId: request.templateId };
+      }
+      if (stored.template.revision !== request.expectedRevision) {
+        return { status: 'revisionConflict', current: stored.template };
+      }
+      const clashing = this.selectByName(orm, nameNormalized);
+      if (clashing && clashing.id !== request.templateId) {
+        return {
+          status: 'conflict',
+          reason: 'nameTaken',
+          existingTemplateId: clashing.id,
+        };
+      }
+      orm
+        .update(customTeamTemplates)
+        .set({
+          name: request.template.name,
+          nameNormalized,
+          description: request.template.description ?? null,
+          teamPrompt: request.template.teamPrompt,
+          membersJson: JSON.stringify(request.template.members),
+          contentHash: request.contentHash,
+          revision: request.expectedRevision + 1,
+        })
+        .where(eq(customTeamTemplates.id, request.templateId))
+        .run();
+      const refreshed = this.selectById(orm, request.templateId);
+      if (!refreshed) {
+        throw new Error(
+          `customTemplate.update lost its row mid-transaction: ${request.templateId}`
+        );
+      }
+      const reread = readStoredTemplate(refreshed);
+      if (reread.status !== 'readable') {
+        throw new Error(`customTemplate.update stored an unreadable row: ${request.templateId}`);
+      }
+      return { status: 'updated', template: reread.template };
+    });
+  }
+
+  private runDeleteTransaction(
+    request: DeleteCustomTeamTemplateRecordRequest
+  ): DeleteCustomTeamTemplateRecordResult {
+    const orm = this.getOrm();
+    return orm.transaction((): DeleteCustomTeamTemplateRecordResult => {
+      const existing = this.selectById(orm, request.templateId);
+      if (!existing) {
+        return { status: 'notFound', templateId: request.templateId };
+      }
+      const stored = readStoredTemplate(existing);
+      if (stored.status !== 'readable') {
+        return { status: 'unreadable', templateId: request.templateId };
+      }
+      if (stored.template.revision !== request.expectedRevision) {
+        return { status: 'revisionConflict', current: stored.template };
+      }
+      orm.delete(customTeamTemplates).where(eq(customTeamTemplates.id, request.templateId)).run();
+      return { status: 'deleted', templateId: request.templateId };
+    });
   }
 }

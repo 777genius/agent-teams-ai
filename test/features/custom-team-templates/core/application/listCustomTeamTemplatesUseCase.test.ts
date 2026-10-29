@@ -18,6 +18,8 @@ function gatewayWith(list: () => Promise<unknown>): CustomTeamTemplateStorageGat
     customTeamTemplateCreate: vi.fn(),
     customTeamTemplateList: list as CustomTeamTemplateStorageGateway['customTeamTemplateList'],
     customTeamTemplateGetById: vi.fn(),
+    customTeamTemplateUpdate: vi.fn(),
+    customTeamTemplateDelete: vi.fn(),
   };
 }
 
@@ -91,6 +93,8 @@ describe('ListCustomTeamTemplatesUseCase', () => {
           .fn()
           .mockResolvedValue({ templates: [template], unreadableRecords: [] }),
         customTeamTemplateGetById: getById,
+        customTeamTemplateUpdate: vi.fn(),
+        customTeamTemplateDelete: vi.fn(),
       },
     });
 

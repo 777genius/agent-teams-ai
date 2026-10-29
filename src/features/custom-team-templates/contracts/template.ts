@@ -62,3 +62,9 @@ export interface CustomTeamTemplateV1 extends CustomTeamTemplateContentV1 {
    */
   revision?: number;
 }
+
+export function resolveTemplateRevision(template: Pick<CustomTeamTemplateV1, 'revision'>): number {
+  return typeof template.revision === 'number' && Number.isInteger(template.revision)
+    ? template.revision
+    : 1;
+}

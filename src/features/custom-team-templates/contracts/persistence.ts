@@ -88,6 +88,32 @@ export type ReadCustomTeamTemplateRecordResult =
   | { status: 'notFound' }
   | { status: 'unreadable'; templateId: string };
 
+export interface UpdateCustomTeamTemplateRecordRequest {
+  templateId: string;
+  expectedRevision: number;
+  template: Omit<CustomTeamTemplateV1, 'createdAt' | 'revision'>;
+  contentHash: string;
+}
+
+export type UpdateCustomTeamTemplateRecordResult =
+  | { status: 'updated'; template: CustomTeamTemplateV1 }
+  | { status: 'revisionConflict'; current: CustomTeamTemplateV1 }
+  | { status: 'notFound'; templateId: string }
+  | { status: 'unreadable'; templateId: string }
+  | { status: 'conflict'; reason: 'nameTaken'; existingTemplateId: string }
+  | { status: 'retryable'; reason: 'databaseBusy' };
+
+export interface DeleteCustomTeamTemplateRecordRequest {
+  templateId: string;
+  expectedRevision: number;
+}
+
+export type DeleteCustomTeamTemplateRecordResult =
+  | { status: 'deleted'; templateId: string }
+  | { status: 'revisionConflict'; current: CustomTeamTemplateV1 }
+  | { status: 'notFound'; templateId: string }
+  | { status: 'unreadable'; templateId: string }
+  | { status: 'retryable'; reason: 'databaseBusy' };
 /**
  * Persistence port for the custom team template library.
  *
@@ -111,4 +137,10 @@ export interface CustomTeamTemplateStorageGateway {
   customTeamTemplateGetById(
     request: ReadCustomTeamTemplateRecordRequest
   ): Promise<ReadCustomTeamTemplateRecordResult>;
+  customTeamTemplateUpdate(
+    request: UpdateCustomTeamTemplateRecordRequest
+  ): Promise<UpdateCustomTeamTemplateRecordResult>;
+  customTeamTemplateDelete(
+    request: DeleteCustomTeamTemplateRecordRequest
+  ): Promise<DeleteCustomTeamTemplateRecordResult>;
 }

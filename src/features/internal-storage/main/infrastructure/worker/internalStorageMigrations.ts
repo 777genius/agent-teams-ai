@@ -193,6 +193,13 @@ const MIGRATIONS: InternalStorageMigration[] = [
         ON custom_team_templates (name_normalized)`,
     ],
   },
+  {
+    version: 7,
+    statements: [
+      `ALTER TABLE custom_team_templates ADD COLUMN revision INTEGER NOT NULL DEFAULT 1`,
+      `UPDATE custom_team_templates SET revision = 1 WHERE revision IS NULL`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -210,7 +217,16 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     }
     const apply = db.transaction(() => {
       for (const statement of migration.statements) {
-        db.exec(statement);
+        try {
+          db.exec(statement);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          // Keep migrations idempotent when a column already exists (for example
+          // when a database is re-migrated or a schema is partially upgraded).
+          if (!/duplicate column name/i.test(message)) {
+            throw error;
+          }
+        }
       }
       db.pragma(`user_version = ${migration.version}`);
     });
