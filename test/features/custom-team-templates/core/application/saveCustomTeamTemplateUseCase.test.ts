@@ -579,10 +579,13 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     expect(result.status).toBe('created');
     if (result.status !== 'created') return;
     expect(result.template.templateId).toBe(`${PREVIEW_ID}-2`);
+    expect(result.template.name).toBe('Release Pipeline');
 
     // Neither existing record is overwritten or changed.
     expect(library.rows.get(PREVIEW_ID)?.name).toBe('Occupied Original');
+    expect(library.rows.get(PREVIEW_ID)?.teamPrompt).toBe('Different content.');
     expect(library.rows.get(`${PREVIEW_ID}-1`)?.name).toBe('Occupied Candidate');
+    expect(library.rows.get(`${PREVIEW_ID}-1`)?.teamPrompt).toBe('Different content.');
 
     // Repeating the same save reconciles to alreadySaved for the new record,
     // not a third row.
@@ -593,6 +596,34 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     if (repeat.status !== 'alreadySaved') return;
     expect(repeat.template.templateId).toBe(`${PREVIEW_ID}-2`);
     expect(library.rows.size).toBe(3);
+  });
+
+  it('reports an id conflict instead of writing when every candidate id is occupied', async () => {
+    const library = libraryFixture();
+    const candidates = Array.from({ length: 8 }, (_, index) =>
+      index === 0 ? PREVIEW_ID : `${PREVIEW_ID}-${index}`
+    );
+    for (const templateId of candidates) {
+      library.rows.set(
+        templateId,
+        storedTemplate(templateId, {
+          name: `Occupied ${templateId}`,
+          teamPrompt: 'Different content.',
+        })
+      );
+    }
+
+    const preview = await preparedPreview({ gateway: library.gateway });
+    await expect(
+      useCase({ gateway: library.gateway }, preview.store).execute({ previewToken: preview.token })
+    ).resolves.toEqual({ status: 'templateIdConflict', templateId: PREVIEW_ID });
+
+    // The bounded search never writes over an occupied identity.
+    expect(library.rows.size).toBe(candidates.length);
+    expect(library.rows.has(PREVIEW_ID)).toBe(true);
+    for (const templateId of candidates) {
+      expect(library.rows.get(templateId)?.teamPrompt).toBe('Different content.');
+    }
   });
 
   it('retries a busy database with the identical request, then reports unavailability', async () => {
