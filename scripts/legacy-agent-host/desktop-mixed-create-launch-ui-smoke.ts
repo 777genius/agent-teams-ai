@@ -460,6 +460,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   proof.allHostChildrenBeforeStop = allHostChildren;
   proof.managementChildBeforeStop = managementChild;
   proof.nativeChildrenBeforeStop = children;
+  await ui.scrollTo('button[aria-label="Stop"]', 'visible original whole Team Stop control');
   await ui.click('button[aria-label="Stop"]', 'original whole Team Stop once', 'Stop');
   await poll(
     sessions,

@@ -876,6 +876,9 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
+            /private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
+            /private/tmp/TEST-desktop-backend-*/home/Downloads/**
             /private/tmp/TEST-desktop-backend-*/native-codex/config/config.toml
             /private/tmp/TEST-desktop-backend-*/native-codex/config/sessions/**
             /private/tmp/TEST-native-mixed-host-*/**
@@ -1000,6 +1003,32 @@ jobs:
         run: |
           set -euo pipefail
           resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/run-process-qualification.ts "$STAGE1_P7_INPUTS" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification.log"
+      - name: Preserve original process and packed proof receipts separately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-qualification-proof-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-process-qualification*.log
+            /private/tmp/TEST-stage1-p7-*/*.json
+            /private/tmp/TEST-stage1-p7-*/*.log
+            /private/tmp/TEST-stage1-p7-*/process-artifact/manifest.json
+            /private/tmp/TEST-stage1-p7-*/process-artifact/registered-process-darwin.c
+            /private/tmp/TEST-stage1-p7-*/process-artifact/registered-process.node
+            /private/tmp/TEST-stage1-p7-*/candidate/electron-builder.candidate.json
+            /private/tmp/TEST-stage1-p7-*/candidate/legacy-agent-host/candidate.json
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-native-ancestry-*/proof.ndjson
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.json
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.log
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.png
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
       - name: Preserve exact TEST inputs, original receipts and incomplete custody
         if: always()
         uses: actions/upload-artifact@v4

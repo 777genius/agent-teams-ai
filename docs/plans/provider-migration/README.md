@@ -66,62 +66,70 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 
 ## Текущий checkpoint интеграции — 29 октября
 
-**Текущий code candidate —
-[`42287f835`](https://github.com/777genius/agent-teams-ai/commit/42287f835025186d0bd4a11841c752488650209b):**
-семь TEST-файлов с двумя конечными исправлениями опубликованы поверх reviewed merge
-[`4e10a01bf`](https://github.com/777genius/agent-teams-ai/commit/4e10a01bf838bb7a92889dd35e1dde5a7342254a)
-с родителями `d408b1191` и `16e098d51`; tree `ae6e9b867`.
-Два разрешённых конфликта сохраняют native-release proof и новые original
-transcript bindings, отложенный cleanup и финальную остановку task clocks.
-Унаследованная ordinary OpenCode V2 delivery из main не подключает V2 к Stage1 Host:
-выбранный driver остаётся `createOpenCodeV1DriverFactory`.
+**Последний проверенный remote ref —
+[`36dfe44f0`](https://github.com/777genius/agent-teams-ai/commit/36dfe44f03239150ba63240ec13788085194bc00).**
+Владелец запустил original manual [CI 40889524010](https://github.com/777genius/agent-teams-ai/actions/runs/40889524010),
+attempt 1, и [CodeQL 40889529268](https://github.com/777genius/agent-teams-ai/actions/runs/40889529268)
+на этом exact head. Canonical Full qualification PASS; Source — **10 SUCCESS /
+1 Mixed FAIL**, поэтому весь CI остаётся FAILURE. Оба CodeQL analysis jobs PASS;
+сравнение branch findings через plugin API недоступно, zero-alert claim не делается.
+Ранее [canonical CI 40886172617](https://github.com/777genius/agent-teams-ai/actions/runs/40886172617)
+на том же `36dfe` дал 24 104 root PASS / 98 SKIP / 0 FAIL; эти totals не
+приписываются новому manual run. Эти результаты относятся к `36dfe`; TEST/workflow-правки ниже требуют нового exact-head прогона.
 
-**Исходный `d408`:** [CI 40754124612](https://github.com/777genius/agent-teams-ai/actions/runs/40754124612)
-имеет canonical Full qualification PASS, все четыре root shards, Validate,
-три lint scopes и Windows smoke SUCCESS. [CodeQL 40754129313](https://github.com/777genius/agent-teams-ai/actions/runs/40754129313)
-прошёл оба анализа. Source jobs — **9 SUCCESS / 2 FAIL**; original Mixed и
-Taskboard receipts остаются INCOMPLETE. Raw audit выполнен для Mixed, Taskboard,
-Codex Resume и conditional H3; это не независимая raw-приёмка остальных восьми UI jobs.
-Codex UI и actual all-three H3 приняты на собственных `d408` bytes:
-`cleanupConfirmed=true`, selections `alice/bob/carol`, три Host exit `0/null`,
-по 12 model observations и 0 model failures. P7 в этом run был SKIPPED.
+**Raw Source audit завершён в доступной границе:** девять остальных успешных jobs
+дают 12 original primary/paired receipts; отдельно приняты Codex Resume UI и
+conditional all-three H3. Все 11 primary UI receipts, включая Mixed INCOMPLETE,
+и три paired readbacks сохраняют 1 414 source pins, совпадающих с immutable
+`36dfe` Git blobs, без изменения before/after. Проверены семь Source checkpoint
+payload/history/source bindings; исходные Claude JSONL, epoch-1 compiled snapshot
+и original Downloads bytes не вошли в upload, поэтому их независимый rehash не заявлен.
+Taskboard attachments и три owner-routing epochs PASS в offline/same-Host границе;
+это не native M05. Pending-open сохраняет held/unknown debt; active input остаётся
+UNKNOWN после released custody. Review остаётся PARTIAL_OR_GAP, fullM13=false.
+Это границы исходных proofs; новых feature obligations из них не следует.
 
-**Две конечные TEST-коррекции опубликованы и независимо приняты.** Retained census
-`d408` установил четвёртого child: OpenCode management server `49358`, отдельно от
-runtime server `49357`. Mixed различает этот exact profile-bound manager и три
-runtime; Restart сохраняет Host и всех peers, заменяя только исходного Bob;
-whole-Team Stop требует отсутствия трёх runtime и сохранения только manager.
-Taskboard после одного исходного focus click ожидает прежнюю bounded readiness
-того же owner/surface/textarea перед единственным вводом текста. Новых controls,
-signals, повторных business actions или увеличенных deadlines нет.
+**Mixed: Group и изолированный Bob Restart — scoped PASS; Team Stop не достигнут.**
+Host и peers сохранены, старый Bob физически отсутствует, новый Bob выбран один раз;
+до Stop все три current sessions allocated/owned/nativeReady, inputs terminal,
+model observations 13/15/13 без failures. Original Stop не был нажат: read-only
+lookup завершился timeout до hover/click. Rehashed screenshot показывает main
+Team header выше viewport. В TEST подготовлена одна строка existing `ui.scrollTo`
+перед прежним click; deadlines, действия, product и process guards не меняются.
+Original receipt `c3a01770…` остаётся INCOMPLETE; поздний guarded Quit не заменяет Stop
+и не даёт отдельного физического наблюдения Host absence.
 
-**Локальные результаты на `42287f`:** genuine Host/ledger build и strict
-`pnpm typecheck:legacy-host-scripts` PASS; три существующие TEST suites —
-**36 PASS / 0 FAIL / 0 SKIP**, включая четыре новые регрессии. Отдельно store/Stop
-suites 50/50, source-size/provisioning guards и diff check PASS; четыре конечные
-регрессии также независимо прошли 4/4. Local toolchain — Linux Node 24.22.1,
-Host compiler 7.0.2, pnpm 11.25.0 при repo request 11.22.0; frozen lock не менялся.
-Это не actual macOS/native приёмка исправленных workflows.
-Автоматический [CI 40873748288](https://github.com/777genius/agent-teams-ai/actions/runs/40873748288)
-дал Fast feedback PASS; Full qualification ожидаемо отказал при Draft
-`MODE_FULL=false` — это не выполненная canonical qualification.
-Новый final-ref canonical/CodeQL, Source11/H3 и rebuilt packed P7 **ещё не выполнены**.
-Изменившиеся Desktop bytes после main merge требуют actual нового packed candidate;
-прежний scoped P7 `095` сохраняет только собственные source/artifact границы.
+**Codex Resume и H3 относятся только к `36dfe`.** Codex сохраняет native thread,
+исходный JSONL/history prefix независимо rehashed, original helper отсутствует
+после Stop. H3 подтверждает selections alice/bob/carol, три Host exit 0/null,
+по 12 observations без model failures, шесть closed/sealed/released sessions;
+проверены все шесть checkpoint digests и unchanged native identities.
 
-Остаток ограничен existing combined CI на окончательном ref
+**P7 job 123502222513 — SUCCESS, независимый raw audit заблокирован.** Original
+artifact 12904338988 имеет 3 151 799 533 bytes при plugin limit 536 870 912;
+его raw receipts не прочитаны, **P7 raw ACCEPT не заявлен**. Подготовлен отдельный
+bounded proof upload с original receipts/logs/state/screenshots и малым pinned
+`registered-process.node` рядом с manifest/C source; existing full upload сохранён.
+Будущий proof позволяет rehash этого модуля, но не omitted Electron/app.asar/SDK/
+provider binaries и runtime/renderer/terminal trees. Три Source retention paths
+добавляют только private TEST Claude JSONL, epoch-1 bundles и home/Downloads.
+Будущие uploads не закрывают пробелы исходного `36dfe` задним числом.
+
+**Локально после одной Mixed navigation правки:** существующие три fixture suites
+36 PASS / 0 FAIL / 0 SKIP; strict scripts types и diff check PASS. Pinned local
+prettier/eslint executables отсутствуют: их wrapper attempts не считаются PASS.
+Новые TEST/workflow bytes ещё не имеют fresh canonical/native/CodeQL результата.
+После commit/push нужен existing combined manual CI на exact новом head
 (`stage1_desktop=true`, `stage1_process_diagnostic=false`,
-`stage1_process_qualification=true`), manual CodeQL на том же ref и аудитом
-исходных final receipts/source freezes. Используемый GitHub plugin поддерживает
-чтение и rerun существующих jobs, но не предоставляет новый `workflow_dispatch`
-с inputs; поэтому эти gates пока не запущены. Подробности и exact receipts — в
-[checkpoint](progress/checkpoint-2026-10-27.md#29-october-current-main-integration-and-bounded-test-corrections).
-Сохранён [sanitized d408 audit](evidence/d408-source-and-h3-audit.json),
-SHA256 `656e3019eff9f886488b2e1282646fbbf2ff3100613efdf494eed216952732b9`.
-Original M19 root911 остаётся immutable SDK-custody HOLD; fresh runs не закрывают
-его долг и не квалифицируют original live cold Stop. Real auth/other-OS/release
-остаются отдельными ограничениями. **Stage1 не завершён; PR остаётся Draft,
-без merge в main/release, публикации или default activation.**
+`stage1_process_qualification=true`), manual CodeQL и raw audit original artifacts.
+Нового selector, replay исходного failed run или business-action retry нет.
+
+Полные sanitized refs и границы — [36dfe audit](evidence/36dfe-source-and-native-audit.json)
+и [новый checkpoint](progress/checkpoint-2026-10-27.md#29-october-exact-36dfe-raw-audit-and-bounded-follow-up).
+Original M19 root911 остаётся immutable SDK-custody HOLD; full live cold Stop,
+real auth, other-OS и release/default activation не квалифицированы.
+**Stage1 P0–P8/M01–M19, existing UI и OpenCode V1 only; Stage2/V2 Host не входят
+в работу. Stage1 не завершён; PR Draft, без merge/release/publication/default activation.**
 
 ### Исторические snapshots интеграции
 

@@ -6784,3 +6784,100 @@ proofs and fresh released runs do not qualify original live cold Stop or release
 that SDK root. Real authentication, other native OS tuples and release/default
 activation remain unqualified. Full Stage1 completion is not claimed. PR stays
 Draft; no merge into main/release, publication, ownership adoption or replay.
+
+
+### 29 October: exact 36dfe raw audit and bounded follow-up
+
+This supersedes only the prior pending-status summary. Original manual
+[CI 40889524010](https://github.com/777genius/agent-teams-ai/actions/runs/40889524010),
+attempt 1, and [CodeQL 40889529268](https://github.com/777genius/agent-teams-ai/actions/runs/40889529268)
+bind exact published `36dfe44f03239150ba63240ec13788085194bc00`.
+Canonical Full qualification passes; Source jobs are 10 SUCCESS / 1 Mixed FAIL,
+so the combined run remains FAILURE. Both CodeQL analyses pass. The plugin API
+cannot retrieve the branch code-scanning comparison; no zero-alert claim follows.
+Earlier canonical 40886172617 on the same head passed 24,104 root tests / 98 SKIP /
+0 FAIL. Those counts are not attributed to the later manual run.
+
+The [sanitized combined audit](../evidence/36dfe-source-and-native-audit.json)
+SHA256 is `3b414eb0fc8e8c0794222b575b56ceb78d56f9867fdfdff42666f249cfc099c5`.
+It preserves artifact IDs, verified accessible ZIP hashes, exact original
+receipt digests, immutable Git source matches and each raw-audit limit. No signed
+URLs, credentials, bulk logs or retrospective acceptance are embedded.
+
+The independent Source audit accepts nine successful jobs /12 original primary
+and paired receipts; Codex primary UI and H3 are independently audited below.
+Together all 11 primary UI receipts, including Mixed INCOMPLETE, plus three paired
+readbacks retain 1,414 before/after source pins matching immutable 36dfe Git blobs.
+Seven Source checkpoint payload/logical-history/source-binding digests verify.
+Taskboard attachments and three owner-routing epochs pass; its offline/same-Host
+Cross-Team controls do not qualify a live native M05 provider path.
+
+Explicit Source limits remain: several app wrappers require exact-identity
+SIGTERM before empty-group/Host-absence confirmation. No universal natural exit
+or separately exposed Host exit code is claimed. Original Claude native JSONL,
+first-epoch compiled snapshot and downloaded attachment bytes are omitted from
+these uploads; their frozen receipt assertions are not independent raw rehashes.
+Pending-open Quit/readback retains sealed held/unknown/open-unknown debt. Active
+input is UNKNOWN after released custody, and queued input is cancelled. Review
+retains PARTIAL_OR_GAP, fullM13=false and unsafePromotion=false. Captured-stopped
+import remains the finite Node fixture, not old SDK custody qualification.
+These are preserved proof limits, not new feature work or universal M13 tooling.
+
+Original Mixed receipt SHA256 is
+`c3a017709ed7b881b624e2c0885e8d22d58164db10bcc33e8288f44e10e58fc0`.
+Group delivery and isolated Bob Restart pass in their own captured scope. Host 5867,
+management 6159 and both runtime peers remain unchanged; old Bob 7909 is absent,
+new Bob 8837 selected once. The complete post-Restart and pre-Stop child lists match.
+All three selected sessions are allocated/owned/nativeReady; all inputs terminal;
+model observations are 13/15/13, failures 0, with exact six-line effects
+`ONE\nONE\nONE\nTWO\nTWO\nTWO\n`.
+
+The failure is `UI read timed out: original whole Team Stop once; no mutation retry`.
+There is no Stop hover or click step: the first read-only target lookup failed,
+before any original Stop dispatch. Screenshot SHA256
+`d15123d11855a7eea08a9ae0c8e13e2c4982f506a50c2097ec3fda04f52a8677`
+shows the Team header above the scrolled viewport; renderer visible/focused,
+no dialog. The snapshot does not retain a Stop DOM rectangle/count, so no such
+original geometry is invented. One TEST-only existing `ui.scrollTo` is prepared
+before the unchanged click, matching analogous Create/Launch/Resume/Group/Review
+flows. No timeout, retry, product behavior or process proof assertion changes.
+The receipt remains INCOMPLETE. Guarded failure Quit later exits app 0/null with
+empty wrapper cleanup, but capturedHostObserved=false /capturedHostAbsent=null;
+it does not qualify original Team Stop or independently observed Host absence.
+
+Codex UI receipt `d042fd62…` passes ONE/TWO on the same native identity. Its native
+JSONL and original history prefix are independently rehashed; original helper 7227
+is absent after Stop, custody released before Quit, and both app epochs close 0/null.
+H3 receipt `27326e3d…` passes cleanupConfirmed=true and exactly alice/bob/carol
+restore selections. Three Hosts exit 0/null; every provider has 12 observations /
+0 model failures. All six physical checkpoint payload digests and native identity
+continuity verify; six sessions are closed/sealed/released. Harness and Host
+source hashes match immutable36dfe. These results do not qualify new source bytes.
+
+P7 job 123502222513 reports SUCCESS, but original artifact 12904338988 has
+3,151,799,533 bytes, above the plugin download cap 536,870,912. Original raw receipts
+are inaccessible through that interface: raw P7 ACCEPT is not claimed. The new
+existing-workflow upload retains bounded receipts/logs/state/screenshots plus the
+small pinned registered-process.node, its manifest and C source, separately from
+the unchanged full artifact. The small module can be independently rehashed;
+omitted large Electron/app.asar/SDK/provider binaries and runtime/renderer/terminal
+trees cannot be rehashed from that proof alone. Three private TEST Source paths
+retain future Claude JSONL, cold-resume epoch1 bundles and home/Downloads files.
+These delivery changes introduce no scenario, selector or original action replay,
+and cannot retroactively fill missing bytes or qualify the original P7 run.
+
+Existing local selected fixtures pass 36/36, 0 FAIL/SKIP after the one navigation line;
+strict legacy Host script types and diff check pass. Local pinned prettier/eslint
+executables are missing; those attempts are not PASS. New workflow/source bytes
+need fresh exact-head qualification after commit/push: one existing combined
+manual CI with stage1_desktop=true, stage1_process_diagnostic=false and
+stage1_process_qualification=true, plus manual CodeQL, followed by original raw
+receipt/source/payload audit. The owner has offered the necessary dispatch;
+no unsupported plugin workaround, blind rerun or failed business-action retry is used.
+
+The prior 447,289 checkpoint bytes remain unchanged. Original M19 root911 remains
+immutable SDK-custody HOLD; fresh normal/cold-read-only/released proofs do not
+qualify original live cold Stop or release that SDK root. Stage1 P0–P8/M01–M19,
+existing UI and OpenCode V1-only scope remain; Stage2 and V2 Host integration are
+excluded. Full Stage1, real authentication, other native OS tuples and release/
+default activation remain unqualified. PR stays Draft; no merge/release/publication.

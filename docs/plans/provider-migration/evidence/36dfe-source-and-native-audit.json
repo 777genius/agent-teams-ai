@@ -1,0 +1,763 @@
+{
+  "schemaVersion": 1,
+  "head": "36dfe44f03239150ba63240ec13788085194bc00",
+  "run": 40889524010,
+  "attempt": 1,
+  "scope": "Original manual exact-36dfe CI/CodeQL artifacts only; prepared follow-up changes are separate and have no native result.",
+  "ci": {
+    "url": "https://github.com/777genius/agent-teams-ai/actions/runs/40889524010",
+    "canonicalFullQualification": "SUCCESS",
+    "sourceJobs": {
+      "success": 10,
+      "failure": 1,
+      "failedCase": "native-mixed-create-launch-ui"
+    },
+    "overall": "FAILURE",
+    "exactRootTotalsForThisRun": "not independently established here",
+    "earlierCanonicalRun": {
+      "id": 40886172617,
+      "head": "36dfe44f03239150ba63240ec13788085194bc00",
+      "rootPassed": 24104,
+      "rootSkipped": 98,
+      "rootFailed": 0,
+      "scope": "Earlier canonical run; these totals are not attributed to 40889524010."
+    }
+  },
+  "codeql": {
+    "run": 40889529268,
+    "head": "36dfe44f03239150ba63240ec13788085194bc00",
+    "jobs": [
+      {
+        "id": 123502240544,
+        "name": "javascript-typescript",
+        "conclusion": "success",
+        "uploadCompleteAt": "2026-10-29T14:24:47.5100968Z"
+      },
+      {
+        "id": 123502240922,
+        "name": "actions",
+        "conclusion": "success",
+        "uploadCompleteAt": "2026-10-29T14:20:38.7966573Z"
+      }
+    ],
+    "branchFindingComparison": "UNAVAILABLE: GitHub Fetch rejects code-scanning/alerts endpoint INVALID_ARGUMENT400"
+  },
+  "artifacts": [
+    {
+      "id": 12906386151,
+      "name": "stage1-source-desktop-stopped-import-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 1235444,
+      "advertisedSha256": "e28e867dbc3534bd42bac19e8ca57b1974f78f1436d9e25a554f21a1b121a565",
+      "rehashSha256": "e28e867dbc3534bd42bac19e8ca57b1974f78f1436d9e25a554f21a1b121a565"
+    },
+    {
+      "id": 12906066472,
+      "name": "stage1-source-desktop-native-quit-active-readback-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 753573,
+      "advertisedSha256": "24b87a9b076f49782981a5ca713b73d7fad77c369f790727a10d992edf9f7aa1",
+      "rehashSha256": "24b87a9b076f49782981a5ca713b73d7fad77c369f790727a10d992edf9f7aa1"
+    },
+    {
+      "id": 12905971675,
+      "name": "stage1-source-desktop-native-review-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 1207958,
+      "advertisedSha256": "8734588ab2e8e5fc9dbf1408d383bb9cc71840aa95995602caebdd1eb35565ac",
+      "rehashSha256": "8734588ab2e8e5fc9dbf1408d383bb9cc71840aa95995602caebdd1eb35565ac"
+    },
+    {
+      "id": 12905791157,
+      "name": "stage1-source-desktop-native-codex-resume-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 42263841,
+      "advertisedSha256": "be6f6dae5f30f3c5acc2778e2f3bcabb0eb88fa570af868f4fb353f22336655d",
+      "rehashSha256": "be6f6dae5f30f3c5acc2778e2f3bcabb0eb88fa570af868f4fb353f22336655d"
+    },
+    {
+      "id": 12905596000,
+      "name": "stage1-source-desktop-task-board-cross-team-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 5610910,
+      "advertisedSha256": "54c4018251ec44d50150abe0dc76f74987b6e87618d16ad9d6cdc41a21ebfc08",
+      "rehashSha256": "54c4018251ec44d50150abe0dc76f74987b6e87618d16ad9d6cdc41a21ebfc08"
+    },
+    {
+      "id": 12905305325,
+      "name": "stage1-source-desktop-native-create-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 446468,
+      "advertisedSha256": "f9a3b9a08da20ac6c33fd241997f6569fbe11afef80ef0f90c1073abb39f4576",
+      "rehashSha256": "f9a3b9a08da20ac6c33fd241997f6569fbe11afef80ef0f90c1073abb39f4576"
+    },
+    {
+      "id": 12905172311,
+      "name": "stage1-source-desktop-native-resume-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 687302,
+      "advertisedSha256": "1794d91b301c887ba71c1d47105f5ab4ee31273b5f007f0702696973552853e7",
+      "rehashSha256": "1794d91b301c887ba71c1d47105f5ab4ee31273b5f007f0702696973552853e7"
+    },
+    {
+      "id": 12905038078,
+      "name": "stage1-source-desktop-stopped-import-native-launch-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 1320759,
+      "advertisedSha256": "b9c55c7e3e211f8c8c430b02f27efc63c8ba7e4d769e4da07f1cbc93c5380562",
+      "rehashSha256": "b9c55c7e3e211f8c8c430b02f27efc63c8ba7e4d769e4da07f1cbc93c5380562"
+    },
+    {
+      "id": 12904781491,
+      "name": "stage1-source-desktop-native-mixed-create-launch-ui-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 819269,
+      "advertisedSha256": "d9238d2ade16eedec0438646ec9ead714b8e2aea106bdd1c505f0473d1db9737",
+      "rehashSha256": "d9238d2ade16eedec0438646ec9ead714b8e2aea106bdd1c505f0473d1db9737"
+    },
+    {
+      "id": 12904692915,
+      "name": "stage1-source-desktop-native-create-member-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 502434,
+      "advertisedSha256": "74df796edc816a40a56e9ef904993d6452487c61db7fb9029aa1f47e2dfdc282",
+      "rehashSha256": "74df796edc816a40a56e9ef904993d6452487c61db7fb9029aa1f47e2dfdc282"
+    },
+    {
+      "id": 12904338988,
+      "name": "stage1-process-qualification-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 3151799533,
+      "advertisedSha256": "309d0cac1fa07690e059b0b02deb447d4acc72390983d8ba4c284cc18a511e5f",
+      "rehashSha256": null
+    },
+    {
+      "id": 12904134340,
+      "name": "stage1-source-desktop-native-quit-pending-open-readback-36dfe44f03239150ba63240ec13788085194bc00",
+      "sizeBytes": 760701,
+      "advertisedSha256": "a31f654c8932873629a11be402b256c6d4a309db80b2796c2bd935295fba19b3",
+      "rehashSha256": "a31f654c8932873629a11be402b256c6d4a309db80b2796c2bd935295fba19b3"
+    }
+  ],
+  "source": {
+    "summary": {
+      "successfulJobsAudited": 9,
+      "originalReceiptsAudited": 12,
+      "sourcePinsPerReceipt": 1414,
+      "allPinsMatchExactImmutableCommit": true,
+      "checkpointPayloadsAndBindingsRecomputed": 7,
+      "issues": [],
+      "pendingOpenOutcome": "PASS safe shutdown/readback with held/unknown open-unknown custody debt retained"
+    },
+    "receipts": [
+      {
+        "artifactId": "12905305325",
+        "originalPreparedLog": "stage1-desktop-native-create-ui.log",
+        "sha256": "b60467ceb28a8afb4a71a0b8a1d2246d633afc3ef45bb99a550053cdc5a03ad0",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": null,
+        "cleanupAppSignalCode": "SIGTERM",
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12904692915",
+        "originalPreparedLog": "stage1-desktop-native-create-member.log",
+        "sha256": "c6b0b88efd0725ec63a5e5c2d61e79739b09db38a72d2406903ac7b6013eb3a9",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": null,
+        "cleanupAppSignalCode": "SIGTERM",
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12905038078",
+        "originalPreparedLog": "stage1-desktop-stopped-import-native-launch.log",
+        "sha256": "fdef330ac561e41430cad0ecd170e16f6c7aa1989a40cfb7dac60d302bd81dd1",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": null,
+        "cleanupAppSignalCode": "SIGTERM",
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12906386151",
+        "originalPreparedLog": "stage1-desktop-stopped-import-ui.log",
+        "sha256": "81b7ca456bc0e151e092ec5ae25cf837738fada6bb83e271ba1fb2163a3e7f6b",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": null,
+        "cleanupAppSignalCode": "SIGTERM",
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12905172311",
+        "originalPreparedLog": "stage1-desktop-native-resume-ui.log",
+        "sha256": "3fbff1099276c778aaa8e014dd7fbc358e62e1003d3911edccebb53820f24ca2",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": 0,
+        "cleanupAppSignalCode": null,
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12906066472",
+        "originalPreparedLog": "stage1-desktop-native-quit-active-readback.log",
+        "sha256": "18a76513f67846724d4b43d48d8967ed7b74bc795b0f3083f5f78b6868a1a4a8",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": 0,
+        "cleanupAppSignalCode": null,
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12906066472",
+        "originalPreparedLog": "stage1-readback-native-quit-active-readback.log",
+        "sha256": "51a11983e09b06092f92aeb956a3ce6d1063f68a42fd06e7d9700563e4997914",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": 0,
+        "cleanupAppSignalCode": null,
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12904134340",
+        "originalPreparedLog": "stage1-desktop-native-quit-pending-open-readback.log",
+        "sha256": "00f909c422e70d5dec77e7b2c75a3ed27207cbbb07ba4962b1797f1c98da9175",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": 0,
+        "cleanupAppSignalCode": null,
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12904134340",
+        "originalPreparedLog": "stage1-readback-native-quit-pending-open-readback.log",
+        "sha256": "af54422a70a7ef5a3c8b60682929884f581721c6238c739094e7a1d5a5bc1470",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": 0,
+        "cleanupAppSignalCode": null,
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12905971675",
+        "originalPreparedLog": "stage1-desktop-native-review-ui.log",
+        "sha256": "cca6f003ee52c0c3eecfc14b37c1017d6777debd0c9188ded95ce8264a652468",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": null,
+        "cleanupAppSignalCode": "SIGTERM",
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12905971675",
+        "originalPreparedLog": "stage1-readback-native-review-ui.log",
+        "sha256": "f4f836c5c4e116931a1d7ef022af4f90f9f6560445eaf234637e02562f57dfeb",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": 0,
+        "cleanupAppSignalCode": null,
+        "capturedHostAbsent": true
+      },
+      {
+        "artifactId": "12905596000",
+        "originalPreparedLog": "stage1-desktop-task-board-cross-team-ui.log",
+        "sha256": "6c97bfba3efc6fc4b65f471f176fdcde07b870a74b2e61f8b534eadc21308899",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "cleanupAppExitCode": null,
+        "cleanupAppSignalCode": "SIGTERM",
+        "capturedHostAbsent": true
+      }
+    ],
+    "scope": "Nine original successful Source11 jobs, twelve primary/readback receipts. Codex/H3 audited separately.",
+    "selectedBoundaries": {
+      "taskboard": {
+        "allSevenProofsPass": true,
+        "attachmentsUi": "PASS",
+        "ownerEpochs": [
+          {
+            "phase": "default-b",
+            "status": "PASS",
+            "descriptorAndBindingFilesRehashed": true,
+            "hostsAbsent": true
+          },
+          {
+            "phase": "unavailable-a",
+            "status": "PASS",
+            "descriptorAndBindingFilesRehashed": true,
+            "hostsAbsent": true
+          },
+          {
+            "phase": "rollback-a",
+            "status": "PASS",
+            "descriptorAndBindingFilesRehashed": true,
+            "hostsAbsent": true
+          }
+        ],
+        "scope": "Offline Task board and same-Host cross-Team product controls; no native execution/full M05."
+      },
+      "activeQuit": {
+        "scenario": "active-plus-queued",
+        "runtimeOutcome": "closed-released",
+        "debtRetained": false,
+        "nativeChildrenAbsent": true,
+        "originalGroupAbsentBeforeHarnessCleanup": true,
+        "writerLockReleased": true,
+        "productAndInputIdentityUnchanged": true,
+        "inputBefore": [
+          "consumed",
+          "admitted"
+        ],
+        "inputAfter": [
+          "unknown",
+          "cancelled"
+        ],
+        "coldReadbackSameRootSessionProduct": true,
+        "unchangedThroughSecondQuit": true
+      },
+      "pendingOpenQuit": {
+        "scenario": "pending-open",
+        "runtimeOutcome": "held-unknown",
+        "debtRetained": true,
+        "nativeChildrenAbsent": true,
+        "originalGroupAbsentBeforeHarnessCleanup": true,
+        "writerLockReleased": true,
+        "productAndInputIdentityUnchanged": true,
+        "inputBefore": [],
+        "inputAfter": [],
+        "coldReadbackSameRootSessionProduct": true,
+        "unchangedThroughSecondQuit": true
+      },
+      "review": {
+        "taskId": "933ea8b2-1ca1-57b0-8401-0afb1317392d",
+        "canonicalEventsMatched": true,
+        "eventCount": 7,
+        "originalReceiptDigestLinked": true,
+        "coldNativeAllocations": 0,
+        "coldNativeInputs": 0,
+        "runtimeEventsDecisionsUnchanged": true,
+        "partialStatus": "PARTIAL_OR_GAP",
+        "fullM13": false,
+        "unsafePromotion": false,
+        "requiredTuple": "positive-failed-post-hook-and-background",
+        "eventualOutcome": "observed-native-completion"
+      }
+    },
+    "limits": [
+      "Source Desktop and localhost scripted inference only; no real-provider authentication or packed/installed acceptance",
+      "No new whole Stage1/M13/M19 acceptance; historical root911 SDK-custody HOLD remains",
+      "Exact-identity SIGTERM wrapper cleanup does not prove normal wrapper exit",
+      "Mixed remains INCOMPLETE; post-failure Quit state cannot qualify original Stop",
+      "Source artifact upload omits native-claude/config/projects/** and cold-resume-epoch1-bundles/**. Claude native history/prefix and first-epoch compiled-bundle hash assertions remain frozen-harness receipt evidence, not independently rehashed retained bytes.",
+      "Taskboard original downloaded attachment under home/Downloads is omitted by upload; size/hash/native-picker=false are retained receipt assertions, not an independent rehash of the downloaded file."
+    ],
+    "planScopeJudgment": {
+      "result": "No additional implementation or new scenario obligation discovered by partial-review/offline-cross-Team/pending-open statuses. Final exact-ref qualification and substantive candidate review remain required.",
+      "M13": {
+        "source": "docs/plans/provider-migration/compatibility-matrix.md:74-82; stage-1-contracts.md:10 Task lifecycle and evidence/review",
+        "finding": "Selected supported behavioral proofs are accepted collectively; partial rows and unsafe authorship remain gap/nonreviewable. Individual fullM13:false does not require universal tool attribution."
+      },
+      "M05": {
+        "source": "docs/plans/provider-migration/compatibility-matrix.md:55-60; progress/checkpoint-2026-10-27.md: Current merged base and independent TEST-fix audit; stage-1-legacy-host.md:9",
+        "finding": "Retained native Cross-Team own-ref proof and affected real store/MCP composition regressions complement current offline UI. No new native scenario absent a concrete changed provider/transport finding. Current Mixed actual group/Restart/whole Stop remains the known incomplete workflow."
+      },
+      "pendingOpen": {
+        "source": "docs/plans/provider-migration/compatibility-matrix.md:M08 and M18; stage-1-legacy-host.md:P8.2 and Definition of done",
+        "finding": "Safe Quit may retain unresolved custody debt. The observed pending-open held/unknown outcome is explicit and must never be reported released."
+      },
+      "completionBoundary": {
+        "source": "docs/plans/provider-migration/stage-1-legacy-host.md:P8 and 10 Definition of done; current checkpoint final paragraph",
+        "finding": "Green Source11 alone cannot establish full Stage1. Selected exact-ref Source/H3/P7/canonical/CodeQL and substantive handoff review remain required. Historical root911 HOLD, auth, other OS tuples and release/default activation stay separate/unqualified."
+      }
+    }
+  },
+  "codexResume": {
+    "status": "PASS",
+    "receiptSha256": "d042fd6240977c58e2c2de6b82e442853fa5bbec37d4e74496c44f9ccb609c9d",
+    "sourcePins": 1414,
+    "immutableGitMatch": true,
+    "beforeAfterEqual": true,
+    "nativeInputsBeforeAfterEqual": true,
+    "checkpoints": [
+      {
+        "reference": "cp1-0db70730cf49238ca7d4ae2e7bb1b858ddf5bd65b6859b35c4f3c884b3e2840a",
+        "fileSha256": "772222a8a806df19290ac946a2fdd7b29041132c2b99a3480c8aea7b539f5352",
+        "digestMatched": true
+      },
+      {
+        "reference": "cp1-104f670423895661dab4caad4f81ccbaaab1623882256574c1dae926a5070eda",
+        "fileSha256": "0e35d9a38ac8ef0e396f39a07bc487e7c3a98a1ccab2e6d137efb565d58e16b3",
+        "digestMatched": true
+      }
+    ],
+    "sameNativeIdentity": true,
+    "nativeIdentityDigest": "39bd2ea20e5338ef9c44cc70f238efe498f4a39429c3e7300b117e20f63d6acb",
+    "nativeHistoryFileSha256": "8eee9bb5ad7b7f96d78d407e8caae3ba2e04cd12a066f6d18cd2414dead3b2bf",
+    "originalHistoryPrefixRehashed": true,
+    "helperAbsentAfterStop": true,
+    "releasedBeforeQuit": true,
+    "beforeHarnessCleanup": [],
+    "firstCleanup": {
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "writerLockReleased": true
+    },
+    "cleanup": {
+      "scope": "second captured app epoch; firstCleanup retained separately",
+      "processGroup": 5985,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    }
+  },
+  "h3": {
+    "status": "PASS",
+    "receiptSha256": "27326e3dde072a8694e8089414840c4ae49f0e59d1b0b70f4bd461aeccc0fbd2",
+    "cleanupConfirmed": true,
+    "hostFacts": [
+      {
+        "pid": 7940,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "pid": 7978,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "pid": 8026,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelObservationCounts": [
+      12,
+      12,
+      12
+    ],
+    "modelFailureCounts": [
+      0,
+      0,
+      0
+    ],
+    "hostSourceTreeSha256": "226129eb1873a50db84de204ac8156299ba0fc145df414b25c96f64d628e515c",
+    "hostSourceImmutableGitMatch": true,
+    "harnessSha256": "6ca1ed67bd4e1b3eaaf480bf8af216ff9d3cee87f536951fe57cb251d04f3e04",
+    "harnessImmutableGitMatch": true,
+    "checkpoints": [
+      {
+        "file": "store/runtime-checkpoints/cp1-a719cb22b5693773de43f1e77f5533c177ca09658e23ae438d8020846b317bb1.json",
+        "sha256": "c8ace8771d26878d57576bb52ef110f5b9d5d16b69fb76d8434e0edefdbb4f34",
+        "digestMatched": true,
+        "memberId": "carol-id",
+        "checkpointId": "TEST-history-A"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-9b6d0290a66a36661b86b18994c9d0164be6d704a2a74bef34e1bc716be9882b.json",
+        "sha256": "9459ca4d801d055f590961f45ff11007c0c59f03fe31e88727cadb47e6f6e90f",
+        "digestMatched": true,
+        "memberId": "alice-id",
+        "checkpointId": "TEST-history-B"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-065fc6d2b5f31a83727f5cba346547171239ceed5bc5f22839d96b8e935cca7d.json",
+        "sha256": "bcad05c82a2d12b10fcbd2684cc82e369e7da41f7e55cd4f037fdd57c23ddbd8",
+        "digestMatched": true,
+        "memberId": "alice-id",
+        "checkpointId": "TEST-history-A"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-a969ed84aa5a78fd5665a632cf1df7b054b905336e1174b1ad33251f2f9461f0.json",
+        "sha256": "c940e937a9090356ec2eb7b0f7af025e87980c7b7f5beeccb7a75159c64fd8b0",
+        "digestMatched": true,
+        "memberId": "bob-id",
+        "checkpointId": "TEST-history-A"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-d424d58423ef7a7472f18d1b2e0dee2d1aa16bc540bb7e671cf4bad9eb2ab732.json",
+        "sha256": "14fd8c167db3bf5ecafdbf51537d58130a84e208798ae6729088db1517187493",
+        "digestMatched": true,
+        "memberId": "bob-id",
+        "checkpointId": "TEST-history-B"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-e54ba21c171262784c3e038836bc1a3299b1ec53c38b3c7779ac30df9502ab54.json",
+        "sha256": "2e57a7522a9b76bb6756855dc5aa49be77c61b32dffcfc5ca7f0754b7554d2e4",
+        "digestMatched": true,
+        "memberId": "carol-id",
+        "checkpointId": "TEST-history-B"
+      }
+    ],
+    "identities": [
+      {
+        "member": "alice",
+        "referenceA": "cp1-065fc6d2b5f31a83727f5cba346547171239ceed5bc5f22839d96b8e935cca7d",
+        "referenceB": "cp1-9b6d0290a66a36661b86b18994c9d0164be6d704a2a74bef34e1bc716be9882b",
+        "nativeIdentityDigest": "341bee77f530bb8f5b2f6e10c58e2260ed4462b277f8abf9edeb8e9f510cff0c",
+        "sameOriginalIdentity": true,
+        "engine": "0.3.305"
+      },
+      {
+        "member": "bob",
+        "referenceA": "cp1-a969ed84aa5a78fd5665a632cf1df7b054b905336e1174b1ad33251f2f9461f0",
+        "referenceB": "cp1-d424d58423ef7a7472f18d1b2e0dee2d1aa16bc540bb7e671cf4bad9eb2ab732",
+        "nativeIdentityDigest": "8b5a8f5f37df66830eaf1e2f7dea71dd3763557191dedf00f95b72fe58bda761",
+        "sameOriginalIdentity": true,
+        "engine": "codex-app-server"
+      },
+      {
+        "member": "carol",
+        "referenceA": "cp1-a719cb22b5693773de43f1e77f5533c177ca09658e23ae438d8020846b317bb1",
+        "referenceB": "cp1-e54ba21c171262784c3e038836bc1a3299b1ec53c38b3c7779ac30df9502ab54",
+        "nativeIdentityDigest": "e68795f2c9d1a10f5a71baf7caeb2435ed062559a236becccb77e29784106a90",
+        "sameOriginalIdentity": true,
+        "engine": "opencode-v1"
+      }
+    ],
+    "sessionsClosedSealedReleased": 6,
+    "scope": "Actual all-three native history restore; Desktop controls, group, cross-Team, vendor authentication and full Stage1 excluded",
+    "restoreSelections": [
+      "alice",
+      "bob",
+      "carol"
+    ]
+  },
+  "mixed": {
+    "artifactId": 12904781491,
+    "receiptSha256": "c3a017709ed7b881b624e2c0885e8d22d58164db10bcc33e8288f44e10e58fc0",
+    "status": "INCOMPLETE",
+    "failure": "UI read timed out: original whole Team Stop once; no mutation retry",
+    "originalReceiptUnchanged": true,
+    "mixedGroupStatus": "PASS",
+    "isolatedBobRestartStatus": "PASS",
+    "stopHoverOrClickStepCount": 0,
+    "originalStopDispatched": false,
+    "failureScreenshotSha256": "d15123d11855a7eea08a9ae0c8e13e2c4982f506a50c2097ec3fda04f52a8677",
+    "sourcePins": {
+      "beforeCount": 1414,
+      "afterCount": 1414,
+      "beforeAfterEqual": true,
+      "immutableGitHead": "36dfe44f03239150ba63240ec13788085194bc00",
+      "gitBlobMismatches": []
+    },
+    "nativePairBeforeAfterEqual": true,
+    "beforeStopSessions": [
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-cYhSL6",
+          "teamId": "b323cad0-9443-59e9-a055-ef238d17789b",
+          "runId": "eced351a-1026-5881-8a92-aab72ee2fc30",
+          "memberId": "7a027990-7c70-5bb7-aca6-ecffa4d85a73",
+          "generation": "capture-79cb018f-5476-5a40-a78f-ff02ec4722a6"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "inputCount": 5,
+        "allInputsTerminal": true
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-cYhSL6",
+          "teamId": "b323cad0-9443-59e9-a055-ef238d17789b",
+          "runId": "eced351a-1026-5881-8a92-aab72ee2fc30",
+          "memberId": "bb9151c9-1592-520b-9615-587ccf8d17c8",
+          "generation": "capture-f50cca9a-063a-5422-95ac-704f9fba1956"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "inputCount": 4,
+        "allInputsTerminal": true
+      },
+      {
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-cYhSL6",
+          "teamId": "b323cad0-9443-59e9-a055-ef238d17789b",
+          "runId": "eced351a-1026-5881-8a92-aab72ee2fc30",
+          "memberId": "a6a77c97-ff87-540c-8e32-24131fd75e98",
+          "generation": "restart-59ce12b24e527f6c55fd22f3a065bc465624edf1386c8f43bdf14e8fd2d69e7e"
+        },
+        "phase": "allocated",
+        "custody": "owned",
+        "nativeReady": true,
+        "inputCount": 1,
+        "allInputsTerminal": true
+      }
+    ],
+    "modelCounts": [
+      13,
+      15,
+      13
+    ],
+    "modelFailures": 0,
+    "physical": {
+      "hostPid": 5867,
+      "managementPid": 6159,
+      "oldBobPid": 7909,
+      "newBobPid": 8837,
+      "oldBobAbsentAfterRestart": true,
+      "allChildrenAfterRestartEqualBeforeStop": true,
+      "runtimePidsBeforeStop": [
+        7895,
+        7898,
+        8837
+      ]
+    },
+    "diagnosis": {
+      "classification": "TEST viewport navigation omission before first original Stop click",
+      "evidence": "The verified screenshot shows header above viewport, original receipt has zero Stop hover/click steps, and Mixed calls hit-tested ui.click without the existing ui.scrollTo used by analogous Create/Launch/Resume/Group/Review flows.",
+      "precisionLimit": "Original failure snapshot does not retain the Stop DOM rectangle or count, so no original DOM geometry is invented. The screenshot and exact read-only failure boundary support the narrow navigation correction; no production Stop defect is established."
+    },
+    "cleanup": {
+      "processGroup": 5667,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "limit": "Failure Quit and empty wrapper cleanup do not qualify original Team Stop or independently observed Host absence."
+  },
+  "p7": {
+    "jobId": 123502222513,
+    "jobConclusion": "success",
+    "rawQualification": "NOT AUDITED: original artifact3151799533bytes exceeds GitHub plugin maximum536870912bytes",
+    "artifact": 12904338988,
+    "advertisedArtifactSha256": "309d0cac1fa07690e059b0b02deb447d4acc72390983d8ba4c284cc18a511e5f",
+    "rawReceiptsNotAccessible": true,
+    "artifactSizeBytes": 3151799533,
+    "pluginMaximumDownloadBytes": 536870912,
+    "rawAccept": false
+  },
+  "preparedFollowUp": {
+    "status": "Not committed or natively executed in this record",
+    "mixedNavigation": {
+      "file": "scripts/legacy-agent-host/desktop-mixed-create-launch-ui-smoke.ts",
+      "change": "Existing ui.scrollTo for exact Stop control immediately before unchanged original click; one added line.",
+      "patchSha256": "277a1af3ad08f4959cfb3b70d5727867aa19616ac48416033be56dec7c6fca10",
+      "limits": "No timeout increase, mutation retry, product change, new UI, signal or process proof relaxation."
+    },
+    "workflowProofDelivery": {
+      "status": "PREPARED; not committed or executed",
+      "file": ".github/workflows/ci.yml",
+      "newArtifactName": "stage1-process-qualification-proof-${{ github.sha }}",
+      "always": true,
+      "retentionDays": 14,
+      "fullArtifactUnchanged": true,
+      "includedNativeModule": "process-artifact/registered-process.node",
+      "nativeModulePurpose": "Pinned bounded C custody module; independently rehashable against retained manifest binarySha256",
+      "proofPathsValidated": 43,
+      "pathPatterns": 17,
+      "excludedLargePhysicalPayloads": [
+        "Electron executable",
+        "app.asar",
+        "SDK/provider CLI binaries",
+        "candidate runtime package tree",
+        "renderer tree",
+        "terminal tree"
+      ],
+      "limits": "Selected small custody module is included; omitted large binary and tree bytes cannot be independently rehashed from the proof artifact alone. Original36dfe P7 remains raw AUDIT BLOCKED; a future artifact does not retroactively qualify it.",
+      "policyGate": {
+        "command": "node --test test/scripts/ciOptionalWorkflows.test.mts",
+        "exitCode": 0,
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "sourceUploadExactAddedPaths": [
+          "/private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl",
+          "/private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**",
+          "/private/tmp/TEST-desktop-backend-*/home/Downloads/**"
+        ],
+        "unchangedOriginalWorkflowExceptAuthorizedDeliveryAdditions": true,
+        "sourcePathWriterReview": "ACCEPT: private TEST Claude config project JSONL; hash-verified relative .cjs/.js cold epoch snapshot; explicit generated TEST Downloads targets scoped to fixture.root/fixtureRoot. Existing retention/always settings preserved."
+      }
+    },
+    "futureSourceRetention": {
+      "paths": [
+        "/private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl",
+        "/private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**",
+        "/private/tmp/TEST-desktop-backend-*/home/Downloads/**"
+      ],
+      "scope": "Future uploads only, restricted to each private TEST fixture; omitted original 36dfe bytes stay unverified."
+    },
+    "localValidation": {
+      "ciSelectedFixtureTests": {
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0
+      },
+      "strictLegacyHostScriptsTypes": "PASS; native TypeScript7.0.2",
+      "gitDiffCheck": "PASS",
+      "prettierAndEslint": "Local pinned executable files missing; these wrapper attempts are not PASS.",
+      "nativeResult": "NOT RUN",
+      "existingWorkflowPolicy": {
+        "command": "node --test test/scripts/ciOptionalWorkflows.test.mts",
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "exitCode": 0
+      }
+    },
+    "requiredNext": "After commit/push, one existing combined manual CI with stage1_desktop=true, stage1_process_diagnostic=false, stage1_process_qualification=true and manual CodeQL on the exact new head; audit original new receipts. No automatic replay of this failed run."
+  },
+  "historicalLimits": [
+    "Original M19 root911 SDK-custody HOLD unchanged; no original live cold Stop qualification or custody adoption",
+    "Stage1 P0-P8/M01-M19, existing UI and OpenCode V1 only; no Stage2 or V2 Host integration",
+    "No full Stage1/M13/M19, real authentication, other native OS, release or default activation acceptance",
+    "PR remains Draft; no merge or release"
+  ],
+  "auditInputs": [
+    {
+      "name": "source-audit.json",
+      "sha256": "e52a9755684a85bb69555016e9b74c3022af3a54ed8c4aeac84d4f560cb7c803"
+    },
+    {
+      "name": "native-audit-summary.json",
+      "sha256": "121ce3ce353ac31f95739b5d655b34b95a86dd50b9c4997fcfe62ce9c60fd43b"
+    },
+    {
+      "name": "mixed-audit.json",
+      "sha256": "86d4b03b7335cbdbb30436b2a23c7a422d54f751d58af8195333c2a457b2beca"
+    }
+  ]
+}
