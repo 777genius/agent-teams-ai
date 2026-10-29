@@ -426,6 +426,49 @@ test('V2 full directory disclaimer never qualifies seed-only or failed inventory
   assert.equal(settingsRefreshFailure(failed, expectation)?.category, 'runtime-error');
 });
 
+test('V2 full settings accepts native provider provenance but rejects seed/config-only or failed reads', () => {
+  const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
+  assert.equal(expectation.authenticationProven, false);
+  assert.equal(expectation.launchReadinessProven, false);
+  const response = v2Directory(false);
+  Object.assign(response.directory.entries[0], { sources: ['opencode-provider'],
+    sourceLabel: 'OpenCode catalog', state: 'available' });
+  const observation = { overflow: false, records: [catalogRecord('loadProviderDirectory', response,
+    { summary: false })] };
+  assert.doesNotThrow(() => assertSettledDirectoryPage(response.directory, expectation, false));
+  assert.equal(settingsRefreshSettled(observation, 1000, 500, expectation), true);
+  assert.equal(settingsRefreshFailure(observation, expectation), null);
+  // The same disclaimer and native-looking source cannot qualify a missing/failed inventory.
+  for (const invalidate of [
+    (d) => { d.entries[0].sources = ['seed']; },
+    (d) => { d.entries[0].sources = ['config-provider']; },
+    (d) => { d.entries[0].sources = []; },
+    (d) => { d.entries[0].sources = 'opencode-provider'; },
+    (d) => { d.entries[0].modelCount = null; },
+    (d) => { d.entries[0].modelCount = 0; },
+    (d) => { d.entries[0].modelCount = 2.5; },
+    (d) => { d.entries[0].metadata.hasKnownModels = false; },
+    (d) => { d.entries[0].providerId = 'foreign'; },
+    (d) => { d.diagnostics.push('V2 read status unavailable'); },
+    (d) => { d.diagnostics.push('inventory probe timed out'); },
+    (d) => { d.diagnostics = ['capabilities_pending']; },
+  ]) {
+    const invalid = structuredClone(observation);
+    invalidate(invalid.records[0].response.directory);
+    assert.throws(() => assertSettledDirectoryPage(invalid.records[0].response.directory,
+      expectation, false), /Pending\/degraded/);
+    assert.equal(settingsRefreshSettled(invalid, 1000, 500, expectation), false);
+    assert.equal(settingsRefreshFailure(invalid, expectation)?.category, 'native-diagnostics');
+  }
+  const failed = structuredClone(observation);
+  failed.records[0].response.error = { message: 'actual native failure' };
+  assert.equal(settingsRefreshSettled(failed, 1000, 500, expectation), false);
+  assert.equal(settingsRefreshFailure(failed, expectation)?.category, 'runtime-error');
+  // An unverified/V1 caller cannot use this V2-only disclaimer allowance.
+  assert.equal(settingsRefreshSettled(observation, 1000), false);
+  assert.equal(settingsRefreshFailure(observation)?.category, 'native-diagnostics');
+});
+
 test('V2 settings requires the same native identity and an actually observed fallback model', () => {
   const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
   const response = {

@@ -406,7 +406,10 @@ function settledDirectoryPage(payload, expectation, summary) {
       expectation.modelSources.includes(entry.providerId) &&
       Number.isSafeInteger(entry.modelCount) && entry.modelCount > 0 &&
       entry.metadata?.hasKnownModels === true &&
-      Array.isArray(entry.sources) && entry.sources.includes('inventory'));
+      Array.isArray(entry.sources) &&
+      // The native V2 directory records ready provider/model reads as opencode-provider;
+      // older producers used inventory. Seed/config metadata alone proves neither.
+      (entry.sources.includes('inventory') || entry.sources.includes('opencode-provider')));
 }
 
 export function refreshSettled(observation, current) {
