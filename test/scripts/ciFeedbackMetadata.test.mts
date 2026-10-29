@@ -114,11 +114,16 @@ async function plan(input: unknown, override: Record<string, string | undefined>
   }, Date.now(), scope ? () => ({ scope, paths: [], base: baseSha, head: headSha, reason: `Verified ${scope} diff` })
     : undefined);
 }
-// Virtual time: every gate sleep advances the clock instantly.
+// Virtual time: every gate sleep advances the clock at once. Yielding to the
+// macrotask queue lets the test timeout fire if a broken wait loop never ends.
 function virtualClock(): GateClock & { sleeps: number[] } {
   let time = 0;
   const sleeps: number[] = [];
-  return { sleeps, now: () => time, sleep: (ms) => { sleeps.push(ms); time += ms; return Promise.resolve(); } };
+  return { sleeps, now: () => time, sleep: (ms) => {
+    sleeps.push(ms);
+    time += ms;
+    return new Promise((resolve) => setImmediate(resolve));
+  } };
 }
 const quiet = (): undefined => undefined;
 async function gate(input: unknown, read: GitHubRead, clock: GateClock = virtualClock(), override: Record<string, string | undefined> = {}): Promise<boolean> {
@@ -138,6 +143,8 @@ function phases(clock: GateClock, timeline: [number, Map<string, unknown>][]): G
     return Promise.resolve(structuredClone(data.get(endpoint)));
   };
 }
+// A broken wait loop must fail the suite instead of hanging the CI step.
+const gateTimeout = { timeout: 10_000 };
 const apiFailure = (): Promise<never> => Promise.reject(new Error('Authenticated GitHub API read failed'));
 
 test('unchanged head with an advanced base requires full CI instead of preserving the old producer', async () => {
@@ -607,7 +614,7 @@ test('already listed newer failed or unknown producers never fall back to older 
   }
 });
 
-test('pending full producer never hides an older failure behind metadata qualification', async () => {
+test('pending full producer never hides an older failure behind metadata qualification', gateTimeout, async () => {
   for (const status of ['queued', 'in_progress']) {
     const data = fixture(event(), 'completed');
     source(data).conclusion = 'failure';
@@ -703,7 +710,7 @@ function forkFixture(status = 'completed'): { input: JsonObject; data: Map<strin
   return { input, data };
 }
 
-void test('authenticated true-fork linkage waits for the running producer and passes only on its completed full CI', async () => {
+void test('authenticated true-fork linkage waits for the running producer and passes only on its completed full CI', gateTimeout, async () => {
   for (const status of ['queued', 'in_progress', 'completed']) {
     const { input, data } = forkFixture(status);
     assert.equal((await plan(input, {}, data)).metadata, true, status);
@@ -910,7 +917,7 @@ test('slash-containing target refs use an encoded API path and exact unencoded r
 });
 
 
-void test('ready metadata never replaces an unfinished full producer with a successful required gate', async () => {
+void test('ready metadata never replaces an unfinished full producer with a successful required gate', gateTimeout, async () => {
   for (const status of ['queued', 'in_progress']) {
     const input = event();
     const running = fixture(input, status);
@@ -938,7 +945,7 @@ void test('ready edits of scoped diffs rerun their scoped checks instead of wait
   assert.equal((await plan(event(undefined, true), {}, fixture(event(undefined, true), 'queued'), 'docs')).metadata, true);
 });
 
-void test('the edit gate passes only after the running producer completes its authenticated full qualification', async () => {
+void test('the edit gate passes only after the running producer completes its authenticated full qualification', gateTimeout, async () => {
   const input = event();
   const clock = virtualClock();
   const reads: string[] = [];
@@ -956,7 +963,7 @@ void test('the edit gate passes only after the running producer completes its au
   assert.ok(reads.filter((endpoint) => endpoint === `${prefix}/pulls/12`).length <= 4, 'light polling');
 });
 
-void test('the edit gate fails closed when the awaited producer fails, is cancelled, or the PR moves', async () => {
+void test('the edit gate fails closed when the awaited producer fails, is cancelled, or the PR moves', gateTimeout, async () => {
   // Each phase has its own event and PR objects, so a mutation cannot leak into the event.
   const pr = (data: Map<string, unknown>): JsonObject => {
     const copy = structuredClone(data.get(`${prefix}/pulls/12`)) as JsonObject;
@@ -987,7 +994,7 @@ void test('the edit gate fails closed when the awaited producer fails, is cancel
   }
 });
 
-void test('the edit gate follows a newer same-input producer when the awaited one is superseded', async () => {
+void test('the edit gate follows a newer same-input producer when the awaited one is superseded', gateTimeout, async () => {
   const input = event();
   const superseded = fixture(input, 'completed');
   source(superseded).conclusion = 'cancelled';
@@ -1005,7 +1012,7 @@ void test('the edit gate follows a newer same-input producer when the awaited on
   }
 });
 
-void test('transient proof failures are retried a bounded number of times', async () => {
+void test('transient proof failures are retried a bounded number of times', gateTimeout, async () => {
   const input = event();
   const data = fixture(input, 'completed');
   let failures = 1;
@@ -1017,7 +1024,7 @@ void test('transient proof failures are retried a bounded number of times', asyn
   assert.equal(clock.now(), METADATA_GATE.retryMs * (METADATA_GATE.rejections - 1));
 });
 
-void test('the gate re-proves after a failed status read and forgives proof failures separated by waiting', async () => {
+void test('the gate re-proves after a failed status read and forgives proof failures separated by waiting', gateTimeout, async () => {
   const { pollMs, retryMs } = METADATA_GATE;
   // Status reads fail at three poll times; each failure forces a full re-proof that
   // fails too (same endpoint), so three rejections occur but never consecutively.
@@ -1048,12 +1055,16 @@ void test('the gate re-proves after a failed status read and forgives proof fail
   assert.ok(blind.now() < 10 * pollMs, 'no blind wait until the deadline');
 });
 
-void test('waiting gates pause instead of spending the reserved API budget', async () => {
+void test('waiting gates pause instead of spending the reserved API budget', gateTimeout, async () => {
+  // The budget is still low after the first reset, so the gate must check it again.
+  const firstReset = 10 * 60_000;
   const resetAt = 20 * 60_000;
   const clock = virtualClock();
   const low = fixture(event(), 'completed');
-  low.set('rate_limit', { resources: { core: { limit: 1000, remaining: 100, reset: resetAt / 1000 } } });
-  const timeline = phases(clock, [[0, low], [resetAt, fixture(event(), 'completed')]]);
+  low.set('rate_limit', { resources: { core: { limit: 1000, remaining: 100, reset: firstReset / 1000 } } });
+  const stillLow = fixture(event(), 'completed');
+  stillLow.set('rate_limit', { resources: { core: { limit: 1000, remaining: 200, reset: resetAt / 1000 } } });
+  const timeline = phases(clock, [[0, low], [firstReset, stillLow], [resetAt, fixture(event(), 'completed')]]);
   const reads: [number, string][] = [];
   const result = await awaitMetadataQualification(env, event(), (endpoint) => {
     reads.push([clock.now(), endpoint]);
@@ -1061,7 +1072,7 @@ void test('waiting gates pause instead of spending the reserved API budget', asy
   }, clock, quiet);
   assert.equal(result.ok, true, result.reason);
   assert.deepEqual(reads.filter(([time, endpoint]) => time < resetAt && endpoint !== 'rate_limit'), []);
-  assert.ok(reads.filter(([time]) => time < resetAt).length <= 2, 'one budget read per pause');
+  assert.equal(reads.filter(([time]) => time < resetAt).length, 2, 'one budget read per pause');
   // An unreadable or malformed budget never blocks the gate.
   for (const budget of [undefined, null, { resources: {} }, { resources: { core: { remaining: 0 } } }]) {
     const data = fixture(event(), 'completed');
@@ -1164,7 +1175,7 @@ void test('a Full qualification metadata run is crossed only when its gate re-au
   assert.equal(failed.full, true);
 });
 
-void test('metadata gate reauthenticates completed full evidence and rejects unfinished, missing-attempt and changed-source claims', async () => {
+void test('metadata gate reauthenticates completed full evidence and rejects unfinished, missing-attempt and changed-source claims', gateTimeout, async () => {
   const input = event();
   const data = fixture(input, 'completed');
   const read = (endpoint: string) => Promise.resolve(structuredClone(data.get(endpoint)));
