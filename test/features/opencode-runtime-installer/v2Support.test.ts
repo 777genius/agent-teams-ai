@@ -122,11 +122,12 @@ describe('external OpenCode V2 support installation', () => {
     return new OpenCodeV2SupportInstaller({ lock, cacheRoot: () => root });
   }
   function download(archive: Buffer) {
-    const fetchMock = vi.fn(
-      async () =>
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
         new Response(new Uint8Array(archive), {
           headers: { 'content-length': String(archive.length) },
         })
+      )
     );
     vi.stubGlobal('fetch', fetchMock);
     return fetchMock;
@@ -160,7 +161,7 @@ describe('external OpenCode V2 support installation', () => {
     const { lock, archive } = fixture(undefined, graphMetadata);
     download(archive);
     const service = installer(lock);
-    await service.install(native.version!, () => {});
+    await service.install(native.version!, vi.fn());
     expect((await service.withStatus(native)).v2Support).toBe('ready');
   });
 
@@ -190,7 +191,7 @@ describe('external OpenCode V2 support installation', () => {
       pinned.archive.expandedBytes = entries.reduce((sum, entry) => sum + entry.data.length, 0);
     });
     download(archive);
-    await expect(installer(lock).install(native.version!, () => {})).rejects.toThrow(
+    await expect(installer(lock).install(native.version!, vi.fn())).rejects.toThrow(
       'Invalid pinned OpenCode V2 support delivery'
     );
     await expect(readFile(path.join(directory(descriptor), 'installed.json'))).rejects.toThrow();
@@ -205,7 +206,7 @@ describe('external OpenCode V2 support installation', () => {
       }) + ' '.repeat(32 * 1024 ** 2);
     const { lock, descriptor, archive } = fixture(undefined, graphMetadata);
     download(archive);
-    await expect(installer(lock).install(native.version!, () => {})).rejects.toThrow(
+    await expect(installer(lock).install(native.version!, vi.fn())).rejects.toThrow(
       'graph metadata is too large'
     );
     await expect(readFile(path.join(directory(descriptor), 'installed.json'))).rejects.toThrow();
@@ -252,11 +253,11 @@ describe('external OpenCode V2 support installation', () => {
       state: 'idle',
       v2Support: 'required',
     });
-    await service.install(native.version!, () => {});
+    await service.install(native.version!, vi.fn());
     expect(await service.withStatus(native)).toMatchObject({ ...native, v2Support: 'ready' });
     const receiptPath = path.join(directory(descriptor), 'installed.json');
     const original = JSON.parse(await readFile(receiptPath, 'utf8')) as { instance: string };
-    await service.install(native.version!, () => {});
+    await service.install(native.version!, vi.fn());
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const originalFile = path.join(
       directory(descriptor),
@@ -265,7 +266,7 @@ describe('external OpenCode V2 support installation', () => {
     );
     await writeFile(originalFile, 'tamper fixture'); // Same byte length: cheap status is availability only.
     expect((await service.withStatus(native)).v2Support).toBe('ready');
-    await service.install(native.version!, () => {});
+    await service.install(native.version!, vi.fn());
     const repaired = JSON.parse(await readFile(receiptPath, 'utf8')) as { instance: string };
     expect(repaired.instance).not.toBe(original.instance);
     expect(await readFile(originalFile, 'utf8')).toBe('tamper fixture');
@@ -293,7 +294,7 @@ describe('external OpenCode V2 support installation', () => {
       const bytes = Buffer.from(archive);
       if (failure === 'archive') bytes[0] ^= 1;
       download(bytes);
-      await expect(installer(lock).install(native.version!, () => {})).rejects.toThrow();
+      await expect(installer(lock).install(native.version!, vi.fn())).rejects.toThrow();
       await expect(readFile(path.join(directory(descriptor), 'installed.json'))).rejects.toThrow();
       expect(
         (await readdir(directory(descriptor))).filter(
@@ -329,8 +330,8 @@ describe('external OpenCode V2 support installation', () => {
     const { lock, descriptor, archive } = fixture();
     download(archive);
     await Promise.all([
-      installer(lock).install(native.version!, () => {}),
-      installer(lock).install(native.version!, () => {}),
+      installer(lock).install(native.version!, vi.fn()),
+      installer(lock).install(native.version!, vi.fn()),
     ]);
     expect((await installer(lock).withStatus(native)).v2Support).toBe('ready');
     const names = await readdir(directory(descriptor));
@@ -342,7 +343,7 @@ describe('external OpenCode V2 support installation', () => {
     const { lock, descriptor, archive } = fixture();
     const service = installer(lock);
     download(archive);
-    await service.install(native.version!, () => {});
+    await service.install(native.version!, vi.fn());
     const receiptFile = path.join(directory(descriptor), 'installed.json');
     const before = await readFile(receiptFile, 'utf8');
     const receipt = JSON.parse(before) as { instance: string };
@@ -356,8 +357,8 @@ describe('external OpenCode V2 support installation', () => {
     );
     vi.stubGlobal(
       'fetch',
-      vi.fn(
-        async () =>
+      vi.fn(() =>
+        Promise.resolve(
           new Response(
             new ReadableStream({
               start(controller) {
@@ -366,9 +367,10 @@ describe('external OpenCode V2 support installation', () => {
               },
             })
           )
+        )
       )
     );
-    await expect(service.install(native.version!, () => {})).rejects.toThrow(
+    await expect(service.install(native.version!, vi.fn())).rejects.toThrow(
       'TEST interrupted download'
     );
     expect(await readFile(receiptFile, 'utf8')).toBe(before);

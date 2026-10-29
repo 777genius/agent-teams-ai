@@ -226,15 +226,15 @@ async function createFixtureUseCase(): Promise<{
       { resolve: vi.fn(() => Promise.resolve('/Users/tester/agent_teams_orchestrator')) },
       undefined,
       {
-        read: async (input) => {
+        read: (input) => {
           expect(input).toMatchObject({
             teamName: TEAM_NAME,
             memberName: MEMBER_NAME,
             laneId: LANE_ID,
           });
-          return binding;
+          return Promise.resolve(binding);
         },
-        isCurrent: async (_, original) => original.cacheKey === binding.cacheKey,
+        isCurrent: (_, original) => Promise.resolve(original.cacheKey === binding.cacheKey),
       }
     ),
   ];
