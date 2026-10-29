@@ -16,6 +16,9 @@ describe('OpenCode installation policy', () => {
     expect(chooseOpenCodeInstallGeneration(undefined, '2.9.0', '2.1.4')).toBe('v2');
     expect(chooseOpenCodeInstallGeneration('v1', '2.1.4', '2.1.4')).toBe('v1');
     expect(getLatestQualifiedOpenCodeV2Version('win32', 'arm64')).toBeNull();
+    const unshipped = getLatestQualifiedOpenCodeV2Version('linux', 'arm64');
+    expect(unshipped).toBeNull();
+    expect(chooseOpenCodeInstallGeneration(undefined, undefined, unshipped)).toBe('v1');
     expect(getLatestQualifiedOpenCodeV2Version('unsupported', 'x64')).toBeNull();
   });
 
@@ -24,6 +27,8 @@ describe('OpenCode installation policy', () => {
     'v2',
     [],
     { generation: 'latest' },
+    { supportOnly: 'yes' },
+    { generation: 'v1', supportOnly: true },
     { version: '2.99.0' },
     { generation: 'v2', url: 'https://other.test' },
   ])('rejects invalid install options %j', (input) => {
@@ -63,10 +68,12 @@ describe('OpenCode installation policy', () => {
 
   it('does not upgrade a V1 installation to a different generation via npm latest', async () => {
     await expect(
-      selectOpenCodeInstallPackage('v1', '2.0.32', [], async () => ({
-        name: 'opencode-ai',
-        version: '2.0.32',
-      }))
+      selectOpenCodeInstallPackage('v1', '2.0.32', [], () =>
+        Promise.resolve({
+          name: 'opencode-ai',
+          version: '2.0.32',
+        })
+      )
     ).rejects.toThrow('selected generation');
   });
 });

@@ -110,7 +110,11 @@ import {
 
 import { DashboardRateLimitChips } from './DashboardRateLimitChips';
 import { FluxionSponsorBanner } from './FluxionSponsorBanner';
-import { canLoadOpenCodeDashboardCatalog } from './openCodeDashboardCatalogPolicy';
+import {
+  canLoadOpenCodeDashboardCatalog,
+  countVerifiedOpenCodeDashboardModels,
+  hasAvailableFreeOpenCodeDashboardModel,
+} from './openCodeDashboardCatalogPolicy';
 import { OpenCodeFreeTierUpdateAction } from './OpenCodeFreeTierUpdateAction';
 import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
@@ -675,31 +679,28 @@ function shouldShowCodexInstallAction(
   );
 }
 
-function shouldShowOpenCodeProviderFreeBadge(provider: CliProviderStatus): boolean {
-  return provider.providerId === 'opencode';
-}
-
 function getOpenCodeDashboardChips(
   provider: CliProviderStatus,
+  runtimeStatus: OpenCodeRuntimeStatus | null,
   t: ReturnType<typeof useAppTranslation>['t']
 ): { label: string; title?: string }[] {
-  if (!shouldShowOpenCodeProviderFreeBadge(provider)) {
+  if (provider.providerId !== 'opencode') {
     return [];
   }
 
   const catalogModels = provider.modelCatalog?.models ?? [];
   const configuredLocalCount = countConfiguredLocalOpenCodeCatalogModels(catalogModels);
-  const verifiedCount = new Set(
-    catalogModels
-      .filter((model) => model.metadata?.opencode?.proofState === 'verified')
-      .map((model) => model.launchModel)
-  ).size;
+  const verifiedCount = countVerifiedOpenCodeDashboardModels(provider);
 
   return [
-    {
-      label: t('cliStatus.provider.freeModels'),
-      title: t('cliStatus.provider.freeModelsTitle'),
-    },
+    ...(hasAvailableFreeOpenCodeDashboardModel(provider, runtimeStatus)
+      ? [
+          {
+            label: t('cliStatus.provider.freeModels'),
+            title: t('cliStatus.provider.freeModelsTitle'),
+          },
+        ]
+      : []),
     ...(configuredLocalCount > 0
       ? [
           {
@@ -1188,7 +1189,11 @@ const InstalledBanner = ({
               (provider.modelCatalogRefreshState === 'loading' ||
                 (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider)));
             const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
-            const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
+            const openCodeDashboardChips = getOpenCodeDashboardChips(
+              provider,
+              openCodeRuntimeStatus,
+              t
+            );
             const hasDetailContent = Boolean(
               (provider.backend?.label && !runtimeSummary) ||
               runtimeSummary ||

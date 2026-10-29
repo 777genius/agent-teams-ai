@@ -6,12 +6,19 @@ import { resolveWorkspaceMcpBundle } from '@main/services/team/WorkspaceMcpBundl
 import { execCli } from '@main/utils/childProcess';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMcpDeploymentManifest } from '../../../../mcp-server/deploymentManifest';
+
 vi.mock('@main/utils/childProcess', () => ({ execCli: vi.fn() }));
 
 describe('workspace MCP bundle freshness', () => {
   let root: string;
   let revision: number;
   const outputRoot = () => path.join(root, 'retained-mcp');
+  const manifestSource = {
+    name: 'agent-teams-mcp',
+    version: '1.0.0',
+    engines: { node: '>=24.15.0 <25 || >=26 <27' },
+  };
 
   async function write(relative: string, content: string): Promise<void> {
     const target = path.join(root, relative);
@@ -23,6 +30,10 @@ describe('workspace MCP bundle freshness', () => {
     const output = args[args.indexOf('--out-dir') + 1];
     await fs.mkdir(output, { recursive: true });
     await fs.writeFile(path.join(output, 'index.js'), `// bundle ${++revision}`);
+    await fs.writeFile(
+      path.join(output, 'package.json'),
+      JSON.stringify(createMcpDeploymentManifest(manifestSource))
+    );
     return { stdout: '', stderr: '' };
   }
 
@@ -36,6 +47,7 @@ describe('workspace MCP bundle freshness', () => {
       'mcp-server/package.json',
       'mcp-server/tsconfig.json',
       'mcp-server/tsup.config.ts',
+      'mcp-server/deploymentManifest.ts',
       'agent-teams-controller/package.json',
       'mcp-server/src/index.ts',
       'agent-teams-controller/src/index.js',
@@ -58,7 +70,7 @@ describe('workspace MCP bundle freshness', () => {
     expect(entry.startsWith(path.join(outputRoot(), 'dev') + path.sep)).toBe(true);
     expect(
       JSON.parse(await fs.readFile(path.join(path.dirname(entry), 'package.json'), 'utf8'))
-    ).toEqual({ type: 'module' });
+    ).toEqual(createMcpDeploymentManifest(manifestSource));
     await fs.rm(path.join(root, 'mcp-server/dist'), { recursive: true });
     expect(await fs.readFile(entry, 'utf8')).toBe('// bundle 1');
     expect(execCli).toHaveBeenCalledWith(
@@ -95,6 +107,7 @@ describe('workspace MCP bundle freshness', () => {
       'agent-teams-controller/src/index.js',
       'pnpm-lock.yaml',
       'mcp-server/tsup.config.ts',
+      'mcp-server/deploymentManifest.ts',
     ]) {
       const target = path.join(root, relative);
       const before = await fs.stat(target);
@@ -102,7 +115,7 @@ describe('workspace MCP bundle freshness', () => {
       await fs.utimes(target, before.atime, before.mtime);
       expect(await resolveWorkspaceMcpBundle(root, '/node', outputRoot())).not.toBe(firstEntry);
     }
-    expect(execCli).toHaveBeenCalledTimes(5);
+    expect(execCli).toHaveBeenCalledTimes(6);
     expect(await fs.readFile(firstEntry, 'utf8')).toBe('// bundle 1');
   });
 

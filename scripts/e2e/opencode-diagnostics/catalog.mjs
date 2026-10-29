@@ -23,10 +23,11 @@ export const catalogScenarios = [
 const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function clickControl(evaluate, send, expression) {
-  const point = await evaluate(`(() => { const b = ${expression}; if (!b || b.disabled) return null;
+export async function clickControl(evaluate, send, expression, preparePoint) {
+  const readPoint = () => evaluate(`(() => { const b = ${expression}; if (!b || b.disabled) return null;
       b.scrollIntoView({block:'center'}); const r=b.getBoundingClientRect();
       return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+  const point = await (preparePoint ? preparePoint(readPoint) : readPoint());
   assert(point, 'Required desktop control unavailable');
   for (const type of ['mousePressed', 'mouseReleased'])
     await send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });

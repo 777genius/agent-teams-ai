@@ -31,8 +31,7 @@ import {
   waitForPackagedPreload,
   matchesPackagedPreload,
   refreshSettled,
-  collectReadyCatalog,
-  assertSummaryDirectoryPage,
+  waitForSettledDirectory,
   qualifySummary,
   qualifyProjectStatus,
   qualifySettings,
@@ -472,7 +471,6 @@ test('catalog qualification refuses error evidence, stale/unknown/empty/incomple
       runtimeId: 'opencode',
       providerId: 'opencode',
       catalogState: 'fresh',
-      diagnostics: [],
       models: [{ providerId: 'opencode', modelId: 'actual' }],
       totalCount: 1,
     },
@@ -690,7 +688,6 @@ const modelPage = (ids, cursor, nextCursor, totalCount = 2) => ({
     runtimeId: 'opencode',
     providerId: 'opencode',
     catalogState: 'fresh',
-    diagnostics: [],
     models: ids.map((modelId) => ({ providerId: 'opencode', modelId })),
     cursor,
     nextCursor,
@@ -850,92 +847,37 @@ const uiDirectory = (entries) =>
     },
   });
 
-test('pending summary metadata qualifies only with complete fresh measured provider catalogs', async () => {
+test('pending directory never qualifies a ready measured UI refresh with fresh models', async () => {
   const directory = uiDirectory([{ providerId: 'opencode' }]);
   directory.response.directory.diagnostics = ['capabilities_pending'];
-  const records = [
-    directory,
-    uiRecord('loadModels', modelPage(['one'], null, 'next')),
-    uiRecord('loadModels', modelPage(['two'], 'next', null), { cursor: 'next' }),
-  ];
-  const completed = { state: 'ready', models: ['opencode/one', 'opencode/two'] };
-  assert.deepEqual((await qualifyUIRefresh(records, completed)).modelIds, completed.models);
-  // Metadata must never replace provider proof, completeness or rendered correlation.
-  for (const patch of [
-    { error: { message: 'failed' } },
-    { runtimeId: 'foreign' },
-    { models: { ...records[2].response.models, runtimeId: 'foreign' } },
-    { models: { ...records[2].response.models, providerId: 'foreign' } },
-    { models: { ...records[2].response.models, catalogState: 'stale' } },
-    { models: { ...records[2].response.models, catalogState: undefined } },
-    { models: { ...records[2].response.models, diagnostics: ['capabilities_pending'] } },
-    { models: { ...records[2].response.models, diagnostics: undefined } },
-    { models: { ...records[2].response.models, totalCount: 3 } },
-    {
-      models: {
-        ...records[2].response.models,
-        models: [{ providerId: 'foreign', modelId: 'two' }],
-      },
-    },
-  ]) {
-    const bad = { ...records[2], response: { ...records[2].response, ...patch } };
-    await assert.rejects(qualifyUIRefresh([...records.slice(0, 2), bad], completed));
-  }
-  await assert.rejects(qualifyUIRefresh(records.slice(0, 2), completed), /Missing UI page/);
+  const records = [directory, uiRecord('loadModels', modelPage(['one'], null, null, 1))];
   await assert.rejects(
-    qualifyUIRefresh(records, { ...completed, models: ['opencode/one'] }),
-    /Rendered UI/
+    qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }),
+    /Pending\/degraded provider directory/
   );
-  for (const diagnostics of [undefined, ['unavailable'], ['capabilities_pending', 'timeout']]) {
-    const bad = structuredClone(directory);
-    bad.response.directory.diagnostics = diagnostics;
-    await assert.rejects(
-      qualifyUIRefresh([bad, ...records.slice(1)], completed),
-      /Unexpected provider summary diagnostics/
-    );
-  }
-  assertSummaryDirectoryPage(directory.response.directory);
 });
 
-test('catalog readiness requires all fresh provider pages within the existing bounded budget', async () => {
-  const calls = [];
-  const models = await collectReadyCatalog(
-    async (cursor, page, remaining) => {
-      assert(remaining > 0 && remaining <= 2000);
-      calls.push(cursor);
-      return page === 0 ? modelPage(['one'], null, 'next') : modelPage(['two'], 'next', null);
-    },
-    'opencode',
-    2000
-  );
-  assert.deepEqual(calls, [null, 'next']);
-  assert.deepEqual(
-    models.map((model) => model.modelId),
-    ['one', 'two']
-  );
-  const large = Array.from({ length: 201 }, (_, index) => `model-${index}`);
+test('directory readiness waits for authoritative capabilities and preserves a finite budget', async () => {
+  const pending = uiDirectory([{ providerId: 'opencode' }]).response;
+  pending.directory.diagnostics = ['capabilities_pending'];
+  const ready = uiDirectory([{ providerId: 'opencode' }, { providerId: 'kiro' }]).response;
+  const attempts = [];
   assert.equal(
-    (await collectReadyCatalog(async () => modelPage(large, null, null, 201), 'opencode')).length,
-    201
+    await waitForSettledDirectory(async (remaining, attempt) => {
+      assert(remaining > 0 && remaining <= 2000);
+      attempts.push(attempt);
+      return attempt === 0 ? pending : ready;
+    }, 2000),
+    ready
   );
+  assert.deepEqual(attempts, [0, 1]);
   await assert.rejects(
-    collectReadyCatalog(async () => modelPage(large.slice(0, 200), null, null, 201), 'opencode'),
-    /Incomplete inventory/
-  );
-  await assert.rejects(
-    collectReadyCatalog(
-      async () => {
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        return modelPage(['one'], null, null, 1);
-      },
-      'opencode',
-      1
-    ),
+    waitForSettledDirectory(async () => pending, 1),
     /bootstrap budget/
   );
   await assert.rejects(
-    collectReadyCatalog(async () => modelPage([], null, null, 0), 'opencode', 0),
-    /bootstrap budget/
+    waitForSettledDirectory(async () => ({ ...ready, error: { message: 'failed' } })),
+    /readiness failed/
   );
 });
 
@@ -1478,6 +1420,10 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   const evidence = 'C:\\test\\runtime-candidate-evidence.json';
   const desktop = new URL('../opencode-diagnostics-desktop.mjs', import.meta.url);
   const helper = new URL('./packaged.mjs?handoff-actual', import.meta.url);
+  const platformHelper = new URL('./platform.mjs?handoff-actual', import.meta.url);
+  const launcherBirth = '2026-10-27T20:49:53.4491000Z';
+  const appBirth = '2026-10-27T20:52:41.6914690Z';
+  const replacementBirth = '2026-10-27T20:52:54.2959050Z';
   const loader = path.join(root, 'loader.mjs');
   const preload = path.join(root, 'preload.mjs');
   const mock = path.join(root, 'packaged-mock.mjs');
@@ -1487,11 +1433,23 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     preload,
     `
     import assert from 'node:assert/strict';
+    import { writeFileSync } from 'node:fs';
+    import path from 'node:path';
     Object.defineProperty(process, 'platform', {value:'win32'});
-    if (process.argv[2] === 'stop') process.kill = (pid) => {
-      assert.equal(pid, 101, 'App was signalled before its graceful shutdown completed');
-      return true;
-    };
+    if (process.argv[2] === 'stop') {
+      const calls = [];
+      const receipt = path.join(process.argv[3], 'test-kill-calls.json');
+      writeFileSync(receipt, JSON.stringify(calls));
+      process.kill = (pid, signal) => {
+        calls.push({pid, signal});
+        writeFileSync(receipt, JSON.stringify(calls));
+        assert(
+          pid === 101 || (pid === 102 && process.env.TEST_PACKAGED_STOP_CASE === 'same-identity'),
+          'Retired, replaced or unknown process was signalled'
+        );
+        return true;
+      };
+    }
   `
   );
   await writeFile(
@@ -1515,14 +1473,25 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   await writeFile(
     platform,
     `
+    export { sameIdentity, ownedTree } from ${JSON.stringify(platformHelper.href)};
     export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
-    export const processes = () => process.argv[2] !== 'stop' ? [] : [
-      {pid:101,birth:'launcher',executable:'node'},
-      ...(!globalThis.packagedCloseAt || Date.now() - globalThis.packagedCloseAt < 1000
-        ? [{pid:102,parent:101,birth:'app',executable:${JSON.stringify(exe)}}] : [])
-    ];
-    export const sameIdentity = () => {};
-    export const ownedTree = (snapshot) => snapshot;
+    export const processes = () => {
+      if (process.argv[2] !== 'stop') return [];
+      const launcher = {pid:101,parent:1,birth:${JSON.stringify(launcherBirth)},executable:'node'};
+      const app = {pid:102,parent:101,birth:${JSON.stringify(appBirth)},executable:${JSON.stringify(exe)}};
+      if (!globalThis.packagedCloseAt) return [launcher, app];
+      const scenario = process.env.TEST_PACKAGED_STOP_CASE;
+      if (scenario === 'census-failure') throw new Error('TEST_CENSUS_FAILED');
+      if (scenario === 'same-identity') return [launcher, app];
+      if (['reused-pid', 'missing-birth', 'invalid-birth'].includes(scenario)) {
+        return [launcher, {
+          pid:app.pid, parent:999, executable:'powershell.exe',
+          birth:scenario === 'reused-pid' ? ${JSON.stringify(replacementBirth)}
+            : scenario === 'invalid-birth' ? 'not-a-birth' : undefined,
+        }];
+      }
+      return Date.now() - globalThis.packagedCloseAt < 1000 ? [launcher, app] : [launcher];
+    };
     export const listeners = () => [];
     export const assertListenerOwnership = () => {};
     export const fixtureShim = () => {};
@@ -1557,7 +1526,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     }
   `
   );
-  const invoke = (args) =>
+  const invoke = (args, stopCase = 'graceful') =>
     new Promise((resolve) => {
       execFile(
         process.execPath,
@@ -1569,7 +1538,10 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
           fileURLToPath(desktop),
           ...args,
         ],
-        { timeout: 10000, env: { ...process.env, TEMP: root, TMP: root } },
+        {
+          timeout: 10000,
+          env: { ...process.env, TEMP: root, TMP: root, TEST_PACKAGED_STOP_CASE: stopCase },
+        },
         (error, stdout, stderr) => resolve({ error, stdout, stderr })
       );
     });
@@ -1593,7 +1565,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     await t.test(
       'a CDP timeout still waits for the owned app to retire before fallback',
       async () => {
-        manifest.launcher = { pid: 101, birth: 'launcher', executable: 'node' };
+        manifest.launcher = { pid: 101, parent: 1, birth: launcherBirth, executable: 'node' };
         await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
         const stopped = await invoke(['stop', sandbox]);
         assert.ifError(stopped.error);
@@ -1612,8 +1584,56 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
           signals.find((entry) => entry.expected.pid === 101).outcome,
           'signal-returned'
         );
+        assert.deepEqual(
+          JSON.parse(await readFile(path.join(sandbox, 'test-kill-calls.json'), 'utf8')),
+          [{ pid: 101, signal: 'SIGTERM' }]
+        );
       }
     );
+    for (const scenario of [
+      'reused-pid',
+      'same-identity',
+      'missing-birth',
+      'invalid-birth',
+      'census-failure',
+    ]) {
+      await t.test(`cleanup identity handling: ${scenario}`, async () => {
+        await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
+        await rm(path.join(sandbox, 'cleanup-signals.json'), { force: true });
+        const stopped = await invoke(['stop', sandbox], scenario);
+        const calls = JSON.parse(
+          await readFile(path.join(sandbox, 'test-kill-calls.json'), 'utf8')
+        );
+        if (['missing-birth', 'invalid-birth', 'census-failure'].includes(scenario)) {
+          assert(stopped.error, 'Unknown identity must refuse cleanup');
+          assert.match(
+            stopped.stderr,
+            scenario === 'census-failure' ? /TEST_CENSUS_FAILED/ : /Invalid process birth identity/
+          );
+          assert.deepEqual(calls, [], 'Unknown identity must never authorize a signal');
+          return;
+        }
+        assert.ifError(stopped.error);
+        const signals = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-signals.json'), 'utf8')
+        );
+        const app = signals.find((entry) => entry.expected.pid === 102);
+        assert.equal(app.expected.birth, appBirth);
+        assert.equal(app.current.birth, scenario === 'reused-pid' ? replacementBirth : appBirth);
+        assert.equal(
+          app.outcome,
+          scenario === 'reused-pid' ? 'pid-reused-original-retired' : 'signal-returned'
+        );
+        assert.equal(
+          signals.find((entry) => entry.expected.pid === 101).outcome,
+          'signal-returned'
+        );
+        assert.deepEqual(
+          calls,
+          (scenario === 'reused-pid' ? [101] : [102, 101]).map((pid) => ({ pid, signal: 'SIGTERM' }))
+        );
+      });
+    }
   } finally {
     if (sandbox) await rm(sandbox, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
@@ -1664,48 +1684,29 @@ test('the grid read joined into the catalog refresh counts once; other extra dir
   }
 });
 
+
 test('independent fresh catalog membership drift is explicit without weakening UI completion proof', async () => {
   const records = [
     uiDirectory([{ providerId: 'opencode' }]),
     uiRecord('loadModels', modelPage(['one', 'retired'], null, null, 2)),
   ];
-  const inventory = await qualifyUIRefresh(records, {
-    state: 'ready',
-    models: ['opencode/one', 'opencode/retired'],
-  });
+  const inventory = await qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one', 'opencode/retired'] });
   assert.deepEqual(compareCatalogSnapshots(inventory, ['opencode/one', 'opencode/new']), {
-    comparison: 'independent-requests',
-    changed: true,
-    uiModelCount: 2,
-    freshModelCount: 2,
-    removedSinceUI: ['opencode/retired'],
-    addedSinceUI: ['opencode/new'],
+    comparison: 'independent-requests', changed: true, uiModelCount: 2, freshModelCount: 2,
+    removedSinceUI: ['opencode/retired'], addedSinceUI: ['opencode/new'],
   });
-  await assert.rejects(
-    qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }),
-    /Rendered UI/
-  );
+  await assert.rejects(qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }), /Rendered UI/);
   const incomplete = [records[0], uiRecord('loadModels', modelPage(['one'], null, 'next', 2))];
-  await assert.rejects(
-    qualifyUIRefresh(incomplete, { state: 'ready', models: ['opencode/one'] }),
-    /Missing UI page/
-  );
+  await assert.rejects(qualifyUIRefresh(incomplete, { state: 'ready', models: ['opencode/one'] }), /Missing UI page/);
 });
 
 test('a populated UI source cannot qualify an unexpectedly empty independent fresh source', () => {
   const inventory = { sources: ['opencode', 'kiro'], modelIds: ['opencode/one', 'kiro/auto'] };
   assert.throws(() => compareCatalogSnapshots(inventory, []), /unexpectedly empty/);
-  assert.throws(
-    () => compareCatalogSnapshots(inventory, ['kiro/auto']),
-    /Fresh opencode.*unexpectedly empty/
-  );
+  assert.throws(() => compareCatalogSnapshots(inventory, ['kiro/auto']), /Fresh opencode.*unexpectedly empty/);
   assert.deepEqual(compareCatalogSnapshots(inventory, ['kiro/auto', 'opencode/one']), {
-    comparison: 'independent-requests',
-    changed: false,
-    uiModelCount: 2,
-    freshModelCount: 2,
-    removedSinceUI: [],
-    addedSinceUI: [],
+    comparison: 'independent-requests', changed: false, uiModelCount: 2, freshModelCount: 2,
+    removedSinceUI: [], addedSinceUI: [],
   });
   assert.equal(compareCatalogSnapshots({ sources: [], modelIds: [] }, []).changed, false);
 });

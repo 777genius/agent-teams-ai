@@ -1,6 +1,8 @@
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 
+import { OPENCODE_V2_SUPPORT_ROOT_ENV } from '@features/opencode-runtime-installer';
+import { getOpenCodeV2SupportRoot } from '@features/opencode-runtime-installer/main';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import {
@@ -81,6 +83,8 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
   onOverrideRejected,
   onWarning,
 }: EnsureOpenCodeBridgeRuntimeBinaryEnvOptions): Promise<void> {
+  targetEnv[OPENCODE_V2_SUPPORT_ROOT_ENV] = getOpenCodeV2SupportRoot();
+  bridgeEnv[OPENCODE_V2_SUPPORT_ROOT_ENV] = targetEnv[OPENCODE_V2_SUPPORT_ROOT_ENV];
   const applyBinary = async (env: NodeJS.ProcessEnv, binaryPath: string | null): Promise<void> => {
     const verifiedNativeV2BinaryPath =
       process.platform === 'win32' &&

@@ -1,6 +1,13 @@
+// @vitest-environment node
 /* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main';
+import { configManager } from '@main/services/infrastructure/ConfigManager';
+import {
+  clearShellEnvCache,
+  resolveInteractiveShellEnvBestEffort,
+  waitForPendingShellEnv,
+} from '@main/utils/shellEnv';
 import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/anthropicConnectionMode';
 import fs from 'fs';
 import os from 'os';
@@ -63,6 +70,177 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it.skipIf(process.platform === 'win32').each([0, 1_700])(
+    'discovers shell-only Anthropic Auto credentials and models on a cold launch with %ims shell delay',
+    async (shellDelayMs) => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'anthropic-auto-launch-'));
+      const shellPath = path.join(tempDir, 'fixture-shell.cjs');
+      const invocationsPath = path.join(tempDir, 'shell-invocations');
+      const previousShell = process.env.SHELL;
+      const configured = configManager.getConfig();
+      const configSpy = vi.spyOn(configManager, 'getConfig').mockReturnValue({
+        ...configured,
+        providerConnections: {
+          ...configured.providerConnections,
+          anthropic: {
+            ...configured.providerConnections.anthropic,
+            authMode: 'auto',
+            compatibleEndpoint: { enabled: false, baseUrl: '' },
+          },
+        },
+      });
+      const anthropicEnv = {
+        ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+        ANTHROPIC_AUTH_TOKEN: 'synthetic-shell-token',
+        ANTHROPIC_MODEL: 'gateway-main',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway-fast',
+      };
+      clearShellEnvCache();
+      try {
+        fs.writeFileSync(
+          shellPath,
+          `#!/usr/bin/env node\nconst fs = require('node:fs');\n` +
+            `fs.appendFileSync(${JSON.stringify(invocationsPath)}, 'probe\\n');\n` +
+            `const env = ${JSON.stringify({ ...anthropicEnv, HOME: tempDir, PATH: '/usr/bin' })};\n` +
+            `setTimeout(() => {\n` +
+            `  const result = require('node:child_process').spawnSync('/bin/sh', ['-c', process.argv[3]], { env, stdio: 'inherit' });\n` +
+            `  if (result.error) throw result.error;\n` +
+            `  process.exitCode = result.status ?? 1;\n` +
+            `}, ${shellDelayMs});\n`,
+          { mode: 0o700 }
+        );
+        process.env.SHELL = shellPath;
+        const ports = createPorts({
+          processEnv: { PATH: '/usr/bin', SHELL: shellPath },
+          resolveInteractiveShellEnvBestEffort,
+          waitForPendingShellEnv,
+        });
+
+        const initial = await buildProvisioningEnv({ providerId: 'anthropic', ports });
+        const repeated = await buildProvisioningEnv({ providerId: 'anthropic', ports });
+
+        expect(fs.readFileSync(invocationsPath, 'utf8')).toBe('probe\n');
+        for (const result of [initial, repeated]) {
+          expect(result.env).toMatchObject(anthropicEnv);
+          expect(result.authSource).toBe('anthropic_auth_token');
+          expect(result.env.ANTHROPIC_API_KEY).toBeUndefined();
+        }
+        const isolated = await buildProvisioningEnv({
+          providerId: 'anthropic',
+          ports: createPorts(),
+        });
+        expect(isolated.authSource).toBe('none');
+        expect(isolated.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+      } finally {
+        await waitForPendingShellEnv();
+        configSpy.mockRestore();
+        clearShellEnvCache();
+        if (previousShell === undefined) delete process.env.SHELL;
+        else process.env.SHELL = previousShell;
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'retains inherited HOME when pending Anthropic Auto discovery fails after the soft timeout',
+    async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'anthropic-auto-fallback-'));
+      const shellPath = path.join(tempDir, 'failing-shell.cjs');
+      const inheritedHome = path.join(tempDir, 'inherited-home');
+      const previousShell = process.env.SHELL;
+      const processEnv = { HOME: inheritedHome, PATH: '/fallback/bin', REVIEW_EMPTY: '' };
+      const configured = configManager.getConfig();
+      const configSpy = vi.spyOn(configManager, 'getConfig').mockReturnValue({
+        ...configured,
+        providerConnections: {
+          ...configured.providerConnections,
+          anthropic: {
+            ...configured.providerConnections.anthropic,
+            authMode: 'auto',
+            compatibleEndpoint: { enabled: false, baseUrl: '' },
+          },
+        },
+      });
+      const warnSpy = vi.spyOn(console, 'warn');
+      clearShellEnvCache();
+      try {
+        fs.writeFileSync(
+          shellPath,
+          `#!/usr/bin/env node\n` +
+            `setTimeout(() => {\n` +
+            `  process.stdout.write('PLUGIN_INIT=failed\\n');\n` +
+            `  process.exit(42);\n` +
+            `}, process.argv[2] === '-lic' ? 1_700 : 0);\n`,
+          { mode: 0o700 }
+        );
+        process.env.SHELL = shellPath;
+        const processEnvBefore = { ...process.env };
+        const result = await buildProvisioningEnv({
+          providerId: 'anthropic',
+          ports: createPorts({
+            processEnv,
+            resolveInteractiveShellEnvBestEffort,
+            waitForPendingShellEnv,
+          }),
+        });
+
+        expect(result.env).toMatchObject({ ...processEnv, USERPROFILE: inheritedHome });
+        expect(result.authSource).toBe('none');
+        expect(process.env).toEqual(processEnvBefore);
+        expect(await waitForPendingShellEnv()).toBeNull();
+        expect(warnSpy).toHaveBeenCalledWith(
+          '[Utils:shellEnv]',
+          expect.stringContaining('Failed to resolve shell env after login and interactive probes')
+        );
+      } finally {
+        await waitForPendingShellEnv();
+        warnSpy.mockClear();
+        configSpy.mockRestore();
+        clearShellEnvCache();
+        if (previousShell === undefined) delete process.env.SHELL;
+        else process.env.SHELL = previousShell;
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each([
+    ['subscription', 'anthropic', 'oauth', false, false],
+    ['API key', 'anthropic', 'api_key', false, false],
+    ['saved compatible endpoint', 'anthropic', 'auto', true, false],
+    ['gateway member', 'anthropic', 'auto', false, true],
+    ['Codex', 'codex', 'auto', false, false],
+    ['OpenCode', 'opencode', 'auto', false, false],
+  ] as const)(
+    'keeps shell discovery cached-only for %s launches',
+    async (_label, providerId, authMode, enabled, gatewayMember) => {
+      const configured = configManager.getConfig();
+      const configSpy = vi.spyOn(configManager, 'getConfig').mockReturnValue({
+        ...configured,
+        providerConnections: {
+          ...configured.providerConnections,
+          anthropic: {
+            ...configured.providerConnections.anthropic,
+            authMode,
+            compatibleEndpoint: { enabled, baseUrl: 'https://gateway.example' },
+          },
+        },
+      });
+      try {
+        const pendingShell = vi.fn(async () => ({ ANTHROPIC_AUTH_TOKEN: 'unrelated-token' }));
+        const ports = createPorts({ waitForPendingShellEnv: pendingShell });
+        await buildProvisioningEnv({ providerId, options: { gatewayMember }, ports });
+        expect(ports.resolveInteractiveShellEnvBestEffort).toHaveBeenCalledWith(
+          expect.objectContaining({ background: false, fallbackEnv: ports.processEnv })
+        );
+        expect(pendingShell).not.toHaveBeenCalled();
+      } finally {
+        configSpy.mockRestore();
+      }
+    }
+  );
+
   it.each(['anthropic', 'codex'] as const)(
     'prepares a verified %s gateway member without global auth or a lead helper',
     async (providerId) => {

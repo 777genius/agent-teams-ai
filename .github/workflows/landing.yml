@@ -31,10 +31,9 @@ on:
 permissions:
   contents: read
 
-# Keep the existing latest Pages push policy; manual operations have independent groups.
 concurrency:
-  group: landing-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref || github.run_id) }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  group: landing-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

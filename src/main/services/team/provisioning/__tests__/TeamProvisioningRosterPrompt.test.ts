@@ -1,3 +1,4 @@
+import { protocols } from 'agent-teams-controller';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -125,11 +126,13 @@ describe('buildCreateBootstrapUserPrompt', () => {
     expect(wrapped).not.toContain('- team-lead (role: lead)');
   });
 
-  it('passes the prompt through untouched when there are no teammates', () => {
-    expect(buildCreateBootstrapUserPrompt('  solo work  ', [])).toBe('solo work');
-    expect(buildCreateBootstrapUserPrompt('lead only', [{ name: 'team-lead', role: 'lead' }])).toBe(
-      'lead only'
-    );
+  it('supplies the display protocol to a fresh solo lead without inventing a roster', () => {
+    for (const members of [[], [{ name: 'team-lead', role: 'lead' }]]) {
+      const prompt = buildCreateBootstrapUserPrompt('  solo work  ', members);
+      expect(prompt).toContain(protocols.buildChatVisualizationProtocolText());
+      expect(prompt).not.toContain('Team roster (authoritative');
+      expect(prompt.endsWith('User instructions:\nsolo work')).toBe(true);
+    }
   });
 
   it('stays empty for an empty prompt so create mode skips the deferred prompt file', () => {

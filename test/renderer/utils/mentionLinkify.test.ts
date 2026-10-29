@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   linkifyAllMentionsInMarkdown,
   linkifyMentionsInMarkdown,
   linkifyTeamMentionsInMarkdown,
 } from '@renderer/utils/mentionLinkify';
+import { describe, expect, it } from 'vitest';
 
 describe('mentionLinkify', () => {
   it('linkifies @member after space', () => {
@@ -32,6 +31,40 @@ describe('mentionLinkify', () => {
     const r = linkifyAllMentionsInMarkdown('Hi @Alice from @TeamX', m, ['TeamX']);
     expect(r).toContain('mention://');
     expect(r).toContain('team://');
+  });
+
+  it.each(['```openui-lang', '~~~OPENUI', '````text'])(
+    'preserves code data inside %s while linking surrounding mentions',
+    (opener) => {
+      const delimiter = /^[`~]+/.exec(opener)![0];
+      const source = 'root = Stack([Card([TextContent("@Alice work from @TeamX here")])]);';
+      const block = `${opener}\n${source}\n${delimiter}`;
+      const text = `Hi @Alice from @TeamX\n\n${block}\n\nAfter @Alice`;
+      const result = linkifyAllMentionsInMarkdown(text, new Map([['Alice', 'blue']]), ['TeamX']);
+      expect(result).toBe(
+        `Hi [@Alice](mention://blue/Alice) from [TeamX](team://TeamX)\n\n${block}\n\nAfter [@Alice](mention://blue/Alice)`
+      );
+    }
+  );
+
+  it('preserves inline code and an open fenced block', () => {
+    const code = '`@Alice work` and ``@TeamX work``\n\n> ~~~openui\n> @Alice @TeamX';
+    expect(linkifyAllMentionsInMarkdown(code, new Map([['Alice', 'blue']]), ['TeamX'])).toBe(code);
+  });
+
+  it('links table-cell mentions when literal backticks occur in different GFM cells', () => {
+    const table = '| Command | Owner |\n| --- | --- |\n| `foo | @Alice |\n| bar` | @Bob |';
+    expect(
+      linkifyMentionsInMarkdown(
+        table,
+        new Map([
+          ['Alice', 'blue'],
+          ['Bob', 'red'],
+        ])
+      )
+    ).toBe(
+      '| Command | Owner |\n| --- | --- |\n| `foo | [@Alice](mention://blue/Alice) |\n| bar` | [@Bob](mention://red/Bob) |'
+    );
   });
 
   it('linkifies @ after start of string', () => {

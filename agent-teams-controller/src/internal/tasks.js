@@ -1049,7 +1049,7 @@ async function memberBriefing(context, memberName, options = {}) {
             ? [
                 messagingProtocol.visibleMessageRule,
                 `${messagingProtocol.runtimeProvider === 'opencode' ? 'OpenCode' : 'Codex Native'} bootstrap silence rule: if this briefing was requested because the desktop app attached or reconnected you, do not send readiness, understood, idle, or no-task acknowledgements to the user, lead, or teammates.`,
-                'This briefing already includes your current Task briefing. If it shows no actionable tasks, stop and wait silently. Do not call task_briefing again in the same bootstrap turn just to check for work.',
+                'This briefing already includes your current Task briefing. During bootstrap or reconnect, if it shows no actionable tasks and there is no new actionable app message, stop and wait silently. Do not call task_briefing again in the same bootstrap turn just to check for work. If you refreshed this briefing to handle a current app request (including a chat visualization), continue that request under its existing reply and visibility rules even when the task queue is empty. A briefing refresh does not require a reply to an informational notice.',
                 'Use agent-teams_message_send only for actual app-delivered messages, actionable task coordination, blockers, or task results.',
                 messagingProtocol.taskToolHint,
                 'For cross-team replies or messages to another team, call agent-teams_cross_team_send with toTeam/fromMember. Do not put "cross_team_send" or a remote team name into message_send.to.',

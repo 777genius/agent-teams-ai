@@ -6,7 +6,7 @@ import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
 describe('bounded OpenCode startup visualization briefing', () => {
-  it('keeps one full protocol and operating rules within12k with a real long member briefing', async () => {
+  it('keeps operating rules and workflow context within12k using an atomic display refresh for a long real briefing', async () => {
     const claudeDir = await mkdtemp(join(tmpdir(), 'opencode-visualization-briefing-'));
     const teamName = 'visualization-test-team';
     try {
@@ -42,15 +42,16 @@ describe('bounded OpenCode startup visualization briefing', () => {
         { createController, getClaudeBasePath: () => claudeDir }
       );
       expect(prompt.length).toBeLessThanOrEqual(12_000);
-      expect(prompt).toContain(protocol);
-      expect(prompt.match(/CHAT VISUALIZATION PROTOCOL v1/g)).toHaveLength(1);
+      expect(prompt).not.toContain(protocol);
+      expect(prompt).not.toContain('AVAILABLE DISPLAY LIBRARY SPEC');
+      expect(prompt).toContain(protocols.buildChatVisualizationRefreshInstruction());
+      expect(prompt.match(/CHAT VISUALIZATION REFRESH REQUIRED/g)).toHaveLength(1);
       expect(prompt).toContain('Role: Visualization reviewer.');
       expect(prompt).toContain('task_add_comment BEFORE calling task_complete');
       expect(prompt).toContain('OpenCode bootstrap silence rule');
       expect(prompt).toContain('Ordinary task context.');
       expect(prompt).toContain('not as a request to prove launch readiness.');
       expect(prompt.endsWith('</agent_teams_app_managed_briefing_source>')).toBe(true);
-      expect(prompt).not.toContain('CHAT VISUALIZATION REFRESH REQUIRED');
     } finally {
       await rm(claudeDir, { recursive: true, force: true });
     }

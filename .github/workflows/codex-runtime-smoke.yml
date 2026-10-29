@@ -3,6 +3,7 @@ name: Codex Runtime Smoke
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - '.github/workflows/codex-runtime-smoke.yml'
       - 'package.json'
@@ -32,13 +33,14 @@ on:
       - 'tsconfig*.json'
       - 'scripts/tsconfig/**'
 
-# Supersede PR/push checks without sharing custody with manual runs.
+# Cancel obsolete PR checks without sharing custody with push or manual runs.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event_name == 'push' && github.ref || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   install:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     name: Install Codex runtime (${{ matrix.os }})
     runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubicloud-standard-4') || matrix.os == 'macos-latest' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.os }}
     timeout-minutes: 20

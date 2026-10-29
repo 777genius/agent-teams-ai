@@ -25,6 +25,7 @@ on:
       - 'scripts/lib/runtime-zip.test-fixture.mts'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'runtime.lock.json'
       - 'scripts/dev-with-runtime.mjs'
@@ -49,13 +50,14 @@ on:
 permissions:
   contents: read
 
-# Supersede PR/push checks without sharing custody with manual runs.
+# Cancel obsolete PR checks without sharing custody with push or manual runs.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event_name == 'push' && github.ref || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   bootstrap:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     name: anonymous bootstrap (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ matrix.platform == 'win32-x64' && 45 || 15 }}

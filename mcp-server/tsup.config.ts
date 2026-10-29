@@ -1,10 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 import { defineConfig } from 'tsup';
 
 import { createMcpDeploymentManifest } from './deploymentManifest';
 
-export default defineConfig({
+export default defineConfig((overrideOptions) => ({
   entry: ['src/index.ts'],
   format: ['esm'],
   target: 'node24',
@@ -20,7 +21,7 @@ export default defineConfig({
   async onSuccess() {
     const source = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
     await writeFile(
-      new URL('./dist/package.json', import.meta.url),
+      resolve(overrideOptions.outDir ?? 'dist', 'package.json'),
       `${JSON.stringify(createMcpDeploymentManifest(source), null, 2)}\n`
     );
   },
@@ -39,4 +40,4 @@ export default defineConfig({
       'effect',
     ];
   },
-});
+}));

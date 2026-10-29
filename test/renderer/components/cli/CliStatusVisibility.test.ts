@@ -1575,9 +1575,40 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('always shows a provider-level Free models badge on the OpenCode dashboard card', async () => {
+  it.each([
+    { name: 'a usable V1 free route', version: '1.19.4', catalog: 'free', shown: true },
+    { name: 'a V2 free catalog entry', version: '2.2.0', catalog: 'free', shown: false },
+    { name: 'an unknown runtime version', version: null, catalog: 'free', shown: false },
+    { name: 'an outdated V1 free-tier runtime', version: '1.17.0', catalog: 'free', shown: false },
+    {
+      name: 'an OpenRouter free route on V1',
+      version: '1.17.0',
+      catalog: 'openrouter',
+      shown: true,
+    },
+    { name: 'a free route awaiting proof', version: '1.19.4', catalog: 'unverified', shown: false },
+    { name: 'an unloaded catalog', version: '1.19.4', catalog: 'missing', shown: false },
+    { name: 'a paid-only catalog', version: '1.19.4', catalog: 'paid', shown: false },
+    { name: 'a hidden free route', version: '1.19.4', catalog: 'hidden', shown: false },
+    { name: 'a refused free route', version: '1.19.4', catalog: 'refused', shown: false },
+    { name: 'an unavailable free route', version: '1.19.4', catalog: 'unavailable', shown: false },
+    { name: 'a degraded catalog', version: '1.19.4', catalog: 'degraded', shown: false },
+  ])('gates the provider Free models badge for $name', async ({ version, catalog, shown }) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version,
+    };
+    const modelId =
+      catalog === 'paid'
+        ? 'openai/gpt-paid'
+        : catalog === 'openrouter'
+          ? 'openrouter/test:free'
+          : 'opencode/big-pickle';
+    const isConnectedRoute = catalog === 'paid' || catalog === 'openrouter';
     storeState.cliStatus = createInstalledCliStatus({
       flavor: 'agent_teams_orchestrator',
       displayName: 'Multimodel runtime',
@@ -1594,14 +1625,77 @@ describe('CLI status visibility during completed install state', () => {
           authMethod: 'opencode_managed',
           verificationState: 'verified',
           statusMessage: 'Ready',
-          models: [],
+          models: [modelId],
+          modelAvailability: [
+            {
+              modelId,
+              status:
+                catalog === 'unavailable'
+                  ? 'unavailable'
+                  : catalog === 'unverified'
+                    ? 'unknown'
+                    : 'available',
+            },
+          ],
           canLoginFromUi: false,
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
           backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
-          modelCatalog: null,
+          modelCatalog:
+            catalog === 'missing'
+              ? null
+              : {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: catalog === 'degraded' ? 'degraded' : 'ready',
+                  fetchedAt: '2026-10-28T00:00:00.000Z',
+                  staleAt: '2026-10-28T00:10:00.000Z',
+                  defaultModelId: modelId,
+                  defaultLaunchModel: modelId,
+                  models: [
+                    {
+                      id: modelId,
+                      launchModel: modelId,
+                      displayName: modelId,
+                      hidden: catalog === 'hidden',
+                      supportedReasoningEfforts: [],
+                      defaultReasoningEffort: null,
+                      inputModalities: ['text'],
+                      supportsPersonality: true,
+                      isDefault: true,
+                      upgrade: false,
+                      source: 'app-server',
+                      metadata: {
+                        free: catalog !== 'paid',
+                        opencode: {
+                          providerId:
+                            catalog === 'paid'
+                              ? 'openai'
+                              : catalog === 'openrouter'
+                                ? 'openrouter'
+                                : 'opencode',
+                          modelId,
+                          sourceLabel: 'OpenCode',
+                          accessKind: isConnectedRoute ? 'credentialed' : 'builtin_free',
+                          routeKind: isConnectedRoute ? 'connected_provider' : 'builtin_free',
+                          proofState:
+                            catalog === 'refused'
+                              ? 'failed'
+                              : catalog === 'unverified'
+                                ? 'needs_probe'
+                                : 'not_required',
+                          requiresExecutionProof: false,
+                          failureCode: catalog === 'refused' ? 'free_tier_restricted' : undefined,
+                          reason: null,
+                        },
+                      },
+                    },
+                  ],
+                  diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+                },
         },
       ],
     });
@@ -1616,11 +1710,11 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     const providerFreeBadge = host.querySelector('[title*="Big Pickle"]');
-    expect(providerFreeBadge?.textContent).toBe('Free models');
-    expect(providerFreeBadge?.getAttribute('title')).toContain('OpenRouter');
-    expect(providerFreeBadge?.getAttribute('title')).toContain(
-      'not every OpenCode/OpenRouter model is free'
-    );
+    expect(providerFreeBadge !== null).toBe(shown);
+    if (shown) {
+      expect(providerFreeBadge?.textContent).toBe('Free models');
+      expect(providerFreeBadge?.getAttribute('title')).toContain('OpenRouter');
+    }
 
     await act(async () => {
       root.unmount();
@@ -1631,6 +1725,12 @@ describe('CLI status visibility during completed install state', () => {
   it('shows compact OpenCode configured-local and verified counts on the dashboard card', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '2.2.0',
+    };
     storeState.cliStatus = createInstalledCliStatus({
       flavor: 'agent_teams_orchestrator',
       displayName: 'Multimodel runtime',
@@ -1735,7 +1835,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Free models');
+    expect(host.textContent).not.toContain('Free models');
     expect(host.textContent).toContain('1 configured local');
     expect(host.textContent).toContain('1 verified');
     expect(host.textContent).not.toContain('qwen-test:0.5b qwen-test:0.5b');
@@ -3392,7 +3492,7 @@ describe('CLI status visibility during completed install state', () => {
 
     const onRefreshProvider = providerRuntimeSettingsDialogProps?.onRefreshProvider;
     await expect(onRefreshProvider?.('codex')).resolves.toBe(true);
-    expect(storeState.invalidateCliProviderModelCatalog).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
       silent: false,
       checkReason: 'manual_refresh',

@@ -40,11 +40,12 @@ export function createAgentBlockRegex(): RegExp {
 /**
  * Removes the current and legacy agent-only blocks from text for UI display.
  */
-export function stripAgentBlocks(text: string): string {
-  return text
-    .replace(createAgentBlockRegex(), '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+export function stripAgentBlocks(
+  text: string,
+  { normalizeWhitespace = true }: { normalizeWhitespace?: boolean } = {}
+): string {
+  const stripped = text.replace(createAgentBlockRegex(), '\n');
+  return normalizeWhitespace ? stripped.replace(/\n{3,}/g, '\n\n').trim() : stripped;
 }
 
 /**

@@ -37,6 +37,10 @@ overrides:
   '@terminal-platform/workspace-react': 'file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz'
   '@babel/core': '7.29.7'
   '@hono/node-server@1': '1.19.13'
+  # GHSA-83rm-6c8r-g728: Nuxt i18n 9's Vue I18n 10 line has no security fix.
+  '@intlify/core': '11.4.16'
+  '@intlify/message-compiler': '11.4.16'
+  '@intlify/shared': '11.4.16'
   '@opentelemetry/core': '2.8.0'
   # Keep optional React menus on the same exact Tiptap core/pm peer version.
   '@tiptap/react>@tiptap/extension-bubble-menu': '3.30.5'
@@ -111,6 +115,7 @@ overrides:
   'vitepress>vite': '7.3.7'
   '@nuxt/vite-builder>vite': '7.3.7'
   'vue': '3.5.43'
+  'vue-i18n': '11.4.16'
   'ws': '8.21.0'
   'yaml': '2.9.0'
 allowBuilds:

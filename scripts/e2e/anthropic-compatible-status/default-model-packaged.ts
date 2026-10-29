@@ -274,6 +274,12 @@ try {
     CLAUDE_CONFIG_DIR: path.join(data.home, '.claude'),
   });
   await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
+  // English UI assertions must be independent of the runner's system locale.
+  await writeFile(
+    path.join(env.CLAUDE_CONFIG_DIR!, 'agent-teams-config.json'),
+    JSON.stringify({ general: { appLocale: 'en' } }),
+    { flag: 'wx' }
+  );
   assert.deepEqual(
     Object.keys(env)
       .filter((key) => key.startsWith('ANTHROPIC_'))
@@ -379,6 +385,12 @@ try {
     'native services'
   );
   assert(startup.ready && !startup.error, redact(startup.error));
+  assert.equal(
+    await cdp.evaluate<string>('window.electronAPI.config.get().then(c => c.general.appLocale)'),
+    'en',
+    'The isolated app must load its explicit English UI locale'
+  );
+  await cdp.wait('document.documentElement.lang === "en"', 'English renderer locale');
   const discovery = await cdp.evaluate<{ installed: boolean; launchError?: string }>(
     'window.electronAPI.cliInstaller.getStatus({providerStatusMode:"defer"})'
   );
@@ -431,9 +443,13 @@ try {
     'fresh-diagnostic'
   );
   const label = `Default - ${configuredDefault}`;
+  const labelLiteral = JSON.stringify(label).replace(
+    /[<>&\u2028\u2029]/g,
+    (character) => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0')
+  );
   // The option renders Default and its model in separate spans; its accessible name is stable.
   const inheritedDefaultOption = `[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => {
-    const label = ${JSON.stringify(label)};
+    const label = ${labelLiteral};
     const name = e.getAttribute('aria-label');
     return name === label || name?.startsWith(label + '. ');
   })`;
@@ -470,7 +486,7 @@ try {
       'collapsed lead model controls'
     );
     await cdp.wait(
-      `${leadTrigger}?.getAttribute('aria-label')?.includes(${JSON.stringify(label)})`,
+      `${leadTrigger}?.getAttribute('aria-label')?.includes(${labelLiteral})`,
       'collapsed inherited accessible name'
     );
     const trigger: { text: string; aria: string } = await cdp.evaluate(

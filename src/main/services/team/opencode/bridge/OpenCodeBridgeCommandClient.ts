@@ -25,6 +25,12 @@ import {
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
 import {
+  classifyOpenCodeBridgeTermination,
+  type OpenCodeBridgeTerminationReason,
+  openCodeBridgeWatchdogDetails,
+  openCodeBridgeWatchdogMessage,
+} from './OpenCodeBridgeWatchdogDiagnostics';
+import {
   hasOpenCodeOwnedChildBinding,
   prepareOpenCodeShutdownCleanupEnvironment,
 } from './OpenCodeMcpBridgeEnv';
@@ -49,6 +55,7 @@ export interface OpenCodeBridgeProcessRunResult {
   exitCode: number | null;
   timedOut: boolean;
   outcomeUnknownReason?: 'transport_timeout' | 'output_limit' | 'termination_failed';
+  terminationReason?: OpenCodeBridgeTerminationReason;
 }
 export interface OpenCodeBridgeProcessRunner {
   run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult>;
@@ -174,6 +181,7 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
         stderr,
         exitCode: typeof failure.code === 'number' ? failure.code : null,
         timedOut,
+        terminationReason: classifyOpenCodeBridgeTermination(failure.processTerminationError),
         outcomeUnknownReason: failure.processTerminationError
           ? 'termination_failed'
           : outputLimitExceeded
@@ -469,12 +477,7 @@ export class OpenCodeBridgeCommandClient {
           }
         }
         if (processResult.timedOut) {
-          const unknownOutcomeMessage =
-            processResult.outcomeUnknownReason === 'output_limit'
-              ? 'OpenCode bridge output exceeded its safety limit; process outcome is unknown'
-              : processResult.outcomeUnknownReason === 'termination_failed'
-                ? 'OpenCode bridge process could not be terminated; process outcome is unknown'
-                : 'OpenCode bridge transport watchdog timed out';
+          const unknownOutcomeMessage = openCodeBridgeWatchdogMessage(processResult);
           return this.contractFailure(
             envelope,
             'transport_watchdog_timeout',
@@ -483,11 +486,7 @@ export class OpenCodeBridgeCommandClient {
             {
               stderr: redactBridgeDiagnosticText(processResult.stderr),
               attempts: attempt,
-              runtimeTimeoutMs: options.timeoutMs,
-              transportWatchdogGraceMs: OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
-              transportWatchdogTimeoutMs:
-                options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
-              outcomeUnknownReason: processResult.outcomeUnknownReason ?? 'transport_timeout',
+              ...openCodeBridgeWatchdogDetails(processResult, options.timeoutMs),
               ...processDetails,
             }
           );

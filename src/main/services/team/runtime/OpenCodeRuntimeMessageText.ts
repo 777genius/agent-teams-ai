@@ -1,4 +1,5 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { protocols } from 'agent-teams-controller';
 
 import { buildOriginalUserRequestBlock } from '../messageDeliveryText';
 import {
@@ -62,6 +63,7 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
           'If the group is archived, you are no longer a member, or relay is rejected, report the diagnostic and stop. Do not repair, retry in another destination, or echo privately.',
           'After a successful group_chat_send, stop. Proactive messages may target another available group you belong to, but do not count as replying to this origin.',
           'Use only the agent-teams MCP tools for communication. Do not call HTTP endpoints or read team state files.',
+          protocols.buildChatVisualizationRefreshInstruction(),
         ].join('\n')
       ),
       input.text,
@@ -201,7 +203,8 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
       ? buildOriginalUserRequestBlock(input.messageId)
       : null,
     ...responseInstructions,
-    'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
+    'Do not call runtime_bootstrap_checkin or member_briefing just to acknowledge this delivered app message. You may refresh the appropriate briefing when the chat visualization reminder below requires a missing display library specification.',
+    protocols.buildChatVisualizationRefreshInstruction(),
     'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',
     'Do not invent placeholder task labels. If no explicit taskRefs are provided and the reply is not about a real board task, do not prefix text or summary with a # task label; never use #00000000.',
     'The inbound app message follows. Treat it as the actual instruction to process now, not as background context.',
