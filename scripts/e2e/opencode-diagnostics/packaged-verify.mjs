@@ -1129,7 +1129,26 @@ export async function verifyPackaged({
         }
         return send(method, params);
       },
-      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`
+      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`,
+      async (readPoint) => {
+        // React may remount/disable the control after the earlier preparation.
+        // Poll only before any mouse event; never retry an emitted click.
+        const clickPreparation = await waitForPackagedRefreshPreparation(async () => {
+          const sample = await evaluate(`(${packagedSettingsPreparationState.toString()})(document,
+            ${packagedRefreshControlState.toString()})`);
+          const requests = await observe('globalThis.__packagedCatalogObservation');
+          const point = await readPoint();
+          return { ...sample, point,
+            control: point ? sample.control : { ...sample.control, present: false },
+            // The observation buffer was explicitly cleared above; zero new requests is settled.
+            requestsSettled: requests.overflow === false && Array.isArray(requests.records) &&
+              requests.records.every(record => record.completedAt && record.response && !record.error && !record.response.error),
+          };
+        }, { phase: 'settings' });
+        evidence.settingsClickPreparation = clickPreparation;
+        assert(clickPreparation.ready, `Settings click unavailable: ${clickPreparation.lastReason}`);
+        return clickPreparation.point;
+      }
     );
     let settingsRendered = false;
     for (let attempt = 0; attempt < 360; attempt++) {

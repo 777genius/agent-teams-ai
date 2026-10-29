@@ -7,9 +7,15 @@ import {
   buildMemberActor,
   buildMemberParticipant,
   buildSegmentId,
+  classifyOpenCodeTranscriptError,
   normalizeMemberName,
+  OPENCODE_NATIVE_RUNTIME_LABEL,
   withSegmentSource,
 } from './memberLogStreamSourceUtils';
+import {
+  OpenCodeMemberTranscriptBindingReader,
+  unavailableOpenCodeTranscriptWarning,
+} from './OpenCodeMemberTranscriptBindingReader';
 import {
   type OpenCodeMemberVisibleActivityEntry,
   OpenCodeMemberVisibleActivityReader,
@@ -21,6 +27,10 @@ import type {
   MemberLogStreamSourceInput,
   MemberLogStreamSourceResult,
 } from '../../../../core/application/ports/MemberLogStreamSource';
+import type {
+  OpenCodeMemberTranscriptBinding,
+  OpenCodeTranscriptBindingReader,
+} from './OpenCodeMemberTranscriptBindingReader';
 import type { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import type { BoardTaskExactLogChunkBuilder } from '@main/services/team/taskLogs/exact/BoardTaskExactLogChunkBuilder';
 import type { ParsedMessage } from '@main/types';
@@ -31,42 +41,6 @@ interface BinaryResolverLike {
 
 const CACHE_TTL_MS = 1_500;
 const DEFAULT_VISIBLE_ACTIVITY_READER = new OpenCodeMemberVisibleActivityReader();
-
-function classifyOpenCodeError(error: unknown): MemberLogStreamWarning {
-  const message = error instanceof Error ? error.message : String(error);
-  const record = error && typeof error === 'object' ? (error as Record<string, unknown>) : null;
-  const code = typeof record?.code === 'string' ? record.code : '';
-  const signal = typeof record?.signal === 'string' ? record.signal : '';
-  const killed = record?.killed === true ? 'killed' : '';
-  const normalized = [message, code, signal, killed].join(' ').toLowerCase();
-  if (
-    normalized.includes('timed out') ||
-    normalized.includes('timeout') ||
-    normalized.includes('code 143') ||
-    normalized.includes('signal sigterm') ||
-    normalized.includes('killed')
-  ) {
-    return {
-      code: 'opencode_runtime_timeout',
-      message: 'OpenCode runtime transcript timed out; showing other member logs only.',
-    };
-  }
-  if (
-    normalized.includes('ambiguous') ||
-    normalized.includes('without a safe lane') ||
-    normalized.includes('requires --lane') ||
-    (normalized.includes('multiple') && normalized.includes('lane'))
-  ) {
-    return {
-      code: 'opencode_ambiguous_lane',
-      message: 'OpenCode runtime session is ambiguous without a safe lane id.',
-    };
-  }
-  return {
-    code: 'opencode_runtime_unavailable',
-    message: `OpenCode runtime transcript is unavailable: ${message}`,
-  };
-}
 
 export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource {
   readonly provider = 'opencode_runtime' as const;
@@ -80,11 +54,26 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
     private readonly runtimeBridge: ClaudeMultimodelBridgeService,
     private readonly chunkBuilder: BoardTaskExactLogChunkBuilder,
     private readonly binaryResolver: BinaryResolverLike = ClaudeBinaryResolver,
-    private readonly visibleActivityReader: OpenCodeMemberVisibleActivityReader = DEFAULT_VISIBLE_ACTIVITY_READER
+    private readonly visibleActivityReader: OpenCodeMemberVisibleActivityReader = DEFAULT_VISIBLE_ACTIVITY_READER,
+    private readonly bindingReader: OpenCodeTranscriptBindingReader = new OpenCodeMemberTranscriptBindingReader()
   ) {}
 
   async load(input: MemberLogStreamSourceInput): Promise<MemberLogStreamSourceResult> {
+    const binding = await this.bindingReader.read(input);
+    if (binding.kind === 'unavailable') {
+      const warning = unavailableOpenCodeTranscriptWarning(binding);
+      return this.loadVisibleActivityFallback(input, [warning], warning.message);
+    }
+    const currentResult = async (result: MemberLogStreamSourceResult) =>
+      (await this.bindingReader.isCurrent(input, binding))
+        ? result
+        : this.loadVisibleActivityFallback(
+            input,
+            [unavailableOpenCodeTranscriptWarning()],
+            'opencode_runtime_unavailable'
+          );
     const cacheKey = [
+      binding.cacheKey,
       input.teamName,
       normalizeMemberName(input.memberName),
       input.laneId ?? '',
@@ -94,29 +83,34 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
     if (!input.forceRefresh) {
       const cached = this.cache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
-        return cached.result;
+        return currentResult(cached.result);
       }
     }
 
     const existing = this.inFlight.get(cacheKey);
     if (existing) {
-      return existing;
+      return currentResult(await existing);
     }
 
-    const promise = this.buildResult(input)
+    const promise = this.buildResult(input, binding)
       .then((result) => {
-        this.cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, result });
+        const now = Date.now();
+        for (const [key, cached] of this.cache) {
+          if (cached.expiresAt <= now) this.cache.delete(key);
+        }
+        this.cache.set(cacheKey, { expiresAt: now + CACHE_TTL_MS, result });
         return result;
       })
       .finally(() => {
         this.inFlight.delete(cacheKey);
       });
     this.inFlight.set(cacheKey, promise);
-    return promise;
+    return currentResult(await promise);
   }
 
   private async buildResult(
-    input: MemberLogStreamSourceInput
+    input: MemberLogStreamSourceInput,
+    binding: Extract<OpenCodeMemberTranscriptBinding, { kind: 'bound' }>
   ): Promise<MemberLogStreamSourceResult> {
     const binaryPath = await this.binaryResolver.resolve();
     if (!binaryPath) {
@@ -137,7 +131,9 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         teamId: input.teamName,
         memberName: input.memberName,
         limit: input.budget.openCodeMessageLimit,
-        laneId: input.laneId,
+        laneId: binding.laneId,
+        runId: binding.runId,
+        sessionId: binding.sessionId,
         timeoutMs: input.budget.openCodeTimeoutMs,
       });
       const projectedMessages = transcript?.logProjection?.messages ?? [];
@@ -194,7 +190,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         },
         {
           provider: this.provider,
-          label: 'OpenCode runtime',
+          label: OPENCODE_NATIVE_RUNTIME_LABEL,
           sessionId,
           ...(input.laneId ? { laneId: input.laneId } : {}),
           messageCount: budgeted.messages.length,
@@ -230,7 +226,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         },
       };
     } catch (error) {
-      const warning = classifyOpenCodeError(error);
+      const warning = classifyOpenCodeTranscriptError(error);
       return this.loadVisibleActivityFallback(input, [warning], warning.message);
     }
   }

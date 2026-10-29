@@ -26,6 +26,7 @@
     "../../test/scripts/recoverDraftPayloads.test.ts",
     "../../scripts/electron-builder/**/*.mts",
     "../../scripts/lib/runtime-archive-extraction.mts",
+    "../../scripts/lib/opencode-v2-base-inventory.mts",
     "../../scripts/lib/runtime-archive-extraction.test.mts",
     "../../scripts/lib/runtime-zip.test-fixture.mts",
     "../../scripts/lib/runtime-bootstrap-diagnostics.mts",

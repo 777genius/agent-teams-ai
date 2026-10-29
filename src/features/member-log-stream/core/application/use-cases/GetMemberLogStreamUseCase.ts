@@ -15,6 +15,8 @@ import type {
 } from '../ports/MemberLogStreamSource';
 
 export interface GetMemberLogStreamInput {
+  /** Main-owned provider admission identity; never a renderer selector. */
+  sourceIdentity?: string;
   teamName: string;
   memberName: string;
   limitSegments?: number;
@@ -32,6 +34,7 @@ interface GetMemberLogStreamUseCaseDeps {
 
 function stableInputKey(input: GetMemberLogStreamInput, limitSegments: number): string {
   return JSON.stringify([
+    input.sourceIdentity ?? '',
     input.teamName,
     input.memberName,
     limitSegments,

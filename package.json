@@ -371,7 +371,12 @@
       },
       {
         "from": "resources/runtime",
-        "to": "runtime"
+        "to": "runtime",
+        "filter": [
+          "**/*",
+          "!**/agent-teams-opencode-v2-support-*.zip",
+          "!**/opencode-v2-engine-manifest.json"
+        ]
       },
       {
         "from": "resources/terminal-platform",

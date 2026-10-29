@@ -131,6 +131,7 @@ async function main() {
     toolCount = tools.result.tools.length;
   } finally {
     try {
+      // Keep stdio alive until the strict pre-signal ownership census completes.
       await terminateChild(child, closePromise, platform, 2_000, ownership);
     } catch (error) {
       console.error(

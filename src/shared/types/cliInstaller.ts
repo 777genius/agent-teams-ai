@@ -482,6 +482,8 @@ export interface OpenCodeRuntimeInstallProgress {
 }
 
 export interface OpenCodeRuntimeStatus {
+  /** Availability of optional support; native installation identity is separate. */
+  v2Support?: 'ready' | 'required';
   /** Exact newest V2 qualified by the pinned runtime for this native platform. */
   compatibleV2Version?: string | null;
   installed: boolean;

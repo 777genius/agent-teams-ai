@@ -87,6 +87,7 @@ export function createOpenCodeGroupChatRunGetter(deps: {
         return null;
       // The admitted proof stays request-scoped. Commit checks read current local
       // authority; a bridge/MCP probe must never run while an inbox lock is held.
+      let localHighWatermark = manifest.highWatermark;
       const isCurrent = async (): Promise<boolean> => {
         try {
           if (!isDesktopMcpControlAvailable()) return false;
@@ -104,11 +105,16 @@ export function createOpenCodeGroupChatRunGetter(deps: {
           if (
             currentManifest.activeRunId !== manifest.activeRunId ||
             currentManifest.capabilitySnapshotId !== manifest.capabilitySnapshotId ||
-            currentManifest.highWatermark !== manifest.highWatermark
+            (currentManifest.behaviorFingerprint ?? null) !==
+              (manifest.behaviorFingerprint ?? null) ||
+            currentManifest.highWatermark < localHighWatermark
           )
             return false;
           process.kill(proof.runtimePid, 0);
-          return isDesktopMcpControlAvailable();
+          if (!isDesktopMcpControlAvailable()) return false;
+          // Receipt commits advance the local cursor without replacing the admitted owner.
+          localHighWatermark = Math.max(localHighWatermark, currentManifest.highWatermark);
+          return true;
         } catch {
           return false;
         }

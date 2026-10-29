@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { runInNewContext } from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { constants, runInNewContext } from 'node:vm';
 
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
 import { phase } from './runtime-bootstrap-diagnostics.mts';
@@ -426,6 +427,11 @@ test('stager extraction failure preserves previous payload and removes only its 
       },
       cleanRuntimeDir: () =>
         assert.fail('Failed extraction must not publish or clean previous payload'),
+    },
+    {
+      // Keep the stager's early delivery-map guard on its real module loader.
+      filename: fileURLToPath(new URL('../stage-runtime.mjs', import.meta.url)),
+      importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
     }
   );
   try {
