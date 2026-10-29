@@ -59,11 +59,26 @@ function unavailableProjectStatus(
   ) {
     return projectStatusWithoutAuthority(global, true);
   }
+  const runtimeMissing = runtime?.installed === false;
+  const supportRequired = runtime?.v2Support === 'required';
+  const runtimeMessage =
+    runtime?.error ??
+    (supportRequired
+      ? 'OpenCode V2 support must be installed.'
+      : 'OpenCode runtime is not installed.');
+  const matchingRuntimeFailure =
+    global.statusCheckErrorCode === (runtimeMissing ? 'runtime_missing' : 'unavailable') &&
+    (runtime?.error
+      ? global.statusMessage === runtime.error
+      : runtimeMissing || global.statusMessage === runtimeMessage);
   const hasSettledFailure =
     global.statusCheckOutcome !== 'pending' &&
     (!global.supported ||
       global.statusCheckOutcome === 'transient_error' ||
-      global.statusCheckErrorCode != null);
+      global.statusCheckErrorCode != null) &&
+    // An explicit runtime diagnosis takes precedence over another project's
+    // settled credentials/service failure; retain matching runtime diagnostics.
+    (!(runtimeMissing || supportRequired) || matchingRuntimeFailure);
   return projectStatusWithoutAuthority(
     {
       ...global,
@@ -72,11 +87,7 @@ function unavailableProjectStatus(
         verificationState: 'error',
         statusCheckOutcome: 'transient_error',
         statusCheckErrorCode: runtime?.installed === false ? 'runtime_missing' : 'unavailable',
-        statusMessage:
-          runtime?.error ??
-          (runtime?.v2Support === 'required'
-            ? 'OpenCode V2 support must be installed.'
-            : 'OpenCode runtime is not installed.'),
+        statusMessage: runtimeMessage,
         detailMessage: runtime?.error ?? null,
       }),
     },
@@ -116,6 +127,97 @@ export function useOpenCodeDashboardStatus(input: {
   );
   const enabled =
     input.enabled && input.cliStatus?.flavor === 'agent_teams_orchestrator' && canReadCatalog;
+  const recoveryContext = useMemo(
+    () => ({ projectPath, revision: scopeRevision }),
+    [projectPath, scopeRevision]
+  );
+  const recovery = useRef<{
+    context: typeof recoveryContext;
+    enabled: boolean;
+    runtimeReady: boolean;
+    status: CliProviderStatus | null;
+    freshUntil: string | null;
+    retried: boolean;
+  } | null>(null);
+  const recoverStatus = useCallback(() => {
+    const current = recovery.current;
+    if (
+      current?.context !== recoveryContext ||
+      !current.enabled ||
+      !current.runtimeReady ||
+      !projectPath ||
+      current.retried ||
+      Date.parse(current.freshUntil ?? '') <= Date.now() ||
+      !Number.isFinite(Date.parse(current.freshUntil ?? '')) ||
+      current.status?.statusCheckOutcome !== 'transient_error' ||
+      current.status.statusCheckErrorCode === 'project_missing'
+    )
+      return;
+    // A successful read is a recovery signal, never credentials or launch proof.
+    // Latch before fetching so another catalog cannot retry the same incident.
+    current.retried = true;
+    void fetchCliProviderStatus('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath,
+    }).catch(() => undefined);
+  }, [fetchCliProviderStatus, projectPath, recoveryContext]);
+  const onCatalogRecovery = useCallback(
+    (receipt: { projectPath: string | null; freshUntil: string | null }) => {
+      const current = recovery.current;
+      if (
+        current?.context !== recoveryContext ||
+        !current.enabled ||
+        !projectPath ||
+        receipt.projectPath?.trim() !== projectPath ||
+        !(Date.parse(receipt.freshUntil ?? '') > Date.now()) ||
+        (current.status?.supported &&
+          ['authoritative', 'model_only'].includes(current.status.statusCheckOutcome ?? '') &&
+          current.status.statusCheckErrorCode == null)
+      )
+        return;
+      current.freshUntil = receipt.freshUntil;
+      recoverStatus();
+    },
+    [projectPath, recoverStatus, recoveryContext]
+  );
+
+  useEffect(() => {
+    const previous = recovery.current;
+    const sameContext = previous?.context === recoveryContext;
+    recovery.current = {
+      context: recoveryContext,
+      enabled,
+      runtimeReady:
+        input.runtimeStatus?.installed === true && input.runtimeStatus.state === 'ready',
+      status: scoped,
+      freshUntil: sameContext ? previous.freshUntil : null,
+      retried: sameContext && previous.retried,
+    };
+    if (
+      scoped?.supported &&
+      ['authoritative', 'model_only'].includes(scoped.statusCheckOutcome ?? '') &&
+      scoped.statusCheckErrorCode == null
+    ) {
+      recovery.current.retried = false;
+      recovery.current.freshUntil = null;
+    }
+    // The real catalog may finish before the pending status failure is committed.
+    recoverStatus();
+  }, [
+    enabled,
+    input.runtimeStatus?.installed,
+    input.runtimeStatus?.state,
+    recoverStatus,
+    recoveryContext,
+    scoped,
+  ]);
+  useEffect(
+    () => () => {
+      if (recovery.current?.context === recoveryContext) recovery.current = null;
+    },
+    [recoveryContext]
+  );
   const scopeMissing = scoped === null;
   const lastRead = useRef<{
     projectPath: string;
@@ -143,7 +245,7 @@ export function useOpenCodeDashboardStatus(input: {
     }).catch(() => undefined);
   }, [enabled, fetchCliProviderStatus, projectPath, scopeMissing, scopeRevision]);
 
-  return { enabled, providerStatus };
+  return { enabled, providerStatus, onCatalogRecovery };
 }
 
 export function useDashboardProviderRefresh(

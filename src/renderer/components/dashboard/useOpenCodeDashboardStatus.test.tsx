@@ -117,20 +117,23 @@ let observed: {
 const Probe = ({
   projectPath = '/sandbox/a',
   enabled = true,
+  runtimeStatus = runtime,
 }: {
   projectPath?: string | null;
   enabled?: boolean;
+  runtimeStatus?: OpenCodeRuntimeStatus | null;
 }) => {
   const status = useOpenCodeDashboardStatus({
     enabled,
     projectPath,
     cliStatus: globalStatus,
-    runtimeStatus: runtime,
+    runtimeStatus,
   });
   const catalog = useOpenCodeConnectedModelCatalog({
     enabled: status.enabled,
     projectPath,
     passiveProviderStatus: status.providerStatus,
+    onCatalogRecovery: status.onCatalogRecovery,
   });
   const refresh = useDashboardProviderRefresh(
     projectPath,
@@ -143,7 +146,7 @@ const Probe = ({
   return (
     <span>
       {catalog.providerStatus &&
-      hasAvailableFreeOpenCodeDashboardModel(catalog.providerStatus, runtime)
+      hasAvailableFreeOpenCodeDashboardModel(catalog.providerStatus, runtimeStatus)
         ? 'Free models'
         : 'Needs test'}
     </span>
@@ -216,6 +219,43 @@ afterEach(async () => {
 });
 
 describe('selected-project dashboard proof', () => {
+  it.each(['native missing', 'support required'] as const)(
+    'prefers the current %s diagnosis over an unrelated settled global failure',
+    async (reason) => {
+      const global: CliProviderStatus = {
+        ...provider(true),
+        supported: false,
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        statusMessage: 'Global project credentials failed',
+        detailMessage: 'Global project timeout detail',
+      };
+      globalStatus = { ...globalStatus, providers: [global] };
+      const missing: OpenCodeRuntimeStatus =
+        reason === 'native missing'
+          ? { installed: false, source: 'missing', state: 'idle' }
+          : { ...runtime, state: 'idle', v2Support: 'required' };
+      await act(async () => root.render(<Probe runtimeStatus={missing} />));
+      expect(observed.status.enabled).toBe(false);
+      expect(observed.status.providerStatus).toMatchObject({
+        supported: false,
+        statusMessage:
+          reason === 'native missing'
+            ? 'OpenCode runtime is not installed.'
+            : 'OpenCode V2 support must be installed.',
+        detailMessage: null,
+        statusCheckErrorCode: reason === 'native missing' ? 'runtime_missing' : 'unavailable',
+        authenticated: false,
+        modelCatalog: null,
+        models: [],
+        capabilities: { teamLaunch: false, oneShot: false },
+      });
+      expect(mocks.fetch).not.toHaveBeenCalled();
+      expect(globalStatus.providers[0]).toBe(global);
+      expect(global.statusMessage).toBe('Global project credentials failed');
+    }
+  );
+
   it.each(['Connected to the global project', 'Global project credentials failed'])(
     'does not display %s or global backend metadata while the project is pending',
     async (message) => {
@@ -354,6 +394,137 @@ describe('selected-project dashboard proof', () => {
     await act(async () => publishScope('/sandbox/a', provider(false)));
     await act(async () => publishScope('/sandbox/a', provider(false)));
     await act(async () => root.render(<Probe />));
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks a failed project once after its real connected catalog recovers', async () => {
+    const failure: CliProviderStatus = {
+      ...provider(false),
+      supported: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      statusMessage: 'Runtime temporarily unavailable',
+    };
+    mocks.fetch
+      .mockImplementationOnce(async () => {
+        publishScope('/sandbox/a', failure);
+        return false;
+      })
+      .mockImplementationOnce(async () => {
+        publishScope('/sandbox/a', provider(true));
+        return true;
+      });
+    await act(async () => root.render(<Probe />));
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.fetch).toHaveBeenLastCalledWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/sandbox/a',
+    });
+    expect(mocks.directory).toHaveBeenCalledTimes(1);
+    expect(mocks.models).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toBe('Free models');
+    expect(observed.catalog.providerStatus).toMatchObject({
+      authenticated: false,
+      capabilities: { teamLaunch: false, oneShot: false },
+      modelCatalog: { status: 'degraded', defaultLaunchModel: null },
+    });
+    expect(globalStatus.providers[0].modelCatalog?.models[0].metadata?.opencode?.proofState).toBe(
+      'needs_probe'
+    );
+  });
+
+  it('bounds recovery to one read per unresolved incident and rearms only after scoped recovery', async () => {
+    const failure: CliProviderStatus = {
+      ...provider(false),
+      supported: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+    };
+    mocks.fetch.mockImplementation(async () => {
+      publishScope('/sandbox/a', { ...failure });
+      return false;
+    });
+    await act(async () => root.render(<Probe />));
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    const callback = observed.status.onCatalogRecovery;
+    await act(async () => observed.catalog.refresh());
+    await act(async () => publishScope('/sandbox/a', { ...failure }));
+    await act(async () => root.render(<Probe />));
+    expect(observed.status.onCatalogRecovery).toBe(callback);
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.directory).toHaveBeenCalledTimes(2);
+    await act(async () => publishScope('/sandbox/a', provider(false)));
+    await act(async () => observed.catalog.refresh());
+    await act(async () => publishScope('/sandbox/a', failure));
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    await act(async () => observed.catalog.refresh());
+    expect(mocks.fetch).toHaveBeenCalledTimes(3);
+    expect(container.textContent).toBe('Needs test');
+  });
+
+  it('rejects expired, foreign, superseded-context and unmounted catalog recovery callbacks', async () => {
+    mocks.models.mockReturnValue(new Promise(() => undefined));
+    const failure: CliProviderStatus = {
+      ...provider(false),
+      supported: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+    };
+    publishScope('/sandbox/a', failure);
+    publishScope('/sandbox/b', failure);
+    await act(async () => root.render(<Probe />));
+    const callbackA = observed.status.onCatalogRecovery;
+    const freshUntil = new Date(Date.now() + 60_000).toISOString();
+    await act(async () => {
+      callbackA({ projectPath: '/sandbox/b', freshUntil });
+      callbackA({ projectPath: '/sandbox/a', freshUntil: new Date(0).toISOString() });
+    });
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    await act(async () => root.render(<Probe projectPath="/sandbox/b" />));
+    const oldCallbackB = observed.status.onCatalogRecovery;
+    await act(async () => callbackA({ projectPath: '/sandbox/a', freshUntil }));
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      mocks.snapshot = { ...mocks.snapshot, cliProviderStatusScopeRevision: 1 };
+      for (const listener of mocks.listeners) listener();
+    });
+    await act(async () => oldCallbackB({ projectPath: '/sandbox/b', freshUntil }));
+    expect(mocks.fetch).toHaveBeenCalledTimes(3);
+    const currentCallback = observed.status.onCatalogRecovery;
+    await act(async () => currentCallback({ projectPath: '/sandbox/b', freshUntil }));
+    expect(mocks.fetch).toHaveBeenCalledTimes(4);
+    await act(async () => root.render(null));
+    await act(async () => currentCallback({ projectPath: '/sandbox/b', freshUntil }));
+    expect(mocks.fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not treat global recovery or a missing project as scoped catalog recovery', async () => {
+    mocks.models.mockReturnValue(new Promise(() => undefined));
+    publishScope('/sandbox/a', {
+      ...provider(false),
+      supported: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+    });
+    await act(async () => root.render(<Probe />));
+    globalStatus = { ...globalStatus, providers: [provider(true)] };
+    await act(async () => root.render(<Probe />));
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    await act(async () =>
+      publishScope('/sandbox/a', {
+        ...provider(false),
+        supported: false,
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'project_missing',
+      })
+    );
+    await act(async () =>
+      observed.status.onCatalogRecovery({
+        projectPath: '/sandbox/a',
+        freshUntil: new Date(Date.now() + 60_000).toISOString(),
+      })
+    );
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
   });
 

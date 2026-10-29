@@ -180,8 +180,8 @@ export function createOpenCodeRuntimeActions(
       })().finally(() => {
         if (installInFlight === request) installInFlight = null;
         finishReplacement();
-        // The unscoped follow-up can advance its epoch several times. Notify once after it
-        // settles, including failure, so selected projects read under the final epoch.
+        // Notify once after the bounded follow-up settles, including failure,
+        // so selected projects read the installed runtime after all retries.
         invalidateProjectScopes(true);
         set({ openCodeRuntimeStatusLoading: isInstalling(get().openCodeRuntimeStatus) });
       });

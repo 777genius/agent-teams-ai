@@ -71,6 +71,7 @@ export interface CliProviderStatusFetchOptions {
   silent?: boolean;
   epoch?: number;
   verifyModels?: boolean;
+  requireModelList?: boolean;
   checkReason?: AnalyticsProviderCheckReason;
   projectPath?: string | null;
 }
@@ -197,9 +198,7 @@ function sleep(ms: number): Promise<void> {
 
 function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
   for (const key of cliProviderStatusInFlight.keys()) {
-    if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
-      cliProviderStatusInFlight.delete(key);
-    }
+    if (key.startsWith(`${providerId}:`)) cliProviderStatusInFlight.delete(key);
   }
   for (const key of cliProviderStatusActiveRequestIds.keys()) {
     if (key.startsWith(`${providerId}\0`)) cliProviderStatusActiveRequestIds.delete(key);
@@ -681,10 +680,9 @@ export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
   for (let attempt = 1; attempt <= OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
     await api.cliInstaller.invalidateStatus();
     clearCliProviderStatusInFlight('opencode');
-    const epoch = ++cliStatusEpoch;
     const refreshed = await get().fetchCliProviderStatus('opencode', {
       silent: false,
-      epoch,
+      requireModelList: true,
       checkReason: 'runtime_install',
     });
 
@@ -1190,7 +1188,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (requestEpoch !== cliStatusEpoch) return false;
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const projectPath = options?.projectPath?.trim() || null;
-    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
+    const mode = verifyModels ? 'verify' : options?.requireModelList ? 'models' : 'status';
+    const requestKey = `${providerId}:${mode}:${projectPath ?? ''}`;
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight && cliProviderStatusRequestEpochs.get(inFlight) === requestEpoch) return inFlight;
@@ -1382,6 +1381,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         return Boolean(
           requestIsCurrent &&
           settledProviderStatus &&
+          (!options?.requireModelList || providerStatus.models.length > 0) &&
           (!projectPath || isTeamProviderModelCatalogFresh(providerId, settledProviderStatus))
         );
       } catch (error) {

@@ -117,6 +117,90 @@ function setup(overrides: Partial<ElectronAPI['openCodeRuntime']> = {}) {
 }
 
 describe('OpenCode installation without restarting the renderer', () => {
+  it('retries an empty model-only response instead of accepting retained pre-install models', async () => {
+    vi.useFakeTimers();
+    const { store } = setup();
+    const old = verifiedOpenCodeProvider();
+    const fresh = verifiedOpenCodeProvider('opencode/new-native');
+    const empty: CliProviderStatus = {
+      ...old,
+      authenticated: false,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      statusCheckErrorCode: 'partial_response',
+      models: [],
+      modelCatalog: null,
+      capabilities: { ...old.capabilities, teamLaunch: false, oneShot: false },
+    };
+    const getProviderStatus = vi.fn().mockResolvedValueOnce(empty).mockResolvedValue(fresh);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...window.electronAPI,
+        cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+      },
+    });
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [old] } });
+    const installing = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+    await vi.runAllTimersAsync();
+    await installing;
+    expect(getProviderStatus).toHaveBeenCalledTimes(2);
+    expect(store.getState().cliStatus!.providers[0].models).toEqual(fresh.models);
+  });
+
+  it.each(['success', 'failure'] as const)(
+    'lets an unrelated provider read settle with %s during OpenCode install retries',
+    async (outcome) => {
+      vi.useFakeTimers();
+      const { store } = setup();
+      const old = verifiedOpenCodeProvider();
+      const fresh = verifiedOpenCodeProvider('opencode/new-native');
+      const codex = deferred<CliProviderStatus>();
+      const transient: CliProviderStatus = {
+        ...old,
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'unavailable',
+        models: [],
+        modelCatalog: null,
+      };
+      const openCodeRead = vi.fn().mockResolvedValueOnce(transient).mockResolvedValue(fresh);
+      const getProviderStatus = vi.fn((providerId: string) =>
+        providerId === 'codex' ? codex.promise : openCodeRead()
+      );
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+        },
+      });
+      store.setState({ cliStatus: createLoadingMultimodelCliStatus() });
+      const unrelatedRead = store.getState().fetchCliProviderStatus('codex');
+      expect(store.getState().cliProviderStatusLoading.codex).toBe(true);
+      const installing = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+      await vi.runAllTimersAsync();
+      await installing;
+      expect(openCodeRead).toHaveBeenCalledTimes(2);
+      if (outcome === 'failure') codex.reject(new Error('TEST unrelated provider unavailable'));
+      else
+        codex.resolve({
+          ...verifiedOpenCodeProvider('codex/current-model'),
+          providerId: 'codex',
+          displayName: 'Codex',
+          modelCatalog: null,
+        });
+      expect(await unrelatedRead).toBe(outcome === 'success');
+      expect(store.getState().cliProviderStatusLoading.codex).toBe(false);
+      expect(
+        store.getState().cliStatus!.providers.find((row) => row.providerId === 'codex')
+      ).toMatchObject(
+        outcome === 'success'
+          ? { models: ['codex/current-model'] }
+          : { statusCheckOutcome: 'transient_error' }
+      );
+    }
+  );
+
   it.each(['rejected', 'transient', 'superseded', 'persistent transient'] as const)(
     'does not finish a post-install refresh on retained models after a %s read',
     async (outcome) => {
@@ -154,9 +238,7 @@ describe('OpenCode installation without restarting the renderer', () => {
       if (outcome === 'superseded') store.getState().invalidateCliProviderModelCatalog();
       if (outcome === 'rejected') first.reject(new Error('TEST provider IPC failed'));
       else first.resolve(outcome === 'superseded' ? old : transient);
-      expect(await fetch.mock.results[0].value).toBe(
-        outcome === 'transient' || outcome === 'persistent transient'
-      );
+      expect(await fetch.mock.results[0].value).toBe(false);
       expect(store.getState().cliStatus!.providers[0]).toMatchObject({
         models: old.models,
         modelCatalog: { status: 'stale' },

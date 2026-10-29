@@ -70,52 +70,6 @@ const result = {
   root,
   phases: [],
 };
-const buildEvidence = process.env.OPENCODE_V2_E2E_BUILD_EVIDENCE;
-if (buildEvidence) {
-  const previous = JSON.parse(await readFile(path.join(buildEvidence, 'result.json'), 'utf8'));
-  const log = await readFile(path.join(buildEvidence, 'desktop.log'), 'utf8');
-  assert(log.includes('electron main process built successfully'));
-  assert(log.includes('electron preload scripts built successfully'));
-  assert.equal(previous.appSource.commit, result.appSource.commit);
-  const nativeInput = (file) =>
-    !file.startsWith('src/renderer/') &&
-    !file.includes('/renderer/') &&
-    !file.startsWith('test/') &&
-    !file.startsWith('docs/') &&
-    !file.startsWith('.github/') &&
-    !file.startsWith('scripts/e2e/') &&
-    file !== 'scripts/ci/source-file-size-baseline.json' &&
-    !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
-  assert.deepEqual(
-    result.appSource.files.filter((file) => nativeInput(file.path)),
-    previous.appSource.files.filter((file) => nativeInput(file.path)),
-    'Reusing a native build requires identical main/preload/shared/feature-main/contracts inputs'
-  );
-  const bundleFiles = git(
-    repo,
-    'ls-files',
-    '--others',
-    '--ignored',
-    '--exclude-standard',
-    '-z',
-    'dist-electron'
-  )
-    .split('\0')
-    .filter(Boolean);
-  assert(bundleFiles.includes('dist-electron/main/index.cjs'));
-  assert(bundleFiles.includes('dist-electron/preload/index.js'));
-  result.reusedNativeBuild = {
-    evidence: path.resolve(buildEvidence),
-    files: await Promise.all(
-      bundleFiles.sort().map(async (file) => ({
-        path: file,
-        sha256: createHash('sha256')
-          .update(await readFile(path.join(repo, file)))
-          .digest('hex'),
-      }))
-    ),
-  };
-}
 const save = (name, value) =>
   writeFile(path.join(evidence, name), JSON.stringify(value, null, 2) + '\n');
 let app,
@@ -399,7 +353,7 @@ try {
     result.electronExecutable = await realpath(electron);
   }
   const port = await requireDevMcpPort();
-  app = spawn('pnpm', ['dev:mcp', ...(buildEvidence ? ['--rendererOnly'] : [])], {
+  app = spawn('pnpm', ['dev:mcp'], {
     cwd: repo,
     env,
     detached: true,

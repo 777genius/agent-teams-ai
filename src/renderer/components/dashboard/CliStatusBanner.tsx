@@ -1660,8 +1660,8 @@ export const CliStatusBanner = ({
     refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,
     passiveProviderStatus: openCodeDashboardStatus.providerStatus,
+    onCatalogRecovery: openCodeDashboardStatus.onCatalogRecovery,
   });
-  const refreshOpenCodeDashboardCatalog = openCodeDashboardCatalog.refresh;
   const visibleCliProviders = useMemo(
     () =>
       filterMainScreenCliProviders(loadingCliStatus?.providers ?? []).map((provider) =>
@@ -1817,7 +1817,7 @@ export const CliStatusBanner = ({
   ]);
 
   useDashboardStatusRefresh(isElectron && Boolean(cliStatus), () => {
-    refreshOpenCodeDashboardCatalog();
+    openCodeDashboardCatalog.refresh();
     void refreshCliStatusForCurrentMode({ multimodelEnabled, bootstrapCliStatus, fetchCliStatus });
   });
   useEffect(() => {
@@ -1840,7 +1840,7 @@ export const CliStatusBanner = ({
   }, [installCli]);
 
   const handleRefresh = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    openCodeDashboardCatalog.refresh();
     void (async () => {
       await invalidateCliStatus();
       await refreshCliStatusForCurrentMode({
@@ -1854,7 +1854,7 @@ export const CliStatusBanner = ({
     fetchCliStatus,
     invalidateCliStatus,
     multimodelEnabled,
-    refreshOpenCodeDashboardCatalog,
+    openCodeDashboardCatalog.refresh,
   ]);
 
   // An explicit OpenCode re-check must bypass the provider directory cache for
@@ -1897,7 +1897,7 @@ export const CliStatusBanner = ({
   }, [codexAccount]);
 
   const recheckAuthState = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    openCodeDashboardCatalog.refresh();
     setIsVerifyingAuth(true);
     void (async () => {
       try {
@@ -1916,7 +1916,7 @@ export const CliStatusBanner = ({
     fetchCliStatus,
     invalidateCliStatus,
     multimodelEnabled,
-    refreshOpenCodeDashboardCatalog,
+    openCodeDashboardCatalog.refresh,
   ]);
 
   const handleProviderLogin = useCallback((providerId: CliProviderId) => {
