@@ -29,7 +29,26 @@ describe('native Windows candidate split delivery', () => {
     expect(JSON.stringify(runtimeLock)).toBe(originalSnapshot);
   });
 
+  it('stages an explicit x64 V1-only base without V2 input or stale public eligibility', () => {
+    const lock = candidateRuntimeLock(runtimeLock, { version: '0.0.100', sourceSha, archiveSha256,
+      platform: 'win32-x64', versions: 'v1',
+      get contract() { throw new Error('V1 must not read the registry contract'); },
+      get descriptor() { throw new Error('V1 must not read a support descriptor'); },
+    });
+    expect(lock.version).toBe('0.0.100');
+    expect(lock.sourceRef).toBe(sourceSha);
+    expect(lock.assets).toEqual({ 'win32-x64': { ...runtimeLock.assets['win32-x64'],
+      file: 'TEST-runtime-win32-x64.zip', sha256: archiveSha256 } });
+    expect(Object.hasOwn(lock, 'opencodeV2')).toBe(false);
+    expect(Object.hasOwn(lock, 'opencodeV2Delivery')).toBe(false);
+    expect(readOpenCodeV2DeliveryMap(lock)).toBe(null);
+    expect(JSON.stringify(runtimeLock)).toBe(originalSnapshot);
+    expect(() => candidateRuntimeLock(runtimeLock, { ...input, versions: 'v1' })).toThrow('V1 candidate requires Windows x64');
+  });
+
   it.each([
+    ['missing contract', { contract: undefined }],
+    ['missing descriptor', { descriptor: undefined }],
     ['source', { descriptor: { ...descriptor, sourceCommit: 'c'.repeat(40) } }],
     ['version', { version: '0.0.999' }],
     ['platform', { descriptor: { ...descriptor, arch: 'x64' } }],

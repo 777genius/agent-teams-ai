@@ -364,11 +364,18 @@ jobs:
           foreach ($name in @('cursor-managed', 'local-cli', 'bun')) { Copy-Item "dist/$name" "candidate/runtime/$name" -Recurse }
           bun scripts/ci/verify-packaged-delivery.ts
           if ($LASTEXITCODE -ne 0) { throw 'Physical delivery identity failed' }
-          foreach ($name in @('COMMIT_SHA', 'VERSION', 'opencode-delivery.json', 'opencode-v2-delivery.json')) { Copy-Item "dist/$name" "candidate/runtime/$name" }
+          if ($env:VERSIONS -eq 'v1') {
+            # Legacy V1 SDKs predate emitted V2 delivery metadata and its registry.
+            Set-Content candidate/runtime/COMMIT_SHA $env:SDK_REF
+            Set-Content candidate/runtime/VERSION (Get-Content package.json -Raw | ConvertFrom-Json).version
+            if (Test-Path dist/opencode-delivery.json) { Copy-Item dist/opencode-delivery.json candidate/runtime/opencode-delivery.json }
+          } else {
+            foreach ($name in @('COMMIT_SHA', 'VERSION', 'opencode-delivery.json', 'opencode-v2-delivery.json')) { Copy-Item "dist/$name" "candidate/runtime/$name" }
+          }
           Compress-Archive candidate/runtime "candidate/TEST-runtime-$($env:NATIVE_PLATFORM).zip"
           Push-Location ../TEST-native-source
           try {
-            bun --no-install scripts/e2e/opencode-native-windows-candidate.ts ../TEST-native-sdk $env:NATIVE_PLATFORM $env:SDK_REF
+            bun --no-install scripts/e2e/opencode-native-windows-candidate.ts ../TEST-native-sdk $env:NATIVE_PLATFORM $env:SDK_REF $env:VERSIONS
             if ($LASTEXITCODE -ne 0) { throw 'Candidate split delivery lock staging failed' }
           } finally { Pop-Location }
           New-Item -ItemType Directory -Force ../TEST-native-source/resources | Out-Null
@@ -395,6 +402,7 @@ jobs:
         shell: pwsh
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
+          VERSIONS: ${{ inputs.versions }}
         run: |
           $ErrorActionPreference = 'Stop'
           # Apply the existing afterPack pruning policy to the independent candidate.
@@ -405,7 +413,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Candidate pruning qualification failed' }
           $candidateRoot = (Resolve-Path ../TEST-native-sdk/candidate/resources/runtime).Path
           $packagedRoot = (Resolve-Path (Join-Path $env:NATIVE_APP_DIRECTORY resources/runtime)).Path
-          $required = @('claude-multimodel.exe', 'COMMIT_SHA', 'VERSION', 'opencode-delivery.json', 'opencode-v2-delivery.json', 'bun/bun.exe', 'local-cli/cli.js')
+          $required = @('claude-multimodel.exe', 'COMMIT_SHA', 'VERSION', 'bun/bun.exe', 'local-cli/cli.js')
+          if ($env:VERSIONS -ne 'v1') { $required += @('opencode-delivery.json', 'opencode-v2-delivery.json') }
           foreach ($relative in $required) {
             if (!(Test-Path (Join-Path $candidateRoot $relative) -PathType Leaf)) { throw "Required candidate component missing: $relative" }
           }
@@ -444,8 +453,10 @@ jobs:
           $env:TMP = $env:RUNNER_TEMP
           $env:TMPDIR = $env:RUNNER_TEMP
           $app = (Resolve-Path (Join-Path $env:NATIVE_APP_DIRECTORY AgentTeamsAI.exe)).Path
-          $delivery = Get-Content ../TEST-native-sdk/dist/opencode-v2-delivery.json -Raw | ConvertFrom-Json
-          $env:OPENCODE_NATIVE_CANDIDATE_SUPPORT_ARCHIVE = (Resolve-Path (Join-Path ../TEST-native-sdk/dist $delivery.archive.file)).Path
+          if ($env:VERSIONS -ne 'v1') {
+            $delivery = Get-Content ../TEST-native-sdk/dist/opencode-v2-delivery.json -Raw | ConvertFrom-Json
+            $env:OPENCODE_NATIVE_CANDIDATE_SUPPORT_ARCHIVE = (Resolve-Path (Join-Path ../TEST-native-sdk/dist $delivery.archive.file)).Path
+          }
           $failedPins = @()
           foreach ($pin in @(@('v1', 'opencode-windows-x64', $env:V1_PIN), @('current', "@opencode/cli-windows-$($env:NATIVE_ARCH)", $env:CURRENT_PIN))) {
             if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash, randomUUID } from 'node:crypto';
-import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { assertV2SupportWarmReuse, prepareV2SupportRepair, v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
@@ -10,7 +10,8 @@ const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const helper = 'local-cli/opencodeV2RunOwner.js';
 
 async function fixture() {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-repair-'));
+  // Windows TEMP may use an 8.3 alias; establish the physical root before any child path.
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-repair-')));
   const userData = path.join(root, 'user-data'), base = path.join(root, 'app/resources/runtime');
   const version = '0.0.999', sourceCommit = 'a'.repeat(40), archiveSha256 = 'b'.repeat(64);
   const identity = { schemaVersion: 1, runtimeVersion: version, sourceCommit, bridgeProtocol: 1,

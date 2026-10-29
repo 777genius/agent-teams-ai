@@ -28,18 +28,31 @@ export async function candidateFileSha256(file: string): Promise<string> {
 /** Restrict this disposable TEST lock to the built target; no stale release descriptors survive. */
 export function candidateRuntimeLock(original: Record<string, unknown>, input: {
   version: string; sourceSha: string; platform: string; archiveSha256: string;
-  contract: unknown; descriptor: unknown;
+  contract?: unknown; descriptor?: unknown; versions?: 'all' | 'v1' | 'current';
 }) {
   assert(['win32-x64', 'win32-arm64'].includes(input.platform), 'Unknown candidate platform');
   assert(/^[a-f0-9]{40}$/.test(input.sourceSha) && /^[a-f0-9]{64}$/.test(input.archiveSha256));
-  assert(readOpenCodeV2Contract(input.contract), 'Candidate qualification contract invalid');
+  assert(/^\d+\.\d+\.\d+$/.test(input.version), 'Candidate runtime version invalid');
+  assert(['all', 'v1', 'current'].includes(input.versions ?? 'current'), 'Unknown candidate versions');
+  assert(input.versions !== 'v1' || input.platform === 'win32-x64', 'V1 candidate requires Windows x64');
   const assets = original.assets as Record<string, Record<string, unknown>>;
   assert(assets?.[input.platform], 'Candidate base platform missing');
-  const lock = { ...original, version: input.version, sourceRef: input.sourceSha,
+  const lock: Record<string, unknown> & { assets: Record<string, Record<string, unknown>>;
+    version: string; sourceRef: string; releaseTag: string } = { ...original, version: input.version, sourceRef: input.sourceSha,
     releaseTag: `TEST-native-candidate-${input.sourceSha}`,
     assets: { [input.platform]: { ...assets[input.platform],
       file: `TEST-runtime-${input.platform}.zip`, sha256: input.archiveSha256 } },
-    opencodeV2: input.contract, opencodeV2Delivery: { [input.platform]: input.descriptor } };
+  };
+  if (input.versions === 'v1') {
+    // An explicitly V1-only TEST candidate claims no V2 qualification. In
+    // particular it cannot retain a descriptor from the app's public pin.
+    delete lock.opencodeV2;
+    delete lock.opencodeV2Delivery;
+    return lock;
+  }
+  assert(readOpenCodeV2Contract(input.contract), 'Candidate qualification contract invalid');
+  lock.opencodeV2 = input.contract;
+  lock.opencodeV2Delivery = { [input.platform]: input.descriptor };
   const descriptor = readOpenCodeV2DeliveryMap(lock)?.[input.platform];
   assert(descriptor?.sourceCommit === input.sourceSha, 'Candidate support source identity mismatch');
   assert(descriptor.requiredBunVersion === '1.4.3', 'Candidate Windows Bun identity mismatch');
@@ -83,14 +96,25 @@ export async function stageNativeCandidateSupport(input: {
 }
 
 async function main() {
-  const [sdkArgument, platform, sourceSha] = process.argv.slice(2);
-  assert(sdkArgument && platform && sourceSha && process.argv.length === 5);
+  const [sdkArgument, platform, sourceSha, versions = 'current'] = process.argv.slice(2);
+  assert(sdkArgument && platform && sourceSha && [5, 6].includes(process.argv.length));
+  assert(['all', 'v1', 'current'].includes(versions));
   const sdk = await realpath(sdkArgument);
   const original = JSON.parse(await readFile('runtime.lock.json', 'utf8')) as Record<string, unknown>;
-  const descriptor: unknown = JSON.parse(await readFile(path.join(sdk, 'dist/opencode-v2-delivery.json'), 'utf8'));
   const metadata = JSON.parse(await readFile(path.join(sdk, 'package.json'), 'utf8')) as { version: string };
   const archive = path.join(sdk, `candidate/TEST-runtime-${platform}.zip`);
   const archiveSha256 = await candidateFileSha256(archive);
+  if (versions === 'v1') {
+    const lock = candidateRuntimeLock(original, { version: metadata.version, sourceSha, platform,
+      archiveSha256, versions });
+    await writeFile('runtime.lock.json', JSON.stringify(lock, null, 2) + '\n');
+    await writeFile('runtime-native-candidate-evidence.json', JSON.stringify({
+      mode: 'candidate_not_public_release', generation: 'v1-only', appSha: process.env.GITHUB_SHA,
+      sdkSha: sourceSha, platform, runtimeArchiveSha256: archiveSha256, support: null,
+    }, null, 2) + '\n');
+    return;
+  }
+  const descriptor: unknown = JSON.parse(await readFile(path.join(sdk, 'dist/opencode-v2-delivery.json'), 'utf8'));
   const registry = await import(pathToFileURL(path.join(sdk, 'src/services/opencode/compatibility/OpenCodeV2Registry.ts')).href) as {
     openCodeV2ReleaseContract(): unknown;
   };
