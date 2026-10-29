@@ -40,7 +40,7 @@ jobs:
           cache: pnpm
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness safety
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
       - name: Configure disposable artifact directory
         shell: bash
         run: |

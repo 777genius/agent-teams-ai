@@ -101,12 +101,12 @@ test('gate requires selected checks, successful plan and draft never qualifies',
   assert.equal(qualifyFull(needs, 'false', 'false', '4').ok, false);
 });
 
-test('every event reports the required qualification under its static name', async () => {
+test('each uncancelled event reports the required qualification under its static name', async () => {
   const { readFileSync } = await import('node:fs');
   const yaml = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
   assert.match(
     yaml,
-    /\n {2}full-qualification:\n {4}name: Full qualification\n {4}needs: \[[^\]]+\]\n {4}if: always\(\)\n/
+    /\n {2}full-qualification:\n {4}name: Full qualification\n {4}needs: \[[^\]]+\]\n {4}if: always\(\) && !cancelled\(\)\n/
   );
   assert.doesNotMatch(yaml, /Metadata qualification/);
 });

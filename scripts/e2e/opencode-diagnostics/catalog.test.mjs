@@ -395,6 +395,92 @@ test('pending artifacts tolerate absence, preserve content and surface other rea
   }
 });
 
+test(
+  'catalog waits through duplicate and failed model responses for four distinct successful sources',
+  { timeout: 10000 },
+  async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-catalog-readiness-TEST-'));
+    const scenario = 'catalog-retry';
+    let bodyReads = 0;
+    const calls = [];
+    const saveCalls = () =>
+      writeFile(
+        path.join(root, 'calls.ndjson'),
+        calls.map((call) => JSON.stringify(call)).join('\n') + '\n'
+      );
+    let nextPid = 10;
+    const model = (source, failed = false) => {
+      const pid = nextPid++, at = Date.now();
+      return [
+        { event: 'start', scenario, pid, at,
+          args: ['runtime', 'providers', 'models', '--runtime', 'opencode', '--provider', source] },
+        { event: 'response', operation: 'models', scenario, pid, source, failed, at,
+          response: { models: { catalogState: 'fresh' } } },
+      ];
+    };
+    try {
+      await verifyCatalog({
+        root,
+        scenario,
+        evaluate: async (expression) => {
+          if (expression.startsWith('(() => { const b =')) {
+            calls.push(
+              {
+                event: 'start',
+                scenario,
+                pid: 1, at: Date.now(),
+                args: ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--summary'],
+              },
+              { event: 'response', scenario, pid: 1, at: Date.now(), operation: 'directory', failed: false },
+              ...model('anthropic'),
+              ...model('opencode'),
+              ...model('anthropic'),
+              ...model('google')
+            );
+            await saveCalls();
+            return { x: 1, y: 1 };
+          }
+          if (expression === 'document.body.innerText') {
+            bodyReads += 1;
+            // First add a failed fourth source; only its later successful response may finish the wait.
+            if (bodyReads <= 2) {
+              calls.push(...model('openrouter', bodyReads === 1));
+              await saveCalls();
+            }
+            return 'Fixture opencode model';
+          }
+          if (expression === 'navigator.clipboard.readText()') return '';
+          if (expression === 'window.__catalogProbe')
+            return { done: true, value: { schemaVersion: 1 } };
+          if (expression.startsWith('window.__catalogProbe =')) return undefined;
+          if (expression.includes('opencode-catalog-error')) return '';
+          throw new Error(`Unexpected catalog probe: ${expression}`);
+        },
+        send: async (method) => {
+          assert(['Input.dispatchMouseEvent', 'Page.captureScreenshot'].includes(method));
+          return method === 'Page.captureScreenshot' ? { data: '' } : {};
+        },
+      });
+      assert.equal(bodyReads, 3, 'Duplicate or failed source responses ended polling early');
+      const captured = JSON.parse(
+        await readFile(path.join(root, `${scenario}-subprocess.json`), 'utf8')
+      );
+      assert.deepEqual(
+        [
+          ...new Set(
+            captured
+              .filter((call) => call.operation === 'models' && !call.failed)
+              .map((call) => call.source)
+          ),
+        ].sort(),
+        ['anthropic', 'google', 'opencode', 'openrouter']
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+);
+
 const v2Disclaimer =
   'capabilities_pending: V2 catalog reads do not qualify authentication, team launch or one-shot execution.';
 const nativePath = 'C:\\TEST-packaged\\user-data\\runtimes\\opencode\\bin\\opencode.exe';
