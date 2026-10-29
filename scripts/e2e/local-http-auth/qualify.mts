@@ -120,6 +120,7 @@ export class Cdp {
   readonly activeSseRequests = new Set<string>();
   readonly responses: Array<{ path: string; status: number; corsHeaderPresent: boolean }> = [];
   readonly corsFailures: string[] = [];
+  readonly rendererFailures: string[] = [];
   credentialUrlDetected = false;
   private constructor(
     private socket: WebSocket,
@@ -207,6 +208,19 @@ export class Cdp {
               ? error
               : 'other-cors-error'
           );
+        }
+        // Keep only normalized classes: console/exception payloads may contain secrets.
+        if (
+          message.method === 'Runtime.exceptionThrown' ||
+          (message.method === 'Runtime.consoleAPICalled' &&
+            record(message.params) &&
+            message.params.type === 'error')
+        ) {
+          const code =
+            message.method === 'Runtime.exceptionThrown'
+              ? 'renderer-exception'
+              : 'renderer-console-error';
+          if (!this.rendererFailures.includes(code)) this.rendererFailures.push(code);
         }
         if (typeof message.id !== 'number') return;
         const item = this.pending.get(message.id);
@@ -1037,7 +1051,50 @@ export async function qualify(args: unknown): Promise<boolean> {
     failure = phase;
     failureCode = error instanceof QualificationFailure ? error.message : 'operation-failed';
   } finally {
+    let desktopFailureState: unknown = null;
     let browserFailureState: unknown = null;
+    if (!succeeded && phase === 'desktop-ipc' && cdp) {
+      try {
+        desktopFailureState = await cdp.inspect(
+          `(async () => {
+            const root = document.getElementById('root');
+            const splash = document.getElementById('splash');
+            const api = window.electronAPI;
+            const facts = {
+              electronApiPresent: !!api,
+              startupBridgePresent: typeof api?.startup?.getStatus === 'function',
+              uiInitializationStarted: window.__claudeTeamsUiDidInit === true,
+              rootPresent: !!root,
+              rootHasChildren: !!root?.children.length,
+              splashPresent: !!splash,
+              splashExiting: splash?.classList.contains('splash-exiting') === true,
+              splashError: splash?.classList.contains('splash-status-error') === true,
+              startup: { outcome: 'bridge-missing' }
+            };
+            if (!facts.startupBridgePresent) return facts;
+            let timer;
+            try {
+              facts.startup = await Promise.race([
+                api.startup.getStatus().then(status => ({
+                  outcome: 'observed',
+                  phase: ['boot','electron-ready','services','runtime-host-preflight',
+                    'runtime','settings','team-backups','ipc','readying','ready','failed']
+                    .includes(status.phase) ? status.phase : 'other',
+                  ready: status.ready === true,
+                  errorPresent: !!status.error
+                }), () => ({ outcome: 'rejected' })),
+                new Promise(resolve => {
+                  timer = setTimeout(() => resolve({ outcome: 'timeout' }), 1000);
+                })
+              ]);
+            } finally { clearTimeout(timer); }
+            return facts;
+          })()`
+        );
+      } catch {
+        desktopFailureState = { outcome: 'snapshot-unavailable' };
+      }
+    }
     if (!succeeded && desktopCdp && cdp) {
       try {
         browserFailureState = await cdp.inspect(
@@ -1063,6 +1120,8 @@ export async function qualify(args: unknown): Promise<boolean> {
       requestCounts: cdp ? Object.fromEntries(cdp.counts) : {},
       responses: cdp?.responses ?? [],
       corsFailures: cdp?.corsFailures ?? [],
+      desktopFailureState,
+      rendererFailureClasses: (desktopCdp ?? cdp)?.rendererFailures ?? [],
       browserFailureState,
       sourceRechecked: succeeded,
       sseRequestsStillActive: cdp?.activeSseRequests.size ?? 0,
