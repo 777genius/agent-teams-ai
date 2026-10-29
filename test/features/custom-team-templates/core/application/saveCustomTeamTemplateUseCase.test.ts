@@ -628,6 +628,32 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     }
   });
 
+  it('allocates the last permitted candidate id when every earlier candidate is occupied', async () => {
+    const library = libraryFixture();
+    const occupied = Array.from({ length: 7 }, (_, index) =>
+      index === 0 ? PREVIEW_ID : `${PREVIEW_ID}-${index}`
+    );
+    for (const templateId of occupied) {
+      library.rows.set(
+        templateId,
+        storedTemplate(templateId, {
+          name: `Occupied ${templateId}`,
+          teamPrompt: 'Different content.',
+        })
+      );
+    }
+
+    const preview = await preparedPreview({ gateway: library.gateway });
+    const result = await useCase({ gateway: library.gateway }, preview.store).execute({
+      previewToken: preview.token,
+    });
+
+    // Eight candidates are probed: the derived id plus -1 through -7.
+    expect(result.status).toBe('created');
+    if (result.status !== 'created') return;
+    expect(result.template.templateId).toBe(`${PREVIEW_ID}-7`);
+  });
+
   it('retries a busy database with the identical request, then reports unavailability', async () => {
     const busy = { status: 'retryable', reason: 'databaseBusy' } as const;
     const recoverFixture = gatewayFixture({
