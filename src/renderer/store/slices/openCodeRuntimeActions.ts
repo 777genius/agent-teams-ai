@@ -11,7 +11,12 @@ import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 type RuntimeState = Pick<
   CliInstallerSlice,
-  'openCodeRuntimeStatus' | 'openCodeRuntimeStatusLoading' | 'openCodeRuntimeError'
+  | 'openCodeRuntimeStatus'
+  | 'openCodeRuntimeStatusLoading'
+  | 'openCodeRuntimeError'
+  | 'cliProviderStatusByScope'
+  | 'cliProviderStatusScopeRevision'
+  | 'cliProviderStatusLoading'
 >;
 type RuntimeActions = Pick<
   CliInstallerSlice,
@@ -48,7 +53,8 @@ function failedStatus(
 export function createOpenCodeRuntimeActions(
   set: (state: Partial<RuntimeState>) => void,
   get: () => RuntimeState,
-  refreshProviderStatus: () => Promise<void>
+  refreshProviderStatus: () => Promise<void>,
+  detachProviderReads: () => void
 ): RuntimeActions {
   let revision = 0;
   let statusInFlight: Promise<void> | null = null;
@@ -56,6 +62,19 @@ export function createOpenCodeRuntimeActions(
   const invalidateReads = (): number => {
     statusInFlight = null;
     return ++revision;
+  };
+  const invalidateProjectScopes = (notify: boolean): void => {
+    detachProviderReads();
+    const state = get();
+    set({
+      cliProviderStatusByScope: Object.fromEntries(
+        Object.entries(state.cliProviderStatusByScope).filter(
+          ([key]) => !key.startsWith('opencode\0')
+        )
+      ),
+      cliProviderStatusLoading: { ...state.cliProviderStatusLoading, opencode: false },
+      cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + (notify ? 1 : 0),
+    });
   };
   const applyProgress = (status: OpenCodeRuntimeStatus): void => {
     invalidateReads();
@@ -102,6 +121,8 @@ export function createOpenCodeRuntimeActions(
       if (installInFlight) return installInFlight;
       const startedAt = Date.now();
       const previous = get().openCodeRuntimeStatus;
+      // A previously selected native must not keep project launch authority during replacement.
+      invalidateProjectScopes(false);
       applyProgress({
         ...previous,
         installed: previous?.installed ?? false,
@@ -140,6 +161,9 @@ export function createOpenCodeRuntimeActions(
         }
       })().finally(() => {
         if (installInFlight === request) installInFlight = null;
+        // The unscoped follow-up can advance its epoch several times. Notify once after it
+        // settles, including failure, so selected projects read under the final epoch.
+        invalidateProjectScopes(true);
         set({ openCodeRuntimeStatusLoading: isInstalling(get().openCodeRuntimeStatus) });
       });
       installInFlight = request;

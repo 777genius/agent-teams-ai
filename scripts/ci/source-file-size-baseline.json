@@ -135,7 +135,7 @@
     "src/renderer/index.html": 1441,
     "src/renderer/store/index.ts": 2537,
     "src/renderer/store/slices/changeReviewSlice.ts": 2417,
-    "src/renderer/store/slices/cliInstallerSlice.ts": 1659,
+    "src/renderer/store/slices/cliInstallerSlice.ts": 1653,
     "src/renderer/store/slices/editorSlice.ts": 1483,
     "src/renderer/store/slices/extensionsSlice.ts": 1420,
     "src/renderer/store/slices/tabSlice.ts": 886,

@@ -24,6 +24,10 @@ import {
   settleOpenCodePartialStatus,
   shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
+import {
+  getCliProviderStatusScopeKey,
+  setBoundedScopedProviderStatus,
+} from './cliProviderStatusScope';
 import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
 import type { AppState } from '../types';
@@ -38,6 +42,11 @@ import type {
 } from '@shared/types';
 import type { StateCreator } from 'zustand';
 
+export {
+  CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT,
+  getCliProviderStatusScopeKey,
+} from './cliProviderStatusScope';
+
 const logger = createLogger('Store:cliInstaller');
 
 /** Max log lines to keep in UI (reserved for future use) */
@@ -48,7 +57,6 @@ const CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
 const CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
 const CODEX_CATALOG_LOADING_REFRESH_ATTEMPTS = 6;
 const CODEX_CATALOG_LOADING_REFRESH_RETRY_DELAY_MS = 5_000;
-export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
 export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = isGeminiUiFrozen()
   ? ['anthropic', 'codex', 'opencode']
@@ -195,6 +203,9 @@ function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
     if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
       cliProviderStatusInFlight.delete(key);
     }
+  }
+  for (const key of cliProviderStatusActiveRequestIds.keys()) {
+    if (key.startsWith(`${providerId}\0`)) cliProviderStatusActiveRequestIds.delete(key);
   }
 }
 
@@ -886,26 +897,6 @@ const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
 let codexRuntimeStatusInFlight: Promise<void> | null = null;
 
-export function getCliProviderStatusScopeKey(
-  providerId: CliProviderId,
-  projectPath: string | null | undefined
-): string {
-  return `${providerId}\0${projectPath?.trim() ?? ''}`;
-}
-
-function setBoundedScopedProviderStatus(
-  current: Readonly<Record<string, CliProviderStatus>>,
-  scopeKey: string,
-  providerStatus: CliProviderStatus
-): Readonly<Record<string, CliProviderStatus>> {
-  const entries = Object.entries(current).filter(([key]) => key !== scopeKey);
-  entries.push([scopeKey, providerStatus]);
-  if (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
-    entries.splice(0, entries.length - CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
-  }
-  return Object.fromEntries(entries);
-}
-
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
   if (timer) {
@@ -1577,8 +1568,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     });
   },
 
-  ...createOpenCodeRuntimeActions(set, get, () =>
-    refreshOpenCodeProviderStatusAfterRuntimeInstall(get)
+  ...createOpenCodeRuntimeActions(
+    set,
+    get,
+    () => refreshOpenCodeProviderStatusAfterRuntimeInstall(get),
+    () => clearCliProviderStatusInFlight('opencode')
   ),
 
   fetchCodexRuntimeStatus: async () => {

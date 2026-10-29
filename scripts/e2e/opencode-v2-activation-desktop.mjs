@@ -236,6 +236,34 @@ async function clickControl(selector) {
   );
   await cdp.click(selector);
 }
+async function clickVisibleButtonByText(label) {
+  const point = await cdp.inspect(`(() => {
+    const buttons = [...document.querySelectorAll('button')].filter(button =>
+      button.textContent.trim() === ${JSON.stringify(label)} && !button.disabled &&
+      button.getClientRects().length > 0);
+    if (buttons.length !== 1) throw new Error('Expected one visible enabled installation button');
+    const button = buttons[0];
+    button.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+    const rect = button.getBoundingClientRect();
+    const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+    if (!button.contains(document.elementFromPoint(x, y)))
+      throw new Error('Installation button is obscured');
+    return { x, y };
+  })()`);
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    ...point,
+    button: 'left',
+    clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    ...point,
+    button: 'left',
+    clickCount: 1,
+  });
+}
 try {
   const dirs = {
     HOME: 'home',
@@ -420,24 +448,38 @@ try {
   await snapshot('before-install');
   await milestone('missing V2 detected', { source: initial.source, expectedVersion });
 
-  // The real renderer action invokes production IPC and publishes production progress events.
-  // Holding the promise in the renderer avoids restarting it or a CDP command timing out.
-  await cdp.inspect(`window.__opencodeV2SmokeInstall = { done: false };
-    window.__agentTeamsDevStore.getState().installOpenCodeRuntime({ generation: 'v2' })
-      .then(() => { window.__opencodeV2SmokeInstall.done = true; })
-      .catch(error => { window.__opencodeV2SmokeInstall = { done: true, error: String(error) }; }); true`);
-  await wait(
+  // Exercise the visible button's generation binding and the production store/IPC path.
+  phase = 'V2 installation through the visible button';
+  await clickVisibleButtonByText(`Install V2 ${expectedVersion}`);
+  const started = await wait('production installation progress', () =>
+    cdp.inspect(`(() => {
+      const state = window.__agentTeamsDevStore.getState();
+      const progress = window.__opencodeV2SmokeProgress;
+      return progress.length || state.openCodeRuntimeError || state.openCodeRuntimeStatus?.state === 'failed'
+        ? { progress, error: state.openCodeRuntimeError, state: state.openCodeRuntimeStatus?.state }
+        : null;
+    })()`)
+  );
+  await save('installation-started.json', started);
+  assert.equal(started.error, null, JSON.stringify(started));
+  assert.notEqual(started.state, 'failed', JSON.stringify(started));
+  const activated = await wait(
     'V2 download and atomic activation',
-    () => cdp.inspect('window.__opencodeV2SmokeInstall.done'),
+    () =>
+      cdp.inspect(`(() => {
+      const state = window.__agentTeamsDevStore.getState();
+      const runtime = state.openCodeRuntimeStatus;
+      if (state.openCodeRuntimeStatusLoading ||
+          !(runtime?.state === 'ready' || runtime?.state === 'failed' || state.openCodeRuntimeError))
+        return null;
+      return {
+        runtime, error: state.openCodeRuntimeError, loading: state.openCodeRuntimeStatusLoading,
+        progress: window.__opencodeV2SmokeProgress, timeOrigin: performance.timeOrigin,
+      };
+    })()`),
     480_000
   );
-  const activated = await cdp.inspect(`({
-    runtime: window.__agentTeamsDevStore.getState().openCodeRuntimeStatus,
-    error: window.__agentTeamsDevStore.getState().openCodeRuntimeError,
-    loading: window.__agentTeamsDevStore.getState().openCodeRuntimeStatusLoading,
-    install: window.__opencodeV2SmokeInstall, progress: window.__opencodeV2SmokeProgress,
-    timeOrigin: performance.timeOrigin,
-  })`);
+  await save('installation-completed.json', activated);
   await snapshot('after-install');
   assert.equal(activated.runtime.state, 'ready', JSON.stringify(activated));
   assert.equal(activated.runtime.version, expectedVersion);
@@ -471,6 +513,24 @@ try {
     support: activated.runtime.v2Support,
     visibleReady,
     progressStates: [...new Set(activated.progress.map((value) => value.state))],
+  });
+
+  phase = 'automatic project-scoped catalog after installation';
+  const automaticScope = await wait(
+    phase,
+    () =>
+      cdp.inspect(`(() => {
+      const provider = window.__agentTeamsDevStore.getState().cliProviderStatusByScope[${JSON.stringify(`opencode\0${project}`)}];
+      return provider && provider.statusCheckOutcome !== 'pending' && provider.modelCatalog?.models?.length > 0
+        ? provider : null;
+    })()`),
+    120_000
+  );
+  await save('automatic-project-status-after-install.json', automaticScope);
+  assert.equal(modelRequests.length, 0, 'The automatic project status read must remain passive');
+  await milestone('installed V2 refreshed project catalog automatically', {
+    outcome: automaticScope.statusCheckOutcome,
+    modelCount: automaticScope.modelCatalog.models.length,
   });
 
   phase = 'native provider directory via desktop IPC';

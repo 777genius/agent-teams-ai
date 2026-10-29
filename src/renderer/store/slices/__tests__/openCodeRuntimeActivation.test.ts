@@ -1,10 +1,14 @@
-import { createCliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import {
+  createCliInstallerSlice,
+  createLoadingMultimodelCliStatus,
+  getCliProviderStatusScopeKey,
+} from '@renderer/store/slices/cliInstallerSlice';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
 import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import type { ElectronAPI } from '@shared/types/api';
-import type { OpenCodeRuntimeStatus } from '@shared/types/cliInstaller';
+import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types/cliInstaller';
 import type { StateCreator } from 'zustand';
 
 function deferred<T>() {
@@ -214,4 +218,72 @@ describe('OpenCode installation without restarting the renderer', () => {
     });
     store.getState().applyOpenCodeRuntimeProgress(ready);
   });
+
+  it.each(['1.9.3', '2.1.3'])(
+    'drops project authority and detached reads from native %s without disturbing another provider',
+    async (version) => {
+      const installing = deferred<OpenCodeRuntimeStatus>();
+      const oldRead = deferred<CliProviderStatus>();
+      const { store } = setup({ install: () => installing.promise });
+      const cliStatus = createLoadingMultimodelCliStatus();
+      const base = cliStatus.providers.find((provider) => provider.providerId === 'opencode')!;
+      const old: CliProviderStatus = {
+        ...base,
+        supported: true,
+        authenticated: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        capabilities: { ...base.capabilities, teamLaunch: true, oneShot: true },
+        models: ['opencode/previous-native'],
+      };
+      const other = cliStatus.providers.find((provider) => provider.providerId === 'anthropic')!;
+      const projectPath = '/TEST/previous-native-project';
+      const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+      const otherProjectScopeKey = getCliProviderStatusScopeKey(
+        'opencode',
+        '/TEST/another-project'
+      );
+      const otherScopeKey = getCliProviderStatusScopeKey('anthropic', projectPath);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: {
+            invalidateStatus: vi.fn(async () => undefined),
+            getProviderStatus: vi.fn(
+              async (_provider: string, options?: { projectPath?: string }) =>
+                options?.projectPath ? oldRead.promise : { ...old, models: ['opencode/new-native'] }
+            ),
+          },
+        },
+      });
+      store.setState({
+        cliStatus: { ...cliStatus, installed: true },
+        openCodeRuntimeStatus: {
+          ...ready,
+          version,
+          v2Support: version.startsWith('1.') ? undefined : 'ready',
+        },
+        cliProviderStatusByScope: {
+          [scopeKey]: old,
+          [otherProjectScopeKey]: old,
+          [otherScopeKey]: other,
+        },
+      });
+      const previousRead = store.getState().fetchCliProviderStatus('opencode', { projectPath });
+      const installation = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+      expect(store.getState().cliProviderStatusByScope[scopeKey]).toBeUndefined();
+      expect(store.getState().cliProviderStatusByScope[otherProjectScopeKey]).toBeUndefined();
+      expect(store.getState().cliProviderStatusByScope[otherScopeKey]).toBe(other);
+      oldRead.resolve(old);
+      expect(await previousRead).toBe(false);
+      expect(store.getState().cliProviderStatusByScope[scopeKey]).toBeUndefined();
+      installing.resolve(ready);
+      await installation;
+      expect(store.getState().cliProviderStatusByScope[scopeKey]).toBeUndefined();
+      expect(store.getState().cliProviderStatusByScope[otherScopeKey]).toBe(other);
+      expect(store.getState().cliProviderStatusByScope[otherProjectScopeKey]).toBeUndefined();
+      expect(store.getState().cliProviderStatusScopeRevision).toBe(1);
+    }
+  );
 });
