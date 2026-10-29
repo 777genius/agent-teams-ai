@@ -60,6 +60,7 @@ import {
   applyModelTestResultToModels,
   applyModelTestResultToView,
   buildFailedModelTestResult,
+  refreshAfterModelTest,
   startModelTest,
 } from './runtimeProviderModelTestState';
 import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
@@ -102,6 +103,7 @@ export type RuntimeProviderChangeKind =
   | 'connection'
   | 'credential_removed'
   | 'configuration'
+  | 'model_tested'
   | 'oauth_cancelled';
 
 const MODEL_PAGE_SIZE = 250;
@@ -1580,6 +1582,13 @@ export function useRuntimeProviderManagement(
         modelProbeGenerationRef.current === probeGeneration &&
         (activeProviderAtStart === null || activeModelPickerProviderRef.current === providerId) &&
         isProjectContextCurrent(projectContext);
+      const recordProbeResult = (result: RuntimeProviderModelTestResultDto): void => {
+        if (!shouldRecordProbeResult()) return;
+        setModelResults((current) => ({ ...current, [modelId]: result }));
+        setModels((current) => applyModelTestResultToModels(current, result));
+        setView((current) => applyModelTestResultToView(current, result));
+        void refreshAfterModelTest(() => onProviderChanged?.('model_tested'));
+      };
       setModelTestStartedAt((current) => startModelTest(current, modelId));
       setTestingModelIds((ids) => (ids.includes(modelId) ? ids : [...ids, modelId]));
       setError(null);
@@ -1605,23 +1614,14 @@ export function useRuntimeProviderManagement(
             setError(response.error.message);
             setErrorDiagnostics(response.error.diagnostics);
           }
-          if (shouldRecordProbeResult()) {
-            setModelResults((current) => ({ ...current, [modelId]: result }));
-            setModels((current) => applyModelTestResultToModels(current, result));
-            setView((current) => applyModelTestResultToView(current, result));
-          }
+          recordProbeResult(result);
           return result;
         }
-        if (response.result && shouldRecordProbeResult()) {
-          const result = response.result;
-          setModelResults((current) => ({ ...current, [modelId]: result }));
-          setModels((current) => applyModelTestResultToModels(current, result));
-          setView((current) => applyModelTestResultToView(current, result));
-        }
-        return (
+        const result =
           response.result ??
-          buildFailedModelTestResult(providerId, modelId, 'Model test response was empty')
-        );
+          buildFailedModelTestResult(providerId, modelId, 'Model test response was empty');
+        recordProbeResult(result);
+        return result;
       } catch (testError) {
         await pendingModelStopsRef.current.get(`${requestGroupId}:${requestToken}`);
         const result = buildFailedModelTestResult(
@@ -1629,11 +1629,7 @@ export function useRuntimeProviderManagement(
           modelId,
           testError instanceof Error ? testError.message : 'Failed to test model'
         );
-        if (shouldRecordProbeResult()) {
-          setModelResults((current) => ({ ...current, [modelId]: result }));
-          setModels((current) => applyModelTestResultToModels(current, result));
-          setView((current) => applyModelTestResultToView(current, result));
-        }
+        recordProbeResult(result);
         return result;
       } finally {
         if (shouldRecordProbeResult()) {
@@ -1645,7 +1641,7 @@ export function useRuntimeProviderManagement(
         }
       }
     },
-    [getProjectContextSnapshot, isProjectContextCurrent, options.runtimeId]
+    [getProjectContextSnapshot, isProjectContextCurrent, onProviderChanged, options.runtimeId]
   );
 
   const setDefaultModel = useCallback(

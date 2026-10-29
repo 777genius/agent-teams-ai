@@ -3203,6 +3203,98 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actionLabels).toContain('Configure manually');
   });
 
+  it('opens anonymous V2 models by row and keyboard while retaining optional API-key connection', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const state = createState({
+      directoryLoaded: true,
+      directoryTotalCount: 1,
+      directoryEntries: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode Zen',
+          state: 'available',
+          setupKind: 'available-readonly',
+          ownership: [],
+          recommended: false,
+          modelCount: 9,
+          defaultModelId: null,
+          authMethods: ['api'],
+          sources: ['opencode-provider'],
+          sourceLabel: 'OpenCode catalog',
+          providerSource: null,
+          detail: 'Free models without an API key',
+          actions: [
+            {
+              id: 'use',
+              label: 'View models',
+              enabled: true,
+              disabledReason: null,
+              requiresSecret: false,
+              ownershipScope: 'runtime',
+            },
+            {
+              id: 'connect',
+              label: 'Connect',
+              enabled: true,
+              disabledReason: null,
+              requiresSecret: true,
+              ownershipScope: 'managed',
+            },
+          ],
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: true,
+            configuredAuthless: false,
+          },
+        },
+      ],
+    });
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, { state, actions, disabled: false })
+      );
+    });
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-directory-row-opencode"]'
+    );
+    expect(row?.getAttribute('role')).toBe('button');
+    await act(async () => row?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(actions.selectDirectoryProvider).toHaveBeenCalledWith('opencode');
+    expect(actions.startConnect).not.toHaveBeenCalled();
+    await act(async () =>
+      row?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
+    expect(actions.selectDirectoryProvider).toHaveBeenCalledTimes(2);
+    const connect = Array.from(row?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent === 'Connect'
+    );
+    expect(connect).toBeDefined();
+    await act(async () => connect?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(actions.startConnect).toHaveBeenCalledWith('opencode');
+    expect(actions.selectDirectoryProvider).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            selectedProviderId: 'opencode',
+            directorySelectedProviderId: 'opencode',
+            modelsLoading: true,
+          },
+          actions,
+          disabled: false,
+        })
+      );
+    });
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-opencode-content"]')
+    ).not.toBeNull();
+  });
+
   it('opens model list for configured authless local directory providers', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

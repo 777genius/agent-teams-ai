@@ -1296,7 +1296,12 @@ export class ClaudeMultimodelBridgeService {
         connectionIssues,
         options
       );
-      if (canReuseCompletedRead && status.statusCheckOutcome === 'authoritative') {
+      if (
+        canReuseCompletedRead &&
+        status.statusCheckOutcome === 'authoritative' &&
+        // Installation/invalidation can detach this read before its subprocess finishes.
+        providerStatusReadInFlight.get(requestKey) === request
+      ) {
         providerStatusReadCache.set(requestKey, {
           expiresAt: Date.now() + OPENCODE_PROJECT_STATUS_CACHE_TTL_MS,
           status,

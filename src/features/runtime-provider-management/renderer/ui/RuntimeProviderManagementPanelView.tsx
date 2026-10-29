@@ -51,6 +51,7 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { qualifyModelId } from '../../core/domain/openCodeModelIdentity';
+import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
 import { LegacyConfiguredModelsPanel } from './LegacyConfiguredModelsPanel';
 import {
@@ -1246,13 +1247,7 @@ const DirectoryProviderRow = ({
   const reconnect = getDirectoryAction(provider, 'reconnect');
   const configure = getDirectoryAction(provider, 'configure');
   const forget = getDirectoryAction(provider, 'forget');
-  const test = getDirectoryAction(provider, 'test');
-  const canOpenConnect = provider.state !== 'connected' && connect?.enabled === true;
-  const canSelectModels =
-    provider.modelCount !== 0 &&
-    (provider.state === 'connected' ||
-      provider.metadata.configuredAuthless === true ||
-      test?.enabled === true);
+  const { canOpenConnect, canSelectModels } = runtimeProviderDirectoryInteraction(provider);
   const clickable = !disabled && (canOpenConnect || canSelectModels);
   const visuallyActive = active && (canSelectModels || formOpen);
   const rowInteractive = clickable && !formOpen && !(active && canSelectModels);

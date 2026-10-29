@@ -24,7 +24,7 @@ import {
   settleOpenCodePartialStatus,
   shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
-import { preserveOpenCodeRuntimeUpdateMetadata } from './openCodeRuntimeUpdateMetadata';
+import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
 import type { AppState } from '../types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -868,6 +868,7 @@ export interface CliInstallerSlice {
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
+  applyOpenCodeRuntimeProgress: (status: OpenCodeRuntimeStatus) => void;
   installOpenCodeRuntime: (options?: OpenCodeRuntimeInstallOptions) => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
   fetchCodexRuntimeStatus: () => Promise<void>;
@@ -883,7 +884,6 @@ let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
-let openCodeRuntimeStatusInFlight: Promise<void> | null = null;
 let codexRuntimeStatusInFlight: Promise<void> | null = null;
 
 export function getCliProviderStatusScopeKey(
@@ -953,25 +953,6 @@ function scheduleCodexCatalogLoadingRefreshes(
   get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
 ): void {
   scheduleCodexCatalogLoadingRefresh(get, 'codex');
-}
-
-function createFailedOpenCodeRuntimeStatus(
-  previousStatus: OpenCodeRuntimeStatus | null,
-  message: string
-): OpenCodeRuntimeStatus {
-  return {
-    installed: previousStatus?.installed ?? false,
-    ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
-    ...(previousStatus?.version ? { version: previousStatus.version } : {}),
-    ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
-    source: previousStatus?.source ?? 'missing',
-    state: 'failed',
-    progress: {
-      phase: 'failed',
-      detail: message,
-    },
-    error: message,
-  };
 }
 
 // =============================================================================
@@ -1596,96 +1577,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     });
   },
 
-  fetchOpenCodeRuntimeStatus: async () => {
-    if (!api.openCodeRuntime) return;
-    if (openCodeRuntimeStatusInFlight) return openCodeRuntimeStatusInFlight;
-
-    openCodeRuntimeStatusInFlight = (async () => {
-      set({ openCodeRuntimeStatusLoading: true, openCodeRuntimeError: null });
-      try {
-        const status = await api.openCodeRuntime.getStatus();
-        set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to check OpenCode runtime status';
-        logger.error('Failed to fetch OpenCode runtime status:', error);
-        set({
-          openCodeRuntimeStatus: createFailedOpenCodeRuntimeStatus(
-            get().openCodeRuntimeStatus,
-            message
-          ),
-          openCodeRuntimeError: message,
-        });
-      } finally {
-        set({ openCodeRuntimeStatusLoading: false });
-        openCodeRuntimeStatusInFlight = null;
-      }
-    })();
-
-    return openCodeRuntimeStatusInFlight;
-  },
-
-  installOpenCodeRuntime: async (options) => {
-    if (!api.openCodeRuntime) return;
-    const installStartedAtMs = Date.now();
-    const previousStatus = get().openCodeRuntimeStatus;
-    set({
-      openCodeRuntimeStatusLoading: true,
-      openCodeRuntimeError: null,
-      openCodeRuntimeStatus: {
-        installed: previousStatus?.installed ?? false,
-        ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
-        ...(previousStatus?.version ? { version: previousStatus.version } : {}),
-        ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
-        source: previousStatus?.source ?? 'missing',
-        state: 'checking',
-        progress: {
-          phase: 'checking',
-          detail: 'Resolving latest OpenCode package...',
-        },
-      },
-    });
-    try {
-      const status = await api.openCodeRuntime.install(options);
-      const installSucceeded = status.installed && status.state === 'ready';
-      set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
-      recordRuntimeInstallEnd({
-        runtime: 'opencode',
-        success: installSucceeded,
-        source: status.source,
-        errorClass: installSucceeded ? 'none' : classifyAnalyticsError(status.error),
-        durationMs: elapsedMsSince(installStartedAtMs),
-      });
-      if (status.installed) {
-        await api.openCodeRuntime.invalidateStatus();
-        await refreshOpenCodeProviderStatusAfterRuntimeInstall(get);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
-      logger.error('Failed to install OpenCode runtime:', error);
-      set({
-        openCodeRuntimeStatus: createFailedOpenCodeRuntimeStatus(
-          get().openCodeRuntimeStatus,
-          message
-        ),
-        openCodeRuntimeError: message,
-      });
-      recordRuntimeInstallEnd({
-        runtime: 'opencode',
-        success: false,
-        source: 'unknown',
-        errorClass: classifyAnalyticsError(error),
-        durationMs: elapsedMsSince(installStartedAtMs),
-      });
-    } finally {
-      set({ openCodeRuntimeStatusLoading: false });
-    }
-  },
-
-  invalidateOpenCodeRuntimeStatus: async () => {
-    await api.openCodeRuntime?.invalidateStatus();
-    set({ openCodeRuntimeStatus: null });
-  },
+  ...createOpenCodeRuntimeActions(set, get, () =>
+    refreshOpenCodeProviderStatusAfterRuntimeInstall(get)
+  ),
 
   fetchCodexRuntimeStatus: async () => {
     if (!api.codexRuntime) return;
