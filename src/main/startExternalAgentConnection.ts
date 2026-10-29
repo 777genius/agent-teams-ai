@@ -29,6 +29,7 @@ import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts'
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
 import type { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
 import type { TeamChangeEvent } from '@shared/types';
+import type { FastifyRequest } from 'fastify';
 
 const configManager = ConfigManager.getInstance();
 
@@ -43,6 +44,7 @@ export function composeExternalAgentConnection(options: {
   getMainContents(): WebContents | null;
   isLocalContext(): boolean;
   getControlUrl(): string | null;
+  getControlAuthToken(): string | null;
   startControl(): Promise<void>;
   reconfigureRoot(): Promise<void>;
   hasLiveRuntimeConsumers?(): boolean;
@@ -87,20 +89,23 @@ export function composeExternalAgentConnection(options: {
     prepare: (provider, connectionInfo) =>
       prepareNativeAgentRun(provider, connectionInfo, {
         controlUrl: options.getControlUrl(),
+        controlAuthToken: options.getControlAuthToken(),
         claudeDir: getClaudeBasePath(),
+        mcpHandle: agentTeamsMcpHttpServer.getCurrentHandle(),
+        userDataPath: app.getPath('userData'),
       }),
   });
   return {
     ...connection,
     directRun,
     teamPromptManagement,
-    async updateRoot(applyConfig: () => void) {
+    async updateRoot(applyConfig: () => void, request?: FastifyRequest) {
       await directRun.stopCurrent();
-      return connection.updateRoot(applyConfig);
+      return connection.updateRoot(applyConfig, request);
     },
-    async changeContext(operation: () => Promise<void> | void) {
+    async changeContext(operation: () => Promise<void> | void, request?: FastifyRequest) {
       await directRun.stopCurrent();
-      return connection.changeContext(operation);
+      return connection.changeContext(operation, request);
     },
     async closeAdmission() {
       const drain = connection.closeAdmission();

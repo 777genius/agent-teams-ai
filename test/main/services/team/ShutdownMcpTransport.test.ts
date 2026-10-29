@@ -87,6 +87,7 @@ const handle: NonNullable<ReturnType<typeof server.getCurrentHandle>> = {
   pid: 123,
   generation: 1,
   diagnostics: [],
+  authToken: 'sandbox-mcp-auth-token-0123456789abcdef',
   transportEvidence: {
     schemaVersion: 1,
     transport: 'httpStream',
@@ -241,6 +242,7 @@ describe('shutdown MCP transport authority', () => {
       getMainContents: () => null,
       isLocalContext: () => true,
       getControlUrl: () => 'http://127.0.0.1:41000',
+      getControlAuthToken: () => 'sandbox-control-token-0123456789abcdef',
       startControl: async () => undefined,
       reconfigureRoot: async () => undefined,
     });
@@ -349,6 +351,7 @@ describe('shutdown MCP transport authority', () => {
             getRoot: getClaudeBasePath,
             getAppVersion: () => 'test',
             getCdpEnabled: () => false,
+            getControlAuthToken: () => 'sandbox-control-token-0123456789abcdef',
             mcp: server,
             httpEnabled: true,
           });
@@ -444,6 +447,8 @@ describe('shutdown MCP transport authority', () => {
             server.getCurrentHandle() !== handle ||
             input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL !== expectedUrl ||
             input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH !== handle.urlHash ||
+            input.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON !==
+              JSON.stringify({ Authorization: `Bearer ${handle.authToken}` }) ||
             input.env.CLAUDE_TEAM_APP_INSTANCE_ID !== 'review-host' ||
             input.env.CLAUDE_TEAM_APP_PROFILE_SCOPE !== profile ||
             child.CLAUDE_TEAM_APP_INSTANCE_ID !== 'review-host' ||
@@ -548,6 +553,7 @@ describe('shutdown MCP transport authority', () => {
       expect(teardown).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
       const after = await resolveEnv();
       expect(after.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+      expect(after.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON).toBeUndefined();
       expect(after.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
       expect(after.CLAUDE_TEAM_APP_INSTANCE_ID).toBeUndefined();
       expect(after.CLAUDE_TEAM_APP_PROFILE_SCOPE).toBeUndefined();

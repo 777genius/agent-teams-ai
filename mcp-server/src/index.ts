@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { timingSafeEqual } from 'node:crypto';
 import { realpathSync } from 'fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'url';
@@ -16,6 +17,19 @@ const MCP_HTTP_IDENTITY_SERVICE_ENV = 'AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE';
 const MCP_HTTP_CLAUDE_DIR_HASH_ENV = 'AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH';
 const MCP_HTTP_LAUNCH_SPEC_HASH_ENV = 'AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH';
 const MCP_HTTP_OWNER_INSTANCE_ID_ENV = 'AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID';
+const MCP_HTTP_AUTH_TOKEN_ENV = 'AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN';
+
+function constantTimeEqual(left: string, right: string): boolean {
+  const leftBytes = Buffer.from(left);
+  const rightBytes = Buffer.from(right);
+  return leftBytes.length === rightBytes.length && timingSafeEqual(leftBytes, rightBytes);
+}
+
+function requestAuthToken(request: IncomingMessage): string | null {
+  const authorization = request.headers.authorization;
+  const bearer = typeof authorization === 'string' ? /^Bearer ([^\s]+)$/.exec(authorization) : null;
+  return bearer?.[1] ?? null;
+}
 
 export type AgentTeamsMcpStartOptions =
   | {
@@ -54,6 +68,7 @@ export function createServer(
   const bound =
     process.env.AGENT_TEAMS_BOUND_CONTROL_URL !== undefined ||
     process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON !== undefined;
+  const httpAuthToken = process.env[MCP_HTTP_AUTH_TOKEN_ENV]?.trim() ?? '';
   if (
     input.toolProfile === 'management' &&
     (!process.env.AGENT_TEAMS_BOUND_CONTROL_URL || !process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON)
@@ -63,12 +78,15 @@ export function createServer(
   if (bound && httpOptions && !['127.0.0.1', '::1', 'localhost'].includes(httpOptions.host)) {
     throw new Error('Desktop-bound MCP must listen on loopback');
   }
+  if (httpOptions && !/^\S{32,512}$/.test(httpAuthToken)) {
+    throw new Error('MCP HTTP authentication token is missing or invalid');
+  }
   const authorityHost = httpOptions?.host === '::1' ? '[::1]' : httpOptions?.host;
   const authority = httpOptions ? `${authorityHost}:${httpOptions.port}` : null;
   const server = new FastMCP({
     name: 'agent-teams-mcp',
     version: '1.0.0',
-    ...(bound && authority
+    ...(authority
       ? {
           // Patched transport admission covers every method, before CORS and session lookup.
           httpRequestGate: (request: IncomingMessage, response: ServerResponse) => {
@@ -77,8 +95,57 @@ export function createServer(
               (request.headers.origin !== undefined &&
                 request.headers.origin !== `http://${authority}`)
             ) {
-              response.writeHead(403, { 'content-type': 'application/json' });
-              response.end(JSON.stringify({ error: 'Forbidden Host or Origin' }));
+              response.writeHead(403, {
+                'content-type': 'application/json',
+              });
+              response.end(JSON.stringify({ error: 'Request origin is not allowed' }));
+              return false;
+            }
+            const origin = request.headers.origin;
+            if (origin) {
+              response.setHeader('Access-Control-Allow-Origin', origin);
+              response.setHeader('Vary', 'Origin');
+            }
+            if (request.method === 'OPTIONS') {
+              const method = request.headers['access-control-request-method'];
+              const headers = request.headers['access-control-request-headers'];
+              if (
+                !origin ||
+                typeof method !== 'string' ||
+                !['GET', 'POST', 'DELETE'].includes(method) ||
+                (typeof headers === 'string' &&
+                  headers
+                    .split(',')
+                    .some(
+                      (name) =>
+                        ![
+                          'authorization',
+                          'content-type',
+                          'accept',
+                          'mcp-session-id',
+                          'mcp-protocol-version',
+                          'last-event-id',
+                        ].includes(name.trim().toLowerCase())
+                    ))
+              ) {
+                response.writeHead(403);
+                response.end();
+                return false;
+              }
+              response.writeHead(204, {
+                'Access-Control-Allow-Methods': method,
+                'Access-Control-Allow-Headers':
+                  'Authorization, Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-Id',
+              });
+              response.end();
+              return false;
+            }
+            if (!constantTimeEqual(requestAuthToken(request) ?? '', httpAuthToken)) {
+              response.writeHead(401, {
+                'content-type': 'application/json',
+                'www-authenticate': 'Bearer realm="agent-teams-mcp-local"',
+              });
+              response.end(JSON.stringify({ error: 'Authentication required' }));
               return false;
             }
             return true;

@@ -10,9 +10,9 @@ import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
 import {
-  buildPassiveProviderStatusCliEnv,
   buildProviderAwareCliEnv,
   getProviderStatusStoredCredentialAllowlist,
+  preparePassiveProviderStatusCliEnv,
 } from './providerAwareCliEnv';
 import {
   canHydrateProviderCatalog,
@@ -1278,7 +1278,7 @@ export class ClaudeMultimodelBridgeService {
         // Catalog hydration can finish discovery in the background after the bounded summary.
         if (options.summary !== true) await waitForPendingShellEnv();
       }
-      const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
+      const { env: passiveEnv, connectionIssues } = await preparePassiveProviderStatusCliEnv({
         binaryPath,
         providerId,
       });

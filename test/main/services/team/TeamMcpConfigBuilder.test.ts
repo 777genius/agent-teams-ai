@@ -43,6 +43,11 @@ type ModuleLoad = (request: string, parent: NodeModule | undefined, isMain: bool
 const moduleInternal = Module as unknown as { _load: ModuleLoad };
 const originalModuleLoad = moduleInternal._load;
 
+vi.mock(
+  '@features/external-agent-connection/main',
+  async () => import('@features/external-agent-connection/main/desktopMcpEnvironment')
+);
+
 vi.mock('@main/services/team/WorkspaceMcpBundle', () => ({
   resolveWorkspaceMcpBundle: hoisted.resolveWorkspaceMcpBundleMock,
 }));
@@ -176,7 +181,7 @@ describe('TeamMcpConfigBuilder', () => {
     clearResolvedNodePathForTests();
     originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
     originalControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
-    tempAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-appdata-'));
+    tempAppData = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-appdata-')));
     createdDirs.push(tempAppData);
     moduleInternal._load = ((request, parent, isMain) => {
       if (request === 'electron') {
@@ -240,12 +245,12 @@ describe('TeamMcpConfigBuilder', () => {
 
   // ── Config storage ──
 
-  it('writes config to userData/mcp-configs/, not the system default tmp', async () => {
+  it('writes config inside the validated private app profile', async () => {
     const builder = new TeamMcpConfigBuilder();
     const configPath = await builder.writeConfigFile();
     createdPaths.push(configPath);
 
-    const expectedDir = path.join(tempAppData, 'mcp-configs');
+    const expectedDir = path.join(tempAppData, 'local-http-auth', 'mcp-configs');
     expect(configPath.startsWith(expectedDir)).toBe(true);
     // Config must NOT be in the old hardcoded location
     expect(configPath).not.toContain('claude-team-mcp');
@@ -281,7 +286,7 @@ describe('TeamMcpConfigBuilder', () => {
     hoisted.resolveWorkspaceMcpBundleMock.mockRejectedValue(new Error('MCP build failed'));
 
     await expect(new TeamMcpConfigBuilder().writeConfigFile()).rejects.toThrow('MCP build failed');
-    expect(fs.existsSync(path.join(tempAppData, 'mcp-configs'))).toBe(false);
+    expect(fs.existsSync(path.join(tempAppData, 'local-http-auth', 'mcp-configs'))).toBe(false);
   });
 
   it('pins the MCP controller to the active Claude base path', async () => {
@@ -384,6 +389,8 @@ describe('TeamMcpConfigBuilder', () => {
 
       try {
         const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
+        // Evaluate real filesystem custody on the host OS after the binary-resolution simulation.
+        if (platformDescriptor) Object.defineProperty(process, 'platform', platformDescriptor);
         const builder = new TeamMcpConfigBuilder();
         const configPath = await builder.writeConfigFile();
         createdPaths.push(configPath);
@@ -1474,6 +1481,7 @@ describe('TeamMcpConfigBuilder', () => {
       CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43125',
       AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:43125',
       AGENT_TEAMS_BOUND_CONTEXT_JSON: 'synthetic-resolved-context',
+      AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'TEST-bound-control-token-000000000000000000',
     };
     const revoke = configureDesktopMcpEnvironment(() => resolved);
     try {
@@ -1482,6 +1490,11 @@ describe('TeamMcpConfigBuilder', () => {
       });
       createdPaths.push(configPath);
       expect(readGeneratedServer(configPath)?.env).toMatchObject(resolved);
+      if (process.platform !== 'win32') {
+        expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
+        expect(fs.statSync(path.dirname(configPath)).mode & 0o777).toBe(0o700);
+        expect(fs.statSync(path.dirname(path.dirname(configPath))).mode & 0o777).toBe(0o700);
+      }
     } finally {
       revoke();
     }
@@ -1512,6 +1525,31 @@ describe('TeamMcpConfigBuilder', () => {
     expect(Object.keys(parsed.mcpServers)).toEqual(['agent-teams']);
   });
 
+  it.skipIf(process.platform === 'win32')(
+    'rejects a broadly readable generated config directory before credential bytes',
+    async () => {
+      const directory = path.join(tempAppData, 'local-http-auth', 'mcp-configs');
+      fs.mkdirSync(path.dirname(directory), { mode: 0o700 });
+      fs.mkdirSync(directory, { mode: 0o755 });
+      await expect(new TeamMcpConfigBuilder().writeConfigFile()).rejects.toThrow('private');
+      expect(fs.readdirSync(directory)).toEqual([]);
+      expect(fs.statSync(directory).mode & 0o777).toBe(0o755);
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'refuses a linked credential config directory without touching its target',
+    async () => {
+      const target = path.join(tempAppData, 'foreign-configs');
+      fs.mkdirSync(target, { mode: 0o700 });
+      const parent = path.join(tempAppData, 'local-http-auth');
+      fs.mkdirSync(parent, { mode: 0o700 });
+      fs.symlinkSync(target, path.join(parent, 'mcp-configs'));
+      await expect(new TeamMcpConfigBuilder().writeConfigFile()).rejects.toThrow();
+      expect(fs.readdirSync(target)).toEqual([]);
+    }
+  );
+
   // ── Cleanup: removeConfigFile ──
 
   it('removeConfigFile deletes the file', async () => {
@@ -1533,11 +1571,8 @@ describe('TeamMcpConfigBuilder', () => {
 
   it('removeConfigFile defers Windows locked temp config cleanup without warning', async () => {
     const builder = new TeamMcpConfigBuilder();
-    const configPath = path.join(
-      tempAppData,
-      'mcp-configs',
-      `agent-teams-mcp-${process.pid}-locked.json`
-    );
+    const configPath = await builder.writeConfigFile();
+    createdPaths.push(configPath);
     const originalUnlink = fs.promises.unlink.bind(fs.promises);
     const unlinkSpy = vi.spyOn(fs.promises, 'unlink').mockImplementation(async (targetPath) => {
       if (targetPath === configPath) {
@@ -1555,46 +1590,59 @@ describe('TeamMcpConfigBuilder', () => {
 
   // ── Cleanup: gcOwnConfigs ──
 
-  it('gcOwnConfigs removes only files owned by current pid', async () => {
-    const configDir = path.join(tempAppData, 'mcp-configs');
-    fs.mkdirSync(configDir, { recursive: true });
-
-    const ownFile = path.join(configDir, `agent-teams-mcp-${process.pid}-12345-abc.json`);
-    const otherFile = path.join(configDir, `agent-teams-mcp-99999-12345-xyz.json`);
-    fs.writeFileSync(ownFile, '{}');
-    fs.writeFileSync(otherFile, '{}');
-
+  it('gcOwnConfigs removes only exact owned publications, including across builder instances', async () => {
     const builder = new TeamMcpConfigBuilder();
-    await builder.gcOwnConfigs();
+    const ownFile = await builder.writeConfigFile();
+    const otherFile = path.join(
+      path.dirname(ownFile),
+      `agent-teams-mcp-${process.pid}-foreign.json`
+    );
+    fs.writeFileSync(otherFile, '{}', { mode: 0o600 });
+
+    await new TeamMcpConfigBuilder().gcOwnConfigs();
 
     expect(fs.existsSync(ownFile)).toBe(false);
     expect(fs.existsSync(otherFile)).toBe(true);
   });
 
+  it('does not delete a replacement at a previously owned config path', async () => {
+    const builder = new TeamMcpConfigBuilder();
+    const configPath = await builder.writeConfigFile();
+    fs.renameSync(configPath, `${configPath}.retained`);
+    fs.writeFileSync(configPath, '{"foreign":true}', { mode: 0o600 });
+    await builder.removeConfigFile(configPath);
+    expect(fs.readFileSync(configPath, 'utf8')).toBe('{"foreign":true}');
+    expect(fs.existsSync(`${configPath}.retained`)).toBe(true);
+  });
+
   // ── Cleanup: gcStaleConfigs ──
 
-  it('gcStaleConfigs removes files older than TTL', async () => {
-    const configDir = path.join(tempAppData, 'mcp-configs');
-    fs.mkdirSync(configDir, { recursive: true });
-
-    const oldFile = path.join(configDir, `agent-teams-mcp-999-1-old.json`);
-    fs.writeFileSync(oldFile, '{}');
+  it('gcStaleConfigs retains aged owned and unknown files until explicit owner cleanup', async () => {
+    const builder = new TeamMcpConfigBuilder();
+    const oldFile = await builder.writeConfigFile();
+    const configDir = path.dirname(oldFile);
+    const unknownOldFile = path.join(configDir, 'agent-teams-mcp-999-1-old.json');
+    fs.writeFileSync(unknownOldFile, '{}', { mode: 0o600 });
     // Set mtime to 2 days ago
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     fs.utimesSync(oldFile, twoDaysAgo, twoDaysAgo);
+    fs.utimesSync(unknownOldFile, twoDaysAgo, twoDaysAgo);
 
     const freshFile = path.join(configDir, `agent-teams-mcp-999-2-fresh.json`);
     fs.writeFileSync(freshFile, '{}');
 
-    const builder = new TeamMcpConfigBuilder();
     await builder.gcStaleConfigs(24 * 60 * 60 * 1000); // 24h TTL
 
-    expect(fs.existsSync(oldFile)).toBe(false);
+    expect(fs.existsSync(oldFile)).toBe(true);
+    expect(fs.existsSync(unknownOldFile)).toBe(true);
     expect(fs.existsSync(freshFile)).toBe(true);
+    await builder.removeConfigFile(oldFile);
+    expect(fs.existsSync(oldFile)).toBe(false);
+    expect(fs.existsSync(unknownOldFile)).toBe(true);
   });
 
   it('gcStaleConfigs does not remove fresh files', async () => {
-    const configDir = path.join(tempAppData, 'mcp-configs');
+    const configDir = path.join(tempAppData, 'local-http-auth', 'mcp-configs');
     fs.mkdirSync(configDir, { recursive: true });
 
     const freshFile = path.join(configDir, `agent-teams-mcp-1-1234-abc.json`);

@@ -1,3 +1,4 @@
+import type { HttpServices } from '@main/http';
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -16,6 +17,7 @@ import './sentryBootstrap';
 import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 
+import { checkApiReadiness } from '@features/local-http-auth/main';
 import {
   createDesktopTeamGroupChats,
   registerTeamGroupChatsIpc,
@@ -1456,12 +1458,13 @@ function getTeamControlApiBaseUrl(): string | null {
 
 async function syncTeamControlApiState(): Promise<void> {
   const baseUrl = getTeamControlApiBaseUrl();
-  if (!baseUrl) {
+  const authToken = httpServer?.getAuthToken() ?? null;
+  if (!baseUrl || !authToken) {
     await clearTeamControlApiState();
     return;
   }
-
-  await writeTeamControlApiState(baseUrl);
+  await checkApiReadiness(baseUrl, authToken);
+  await writeTeamControlApiState(baseUrl, authToken);
 }
 
 /**
@@ -2002,6 +2005,7 @@ async function initializeServices(): Promise<void> {
       contextRegistry.getActiveContextId() === 'local' &&
       !['connecting', 'connected'].includes(sshConnectionManager.getStatus().state),
     getControlUrl: getTeamControlApiBaseUrl,
+    getControlAuthToken: () => httpServer?.getAuthToken() ?? null,
     startControl: () => startHttpServer(handleModeSwitch),
     reconfigureRoot: async () => {
       reconfigureLocalContextForClaudeRoot();
@@ -2209,7 +2213,10 @@ async function initializeServices(): Promise<void> {
   });
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
-  httpServer = new HttpServer();
+  httpServer = new HttpServer({
+    getServices: currentHttpServices,
+    afterRestart: syncTeamControlApiState,
+  });
   teamProvisioningService.setControlApiBaseUrlResolver(async () => {
     // Listening alone does not prove that Host publication has committed.
     await startHttpServer(handleModeSwitch);
@@ -2944,6 +2951,29 @@ async function initializeServices(): Promise<void> {
   });
 }
 
+function currentHttpServices(): HttpServices {
+  const activeContext = contextRegistry.getActive();
+  if (!teamHttpHandlerApis) throw new Error('Team HTTP APIs are not initialized');
+  return {
+    projectScanner: activeContext.projectScanner,
+    sessionParser: activeContext.sessionParser,
+    subagentResolver: activeContext.subagentResolver,
+    chunkBuilder: activeContext.chunkBuilder,
+    dataCache: activeContext.dataCache,
+    recentProjectsFeature,
+    teamGroupChatsFeature,
+    organizationsFeature,
+    workspaceTrust: workspaceTrustStatus,
+    tokenUsageFeature: tokenUsageFeature ?? undefined,
+    memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
+    externalAgentConnection: externalAgentConnection ?? undefined,
+    updaterService,
+    sshConnectionManager,
+    teamDataApi: bindTeamHttpDataApi(teamDataService),
+    teamApis: teamHttpHandlerApis,
+  };
+}
+
 /** Starts the HTTP sidecar server with services from the active context. */
 async function startHttpServer(
   modeSwitchHandler: (mode: 'local' | 'ssh') => Promise<void>
@@ -2952,36 +2982,16 @@ async function startHttpServer(
     throw new StartupCancelledError();
   }
 
+  const wasRunning = httpServer.isRunning();
   try {
-    if (httpServer.isRunning()) {
+    if (wasRunning) {
       await startupStage(syncTeamControlApiState);
       return;
     }
 
     const config = configManager.getConfig();
-    const activeContext = contextRegistry.getActive();
-    if (!teamHttpHandlerApis) {
-      throw new Error('Team HTTP APIs are not initialized');
-    }
     const port = await httpServer.start(
-      {
-        projectScanner: activeContext.projectScanner,
-        sessionParser: activeContext.sessionParser,
-        subagentResolver: activeContext.subagentResolver,
-        chunkBuilder: activeContext.chunkBuilder,
-        dataCache: activeContext.dataCache,
-        recentProjectsFeature,
-        teamGroupChatsFeature,
-        organizationsFeature,
-        workspaceTrust: workspaceTrustStatus,
-        tokenUsageFeature: tokenUsageFeature ?? undefined,
-        memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
-        externalAgentConnection: externalAgentConnection ?? undefined,
-        updaterService,
-        sshConnectionManager,
-        teamDataApi: bindTeamHttpDataApi(teamDataService),
-        teamApis: teamHttpHandlerApis,
-      },
+      currentHttpServices(),
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
     );
@@ -2993,6 +3003,7 @@ async function startHttpServer(
     await startupStage(syncTeamControlApiState);
     logger.info(`HTTP sidecar server running on port ${port}`);
   } catch (error) {
+    if (!wasRunning && httpServer.isRunning()) await httpServer.stop().catch(() => undefined);
     await clearTeamControlApiState().catch(() => undefined);
     assertStartupActive(isShutdownStarted);
     logger.error('Failed to start HTTP server:', error);

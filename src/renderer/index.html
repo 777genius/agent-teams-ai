@@ -1435,7 +1435,40 @@
       }
     </script>
     <script type="module">
-      import('./main.tsx');
+      const bootstrap = {
+        importState: 'pending',
+        mainPhase: null,
+        errorClass: null,
+      };
+      window.__claudeTeamsRendererBootstrap = bootstrap;
+      import('./main.tsx').then(
+        () => {
+          bootstrap.importState = 'resolved';
+        },
+        (error) => {
+          bootstrap.importState = 'rejected';
+          let errorClass = 'other';
+          try {
+            const name = Object.getOwnPropertyDescriptor(error, 'name')?.value ?? error?.name;
+            const message = Object.getOwnPropertyDescriptor(error, 'message')?.value;
+            errorClass =
+              typeof message === 'string' && /does not provide an export named/.test(message)
+                ? 'module-export'
+                : typeof message === 'string' &&
+                    /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/.test(
+                      message
+                    )
+                  ? 'module-fetch'
+                  : ['SyntaxError', 'ReferenceError', 'TypeError'].includes(name)
+                    ? name
+                    : 'other';
+          } catch {
+            /* Diagnostic inspection must preserve the original import rejection. */
+          }
+          bootstrap.errorClass = errorClass;
+          throw error;
+        }
+      );
     </script>
   </body>
 </html>

@@ -222,7 +222,8 @@ export class ExternalAgentRunService implements ExternalAgentRunApi {
           fresh.context.appInstanceId !== request.expectedContext.appInstanceId ||
           fresh.context.dataRootFingerprint !== request.expectedContext.dataRootFingerprint ||
           fresh.context.connectionGeneration !== request.expectedContext.connectionGeneration ||
-          fresh.mcp.url !== connection.mcp.url
+          fresh.mcp.url !== connection.mcp.url ||
+          fresh.mcp.generation !== connection.mcp.generation
         )
           throw new Error('App connection changed before native launch');
         if (run.cancelled) return;

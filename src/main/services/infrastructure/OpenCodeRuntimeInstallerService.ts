@@ -16,6 +16,8 @@ import {
   type OpenCodeBinaryVersionProbe,
   probeOpenCodeBinaryVersion,
 } from '@features/runtime-provider-management/main';
+import { detectOpenCodeNativeFacts } from '@main/services/runtime/openCodeNativePlatform';
+import { getOpenCodeNativePackages } from '@main/services/runtime/openCodeNativePolicy';
 import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
@@ -34,7 +36,7 @@ import {
   isAgentTeamsOpenCodeVersionSupported,
 } from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
-import { promises as fsp, readdirSync, readFileSync } from 'fs';
+import { promises as fsp, readdirSync } from 'fs';
 import path from 'path';
 
 import {
@@ -42,6 +44,21 @@ import {
   resolveLatestOpenCodeVersion,
   withLatestOpenCodeVersion,
 } from './openCodeRuntimeLatestVersion';
+import {
+  managedFileIdentity,
+  readManagedProjection,
+  rememberManagedProjection,
+} from './openCodeRuntimeManagedProjection';
+import {
+  CURRENT_MANIFEST_SCHEMA_VERSION,
+  type OpenCodeRuntimeManifest,
+  readRuntimeManifest,
+  readRuntimeManifestSync,
+} from './openCodeRuntimeManifest';
+import {
+  getOpenCodeRuntimePlatformCandidates,
+  matchesNativePackagePolicy,
+} from './openCodeRuntimeNativeSelection';
 import {
   getUnverifiedOpenCodeOverrideMessage,
   matchesOpenCodeRuntimeGeneration,
@@ -53,6 +70,7 @@ import {
   getOpenCodeRuntimeResolverCacheGeneration,
   pathProbeCache,
   pathProbeInFlight,
+  resolveCachedVerifiedOpenCodeRuntimeBinaryPath as readCachedVerifiedOpenCodeRuntimeBinaryPath,
   runtimeBinaryResolveCache,
   runtimeBinaryResolveInFlight,
   setPathProbeCacheEntry,
@@ -74,14 +92,14 @@ import type {
 } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 export {
-  clearOpenCodeRuntimeResolverCache as clearOpenCodeRuntimeBinaryResolverCache,
-  resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
-} from './openCodeRuntimeResolverCache';
+  getOpenCodeRuntimePlatformCandidates,
+  type PlatformCandidate,
+} from './openCodeRuntimeNativeSelection';
+export { clearOpenCodeRuntimeResolverCache as clearOpenCodeRuntimeBinaryResolverCache } from './openCodeRuntimeResolverCache';
 
 const logger = createLogger('OpenCodeRuntimeInstallerService');
 
 const CHANNEL = 'openCodeRuntime:progress';
-const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 250 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 30_000;
@@ -89,20 +107,6 @@ const VERSION_PROBE_SUCCESS_CACHE_TTL_MS = 30_000;
 const VERSION_PROBE_FAILURE_CACHE_TTL_MS = 5_000;
 const RUNTIME_STATUS_SUCCESS_CACHE_TTL_MS = 30_000;
 const RUNTIME_STATUS_FAILURE_CACHE_TTL_MS = 5_000;
-
-interface OpenCodeRuntimeManifest {
-  schemaVersion: 1;
-  version: string;
-  platformPackage: string;
-  binaryPath: string;
-  integrity: string;
-  installedAt: string;
-}
-
-export interface PlatformCandidate {
-  packageName: string;
-  reason: string;
-}
 
 function getRuntimeRootPath(): string {
   return path.join(getAppDataPath(), 'runtimes', 'opencode');
@@ -112,45 +116,62 @@ function getCurrentManifestPath(): string {
   return path.join(getRuntimeRootPath(), 'current.json');
 }
 
-function parseManifest(value: unknown): OpenCodeRuntimeManifest | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  const manifest = value as Partial<OpenCodeRuntimeManifest>;
-  if (
-    manifest.schemaVersion !== CURRENT_MANIFEST_SCHEMA_VERSION ||
-    typeof manifest.version !== 'string' ||
-    typeof manifest.platformPackage !== 'string' ||
-    typeof manifest.binaryPath !== 'string' ||
-    typeof manifest.integrity !== 'string' ||
-    typeof manifest.installedAt !== 'string'
-  ) {
-    return null;
-  }
-  return manifest as OpenCodeRuntimeManifest;
-}
-
 function readCurrentManifestSync(): OpenCodeRuntimeManifest | null {
-  try {
-    const raw = readFileSync(getCurrentManifestPath(), 'utf8');
-    return parseManifest(JSON.parse(raw));
-  } catch {
-    return null;
-  }
+  return readRuntimeManifestSync(getCurrentManifestPath());
 }
 
+/** Passive locator: only an unchanged, policy-admitted and version-verified capture can be projected. */
 export function resolveAppManagedOpenCodeRuntimeBinaryPath(): string | null {
+  return readManagedProjection(
+    readCurrentManifestSync(),
+    getOpenCodeRuntimeResolverCacheGeneration()
+  );
+}
+
+export function resolveCachedVerifiedOpenCodeRuntimeBinaryPath(): string | null {
+  const cached = readCachedVerifiedOpenCodeRuntimeBinaryPath();
   const manifest = readCurrentManifestSync();
-  return isAbsoluteExistingFile(manifest?.binaryPath) ? manifest.binaryPath : null;
+  // A stale generic cache cannot resurrect the current manifest's rejected selection, including aliases.
+  const identity = manifest ? managedFileIdentity(manifest.binaryPath) : null;
+  const sameTarget =
+    cached &&
+    manifest &&
+    (normalizeBinaryCandidateForCompare(manifest.binaryPath) ===
+      normalizeBinaryCandidateForCompare(cached) ||
+      (identity !== null && identity === managedFileIdentity(cached)));
+  return sameTarget && resolveAppManagedOpenCodeRuntimeBinaryPath() !== cached ? null : cached;
+}
+
+/** Cold status/catalog preparation stays async; the passive projection itself never probes. */
+export async function preparePassiveOpenCodeRuntimeBinaryProjection(): Promise<void> {
+  if (readOpenCodeBinaryOverride(process.env) || resolveAppManagedOpenCodeRuntimeBinaryPath())
+    return;
+  await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
 }
 
 export async function resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath(): Promise<string | null> {
-  const binaryPath = resolveAppManagedOpenCodeRuntimeBinaryPath();
-  if (!binaryPath) {
+  const manifest = readCurrentManifestSync();
+  const binaryPath = manifest?.binaryPath;
+  if (
+    !isAbsoluteExistingFile(binaryPath) ||
+    !manifest ||
+    !(await matchesNativePackagePolicy(manifest.platformPackage))
+  ) {
     return null;
   }
+  const identity = managedFileIdentity(binaryPath),
+    generation = getOpenCodeRuntimeResolverCacheGeneration();
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version) ? binaryPath : null;
+  if (!version.ok || !isRecognizedOpenCodeRuntimeVersion(version.version)) return null;
+  return rememberManagedProjection(
+    manifest,
+    identity,
+    generation,
+    readCurrentManifestSync(),
+    getOpenCodeRuntimeResolverCacheGeneration()
+  )
+    ? binaryPath
+    : null;
 }
 
 export async function isSupportedOpenCodeRuntimeBinaryPath(
@@ -256,7 +277,7 @@ function getVersionProbeTtlMs(result: OpenCodeBinaryVersionProbe): number {
 async function probeOpenCodeBinaryVersionCached(
   binaryPath: string
 ): Promise<OpenCodeBinaryVersionProbe> {
-  const cacheKey = normalizeBinaryCandidateForCompare(binaryPath);
+  const cacheKey = `${normalizeBinaryCandidateForCompare(binaryPath)}\0${managedFileIdentity(binaryPath) ?? 'missing'}`;
   const cached = versionProbeCache.get(cacheKey);
   if (cached && Date.now() - cached.cachedAt < cached.ttlMs) {
     return cached.result;
@@ -305,7 +326,14 @@ async function probeFirstQualifiedOpenCodeBinaryCandidate(
   search: OpenCodeBinaryCandidateSearch
 ): Promise<{ binaryPath: string; version: string | null } | null> {
   for (const binaryPath of candidates) {
-    for (const launchBinaryPath of collectWindowsNativeOpenCodeBinaryCandidates(binaryPath)) {
+    const packages =
+      process.platform === 'win32'
+        ? getOpenCodeNativePackages(await detectOpenCodeNativeFacts())
+        : [];
+    for (const launchBinaryPath of collectWindowsNativeOpenCodeBinaryCandidates(
+      binaryPath,
+      packages
+    )) {
       const normalized = normalizeBinaryCandidateForCompare(launchBinaryPath);
       if (search.seen.has(normalized)) {
         continue;
@@ -475,74 +503,6 @@ export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
   return request;
 }
 
-function isLinuxMuslRuntime(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
-  }
-  const report =
-    typeof process.report?.getReport === 'function'
-      ? (process.report.getReport() as { header?: { glibcVersionRuntime?: string } })
-      : null;
-  const header = report?.header;
-  return !header?.glibcVersionRuntime;
-}
-
-export function getOpenCodeRuntimePlatformCandidates(
-  platform: NodeJS.Platform = process.platform,
-  arch: string = process.arch,
-  musl: boolean = isLinuxMuslRuntime()
-): PlatformCandidate[] {
-  if (platform === 'darwin') {
-    if (arch === 'arm64') return [{ packageName: 'opencode-darwin-arm64', reason: 'macOS arm64' }];
-    if (arch === 'x64') {
-      return [
-        { packageName: 'opencode-darwin-x64', reason: 'macOS x64' },
-        { packageName: 'opencode-darwin-x64-baseline', reason: 'macOS x64 baseline fallback' },
-      ];
-    }
-  }
-  if (platform === 'linux') {
-    if (arch === 'arm64') {
-      return musl
-        ? [
-            { packageName: 'opencode-linux-arm64-musl', reason: 'Linux arm64 musl' },
-            { packageName: 'opencode-linux-arm64', reason: 'Linux arm64 glibc fallback' },
-          ]
-        : [
-            { packageName: 'opencode-linux-arm64', reason: 'Linux arm64 glibc' },
-            { packageName: 'opencode-linux-arm64-musl', reason: 'Linux arm64 musl fallback' },
-          ];
-    }
-    if (arch === 'x64') {
-      return musl
-        ? [
-            { packageName: 'opencode-linux-x64-musl', reason: 'Linux x64 musl' },
-            {
-              packageName: 'opencode-linux-x64-baseline-musl',
-              reason: 'Linux x64 musl baseline fallback',
-            },
-            { packageName: 'opencode-linux-x64', reason: 'Linux x64 glibc fallback' },
-          ]
-        : [
-            { packageName: 'opencode-linux-x64', reason: 'Linux x64 glibc' },
-            { packageName: 'opencode-linux-x64-baseline', reason: 'Linux x64 baseline fallback' },
-            { packageName: 'opencode-linux-x64-musl', reason: 'Linux x64 musl fallback' },
-          ];
-    }
-  }
-  if (platform === 'win32') {
-    if (arch === 'arm64')
-      return [{ packageName: 'opencode-windows-arm64', reason: 'Windows arm64' }];
-    if (arch === 'x64') {
-      return [
-        { packageName: 'opencode-windows-x64', reason: 'Windows x64' },
-        { packageName: 'opencode-windows-x64-baseline', reason: 'Windows x64 baseline fallback' },
-      ];
-    }
-  }
-  throw new Error(`OpenCode app install is not supported on ${platform}/${arch}`);
-}
-
 export function verifyOpenCodeRuntimePackageIntegrity(buffer: Buffer, integrity: string): void {
   const match = /^sha512-([A-Za-z0-9+/=]+)$/.exec(integrity.trim());
   if (!match) {
@@ -607,13 +567,8 @@ export function extractOpenCodeRuntimeBinaryFromTarball(tarball: Buffer): Buffer
   return extractOpenCodePackage(tarball, getExecutableName()).binary;
 }
 
-async function readCurrentManifest(): Promise<OpenCodeRuntimeManifest | null> {
-  try {
-    const raw = await fsp.readFile(getCurrentManifestPath(), 'utf8');
-    return parseManifest(JSON.parse(raw));
-  } catch {
-    return null;
-  }
+function readCurrentManifest(): Promise<OpenCodeRuntimeManifest | null> {
+  return readRuntimeManifest(getCurrentManifestPath());
 }
 
 export class OpenCodeRuntimeInstallerService {
@@ -769,8 +724,34 @@ export class OpenCodeRuntimeInstallerService {
     if (!isAbsoluteExistingFile(manifest?.binaryPath)) {
       return { installed: false, source: 'missing', state: 'idle' };
     }
+    if (!(await matchesNativePackagePolicy(manifest.platformPackage)))
+      return {
+        installed: false,
+        binaryPath: manifest.binaryPath,
+        version: manifest.version,
+        source: 'app-managed',
+        state: 'failed',
+        error: 'OpenCode managed package does not match native CPU/ABI selection',
+      };
+    const identity = managedFileIdentity(manifest.binaryPath),
+      generation = getOpenCodeRuntimeResolverCacheGeneration();
     const version = await probeOpenCodeBinaryVersionCached(manifest.binaryPath);
     if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
+      if (
+        !rememberManagedProjection(
+          manifest,
+          identity,
+          generation,
+          readCurrentManifestSync(),
+          getOpenCodeRuntimeResolverCacheGeneration()
+        )
+      )
+        return {
+          installed: false,
+          source: 'app-managed',
+          state: 'failed',
+          error: 'OpenCode managed selection changed during verification',
+        };
       return {
         installed: true,
         binaryPath: manifest.binaryPath,
@@ -841,6 +822,7 @@ export class OpenCodeRuntimeInstallerService {
     if (!isAbsoluteExistingFile(manifest?.binaryPath)) {
       return null;
     }
+    if (!(await matchesNativePackagePolicy(manifest.platformPackage))) return null;
     const version = await probeOpenCodeBinaryVersion(manifest.binaryPath);
     if (!version.ok || !isRecognizedOpenCodeRuntimeVersion(version.version)) {
       return null;
@@ -882,7 +864,7 @@ export class OpenCodeRuntimeInstallerService {
       const selected = await selectOpenCodeInstallPackage(
         generation,
         compatibleV2Version,
-        getOpenCodeRuntimePlatformCandidates(),
+        await getOpenCodeRuntimePlatformCandidates(),
         fetchOpenCodePackageMetadata
       );
       const platformMetadata = selected.metadata;

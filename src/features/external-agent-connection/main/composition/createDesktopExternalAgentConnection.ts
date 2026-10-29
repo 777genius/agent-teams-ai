@@ -1,8 +1,18 @@
 import { createHash } from 'node:crypto';
 
+import {
+  applyApiAuthReference,
+  cancelApiProfileChanges,
+  configureApiProfileChanges,
+  scheduleApiProfileChange,
+} from '@features/local-http-auth/main';
 import { buildOpenCodeAppProfileScope } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 
-import { BOUND_CONTROL_CONTEXT_ENV, BOUND_CONTROL_URL_ENV } from '../../contracts';
+import {
+  BOUND_CONTROL_AUTH_TOKEN_ENV,
+  BOUND_CONTROL_CONTEXT_ENV,
+  BOUND_CONTROL_URL_ENV,
+} from '../../contracts';
 import { BoundControlContext } from '../BoundControlContext';
 import { configureDesktopMcpEnvironment } from '../desktopMcpEnvironment';
 import { ExternalAgentConnection } from '../ExternalAgentConnection';
@@ -11,7 +21,7 @@ import { registerBoundControlHttp } from '../registerBoundControlHttp';
 import type { AppConnectionContext, ExternalAgentConnectionApi } from '../../contracts';
 import type { NativeRendererCdp } from '../NativeRendererCdp';
 import type { WebContents } from 'electron';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 interface Dependencies {
   appInstanceId: string;
@@ -23,6 +33,7 @@ interface Dependencies {
   getAppVersion(): string;
   isLocalContext(): boolean;
   getControlUrl(): string | null;
+  getControlAuthToken(): string | null;
   startControl(): Promise<void>;
   reconfigureRoot(): Promise<void> | void;
   mcp: {
@@ -41,8 +52,8 @@ export interface DesktopExternalAgentConnection extends ExternalAgentConnectionA
   registerHttp(app: FastifyInstance): void;
   withExpectedContext<T>(expected: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   assertLaunchAdmission(): void;
-  updateRoot(applyConfig: () => void): Promise<void>;
-  changeContext(operation: () => Promise<void> | void): Promise<void>;
+  updateRoot(applyConfig: () => void, request?: FastifyRequest): Promise<void>;
+  changeContext(operation: () => Promise<void> | void, request?: FastifyRequest): Promise<void>;
   closeAdmission(): Promise<void>;
   shutdown(): Promise<void>;
 }
@@ -51,6 +62,7 @@ export interface DesktopExternalAgentConnection extends ExternalAgentConnectionA
 export function createDesktopExternalAgentConnection(
   deps: Dependencies
 ): DesktopExternalAgentConnection {
+  configureApiProfileChanges(() => undefined);
   const context = new BoundControlContext(deps.appInstanceId, deps.getRoot());
   const profileFingerprint = createHash('sha256').update(deps.userDataPath).digest('hex');
   let tail = Promise.resolve();
@@ -78,25 +90,44 @@ export function createDesktopExternalAgentConnection(
     revokeAuthority = deps.mcp.appContext.bind(identity, deps.httpEnabled);
   };
   bindAuthority();
-  const revokeEnvironment = configureDesktopMcpEnvironment(() => {
-    const controlUrl = deps.getControlUrl();
-    if (stopping || !context.isOpen || !deps.isLocalContext() || !controlUrl) {
-      throw new Error('Desktop MCP control context is unavailable');
-    }
-    // This factory is invoked only for a new owned child, never for discovery reads.
-    boundControlUrl = controlUrl;
-    return Object.freeze({
-      [BOUND_CONTROL_URL_ENV]: controlUrl,
-      [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
-      AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
-      CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
-      AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
-      CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
-        deps.userDataPath,
-        deps.getRoot()
-      ),
-    });
-  }, () => !stopping && context.isOpen && deps.isLocalContext() && !!deps.getControlUrl());
+  const revokeEnvironment = configureDesktopMcpEnvironment(
+    () => {
+      const controlUrl = deps.getControlUrl();
+      const controlAuthToken = deps.getControlAuthToken();
+      const root = deps.getRoot();
+      if (
+        stopping ||
+        !context.isOpen ||
+        !deps.isLocalContext() ||
+        !controlUrl ||
+        !controlAuthToken
+      ) {
+        throw new Error('Desktop MCP control context is unavailable');
+      }
+      // This factory is invoked only for a new owned child, never for discovery reads.
+      boundControlUrl = controlUrl;
+      const environment = {
+        [BOUND_CONTROL_URL_ENV]: controlUrl,
+        [BOUND_CONTROL_AUTH_TOKEN_ENV]: controlAuthToken,
+        [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
+        CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
+        AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
+          deps.userDataPath,
+          deps.getRoot()
+        ),
+      };
+      applyApiAuthReference(environment, root, controlUrl);
+      return Object.freeze(environment);
+    },
+    () =>
+      !stopping &&
+      context.isOpen &&
+      deps.isLocalContext() &&
+      !!deps.getControlUrl() &&
+      !!deps.getControlAuthToken()
+  );
   const connection = new ExternalAgentConnection({
     ...deps,
     context,
@@ -138,24 +169,17 @@ export function createDesktopExternalAgentConnection(
       if (stopping) throw new Error('App connection is shutting down');
       revokeAuthority?.();
       revokeAuthority = null;
-      try {
-        await operation();
-        if (rootChanged) await deps.reconfigureRoot();
-        if (stopping) throw new Error('App connection is shutting down');
-        bindAuthority();
-        if (deps.isLocalContext()) {
-          context.rebind(deps.getRoot());
-          await connection.retryConnection();
-        }
-      } catch (error) {
-        // Restore the actual local root only; a partial remote transition remains closed.
-        if (!stopping && deps.isLocalContext()) await restoreLocalContext().catch(() => undefined);
-        throw error;
-      }
+      await operation();
+      if (rootChanged) await deps.reconfigureRoot();
+      if (stopping) throw new Error('App connection is shutting down');
+      bindAuthority();
+      if (deps.isLocalContext()) context.rebind(deps.getRoot());
     });
   const closeAdmission = (): Promise<void> => {
     stopping = true;
-    shutdownDrain ??= context.closeAdmission();
+    shutdownDrain ??= Promise.all([context.closeAdmission(), cancelApiProfileChanges()]).then(
+      () => undefined
+    );
     return shutdownDrain;
   };
   return {
@@ -176,8 +200,24 @@ export function createDesktopExternalAgentConnection(
     closeAdmission,
     getConnectionInfo: () => connection.getConnectionInfo(),
     retryConnection,
-    updateRoot: (applyConfig) => change(applyConfig, true),
-    changeContext: (operation) => change(operation, false),
+    updateRoot: (applyConfig, request) => {
+      const transition = scheduleApiProfileChange(() => change(applyConfig, true), request, {
+        afterResume: async () => {
+          if (deps.isLocalContext()) await connection.retryConnection();
+        },
+      });
+      void transition.settled.catch(() => undefined);
+      return transition.result;
+    },
+    changeContext: (operation, request) => {
+      const transition = scheduleApiProfileChange(() => change(operation, false), request, {
+        afterResume: async () => {
+          if (deps.isLocalContext()) await connection.retryConnection();
+        },
+      });
+      void transition.settled.catch(() => undefined);
+      return transition.result;
+    },
     registerHttp(app) {
       registerBoundControlHttp(app, context);
       app.get('/api/app/connection', () => connection.getConnectionInfo());

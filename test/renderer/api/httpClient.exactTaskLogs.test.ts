@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { HttpAPIClient } from '../../../src/renderer/api/httpClient';
@@ -18,7 +19,10 @@ describe('HttpAPIClient exact task logs browser fallback', () => {
   it('returns safe fallback shapes for exact task logs in browser mode', async () => {
     vi.stubGlobal('EventSource', MockEventSource);
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const client = new HttpAPIClient('http://localhost:9999');
+    const client = new HttpAPIClient(
+      'http://localhost:9999',
+      fixtureBrowserAccess('http://localhost:9999')
+    );
 
     await expect(client.teams.getTaskLogStream('demo', 'task-a')).resolves.toEqual({
       participants: [],
