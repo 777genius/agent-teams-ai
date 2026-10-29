@@ -194,6 +194,7 @@ describe('run supersession policy', () => {
 
   it.each(automatic)('%s: groups never collide across events or identity kinds', (name) => {
     // Run IDs are unique per run, but may equal a PR number or a branch name.
+    // GitHub compares group names case-insensitively.
     const groups = [
       pr(7, 1),
       dispatch(7),
@@ -203,7 +204,7 @@ describe('run supersession policy', () => {
       push('refs/tags/8', 4),
       schedule(5),
       queue(7, 6),
-    ].map((scenario) => concurrency(name, scenario).group);
+    ].map((scenario) => concurrency(name, scenario).group.toLowerCase());
     expect(new Set(groups).size).toBe(groups.length);
   });
 

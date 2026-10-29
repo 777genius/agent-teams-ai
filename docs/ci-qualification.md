@@ -65,8 +65,10 @@ Explicit variants:
   cancels code checks, as before.
 - `Electron packaged CI` runs only for PRs and isolates only title/body edits;
   a base change runs its code checks and supersedes older ones.
-- Landing deployment keeps one cancelling group per ref, so the latest `main`
-  state publishes and an older deployment cannot overwrite it.
+- Landing deployment keeps one cancelling group per ref, so a newer push or
+  dispatch cancels an older deployment that is still queued or running. A
+  manual re-run of an older run deploys its original commit, so do not re-run
+  superseded deployments.
 - Release, signing and draft recovery workflows queue per release tag, ref,
   release ID or fixed operation group and never cancel running work. GitHub
   keeps at most one pending run per group, so a third queued operation replaces
