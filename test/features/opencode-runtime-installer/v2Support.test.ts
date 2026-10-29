@@ -164,6 +164,38 @@ describe('external OpenCode V2 support installation', () => {
     expect((await service.withStatus(native)).v2Support).toBe('ready');
   });
 
+  it.each([
+    ['opencodeV2Server.js', 'opencodev2server.js'],
+    ['opencodeV2ExecutionServer.js', 'opencodev2executionserver.js'],
+    ['opencodeV2RunOwner.js', 'opencodev2runowner.js'],
+    ['opencode-v2-graphs.json', 'Opencode-v2-graphs.json'],
+  ])('refuses a fully hashed manifest with the wrong case for %s', async (required, wrongCase) => {
+    const { lock, descriptor, archive } = fixture((entries, pinned) => {
+      const manifestEntry = entries.find((entry) => entry.name === V2_MANIFEST_FILE);
+      const helperEntry = entries.find((entry) => entry.name === `local-cli/${required}`);
+      if (!manifestEntry || !helperEntry) throw new Error('Missing required TEST fixture entry');
+      const manifest = JSON.parse(manifestEntry.data.toString('utf8')) as {
+        files: { path: string }[];
+      };
+      const row = manifest.files.find((file) => file.path === helperEntry.name);
+      if (!row) throw new Error('Missing required TEST manifest row');
+      helperEntry.name = `local-cli/${wrongCase}`;
+      row.path = helperEntry.name;
+      manifest.files.sort((left, right) =>
+        Buffer.compare(Buffer.from(left.path), Buffer.from(right.path))
+      );
+      manifestEntry.data = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
+      pinned.manifest.bytes = manifestEntry.data.length;
+      pinned.manifest.sha256 = sha(manifestEntry.data);
+      pinned.archive.expandedBytes = entries.reduce((sum, entry) => sum + entry.data.length, 0);
+    });
+    download(archive);
+    await expect(installer(lock).install(native.version!, () => {})).rejects.toThrow(
+      'Invalid pinned OpenCode V2 support delivery'
+    );
+    await expect(readFile(path.join(directory(descriptor), 'installed.json'))).rejects.toThrow();
+  });
+
   it('refuses graph metadata above the 32 MiB inventory JSON budget without publishing', async () => {
     const graphMetadata =
       JSON.stringify({

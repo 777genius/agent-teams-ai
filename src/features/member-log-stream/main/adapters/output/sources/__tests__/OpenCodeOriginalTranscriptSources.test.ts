@@ -122,6 +122,121 @@ describe('original transcript source admission', () => {
     expect(getOpenCodeTranscript).toHaveBeenCalledOnce();
   });
 
+  it('clears stale native preview overflow and preserves independent canonical limits', async () => {
+    const b = bindings();
+    const many = {
+      ...projection,
+      logProjection: {
+        messages: Array.from({ length: 5 }, (_, index) => ({
+          ...projection.logProjection.messages[0],
+          uuid: `native-${index}`,
+          content: `Native item ${index}`,
+        })),
+      },
+    };
+    let finish!: (value: typeof many) => void;
+    const getOpenCodeTranscript = vi
+      .fn()
+      .mockResolvedValueOnce(many)
+      .mockImplementationOnce(
+        () =>
+          new Promise<typeof many>((resolve) => {
+            finish = resolve;
+          })
+      );
+    const preview = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript } as never,
+      resolver,
+      ledger,
+      activity,
+      b.reader
+    );
+    expect((await preview.loadPreview(request)).overflowCount).toBeGreaterThan(0);
+    const pending = preview.loadPreview({ ...request, forceRefresh: true });
+    await vi.waitFor(() => expect(getOpenCodeTranscript).toHaveBeenCalledTimes(2));
+    b.change(unavailable);
+    finish(many);
+    expect(await pending).toMatchObject({
+      status: 'skipped',
+      items: [],
+      overflowCount: 0,
+      truncated: false,
+    });
+
+    const canonicalBinding = bindings();
+    const retained = {
+      list: async () => {
+        canonicalBinding.change(unavailable);
+        return Array.from({ length: 5 }, (_, index) => ({
+          id: `canonical-${index}`,
+          timestamp: '2026-10-29T00:00:00.000Z',
+          title: 'Message',
+          text: `Retained item ${index}`,
+          sourceLabel: 'OpenCode team inbox',
+        }));
+      },
+    } as never;
+    const canonical = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript } as never,
+      resolver,
+      ledger,
+      retained,
+      canonicalBinding.reader
+    );
+    expect(await canonical.loadPreview(request)).toMatchObject({
+      status: 'included',
+      overflowCount: 2,
+      truncated: true,
+      warnings: [expect.objectContaining({ code: 'opencode_runtime_unavailable' })],
+    });
+    expect(getOpenCodeTranscript).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['stream', 'preview'] as const)(
+    'prunes expired %s cache entries when a successor is cached',
+    async (provider) => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      try {
+        const b = bindings();
+        const getOpenCodeTranscript = vi.fn(async () => projection);
+        const source =
+          provider === 'stream'
+            ? new OpenCodeMemberRuntimeStreamSource(
+                { getOpenCodeTranscript } as never,
+                chunks,
+                resolver,
+                activity,
+                b.reader
+              )
+            : new OpenCodeMemberRuntimePreviewSource(
+                { getOpenCodeTranscript } as never,
+                resolver,
+                ledger,
+                activity,
+                b.reader
+              );
+        const load = () => ('load' in source ? source.load(request) : source.loadPreview(request));
+        await load();
+        const cache = (source as unknown as { cache: Map<string, unknown> }).cache;
+        expect(cache.size).toBe(1);
+        b.change({
+          kind: 'bound',
+          mode: 'active',
+          runId: 'sdk-successor',
+          sessionId: 'ses_successor',
+          laneId: 'primary',
+          cacheKey: 'successor',
+        });
+        now.mockReturnValue(100_000);
+        await load();
+        expect(getOpenCodeTranscript).toHaveBeenCalledTimes(2);
+        expect(cache.size).toBe(1);
+      } finally {
+        now.mockRestore();
+      }
+    }
+  );
+
   it('only reports lane ambiguity from the typed binding reader', async () => {
     const b = bindings();
     b.change({ kind: 'unavailable', reason: 'ambiguous', cacheKey: 'duplicate-evidence' });

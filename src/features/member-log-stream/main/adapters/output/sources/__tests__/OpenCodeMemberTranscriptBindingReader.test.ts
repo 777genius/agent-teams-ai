@@ -81,12 +81,12 @@ describe('original OpenCode transcript identity', () => {
 
   it('refuses partial, conflicting, unreadable and duplicate active evidence', async () => {
     const f = fixture();
-    f.evidence.sessions[1]!.runId = null;
+    f.evidence.sessions[1].runId = null;
     expect(await f.reader.read(f.request)).toMatchObject({
       kind: 'unavailable',
       reason: 'missing',
     });
-    f.evidence.sessions[1]!.runId = 'sdk-original';
+    f.evidence.sessions[1].runId = 'sdk-original';
     f.setPublication({
       status: 'snapshot',
       snapshot: {
@@ -107,7 +107,7 @@ describe('original OpenCode transcript identity', () => {
       status: 'snapshot',
       snapshot: { publicationRunId: 'app-publication', members: {} } as never,
     });
-    f.evidence.sessions.push({ ...f.evidence.sessions[1]! });
+    f.evidence.sessions.push({ ...f.evidence.sessions[1] });
     expect(await f.reader.read(f.request)).toMatchObject({
       kind: 'unavailable',
       reason: 'ambiguous',
@@ -120,7 +120,7 @@ describe('original OpenCode transcript identity', () => {
 
   it('rejects mismatched app bootstrap candidates and unreadable committed stores', async () => {
     const f = fixture();
-    f.evidence.sessions[1]!.appManagedBootstrapCandidate = {
+    f.evidence.sessions[1].appManagedBootstrapCandidate = {
       teamName: 'TEST-team',
       memberName: 'alice',
       laneId: 'primary',

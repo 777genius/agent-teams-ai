@@ -404,9 +404,16 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
       const items = result.items.filter(
         (item) => item.sourceLabel !== OPENCODE_NATIVE_RUNTIME_LABEL
       );
+      if (items.length === result.items.length)
+        return {
+          ...result,
+          warnings: dedupeWarnings([...result.warnings, unavailableOpenCodeTranscriptWarning()]),
+        };
       return {
         ...result,
         items,
+        truncated: false,
+        overflowCount: 0,
         status: items.length > 0 ? 'included' : 'skipped',
         reason: items.length > 0 ? undefined : 'opencode_runtime_unavailable',
         warnings: dedupeWarnings([...result.warnings, unavailableOpenCodeTranscriptWarning()]),
@@ -437,8 +444,12 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
 
     const promise = this.buildResult(input, binding)
       .then((result) => {
+        const now = Date.now();
+        for (const [key, cached] of this.cache) {
+          if (cached.expiresAt <= now) this.cache.delete(key);
+        }
         this.cache.set(cacheKey, {
-          expiresAt: Date.now() + input.budget.cacheTtlMs,
+          expiresAt: now + input.budget.cacheTtlMs,
           result,
         });
         return result;

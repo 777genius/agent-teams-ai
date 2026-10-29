@@ -94,7 +94,11 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
 
     const promise = this.buildResult(input, binding)
       .then((result) => {
-        this.cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, result });
+        const now = Date.now();
+        for (const [key, cached] of this.cache) {
+          if (cached.expiresAt <= now) this.cache.delete(key);
+        }
+        this.cache.set(cacheKey, { expiresAt: now + CACHE_TTL_MS, result });
         return result;
       })
       .finally(() => {

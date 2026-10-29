@@ -134,9 +134,15 @@ export function createMemberLogStreamFeature(deps: {
           segment.source.label !== OPENCODE_NATIVE_RUNTIME_LABEL
       );
       if (segments.length === result.segments.length) return result;
+      const participantKeys = new Set(segments.map((segment) => segment.participantKey));
+      const participants = result.participants.filter((participant) =>
+        participantKeys.has(participant.key)
+      );
       return {
         ...result,
         segments,
+        participants,
+        defaultFilter: participants.length === 1 ? participants[0].key : 'all',
         source: inferMemberLogStreamSource(segments),
         coverage: result.coverage.map((coverage) =>
           coverage.provider === 'opencode_runtime'
@@ -173,26 +179,24 @@ export function createMemberLogStreamFeature(deps: {
           );
           if (!admission || (await bindingReader.isCurrent(admission.request, admission.binding)))
             return member;
-          const items = member.items.filter(
-            (item) =>
-              item.provider !== 'opencode_runtime' ||
-              item.sourceLabel !== OPENCODE_NATIVE_RUNTIME_LABEL
-          );
-          if (items.length === member.items.length) return member;
-          return {
-            ...member,
-            items,
-            coverage: member.coverage.map((coverage) =>
-              coverage.provider === 'opencode_runtime'
-                ? {
-                    ...coverage,
-                    status: 'skipped' as const,
-                    reason: 'opencode_runtime_unavailable',
-                  }
-                : coverage
-            ),
-            warnings: [...member.warnings, unavailableOpenCodeTranscriptWarning()],
-          };
+          return getPreviewsUseCase.mapMemberSources(member, (source) => {
+            if (source.coverage.provider !== 'opencode_runtime') return source;
+            const warnings = [...source.warnings, unavailableOpenCodeTranscriptWarning()];
+            if (!source.items.some((item) => item.sourceLabel === OPENCODE_NATIVE_RUNTIME_LABEL))
+              return { ...source, warnings };
+            return {
+              ...source,
+              items: [],
+              coverage: {
+                provider: 'opencode_runtime',
+                status: 'skipped',
+                reason: 'opencode_runtime_unavailable',
+              },
+              truncated: false,
+              overflowCount: 0,
+              warnings,
+            };
+          });
         })
       );
       return { ...result, members };

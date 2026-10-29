@@ -102,7 +102,8 @@ function identity(value: Record<string, unknown>): void {
     !Array.isArray(value.engineVersions) ||
     value.engineVersions.length === 0 ||
     value.engineVersions.some(
-      (version) => typeof version !== 'string' || !/^2\./.test(version) || !RELEASE.test(version)
+      (version) =>
+        typeof version !== 'string' || !version.startsWith('2.') || !RELEASE.test(version)
     ) ||
     new Set(value.engineVersions).size !== value.engineVersions.length
   )
@@ -197,6 +198,7 @@ export function parseOpenCodeV2DeliveryManifest(
   )
     invalid();
   const paths = new Set<string>();
+  const exactPaths = new Set<string>();
   let previous: Uint8Array | undefined;
   let bytes = descriptor.manifest.bytes;
   const encoder = new TextEncoder();
@@ -219,6 +221,7 @@ export function parseOpenCodeV2DeliveryManifest(
     const key = file.path.normalize('NFC').toLowerCase();
     if (order >= 0 || paths.has(key)) invalid();
     paths.add(key);
+    exactPaths.add(file.path);
     previous = encoded;
     bytes += file.bytes;
   }
@@ -229,13 +232,13 @@ export function parseOpenCodeV2DeliveryManifest(
     'opencodeV2RunOwner.js',
     'opencode-v2-graphs.json',
   ])
-    if (!paths.has(`local-cli/${required}`.toLowerCase())) invalid();
+    if (!exactPaths.has(`local-cli/${required}`)) invalid();
   return manifest as unknown as OpenCodeV2DeliveryManifest;
 }
 
 function compareBytes(left: Uint8Array, right: Uint8Array): number {
   for (let index = 0; index < Math.min(left.length, right.length); index++)
-    if (left[index] !== right[index]) return left[index]! - right[index]!;
+    if (left[index] !== right[index]) return left[index] - right[index];
   return left.length - right.length;
 }
 

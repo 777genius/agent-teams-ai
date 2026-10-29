@@ -7,11 +7,13 @@ import {
 import { buildMemberLogPreviewMember } from '../../domain/policies/memberLogPreviewMergePolicy';
 
 import type {
+  MemberLogPreviewMember,
   MemberLogPreviewResponse,
   MemberLogStreamProvider,
   MemberLogStreamWarning,
 } from '../../../contracts';
 import type { MemberLogPreviewBudget } from '../../domain/models/MemberLogPreviewBudget';
+import type { MemberLogPreviewSourceMergeResult } from '../../domain/policies/memberLogPreviewMergePolicy';
 import type { ClockPort } from '../ports/ClockPort';
 import type { LoggerPort } from '../ports/LoggerPort';
 import type {
@@ -109,10 +111,33 @@ function warningForSourceFailure(
 
 export class GetMemberLogPreviewsUseCase {
   private readonly budget: MemberLogPreviewBudget;
+  private readonly mergeInputs = new WeakMap<
+    MemberLogPreviewMember,
+    Parameters<typeof buildMemberLogPreviewMember>[0]
+  >();
   private readonly inFlight = new Map<string, Promise<MemberLogPreviewResponse>>();
 
   constructor(private readonly deps: GetMemberLogPreviewsUseCaseDeps) {
     this.budget = { ...DEFAULT_MEMBER_LOG_PREVIEW_BUDGET, ...(deps.budget ?? {}) };
+  }
+
+  /** Reproject admitted source inputs after a main-owned freshness fence, before the display cap. */
+  mapMemberSources(
+    member: MemberLogPreviewMember,
+    map: (source: MemberLogPreviewSourceMergeResult) => MemberLogPreviewSourceMergeResult
+  ): MemberLogPreviewMember {
+    const input = this.mergeInputs.get(member);
+    return input
+      ? this.buildMember({ ...input, sourceResults: input.sourceResults.map(map) })
+      : member;
+  }
+
+  private buildMember(
+    input: Parameters<typeof buildMemberLogPreviewMember>[0]
+  ): MemberLogPreviewMember {
+    const member = buildMemberLogPreviewMember(input);
+    this.mergeInputs.set(member, input);
+    return member;
   }
 
   async execute(input: GetMemberLogPreviewsInput): Promise<MemberLogPreviewResponse> {
@@ -195,7 +220,7 @@ export class GetMemberLogPreviewsUseCase {
           })
         );
 
-        return buildMemberLogPreviewMember({
+        return this.buildMember({
           memberName: member.memberName,
           sourceResults: sourceResults.map((result) => ({
             coverage: {

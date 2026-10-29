@@ -166,11 +166,11 @@ export async function extractV2SupportArchive(
     await verifyFile(target, row.bytes, row.sha256);
     if (process.platform !== 'win32') {
       // The pinned manifest supplies only normalized executable intent.
-      // eslint-disable-next-line sonarjs/file-permissions -- verified runtime helpers require their declared execute bits
       await fs.chmod(target, row.executable ? 0o755 : 0o644);
     }
   }
-  await fs.chmod(path.join(root, descriptor.manifest.file), 0o644);
+  // This integrity metadata is read only by the owning app and its children.
+  await fs.chmod(path.join(root, descriptor.manifest.file), 0o600);
   const graphPath = await regularV2SupportFile(root, 'local-cli/opencode-v2-graphs.json');
   const graphBytes = (await fs.stat(graphPath)).size;
   // Staging lists every package here; use the bounded inventory JSON budget, not package.json's cap.

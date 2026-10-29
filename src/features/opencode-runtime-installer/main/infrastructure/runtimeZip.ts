@@ -58,7 +58,7 @@ export interface ValidatedRuntimeZipRecord extends ValidatedRuntimeZipEntry {
   readonly method: number;
 }
 
-type Entry = {
+interface Entry {
   offset: number;
   compressed: number;
   uncompressed: number;
@@ -68,7 +68,7 @@ type Entry = {
   name: Buffer;
   directory: boolean;
   dataOffset?: number;
-};
+}
 
 // Inspect all local records before the native extractor can follow a link or
 // write a hostile path. ZIP64 counts are required by the published runtime ZIPs.

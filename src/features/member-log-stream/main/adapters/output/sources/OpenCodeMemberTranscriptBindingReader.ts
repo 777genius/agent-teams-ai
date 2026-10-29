@@ -75,7 +75,8 @@ export class OpenCodeMemberTranscriptBindingReader implements OpenCodeTranscript
       reason,
       cacheKey: JSON.stringify([reason, stamp]),
     });
-    if (!input.laneId) return unavailable('missing');
+    const laneId = input.laneId;
+    if (!laneId) return unavailable('missing');
     try {
       return await withTeamLaunchStatePublicationLock(
         input.teamName,
@@ -88,7 +89,7 @@ export class OpenCodeMemberTranscriptBindingReader implements OpenCodeTranscript
             );
             if (matches.length !== 1)
               return unavailable(matches.length > 1 ? 'ambiguous' : 'inactive', stamp);
-            const record = matches[0]!;
+            const record = matches[0];
             return {
               kind: 'bound',
               mode: 'stopped',
@@ -109,7 +110,7 @@ export class OpenCodeMemberTranscriptBindingReader implements OpenCodeTranscript
           const evidence = await this.deps.readEvidence({
             teamsBasePath: this.deps.teamsBasePath(),
             teamName: input.teamName,
-            laneId: input.laneId!,
+            laneId,
           });
           if (!evidence.committed || evidence.state !== 'healthy')
             return unavailable('unreadable', stamp);
@@ -122,7 +123,7 @@ export class OpenCodeMemberTranscriptBindingReader implements OpenCodeTranscript
           );
           if (matches.length !== 1)
             return unavailable(matches.length > 1 ? 'ambiguous' : 'missing', stamp);
-          const record = matches[0]!;
+          const record = matches[0];
           if (!record.runId || !record.id) return unavailable('missing', stamp);
           const candidate = record.appManagedBootstrapCandidate;
           const member = publication.snapshot.members[input.memberName];
