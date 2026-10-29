@@ -300,6 +300,11 @@ export async function planFeedback(
     // A title/body edit that cannot reuse full evidence qualifies its unchanged
     // immutable diff again, so a focused PR stays focused.
     const change = classify(env);
+    // The producer tested the same merge with the same rules, so a full diff ran
+    // full CI there too. A classification left unproven by a stale PR base is
+    // unproven for the producer as well, which then ran full CI. Only a failure
+    // of this classifier alone can meet a scoped producer; the gate then fails
+    // closed and a re-run of this run plans again.
     if (proof.state === 'pending' && change.scope === 'full') {
       // The required gate of this run waits for the running producer and then
       // demands its complete full evidence. Scoped evidence is never reused.
@@ -307,7 +312,10 @@ export async function planFeedback(
         `Title/body edit while same-input CI run ${proof.producer} is running; the required gate waits for it`
       );
     }
-    const unavailable = proof.state === 'rejected' ? `; no reusable producer: ${proof.reason}` : '';
+    const unavailable =
+      proof.state === 'rejected'
+        ? `; no reusable producer: ${proof.reason}`
+        : `; not waiting for same-input CI run ${proof.producer}`;
     return { ...fallback, scope: change.scope, reason: `${change.reason}${unavailable}` };
   }
   // Base changes and unknown or malformed edits run full CI.

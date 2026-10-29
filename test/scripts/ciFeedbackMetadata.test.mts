@@ -940,6 +940,12 @@ void test('ready edits of scoped diffs rerun their scoped checks instead of wait
   }
   const full = await plan(event(), {}, fixture(event(), 'in_progress'), 'full');
   assert.deepEqual([full.full, full.metadata], [false, true]);
+  // An unproven classification (for example a stale PR base) stays full and waits.
+  const unproven = await planFeedback(env, event(), serve(fixture(event(), 'in_progress')), Date.now(),
+    () => ({ scope: 'full', paths: [], base: '', head: '', reason: 'Unproven event or git diff' }));
+  assert.deepEqual([unproven.full, unproven.metadata], [false, true]);
+  const docs = await plan(event(), {}, fixture(event(), 'in_progress'), 'docs');
+  assert.match(docs.reason, /^Verified docs diff; not waiting for same-input CI run 100$/);
   // Completed full evidence and drafts keep their existing decisions.
   assert.equal((await plan(event(), {}, fixture(event(), 'completed'), 'docs')).metadata, true);
   assert.equal((await plan(event(undefined, true), {}, fixture(event(undefined, true), 'queued'), 'docs')).metadata, true);
