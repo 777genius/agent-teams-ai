@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { SUPERSESSION_CANCEL, SUPERSESSION_GROUP } from '../workflows/runSupersession.mts';
+import {
+  RUN_SUPERSESSION_POLICY,
+  SUPERSESSION_CANCEL,
+  SUPERSESSION_GROUP,
+} from '../workflows/runSupersession.mts';
 
 const deferredJobs = {
   codeql: 'analyze',
@@ -14,12 +18,12 @@ const deferredJobs = {
 };
 const workflow = (name: string) =>
   readFileSync(new URL(`../../.github/workflows/${name}.yml`, import.meta.url), 'utf8');
-// Exact text of the canonical policy; its semantics are proven by
-// test/workflows/runSupersession.test.ts across every workflow.
+// Exact text of the canonical run supersession policy. Its behavior for every
+// event is evaluated by test/workflows/runSupersession.test.ts.
 const canonicalConcurrency = `\nconcurrency:\n  group: ${SUPERSESSION_GROUP}\n  cancel-in-progress: ${SUPERSESSION_CANCEL}\n`;
 
 for (const [name, job] of Object.entries(deferredJobs)) {
-  test(`${name}: defer drafts, run on Ready, and use canonical run supersession`, () => {
+  test(`${name}: defer drafts and run on Ready`, () => {
     const source = workflow(name);
     const trigger = source.split('\njobs:')[0];
     assert.match(
@@ -27,7 +31,6 @@ for (const [name, job] of Object.entries(deferredJobs)) {
       /pull_request:\n    types: \[opened, synchronize, reopened, ready_for_review, converted_to_draft\]/
     );
     assert.match(trigger, /workflow_dispatch:/);
-    assert.ok(trigger.includes(canonicalConcurrency), `${name}: non-canonical concurrency`);
     const body = source.split(`\n  ${job}:\n`)[1]?.split(/\n  [\w-]+:\n/)[0];
     assert.ok(body, `Missing ${job}`);
     assert.match(
@@ -60,10 +63,15 @@ test('security schedules and main push triggers remain available', () => {
   }
 });
 
-test('announcement validation still runs on drafts, with canonical run supersession', () => {
-  const source = workflow('announcements-content');
-  assert.ok(source.includes(canonicalConcurrency));
-  assert.doesNotMatch(source, /draft/);
+test('announcement validation still runs on drafts', () => {
+  assert.doesNotMatch(workflow('announcements-content'), /draft/);
+});
+
+test('automatic checks use the canonical run supersession policy verbatim', () => {
+  for (const name of RUN_SUPERSESSION_POLICY.canonical) {
+    const trigger = workflow(name).split('\njobs:')[0];
+    assert.ok(trigger.includes(canonicalConcurrency), `${name}: non-canonical concurrency`);
+  }
 });
 
 test('policy tests run before main CI planning, without dependency installation', () => {

@@ -6,8 +6,9 @@
 
 // Only a push to a branch other than the default branch or release/* may be
 // superseded. Default-branch, release and tag pushes keep per-commit evidence.
+// A payload without a default branch (null == '') never cancels.
 const SUPERSEDABLE_PUSH =
-  "github.event_name == 'push' && github.ref_type == 'branch' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')";
+  "github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')";
 
 // PRs share one group per PR number, merge queue entries and supersedable pushes
 // one group per ref; every other run (default-branch push, schedule, dispatch)
@@ -15,6 +16,55 @@ const SUPERSEDABLE_PUSH =
 export const SUPERSESSION_GROUP = `\${{ github.workflow }}-\${{ github.event_name }}-\${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || ${SUPERSEDABLE_PUSH}) && github.ref || github.run_id }}`;
 
 export const SUPERSESSION_CANCEL = `\${{ github.event_name == 'pull_request' || ${SUPERSEDABLE_PUSH} }}`;
+
+// Every workflow file must be classified; a new workflow fails until its policy is chosen.
+export const RUN_SUPERSESSION_POLICY = {
+  // Automatic checks: the canonical expression, verbatim.
+  canonical: [
+    'announcements-content',
+    'anthropic-compatible-status-e2e',
+    'anthropic-env-portability',
+    'codeql',
+    'codex-runtime-smoke',
+    'dependency-review',
+    'opencode-desktop-e2e',
+    'opencode-packaged-e2e',
+    'prepare-updater-native-inputs',
+    'runtime-bootstrap-smoke',
+    'sentry-owned-process-native',
+    'updater-linux-packages',
+    'updater-native-feasibility',
+    'updater-windows',
+    'updater-windows-ota',
+    'windows-backfill-diagnostic',
+  ],
+  // Canonical group plus isolated PR edits for the required check.
+  ci: ['ci'],
+  // PR-only packaged gate with isolated title/body edits.
+  packaged: ['electron-packaged-ci'],
+  // Pages publication: the latest run per ref wins.
+  pages: ['landing'],
+  // Release, signing and recovery operations queue and never cancel running work.
+  serialized: [
+    'build-linux-windows-draft',
+    'macos-signing-qualification',
+    'publish-carried-release',
+    'recover-existing-draft-payloads',
+    'release',
+    'release-publication-guard',
+    'stage-existing-partial-draft',
+  ],
+  // Manual-only Mac updater runs, reusable workflows and ReviewRouter: no workflow-level group.
+  unmanaged: [
+    'opencode-native-windows-e2e',
+    'reviewrouter-interaction',
+    'reviewrouter-review',
+    'updater-mac-manual-migration',
+    'updater-mac-old-updater',
+    'updater-mac-source',
+    'updater-mac-updater',
+  ],
+} as const;
 
 export type ExpressionValue = string | number | boolean | null | ExpressionObject;
 

@@ -10,7 +10,7 @@ import { parse } from 'yaml';
 import {
   type ExpressionValue,
   evaluateWorkflowValue,
-  SUPERSESSION_CANCEL,
+  RUN_SUPERSESSION_POLICY,
   SUPERSESSION_GROUP,
 } from './runSupersession.mts';
 
@@ -54,54 +54,7 @@ const workflows = new Map(
     .map((file) => [file.replace(/\.ya?ml$/, ''), readWorkflow(new URL(file, directory))] as const)
 );
 
-// Every workflow must be classified; a new workflow fails until its policy is chosen.
-const policy = {
-  // Automatic checks: the canonical expression, verbatim.
-  canonical: [
-    'announcements-content',
-    'anthropic-compatible-status-e2e',
-    'anthropic-env-portability',
-    'codeql',
-    'codex-runtime-smoke',
-    'dependency-review',
-    'opencode-desktop-e2e',
-    'opencode-packaged-e2e',
-    'prepare-updater-native-inputs',
-    'runtime-bootstrap-smoke',
-    'sentry-owned-process-native',
-    'updater-linux-packages',
-    'updater-native-feasibility',
-    'updater-windows',
-    'updater-windows-ota',
-    'windows-backfill-diagnostic',
-  ],
-  // Canonical identity plus isolated PR edits for the required check.
-  ci: ['ci'],
-  // PR-only packaged gate with isolated title/body edits.
-  packaged: ['electron-packaged-ci'],
-  // Pages publication: the latest run per ref wins.
-  pages: ['landing'],
-  // Release and signing operations queue per release/ref and never cancel running work.
-  serialized: [
-    'build-linux-windows-draft',
-    'macos-signing-qualification',
-    'publish-carried-release',
-    'recover-existing-draft-payloads',
-    'release',
-    'release-publication-guard',
-    'stage-existing-partial-draft',
-  ],
-  // Manual native runs, reusable workflows and ReviewRouter lifecycle: no run-level group.
-  unmanaged: [
-    'opencode-native-windows-e2e',
-    'reviewrouter-interaction',
-    'reviewrouter-review',
-    'updater-mac-manual-migration',
-    'updater-mac-old-updater',
-    'updater-mac-source',
-    'updater-mac-updater',
-  ],
-} as const;
+const policy = RUN_SUPERSESSION_POLICY;
 const automatic = [...policy.canonical, ...policy.ci];
 const superseding = [...automatic, ...policy.packaged, ...policy.pages];
 
@@ -184,17 +137,12 @@ describe('run supersession policy', () => {
     expect(new Set(classified).size).toBe(classified.length);
     const byName = (left: string, right: string) => left.localeCompare(right);
     expect([...workflows.keys()].sort(byName)).toEqual([...classified].sort(byName));
-    const names = [...workflows.values()].map((workflow) => workflow.name);
+    const names = [...workflows.values()].map((workflow) => workflow.name.toLowerCase());
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('uses one canonical expression for automatic checks', () => {
-    for (const name of policy.canonical) {
-      expect(workflows.get(name)!.concurrency, name).toEqual({
-        group: SUPERSESSION_GROUP,
-        cancel: SUPERSESSION_CANCEL,
-      });
-    }
+  // ciOptionalWorkflows.test.mts checks the canonical text early, without dependencies.
+  it('extends the canonical group for CI', () => {
     const ci = String(workflows.get('ci')!.concurrency!.group);
     expect(ci.startsWith(`${SUPERSESSION_GROUP}-`), ci).toBe(true);
   });
@@ -212,6 +160,7 @@ describe('run supersession policy', () => {
     (name) => {
       for (const make of [
         (run: number) => branch('main', run),
+        (run: number) => ({ ...branch('main', run), payload: { ref: 'refs/heads/main' } }),
         (run: number) => branch('release/2.19', run),
         (run: number) => push('refs/tags/v2.19.0', run),
         schedule,
@@ -293,7 +242,8 @@ describe('run supersession policy', () => {
   it('leaves ReviewRouter, manual native runs and reusable workflows without run groups', () => {
     for (const name of policy.unmanaged)
       expect(workflows.get(name)!.concurrency, name).toBeUndefined();
-    // A called workflow sees the caller's github context, so a run-level group would deadlock.
+    // A called workflow sees the caller's github context and name, so the same
+    // expression would put it in the caller's group and cancel or block the caller.
     for (const [name, workflow] of workflows) {
       if (workflow.triggers.includes('workflow_call'))
         expect(workflow.concurrency, name).toBeUndefined();

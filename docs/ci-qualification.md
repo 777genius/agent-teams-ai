@@ -63,16 +63,18 @@ Explicit variants:
 
 - `CI` appends an edit suffix: each `edited` run gets its own group and never
   cancels code checks, as before.
-- `Electron packaged CI` runs only for PRs and isolates title/body edits the
-  same way.
+- `Electron packaged CI` runs only for PRs and isolates only title/body edits;
+  a base change runs its code checks and supersedes older ones.
 - Landing deployment keeps one cancelling group per ref, so the latest `main`
   state publishes and an older deployment cannot overwrite it.
-- Release, signing and draft recovery workflows queue per release tag or ref and
-  never cancel running work. GitHub keeps at most one pending run per group, so
-  a third queued operation replaces the pending second one.
-- ReviewRouter, manual native updater runs and reusable workflows declare no
-  workflow-level group. A called workflow sees the caller's `github` context, so
-  the same expression there would share the caller's group and deadlock.
+- Release, signing and draft recovery workflows queue per release tag, ref,
+  release ID or fixed operation group and never cancel running work. GitHub
+  keeps at most one pending run per group, so a third queued operation replaces
+  the pending second one.
+- ReviewRouter, the manual-only Mac updater workflows and reusable workflows
+  declare no workflow-level group. A called workflow sees the caller's `github`
+  context, so the same expression there would join the caller's group and cancel
+  or block the caller.
 
 Cancellation never passes the required check. `Full qualification` keeps its
 static name and runs only `if: always() && !cancelled()`: a cancelled run reports
