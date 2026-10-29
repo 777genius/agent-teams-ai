@@ -614,7 +614,7 @@ test('already listed newer failed or unknown producers never fall back to older 
   }
 });
 
-test('pending full producer never hides an older failure behind metadata qualification', gateTimeout, async () => {
+void test('pending full producer never hides an older failure behind metadata qualification', gateTimeout, async () => {
   for (const status of ['queued', 'in_progress']) {
     const data = fixture(event(), 'completed');
     source(data).conclusion = 'failure';
