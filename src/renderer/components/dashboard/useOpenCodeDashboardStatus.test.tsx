@@ -57,7 +57,7 @@ vi.mock('@renderer/api', () => ({
 const runtime = {
   installed: true,
   state: 'ready',
-  source: 'managed',
+  source: 'app-managed',
   version: '2.2.0',
   v2Support: 'ready',
 } as OpenCodeRuntimeStatus;

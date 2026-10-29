@@ -3965,7 +3965,7 @@ describe('useRuntimeProviderManagement', () => {
     });
     expect(onProviderChanged).toHaveBeenCalledExactlyOnceWith('model_tested');
     expect(state?.testingModelIds).toEqual([]);
-    expect(state?.modelTestStartedAt[modelId]).toBeUndefined();
+    expect(state?.modelTestStartedAt?.[modelId]).toBeUndefined();
     expect(state?.successMessage).toBeNull();
   });
 

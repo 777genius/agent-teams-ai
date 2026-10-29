@@ -17,7 +17,7 @@ describe('OpenCode dashboard catalog detection gate', () => {
     const runtime = {
       installed: true,
       state: 'idle',
-      source: 'managed',
+      source: 'app-managed',
       version: '2.1.4',
       v2Support: 'required',
     } as OpenCodeRuntimeStatus;
@@ -58,7 +58,7 @@ describe('OpenCode V2 verified free availability', () => {
   const runtime = {
     installed: true,
     state: 'ready',
-    source: 'managed',
+    source: 'app-managed',
     version: '2.1.4',
     v2Support: 'ready',
   } as OpenCodeRuntimeStatus;

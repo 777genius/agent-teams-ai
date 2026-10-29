@@ -28,7 +28,7 @@ describe('OpenCode V2 support activation', () => {
   const supportRequired = {
     installed: true,
     version: '2.1.4',
-    source: 'managed',
+    source: 'app-managed',
     state: 'idle',
     v2Support: 'required',
     error: 'OpenCode V2 support must be installed.',
