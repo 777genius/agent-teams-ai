@@ -21,11 +21,17 @@ const clients = new Map<FastifyReply, FastifyInstance>();
  */
 export function registerEventRoutes(app: FastifyInstance): void {
   app.get('/api/events', async (request, reply) => {
+    // Raw streaming bypasses Fastify's send hooks; retain admission/CORS headers.
+    for (const [name, value] of Object.entries(reply.getHeaders())) {
+      if (value !== undefined) reply.raw.setHeader(name, value);
+    }
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
       Connection: 'keep-alive',
     });
+    reply.raw.flushHeaders();
 
     clients.set(reply, app);
     logger.info(`SSE client connected (total: ${clients.size})`);
