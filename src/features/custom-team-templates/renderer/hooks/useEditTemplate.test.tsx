@@ -158,6 +158,35 @@ describe('useEditTemplate unresolved writes', () => {
     expect(latest?.canRecheck).toBe(false);
   });
 
+  it('treats an HTTP 413 as a known pre-dispatch rejection', async () => {
+    updateTemplate.mockRejectedValue(new Error('custom team templates request failed: HTTP 413'));
+    await render();
+    await act(async () => {
+      latest?.updateMember(0, { name: 'alice' });
+    });
+
+    await expect(saveNow()).resolves.toBe(false);
+
+    expect(latest?.status).toBe('requestSizeValidationFailed');
+    expect(latest?.busy).toBe(false);
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(latest?.expectedRevision).toBe(5);
+    expect(latest?.canRecheck).toBe(false);
+    expect(latest?.name).toBe('Release Pipeline');
+    expect(latest?.canSave).toBe(true);
+  });
+
+  it('keeps a genuine dispatched timeout as an unresolved write outcome', async () => {
+    updateTemplate.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    await render();
+
+    await expect(saveNow()).resolves.toBe(false);
+
+    expect(latest?.status).toBe('unresolvedWriteOutcome');
+    expect(latest?.canRecheck).toBe(true);
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it('does not treat an exception from onSaved as a transport failure', async () => {
     updateTemplate.mockResolvedValue({
       status: 'updated',

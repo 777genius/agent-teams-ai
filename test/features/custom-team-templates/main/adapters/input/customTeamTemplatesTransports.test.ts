@@ -54,7 +54,13 @@ function fakeIpcMain(): FakeIpcMain {
 }
 
 interface FakeFastify {
-  post(path: string, handler: (request: { body?: unknown }) => unknown): void;
+  post(
+    path: string,
+    optionsOrHandler:
+      | { bodyLimit?: number }
+      | ((request: { body?: unknown }) => unknown),
+    handler?: (request: { body?: unknown }) => unknown
+  ): void;
   get(path: string, handler: (request: { body?: unknown }) => unknown): void;
   call(method: 'GET' | 'POST', path: string, body?: unknown): Promise<unknown>;
   keys(): string[];
@@ -64,8 +70,11 @@ interface FakeFastify {
 function fakeFastify(): FakeFastify {
   const routes = new Map<string, (request: { body?: unknown }) => unknown>();
   return {
-    post: (path, handler) => {
-      routes.set(`POST ${path}`, handler);
+    post: (path, optionsOrHandler, handler) => {
+      const resolvedHandler =
+        typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
+      if (!resolvedHandler) throw new Error('missing handler');
+      routes.set(`POST ${path}`, resolvedHandler);
     },
     get: (path, handler) => {
       routes.set(`GET ${path}`, handler);

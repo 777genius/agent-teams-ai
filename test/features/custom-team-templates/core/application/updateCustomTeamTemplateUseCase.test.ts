@@ -269,6 +269,45 @@ describe('UpdateCustomTeamTemplateUseCase', () => {
     );
   });
 
+  it('trims surrounding whitespace from the team prompt before validation, hashing and persistence', async () => {
+    const updated = storedTemplate({ revision: 2 });
+    const fixture = gatewayFixture({ update: [{ status: 'updated', template: updated }] });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(updateRequest({ teamPrompt: '  Deliver the feature.  ' }));
+
+    expect(result).toEqual({ status: 'updated', template: updated });
+    expect(fixture.requests[0].template.teamPrompt).toBe('Deliver the feature.');
+    expect(fixture.requests[0].contentHash).toBe(
+      contentHashFor('Deliver the feature.', [
+        { name: 'alice', role: 'reviewer', workflow: 'Review each change.' },
+      ])
+    );
+  });
+
+  it('allows an empty or whitespace-only team prompt following the domain contract', async () => {
+    const updated = storedTemplate({ revision: 2, teamPrompt: '' });
+    const fixture = gatewayFixture({ update: [{ status: 'updated', template: updated }] });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(updateRequest({ teamPrompt: '   ' }));
+
+    expect(result).toEqual({ status: 'updated', template: updated });
+    expect(fixture.requests[0].template.teamPrompt).toBe('');
+  });
+
+  it('rejects a non-string team prompt', async () => {
+    const fixture = gatewayFixture({
+      update: [{ status: 'updated', template: storedTemplate({ revision: 2 }) }],
+    });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(updateRequest({ teamPrompt: 42 as unknown as string }));
+
+    expect(result).toMatchObject({ status: 'validationFailed' });
+    expect(fixture.update).not.toHaveBeenCalled();
+  });
+
   it('rejects a whitespace-only member name through validation', async () => {
     const fixture = gatewayFixture({
       update: [{ status: 'updated', template: storedTemplate({ revision: 2 }) }],

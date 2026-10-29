@@ -136,7 +136,12 @@ export class UpdateCustomTeamTemplateUseCase {
     }
     const description = request.description === undefined ? undefined : request.description;
     const descriptionIssues = validateTemplateDescription(description);
-    const teamPrompt = typeof request.teamPrompt === 'string' ? request.teamPrompt : null;
+    // Normalize with the established trim() policy before content validation,
+    // hashing and the write payload. A valid string keeps its internal
+    // whitespace, only leading/trailing whitespace is removed, and empty or
+    // whitespace-only strings remain valid (empty prompt is allowed).
+    const rawTeamPrompt = typeof request.teamPrompt === 'string' ? request.teamPrompt : null;
+    const teamPrompt = rawTeamPrompt === null ? null : rawTeamPrompt.trim();
     const members = toAllowlistedMembers(request.members);
 
     if (!nameValidation.valid || descriptionIssues.length > 0) {

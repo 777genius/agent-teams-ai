@@ -276,7 +276,7 @@ export const EditCustomTemplateDialog = ({
             </div>
           ) : null}
 
-          {status === 'requestFailed' ? (
+          {status === 'requestFailed' || status === 'requestSizeValidationFailed' ? (
             <div
               role="alert"
               data-testid="edit-template-request-failed"

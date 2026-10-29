@@ -19,7 +19,8 @@ export type EditTemplateStatus =
   | 'unreadableRecord'
   | 'storageUnavailable'
   | 'unresolvedWriteOutcome'
-  | 'requestFailed';
+  | 'requestFailed'
+  | 'requestSizeValidationFailed';
 
 export interface UseEditTemplateInput {
   open: boolean;
@@ -91,7 +92,7 @@ function matchesPendingUpdate(stored: CustomTeamTemplateV1, pending: PendingUpda
     resolveTemplateRevision(stored) === pending.expectedRevision + 1 &&
     stored.name === pending.fields.name.normalize('NFC').trim() &&
     (stored.description ?? null) === normalizeDescription(pending.fields.description) &&
-    stored.teamPrompt === pending.fields.teamPrompt &&
+    stored.teamPrompt === pending.fields.teamPrompt.trim() &&
     membersMatch(stored.members, pending.fields.members)
   );
 }
@@ -237,10 +238,15 @@ export function useEditTemplate({
   const save = useCallback(async (): Promise<boolean> => {
     if (busy || !template || status === 'unresolvedWriteOutcome') return false;
 
+    // Normalize the team prompt with the established trim() policy before
+    // validation, hashing, and writing. A valid string keeps its internal
+    // whitespace; only leading/trailing whitespace is removed, and empty or
+    // whitespace-only strings are still valid (empty prompt is allowed).
+    const normalizedTeamPrompt = teamPrompt.trim();
     const fields: UpdateCustomTeamTemplateFields = {
       name,
       description: description.trim() ? description : undefined,
-      teamPrompt,
+      teamPrompt: normalizedTeamPrompt,
       members: members.map((m) => ({
         // The update use case trims member names before hashing and writing, so
         // the dispatched payload must carry the same normalized value. A
@@ -265,11 +271,24 @@ export function useEditTemplate({
         expectedRevision,
         fields,
       });
-    } catch {
+    } catch (error) {
       if (requestId !== requestIdRef.current) return false;
-      // The request was dispatched, so a transport failure (timeout, abort,
-      // network loss or malformed response) cannot prove the update did not
-      // commit. Keep the outcome unknown and require a read-only re-check.
+      // HTTP 413 is a pre-dispatch rejection: Fastify rejects oversized
+      // payloads before the route handler runs, so the mutation was never
+      // dispatched. Treat it as a definitive, known failure rather than an
+      // ambiguous unresolved write.
+      const isHttp413 =
+        typeof error === 'object' &&
+        error !== null &&
+        'message' in error &&
+        String((error as { message: string }).message).includes('HTTP 413');
+      if (isHttp413) {
+        setStatus('requestSizeValidationFailed');
+        return false;
+      }
+      // A genuine dispatched transport failure (timeout, abort, network loss,
+      // malformed response) keeps the outcome unknown and requires a
+      // read-only re-check.
       setStatus('unresolvedWriteOutcome');
       return false;
     } finally {
