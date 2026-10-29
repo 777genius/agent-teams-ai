@@ -171,7 +171,7 @@ jobs:
 
   packaged-full-gate:
     needs: [packaged-scope, packaged-smoke]
-    if: always()
+    if: always() && !cancelled()
     name: ${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate' }}
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 5
