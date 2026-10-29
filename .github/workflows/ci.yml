@@ -92,8 +92,9 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      # Force exit: a broken gate wait loop must fail this step, not hang it.
       - name: Test feedback policy
-        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Guard runtime artifacts
@@ -256,7 +257,7 @@ jobs:
 
       - name: Test feedback policy
         if: matrix.shard == 1
-        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
 
   lint:
     env:
@@ -449,7 +450,7 @@ jobs:
           EXPECTED_SCOPE: ${{ needs.plan.outputs.scope }}
         run: node scripts/ci/ci-change-scope-check.mts
       - name: Test CI scope and feedback policy
-        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
       - name: Check changed text formatting
         run: node scripts/ci/ci-change-scope-check.mts format
 
