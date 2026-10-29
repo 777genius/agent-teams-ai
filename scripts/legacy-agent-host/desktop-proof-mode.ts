@@ -27,6 +27,7 @@ export async function prepareDesktopProofMode(
   assert.ok(
     [
       'native-process-ui',
+      'process-cold-ui',
       'native-extensions-ui',
       'native-activity-readback-ui',
       'bridge-diagnostics',
@@ -60,6 +61,13 @@ export async function prepareDesktopProofMode(
   );
   const mixedMode = mode === 'native-mixed-create-launch-ui';
   const processUiMode = mode === 'native-process-ui';
+  const controlledProcessMode = mode === 'process-cold-ui';
+  if (controlledProcessMode) {
+    assert.equal(process.env.LEGACY_PROCESS_COLD_UI_GO, '1');
+    assert.equal(process.env.LEGACY_M19_PROVIDER_UI_GO, undefined);
+    assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
+  }
   const processReadbackMode = processUiMode && process.env.LEGACY_DESKTOP_READBACK_ROOT !== undefined;
   if (processReadbackMode) nativeProcessReadbackAction();
   if (processUiMode) {
@@ -155,6 +163,7 @@ export async function prepareDesktopProofMode(
     mode === 'native-extensions-ui' ||
     mode === 'skills-ui' ||
     processUiMode ||
+    controlledProcessMode ||
     mode === 'team-ui' ||
     taskBoardUiMode ||
     nativeReviewMode ||
@@ -399,6 +408,7 @@ export async function prepareDesktopProofMode(
     mixedMode,
     mixedModels,
     processUiMode,
+    controlledProcessMode,
     processReadbackMode,
     processModel,
     nativeReviewMode,

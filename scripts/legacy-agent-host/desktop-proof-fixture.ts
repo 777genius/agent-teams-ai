@@ -10,6 +10,7 @@ import { prepareDesktopCrossTeamUiFixture } from './desktop-cross-team-ui-smoke.
 import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
 import { prepareDesktopCodexResumeFixture } from './desktop-codex-resume-fixture.ts';
+import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
 
 /** TEST fixture composition; no app or provider process starts here. */
 export async function prepareDesktopProofFixture(
@@ -19,6 +20,7 @@ export async function prepareDesktopProofFixture(
   options: {
     candidateRuntime?: CandidateRuntimePaths;
     processUiMode?: boolean;
+    controlledProcessMode?: boolean;
     processReadbackMode?: boolean;
     approvalUiMode?: boolean;
     nativeReviewMode?: boolean;
@@ -39,8 +41,13 @@ export async function prepareDesktopProofFixture(
   Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
     activitySource?: CapturedActivitySource;
     codexResume?: Awaited<ReturnType<typeof prepareDesktopCodexResumeFixture>>['codexResume'];
+    controlledProcess?: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'];
   }
 > {
+  if (options.controlledProcessMode) {
+    assert.equal(mode, 'process-cold-ui');
+    return prepareControlledProcessFixture(repo, pnpm);
+  }
   if (mode === 'native-activity-readback-ui') {
     const { fixture, source } = await prepareDesktopCapturedActivityReadback(
       repo,

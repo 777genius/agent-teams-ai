@@ -74,7 +74,9 @@ export async function desktopProofEvidence(options: {
         }
       : {}),
     scope:
-      mode === 'native-process-ui'
+      mode === 'process-cold-ui'
+        ? 'Controlled genuine native-kernel/canonical Team registration, normal first Host exit, cold Electron Host and one existing ProcessesSection Stop; zero provider session/model allocation'
+        : mode === 'native-process-ui'
         ? 'Actual native Bash/private MCP registration and original Host crash/cold reconnect; visible original row with no Stop if absent, or one original-ref Stop if same-live; Runtime custody stays HOLD, no native cleanup or natural-expiry claim'
         : mode === 'native-activity-readback-ui'
           ? 'Original Member Logs/Stats and reload from exact retained native child proof; original profile/store unchanged through Host close, zero native replay'
@@ -127,7 +129,9 @@ export async function desktopProofEvidence(options: {
                                                   ? 'Codex account/quota Desktop API through preload/Main/Host/D/native TEST profile'
                                                   : 'Desktop preload agentBackend API bridge diagnostics; actual main/Host/Team filesystem path',
     excluded:
-      mode === 'native-process-ui'
+      mode === 'process-cold-ui'
+        ? ['actual SDK/MCP registration (separate normal SDK proof)', 'SDK cold survival', 'historical root911 custody release', 'provider sessions', 'whole process tree stop', 'PID/group signal fallback', 'automatic uncertain Stop retry', 'vendor authentication', 'other OS tuples', 'full Stage1/release/default activation']
+        : mode === 'native-process-ui'
         ? [
             'vendor model qualification',
             'whole process tree stop',

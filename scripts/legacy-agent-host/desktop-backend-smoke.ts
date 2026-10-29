@@ -14,6 +14,7 @@ import { runDesktopActivityUiSmoke, finalizeDesktopActivityReadback } from './de
 import { processFixtureBashCommand } from './desktop-native-process-fixture.ts';
 import { qualifyPreparedProcessRegistration } from './desktop-native-process-host.ts';
 import { qualifyColdProcessUi } from './desktop-native-process-ui.ts';
+import type { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
 import assert from 'node:assert/strict';
 import { runDesktopNativeQuitMode, verifyDesktopNativeQuitAfterShutdown, capturePendingDesktopNativeQuit } from './desktop-native-quit-ui-smoke.ts';
 import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
@@ -78,6 +79,7 @@ let questionModel: Awaited<ReturnType<typeof startDesktopCodexQuestionModel>> | 
 let mixedModels: DesktopMixedModels | undefined;
 let conversationModel: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
 let codexResumeModel: Awaited<ReturnType<typeof startCodexModel>> | undefined;
+let controlledProcess: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'] | undefined;
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -115,7 +117,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
-  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel } =
+  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
@@ -125,9 +127,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
-    processUiMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
+    processUiMode, controlledProcessMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
     launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
   });
+  controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
   const fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
@@ -203,6 +206,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const receiptPath = join(fixture.root, artifacts.receipt);
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
+  if (controlledProcess) {
+    evidence.controlledProcessColdUi = controlledProcess.proof;
+    await controlledProcess.start();
+  }
   await qualifyPreparedProcessRegistration({ enabled: processUiMode && !processReadbackMode, fixture, model: processModel, evidence, receiptPath,
     verifySourceFreeze: () => verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence) });
   const log = createWriteStream(
@@ -319,8 +326,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         } });
     } else if (activitySource) {
       await runDesktopActivityUiSmoke(cdp, {root:fixture.root, source:activitySource, teamName:activitySource.teamName, memberName:activitySource.memberName, memberId:activitySource.memberId, handleId:fixture.handleId, evidence, assertOwnedRenderer:()=>assertOwnedCdpListener(group), assertNoNativeChildren:phase=>assertNoNativeHostChildren(group,fixture,phase)});
-    } else if (processUiMode) {
-      hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (processUiMode || controlledProcessMode) {
+      hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource,
+        controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {
@@ -719,7 +727,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       ...(cleanupFailure ? { cleanupFailure } : {}),
       capturedHostObserved: hostPid !== undefined,
       capturedHostAbsent,
-      hostExitCode: processUiMode
+      hostExitCode: controlledProcessMode
+        ? 'controlled cold Host app shutdown; no provider Runtime allocation; first standalone Host separately observed exit0/null'
+        : processUiMode
         ? 'cold Host app shutdown only; intentionally crashed original Host/SDK native custody remains separate HOLD, no cleanup claim'
         : nativeStopMode || launchDialogMode || createConfigMode
         ? 'not exposed by main-owned transport; consult per-flow native custody and physical child observations'
@@ -775,10 +785,20 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     }
+    if (controlledProcess) {
+      try {
+        await controlledProcess.cleanup();
+        assert.equal(controlledProcess.proof.status, 'PASS');
+      } catch (error) {
+        evidence.controlledProcessCleanupFailure = error instanceof Error ? error.message : String(error);
+        evidence.status = 'INCOMPLETE';
+      }
+    }
     await verifyDesktopNativeFreeze(nativeInputs, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
+    if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
     assert.ok(
       !cleanupFailure && remaining !== null && remaining.length === 0,
       'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
@@ -790,10 +810,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   }
 }
 
+let originalFailure: unknown;
 try {
   const ownerContinuation = await main();
   if (ownerContinuation) await runDesktopOwnerRoutingContinuation(ownerContinuation);
+} catch (error) {
+  originalFailure = error;
+  throw error;
 } finally {
+  try { await controlledProcess?.cleanup(); } catch (error) { if (!originalFailure) throw error; }
   await questionModel?.close();
   await (codexResumeModel ?? conversationModel)?.close();
   await mixedModels?.close();

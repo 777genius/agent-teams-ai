@@ -6881,3 +6881,99 @@ qualify original live cold Stop or release that SDK root. Stage1 P0–P8/M01–M
 existing UI and OpenCode V1-only scope remain; Stage2 and V2 Host integration are
 excluded. Full Stage1, real authentication, other native OS tuples and release/
 default activation remain unqualified. PR stays Draft; no merge/release/publication.
+
+
+### 29 October: exact451 original gates/raw acceptance and the remaining positive M19 composition
+
+Original manual [CI40903039695](https://github.com/777genius/agent-teams-ai/actions/runs/40903039695),
+attempt1, completed SUCCESS on `451e9bb1914e45489c182c32a085e0f2da72911c`:
+canonical Full qualification, all eleven Source jobs and current-tuple P7.
+[The sanitized combined summary](../evidence/451-source-native-and-canonical-audit.json)
+SHA256 is `91a109d42c8f81915efad59577562a5b9b21961f8668373337b90c49e91cb8f1`.
+It records the five independent audit digests without copying bulk raw pins/logs.
+These results bind only451; the later controlled-process fixture is not executed.
+
+The original Full qualification job123563748440 has exact451 checkout,
+MODE_FULL=true, MODE_REUSE=false and full canonical aggregates SUCCESS.
+Raw root shards123552081880/1937/1884/1981 independently give5844+6150+5839+6271
+PASS and26+36+17+19 SKIP: **24,104 PASS /98 SKIP /0 FAIL**, 2,051 passed/37 skipped
+root files. Workspace/CI-script/Windows/Source/native counts are excluded from
+those totals. Automatic Draft CI40901837868 has Fast feedback SUCCESS and the
+expected MODE_FULL=false refusal, not a genuine code regression or full CI PASS.
+
+Nine other Source jobs retain12 original primary/paired receipts; Mixed and
+Codex/H3 were audited separately. All eleven primary and three paired receipts
+retain1,414 unchanged source pins matching immutable451 blobs. Seven other Source
+checkpoint payload/history/source bindings verify. Retained Claude JSONL,
+epoch-1 compiled snapshots and original Downloads bytes are independently rehashed
+where the specific audit asserts it. Taskboard routing/attachments remain offline/
+same-Host; native cross-Team is separately supported by retained own-ref proof and
+affected composition regressions. Pending-open debt is held/unknown/open-unknown;
+active input remains UNKNOWN after released custody, queued input cancelled.
+Review partial/gap rows remain nonreviewable; fullM13=false is not an obligation
+to build universal tool attribution or change the selected denominator.
+
+Mixed original receipt `4084fb794f6aa413c352fad7c72ec426f827717fbbdfaefb37b7d85484310526`
+is PASS. One Group Create/Send, one isolated Bob Restart and one whole-Team Stop
+are retained. Original Host3998/management4267 and peers remain unchanged;
+oldBob6127 is absent, newBob7036 selected once. Models have13/15/13 observations,
+zero failures, three completed Tasks and exact ONE/ONE/ONE/TWO/TWO/TWO effects.
+Selected3 and all-run4 sessions are closed/sealed/released. Original pinned source
+reaches the Stop receipt only after exact three-runtime absence and unchanged
+Host/management-only child census assertions; the intermediate final process table
+is not itself retained. Six wrapper/renderer entries remained before scoped
+SIGTERM cleanup; final group empty/Host absent does not prove natural wrapper exit
+or a separately exposed Host exit code. Historical36dfe INCOMPLETE is unchanged.
+
+Codex Resume receipt `c2f8c426…` preserves native identity, rehashed history prefix
+and physical checkpoints, with original helper absent after Stop. H3 receipt
+`9fd85a09…` preserves alice/bob/carol, all six checkpoint digests and three native
+identities. Three Hosts exit0/null; observations12/12/12, failures0/0/0;
+six sessions closed/sealed/released. Second Codex wrapper needed scoped SIGTERM;
+natural wrapper exit and separate Desktop Host exit code are not inferred.
+
+P7 job123550232268 is scoped raw ACCEPT through bounded original artifact12910648921,
+1,201,479 bytes, ZIP SHA256 `f465d89cdbe8f58f12add4869af8617f97653eb340b99a32349507ab200569c4`.
+Original P7/kernel/normal-SDK/packed receipts, source bindings, selected native
+module/manifest/C source and two checkpoints/Claude JSONL verify. Current tuple
+is macOS24G624/arm64/Node24.21.0. Full artifact12912655632 is3,151,798,558 bytes;
+it was not downloaded or independently rehashed. Omitted large executable/ASAR/
+SDK/provider/runtime/renderer/terminal trees remain receipt freeze assertions.
+The packed finally reached an exact-identity SIGTERM attempt while wrapper4386
+remained; neither delivery/acceptance of that signal nor natural Quit is invented.
+
+Manual [CodeQL40903047474](https://github.com/777genius/agent-teams-ai/actions/runs/40903047474)
+passes both original analyses on451. SARIF provenance and exact main `ce967e14…`
+comparison show no introduced finding identities:192 JS/TS identity multisets equal,
+Actions0 against main1. There are187 inherited open branch instances; this is not
+an alert-free claim, and no dismissal/state mutation occurred.
+
+Independent acceptance review found one explicit remaining composed M19 criterion:
+contracts§8 requires register/list → Host restart → original captured TEST child
+Stop through the existing UI → stopped history. Normal-live SDK/UI Stop and
+already-absent cold read-only row do not demonstrate that positive sequence.
+The [bounded plan](../m19-controlled-cold-ui-acceptance.md) uses actual current
+Darwin custody/canonical registration, real HostA normal exit then Electron HostB,
+the unchanged ProcessesSection and one original-ref Stop. No provider session,
+model server, new SDK action, production supervisor or historical-root adoption.
+The separate actual SDK/MCP normal proof remains required; SDK cold survival is
+not claimed. Cleanup checks already-exited primary/no primary cleanup signal,
+one original held neighbor ChildProcess SIGTERM, original exits and exact
+primary/neighbor/root capsule absence; this is not natural TTL cleanup.
+
+The existing P7 workflow gains one separate controlled-native step only after
+its original P7/sourceFreeze window completes. It selects the original final log
+result/receipt, verifies exact current head and bound normal capture/module,
+retains original P7 bytes unchanged, then runs the existing source Desktop harness
+in its own freeze window. Dev compiled output may change outside the earlier
+packed proof window; both proofs remain independently required. Original full
+upload is unchanged; existing bounded TEST-root paths retain new proof data.
+
+New TEST/workflow source is pending original exact-head CI/CodeQL and raw audit
+after review/commit/push. Reuse unchanged own-ref proofs; no blind retry or new
+universal scenario follows from partial/offline/UNKNOWN statuses. Original root911
+stays immutable INCOMPLETE/SDK-custody HOLD, not adopted/replayed/released.
+Full Stage1 remains pending positive M19 and final M01–M19 mapping/review/handoff.
+Real auth, other native OS tuples and release/default activation remain separate.
+PR stays Draft; Stage1P0–P8/M01–M19, existing UI, OpenCodeV1 only. No Stage2/V2 Host,
+merge, release, publication or default activation.

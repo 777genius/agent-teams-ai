@@ -13,6 +13,7 @@ import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertProcessFixture, probeProcessService, readProcessServices } from './desktop-native-process-fixture.ts';
 import { PROCESS_LABEL } from './desktop-native-process-model.ts';
+import type { ControlledProcessUiSource } from './desktop-controlled-process-fixture.ts';
 const row = (v: unknown): Record<string, unknown> => {
   assert.ok(v && typeof v === 'object' && !Array.isArray(v));
   return v as Record<string, unknown>;
@@ -36,9 +37,14 @@ export async function qualifyColdProcessUi(
     group: number;
     processReadbackMode?: boolean;
     processReadbackSource?: Awaited<ReturnType<typeof verifyNativeProcessReadbackSource>>;
+    controlledSource?: ControlledProcessUiSource;
   }
 ) {
-  assert.equal(process.env.LEGACY_M19_PROVIDER_UI_GO, '1');
+  const controlled = options.controlledSource;
+  if (controlled) {
+    assert.equal(process.env.LEGACY_PROCESS_COLD_UI_GO, '1');
+    assert.equal(options.processReadbackMode, false);
+  } else assert.equal(process.env.LEGACY_M19_PROVIDER_UI_GO, '1');
   const { fixture } = options;
   if (!options.processReadbackMode) assertProcessFixture(fixture);
   assert.ok(fixture.uiSeed);
@@ -46,7 +52,7 @@ export async function qualifyColdProcessUi(
   const source = options.processReadbackSource;
   assert.equal(Boolean(source), Boolean(options.processReadbackMode), 'original pre-app snapshot supplied only for cold readback');
   const before = row(
-    JSON.parse(await readFile(join(fixture.root, 'native-process-before-crash.json'), 'utf8'))
+    JSON.parse(await readFile(join(fixture.root, controlled?.recordFile ?? 'native-process-before-crash.json'), 'utf8'))
   );
   const original = row(before.original),
     processRef = String(original.processRef),
@@ -76,6 +82,11 @@ export async function qualifyColdProcessUi(
       ? 'Separate cold original-row read-only scope; original pre-app SDK-root failure remains INCOMPLETE/HOLD; zero Stop/input/launch/restart'
       : 'Separate cold original-row scope with at most one existing original-ref Stop; SDK-root custody remains HOLD';
   }
+  if (controlled) {
+    proof.scope = controlled.scope;
+    proof.runtimeCustody = 'NOT_ALLOCATED';
+    proof.nativeRuntimeAllocation = { providerSessions: 0, inputs: 0, modelServers: 0 };
+  }
   options.evidence.nativeProcessUi = proof;
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
@@ -97,6 +108,10 @@ export async function qualifyColdProcessUi(
   assert.equal(hosts.length, 1, 'one original cold selected standalone Host');
   const hostPid = hosts[0]!.pid;
   options.evidence.coldProcessHost = { ...hosts[0], command: `${fixture.node} ${fixture.hostEntry}`, observedBeforeShutdown: true };
+  if (controlled) {
+    await controlled.assertCold(hostPid);
+    assert.deepEqual(groupMembers(options.group).filter(value => value.ppid === hostPid), [], 'controlled cold Host allocated no native provider child');
+  }
   const collapse = await cdp.evaluate(
     `document.querySelector('[data-section-id="processes"] button[aria-label="Expand section"]')!==null`
   );
@@ -105,14 +120,14 @@ export async function qualifyColdProcessUi(
       '[data-section-id="processes"] button[aria-label="Expand section"]',
       'expand original process section'
     );
-  const ownershipExpression = `(() => {
+  const ownershipExpression = (reference: string | null = processRef) => `(() => {
     const section=document.querySelector('[data-section-id="processes"]');if(!section)return null;
     for(const node of [section,...section.querySelectorAll('*')]) {
       const key=Object.keys(node).find(k=>k.startsWith('__reactFiber$'));let fiber=key?node[key]:null;
       for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return) {
         for(const f of [fiber,fiber.alternate]) {
           const p=f?.memoizedProps;if(!p||p.teamName!==${desktopJsLiteral(selection)}||!Array.isArray(p.processes))continue;
-          const rows=p.processes.filter(r=>r.id===${desktopJsLiteral(id)}&&r.processRef===${desktopJsLiteral(processRef)});
+          const rows=p.processes.filter(r=>r.id===${desktopJsLiteral(id)}${reference === null ? '' : '&&r.processRef===' + desktopJsLiteral(reference)});
           if(rows.length===1)return {teamName:p.teamName,process:rows[0],isTeamAlive:p.isTeamAlive??null};
         }
       }
@@ -120,7 +135,7 @@ export async function qualifyColdProcessUi(
   })()`;
   const owner = row(
     await ui.waitRead(
-      ownershipExpression,
+      ownershipExpression(),
       'exact canonical process props, independent of compiled function name'
     )
   );
@@ -133,6 +148,7 @@ export async function qualifyColdProcessUi(
   assert.equal(processRow.canTerminate, processRow.observation === 'same-live');
   assert.equal(processRow.pendingStop, undefined);
   proof.coldOwnerProps = owner;
+  if (controlled) assert.equal(processRow.observation, 'same-live', 'controlled positive Stop refuses expired/stale/unknown originals');
   // Actual unified renderer read, never a monkeypatch or alternate mutation path.
   const data = row(
     await cdp.evaluate(
@@ -164,7 +180,7 @@ export async function qualifyColdProcessUi(
     'visible original registered process label',
     PROCESS_LABEL
   );
-  const originalRenderedRow = row(await ui.waitRead(`(() => {
+  const renderedRowExpression = `(() => {
     const labels=[...document.querySelectorAll('[data-section-id="processes"] span.font-medium')]
       .filter(node=>node.textContent.trim()===${desktopJsLiteral(PROCESS_LABEL)});
     if(labels.length!==1)return null;
@@ -182,8 +198,11 @@ export async function qualifyColdProcessUi(
     const r=container.getBoundingClientRect();
     return {label:label.textContent.trim(),pidText:pids[0].textContent.trim(),
       geometry:{x:r.x,y:r.y,width:r.width,height:r.height},
+      stoppedStyle:container.classList.contains('opacity-50'),
+      stoppedIndicator:Boolean(container.querySelector('span.bg-zinc-500')),
       killCount:[...container.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Kill').length};
-  })()`, 'rendered original process label/PID with visible geometry'));
+  })()`;
+  const originalRenderedRow = row(await ui.waitRead(renderedRowExpression, 'rendered original process label/PID with visible geometry'));
   proof.originalRenderedRow = originalRenderedRow;
   proof.beforeScreenshot = await screenshot('ui-original-native-process-before-stop.png');
   if (source) {
@@ -330,6 +349,23 @@ export async function qualifyColdProcessUi(
   proof.coldReconciliation = 'ORIGINAL_CAPTURE_SAME_LIVE_STOP_COMPLETED';
   proof.nativeCleanupClaim = false;
   proof.runtimeCustody = 'HOLD';
+  if (controlled) {
+    const stoppedOwner = row(await ui.waitRead(`(() => {
+      const owner=(${ownershipExpression(null)}),p=owner?.process;
+      return p&&p.observation==='absent'&&typeof p.stoppedAt==='string'&&p.canTerminate===false&&!p.pendingStop?owner:null;
+    })()`, 'original stopped process props after one UI Stop'));
+    const stoppedRow = row(stoppedOwner.process);
+    assert.equal(stoppedRow.id, id); assert.equal(stoppedRow.pid, services.primary.pid);
+    assert.equal(stoppedRow.label, PROCESS_LABEL);
+    const stoppedData = row(await cdp.evaluate(`(async()=>{const {api}=await import('/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`));
+    const stoppedRead = (stoppedData.processes as unknown[]).map(row).filter(value => value.id === id);
+    assert.equal(stoppedRead.length, 1); assert.deepEqual(stoppedRead[0], stoppedRow);
+    const stoppedRendered = row(await ui.waitRead(`(() => {const r=(${renderedRowExpression});return r&&r.killCount===0&&r.stoppedStyle&&r.stoppedIndicator?r:null;})()`, 'visible stopped original row with no Kill action'));
+    await controlled.assertStopped(commandId, String(stoppedRow.processRef));
+    proof.stoppedOwnerProps = stoppedOwner; proof.stoppedOwnerRead = stoppedRead[0]; proof.stoppedRenderedRow = stoppedRendered;
+    proof.runtimeCustody = 'NOT_ALLOCATED';
+    proof.qualificationScope = 'controlled-native-kernel-real-Host-restart-original-UI-stop';
+  }
   proof.afterScreenshot = await screenshot('ui-original-native-process-after-stop.png');
   proof.signalEvidence =
     'One admitted UI stop command, one accepted original native request, one observed TEST service SIGTERM; no syscall tracing claim';
