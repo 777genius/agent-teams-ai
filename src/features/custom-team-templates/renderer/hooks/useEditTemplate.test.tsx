@@ -288,6 +288,42 @@ describe('useEditTemplate unresolved writes', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it('trims member names so a padded draft reconciles with the stored row', async () => {
+    updateTemplate.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    await render();
+    await act(async () => {
+      latest?.updateMember(0, { name: '  alice  ' });
+    });
+
+    await expect(saveNow()).resolves.toBe(false);
+
+    // The dispatched payload carries the same normalized name the update use
+    // case hashes and persists, so a committed row can be recognised.
+    expect(updateTemplate).toHaveBeenCalledWith({
+      templateId: 'tmpl-1',
+      expectedRevision: 5,
+      fields: {
+        name: 'Release Pipeline',
+        description: 'Ship it.',
+        teamPrompt: 'Deliver the feature.',
+        members: [{ name: 'alice', role: 'reviewer' }],
+      },
+    });
+    expect(latest?.status).toBe('unresolvedWriteOutcome');
+
+    // The server stored the trimmed name; the re-check must still match it.
+    const stored: CustomTeamTemplateV1 = { ...template, revision: 6 };
+    listTemplates.mockResolvedValue({
+      status: 'ready',
+      templates: [stored],
+    } satisfies ListCustomTeamTemplatesResult);
+
+    await expect(recheckNow()).resolves.toBe(true);
+    expect(latest?.status).toBe('saved');
+    expect(latest?.expectedRevision).toBe(6);
+    expect(onSaved).toHaveBeenCalledWith(stored);
+  });
+
   it('drops a stale save result after the dialog closes and reopens', async () => {
     const pending = deferred<UpdateCustomTeamTemplateResult>();
     updateTemplate.mockReturnValue(pending.promise);

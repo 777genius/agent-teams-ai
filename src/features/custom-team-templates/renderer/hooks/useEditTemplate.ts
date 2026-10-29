@@ -242,7 +242,10 @@ export function useEditTemplate({
       description: description.trim() ? description : undefined,
       teamPrompt,
       members: members.map((m) => ({
-        name: m.name,
+        // The update use case trims member names before hashing and writing, so
+        // the dispatched payload must carry the same normalized value. A
+        // whitespace-only name still collapses to '' and fails validation.
+        name: m.name.trim(),
         ...(m.role?.trim() ? { role: m.role.trim() } : {}),
         ...(m.workflow?.trim() ? { workflow: m.workflow.trim() } : {}),
       })),
