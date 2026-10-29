@@ -87,6 +87,9 @@ function observe(child: ChildProcess, role: string): void {
         /No usable sandbox|SUID sandbox helper|Failed to move to new namespace/,
       ],
       ['native-module-abi-mismatch', /NODE_MODULE_VERSION|was compiled against a different Node/],
+      ['vite-dependency-optimization', /new dependencies optimized|optimized dependencies changed/],
+      ['vite-stale-prebundle', /Outdated Optimize Dep|outdated optimized deps/],
+      ['vite-transform-or-resolution-failed', /Pre-transform error|Failed to resolve import/],
       [
         'runtime-download-failed',
         /pinned public runtime asset is unavailable|Runtime archive checksum/,

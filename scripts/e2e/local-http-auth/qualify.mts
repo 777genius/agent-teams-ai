@@ -41,6 +41,7 @@ export const modulePaths = [
   'src/renderer/api/httpClient.ts',
   'src/renderer/api/index.ts',
   'src/renderer/main.tsx',
+  'src/renderer/index.html',
   'src/renderer/App.tsx',
   'src/main/services/infrastructure/HttpServer.ts',
   'src/main/services/infrastructure/HttpServerAuth.ts',
@@ -1060,7 +1061,15 @@ export async function qualify(args: unknown): Promise<boolean> {
             const root = document.getElementById('root');
             const splash = document.getElementById('splash');
             const api = window.electronAPI;
+            const bootstrap = window.__claudeTeamsRendererBootstrap;
             const facts = {
+              documentState: document.readyState,
+              entryImportState: ['pending','resolved','rejected'].includes(bootstrap?.importState)
+                ? bootstrap.importState : 'not-observed',
+              mainBootstrapPhase: ['evaluating','startup-bridge','mount-started'].includes(bootstrap?.mainPhase)
+                ? bootstrap.mainPhase : 'not-observed',
+              entryImportErrorClass: ['module-export','module-fetch','SyntaxError','ReferenceError','TypeError','other'].includes(bootstrap?.errorClass)
+                ? bootstrap.errorClass : null,
               electronApiPresent: !!api,
               startupBridgePresent: typeof api?.startup?.getStatus === 'function',
               uiInitializationStarted: window.__claudeTeamsUiDidInit === true,

@@ -21,12 +21,23 @@ import type { AppStartupStatus, AppStartupStep } from '@shared/types/api';
 declare global {
   interface Window {
     __claudeTeamsUiDidInit?: boolean;
+    __claudeTeamsRendererBootstrap?: {
+      importState: string;
+      mainPhase: string | null;
+      errorClass: string | null;
+    };
     __claudeTeamsUiCleanup?: () => void;
     __claudeTeamsSplashStaticTimer?: number;
     __claudeTeamsSplashScene?: SplashSceneHandle;
     __claudeTeamsSplashEnhancedDisabled?: boolean;
   }
 }
+
+function markBootstrapPhase(phase: 'evaluating' | 'startup-bridge' | 'mount-started'): void {
+  const probe = window.__claudeTeamsRendererBootstrap;
+  if (probe) probe.mainPhase = phase;
+}
+markBootstrapPhase('evaluating');
 
 // Prepare Sentry before React renders. Actual init waits for telemetry config.
 initSentryRenderer();
@@ -208,6 +219,7 @@ function stopEnhancedSplashScene(): void {
 
 function mountApp(): void {
   if (root) return;
+  markBootstrapPhase('mount-started');
 
   // The main process reports ready only after config and telemetry IPC handlers exist.
   void bootstrapRendererTelemetryFromConfig();
@@ -273,6 +285,7 @@ async function bootstrapRenderer(): Promise<void> {
       }
     };
 
+    markBootstrapPhase('startup-bridge');
     cleanup = startupApi.onProgress(handleStartupStatus);
     handleStartupStatus(await startupApi.getStatus());
   } catch (error) {
