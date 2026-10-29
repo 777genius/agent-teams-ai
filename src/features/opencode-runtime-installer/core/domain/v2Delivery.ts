@@ -237,8 +237,11 @@ export function parseOpenCodeV2DeliveryManifest(
 }
 
 function compareBytes(left: Uint8Array, right: Uint8Array): number {
-  for (let index = 0; index < Math.min(left.length, right.length); index++)
-    if (left[index] !== right[index]) return left[index] - right[index];
+  for (const [index, byte] of left.entries()) {
+    const other = right[index];
+    if (other === undefined) return 1;
+    if (byte !== other) return byte - other;
+  }
   return left.length - right.length;
 }
 
