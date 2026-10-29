@@ -141,19 +141,12 @@ function isModelOnlyFallbackProviderStatus(provider: CliProviderStatus | undefin
 }
 
 function isOpenCodeSummaryOnlyCatalogStatus(provider: CliProviderStatus | undefined): boolean {
-  if (provider?.providerId !== 'opencode') {
-    return false;
-  }
-
-  if (provider.modelCatalog?.providerId === 'opencode') {
-    return false;
-  }
-
-  if (provider.modelCatalogRefreshState === 'error') {
-    return false;
-  }
-
-  return provider.runtimeCapabilities?.modelCatalog?.dynamic === true;
+  return (
+    provider?.providerId === 'opencode' &&
+    provider.modelCatalog?.providerId !== 'opencode' &&
+    provider.modelCatalogRefreshState !== 'error' &&
+    provider.runtimeCapabilities?.modelCatalog?.dynamic === true
+  );
 }
 
 function isDeferredMultimodelProviderStatus(provider: CliProviderStatus | undefined): boolean {
@@ -232,6 +225,11 @@ function isCodexCatalogLoadingSnapshot(provider: CliProviderStatus | undefined):
 function hasOpenCodeModels(provider: CliProviderStatus | undefined): boolean {
   return (
     provider?.providerId === 'opencode' &&
+    provider.statusCheckOutcome !== 'pending' &&
+    provider.statusCheckOutcome !== 'transient_error' &&
+    (provider.statusCheckErrorCode == null ||
+      (provider.statusCheckOutcome === 'model_only' &&
+        provider.statusCheckErrorCode === 'partial_response')) &&
     provider.models.length > 0 &&
     !isOpenCodeSummaryOnlyCatalogStatus(provider)
   );
@@ -684,13 +682,13 @@ export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
     await api.cliInstaller.invalidateStatus();
     clearCliProviderStatusInFlight('opencode');
     const epoch = ++cliStatusEpoch;
-    await get().fetchCliProviderStatus('opencode', {
+    const refreshed = await get().fetchCliProviderStatus('opencode', {
       silent: false,
       epoch,
       checkReason: 'runtime_install',
     });
 
-    if (hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
+    if (refreshed && hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
       return;
     }
 

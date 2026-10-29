@@ -40,11 +40,10 @@ const required: OpenCodeRuntimeStatus = {
   error: 'OpenCode V2 support download required.',
 };
 
-function verifiedOpenCodeProvider(): CliProviderStatus {
+function verifiedOpenCodeProvider(modelId = 'opencode/previous-native'): CliProviderStatus {
   const base = createLoadingMultimodelCliStatus().providers.find(
     (provider) => provider.providerId === 'opencode'
   )!;
-  const modelId = 'opencode/previous-native';
   return {
     ...base,
     supported: true,
@@ -88,6 +87,7 @@ function verifiedOpenCodeProvider(): CliProviderStatus {
 
 const originalApi = window.electronAPI;
 afterEach(() => {
+  vi.useRealTimers();
   Object.defineProperty(window, 'electronAPI', {
     configurable: true,
     writable: true,
@@ -117,6 +117,102 @@ function setup(overrides: Partial<ElectronAPI['openCodeRuntime']> = {}) {
 }
 
 describe('OpenCode installation without restarting the renderer', () => {
+  it.each(['rejected', 'transient', 'superseded', 'persistent transient'] as const)(
+    'does not finish a post-install refresh on retained models after a %s read',
+    async (outcome) => {
+      vi.useFakeTimers();
+      const { store } = setup();
+      const old = verifiedOpenCodeProvider();
+      const fresh = verifiedOpenCodeProvider('opencode/new-native');
+      const first = deferred<CliProviderStatus>();
+      const transient: CliProviderStatus = {
+        ...old,
+        authenticated: false,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'unavailable',
+        models: [],
+        modelCatalog: null,
+        modelCatalogRefreshState: 'error',
+        capabilities: { ...old.capabilities, teamLaunch: false, oneShot: false },
+      };
+      const getProviderStatus = vi
+        .fn()
+        .mockReturnValueOnce(first.promise)
+        .mockResolvedValue(outcome === 'persistent transient' ? transient : fresh);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+        },
+      });
+      store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [old] } });
+      const fetch = vi.spyOn(store.getState(), 'fetchCliProviderStatus');
+      const installing = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+      await vi.waitFor(() => expect(getProviderStatus).toHaveBeenCalledTimes(1));
+      if (outcome === 'superseded') store.getState().invalidateCliProviderModelCatalog();
+      if (outcome === 'rejected') first.reject(new Error('TEST provider IPC failed'));
+      else first.resolve(outcome === 'superseded' ? old : transient);
+      expect(await fetch.mock.results[0].value).toBe(
+        outcome === 'transient' || outcome === 'persistent transient'
+      );
+      expect(store.getState().cliStatus!.providers[0]).toMatchObject({
+        models: old.models,
+        modelCatalog: { status: 'stale' },
+        capabilities: { teamLaunch: false },
+      });
+      await vi.runAllTimersAsync();
+      await installing;
+      expect(getProviderStatus).toHaveBeenCalledTimes(outcome === 'persistent transient' ? 3 : 2);
+      expect(store.getState().cliStatus!.providers[0].models).toEqual(
+        outcome === 'persistent transient' ? old.models : fresh.models
+      );
+      expect(store.getState().openCodeRuntimeStatus).toEqual(ready);
+      expect(store.getState().openCodeRuntimeStatusLoading).toBe(false);
+    }
+  );
+
+  it.each(['V1 legacy models only', 'V1 model_only', 'V2 catalog only'] as const)(
+    'finishes a successful %s post-install read without requiring launch authority',
+    async (mode) => {
+      vi.useFakeTimers();
+      const { store } = setup();
+      const fresh: CliProviderStatus = {
+        ...verifiedOpenCodeProvider('opencode/read-only'),
+        authenticated: false,
+        verificationState: 'unknown',
+        statusCheckOutcome: mode === 'V1 legacy models only' ? undefined : 'model_only',
+        statusCheckErrorCode: mode === 'V1 model_only' ? 'partial_response' : undefined,
+        effectiveDefaultModel: null,
+        capabilities: {
+          ...verifiedOpenCodeProvider().capabilities,
+          teamLaunch: false,
+          oneShot: false,
+        },
+      };
+      if (mode !== 'V2 catalog only') fresh.modelCatalog = null;
+      const getProviderStatus = vi.fn(async () => fresh);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+        },
+      });
+      store.setState({ cliStatus: createLoadingMultimodelCliStatus() });
+      const installing = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+      await vi.runAllTimersAsync();
+      await installing;
+      expect(getProviderStatus).toHaveBeenCalledTimes(1);
+      const provider = store
+        .getState()
+        .cliStatus!.providers.find((value) => value.providerId === 'opencode')!;
+      expect(provider.models).toEqual(fresh.models);
+      expect(hasEffectiveProviderLaunchAuthority(provider)).toBe(false);
+    }
+  );
+
   it.each(['success', 'failure'] as const)(
     'ignores a pre-install status %s after V2 is ready',
     async (outcome) => {

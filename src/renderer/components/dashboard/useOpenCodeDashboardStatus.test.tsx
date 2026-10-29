@@ -216,6 +216,43 @@ afterEach(async () => {
 });
 
 describe('selected-project dashboard proof', () => {
+  it.each(['Connected to the global project', 'Global project credentials failed'])(
+    'does not display %s or global backend metadata while the project is pending',
+    async (message) => {
+      const global: CliProviderStatus = {
+        ...provider(true),
+        statusMessage: message,
+        detailMessage: `Global detail: ${message}`,
+        selectedBackendId: 'global-backend',
+        resolvedBackendId: 'global-backend',
+        availableBackends: [
+          {
+            id: 'global-backend',
+            label: 'Global backend',
+            description: message,
+            selectable: true,
+            recommended: true,
+            available: true,
+          },
+        ],
+      };
+      globalStatus = { ...globalStatus, providers: [global] };
+      await act(async () => root.render(<Probe />));
+      expect(observed.status.providerStatus).toMatchObject({
+        statusCheckOutcome: 'pending',
+        statusMessage: 'Checking...',
+        detailMessage: null,
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        capabilities: { teamLaunch: false, oneShot: false },
+      });
+      expect(globalStatus.providers[0]).toBe(global);
+      expect(global.statusMessage).toBe(message);
+      expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('refreshes the tested project and shows its free badge without changing global status or launch authority', async () => {
     await act(async () => root.render(<Probe />));
     expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith('opencode', {

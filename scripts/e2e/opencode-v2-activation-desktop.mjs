@@ -13,6 +13,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parse as parseYaml } from 'yaml';
+
 import { connectCdp } from './announcements/cdp.mjs';
 
 assert.equal(
@@ -290,6 +292,8 @@ try {
     'PATH',
     'LANG',
     'LC_ALL',
+    'CI',
+    'PNPM_HOME',
     'DISPLAY',
     'HTTP_PROXY',
     'HTTPS_PROXY',
@@ -302,6 +306,13 @@ try {
   ]) {
     if (process.env[key]) env[key] = process.env[key];
   }
+  // Preserve the installed dependency graph's tool store while isolating all app profiles.
+  // Otherwise pnpm's pre-run check tries to reinstall node_modules under the disposable HOME.
+  const modules = parseYaml(await readFile(path.join(repo, 'node_modules/.modules.yaml'), 'utf8'));
+  assert(typeof modules?.storeDir === 'string' && path.isAbsolute(modules.storeDir));
+  env.pnpm_config_store_dir = modules.storeDir;
+  env.pnpm_config_verify_deps_before_run = 'error';
+  result.pnpmStoreDirectory = modules.storeDir;
   for (const [key, directory] of Object.entries(dirs)) {
     env[key] = path.join(root, directory);
     await mkdir(env[key], { recursive: true });
