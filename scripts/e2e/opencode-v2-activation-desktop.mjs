@@ -231,6 +231,7 @@ async function snapshot(name) {
     error: window.__agentTeamsDevStore.getState().openCodeRuntimeError,
     progress: window.__opencodeV2SmokeProgress,
     timeOrigin: performance.timeOrigin,
+    viewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio },
     text: document.body.innerText.slice(0, 14000)
   })`)
   );
@@ -425,6 +426,16 @@ try {
     'Dev process must announce this exact owned CDP endpoint'
   );
   cdp = await connectCdp(target.webSocketDebuggerUrl);
+  // Ozone's headless display can start at 1x1 despite BrowserWindow's bounds.
+  // Use the same explicit desktop viewport as the other real Electron smokes.
+  await cdp.send('Page.enable');
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 1440,
+    height: 1000,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await wait('desktop viewport', () => cdp.inspect('innerWidth === 1440 && innerHeight === 1000'));
   await wait(
     'desktop API and dev store',
     () => cdp.inspect('!!(window.electronAPI && window.__agentTeamsDevStore)'),
