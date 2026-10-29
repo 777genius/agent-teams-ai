@@ -19,7 +19,11 @@ import {
   retainPackagedLineage,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
-import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
+import {
+  catalogScenarios,
+  verifyCatalog,
+  waitForReadyCatalog,
+} from './opencode-diagnostics/catalog.mjs';
 import {
   processes,
   sameIdentity,
@@ -634,6 +638,8 @@ if (mode === 'seed-packaged') {
             refreshClicked && recovered && !found,
             'Retry did not complete a fresh successful version probe'
           );
+          // Do not relabel still-running catalog children when the recipe switches fixtures.
+          await waitForReadyCatalog({ root, started: verifyStarted, evaluate, send });
           console.log(JSON.stringify({ passed: true, scenario, platform: process.platform }));
           const screenshot = await send('Page.captureScreenshot');
           await writeFile(path.join(root, 'ready.png'), Buffer.from(screenshot.data, 'base64'));

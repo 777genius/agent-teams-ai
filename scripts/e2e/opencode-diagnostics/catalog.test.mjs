@@ -4,7 +4,13 @@ import { spawnSync } from 'node:child_process';
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { clickControl, readPendingArtifact } from './catalog.mjs';
+import {
+  catalogRefreshEvidence,
+  clickControl,
+  readPendingArtifact,
+  verifyCatalog,
+  waitForReadyCatalog,
+} from './catalog.mjs';
 import { waitForPackagedRefreshPreparation } from './packaged.mjs';
 import {
   assertSettledDirectoryPage,
@@ -118,6 +124,224 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
       const start = latestStart.get(event.pid);
       assert(start && start.at <= event.at && start.scenario === event.scenario);
     }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+const catalogSources = ['opencode', 'anthropic', 'google', 'openrouter'];
+function refreshTimeline({
+  scenario = 'delayed8s',
+  base = 100,
+  firstPid = 1,
+  summary = true,
+} = {}) {
+  let at = base;
+  let pid = firstPid;
+  const calls = [];
+  const pair = (args, operation, source = null, duration = 1) => {
+    const start = { event: 'start', scenario, pid: pid++, at: at++, args };
+    const response = {
+      event: 'response',
+      scenario,
+      pid: start.pid,
+      at: (at += duration),
+      operation,
+      source,
+      failed: false,
+      ...(operation === 'models' ? { response: { models: { catalogState: 'fresh' } } } : {}),
+    };
+    calls.push(start, response);
+  };
+  if (summary)
+    pair(
+      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+      'status',
+      null,
+      8000
+    );
+  pair(['runtime', 'providers', 'directory', '--runtime', 'opencode', '--summary'], 'directory');
+  for (const source of catalogSources)
+    pair(
+      ['runtime', 'providers', 'models', '--runtime', 'opencode', '--provider', source],
+      'models',
+      source
+    );
+  return calls;
+}
+
+test('catalog completion requires its own summary then a complete fresh directory/model cycle', () => {
+  const calls = refreshTimeline();
+  const options = { requireSummary: true };
+  assert(catalogRefreshEvidence(calls, options));
+  assert.equal(catalogRefreshEvidence(calls.slice(0, 1), options), null);
+  assert.equal(catalogRefreshEvidence(calls.slice(2), options), null);
+  // Earlier model reads (even successful ones) cannot complete a later summary refresh.
+  const previous = refreshTimeline({ summary: false });
+  const summary = refreshTimeline({ base: 200, firstPid: 20 }).slice(0, 2);
+  assert.equal(catalogRefreshEvidence([...previous, ...summary], options), null);
+  assert.equal(catalogRefreshEvidence([...summary.slice(0, 1), ...previous], options), null);
+  // A response from an older in-flight model request cannot count after the directory.
+  const mixed = structuredClone(calls);
+  const oldModel = mixed.splice(4, 1)[0];
+  mixed.splice(2, 0, oldModel);
+  assert.equal(catalogRefreshEvidence(mixed, options), null);
+  for (const mutate of [
+    (events) => {
+      events.at(-1).failed = true;
+    },
+    (events) => {
+      events.at(-1).response.models.catalogState = 'stale';
+    },
+    (events) => {
+      events.at(-1).source = 'foreign';
+    },
+    (events) => {
+      events.at(-1).scenario = 'ready';
+    },
+    (events) => {
+      events.at(-1).pid = 999;
+    },
+    (events) => {
+      events[1].operation = 'directory';
+    },
+  ]) {
+    const invalid = structuredClone(calls);
+    mutate(invalid);
+    assert.equal(catalogRefreshEvidence(invalid, options), null);
+  }
+});
+
+test('catalog pairing uses the latest preceding start when Windows reuses a PID', () => {
+  const calls = refreshTimeline();
+  const model = calls.at(-2);
+  const reused = { ...model, args: ['--version'], at: model.at + 1 };
+  assert.equal(
+    catalogRefreshEvidence([...calls.slice(0, -1), reused, calls.at(-1)], { requireSummary: true }),
+    null
+  );
+  // Reuse after a completed request does not destroy its original paired response.
+  assert(
+    catalogRefreshEvidence([...calls, { ...reused, at: calls.at(-1).at + 1 }], {
+      requireSummary: true,
+    })
+  );
+});
+
+test('ready drains old requests then performs its own summary/catalog recovery before fixture change', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-ready-catalog-test-'));
+  try {
+    const initial = refreshTimeline({ scenario: 'ready', summary: false });
+    // The second directory overtakes the already-started first model. This old
+    // generation can drain without ever forming a fresh latest-directory cycle.
+    const secondDirectory = refreshTimeline({ scenario: 'ready', summary: false, firstPid: 50 })
+      .slice(0, 2)
+      .map((event) => ({ ...event, at: initial[2].at + 1 }));
+    const calls = [...initial.slice(0, 3), ...secondDirectory, ...initial.slice(3)];
+    assert.equal(catalogRefreshEvidence(calls), null);
+    const file = path.join(root, 'calls.ndjson');
+    const save = (events) =>
+      writeFile(file, events.map((e) => JSON.stringify(e)).join('\n') + '\n');
+    await save(calls.slice(0, -1));
+    let completed = false;
+    let clicks = 0;
+    let probe = false;
+    const waiting = waitForReadyCatalog({
+      root,
+      started: 100,
+      send: async (method, params) => {
+        if (method === 'Page.captureScreenshot') return { data: '' };
+        if (method === 'Input.dispatchMouseEvent' && params.type === 'mouseReleased') {
+          clicks++;
+          await save([
+            ...calls,
+            ...refreshTimeline({ scenario: 'ready', base: Date.now() + 100, firstPid: 20 }),
+          ]);
+        }
+        return {};
+      },
+      evaluate: async (expression) => {
+        if (expression.startsWith('(() => { const b')) return { x: 1, y: 1 };
+        if (expression === 'document.body.innerText') return 'Fixture OpenCode model';
+        if (expression === 'navigator.clipboard.readText()') return '';
+        // The previous overlapping generation's warning remains until a real refresh.
+        if (expression.includes('opencode-catalog-error')) return clicks ? '' : 'cached models';
+        if (expression.startsWith('window.__catalogProbe =')) {
+          probe = true;
+          return;
+        }
+        if (expression === 'window.__catalogProbe')
+          return { done: probe, value: { schemaVersion: 1 } };
+        throw new Error(`Unexpected expression: ${expression}`);
+      },
+    }).then(() => {
+      completed = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(completed, false, 'Ready must not finish with an in-flight model request');
+    assert.equal(clicks, 0, 'Do not start the recovery refresh before old requests drain');
+    await save(calls);
+    await waiting;
+    assert.equal(completed, true);
+    assert.equal(clicks, 1, 'Recover with exactly one real UI refresh');
+    assert.deepEqual(
+      JSON.parse(await readFile(path.join(root, 'ready-catalog-subprocess.json'), 'utf8')),
+      calls
+    );
+    assert(
+      catalogRefreshEvidence(
+        JSON.parse(await readFile(path.join(root, 'ready-subprocess.json'), 'utf8')),
+        { requireSummary: true }
+      )
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('real catalog verifier waits past old models and unfinished summary for the post-summary refresh', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-delayed-catalog-test-'));
+  try {
+    const base = Date.now() + 100;
+    const old = refreshTimeline({ base, summary: false });
+    const current = refreshTimeline({ base: base + 100, firstPid: 20 });
+    let reads = 0;
+    let probe = false;
+    await writeFile(
+      path.join(root, 'calls.ndjson'),
+      [...old, current[0]].map((event) => JSON.stringify(event)).join('\n')
+    );
+    await verifyCatalog({
+      root,
+      scenario: 'delayed8s',
+      send: async (method) => (method === 'Page.captureScreenshot' ? { data: '' } : {}),
+      evaluate: async (expression) => {
+        if (expression.startsWith('(() => { const b')) return { x: 1, y: 1 };
+        if (expression === 'navigator.clipboard.readText()') return '';
+        if (expression === 'document.body.innerText') {
+          reads++;
+          const events = reads === 1 ? [...old, ...current.slice(0, 2)] : [...old, ...current];
+          await writeFile(
+            path.join(root, 'calls.ndjson'),
+            events.map((event) => JSON.stringify(event)).join('\n')
+          );
+          return 'Fixture OpenCode model';
+        }
+        if (expression.includes('opencode-catalog-error')) return '';
+        if (expression.startsWith('window.__catalogProbe =')) {
+          probe = true;
+          return;
+        }
+        if (expression === 'window.__catalogProbe')
+          return { done: probe, value: { schemaVersion: 1 } };
+        throw new Error(`Unexpected expression: ${expression}`);
+      },
+    });
+    assert.equal(reads, 3, 'Old models and summary-only completion must each continue polling');
+    const observed = JSON.parse(
+      await readFile(path.join(root, 'delayed8s-subprocess.json'), 'utf8')
+    );
+    assert(catalogRefreshEvidence(observed, { requireSummary: true }));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

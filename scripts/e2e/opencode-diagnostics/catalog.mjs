@@ -23,6 +23,122 @@ export const catalogScenarios = [
 const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Fixture records are append ordered. A response belongs only to the latest start of
+// its PID (Windows can reuse PIDs), and only to that start's operation/source.
+function catalogFixtureRequests(calls) {
+  const requests = [];
+  const latest = new Map();
+  for (const [index, event] of calls.entries()) {
+    if (event.event === 'start') {
+      const args = event.args ?? [];
+      const scoped = (flag, value) => args[args.indexOf(flag) + 1] === value && args.includes(flag);
+      const operation =
+        args[0] === 'runtime' &&
+        args[1] === 'status' &&
+        args.includes('--summary') &&
+        scoped('--provider', 'opencode')
+          ? 'status'
+          : args[0] === 'runtime' &&
+              args[1] === 'providers' &&
+              scoped('--runtime', 'opencode') &&
+              ['directory', 'models'].includes(args[2])
+            ? args[2]
+            : null;
+      const request = {
+        start: event,
+        index,
+        operation,
+        source: operation === 'models' ? args[args.indexOf('--provider') + 1] : null,
+      };
+      latest.set(event.pid, request);
+      if (operation) requests.push(request);
+    } else if (event.event === 'response') {
+      const request = latest.get(event.pid);
+      if (
+        request?.operation &&
+        request.operation === event.operation &&
+        event.scenario === request.start.scenario &&
+        event.at >= request.start.at &&
+        (event.operation !== 'models' || event.source === request.source)
+      )
+        request.response = { ...event, index };
+    }
+  }
+  return requests;
+}
+
+export function catalogRefreshEvidence(calls, { requireSummary = false } = {}) {
+  const requests = catalogFixtureRequests(calls);
+  const summary = requests.filter((r) => r.operation === 'status').at(-1);
+  if (requireSummary && (!summary?.response || summary.response.failed)) return null;
+  const directory = requests
+    .filter(
+      (r) =>
+        r.operation === 'directory' &&
+        (!requireSummary || (r.index > summary.response.index && r.start.at >= summary.response.at))
+    )
+    .at(-1);
+  if (
+    !directory?.response ||
+    directory.response.failed ||
+    !directory.start.args.includes('--summary')
+  )
+    return null;
+  const models = sources.map((source) =>
+    requests
+      .filter(
+        (r) =>
+          r.operation === 'models' &&
+          r.source === source &&
+          r.index > directory.response.index &&
+          r.start.at >= directory.response.at
+      )
+      .at(-1)
+  );
+  if (
+    models.some(
+      (r) =>
+        !r?.response || r.response.failed || r.response.response?.models?.catalogState !== 'fresh'
+    )
+  )
+    return null;
+  if (requests.some((r) => !r.response)) return null;
+  return { summary, directory, models };
+}
+
+export async function waitForReadyCatalog({ root, started, evaluate, send }) {
+  for (let attempt = 0; attempt < 240; attempt++) {
+    const calls = (await readPendingArtifact(path.join(root, 'calls.ndjson')))
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map(JSON.parse)
+      .filter((c) => c.scenario === 'ready' && c.at >= started);
+    const requests = catalogFixtureRequests(calls);
+    // Drain the superseded work, which need not itself form a fresh generation.
+    // Two overlapping directories may straddle the first source's model request.
+    const drained =
+      requests.some((r) => r.operation === 'directory' && r.response) &&
+      sources.every((source) =>
+        requests.some((r) => r.operation === 'models' && r.source === source && r.response)
+      ) &&
+      requests.every((r) => r.response);
+    if (drained) {
+      await writeFile(
+        path.join(root, 'ready-catalog-subprocess.json'),
+        JSON.stringify(calls, null, 2)
+      );
+      // A superseded overlapping generation may have painted a stale warning.
+      // Recover through the real UI only after its requests drain, keeping the
+      // scenario fixed until this new summary and catalog have both completed.
+      await verifyCatalog({ root, scenario: 'ready', evaluate, send, requireSummary: true });
+      return;
+    }
+    await pause(500);
+  }
+  assert.fail('Ready scenario catalog requests did not settle before the next fixture scenario');
+}
+
 export async function clickControl(evaluate, send, expression, preparePoint) {
   const readPoint = () => evaluate(`(() => { const b = ${expression}; if (!b || b.disabled) return null;
       b.scrollIntoView({block:'center'}); const r=b.getBoundingClientRect();
@@ -42,7 +158,13 @@ export function correlateReport(copied, logs) {
   return ids;
 }
 
-export async function verifyCatalog({ root, scenario, evaluate, send }) {
+export async function verifyCatalog({
+  root,
+  scenario,
+  evaluate,
+  send,
+  requireSummary = scenario === 'delayed8s',
+}) {
   const save = (name, value) => writeFile(path.join(root, `${scenario}-${name}`), value);
   const screenshot = async (name) => {
     const shot = await send('Page.captureScreenshot');
@@ -68,6 +190,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
     let text = '';
     let copied = '';
     let loadingCaptured = false;
+    let completedCatalog;
     for (let attempt = 0; attempt < 240; attempt++) {
       await pause(500);
       calls = (await readPendingArtifact(path.join(root, 'calls.ndjson')))
@@ -76,6 +199,9 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
         .filter(Boolean)
         .map(JSON.parse)
         .filter((c) => c.scenario === scenario && c.at >= started);
+      completedCatalog = catalogRefreshEvidence(calls, {
+        requireSummary,
+      });
       text = await evaluate('document.body.innerText');
       const visible = await evaluate(`${alert}?.innerText || ''`);
       if (scenario === 'delayed8s' && Date.now() - started < 7000) {
@@ -94,7 +220,9 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
       } else if (
         !expectedFailures &&
         !visible &&
-        calls.filter((c) => c.event === 'response' && c.operation === 'models').length >= 4 &&
+        completedCatalog &&
+        (scenario !== 'delayed8s' ||
+          completedCatalog.summary.response.at - completedCatalog.summary.start.at >= 7900) &&
         /fixture-model|Fixture .* model/.test(text)
       )
         break;
@@ -107,16 +235,14 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
       'Dashboard did not request a real summary subprocess'
     );
     if (scenario === 'delayed8s') {
-      const summaryStart = calls.find(
-        (c) =>
-          c.event === 'start' &&
-          c.args[0] === 'runtime' &&
-          c.args[1] === 'status' &&
-          c.args.includes('--summary')
+      assert(
+        completedCatalog?.summary,
+        'No completed provider summary and subsequent catalog refresh'
       );
-      assert(summaryStart, 'No actual provider status summary subprocess');
-      const end = calls.find((c) => c.event === 'response' && c.pid === summaryStart.pid);
-      assert(end && end.at - summaryStart.at >= 7900, '8s status summary delay not observed');
+      assert(
+        completedCatalog.summary.response.at - completedCatalog.summary.start.at >= 7900,
+        '8s status summary delay not observed'
+      );
     }
     if (expectedFailures)
       assert.notEqual(copied, previousClipboard, 'Copy retained previous scenario report');
@@ -163,6 +289,7 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
           .join('\n')
       );
     } else {
+      assert(completedCatalog, 'No completed fresh catalog refresh');
       assert.equal(await evaluate(`${alert}?.innerText || ''`), '', 'Stale catalog error retained');
       assert.equal(
         new Set(
