@@ -27,14 +27,15 @@ function triggerNames(on: unknown): string[] {
   return Object.keys(on as Record<string, unknown>);
 }
 
-function readWorkflow(url: URL): Workflow {
-  const source = parse(readFileSync(url, 'utf8'));
+function readWorkflow(directory: URL, file: string): Workflow {
+  const source = parse(readFileSync(new URL(file, directory), 'utf8'));
   const concurrency = source.concurrency as
     | string
     | { group: unknown; 'cancel-in-progress'?: unknown }
     | undefined;
   return {
-    name: source.name,
+    // Without a name, github.workflow is the workflow file path.
+    name: String(source.name ?? `.github/workflows/${file}`),
     triggers: triggerNames(source.on),
     concurrency:
       typeof concurrency === 'string'
@@ -51,7 +52,7 @@ const directory = new URL('../../.github/workflows/', import.meta.url);
 const workflows = new Map(
   readdirSync(directory)
     .filter((file) => /\.ya?ml$/.test(file))
-    .map((file) => [file.replace(/\.ya?ml$/, ''), readWorkflow(new URL(file, directory))] as const)
+    .map((file) => [file.replace(/\.ya?ml$/, ''), readWorkflow(directory, file)] as const)
 );
 
 const policy = RUN_SUPERSESSION_POLICY;
