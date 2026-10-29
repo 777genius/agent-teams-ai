@@ -281,6 +281,44 @@ describe('UpdateCustomTeamTemplateUseCase', () => {
     expect(fixture.update).not.toHaveBeenCalled();
   });
 
+  it('trims surrounding whitespace from member role and workflow before hashing and persistence', async () => {
+    const updated = storedTemplate({ revision: 2 });
+    const fixture = gatewayFixture({ update: [{ status: 'updated', template: updated }] });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(
+      updateRequest({
+        members: [{ name: 'alice', role: '  reviewer  ', workflow: '  Review each change.  ' }],
+      })
+    );
+
+    expect(result).toEqual({ status: 'updated', template: updated });
+    expect(fixture.requests[0].template.members).toEqual([
+      { name: 'alice', role: 'reviewer', workflow: 'Review each change.' },
+    ]);
+    expect(fixture.requests[0].contentHash).toBe(
+      contentHashFor('Deliver the feature.', [
+        { name: 'alice', role: 'reviewer', workflow: 'Review each change.' },
+      ])
+    );
+  });
+
+  it('drops whitespace-only member role and workflow before hashing', async () => {
+    const updated = storedTemplate({ revision: 2 });
+    const fixture = gatewayFixture({ update: [{ status: 'updated', template: updated }] });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(
+      updateRequest({ members: [{ name: 'alice', role: '   ', workflow: '  ' }] })
+    );
+
+    expect(result).toEqual({ status: 'updated', template: updated });
+    expect(fixture.requests[0].template.members).toEqual([{ name: 'alice' }]);
+    expect(fixture.requests[0].contentHash).toBe(
+      contentHashFor('Deliver the feature.', [{ name: 'alice' }])
+    );
+  });
+
   it('reconciles an interrupted update whose member name was trimmed before persistence', async () => {
     const committed = storedTemplate({ revision: 2 });
     const fixture = gatewayFixture({
@@ -292,6 +330,24 @@ describe('UpdateCustomTeamTemplateUseCase', () => {
     const result = await useCase.execute(
       updateRequest({
         members: [{ name: '  alice  ', role: 'reviewer', workflow: 'Review each change.' }],
+      })
+    );
+
+    expect(result).toEqual({ status: 'updated', template: committed });
+    expect(fixture.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconciles an interrupted update whose member metadata was trimmed before persistence', async () => {
+    const committed = storedTemplate({ revision: 2 });
+    const fixture = gatewayFixture({
+      update: [interrupted('unknown')],
+      getById: [{ status: 'found', template: committed }],
+    });
+    const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+    const result = await useCase.execute(
+      updateRequest({
+        members: [{ name: '  alice  ', role: '  reviewer  ', workflow: '  Review each change.  ' }],
       })
     );
 

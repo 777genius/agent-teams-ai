@@ -81,6 +81,10 @@ export const DeleteCustomTemplateDialog = ({
           setErrorState('notFound');
           return;
         case 'unreadableRecord':
+          // A row that cannot be read is a distinct diagnosis from a storage
+          // outage; keep the unreadable state so the copy can say so.
+          setErrorState('unreadableRecord');
+          return;
         case 'storageUnavailable':
           setErrorState('storageUnavailable');
           return;
@@ -169,6 +173,17 @@ export const DeleteCustomTemplateDialog = ({
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>{t('customTemplates.errors.storageUnavailable')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'unreadableRecord' ? (
+            <div
+              role="alert"
+              data-testid="delete-template-unreadable"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.errors.unreadableRecord')}</p>
             </div>
           ) : null}
 

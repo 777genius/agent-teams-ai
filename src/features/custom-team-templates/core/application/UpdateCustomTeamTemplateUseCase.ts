@@ -94,11 +94,16 @@ function toAllowlistedMembers(value: unknown): CustomTeamTemplateMemberV1[] | nu
     // an empty-string optional never reaches the canonical digest: persistence
     // drops falsy optionals, and a digest over a shape the store never writes
     // could not be reconciled against its own committed row.
+    //
+    // Save As and team creation both trim this metadata, so the update boundary
+    // must trim it too: a padded value would otherwise be hashed and stored
+    // differently from the team the template produces. Whitespace-only values
+    // collapse to '' and are dropped as absent by normalizeTemplateMember.
     members.push(
       normalizeTemplateMember({
         name: candidate.name.trim(),
-        ...(typeof candidate.role === 'string' ? { role: candidate.role } : {}),
-        ...(typeof candidate.workflow === 'string' ? { workflow: candidate.workflow } : {}),
+        ...(typeof candidate.role === 'string' ? { role: candidate.role.trim() } : {}),
+        ...(typeof candidate.workflow === 'string' ? { workflow: candidate.workflow.trim() } : {}),
       })
     );
   }

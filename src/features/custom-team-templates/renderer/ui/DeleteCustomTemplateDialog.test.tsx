@@ -156,6 +156,25 @@ describe('DeleteCustomTemplateDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('keeps an unreadable record distinct from a storage outage', async () => {
+    deleteTemplate.mockResolvedValue({
+      status: 'unreadableRecord',
+      templateId: 'tmpl-1',
+    } satisfies DeleteCustomTeamTemplateResult);
+
+    await render();
+    await confirmDelete();
+
+    const alert = host.querySelector('[data-testid="delete-template-unreadable"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(alert?.textContent).toContain('customTemplates.errors.unreadableRecord');
+    expect(alert?.textContent).not.toContain('customTemplates.errors.storageUnavailable');
+    expect(host.querySelector('[data-testid="delete-template-storage-unavailable"]')).toBeNull();
+    expect(onDeleted).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('surfaces a revision conflict and refreshes the expected revision', async () => {
     deleteTemplate
       .mockResolvedValueOnce({
