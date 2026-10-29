@@ -23,7 +23,7 @@ PR #1 остаётся Draft; новый runtime/native/UI PASS из локал�
 Этап 2 по-прежнему не входит в работу.
 
 
-Обновлено: 28 октября 2026, UTC.
+Обновлено: 29 октября 2026, UTC.
 
 **Направление согласовано владельцем. Этап 1 реализуется и проверяется в изолированных lanes.**
 Есть работающий legacy-host и принятые scoped E2E; полная приёмка этапа 1 ещё не завершена.
@@ -64,23 +64,69 @@ consumer. [P4.4](stage-1-legacy-host.md#p4-полноценные-несколь
 workflows, pending/revoke/control guards и product approvals. Это не заявление о
 поддержке native questions всеми тремя providers и не удаление прежнего UI.
 
-## Текущий checkpoint интеграции — 28 октября
+## Текущий checkpoint интеграции — 29 октября
 
-**Выбранный `0950160dc`:** в [CI 40750146585](https://github.com/777genius/agent-teams-ai/actions/runs/40750146585)
-прошли все четыре root shards: 24 045 PASS / 98 SKIP; отдельно Host 816/816,
-workspace Validate и все три lint scopes PASS. [CodeQL 40750215229](https://github.com/777genius/agent-teams-ai/actions/runs/40750215229)
-прошёл оба анализа: 187 open alerts совпадают с b63, branch-only относительно main — 0;
-подавления не выполнялись. Остальные original jobs `095` продолжаются; новый общий
-Source11/H3/P7 PASS до проверки исходных артефактов не заявляется.
+**Текущий code candidate —
+[`42287f835`](https://github.com/777genius/agent-teams-ai/commit/42287f835025186d0bd4a11841c752488650209b):**
+семь TEST-файлов с двумя конечными исправлениями опубликованы поверх reviewed merge
+[`4e10a01bf`](https://github.com/777genius/agent-teams-ai/commit/4e10a01bf838bb7a92889dd35e1dde5a7342254a)
+с родителями `d408b1191` и `16e098d51`; tree `ae6e9b867`.
+Два разрешённых конфликта сохраняют native-release proof и новые original
+transcript bindings, отложенный cleanup и финальную остановку task clocks.
+Унаследованная ordinary OpenCode V2 delivery из main не подключает V2 к Stage1 Host:
+выбранный driver остаётся `createOpenCodeV1DriverFactory`.
 
-**Mixed `095` остаётся INCOMPLETE:** native group proof — PASS, но до клика Restart
-строгая проверка direct children исходного Host получила `4 !== 3`; старый census
-с commands не сохранён, причина четвёртого child не установлена. Независимо принятый
-TEST-only diagnostic сохраняет уже прочитанные pre/post census в existing receipt,
-перенося существующие command reads перед прежним `assert3`, без его ослабления,
-нового probe, delay или догадки о процессе. Готовится свежий existing Source11 с
-`stage1_process_qualification=false`: production bytes не меняются; доказательства
-`095` сохраняют только проверенную собственную границу. Draft/Stage1/V1 и root911 HOLD сохранены.
+**Исходный `d408`:** [CI 40754124612](https://github.com/777genius/agent-teams-ai/actions/runs/40754124612)
+имеет canonical Full qualification PASS, все четыре root shards, Validate,
+три lint scopes и Windows smoke SUCCESS. [CodeQL 40754129313](https://github.com/777genius/agent-teams-ai/actions/runs/40754129313)
+прошёл оба анализа. Source jobs — **9 SUCCESS / 2 FAIL**; original Mixed и
+Taskboard receipts остаются INCOMPLETE. Raw audit выполнен для Mixed, Taskboard,
+Codex Resume и conditional H3; это не независимая raw-приёмка остальных восьми UI jobs.
+Codex UI и actual all-three H3 приняты на собственных `d408` bytes:
+`cleanupConfirmed=true`, selections `alice/bob/carol`, три Host exit `0/null`,
+по 12 model observations и 0 model failures. P7 в этом run был SKIPPED.
+
+**Две конечные TEST-коррекции опубликованы и независимо приняты.** Retained census
+`d408` установил четвёртого child: OpenCode management server `49358`, отдельно от
+runtime server `49357`. Mixed различает этот exact profile-bound manager и три
+runtime; Restart сохраняет Host и всех peers, заменяя только исходного Bob;
+whole-Team Stop требует отсутствия трёх runtime и сохранения только manager.
+Taskboard после одного исходного focus click ожидает прежнюю bounded readiness
+того же owner/surface/textarea перед единственным вводом текста. Новых controls,
+signals, повторных business actions или увеличенных deadlines нет.
+
+**Локальные результаты на `42287f`:** genuine Host/ledger build и strict
+`pnpm typecheck:legacy-host-scripts` PASS; три существующие TEST suites —
+**36 PASS / 0 FAIL / 0 SKIP**, включая четыре новые регрессии. Отдельно store/Stop
+suites 50/50, source-size/provisioning guards и diff check PASS; четыре конечные
+регрессии также независимо прошли 4/4. Local toolchain — Linux Node 24.22.1,
+Host compiler 7.0.2, pnpm 11.25.0 при repo request 11.22.0; frozen lock не менялся.
+Это не actual macOS/native приёмка исправленных workflows.
+Автоматический [CI 40873748288](https://github.com/777genius/agent-teams-ai/actions/runs/40873748288)
+дал Fast feedback PASS; Full qualification ожидаемо отказал при Draft
+`MODE_FULL=false` — это не выполненная canonical qualification.
+Новый final-ref canonical/CodeQL, Source11/H3 и rebuilt packed P7 **ещё не выполнены**.
+Изменившиеся Desktop bytes после main merge требуют actual нового packed candidate;
+прежний scoped P7 `095` сохраняет только собственные source/artifact границы.
+
+Остаток ограничен existing combined CI на окончательном ref
+(`stage1_desktop=true`, `stage1_process_diagnostic=false`,
+`stage1_process_qualification=true`), manual CodeQL на том же ref и аудитом
+исходных final receipts/source freezes. Используемый GitHub plugin поддерживает
+чтение и rerun существующих jobs, но не предоставляет новый `workflow_dispatch`
+с inputs; поэтому эти gates пока не запущены. Подробности и exact receipts — в
+[checkpoint](progress/checkpoint-2026-10-27.md#29-october-current-main-integration-and-bounded-test-corrections).
+Сохранён [sanitized d408 audit](evidence/d408-source-and-h3-audit.json),
+SHA256 `656e3019eff9f886488b2e1282646fbbf2ff3100613efdf494eed216952732b9`.
+Original M19 root911 остаётся immutable SDK-custody HOLD; fresh runs не закрывают
+его долг и не квалифицируют original live cold Stop. Real auth/other-OS/release
+остаются отдельными ограничениями. **Stage1 не завершён; PR остаётся Draft,
+без merge в main/release, публикации или default activation.**
+
+### Исторические snapshots интеграции
+
+Статусы и формулировки «текущий» ниже относятся к своим исходным checkpoints;
+актуальный список оставшихся проверок приведён выше.
 
 **Текущая подготовка после merge main:** `02c2e68b1` уже запушен; он включает
 main `11418fb29` без конфликтов и только пять upstream TEST files. Это обновление

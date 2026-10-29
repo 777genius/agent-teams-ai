@@ -6684,3 +6684,103 @@ scoped lint and diff check pass. The next existing Source11 uses
 `stage1_process_qualification=false` because production bytes are unchanged;
 original `095` production/P7 evidence retains only its independently confirmed
 scope. Draft/Stage1/V1 and original root911 HOLD remain unchanged.
+
+### 29 October: current main integration and bounded TEST corrections
+
+This entry supersedes earlier pending-status summaries without changing their
+original receipts. Reviewed integration merge
+[`4e10a01bf838bb7a92889dd35e1dde5a7342254a`](https://github.com/777genius/agent-teams-ai/commit/4e10a01bf838bb7a92889dd35e1dde5a7342254a)
+is published on the feature branch, parents `d408b1191fe912942e40f3848b93c2466f2e20af`
+and current main `16e098d51b32f0463c8836b7359760d106534b62`, tree
+`ae6e9b867c5033da23daff5cede5854c81243784`. The selected code candidate
+[`42287f835025186d0bd4a11841c752488650209b`](https://github.com/777genius/agent-teams-ai/commit/42287f835025186d0bd4a11841c752488650209b)
+is published on top of that merge and changes only the seven TEST files described
+below. Independent source review accepted the
+two conflict resolutions: original native-release capture/digest authority and
+run-qualified transcript history coexist; run cleanup remains deferred through
+release publication, all owned stop branches settle, task clocks pause finally,
+and the original stop failure retains precedence. Ordinary upstream V2 delivery
+is inherited; Stage1 Host still selects only OpenCode V1.
+
+Original exact `d408` [CI 40754124612](https://github.com/777genius/agent-teams-ai/actions/runs/40754124612)
+has successful canonical Full qualification, four root shards, Validate, three
+lint scopes and Windows smoke. [CodeQL 40754129313](https://github.com/777genius/agent-teams-ai/actions/runs/40754129313)
+has both analyses SUCCESS. Source jobs are nine SUCCESS and two FAIL. Raw audit
+covers the following original receipts; the other eight successful primary UI
+jobs were not independently downloaded/audited in this continuation.
+
+| Original d408 receipt | Raw result | SHA256 |
+| --- | --- | --- |
+| Mixed | INCOMPLETE before Restart | `edcbf0b3ad7dfedaf310df2fb32b88e22c1df94ef66bcdd49bc479b4819ce905` |
+| Taskboard | INCOMPLETE before comment insertion | `0144ede4351a71ae660cb1b8a0879e73e7cc8c264b6c244a05e9ec05d28f4819` |
+| Codex Resume primary UI | PASS | `a5fa7f9ef06021c5816118e9438c0866b68832e328ffd983a3b0d0fe9435668e` |
+| Conditional all-three H3 | PASS, cleanup confirmed | `a76e8d1a3f17ba9a1d4da2af8a26dfb627a2e2d12f8531dbc958f0c482f17269` |
+
+The retained [sanitized audit](../evidence/d408-source-and-h3-audit.json) has SHA256
+`656e3019eff9f886488b2e1282646fbbf2ff3100613efdf494eed216952732b9`.
+It records the three original artifact ZIP digests and exact audited scope.
+
+The three primary UI receipts retain 1,413 before/after source pins matching
+immutable `d408` Git blobs and unchanged native-input pairs. H3 retains exactly
+alice/bob/carol selections, three original Hosts exit 0/null, 12 observations
+per provider and zero model failures. All six checkpoint payload digests were
+rehashed; each provider preserves its selected native identity across history
+A/B, all six sessions are closed/sealed/released, and harness/Host source hashes
+match immutable Git. These are own-ref results, not merged-candidate acceptance.
+P7 was SKIPPED in this run.
+
+The retained Mixed census identifies the extra direct Host child as the exact
+OpenCode management endpoint 49358, separate from runtime endpoint 49357. No
+Restart click occurred in the original failed run. The bounded TEST correction
+selects management by its captured executable/profile endpoint/argv and requires
+all other children to be the exact three provider runtimes. Restart conserves
+the full original Host/peer birth, parent, group and executable identities,
+requires old Bob physically absent and exactly one new Codex child. Before
+whole-Team Stop the entire post-Restart census must remain unchanged; the final
+existing poll snapshot requires all three original runtime PIDs absent and only
+the unchanged management child under the original Host. The new pure oracle is
+pinned in the existing source list; its three regressions run in the existing
+Mixed fixture suite. No new selector, signal or process-read loop is added.
+
+Taskboard's original image refresh had settled; one immediate post-focus sample
+returned owner=null while the original textarea remained focused. No later
+successful owner sample or comment text insertion is retained from that run.
+The TEST correction uses the
+existing bounded product observer to require that same captured owner, surface,
+selector, empty draft and focused document before one original insertion. The
+regression rejects missing, rebound and unfocused observations without another
+click, upload or input. The original failure remains INCOMPLETE.
+
+Genuine Host/ledger build and strict `pnpm typecheck:legacy-host-scripts` pass on
+exact `42287f`; the three existing selected Node TEST suites pass 36/36, zero
+FAIL/SKIP, including the four new regressions. Separate store/Stop suites pass
+50/50; source-size/provisioning guards and diff check pass. The four finite
+regressions also independently pass 4/4; Taskboard has meaningful original-
+assertion RED to corrected GREEN. Local toolchain is Linux Node 24.22.1, Host
+compiler 7.0.2 and pnpm 11.25.0 (repository request 11.22.0), with unchanged frozen
+lock dependencies. This does not qualify actual macOS Restart/Stop or Taskboard.
+Automatic [CI 40873748288](https://github.com/777genius/agent-teams-ai/actions/runs/40873748288)
+has Fast feedback job 123447668751 PASS. Full qualification job 123447669902
+deliberately refuses Draft feedback with `MODE_FULL=false`; that refusal is not
+a canonical code failure or completed qualification. Source/P7/CodeQL are skipped
+on this automatic route. New final-ref canonical, CodeQL, Source11/H3 and rebuilt
+packed P7 remain NOT RUN. The main merge changes
+production Desktop bytes, so the actual rebuilt packed app needs fresh P7;
+the original `095` kernel/normal-SDK/packed evidence retains only its own exact
+refs and scoped limits. No older capture is promoted to the merged app.
+
+The remaining route is the existing combined CI on the final selected branch
+with `stage1_desktop=true`, `stage1_process_diagnostic=false` and
+`stage1_process_qualification=true`, manual CodeQL on that same head, then audit
+of the original selected-head receipts and source/payload freezes. The requested
+GitHub plugin exposes reads and reruns of existing jobs but no new
+`workflow_dispatch` with inputs; those manual gates have therefore not started.
+No alternate access, new selector, retry framework or policy relaxation is used.
+
+Stage1 P0–P8/M01–M19, existing UI and OpenCode V1-only scope remain fixed. M13's
+accepted selected behavioral paths do not require a universal capture engine.
+Original M19 root911 remains immutable SDK-custody HOLD; normal-live/cold-read-only
+proofs and fresh released runs do not qualify original live cold Stop or release
+that SDK root. Real authentication, other native OS tuples and release/default
+activation remain unqualified. Full Stage1 completion is not claimed. PR stays
+Draft; no merge into main/release, publication, ownership adoption or replay.
