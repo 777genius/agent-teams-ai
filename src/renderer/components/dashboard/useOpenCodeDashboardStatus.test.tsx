@@ -1,4 +1,4 @@
-import React, { act } from 'react';
+import React, { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { useOpenCodeConnectedModelCatalog } from '@features/runtime-provider-management/renderer';
@@ -137,7 +137,9 @@ const Probe = ({
     mocks.refreshDirectory,
     mocks.refreshAnthropic
   );
-  observed = { status, catalog, refresh };
+  useEffect(() => {
+    observed = { status, catalog, refresh };
+  }, [status, catalog, refresh]);
   return (
     <span>
       {catalog.providerStatus &&

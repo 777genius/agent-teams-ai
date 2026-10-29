@@ -50,7 +50,7 @@ function provider(model: string): CliProviderStatus {
     )!,
     supported: true,
     statusCheckOutcome: 'authoritative',
-    statusCheckErrorCode: null,
+    statusCheckErrorCode: undefined,
     models: [model],
     modelAvailability: [],
   };

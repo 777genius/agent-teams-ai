@@ -18,6 +18,7 @@ import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import {
+  isMultimodelCliStatus,
   reconcileCliProviderSnapshot,
   revokeProviderLaunchAuthority,
   settleCliProviderStatusLoading,
@@ -26,6 +27,7 @@ import {
 } from './cliInstallerStatusReconciliation';
 import {
   getCliProviderStatusScopeKey,
+  invalidateCliProviderScopeReads,
   setBoundedScopedProviderStatus,
 } from './cliProviderStatusScope';
 import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
@@ -723,12 +725,6 @@ export async function refreshCodexProviderStatusAfterRuntimeInstall(
   }
 }
 
-function isMultimodelCliStatus(
-  status: CliInstallationStatus | null | undefined
-): status is CliInstallationStatus & { flavor: 'agent_teams_orchestrator' } {
-  return status?.flavor === 'agent_teams_orchestrator';
-}
-
 function hasActiveProviderStatusLoading(
   providerLoading: Partial<Record<CliProviderId, boolean>>
 ): boolean {
@@ -875,7 +871,7 @@ export interface CliInstallerSlice {
     providerId: CliProviderId,
     options?: CliProviderStatusFetchOptions
   ) => Promise<boolean>;
-  invalidateCliProviderModelCatalog: () => void;
+  invalidateCliProviderModelCatalog: (options?: { scopedOnly?: boolean }) => void;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
@@ -889,6 +885,7 @@ export interface CliInstallerSlice {
 
 let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
+const cliProviderStatusRequestEpochs = new WeakMap<Promise<boolean>, number>();
 let cliStatusEpoch = 0;
 let cliProviderStatusGeneration = 0;
 let cliProviderStatusRequestId = 0;
@@ -987,6 +984,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     }
 
     const epoch = ++cliStatusEpoch;
+    get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     const currentStatus = get().cliStatus;
     const initialStatus =
       currentStatus?.flavor === 'agent_teams_orchestrator'
@@ -1129,6 +1127,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (cliStatusInFlight) return cliStatusInFlight;
 
     const epoch = ++cliStatusEpoch;
+    get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<void>;
     // eslint-disable-next-line prefer-const
@@ -1191,14 +1190,15 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (get().cliStatus && !get().cliStatus?.installed) {
       return false;
     }
+    const requestEpoch = options?.epoch ?? cliStatusEpoch;
+    if (requestEpoch !== cliStatusEpoch) return false;
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const projectPath = options?.projectPath?.trim() || null;
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestKey);
-    if (inFlight) return inFlight;
+    if (inFlight && cliProviderStatusRequestEpochs.get(inFlight) === requestEpoch) return inFlight;
 
-    const requestEpoch = options?.epoch ?? cliStatusEpoch;
     const requestGeneration = cliProviderStatusGeneration;
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
@@ -1514,25 +1514,21 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     })();
 
     cliProviderStatusInFlight.set(requestKey, request);
+    cliProviderStatusRequestEpochs.set(request, requestEpoch);
     return request;
   },
 
-  invalidateCliProviderModelCatalog: () => {
-    const invalidatedProviderIds = new Set<CliProviderId>();
-    for (const requestKey of cliProviderStatusActiveRequestIds.keys()) {
-      invalidatedProviderIds.add(requestKey.split('\0', 1)[0] as CliProviderId);
-    }
-    cliProviderStatusGeneration += 1;
-    cliProviderStatusInFlight.clear();
-    cliProviderStatusActiveRequestIds.clear();
-    set((state) => {
-      const nextLoading = { ...state.cliProviderStatusLoading };
-      for (const providerId of invalidatedProviderIds) delete nextLoading[providerId];
-      return {
-        cliProviderStatusLoading: nextLoading,
-        cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
-      };
-    });
+  invalidateCliProviderModelCatalog: (options) => {
+    const scopedOnly = options?.scopedOnly === true;
+    if (!scopedOnly) cliProviderStatusGeneration += 1;
+    set(
+      invalidateCliProviderScopeReads(
+        get(),
+        cliProviderStatusInFlight,
+        cliProviderStatusActiveRequestIds,
+        scopedOnly
+      )
+    );
   },
 
   invalidateCliStatus: async () => {
@@ -1542,14 +1538,18 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
     cliProviderStatusActiveRequestIds.clear();
-    set((state) => ({
+    set({
       cliProviderStatusByScope: {},
-      cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
       cliStatusLoading: false,
       cliProviderStatusLoading: {},
-    }));
-    await api.cliInstaller?.invalidateStatus();
-    if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+    });
+    try {
+      await api.cliInstaller?.invalidateStatus();
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+    } finally {
+      // Even an older IPC completion can retire a cache read made before main invalidation.
+      get().invalidateCliProviderModelCatalog({ scopedOnly: true });
+    }
   },
   installCli: () => {
     set({
