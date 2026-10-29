@@ -580,7 +580,7 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
       status: 'skipped',
       reason: 'opencode_safe_lane_unavailable',
       items: [],
-      warnings: [expect.objectContaining({ code: 'opencode_runtime_unavailable' })],
+      warnings: [],
     });
     expect(resolve).not.toHaveBeenCalled();
     expect(getOpenCodeTranscript).not.toHaveBeenCalled();

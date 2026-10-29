@@ -396,6 +396,18 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
   ) {}
 
   async loadPreview(input: MemberLogPreviewSourceInput): Promise<MemberLogPreviewSourceResult> {
+    if (!input.laneId) {
+      return {
+        provider: this.provider,
+        status: 'skipped',
+        reason: 'opencode_safe_lane_unavailable',
+        items: [],
+        warnings: [],
+        truncated: false,
+        overflowCount: 0,
+      };
+    }
+
     const binding = await this.bindingReader.read(input);
     const currentResult = async (
       result: MemberLogPreviewSourceResult
@@ -465,18 +477,6 @@ export class OpenCodeMemberRuntimePreviewSource implements MemberLogPreviewSourc
     input: MemberLogPreviewSourceInput,
     binding: OpenCodeMemberTranscriptBinding
   ): Promise<MemberLogPreviewSourceResult> {
-    if (!input.laneId) {
-      return {
-        provider: this.provider,
-        status: 'skipped',
-        reason: 'opencode_safe_lane_unavailable',
-        items: [],
-        warnings: [unavailableOpenCodeTranscriptWarning(binding)],
-        truncated: false,
-        overflowCount: 0,
-      };
-    }
-
     const stoppedTranscript =
       binding.kind === 'bound' && binding.mode === 'stopped'
         ? await this.buildTranscriptResult(input, [], binding)

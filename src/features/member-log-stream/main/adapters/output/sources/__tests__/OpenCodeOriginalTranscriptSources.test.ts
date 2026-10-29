@@ -64,6 +64,46 @@ const activity = { list: async () => [] } as never;
 const ledger = { list: async () => [] };
 
 describe('original transcript source admission', () => {
+  it('silently skips preview without a lane before admission but warns for an unavailable OpenCode lane', async () => {
+    const read = vi.fn(() =>
+      Promise.resolve({ kind: 'unavailable', reason: 'missing', cacheKey: 'missing' } as const)
+    );
+    const isCurrent = vi.fn(() => Promise.resolve(true));
+    const getOpenCodeTranscript = vi.fn();
+    const resolve = vi.fn();
+    const preview = new OpenCodeMemberRuntimePreviewSource(
+      { getOpenCodeTranscript } as never,
+      { resolve },
+      ledger,
+      activity,
+      { read, isCurrent }
+    );
+
+    expect(await preview.loadPreview({ ...request, laneId: undefined })).toEqual({
+      provider: 'opencode_runtime',
+      status: 'skipped',
+      reason: 'opencode_safe_lane_unavailable',
+      items: [],
+      warnings: [],
+      truncated: false,
+      overflowCount: 0,
+    });
+    expect(read).not.toHaveBeenCalled();
+    expect(isCurrent).not.toHaveBeenCalled();
+    expect(resolve).not.toHaveBeenCalled();
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+
+    const unavailableLane = await preview.loadPreview({
+      ...request,
+      laneId: 'secondary:opencode:missing',
+    });
+    expect(read).toHaveBeenCalledOnce();
+    expect(unavailableLane.warnings).toContainEqual(
+      expect.objectContaining({ code: 'opencode_runtime_unavailable' })
+    );
+    expect(getOpenCodeTranscript).not.toHaveBeenCalled();
+  });
+
   it('passes every original selector for lead and member through both existing bridge calls', async () => {
     const b = bindings();
     const getOpenCodeTranscript = vi.fn(async () => projection);
