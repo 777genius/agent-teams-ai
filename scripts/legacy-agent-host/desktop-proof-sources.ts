@@ -1,4 +1,4 @@
-import { desktopProofSupplementarySources } from './desktop-proof-supplementary-sources.ts';
+import { desktopProofSupplementarySources, desktopProofProcessSources } from './desktop-proof-supplementary-sources.ts';
 import { desktopProofIntegratedSources } from './desktop-proof-integrated-sources.ts';
 import { desktopProofManagementSources } from './desktop-proof-management-sources.ts';
 
@@ -32,18 +32,7 @@ const desktopProofBaseSources = [
   'src/renderer/components/team/taskLogs/TaskActivitySection.tsx',
   'src/renderer/components/team/taskLogs/TaskLogStreamSection.tsx',
 
-  'scripts/legacy-agent-host/desktop-native-process-model.ts',
-  'scripts/legacy-agent-host/desktop-native-process-fixture.ts',
-  'scripts/legacy-agent-host/desktop-native-process-host.ts',
-  'scripts/legacy-agent-host/desktop-native-process-ui.ts',
-  'scripts/legacy-agent-host/desktop-controlled-process-fixture.ts',
-  'scripts/legacy-agent-host/qualify-process-cold-ui.ts',
-  'scripts/legacy-agent-host/fixtures/process-controlled-root.ts',
-  'scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts',
-  'scripts/legacy-agent-host/fixtures/process-service.ts',
-  'scripts/legacy-agent-host/fixtures/process-foreground-service.ts',
-  'scripts/legacy-agent-host/fixtures/process-notification-wrapper.json',
-  'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
+  ...desktopProofProcessSources,
 
   'scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts',

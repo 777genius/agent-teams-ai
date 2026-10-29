@@ -9,7 +9,8 @@ import { performance } from 'node:perf_hooks';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
-  readRendererBackendConnections, safeGroupSnapshot } from './desktop-backend-observations.ts';
+  readRendererBackendConnections, safeGroupSnapshot, settledGroupMembers, observeOriginalAppReap, groupMembers } from './desktop-backend-observations.ts';
+import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { readCapturedCandidateElectron } from './candidate-electron.ts';
 export interface DesktopCdpPort {
@@ -279,4 +280,75 @@ export async function observePackedAppRelaunch(options: {
     proof.status = 'PASS';
   } catch (error) { proof.failure = error instanceof Error ? error.message.slice(0, 2000) : 'unknown successor'; throw error; }
   finally { await bounded(successor?.close() ?? Promise.resolve(), 3000, 'disconnect observed successor').catch(() => undefined); }
+}
+
+/** Existing final captured app/group cleanup; preserves original identity and signal gates. */
+export async function cleanupCapturedDesktopApp(options: {
+  app: ChildProcess;
+  group: number;
+  fixture: Pick<Fixture, 'node' | 'hostEntry'>;
+  evidence: Evidence;
+  appIdentity: string;
+  hostPid: number | undefined;
+  packedRelaunchMode: boolean;
+}) {
+  const { app, group, fixture, evidence, appIdentity, packedRelaunchMode } = options;
+  let hostPid = options.hostPid;
+  let remaining: ProcessIdentity[] | null = null;
+  let cleanupFailure: string | undefined;
+  let capturedHostAbsent: boolean | null = null;
+  try {
+    // Yield for ChildProcess exit/reaping before inspecting a just-closed dev wrapper.
+    await tick();
+    const observationDeadline = Date.now() + 3000;
+    remaining = group > 0 ? await settledGroupMembers(group, observationDeadline) : [];
+    evidence.beforeHarnessCleanup = remaining;
+    if (hostPid === undefined) {
+      const hosts = remaining.filter(
+        (row) => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
+      );
+      if (hosts.length === 1) {
+        hostPid = hosts[0]!.pid;
+        evidence.hostChildOnFailure = {
+          ...hosts[0],
+          command: `${fixture.node} ${fixture.hostEntry}`,
+          observedBeforeHarnessCleanup: true,
+        };
+      }
+    }
+    if (remaining.length) {
+      assert.ok(!packedRelaunchMode, 'observer-only app relaunch keeps UNKNOWN debt; no old-group signal or retry');
+      // A numeric PGID alone never authorizes signaling after its leader exits.
+      assert.ok(
+        appIdentity && remaining.some((row) => row.pid === group),
+        'captured leader absent; retain cleanup debt without signaling'
+      );
+      const observedIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], {
+        encoding: 'utf8', timeout: 3000,
+      }).trim();
+      if (observedIdentity !== appIdentity && hostPid !== undefined) {
+        const reaped = await observeOriginalAppReap({ child: app, group, hostPid,
+          initialMembers: remaining, expectedIdentity: appIdentity, observedIdentity,
+          deadline: observationDeadline });
+        evidence.originalAppReap = reaped;
+        if (reaped.settled) remaining = reaped.remaining!;
+      }
+      if (remaining.length) {
+        assert.equal(observedIdentity, appIdentity, 'captured invocation identity remains current');
+        try {
+          process.kill(-group, 'SIGTERM');
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+        }
+        const deadline = Date.now() + 30_000;
+        while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();
+      }
+    }
+    capturedHostAbsent =
+      hostPid === undefined ? null : !processTable().some((row) => row.pid === hostPid);
+  } catch (error) {
+    cleanupFailure =
+      error instanceof Error ? error.message.slice(0, 4000) : 'unclassified cleanup failure';
+  }
+  return { remaining, cleanupFailure, capturedHostAbsent, hostPid };
 }

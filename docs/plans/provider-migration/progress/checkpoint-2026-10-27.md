@@ -6977,3 +6977,69 @@ Full Stage1 remains pending positive M19 and final M01–M19 mapping/review/hand
 Real auth, other native OS tuples and release/default activation remain separate.
 PR stays Draft; Stage1P0–P8/M01–M19, existing UI, OpenCodeV1 only. No Stage2/V2 Host,
 merge, release, publication or default activation.
+
+
+### 29 October: original8b6 failures preserved; bounded corrective TEST delta
+
+Original manual [CI40913326405](https://github.com/777genius/agent-teams-ai/actions/runs/40913326405),
+attempt1, binds `8b6aa18889f337cabc6970e8ec7173b6cdd2f292`. It does not qualify the
+candidate: validate123589577982 fails the unchanged source-size guard because
+`desktop-backend-smoke.ts` has825 physical lines against800. Full qualification
+123599186020 runs MODE_FULL=true/MODE_REUSE=false and correctly refuses failed
+validate. Four fresh original root-shard logs independently reproduce24,104PASS /
+98SKIP /0FAIL; equal451 counts are not reused. Automatic DraftCI40913289102 has
+both the expected MODE_FULL=false full-gate refusal and a genuine Fast-feedback
+source-size failure. Its overall failure is not described as only Draft policy.
+
+All eleven original Source jobs subsequently report SUCCESS, and both manual
+CodeQL analyses report SUCCESS. This is an8b6 job-level Source statement; the
+nine other Source artifact audits were not completed for the failed candidate,
+and no451 raw acceptance is transferred to8b6. Mixed/Codex/H3 and P7 require their
+separate original artifact audits and precise limits.
+
+Original P7 job123586847107 has separate outcomes. Its kernel, normal SDK and
+packed-control step completes successfully; immutable original `p7-receipt.json`
+SHA256 `6cde09891c22ea3cd4bc285fad64a5106a5478f6da269ccbcfb884a4adf395a4`
+reports PASS/sourceFreezePASS. The later controlled source proof is separate:
+`cold-ui-runner-oracle.json` SHA256
+`ae67ca705826e9d5a45ae2becde933048e5f0d0962f914315dfa451a3237d8d4`
+remains INCOMPLETE and confirms originalP7InputsUnchanged=true.
+
+The controlled original Stop is admitted once and its exact original command
+`ffd9cdb0-841e-4e35-986f-0b14d354d244` reaches completed/native observed-absent /
+signalAccepted=true. This does not qualify the whole workflow: the next read
+fails `UI read timed out: original stopped process props after one UI Stop; no mutation retry`.
+Original Desktop receipt SHA256
+`3ed4de54120d30057a94db33062d3b4f482d2951287b56c2bda11bbc34b79a79`
+and controlled receipt remain INCOMPLETE. No second Stop, retry, receipt rewrite
+or retrospective PASS is performed. The correction is restricted to the existing
+TEST observation of the current stopped row; product/native command guards and
+the positive stopped-state criterion remain unchanged. Source-size repair extracts
+cohesive TEST cleanup from the existing harness; the800-line gate is not relaxed.
+
+Bounded proof upload finalized successfully before the full upload failed:
+artifact12916065739,1,677,991 bytes, ZIP SHA256
+`3f774b3619aae61e465733533fe2e31ff5f5e00187aca53d53efac949ad31a8f`.
+The full original upload reached3,036,676,096 uploaded bytes and then its action's
+Node24 process exhausted a roughly2,048MB V8 heap. It did not finalize a full
+artifact ID or digest; no such completed artifact or full byte audit is claimed.
+The raw runner reports macOS arm64, namespace machine type6x14. The minimal
+reviewed delivery correction sets `NODE_OPTIONS: --max-old-space-size=4096` only
+on the existing full-upload step, after native/controlled execution. Paths,
+artifact identity policy, bounded upload, job selection and qualification guards
+are unchanged. A future successful full upload remains pending actual execution.
+
+The small `desktop-native-process-ui.test.ts` stopped-row observation regression
+joins the existing controlled-root cleanup regression in the same post-P7 TEST
+step; Source11 does not repeat them.
+No new workflow job, dispatch flag, model/native SDK action or product feature
+is introduced. After affected local checks/review, the new selected head requires
+one original existing combined manual CI plus CodeQL and original raw audit;
+there is no blind rerun of failed8b6 or replay of its original business action.
+
+Original451 audited scoped PASS remains bound to451 and unchanged. Historical
+36dfe INCOMPLETE and original root911 SDK-custody HOLD remain immutable. Full
+Stage1/M19 is not declared complete from the completed Stop substep or old gates.
+Real auth, other native OS tuples and release/default activation remain separate.
+Scope stays Stage1P0–P8/M01–M19, existing UI and OpenCodeV1 only; PR Draft,
+no Stage2/V2 Host integration, merge, release or publication.

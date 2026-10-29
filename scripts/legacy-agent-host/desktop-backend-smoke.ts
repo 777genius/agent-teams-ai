@@ -2,7 +2,7 @@ import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-s
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { checkpoint } from './desktop-resume-records.ts';
-import { connectCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding } from './desktop-captured-app.ts';
+import { connectCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
 import { observeDesktopStartup, requestObservedDesktopClose } from './startup-passive-observer.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
@@ -62,8 +62,6 @@ import {
   groupMembers,
   portOccupied,
   processTable,
-  settledGroupMembers,
-  observeOriginalAppReap,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
@@ -658,62 +656,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.quitRequested = quitRequested;
     await verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence);
     if (cdp) await bounded(cdp.close(), 3000, 'disconnect test renderer').catch(() => undefined);
-    let remaining: ProcessIdentity[] | null = null;
-    let cleanupFailure: string | undefined;
-    let capturedHostAbsent: boolean | null = null;
-    try {
-      // Yield for ChildProcess exit/reaping before inspecting a just-closed dev wrapper.
-      await tick();
-      const observationDeadline = Date.now() + 3000;
-      remaining = group > 0 ? await settledGroupMembers(group, observationDeadline) : [];
-      evidence.beforeHarnessCleanup = remaining;
-      if (hostPid === undefined) {
-        const hosts = remaining.filter(
-          (row) => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
-        );
-        if (hosts.length === 1) {
-          hostPid = hosts[0]!.pid;
-          evidence.hostChildOnFailure = {
-            ...hosts[0],
-            command: `${fixture.node} ${fixture.hostEntry}`,
-            observedBeforeHarnessCleanup: true,
-          };
-        }
-      }
-      if (remaining.length) {
-        assert.ok(!packedRelaunchMode, 'observer-only app relaunch keeps UNKNOWN debt; no old-group signal or retry');
-        // A numeric PGID alone never authorizes signaling after its leader exits.
-        assert.ok(
-          appIdentity && remaining.some((row) => row.pid === group),
-          'captured leader absent; retain cleanup debt without signaling'
-        );
-        const observedIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], {
-          encoding: 'utf8', timeout: 3000,
-        }).trim();
-        if (observedIdentity !== appIdentity && hostPid !== undefined) {
-          const reaped = await observeOriginalAppReap({ child: app, group, hostPid,
-            initialMembers: remaining, expectedIdentity: appIdentity, observedIdentity,
-            deadline: observationDeadline });
-          evidence.originalAppReap = reaped;
-          if (reaped.settled) remaining = reaped.remaining!;
-        }
-        if (remaining.length) {
-          assert.equal(observedIdentity, appIdentity, 'captured invocation identity remains current');
-          try {
-            process.kill(-group, 'SIGTERM');
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-          }
-          const deadline = Date.now() + 30_000;
-          while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();
-        }
-      }
-      capturedHostAbsent =
-        hostPid === undefined ? null : !processTable().some((row) => row.pid === hostPid);
-    } catch (error) {
-      cleanupFailure =
-        error instanceof Error ? error.message.slice(0, 4000) : 'unclassified cleanup failure';
-    }
+    const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
+      await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
+    hostPid = cleanedHostPid;
     if (evidence.coldResumeBoundary && object(evidence.coldResumeBoundary).secondEpoch) object(evidence.coldResumeBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),

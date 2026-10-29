@@ -1,3 +1,20 @@
+/** Existing finite process proof closure; spread at its original roster position. */
+export const desktopProofProcessSources = [
+  'scripts/legacy-agent-host/desktop-native-process-model.ts',
+  'scripts/legacy-agent-host/desktop-native-process-fixture.ts',
+  'scripts/legacy-agent-host/desktop-native-process-host.ts',
+  'scripts/legacy-agent-host/desktop-native-process-ui.ts',
+  'scripts/legacy-agent-host/desktop-native-process-ui.test.ts',
+  'scripts/legacy-agent-host/desktop-controlled-process-fixture.ts',
+  'scripts/legacy-agent-host/qualify-process-cold-ui.ts',
+  'scripts/legacy-agent-host/fixtures/process-controlled-root.ts',
+  'scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts',
+  'scripts/legacy-agent-host/fixtures/process-service.ts',
+  'scripts/legacy-agent-host/fixtures/process-foreground-service.ts',
+  'scripts/legacy-agent-host/fixtures/process-notification-wrapper.json',
+  'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
+];
+
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts',

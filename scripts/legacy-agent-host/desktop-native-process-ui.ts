@@ -27,6 +27,24 @@ async function stopReceipts(root: string) {
   );
   return records.filter((r) => r.family === 'process' && r.operation === 'terminate');
 }
+export function desktopProcessOwnerExpression(selection: string, id: string, reference: string | null) {
+  return `(() => {
+    const section=document.querySelector('[data-section-id="processes"]');if(!section)return null;
+    for(const node of [section,...section.querySelectorAll('*')]) {
+      const key=Object.keys(node).find(k=>k.startsWith('__reactFiber$'));let fiber=key?node[key]:null;
+      for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return) {
+        for(const f of [fiber,fiber.alternate]) {
+          const p=f?.memoizedProps;if(!p||p.teamName!==${desktopJsLiteral(selection)}||!Array.isArray(p.processes))continue;
+          const rows=p.processes.filter(r=>r.id===${desktopJsLiteral(id)}${reference === null
+            ? "&&r.observation==='absent'&&typeof r.stoppedAt==='string'&&r.canTerminate===false&&!r.pendingStop"
+            : '&&r.processRef===' + desktopJsLiteral(reference)});
+          if(rows.length===1)return {teamName:p.teamName,process:rows[0],isTeamAlive:p.isTeamAlive??null};
+        }
+      }
+    } return null;
+  })()`;
+}
+
 /** Cold owner UI read and one original Stop. No DOM handlers, store mutations, or native replay. */
 export async function qualifyColdProcessUi(
   cdp: UiCdpPort,
@@ -120,19 +138,7 @@ export async function qualifyColdProcessUi(
       '[data-section-id="processes"] button[aria-label="Expand section"]',
       'expand original process section'
     );
-  const ownershipExpression = (reference: string | null = processRef) => `(() => {
-    const section=document.querySelector('[data-section-id="processes"]');if(!section)return null;
-    for(const node of [section,...section.querySelectorAll('*')]) {
-      const key=Object.keys(node).find(k=>k.startsWith('__reactFiber$'));let fiber=key?node[key]:null;
-      for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return) {
-        for(const f of [fiber,fiber.alternate]) {
-          const p=f?.memoizedProps;if(!p||p.teamName!==${desktopJsLiteral(selection)}||!Array.isArray(p.processes))continue;
-          const rows=p.processes.filter(r=>r.id===${desktopJsLiteral(id)}${reference === null ? '' : '&&r.processRef===' + desktopJsLiteral(reference)});
-          if(rows.length===1)return {teamName:p.teamName,process:rows[0],isTeamAlive:p.isTeamAlive??null};
-        }
-      }
-    } return null;
-  })()`;
+  const ownershipExpression = (reference: string | null = processRef) => desktopProcessOwnerExpression(selection, id, reference);
   const owner = row(
     await ui.waitRead(
       ownershipExpression(),

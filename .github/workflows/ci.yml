@@ -1008,7 +1008,7 @@ jobs:
           LEGACY_PROCESS_COLD_UI_GO: '1'
         run: |
           set -euo pipefail
-          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --test scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --test scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts scripts/legacy-agent-host/desktop-native-process-ui.test.ts
           original_p7_log_sha256="$(shasum -a 256 "$RUNNER_TEMP/stage1-process-qualification.log" | cut -d ' ' -f 1)"
           resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/qualify-process-cold-ui.ts "$RUNNER_TEMP/stage1-process-qualification.log" "$original_p7_log_sha256" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification-cold-ui.log"
       - name: Preserve original process and packed proof receipts separately
@@ -1040,6 +1040,8 @@ jobs:
       - name: Preserve exact TEST inputs, original receipts and incomplete custody
         if: always()
         uses: actions/upload-artifact@v4
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         with:
           name: stage1-process-qualification-${{ github.sha }}
           retention-days: 14
