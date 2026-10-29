@@ -28,8 +28,9 @@ and packaged E2E, and Anthropic-compatible packaged E2E defer automatic PR jobs
 while the PR is draft. `ready_for_review` runs them for the current diff when
 their path filters match. Converting back to draft cancels superseded PR runs.
 Announcement validation continues on drafts because it validates publishable
-content. All these workflows cancel obsolete runs for the same PR only;
-main, scheduled and manually dispatched runs remain independent.
+content. All these workflows follow [run supersession](#run-supersession):
+a newer revision of the same PR cancels its obsolete runs, while main,
+scheduled and manually dispatched runs remain independent.
 
 Use **Actions → the relevant workflow → Run workflow** for an early smoke or
 packaging check while drafting. Manual runs and scheduled security scans still
@@ -37,3 +38,44 @@ run regardless of draft state. Keep `ci:full` for forcing full change scope on a
 ready PR; it does not turn a draft into a merge-qualified PR. Do not use
 `[skip ci]`: it suppresses the workflow that reports the required merge check.
 There is no line-count-based bypass for small changes to runtime or shared code.
+
+## Run supersession
+
+Workflow concurrency decides which runs a newer run may cancel. Automatic check
+workflows use one canonical expression, defined in
+`test/workflows/runSupersession.mts`. `test/workflows/runSupersession.test.ts`
+evaluates the concurrency of every workflow for simulated events and fails for a
+workflow that has no assigned policy.
+
+| Event                                                   | Group identity                | Cancels older runs in the group                                               |
+| ------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
+| `pull_request`                                          | Workflow, event and PR number | Yes: a newer run for the same PR stops its queued and running checks          |
+| `push` to another branch (not default, not `release/*`) | Workflow, event and ref       | Yes: older runs of the same branch                                            |
+| `push` to the default branch, `release/*` or a tag      | Workflow, event and run ID    | No: every commit keeps its own evidence, such as the announcement range check |
+| `schedule`, `workflow_dispatch`                         | Workflow, event and run ID    | No: manual runs never cancel each other                                       |
+| `merge_group`                                           | Workflow, event and queue ref | No                                                                            |
+
+PR groups use the PR number rather than the head branch, so fork PRs and a fork
+branch named `main` cannot share a group with pushes. Including the event name
+keeps a PR number, branch name and run ID from colliding.
+
+Explicit variants:
+
+- `CI` appends an edit suffix: each `edited` run gets its own group and never
+  cancels code checks, as before.
+- `Electron packaged CI` runs only for PRs and isolates title/body edits the
+  same way.
+- Landing deployment keeps one cancelling group per ref, so the latest `main`
+  state publishes and an older deployment cannot overwrite it.
+- Release, signing and draft recovery workflows queue per release tag or ref and
+  never cancel running work. GitHub keeps at most one pending run per group, so
+  a third queued operation replaces the pending second one.
+- ReviewRouter, manual native updater runs and reusable workflows declare no
+  workflow-level group. A called workflow sees the caller's `github` context, so
+  the same expression there would share the caller's group and deadlock.
+
+Cancellation never passes the required check. `Full qualification` keeps its
+static name and runs only `if: always() && !cancelled()`: a cancelled run reports
+it as cancelled, never skipped or successful, and the PR waits for a newer run.
+Job-level `always()` conditions in cancellable workflows must include
+`!cancelled()`, so a cancelled run does not start further jobs.

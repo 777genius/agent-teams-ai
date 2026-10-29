@@ -32,10 +32,10 @@ permissions:
   contents: read
   actions: read
 
-# Supersede automatic checks; keep each manual operation independent.
+# Canonical run supersession; see docs/ci-qualification.md#run-supersession.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event_name == 'push' && github.ref || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
   tooling-quality:
@@ -139,7 +139,7 @@ jobs:
 
   windows-predecessor:
     needs: [verified-windows-inputs, legacy-windows-inputs]
-    if: always() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success')
+    if: ${{ !cancelled() && (needs.verified-windows-inputs.result == 'success' || needs.legacy-windows-inputs.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
