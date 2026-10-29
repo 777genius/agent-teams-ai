@@ -98,6 +98,8 @@ describe('TeamLaunchStateStore', () => {
       ...current.members.Builder!,
       providerId: 'opencode',
       laneId: 'primary',
+      laneKind: 'primary',
+      laneOwnerProviderId: 'opencode',
       runtimeRunId: 'sdk-original',
       runtimeSessionId: 'ses_member',
     };
