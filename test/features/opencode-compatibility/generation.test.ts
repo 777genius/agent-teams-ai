@@ -1,5 +1,6 @@
 import {
   classifyNativeVersion,
+  getLatestQualifiedOpenCodeV2Version,
   isRecognizedOpenCodeRuntimeVersion,
   negotiateOpenCodeProtocol,
 } from '@features/opencode-compatibility';
@@ -47,7 +48,12 @@ function forEachPinnedPlatform(
       const contract = readOpenCodeV2Contract(runtimeLock.opencodeV2)!;
       const engine = (raw: string): string | null => {
         const version = raw.replace(/^opencode v/, '').trim();
-        if (!openCodeV2ContractCovers(contract, version)) return null;
+        if (
+          !Object.hasOwn(runtimeLock.assets, key) ||
+          !Object.hasOwn(runtimeLock.opencodeV2Delivery, key) ||
+          !openCodeV2ContractCovers(contract, version)
+        )
+          return null;
         return pinnedQualified[key].includes(version)
           ? version
           : flexible
@@ -192,6 +198,71 @@ describe('pinned OpenCode V2 contract', () => {
   ] as const)('derives platform keys for a %s', (_name, environment, keys) => {
     expect(openCodeV2PlatformKeys(environment)).toEqual(keys);
   });
+
+  it('offers no engine on unshipped Linux ARM64 in either main or preload target selection', () => {
+    const original = { platform: process.platform, arch: process.arch };
+    try {
+      vi.stubGlobal('electronAPI', undefined);
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+      Object.defineProperty(process, 'arch', { value: 'arm64', configurable: true });
+      expect(getLatestQualifiedOpenCodeV2Version('linux', 'arm64')).toBeNull();
+      for (const version of ['2.0.32', '2.99.0'])
+        expect(classifyNativeVersion(version)).toMatchObject({
+          kind: 'recognized',
+          generation: 'v2',
+          productionEligible: false,
+        });
+      vi.stubGlobal('electronAPI', { openCodeRuntime: { platform: 'linux', arch: 'x64' } });
+      expect(classifyNativeVersion('2.99.0')).toMatchObject({
+        apiDialect: 'v2-2.1.4',
+        productionEligible: true,
+      });
+      vi.stubGlobal('electronAPI', { openCodeRuntime: { platform: 'linux', arch: 'arm64' } });
+      expect(classifyNativeVersion('2.99.0')).toMatchObject({ productionEligible: false });
+      vi.stubGlobal('electronAPI', undefined);
+      vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (X11; Linux)' });
+      Object.defineProperty(process, 'platform', { value: undefined, configurable: true });
+      Object.defineProperty(process, 'arch', { value: undefined, configurable: true });
+      const uaOnly = classifyNativeVersion('2.99.0');
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+      Object.defineProperty(process, 'arch', { value: 'arm64', configurable: true });
+      expect(uaOnly).toMatchObject({ productionEligible: false });
+    } finally {
+      Object.defineProperty(process, 'platform', { value: original.platform, configurable: true });
+      Object.defineProperty(process, 'arch', { value: original.arch, configurable: true });
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each([null, {}, { 'linux-arm64': null }])(
+    'does not treat invalid present delivery metadata as legacy absence (%j)',
+    async (delivery) => {
+      vi.resetModules();
+      const platformKey = `${process.platform}-${process.arch}`;
+      vi.doMock('../../../runtime.lock.json', () => ({
+        default: {
+          assets: { [platformKey]: { file: 'TEST-base-archive' } },
+          opencodeV2: {
+            range: { minimum: '2.0.0', below: '3.0.0' },
+            qualified: { [platformKey]: ['2.0.32'] },
+          },
+          opencodeV2Delivery: delivery,
+        },
+      }));
+      try {
+        const pinned =
+          await import('../../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract');
+        expect(
+          pinned.getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)
+        ).toBeNull();
+        expect(pinned.getOpenCodeV2EngineVersion('2.0.32')).toBeNull();
+        expect(pinned.pinnedRuntimeShipsOpenCodeV2()).toBe(false);
+      } finally {
+        vi.doUnmock('../../../runtime.lock.json');
+        vi.resetModules();
+      }
+    }
+  );
 
   it('recognizes no V2 version when the pinned contract is malformed', async () => {
     vi.resetModules();

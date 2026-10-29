@@ -16,6 +16,9 @@ describe('OpenCode installation policy', () => {
     expect(chooseOpenCodeInstallGeneration(undefined, '2.9.0', '2.1.4')).toBe('v2');
     expect(chooseOpenCodeInstallGeneration('v1', '2.1.4', '2.1.4')).toBe('v1');
     expect(getLatestQualifiedOpenCodeV2Version('win32', 'arm64')).toBeNull();
+    const unshipped = getLatestQualifiedOpenCodeV2Version('linux', 'arm64');
+    expect(unshipped).toBeNull();
+    expect(chooseOpenCodeInstallGeneration(undefined, undefined, unshipped)).toBe('v1');
     expect(getLatestQualifiedOpenCodeV2Version('unsupported', 'x64')).toBeNull();
   });
 
