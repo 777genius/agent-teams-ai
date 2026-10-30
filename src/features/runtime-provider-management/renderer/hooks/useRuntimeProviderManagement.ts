@@ -810,8 +810,7 @@ export function useRuntimeProviderManagement(
             cursor: input.cursor ?? null,
             requestGroupId: `provider-model-picker:${options.runtimeId}:${projectContext.path ?? ''}:${providerId}`,
           }),
-          'Provider models load timed out',
-          100_000
+          'Provider models load timed out'
         );
         if (!requestIsCurrent()) {
           return;

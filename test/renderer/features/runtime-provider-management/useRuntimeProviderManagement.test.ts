@@ -3359,6 +3359,96 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it.each(['complete', 'timeout'] as const)(
+    'preserves the full slow model-picker allowance: %s',
+    async (outcome) => {
+      vi.useFakeTimers();
+      let finishModels!: (value: unknown) => void;
+      const loadModels = vi.fn(
+        () =>
+          new Promise<unknown>((resolve) => {
+            finishModels = resolve;
+          })
+      );
+      const page = {
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        models: {
+          runtimeId: 'opencode',
+          providerId: 'openai',
+          models: [
+            {
+              modelId: 'openai/TEST-slow-model',
+              providerId: 'openai',
+              displayName: 'Slow model',
+              sourceLabel: 'OpenCode catalog',
+              free: false,
+              default: false,
+              availability: 'available',
+            },
+          ],
+          defaultModelId: null,
+          diagnostics: [],
+        },
+      };
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            loadView: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              view: createRuntimeView([createOpenAiLocalProvider()]),
+            })),
+            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
+            loadModels,
+          },
+        } as unknown as ElectronAPI,
+      });
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(React.createElement(EnabledHarness, { projectPath: '/TEST/slow-picker' }));
+        });
+        await act(async () => {
+          await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1));
+        });
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(180_001);
+        });
+        expect(state?.modelsLoading).toBe(true);
+        expect(state?.modelsError).toBeNull();
+        if (outcome === 'timeout') {
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(150_000);
+          });
+          expect(state?.modelsLoading).toBe(false);
+          expect(state?.modelsError).toBe('Provider models load timed out');
+        }
+        await act(async () => {
+          finishModels(page);
+          await Promise.resolve();
+        });
+        if (outcome === 'complete') {
+          expect(state?.models.map((model) => model.modelId)).toEqual(['openai/TEST-slow-model']);
+          expect(state?.modelsLoading).toBe(false);
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(330_000);
+          });
+          expect(state?.modelsError).toBeNull();
+        } else {
+          expect(state?.models).toEqual([]);
+          expect(state?.modelsError).toBe('Provider models load timed out');
+        }
+      } finally {
+        await act(async () => {
+          root.unmount();
+        });
+        vi.useRealTimers();
+      }
+    }
+  );
+
   it('clears model loading when switching from model picker to setup form', async () => {
     const localProvider = createOpenAiLocalProvider();
     let resolveModels: ((value: unknown) => void) | null = null;
