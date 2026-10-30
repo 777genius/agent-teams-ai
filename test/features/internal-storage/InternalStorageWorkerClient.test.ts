@@ -42,7 +42,17 @@ const fixture = vi.hoisted(() => {
     return { close: closeProbe };
   });
   const requireModule = vi.fn(() => nativeDriver);
-  return { workers, construct, nativeDriver, closeProbe, requireModule };
+  const warn = vi.fn();
+  return { workers, construct, nativeDriver, closeProbe, requireModule, warn };
+});
+
+vi.mock('@shared/utils/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared/utils/logger')>();
+  return {
+    ...actual,
+    createLogger: (namespace: string) =>
+      Object.assign(actual.createLogger(namespace), { warn: fixture.warn }),
+  };
 });
 
 vi.mock('node:module', async () => {
@@ -236,5 +246,35 @@ describe('InternalStorageWorkerClient physical retirement', () => {
     expect(worker.terminate).toHaveBeenCalledTimes(1);
     worker.finishTermination(0);
     await closing;
+  });
+
+  // terminate() reports exit code 1, so a worker we stop ourselves must not
+  // look like a crash in the log.
+  it('does not warn when a worker stopped on purpose exits with code 1', async () => {
+    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
+    const first = client.ping();
+    const worker = fixture.workers[0];
+    worker.reply(0, { backend: 'sqlite' });
+    await first;
+    const closing = client.close();
+    worker.reply(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    worker.emit('exit', 1);
+    worker.finishTermination(1);
+    await closing;
+    expect(fixture.warn).not.toHaveBeenCalled();
+  });
+
+  it('warns when the live worker exits with a non-zero code on its own', async () => {
+    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
+    const pending = client.ping().catch((error: unknown) => error);
+    const worker = fixture.workers[0];
+    worker.emit('exit', 1);
+    expect(await pending).toMatchObject({ execution: 'unknown' });
+    expect(worker.terminate).not.toHaveBeenCalled();
+    expect(fixture.warn).toHaveBeenCalledExactlyOnceWith(
+      'internal-storage worker exited with code 1'
+    );
   });
 });
