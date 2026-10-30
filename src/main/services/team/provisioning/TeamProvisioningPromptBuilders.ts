@@ -865,7 +865,7 @@ export function buildPersistentLeadContext(opts: {
   const teammateRoster = getTeammateRosterMembers(members);
   const rosterRulesBlock =
     teammateRoster.length > 0
-      ? `\n\n${buildLeadRosterIntegrityRules(teammateRoster.map((member) => member.name))}`
+      ? `\n\n${buildLeadRosterIntegrityRules(teamName, teammateRoster)}`
       : '';
 
   return `${languageInstruction}
