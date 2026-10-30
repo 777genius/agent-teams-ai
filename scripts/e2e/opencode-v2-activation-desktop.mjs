@@ -193,10 +193,34 @@ async function snapshot(name) {
   await writeFile(path.join(evidence, name + '.png'), Buffer.from(image.data, 'base64'));
 }
 async function clickControl(selector) {
-  await cdp.inspect(
-    `document.querySelector(${JSON.stringify(selector)})?.scrollIntoView({ block: 'center' }); true`
-  );
-  await cdp.click(selector);
+  const point = await cdp.inspect(`(() => {
+    const targets = [...document.querySelectorAll(${JSON.stringify(selector)})]
+      .filter(element => element.getClientRects().length > 0);
+    if (targets.length !== 1) throw new Error('Expected one visible control');
+    const element = targets[0];
+    if (element.disabled) throw new Error('Control is disabled');
+    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+    const rect = element.getBoundingClientRect();
+    const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    const interactive = 'button, a, input, select, textarea, [role="button"]';
+    if (!element.contains(hit) || hit.closest(interactive) !== element.closest(interactive))
+      throw new Error('Control is obscured or targets a different nested action');
+    return { x, y };
+  })()`);
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    ...point,
+    button: 'left',
+    clickCount: 1,
+  });
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    ...point,
+    button: 'left',
+    clickCount: 1,
+  });
 }
 async function clickVisibleButtonByText(label) {
   const point = await cdp.inspect(`(() => {
@@ -567,14 +591,27 @@ try {
   })()`)
   );
   await clickControl('[data-testid="runtime-manage-opencode"]');
-  await wait(
-    'anonymous directory row',
+  // The dialog first paints a curated summary with a key-Connect action.
+  // Its full native catalog then exposes anonymous browsing. A clickable summary
+  // row is not yet the free-model action established by the read-only IPC above.
+  assert.equal(typeof freeProvider.detail, 'string');
+  assert(freeProvider.detail.length > 0);
+  const anonymousRow = await wait(
+    'full anonymous directory row',
     () =>
-      cdp.inspect(`
-    document.querySelector('[data-testid="runtime-provider-directory-row-opencode"]')?.getAttribute('role') === 'button'`),
+      cdp.inspect(`(() => {
+    const row = document.querySelector('[data-testid="runtime-provider-directory-row-opencode"]');
+    const header = row?.querySelector('[data-testid="runtime-provider-directory-row-opencode-header"]');
+    const catalog = row?.closest('[data-testid="runtime-provider-catalog-list"]');
+    return row?.getAttribute('role') === 'button' && header?.getClientRects().length > 0 &&
+      catalog?.getAttribute('aria-busy') === 'false' &&
+      header.innerText.includes(${JSON.stringify(freeProvider.detail)})
+        ? { text: header.innerText, catalogBusy: catalog.getAttribute('aria-busy') } : null;
+  })()`),
     120_000
   );
-  await clickControl('[data-testid="runtime-provider-directory-row-opencode"]');
+  await save('anonymous-directory-before-click.json', anonymousRow);
+  await clickControl('[data-testid="runtime-provider-directory-row-opencode-header"]');
   const testSelector = '[data-testid="runtime-provider-model-test-opencode/big-pickle"]';
   await wait(
     'enabled anonymous model Test',
@@ -584,6 +621,13 @@ try {
     return button && !button.disabled && button.getClientRects().length > 0;
   })()`),
     120_000
+  );
+  assert.equal(
+    await cdp.inspect(
+      `!!document.querySelector('[data-testid="runtime-provider-directory-row-opencode"] input[type="password"]')`
+    ),
+    false,
+    'Browsing anonymous models must not open the optional API-key form'
   );
   await clickControl(testSelector);
   const verifiedText = await wait(
