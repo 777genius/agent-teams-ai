@@ -1,4 +1,3 @@
-import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
@@ -8,6 +7,7 @@ import {
   recordProviderConnectionEnd,
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
+import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 
 import {
   getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,

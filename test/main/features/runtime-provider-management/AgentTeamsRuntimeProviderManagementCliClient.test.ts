@@ -308,7 +308,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           expect(details.upstreamReportId).toBe('upstream-fixed');
           expect(details.summary).toBe('Catalog unavailable token=[redacted]');
           expect(details.binaryPath).toBe('/repo/cli-dev');
-          expect(details.timeoutMs).toBe(90_000);
+          expect(details.timeoutMs).toBe(300_000);
           expect(details.durationMs).not.toBe(987654321);
           expect(first.error?.message).toBe('api_key=[redacted]');
           expect(details.hints?.join(' ')).toContain('inner failure');
@@ -1648,7 +1648,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           stage: 'runtime_command',
           exitCode: form === 'json-zero' ? 0 : 7,
           stderrPreview: finalStderr,
-          timeoutMs: 90_000,
+          timeoutMs: 300_000,
           timedOut: false,
         });
         expect(error.diagnostics?.upstreamReportId).toBe(
@@ -1909,7 +1909,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       expect.arrayContaining(['runtime', 'providers', 'view']),
       expect.any(Object)
     );
-    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 90_000 });
+    expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ timeout: 300_000 });
   });
 
   it('explains OpenCode CLI help output instead of returning a generic JSON error', async () => {

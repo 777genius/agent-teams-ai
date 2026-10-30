@@ -1,8 +1,8 @@
-import { PROVIDER_CLI_TIMEOUT_MS as COMMAND_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { PROVIDER_CLI_TIMEOUT_MS as COMMAND_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 
 import { getRuntimeProviderConnectTimeoutMs as connectTimeoutMs } from '../../core/domain';
 
