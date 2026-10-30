@@ -13,6 +13,7 @@ import {
   packagedOrphanObservation,
 } from './packaged.mjs';
 import { settingsRefreshFailureSummary } from './packaged-verify.mjs';
+import { assertV2SupportWarmReuse, prepareV2SupportRepair } from './v2-support-repair.mjs';
 import {
   processes,
   listeners,
@@ -22,7 +23,7 @@ import {
 } from './platform.mjs';
 
 const args = process.argv.slice(2);
-packagedArguments(args); // Validate before creating a profile or launching anything.
+const options = packagedArguments(args); // Validate before creating a profile or launching anything.
 const harness = fileURLToPath(new URL('../opencode-diagnostics-desktop.mjs', import.meta.url));
 const command = (mode, rest, timeout = 30000) =>
   spawnSync(process.execPath, [harness, mode, ...rest], {
@@ -37,12 +38,29 @@ const root = seed.stdout.trim();
 console.log(`Packaged artifacts/profile: ${root}`);
 const manifestPath = path.join(root, 'manifest.json');
 const results = [];
+const runs = ['cold', 'warm-1', 'warm-2', ...(options.runtimeSetup === 'app-install-v2-repair'
+  ? ['support-repair', 'support-repair-restart'] : [])];
+const passed = () => results.length === runs.length && results.every((r) => r.passed && r.cleanup);
+const saveResults = () => writeFile(path.join(root, 'packaged-runs.json'), JSON.stringify({
+  passed: passed(), providerQualified: passed() && results.every((r) => r.providerQualified), results,
+}, null, 2));
 let cleanupFailed = false;
-for (const run of ['cold', 'warm-1', 'warm-2']) {
+for (const run of runs) {
   const runDir = path.join(root, run);
   await mkdir(runDir);
   const data = JSON.parse(await readFile(manifestPath, 'utf8'));
   assert(!data.launcher, 'Previous ownership manifest must be retired only after verified cleanup');
+  if (run === 'support-repair') {
+    try {
+      assert(results.length === 3 && results.every((r) => r.passed && r.cleanup),
+        'Repair requires three successful owned cold/warm runs');
+      data.supportRepair = await prepareV2SupportRepair(data);
+    } catch (error) {
+      results.push({ run, passed: false, cleanup: true, error: String(error) });
+      await saveResults();
+      break;
+    }
+  }
   data.run = run;
   delete data.diagnosticLineage;
   delete data.diagnosticLineageCollectionFailed;
@@ -108,6 +126,8 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
     assert(['provider-inventory', 'transport-only'].includes(evidence.qualification));
     result.qualification = evidence.qualification;
     result.providerQualified = evidence.providerQualified === true;
+    if (options.runtimeSetup === 'app-install-v2-repair') result.v2Support = evidence.v2Support;
+    if (run === 'support-repair') result.repairedSupport = evidence.v2Support;
     result.passed = true;
   } catch (error) {
     result.error = String(error);
@@ -426,6 +446,17 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
       sameIdentity(ownedManifest.launcher, current.launcher);
       delete current.launcher;
       delete current.observedProcesses;
+      if (result.passed && options.runtimeSetup === 'app-install-v2-repair') {
+        if (run === 'cold') {
+          assert(!current.v2SupportCold, 'Cold support baseline already exists');
+          assertV2SupportWarmReuse(result.v2Support, result.v2Support);
+          current.v2SupportCold = result.v2Support;
+        } else if (run === 'warm-1' || run === 'warm-2') {
+          assertV2SupportWarmReuse(current.v2SupportCold, result.v2Support);
+        }
+      }
+      if (run === 'support-repair' && result.passed)
+        current.supportRepair.after = result.repairedSupport;
       await writeFile(manifestPath, JSON.stringify(current, null, 2));
       result.cleanup = true;
     } catch (error) {
@@ -536,21 +567,8 @@ $ids = @($errors | ForEach-Object { $_.integratorReportId } | Where-Object { $_ 
       }
     }
     await log.close();
-    await writeFile(
-      path.join(root, 'packaged-runs.json'),
-      JSON.stringify(
-        {
-          passed: results.length === 3 && results.every((r) => r.passed && r.cleanup),
-          providerQualified:
-            results.length === 3 &&
-            results.every((r) => r.passed && r.cleanup && r.providerQualified),
-          results,
-        },
-        null,
-        2
-      )
-    );
+    await saveResults();
   }
   if (cleanupFailed) break;
 }
-process.exitCode = results.length === 3 && results.every((r) => r.passed && r.cleanup) ? 0 : 1;
+process.exitCode = passed() ? 0 : 1;

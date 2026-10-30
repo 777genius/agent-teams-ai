@@ -4,7 +4,7 @@ import { types } from 'node:util';
 /** Finite observations from the existing public V2 canonical DTO, never turn authority. */
 export function projectV2NativeTranscript(value: unknown, expected: {
   sessionId: string; selectedModel: string; runtimePromptMessageId?: string | null;
-  command?: { program: string; marker: string };
+  command?: { executable: string; program: string; marker: string };
 }) {
   const field = (input: unknown, key: string): unknown => {
     assert(input && typeof input === 'object' && !types.isProxy(input) && !Array.isArray(input), 'TEST V2 transcript invalid');
@@ -113,8 +113,9 @@ export function projectV2NativeTranscript(value: unknown, expected: {
   const inputId = expected.runtimePromptMessageId;
   assert(inputId === undefined || inputId === null || /^msg_[A-Za-z0-9]+$/.test(inputId));
   const commandObservation = expected.command ? (() => {
-    const { program, marker } = expected.command;
-    assert(typeof program === 'string' && program.length > 0 && program.length <= 32_768 &&
+    const { executable, program, marker } = expected.command;
+    assert(typeof executable === 'string' && executable.length > 0 && executable.length <= 32_768 &&
+      typeof program === 'string' && program.length > 0 && program.length <= 32_768 &&
       typeof marker === 'string' && marker.length > 0 && marker.length <= 4096, 'TEST command expectation invalid');
     const originalInputIndex = inputId ? messages.findIndex((_, index) => ids[index] === inputId && roles[index] === 'user') : -1;
     const nextInputIndex = originalInputIndex < 0 ? -1 : messages.findIndex((_, index) => index > originalInputIndex && roles[index] === 'user');
@@ -159,9 +160,16 @@ export function projectV2NativeTranscript(value: unknown, expected: {
         const windowsAbsolute = /^[A-Za-z]:\//.test(normalizedProgram);
         const directory = normalizedProgram.slice(0, normalizedProgram.lastIndexOf('/'));
         const basename = normalizedProgram.slice(normalizedProgram.lastIndexOf('/') + 1);
-        const invocation = typeof command === 'string'
-          ? /^\s*node(?:\.exe)?\s+(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"';&|<>`$]+))\s*$/i.exec(command) : null;
-        const argument = invocation ? slash(invocation[1] ?? invocation[2] ?? invocation[3]) : null;
+        const invocation = typeof command === 'string' && command.length <= 32_768 && !/[\r\n]/.test(command)
+          ? /^(?:&[ \t]+)?(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"']+))[ \t]+(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"']+))$/.exec(normalizedCommand.replace(/^[ \t]+|[ \t]+$/g, '')) : null;
+        const selectedNode = invocation ? invocation[1] ?? invocation[2] ?? invocation[3] : null;
+        const argument = invocation ? invocation[4] ?? invocation[5] ?? invocation[6] : null;
+        const literalPath = (value: string | null): boolean => value !== null &&
+          /^[A-Za-z]:\/[A-Za-z0-9_./-]+$/.test(value) &&
+          !value.split('/').some(part => part === '.' || part === '..');
+        const allowedForm = literalPath(selectedNode) && literalPath(argument);
+        const expectedNodeExact = allowedForm && selectedNode === slash(executable);
+        const programExact = allowedForm && argument === normalizedProgram;
         const relativeProgramArgument = argument !== null && [basename, './' + basename].includes(argument);
         const normalizedWorkdir = typeof workdir === 'string' ? slash(workdir).replace(/\/$/, '') : null;
         const workdirProjectMatches = normalizedWorkdir !== null && windowsAbsolute && /^[A-Za-z]:\//.test(normalizedWorkdir)
@@ -171,6 +179,7 @@ export function projectV2NativeTranscript(value: unknown, expected: {
           caseNormalizedAbsolutePresent: windowsAbsolute && normalizedCommand.toLowerCase().includes(normalizedProgram.toLowerCase()),
           relativeProgramArgument, workdirProjectMatches,
           relativeProgramAtProject: relativeProgramArgument && workdirProjectMatches === true,
+          allowedForm, expectedNodeExact, programExact,
         } };
       })();
       let outputPresent: boolean | null = null, markerLinePresent: boolean | null = null;

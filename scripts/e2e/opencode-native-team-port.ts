@@ -10,11 +10,11 @@ export type NativeCausalFailure = Omit<OpenCodeStopCausalFailure, 'handshakeFail
 
 type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
 export type NativeCommandExpectation = {
-  session: string; program: string; marker: string; model: string; comment?: string;
+  session: string; executable: string; program: string; marker: string; model: string; comment?: string;
 };
 
 /** The exact acceptance predicates, also used for finite failure observations. */
-export function nativeCommandMatch(execution: NativeCommandExecution, program: string, marker: string) {
+export function nativeCommandMatch(execution: NativeCommandExecution, program: string, marker: string, executable: string) {
   const command = execution.toolCall.input.command;
   const shell = ['bash', 'shell', 'exec'].includes(execution.toolCall.name);
   const programMatches = typeof command === 'string' &&
@@ -28,12 +28,19 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
   const windowsAbsolute = /^[A-Za-z]:\//.test(normalizedProgram);
   const directory = normalizedProgram.slice(0, normalizedProgram.lastIndexOf('/'));
   const basename = normalizedProgram.slice(normalizedProgram.lastIndexOf('/') + 1);
-  // Recognize only a single plain Node invocation, never shell fragments or
-  // embedded text. An absent/relative workdir cannot bind a relative argument.
-  const invocation = typeof command === 'string'
-    ? /^\s*node(?:\.exe)?\s+(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"';&|<>`$]+))\s*$/i.exec(command)
+  // Exactly two literal path arguments, with optional balanced quotes and the
+  // PowerShell call operator. Never infer execution from text inside a wrapper.
+  const invocation = typeof command === 'string' && command.length <= 32_768 && !/[\r\n]/.test(command)
+    ? /^(?:&[ \t]+)?(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"']+))[ \t]+(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"']+))$/.exec(normalizedCommand.replace(/^[ \t]+|[ \t]+$/g, ''))
     : null;
-  const argument = invocation ? slash(invocation[1] ?? invocation[2] ?? invocation[3]) : null;
+  const selectedNode = invocation ? invocation[1] ?? invocation[2] ?? invocation[3] : null;
+  const argument = invocation ? invocation[4] ?? invocation[5] ?? invocation[6] : null;
+  const literalPath = (value: string | null): boolean => value !== null &&
+    /^[A-Za-z]:\/[A-Za-z0-9_./-]+$/.test(value) &&
+    !value.split('/').some(part => part === '.' || part === '..');
+  const allowedForm = literalPath(selectedNode) && literalPath(argument);
+  const expectedNodeExact = allowedForm && typeof executable === 'string' && selectedNode === slash(executable);
+  const programExact = allowedForm && argument === normalizedProgram;
   const relativeProgramArgument = argument !== null &&
     [basename, './' + basename].includes(argument);
   const workdir = execution.toolCall.input.workdir;
@@ -47,8 +54,10 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
     relativeProgramArgument,
     workdirProjectMatches,
     relativeProgramAtProject: relativeProgramArgument && workdirProjectMatches === true,
+    allowedForm, expectedNodeExact, programExact,
   };
-  const resultPaired = execution.result?.toolUseId === execution.toolCall.id;
+  const resultPaired = typeof execution.toolCall.id === 'string' && execution.toolCall.id.length > 0 &&
+    execution.result?.toolUseId === execution.toolCall.id;
   const resultSucceeded = execution.result?.isError === false;
   const hasMarker = (content: unknown): boolean => {
     const markerLine = (text: unknown): boolean => typeof text === 'string' &&
@@ -66,9 +75,10 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
     } catch { return false; }
   };
   const markerMatches = hasMarker(execution.result?.content);
+  const nativeExact = shell && allowedForm && expectedNodeExact && programExact;
   return { shell, programMatches, nodeMatches, commandShape, resultPaired, resultSucceeded, markerMatches,
-    nativeMatches: shell && programMatches && nodeMatches,
-    succeeded: resultPaired && resultSucceeded && markerMatches };
+    nativeExact, nativeMatches: nativeExact,
+    succeeded: nativeExact && resultPaired && resultSucceeded && markerMatches };
 }
 
 /** Renderer adapter for the existing full-team scenario. The host driver must
@@ -349,7 +359,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
           const models = chunk.responses.filter((response) => response.type === 'assistant' || response.role === 'assistant')
             .map((response) => response.model).filter((value): value is string => typeof value === 'string' && value.length > 0);
           for (const execution of chunk.toolExecutions) {
-            const match = matchCommand(execution, command.program, command.marker);
+            const match = matchCommand(execution, command.program, command.marker, command.executable);
             const tool = (['bash', 'shell', 'exec'] as const).find((name) => name === execution.toolCall.name);
             if (!tool) continue;
             shellCount = Math.min(10_000, shellCount + 1);
