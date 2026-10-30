@@ -25,6 +25,7 @@ function createRun(
     pendingDirectCrossTeamSendRefresh: false,
     silentUserDmForward: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
     leadMsgSeq: 0,
     liveLeadTextBuffer: null,
     pendingToolCalls: [],
@@ -171,20 +172,31 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
     ports.captureSendMessages(run, [
       {
         type: 'tool_use',
+        id: 'toolu-user',
         name: 'SendMessage',
         input: { recipient: 'user', content: 'hello user', summary: 'hello' },
       },
       {
         type: 'tool_use',
+        id: 'toolu-worker',
         name: 'SendMessage',
         input: { recipient: 'worker', content: 'hello worker', summary: 'worker' },
       },
       {
         type: 'tool_use',
+        id: 'toolu-beta',
         name: 'SendMessage',
         input: { recipient: 'beta.lead', content: 'hello beta', summary: 'beta' },
       },
     ]);
+    ports.captureSendMessages(
+      run,
+      ['toolu-user', 'toolu-worker', 'toolu-beta'].map((id) => ({
+        type: 'tool_result',
+        tool_use_id: id,
+        content: 'Message sent',
+      }))
+    );
     await Promise.resolve();
 
     expect(sent).toEqual([expect.objectContaining({ to: 'user', text: 'hello user' })]);

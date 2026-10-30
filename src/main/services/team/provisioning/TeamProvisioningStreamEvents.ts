@@ -25,6 +25,7 @@ import {
   clearGeminiPostLaunchHydrationState,
   clearPostCompactReminderState,
 } from './TeamProvisioningCleanup';
+import { dropUnsettledLeadSendMessages } from './TeamProvisioningLeadSendMessageCapture';
 import { buildRestartStillRunningReason } from './TeamProvisioningMemberSpawnStatusPolicy';
 import { recordProvisioningFirstTurnStart } from './TeamProvisioningTimeoutLifecycle';
 
@@ -84,6 +85,7 @@ export interface TeamProvisioningStreamRun {
   suppressGeminiPostLaunchHydrationOutput: boolean;
   activeCrossTeamReplyHints: unknown[];
   pendingInboxRelayCandidates: unknown[];
+  pendingLeadSendMessages: Map<string, unknown>;
   silentUserDmForwardClearHandle: NodeJS.Timeout | null;
   leadContextUsage: {
     promptInputTokens: number | null;
@@ -157,6 +159,7 @@ export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningS
   startRuntimeToolActivity(run: TRun, memberName: string, block: Record<string, unknown>): void;
   getRunLeadName(run: TRun): string;
   captureTeamSpawnEvents(run: TRun, content: Record<string, unknown>[]): void;
+  /** Gets send tool_use blocks and, later, their tool_result blocks. */
   captureSendMessages(run: TRun, content: Record<string, unknown>[]): void;
   updateLeadContextUsageFromUsage(
     run: TRun,
@@ -580,7 +583,8 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
         );
       }
     }
-    if (content.some((block) => block?.type === 'tool_result')) {
+    const hasToolResult = content.some((block) => block?.type === 'tool_result');
+    if (hasToolResult) {
       run.leadRelayCapture?.touch?.();
     }
     for (const block of content) {
@@ -591,6 +595,10 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
         block.content,
         block.is_error === true
       );
+    }
+    if (hasToolResult) {
+      // Lead send side effects wait for the runtime to accept the call.
+      ports.captureSendMessages(run, content);
     }
     ports.handleNativeTeammateUserMessage(run, msg);
     return;
@@ -885,6 +893,7 @@ function handleSuccessResultMessage<TRun extends TeamProvisioningStreamRun>(
   ports.resetLiveLeadTextBuffer(run);
   run.activeCrossTeamReplyHints = [];
   run.pendingInboxRelayCandidates = [];
+  dropUnsettledLeadSendMessages(run, logger);
   run.silentUserDmForward = null;
   if (run.silentUserDmForwardClearHandle) {
     clearTimeout(run.silentUserDmForwardClearHandle);
@@ -924,6 +933,7 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
   run.pendingDirectCrossTeamSendRefresh = false;
   run.activeCrossTeamReplyHints = [];
   run.pendingInboxRelayCandidates = [];
+  dropUnsettledLeadSendMessages(run, logger);
   run.silentUserDmForward = null;
   if (run.silentUserDmForwardClearHandle) {
     clearTimeout(run.silentUserDmForwardClearHandle);

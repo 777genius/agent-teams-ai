@@ -100,6 +100,7 @@ function createDeterministicBootstrapRun(overrides: Partial<DeterministicBootstr
     suppressGeminiPostLaunchHydrationOutput: false,
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
     silentUserDmForwardClearHandle: null,
     leadContextUsage: null,
     apiRetryWarningIndex: null,
@@ -649,6 +650,39 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
       })
     ).toBe(`${'x'.repeat(500)}…`);
     clearExpectedWarnings();
+  });
+
+  it('drops lead send calls still waiting for a tool result when the turn fails', () => {
+    const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
+    run.pendingLeadSendMessages.set('toolu-1', {});
+    const ports = makeResultPorts();
+
+    handleTeamProvisioningStreamJsonMessage(
+      run,
+      { type: 'result', subtype: 'error', error: 'boom' },
+      ports
+    );
+
+    expect(run.pendingLeadSendMessages.size).toBe(0);
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toContainEqual(
+      expect.stringContaining('Dropped 1 lead send call(s) that got no tool result')
+    );
+    clearExpectedWarnings();
+  });
+
+  it('passes lead tool results to the send capture', () => {
+    const { run } = createDeterministicBootstrapRun({ provisioningComplete: true });
+    const captureSendMessages = vi.fn();
+    const ports = Object.assign(makeResultPorts(), {
+      captureSendMessages,
+      finishRuntimeToolActivity: vi.fn(),
+      handleNativeTeammateUserMessage: vi.fn(),
+    });
+    const content = [{ type: 'tool_result', tool_use_id: 'toolu-1', content: 'Message sent' }];
+
+    handleTeamProvisioningStreamJsonMessage(run, { type: 'user', message: { content } }, ports);
+
+    expect(captureSendMessages).toHaveBeenCalledWith(run, content);
   });
 
   it('does not fail the run for result subtype "success"', () => {

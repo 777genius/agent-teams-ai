@@ -115,6 +115,7 @@ export function createOpenCodeAggregateProvisioningRun(
     silentUserDmForward: null,
     silentUserDmForwardClearHandle: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
     provisioningOutputParts: [],
     provisioningTraceLines: [],
     lastProvisioningTraceKey: null,
@@ -199,7 +200,12 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts
   ): TeamProvisioningProgress;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
   readLaunchState(teamName: string): Promise<TeamRuntimeLaunchInput['previousLaunchState']>;
-  beginLaunchPublication(teamName: string, runId: string, members: string[], isAuthorized: () => boolean): Promise<boolean>;
+  beginLaunchPublication(
+    teamName: string,
+    runId: string,
+    members: string[],
+    isAuthorized: () => boolean
+  ): Promise<boolean>;
   clearPersistedLaunchState(teamName: string, options?: { expectedRunId?: string }): Promise<void>;
   setRun(runId: string, run: OpenCodeAggregateProvisioningRun): void;
   invalidateRuntimeSnapshotCaches(teamName: string): void;

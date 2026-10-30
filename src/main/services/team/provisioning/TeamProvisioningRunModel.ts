@@ -3,6 +3,7 @@ import type { OpenCodeRetainedSecondaryDelivery } from './OpenCodeRetainedSecond
 import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
 import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCandidates';
 import type { LeadActivityState } from './TeamProvisioningLeadActivity';
+import type { PendingLeadSendMessage } from './TeamProvisioningLeadSendMessageCapture';
 import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor';
 import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type { TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
@@ -207,6 +208,8 @@ export interface ProvisioningRun {
   silentUserDmForwardClearHandle: NodeJS.Timeout | null;
   /** Exact inbox rows currently being bridged into the live teammate process. */
   pendingInboxRelayCandidates: PendingInboxRelayCandidate[];
+  /** Lead send calls waiting for their tool_result, keyed by tool_use id. */
+  pendingLeadSendMessages: Map<string, PendingLeadSendMessage>;
   /** Accumulates assistant text during provisioning phase for live UI preview. */
   provisioningOutputParts: string[];
   /** Bounded orchestration checkpoints shown in the Live output panel. */

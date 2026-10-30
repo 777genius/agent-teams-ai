@@ -260,6 +260,7 @@ export function createDeterministicCreateProvisioningRun<
     silentUserDmForward: null,
     silentUserDmForwardClearHandle: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map<string, never>(),
     provisioningOutputParts: [],
     provisioningTraceLines: [],
     lastProvisioningTraceKey: null,

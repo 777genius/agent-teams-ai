@@ -30,6 +30,11 @@ export interface TeamProvisioningLeadSendMessageRun extends InboxRelayCandidateR
   }>;
   pendingDirectCrossTeamSendRefresh: boolean;
   silentUserDmForward?: SilentTeammateForward | null;
+  /**
+   * Send calls waiting for their tool_result, keyed by tool_use id. The runtime can reject a
+   * call (for example an unknown recipient), so nothing is delivered or shown before success.
+   */
+  pendingLeadSendMessages: Map<string, PendingLeadSendMessage>;
 }
 
 export interface CrossTeamSendRequest {
@@ -46,6 +51,17 @@ export interface CrossTeamSendRequest {
   replyToConversationId?: string;
 }
 
+type LeadCrossTeamSendRequest = CrossTeamSendRequest &
+  Required<Pick<CrossTeamSendRequest, 'toMember' | 'summary' | 'messageId' | 'timestamp'>>;
+
+/**
+ * A captured lead send call. `cross_team` is delivered to another team by the app;
+ * `local` is the live copy of a same-team message (the runtime writes the inbox itself).
+ */
+export type PendingLeadSendMessage =
+  | { kind: 'cross_team'; recipient: string; request: LeadCrossTeamSendRequest }
+  | { kind: 'local'; recipient: string; summary: string; message: InboxMessage };
+
 export interface CrossTeamSendResultLike {
   deduplicated?: boolean;
   messageId: string;
@@ -58,7 +74,6 @@ export interface TeamProvisioningLeadSendMessageCaptureLogger {
 
 export interface TeamProvisioningLeadSendMessageCapturePorts {
   nowIso(): string;
-  nowMs(): number;
   logger: TeamProvisioningLeadSendMessageCaptureLogger;
   crossTeamSender: ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResultLike>) | null;
   resolveCrossTeamReplyMetadata(
@@ -72,30 +87,33 @@ export interface TeamProvisioningLeadSendMessageCapturePorts {
   emitInboxChange(teamName: string, detail: string): void;
 }
 
+/**
+ * Handles lead SendMessage calls in the stream. A `tool_use` is kept until its `tool_result`;
+ * only a successful result delivers the cross-team message or publishes the live copy.
+ * Agent-teams `message_send` is not captured: the board rejects recipients in other teams.
+ */
 export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMessageRun>(
   run: TRun,
   content: Record<string, unknown>[],
   ports: TeamProvisioningLeadSendMessageCapturePorts
 ): void {
   for (const part of content) {
+    if (part.type === 'tool_result') {
+      settleLeadSendMessage(run, part, ports);
+      continue;
+    }
     if (part.type !== 'tool_use' || typeof part.name !== 'string') continue;
     const isNativeSendMessage = part.name === 'SendMessage';
     const input = part.input;
     if (!input || typeof input !== 'object') continue;
     const inp = input as Record<string, unknown>;
-    const isTeamMessageSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'message_send',
-      toolInput: inp,
-      currentTeamName: run.teamName,
-    });
     const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
       rawName: part.name,
       canonicalName: 'cross_team_send',
       toolInput: inp,
       currentTeamName: run.teamName,
     });
-    if (!isNativeSendMessage && !isTeamMessageSendTool && !isDirectCrossTeamSendTool) continue;
+    if (!isNativeSendMessage && !isDirectCrossTeamSendTool) continue;
 
     if (isDirectCrossTeamSendTool) {
       const toTeam = typeof inp.toTeam === 'string' ? inp.toTeam.trim() : '';
@@ -106,24 +124,21 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
       continue;
     }
 
-    const rawRecipient = isNativeSendMessage
-      ? typeof inp.recipient === 'string'
-        ? inp.recipient
-        : ''
-      : typeof inp.to === 'string'
-        ? inp.to
-        : '';
+    const toolUseId = typeof part.id === 'string' ? part.id : '';
+    if (!toolUseId) {
+      ports.logger.warn(
+        `[${run.teamName}] SendMessage without a tool_use id: its result can't be checked, ignoring it`
+      );
+      continue;
+    }
+    if (run.pendingLeadSendMessages.has(toolUseId)) continue;
+
+    const rawRecipient = typeof inp.recipient === 'string' ? inp.recipient : '';
     const trimmedRecipient = rawRecipient.trim();
     if (!trimmedRecipient) continue;
     const recipient = trimmedRecipient.toLowerCase() === 'user' ? 'user' : trimmedRecipient;
 
-    const msgContent = isNativeSendMessage
-      ? typeof inp.content === 'string'
-        ? inp.content
-        : ''
-      : typeof inp.text === 'string'
-        ? inp.text
-        : '';
+    const msgContent = typeof inp.content === 'string' ? inp.content : '';
     if (msgContent.trim().length === 0) continue;
 
     const summary = typeof inp.summary === 'string' ? inp.summary : '';
@@ -140,6 +155,8 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
     );
     localRecipientNames.add('user');
     localRecipientNames.add('team-lead');
+    // A tool_use id is unique per call, so parallel calls in the same millisecond keep apart.
+    const messageId = `lead-sendmsg-${run.runId}-${toolUseId}`;
 
     const mistakenToolHint = isCrossTeamToolRecipientName(recipient)
       ? resolveSingleActiveCrossTeamReplyHint(run.activeCrossTeamReplyHints)
@@ -158,11 +175,12 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
       const crossTeamMeta = parseCrossTeamPrefix(cleanContent);
       const replyMeta = inferredReplyMeta;
       const timestamp = ports.nowIso();
-      const messageId = `lead-sendmsg-${run.runId}-${ports.nowMs()}`;
       const taskRefs = teamToolTaskRefs(run.teamName, inp.taskRefs);
 
-      void ports
-        .crossTeamSender({
+      run.pendingLeadSendMessages.set(toolUseId, {
+        kind: 'cross_team',
+        recipient,
+        request: {
           fromTeam: run.teamName,
           fromMember: leadName,
           toTeam: crossTeamRecipient.teamName,
@@ -177,58 +195,12 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
             replyMeta?.replyToConversationId ??
             crossTeamMeta?.conversationId ??
             replyMeta?.conversationId,
-        })
-        .then((result) => {
-          if (result.deduplicated) {
-            return;
-          }
-          if (ports.getTrackedRunId(run.teamName) !== run.runId) {
-            ports.logger.debug(
-              `[${run.teamName}] Skipping stale cross-team send result for old run ${run.runId}`
-            );
-            return;
-          }
-          const msg: InboxMessage = {
-            from: leadName,
-            to: recipient.startsWith('cross-team:')
-              ? recipient
-              : isCrossTeamToolRecipientName(recipient)
-                ? `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`
-                : `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`,
-            text: strippedCrossTeamContent,
-            timestamp,
-            read: true,
-            summary:
-              (summary || strippedCrossTeamContent).length > 60
-                ? (summary || strippedCrossTeamContent).slice(0, 57) + '...'
-                : summary || strippedCrossTeamContent,
-            messageId: result.messageId,
-            source: 'cross_team_sent',
-            conversationId: crossTeamMeta?.conversationId ?? replyMeta?.conversationId,
-            replyToConversationId:
-              replyMeta?.replyToConversationId ??
-              crossTeamMeta?.conversationId ??
-              replyMeta?.conversationId,
-            ...(taskRefs ? { taskRefs } : {}),
-          };
-          ports.pushLiveLeadProcessMessage(run.teamName, msg);
-          ports.emitLeadMessageChange(run.teamName, run.runId, 'cross-team-send');
-        })
-        .catch((error: unknown) => {
-          ports.logger.warn(
-            `[${run.teamName}] qualified SendMessage→${recipient} cross-team fallback failed: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        });
+        },
+      });
       continue;
     }
 
     if (isCrossTeamToolRecipientName(recipient)) {
-      continue;
-    }
-
-    if (!isNativeSendMessage) {
       continue;
     }
 
@@ -239,39 +211,148 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
       continue;
     }
 
-    const relayOfMessageId =
-      recipient !== 'user'
-        ? consumePendingInboxRelayCandidate(run, recipient, strippedCrossTeamContent, summary)
-        : undefined;
-
     const msg: InboxMessage = {
       from: leadName,
       to: recipient,
       text: strippedCrossTeamContent,
       timestamp: ports.nowIso(),
       read: recipient !== 'user',
-      summary:
-        (summary || strippedCrossTeamContent).length > 60
-          ? (summary || strippedCrossTeamContent).slice(0, 57) + '...'
-          : summary || strippedCrossTeamContent,
-      messageId: `lead-sendmsg-${run.runId}-${ports.nowMs()}`,
-      ...(relayOfMessageId ? { relayOfMessageId } : {}),
+      summary: previewSummary(summary, strippedCrossTeamContent),
+      messageId,
       source: 'lead_process',
     };
 
-    ports.pushLiveLeadProcessMessage(run.teamName, msg);
-
-    if (recipient === 'user') {
-      ports.persistSentMessage(run.teamName, msg);
-      ports.emitInboxChange(run.teamName, 'sentMessages.json');
-    } else {
-      // Runtime SendMessage is the single durable writer of teammate inboxes (verified write);
-      // the FileWatcher picks it up for UI refresh and OpenCode relay.
-      ports.emitLeadMessageChange(run.teamName, run.runId, 'lead-send-message');
-    }
-
-    ports.logger.debug(
-      `[${run.teamName}] Captured SendMessage→${recipient} from stdout: ${cleanContent.slice(0, 100)}`
-    );
+    run.pendingLeadSendMessages.set(toolUseId, {
+      kind: 'local',
+      recipient,
+      summary,
+      message: msg,
+    });
   }
+}
+
+/** Forgets send calls that can no longer get a result (the turn ended). Nothing is sent. */
+export function dropUnsettledLeadSendMessages(
+  run: { teamName: string; pendingLeadSendMessages: Map<string, unknown> },
+  logger: Pick<TeamProvisioningLeadSendMessageCaptureLogger, 'warn'>
+): void {
+  const count = run.pendingLeadSendMessages.size;
+  if (count === 0) return;
+  run.pendingLeadSendMessages.clear();
+  logger.warn(`[${run.teamName}] Dropped ${count} lead send call(s) that got no tool result`);
+}
+
+function settleLeadSendMessage(
+  run: TeamProvisioningLeadSendMessageRun,
+  part: Record<string, unknown>,
+  ports: TeamProvisioningLeadSendMessageCapturePorts
+): void {
+  const toolUseId = typeof part.tool_use_id === 'string' ? part.tool_use_id : '';
+  const call = run.pendingLeadSendMessages.get(toolUseId);
+  if (!call) return;
+  run.pendingLeadSendMessages.delete(toolUseId);
+  if (part.is_error === true) {
+    ports.logger.debug(
+      `[${run.teamName}] SendMessage→${call.recipient} failed in the runtime; nothing delivered`
+    );
+    return;
+  }
+  runLeadSendMessage(run, call, ports);
+}
+
+function runLeadSendMessage(
+  run: TeamProvisioningLeadSendMessageRun,
+  call: PendingLeadSendMessage,
+  ports: TeamProvisioningLeadSendMessageCapturePorts
+): void {
+  if (call.kind === 'cross_team') {
+    deliverCrossTeamLeadMessage(run, call.recipient, call.request, ports);
+  } else {
+    publishLocalLeadMessage(run, call.recipient, call.summary, call.message, ports);
+  }
+}
+
+function previewSummary(summary: string, text: string): string {
+  const value = summary || text;
+  return value.length > 60 ? value.slice(0, 57) + '...' : value;
+}
+
+function deliverCrossTeamLeadMessage(
+  run: TeamProvisioningLeadSendMessageRun,
+  recipient: string,
+  request: LeadCrossTeamSendRequest,
+  ports: TeamProvisioningLeadSendMessageCapturePorts
+): void {
+  if (!ports.crossTeamSender) {
+    ports.logger.warn(
+      `[${run.teamName}] qualified SendMessage→${recipient} not delivered: cross-team sender is unavailable`
+    );
+    return;
+  }
+  void ports
+    .crossTeamSender(request)
+    .then((result) => {
+      if (result.deduplicated) {
+        return;
+      }
+      if (ports.getTrackedRunId(run.teamName) !== run.runId) {
+        ports.logger.debug(
+          `[${run.teamName}] Skipping stale cross-team send result for old run ${run.runId}`
+        );
+        return;
+      }
+      const msg: InboxMessage = {
+        from: request.fromMember,
+        to: recipient.startsWith('cross-team:')
+          ? recipient
+          : `${request.toTeam}.${request.toMember}`,
+        text: request.text,
+        timestamp: request.timestamp,
+        read: true,
+        summary: previewSummary(request.summary, request.text),
+        messageId: result.messageId,
+        source: 'cross_team_sent',
+        conversationId: request.conversationId,
+        replyToConversationId: request.replyToConversationId,
+        ...(request.taskRefs ? { taskRefs: request.taskRefs } : {}),
+      };
+      ports.pushLiveLeadProcessMessage(run.teamName, msg);
+      ports.emitLeadMessageChange(run.teamName, run.runId, 'cross-team-send');
+    })
+    .catch((error: unknown) => {
+      ports.logger.warn(
+        `[${run.teamName}] qualified SendMessage→${recipient} cross-team fallback failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    });
+}
+
+function publishLocalLeadMessage(
+  run: TeamProvisioningLeadSendMessageRun,
+  recipient: string,
+  summary: string,
+  message: InboxMessage,
+  ports: TeamProvisioningLeadSendMessageCapturePorts
+): void {
+  const relayOfMessageId =
+    recipient !== 'user'
+      ? consumePendingInboxRelayCandidate(run, recipient, message.text, summary)
+      : undefined;
+  const msg: InboxMessage = relayOfMessageId ? { ...message, relayOfMessageId } : message;
+
+  ports.pushLiveLeadProcessMessage(run.teamName, msg);
+
+  if (recipient === 'user') {
+    ports.persistSentMessage(run.teamName, msg);
+    ports.emitInboxChange(run.teamName, 'sentMessages.json');
+  } else {
+    // Runtime SendMessage is the single durable writer of teammate inboxes (verified write);
+    // the FileWatcher picks it up for UI refresh and OpenCode relay.
+    ports.emitLeadMessageChange(run.teamName, run.runId, 'lead-send-message');
+  }
+
+  ports.logger.debug(
+    `[${run.teamName}] Captured SendMessage→${recipient} from stdout: ${msg.text.slice(0, 100)}`
+  );
 }

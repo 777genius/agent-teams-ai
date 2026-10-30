@@ -198,6 +198,27 @@ function seedLeadInbox(teamName: string, messages: unknown[]): void {
   hoisted.files.set(`/mock/teams/${teamName}/inboxes/team-lead.json`, JSON.stringify(messages));
 }
 
+/** Feeds an assistant message, then a successful tool_result for each tool_use, as the runtime does. */
+function handleLeadToolTurn(
+  service: TeamProvisioningService,
+  run: unknown,
+  msg: Record<string, unknown>
+): void {
+  const handle = (
+    service as unknown as { handleStreamJsonMessage: (r: unknown, m: unknown) => void }
+  ).handleStreamJsonMessage.bind(service);
+  handle(run, msg);
+  const content = (msg.content ?? []) as Array<Record<string, unknown>>;
+  handle(run, {
+    type: 'user',
+    message: {
+      content: content
+        .filter((block) => block.type === 'tool_use' && typeof block.id === 'string')
+        .map((block) => ({ type: 'tool_result', tool_use_id: block.id, content: 'Message sent' })),
+    },
+  });
+}
+
 function seedMemberInbox(teamName: string, memberName: string, messages: unknown[]): void {
   hoisted.files.set(`/mock/teams/${teamName}/inboxes/${memberName}.json`, JSON.stringify(messages));
 }
@@ -325,6 +346,7 @@ function attachAliveRun(
     lastLeadTextEmitMs: 0,
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
     pendingApprovals: new Map(),
     processedPermissionRequestIds: new Set(),
     silentUserDmForward: null,
@@ -1007,12 +1029,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const relayPromise = service.relayLeadInboxMessages(teamName);
     const run = await waitForCapture(service);
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Sending the user update now.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-1',
           name: 'SendMessage',
           input: {
             recipient: 'user',
@@ -1056,12 +1079,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const relayPromise = service.relayLeadInboxMessages(teamName);
     const run = await waitForCapture(service);
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Sending Alice the handoff.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-2',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
@@ -1103,12 +1127,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const relayPromise = service.relayLeadInboxMessages(teamName);
     const run = await waitForCapture(service);
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Asked Alice to review the release notes.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-3',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
@@ -1417,6 +1442,7 @@ Messages:
       lastLeadTextEmitMs: 0,
       activeCrossTeamReplyHints: [],
       pendingInboxRelayCandidates: [],
+      pendingLeadSendMessages: new Map(),
       silentUserDmForward: null,
       silentUserDmForwardClearHandle: null,
       child: { stdin: { writable: true, write: writeSpy } },
@@ -1978,11 +2004,12 @@ Messages:
     const run = (service as unknown as { runs: Map<string, unknown> }).runs.get('run-1') as unknown;
     expect(run).toBeTruthy();
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-4',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
@@ -2027,11 +2054,12 @@ Messages:
       mode: 'user_dm',
     };
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-5',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
