@@ -171,6 +171,7 @@ describe('InternalStorageWorkerClient physical retirement', () => {
     expect(fixture.workers).toHaveLength(2);
     const second = fixture.workers[1];
     first.emit('exit', 1);
+    expect(fixture.warn).not.toHaveBeenCalledWith(expect.stringContaining('exited with code'));
     first.emit('error', new Error('late old error'));
     first.reply(0);
     second.reply(0, null);
@@ -276,5 +277,21 @@ describe('InternalStorageWorkerClient physical retirement', () => {
     expect(fixture.warn).toHaveBeenCalledExactlyOnceWith(
       'internal-storage worker exited with code 1'
     );
+  });
+
+  // The guard is worker identity, not the closed flag: a crash while close()
+  // still waits for its close op is a real failure.
+  it('warns when the live worker exits on its own while close() waits for it', async () => {
+    const client = new InternalStorageWorkerClient({ databasePath: '/test-only/storage.db' });
+    const first = client.ping();
+    const worker = fixture.workers[0];
+    worker.reply(0, { backend: 'sqlite' });
+    await first;
+    const closing = client.close();
+    expect(worker.messages[1].op).toBe('close');
+    worker.emit('exit', 1);
+    await closing;
+    expect(worker.terminate).not.toHaveBeenCalled();
+    expect(fixture.warn).toHaveBeenCalledWith('internal-storage worker exited with code 1');
   });
 });
