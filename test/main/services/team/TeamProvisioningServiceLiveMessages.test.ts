@@ -499,8 +499,8 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(live[0].to).toBe('team-lead');
     expect(live[0].text).toBe('Need clarification on #abcd1234');
     expect(live[0].source).toBe('lead_process');
-    // Non-user recipient → delivered to inbox, not sentMessages
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
+    // Non-user recipient → the runtime writes the inbox, the app neither writes it nor sentMessages
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
   });
 
@@ -632,7 +632,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     }
   );
 
-  it('SendMessage(to:teammate) creates inbox row and emits inbox detail for recipient', () => {
+  it('SendMessage(to:teammate) keeps a live copy and leaves the inbox write to the runtime', () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
@@ -655,22 +655,16 @@ describe('TeamProvisioningService pre-ready live messages', () => {
       ],
     });
 
-    // Delivered to recipient inbox, not sentMessages
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledWith(
-      'my-team',
-      expect.objectContaining({ member: 'alice' })
-    );
+    // The runtime is the single durable writer of the recipient inbox
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
-
-    // Emits inbox event for the specific recipient
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
+      expect.objectContaining({ to: 'alice', source: 'lead_process' }),
+    ]);
     expect(emitter).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'inbox',
-        teamName: 'my-team',
-        detail: 'inboxes/alice.json',
-      })
+      expect.objectContaining({ type: 'lead-message', detail: 'lead-send-message' })
     );
+    expect(emitter).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'inbox' }));
   });
 
   it('SendMessage(to:user) still persists to sentMessages.json', () => {
@@ -1336,11 +1330,10 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     });
 
     expect(crossTeamSender).not.toHaveBeenCalled();
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledWith(
-      'my-team',
-      expect.objectContaining({ member: 'ops.bot' })
-    );
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
+      expect.objectContaining({ to: 'ops.bot', source: 'lead_process' }),
+    ]);
   });
 });
 

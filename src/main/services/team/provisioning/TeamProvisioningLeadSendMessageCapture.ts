@@ -68,7 +68,6 @@ export interface TeamProvisioningLeadSendMessageCapturePorts {
   getTrackedRunId(teamName: string): string | null;
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
   persistSentMessage(teamName: string, message: InboxMessage): void;
-  persistInboxMessage(teamName: string, recipient: string, message: InboxMessage): void;
   emitLeadMessageChange(teamName: string, runId: string, detail: string): void;
   emitInboxChange(teamName: string, detail: string): void;
 }
@@ -266,8 +265,9 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
       ports.persistSentMessage(run.teamName, msg);
       ports.emitInboxChange(run.teamName, 'sentMessages.json');
     } else {
-      ports.persistInboxMessage(run.teamName, recipient, msg);
-      ports.emitInboxChange(run.teamName, `inboxes/${recipient}.json`);
+      // Runtime SendMessage is the single durable writer of teammate inboxes (verified write);
+      // the FileWatcher picks it up for UI refresh and OpenCode relay.
+      ports.emitLeadMessageChange(run.teamName, run.runId, 'lead-send-message');
     }
 
     ports.logger.debug(
