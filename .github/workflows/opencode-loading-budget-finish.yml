@@ -30,15 +30,16 @@ jobs:
           import assert from 'node:assert/strict';
           import { execFileSync } from 'node:child_process';
           import { readFileSync, writeFileSync } from 'node:fs';
-          assert.equal(execFileSync('git', ['rev-parse', 'HEAD^'], {encoding:'utf8'}).trim(), '9c18c740c0bab7fbcf7b567f0fe4aa267bdc90d3');
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD^'], {encoding:'utf8'}).trim(), '1314468f730baed032289cb7e0edbb24e6fcad61');
           const file = 'test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts';
           const source = readFileSync(file, 'utf8');
-          const matches = source.match(/90_000/g) ?? [];
-          assert(matches.length > 0 && matches.length <= 10, 'Unexpected old-timeout assertion count');
+          assert.equal((source.match(/90_000/g) ?? []).length, 3);
           writeFileSync(file, source.replaceAll('90_000', '300_000'));
-          console.log('Updated old provider command timeout assertions: ' + matches.length);
           JS
-          pnpm exec eslint --fix --fix-type layout \
+      - name: Format only the scoped changed files
+        if: steps.edit.outcome == 'success'
+        run: |
+          pnpm exec eslint --config eslint.fast.config.js --fix --fix-type layout \
             src/shared/constants/runtimeLoading.ts \
             src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts \
             src/features/runtime-provider-management/main/infrastructure/RuntimeProviderLoadingBudget.test.ts \
@@ -53,14 +54,14 @@ jobs:
       - name: Focused provider loading and readiness tests
         if: always() && steps.edit.outcome == 'success'
         run: >-
-          pnpm exec vitest run
+          pnpm exec vitest run --maxWorkers=1
           src/features/runtime-provider-management/renderer/hooks/runtimeProviderLoading.test.ts
           src/features/runtime-provider-management/main/infrastructure/RuntimeProviderLoadingBudget.test.ts
           src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
           test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
           test/main/services/team/opencode
       - name: Export exact edited blobs without updating refs
-        if: always()
+        if: always() && steps.edit.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
