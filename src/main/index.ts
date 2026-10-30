@@ -3,10 +3,6 @@ import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGa
 // subprocess work, watchers, and IPC filesystem requests share this pool.
 // The default four threads can block Windows startup.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-// Drop env inherited from a parent Claude Code session before anything can spawn agents.
-// Side-effect import: the CJS build hoists imports above statements.
-// eslint-disable-next-line simple-import-sort/imports -- must run before any module that reads or copies process.env.
-import './bootstrapInheritedHarnessEnv';
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.

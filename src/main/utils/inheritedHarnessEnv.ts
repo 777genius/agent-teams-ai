@@ -20,8 +20,11 @@ export const INHERITED_HARNESS_ENV_KEYS = [
   'TRACEPARENT',
 ] as const;
 
-export function stripInheritedHarnessEnv(env: NodeJS.ProcessEnv): void {
-  for (const key of INHERITED_HARNESS_ENV_KEYS) {
-    delete env[key];
-  }
-}
+/**
+ * Prepended to the main-process bundles (see electron.vite.config.ts) so the cleanup runs before
+ * any bundled module code: ESM to CJS hoists imports above top-level statements, so a
+ * side-effect import is not guaranteed to run first.
+ */
+export const INHERITED_HARNESS_ENV_BANNER = `for(const k of ${JSON.stringify(
+  INHERITED_HARNESS_ENV_KEYS
+)}){delete process.env[k]}`;

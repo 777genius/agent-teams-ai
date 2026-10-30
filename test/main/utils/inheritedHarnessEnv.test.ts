@@ -1,10 +1,10 @@
 import {
+  INHERITED_HARNESS_ENV_BANNER,
   INHERITED_HARNESS_ENV_KEYS,
-  stripInheritedHarnessEnv,
 } from '@main/utils/inheritedHarnessEnv';
 import { describe, expect, it } from 'vitest';
 
-describe('stripInheritedHarnessEnv', () => {
+describe('inherited harness env cleanup', () => {
   it('drops parent-session identity and secrets but keeps auth, config and app variables', () => {
     const kept = {
       PATH: '/usr/bin',
@@ -22,7 +22,8 @@ describe('stripInheritedHarnessEnv', () => {
     const env: NodeJS.ProcessEnv = { ...kept };
     for (const key of INHERITED_HARNESS_ENV_KEYS) env[key] = 'inherited';
 
-    stripInheritedHarnessEnv(env);
+    // Run the exact code that is prepended to the main bundles.
+    new Function('process', INHERITED_HARNESS_ENV_BANNER)({ env });
 
     expect(env).toEqual(kept);
     expect(INHERITED_HARNESS_ENV_KEYS).toContain('CLAUDE_CODE_MESSAGING_TOKEN');
