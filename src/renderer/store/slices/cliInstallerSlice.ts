@@ -1190,6 +1190,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const projectPath = options?.projectPath?.trim() || null;
     const mode = verifyModels ? 'verify' : options?.requireModelList ? 'models' : 'status';
     const requestKey = `${providerId}:${mode}:${projectPath ?? ''}`;
+    // A lighter status read can join the current model refresh, never retire it.
+    if (providerId === 'opencode' && mode === 'status') {
+      const models = cliProviderStatusInFlight.get(`opencode:models:${projectPath ?? ''}`);
+      if (models && cliProviderStatusRequestEpochs.get(models) === requestEpoch) return models;
+    }
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight && cliProviderStatusRequestEpochs.get(inFlight) === requestEpoch) return inFlight;
@@ -1200,7 +1205,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const requestStartedAtMs = Date.now();
     const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
     cliProviderStatusActiveRequestIds.set(scopeKey, requestId);
-
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<boolean>;
     // eslint-disable-next-line prefer-const
@@ -1211,7 +1215,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             ...state.cliProviderStatusLoading,
             [providerId]: true,
           };
-
           return {
             cliStatusError: null,
             cliProviderStatusLoading: nextLoading,
@@ -1245,7 +1248,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           };
         });
       }
-
       try {
         const requestProviderStatus = async (): Promise<CliProviderStatus | null> =>
           verifyModels
@@ -1312,7 +1314,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           ) {
             return {};
           }
-
           if (projectPath) {
             const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
             return {
@@ -1508,7 +1509,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
       }
     })();
-
     cliProviderStatusInFlight.set(requestKey, request);
     cliProviderStatusRequestEpochs.set(request, requestEpoch);
     return request;

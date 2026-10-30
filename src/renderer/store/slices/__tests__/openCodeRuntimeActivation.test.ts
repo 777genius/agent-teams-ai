@@ -117,6 +117,70 @@ function setup(overrides: Partial<ElectronAPI['openCodeRuntime']> = {}) {
 }
 
 describe('OpenCode installation without restarting the renderer', () => {
+  it.each([null, '/TEST/model-refresh'])(
+    'joins a later ordinary status read to the current model refresh in scope %s',
+    async (projectPath) => {
+      const { store } = setup();
+      const response = deferred<CliProviderStatus>();
+      const fresh = verifiedOpenCodeProvider('opencode/new-native');
+      const getProviderStatus = vi.fn(() => response.promise);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: { ...window.electronAPI, cliInstaller: { getProviderStatus } },
+      });
+      store.setState({ cliStatus: createLoadingMultimodelCliStatus() });
+      const models = store.getState().fetchCliProviderStatus('opencode', {
+        projectPath,
+        requireModelList: true,
+      });
+      const status = store.getState().fetchCliProviderStatus('opencode', { projectPath });
+      const silent = store.getState().fetchCliProviderStatus('opencode', {
+        projectPath,
+        silent: true,
+      });
+      response.resolve(fresh);
+      expect(await Promise.all([models, status, silent])).toEqual([true, true, true]);
+      expect(getProviderStatus).toHaveBeenCalledTimes(1);
+      const current = projectPath
+        ? store.getState().cliProviderStatusByScope[
+            getCliProviderStatusScopeKey('opencode', projectPath)
+          ]
+        : store.getState().cliStatus!.providers.find((row) => row.providerId === 'opencode');
+      expect(current?.models).toEqual(fresh.models);
+      expect(store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    }
+  );
+
+  it('does not join a model refresh from an invalidated epoch or another project', async () => {
+    const { store } = setup();
+    const old = deferred<CliProviderStatus>();
+    const fresh = verifiedOpenCodeProvider('opencode/new-native');
+    const getProviderStatus = vi.fn().mockReturnValueOnce(old.promise).mockResolvedValue(fresh);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        ...window.electronAPI,
+        cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+      },
+    });
+    store.setState({ cliStatus: createLoadingMultimodelCliStatus() });
+    const models = store.getState().fetchCliProviderStatus('opencode', {
+      projectPath: '/TEST/old-project',
+      requireModelList: true,
+    });
+    expect(await store.getState().fetchCliProviderStatus('opencode')).toBe(true);
+    await store.getState().invalidateCliStatus();
+    expect(
+      await store.getState().fetchCliProviderStatus('opencode', { projectPath: '/TEST/old-project' })
+    ).toBe(true);
+    old.resolve(verifiedOpenCodeProvider());
+    expect(await models).toBe(false);
+    expect(getProviderStatus).toHaveBeenCalledTimes(3);
+    const scopeKey = getCliProviderStatusScopeKey('opencode', '/TEST/old-project');
+    expect(store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual(fresh.models);
+    expect(store.getState().cliProviderStatusLoading.opencode).toBe(false);
+  });
+
   it('retries an empty model-only response instead of accepting retained pre-install models', async () => {
     vi.useFakeTimers();
     const { store } = setup();
