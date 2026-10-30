@@ -72,7 +72,10 @@ describe('getTeammateRosterMembers', () => {
 
 describe('buildLeadRosterIntegrityRules', () => {
   it('names the exact roster and forbids invented names and premature lead execution', () => {
-    const rules = buildLeadRosterIntegrityRules(['local-worker', 'cursor-worker']);
+    const rules = buildLeadRosterIntegrityRules('alpha', [
+      { name: 'local-worker' },
+      { name: 'cursor-worker' },
+    ]);
 
     expect(rules).toContain('Teammate roster rules (CRITICAL — exact names only):');
     expect(rules).toContain(
@@ -80,12 +83,16 @@ describe('buildLeadRosterIntegrityRules', () => {
     );
     expect(rules).toContain('NEVER invent, guess, rename, or paraphrase teammate names');
     expect(rules).toContain('WAIT for the owner');
+    expect(rules).toContain('Your team is "alpha"');
+    expect(rules).toContain('on your own initiative');
+    expect(rules).not.toContain('Agent spawns');
   });
 });
 
 describe('buildCreateBootstrapUserPrompt', () => {
   it('wraps the deferred create prompt with the roster and integrity rules', () => {
     const wrapped = buildCreateBootstrapUserPrompt(
+      'alpha',
       'create one task per teammate: each writes hello-<their-name>.md',
       teammates
     );
@@ -97,6 +104,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
       'Your teammates are EXACTLY: local-worker, cursor-worker. No other teammate exists.'
     );
     expect(wrapped).toContain('NEVER invent, guess, rename, or paraphrase teammate names');
+    expect(wrapped).toContain('Your team is "alpha"');
     expect(
       wrapped.endsWith(
         'User instructions:\ncreate one task per teammate: each writes hello-<their-name>.md'
@@ -105,7 +113,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
   });
 
   it('excludes the lead entry from the roster and the EXACTLY list', () => {
-    const wrapped = buildCreateBootstrapUserPrompt('do the thing', rosterWithLead);
+    const wrapped = buildCreateBootstrapUserPrompt('alpha', 'do the thing', rosterWithLead);
 
     expect(wrapped).toContain('Your teammates are EXACTLY: local-worker, cursor-worker.');
     expect(wrapped).not.toContain('EXACTLY: team-lead');
@@ -113,7 +121,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
   });
 
   it('keeps a teammate whose role contains "lead" in the authoritative roster', () => {
-    const wrapped = buildCreateBootstrapUserPrompt('do the thing', [
+    const wrapped = buildCreateBootstrapUserPrompt('alpha', 'do the thing', [
       { name: 'team-lead', role: 'lead' },
       { name: 'ana', role: 'Frontend lead' },
       ...teammates,
@@ -128,16 +136,17 @@ describe('buildCreateBootstrapUserPrompt', () => {
 
   it('supplies the display protocol to a fresh solo lead without inventing a roster', () => {
     for (const members of [[], [{ name: 'team-lead', role: 'lead' }]]) {
-      const prompt = buildCreateBootstrapUserPrompt('  solo work  ', members);
+      const prompt = buildCreateBootstrapUserPrompt('alpha', '  solo work  ', members);
       expect(prompt).toContain(protocols.buildChatVisualizationProtocolText());
       expect(prompt).not.toContain('Team roster (authoritative');
+      expect(prompt).toContain('Your team is "alpha"');
       expect(prompt.endsWith('User instructions:\nsolo work')).toBe(true);
     }
   });
 
   it('stays empty for an empty prompt so create mode skips the deferred prompt file', () => {
-    expect(buildCreateBootstrapUserPrompt('', teammates)).toBe('');
-    expect(buildCreateBootstrapUserPrompt('   ', teammates)).toBe('');
+    expect(buildCreateBootstrapUserPrompt('alpha', '', teammates)).toBe('');
+    expect(buildCreateBootstrapUserPrompt('alpha', '   ', teammates)).toBe('');
   });
 });
 
