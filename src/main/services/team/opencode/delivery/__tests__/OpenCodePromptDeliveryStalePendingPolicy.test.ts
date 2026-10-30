@@ -122,6 +122,7 @@ describe('getOpenCodeObservedSessionActivity', () => {
         previousAssistantPreview: '',
         observation: null,
         observedDiagnostics: diagnostics,
+        observationUnavailable: false,
         pendingAgeMs: null,
       });
       expect({

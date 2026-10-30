@@ -242,8 +242,10 @@ export function decideOpenCodeStalePendingResolution(input: {
   );
   // Fresh output in this very observation (growing tool calls, growing
   // assistant text, a second assistant message) outranks the turn-end
-  // heuristic; `session_status_busy` does not, because on an ACP bridge it is
-  // permanent for the whole turn.
+  // heuristic, and so does an observation that could not read the turn at all
+  // (`observation_unavailable`): a failed read is no turn-end evidence.
+  // `session_status_busy` does not, because on an ACP bridge it is permanent
+  // for the whole turn.
   const turnOutputProgressed =
     input.turnActivity?.active === true && input.turnActivity.reason !== 'session_status_busy';
   // A turn end has to be observed, not inferred from silence: the assistant

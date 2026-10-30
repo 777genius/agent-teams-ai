@@ -23,6 +23,7 @@ function activityInput(
       latestAssistantPreview: 'Creating the board.',
     },
     observedDiagnostics: [TREATED_IDLE],
+    observationUnavailable: false,
     pendingAgeMs: 90_000,
     ...overrides,
   };
@@ -137,6 +138,22 @@ describe('decideOpenCodePromptDeliveryTurnActivity', () => {
         })
       )
     ).toEqual({ active: true, reason: 'session_status_busy' });
+  });
+
+  it('never reads an unavailable observation of an accepted prompt as an idle turn', () => {
+    // Nothing moved only because nothing could be read. Calling it idle
+    // re-prompts a member that may already have answered.
+    expect(
+      decideOpenCodePromptDeliveryTurnActivity(activityInput({ observationUnavailable: true }))
+    ).toEqual({ active: true, reason: 'observation_unavailable' });
+    expect(
+      decideOpenCodePromptDeliveryTurnActivity(
+        activityInput({
+          observationUnavailable: true,
+          pendingAgeMs: OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS + 1,
+        })
+      )
+    ).toEqual({ active: false, reason: 'turn_activity_absolute_cap' });
   });
 
   it('closes the first-observation hole left by acceptance-mode sends', () => {

@@ -30,13 +30,16 @@ export const OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS = 90_000;
  * budget forever.
  *
  * It bounds only the inferred signals (a growing assistant message, growing
- * tool calls, growing assistant text). A raw `session status busy` is the
- * bridge stating the turn is live, and re-prompting into a live turn is exactly
- * the double answer this guard exists to prevent, so that signal is not capped
- * here. Whether a session that reports busy forever is ever given up on is a
- * separate decision with a separate owner: the stale-pending policy keeps
- * observing a non-idle session instead of settling it. This cap therefore only
- * decides when a retry may fire, never whether the record is finished.
+ * tool calls, growing assistant text) and an unavailable observation of an
+ * accepted prompt: an unknown result is not an idle turn, but a bridge that
+ * keeps failing to observe must not hold the retry forever either. A raw
+ * `session status busy` is the bridge stating the turn is live, and
+ * re-prompting into a live turn is exactly the double answer this guard exists
+ * to prevent, so that signal is not capped here. Whether a session that reports
+ * busy forever is ever given up on is a separate decision with a separate
+ * owner: the stale-pending policy keeps observing a non-idle session instead of
+ * settling it. This cap therefore only decides when a retry may fire, never
+ * whether the record is finished.
  */
 export const OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS = 600_000;
 export const OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY = 2;
@@ -48,6 +51,7 @@ export type OpenCodePromptDeliveryTurnActivityReason =
   | 'assistant_message_progressed'
   | 'tool_calls_progressed'
   | 'assistant_text_progressed'
+  | 'observation_unavailable'
   | 'turn_idle';
 
 export interface OpenCodePromptDeliveryTurnActivityInput {
@@ -60,6 +64,12 @@ export interface OpenCodePromptDeliveryTurnActivityInput {
     latestAssistantPreview?: string | null;
   } | null;
   observedDiagnostics: readonly string[];
+  /**
+   * The runtime already accepted the prompt, but this observation could not
+   * read what became of it (the bridge did not observe, or reported a failed
+   * reconcile). The caller decides it; it is never inferred from silence.
+   */
+  observationUnavailable: boolean;
   pendingAgeMs: number | null;
 }
 
@@ -79,6 +89,11 @@ export interface OpenCodePromptDeliveryTurnActivityDecision {
  * tool calls and growing assistant text are the signals that survive that, and
  * they are the ledger analogue of what the native lead relay already treats as
  * liveness on tool and text events.
+ *
+ * Every signal needs an observation that worked. When the bridge could not read
+ * the turn of an accepted prompt, "nothing moved" is not evidence of an idle
+ * turn - the member may well have answered already - so the retry waits for a
+ * readable observation instead of putting the same prompt in front of it again.
  */
 export function decideOpenCodePromptDeliveryTurnActivity(
   input: OpenCodePromptDeliveryTurnActivityInput
@@ -94,6 +109,9 @@ export function decideOpenCodePromptDeliveryTurnActivity(
     input.pendingAgeMs >= OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS
   ) {
     return { active: false, reason: 'turn_activity_absolute_cap' };
+  }
+  if (input.observationUnavailable) {
+    return { active: true, reason: 'observation_unavailable' };
   }
   const assistantMessageId = input.observation?.assistantMessageId?.trim() ?? '';
   if (
