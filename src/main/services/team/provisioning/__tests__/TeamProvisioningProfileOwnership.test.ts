@@ -7,7 +7,7 @@ import {
   setAppDataBasePath,
   setClaudeBasePathOverride,
 } from '@main/utils/pathDecoder';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 const tmuxMocks = vi.hoisted(() => ({ killTmuxPaneForCurrentPlatformSync: vi.fn() }));
 vi.mock('@features/tmux-installer/main', async (importOriginal) => ({
@@ -27,7 +27,10 @@ import {
   createNodeClearStoppedTeamLiveRuntimeHandlesPorts,
   persistClearedStoppedTeamLiveRuntimeHandles,
 } from '../TeamProvisioningClearStoppedTeamRuntimeHandles';
-import { createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary } from '../TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
+import {
+  createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
+  type TeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
+} from '../TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
 import {
   listPersistedTeamNames,
   readPersistedRuntimeMembers,
@@ -150,8 +153,13 @@ async function snapshotTeam(teamName: string): Promise<Record<string, Record<str
   };
 }
 
+interface ProcessTable {
+  killPid: Mock<(pid: number) => void>;
+  overrides: NonNullable<Parameters<typeof killOrphanedTeamAgentProcesses>[1]>;
+}
+
 /** A live process table with one teammate per team; killPid removes the process. */
-function createProcessTable(entries: Record<string, number>) {
+function createProcessTable(entries: Record<string, number>): ProcessTable {
   const live = new Map(
     Object.entries(entries).map(([teamName, pid]) => [
       pid,
@@ -186,12 +194,15 @@ function createProcessTable(entries: Record<string, number>) {
  */
 async function runShutdown(
   ownership: TeamProfileOwnership,
-  table: ReturnType<typeof createProcessTable>,
+  table: ProcessTable,
   options: {
     lockedTeamNames?: string[];
     afterOrphanCleanup?: (teamName: string) => Promise<void>;
   } = {}
-) {
+): Promise<{
+  cleanupAnthropicTeamApiKeyHelperForTeam: Mock<() => Promise<undefined>>;
+  stopTeam: Mock<(teamName: string) => Promise<void>>;
+}> {
   const cleanupAnthropicTeamApiKeyHelperForTeam = vi.fn(async () => undefined);
   const activity = new TeamTaskActivityIntervalService();
   const persistent = createTeamProvisioningPersistentRuntimeCleanup({
@@ -401,10 +412,19 @@ async function writeActiveLanes(teamName: string): Promise<PersistedTeamLaunchSn
   } as unknown as PersistedTeamLaunchSnapshot;
 }
 
+interface StoppedLaneCleanupFixture {
+  boundary: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary;
+  stop: Mock;
+  killProcessByPid: Mock;
+  markStoppedTeamOpenCodeRuntimeLanesCleaned: Mock;
+  withTeamLock: Mock;
+}
+
 function createStoppedLaneCleanup(
   ownership: TeamProfileOwnership,
-  launchStates: Record<string, PersistedTeamLaunchSnapshot>
-) {
+  launchStates: Record<string, PersistedTeamLaunchSnapshot>,
+  options: { whileWaitingForLock?: (teamName: string) => Promise<void> } = {}
+): StoppedLaneCleanupFixture {
   const stop = vi.fn(async (input: { runId: string; teamName: string }) => ({
     runId: input.runId,
     teamName: input.teamName,
@@ -420,6 +440,7 @@ function createStoppedLaneCleanup(
     {
       withTeamLock: async (teamName, operation) => {
         withTeamLock(teamName);
+        await options.whileWaitingForLock?.(teamName);
         return operation();
       },
       isManagedByThisProfile: (teamName) => ownership.isManagedByThisProfile(teamName),
@@ -498,6 +519,31 @@ describe('stopped-team OpenCode lane cleanup (F2)', () => {
     expect(cleanup.killProcessByPid).toHaveBeenCalledWith(4242);
     expect(cleanup.markStoppedTeamOpenCodeRuntimeLanesCleaned).toHaveBeenCalledWith('own');
     expect((await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), 'own')).lanes).toEqual({});
+  });
+
+  it('re-checks ownership under the lock and leaves a team claimed meanwhile alone', async () => {
+    await writeTeam('own', { paneId: '%24', ownerScope: scopeOf(userDataA) });
+    const launchStates = { own: await writeActiveLanes('own') };
+    const before: { snapshot: unknown } = { snapshot: null };
+    const cleanup = createStoppedLaneCleanup(freshOwnership(), launchStates, {
+      // Another profile launches the team while this cleanup waits for the lock.
+      whileWaitingForLock: async (teamName) => {
+        await claimTeamForThisProfile({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          reason: 'launch',
+          profileScope: scopeOf(userDataB),
+        });
+        before.snapshot = await snapshotTeam(teamName);
+      },
+    });
+
+    await expect(cleanup.boundary.stopOpenCodeRuntimeLanesForStoppedTeam('own')).resolves.toBe(0);
+
+    expect(cleanup.withTeamLock).toHaveBeenCalledOnce();
+    expect(cleanup.stop).not.toHaveBeenCalled();
+    expect(cleanup.killProcessByPid).not.toHaveBeenCalled();
+    expect(await snapshotTeam('own')).toEqual(before.snapshot);
   });
 });
 
@@ -640,7 +686,7 @@ describe('fail-closed claim', () => {
 });
 
 describe('launch claim', () => {
-  const markerPath = () =>
+  const markerPath = (): string =>
     path.join(getTeamsBasePath(), 'interrupted', TEAM_PROFILE_OWNER_MARKER_FILE);
 
   async function launch(): Promise<ReturnType<typeof vi.fn>> {
@@ -695,6 +741,22 @@ describe('launch claim', () => {
     } finally {
       await chmod(teamDir, 0o700);
     }
+  });
+
+  it('aborts when this profile cannot be resolved instead of trusting a missing marker', async () => {
+    await writeTeam('interrupted', { paneId: '%95' });
+    // No marker to read and no computable scope: null must not count as "ours".
+    setAppDataBasePath('   ');
+    const spawn = vi.fn(async () => ({ runId: 'never' }));
+
+    await expect(
+      createTeamProvisioningRequestAdmissionBoundary(
+        createAdmissionHost(spawn),
+        async () => null
+      ).launchTeam(launchRequest, vi.fn())
+    ).rejects.toThrow(/Team "interrupted" was not started/);
+    expect(spawn).not.toHaveBeenCalled();
+    await expect(stat(markerPath())).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });
 

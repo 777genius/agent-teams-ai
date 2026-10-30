@@ -58,6 +58,42 @@ async function writeTeam(teamName: string, ownerUserData?: string): Promise<void
   }
 }
 
+/** An OpenCode teammate with an unread message, as the file watcher sees it. */
+async function writeOpenCodeInbox(teamName: string): Promise<void> {
+  const teamDir = path.join(getTeamsBasePath(), teamName);
+  await writeFile(
+    path.join(teamDir, 'config.json'),
+    `${JSON.stringify({
+      name: teamName,
+      projectPath: root,
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'bob', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+      ],
+    })}\n`
+  );
+  await mkdir(path.join(teamDir, 'inboxes'), { recursive: true });
+  await writeFile(
+    path.join(teamDir, 'inboxes', 'bob.json'),
+    `${JSON.stringify([
+      {
+        from: 'user',
+        to: 'bob',
+        text: 'hello',
+        timestamp: '2026-10-28T10:01:00.000Z',
+        read: false,
+        messageId: `msg-${teamName}`,
+      },
+    ])}\n`
+  );
+}
+
+interface RelayInternals {
+  inboxReader: { getMessagesFor(teamName: string, memberName: string): Promise<unknown[]> };
+  createOpenCodePromptDeliveryLedger(teamName: string, laneId: string): unknown;
+  deliverOpenCodeMemberMessage(teamName: string, input: unknown): Promise<unknown>;
+}
+
 interface WatchdogInternals {
   openCodePromptDeliveryWatchdogCoordinator: {
     scan(teamName: string): Promise<number>;
@@ -97,5 +133,31 @@ describe('TeamProvisioningService profile ownership', () => {
     expect(scanActiveLanes).toHaveBeenCalledWith('own', ['primary'], {
       recordlessUnreadRows: 'wake',
     });
+  });
+
+  it('relays an inbox change only for a team this app profile manages', async () => {
+    await writeTeam('own', path.join(root, 'user-data-a'));
+    await writeTeam('other-profile', path.join(root, 'user-data-b'));
+    await writeOpenCodeInbox('own');
+    await writeOpenCodeInbox('other-profile');
+    const service = new TeamProvisioningService();
+    const internals = service as unknown as RelayInternals;
+    const readInbox = vi.spyOn(internals.inboxReader, 'getMessagesFor');
+    const createLedger = vi.spyOn(internals, 'createOpenCodePromptDeliveryLedger');
+    const deliver = vi
+      .spyOn(internals, 'deliverOpenCodeMemberMessage')
+      .mockResolvedValue({ delivered: true, accepted: true });
+
+    // The other profile's team has a live pid, so its runtime looks reachable.
+    await service.relayInboxFileToLiveRecipient('other-profile', 'bob');
+    expect(readInbox).not.toHaveBeenCalled();
+    expect(createLedger).not.toHaveBeenCalled();
+    expect(deliver).not.toHaveBeenCalled();
+
+    await service.relayInboxFileToLiveRecipient('own', 'bob');
+    expect(readInbox).toHaveBeenCalledWith('own', 'bob');
+    expect(readInbox.mock.calls.every(([teamName]) => teamName === 'own')).toBe(true);
+    expect(deliver).toHaveBeenCalledWith('own', expect.objectContaining({ memberName: 'bob' }));
+    expect(deliver.mock.calls.every(([teamName]) => teamName === 'own')).toBe(true);
   });
 });

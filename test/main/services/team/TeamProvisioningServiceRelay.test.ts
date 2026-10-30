@@ -151,6 +151,18 @@ vi.mock(
   }
 );
 
+// The relay fixtures live in a mocked filesystem and model teams of this app
+// profile; ownership itself is covered by TeamProvisioningServiceProfileOwnership.test.ts.
+vi.mock(
+  '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership')
+    >()),
+    createTeamProfileOwnership: () => ({ isManagedByThisProfile: () => Promise.resolve(true) }),
+  })
+);
+
 vi.mock('agent-teams-controller', () => ({
   AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES: [] as readonly string[],
@@ -4049,11 +4061,6 @@ Messages:
       expect(identity.ok).toBe(true);
       laneIndexSpy = mockActiveOpenCodeLaneIndex(identity.laneId);
       vi.spyOn(service as any, 'canDeliverToOpenCodeRuntimeForTeam').mockReturnValue(true);
-      // A team of this app profile: the continuity scan skips teams of other profiles.
-      const { profileOwnership } = service as unknown as {
-        profileOwnership: { isManagedByThisProfile(teamName: string): Promise<boolean> };
-      };
-      vi.spyOn(profileOwnership, 'isManagedByThisProfile').mockResolvedValue(true);
       const records: any[] = [];
       const ledger = createPromptDeliveryLedgerFake(records);
       vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue(ledger);

@@ -288,8 +288,8 @@ export async function stopOpenCodeRuntimeLanesForStoppedTeam(input: {
   teamsBasePath: string;
   ports: StopOpenCodeRuntimeLanesForStoppedTeamPorts;
 }): Promise<number> {
-  // Checked before the lock as well: holding the team lock would make a
-  // foreign team look like an in-flight operation of this app at shutdown.
+  // Checked before taking the lock, so a foreign team is never locked here (a
+  // held lock is no ownership proof at shutdown either), and again under it.
   if (!(await input.ports.isManagedByThisProfile(input.teamName))) {
     return 0;
   }
