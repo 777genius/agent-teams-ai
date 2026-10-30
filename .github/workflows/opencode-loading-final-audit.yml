@@ -1,0 +1,223 @@
+name: OpenCode final loading audit
+on:
+  push:
+    branches: [test/opencode-loading-e2e]
+    paths: [.github/workflows/opencode-loading-final-audit.yml]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: ubicloud-standard-4
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 3222139a0ac35d54cac4e0f1ea6a742347397e71
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Apply the exact loading fixes and behavioral regressions
+        id: edit
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          paths=[]
+          def change(name,before,after):
+            p=Path(name);text=p.read_text();assert text.count(before)==1,(name,before)
+            p.write_text(text.replace(before,after));paths.append(name)
+          change('src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts',
+                 "          'Provider models load timed out',\n          100_000",
+                 "          'Provider models load timed out'")
+          change('src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient.ts',
+                 'const DEFAULT_HANDSHAKE_TIMEOUT_MS = 120_000;',
+                 'const DEFAULT_HANDSHAKE_TIMEOUT_MS = OPENCODE_LOADING_TIMEOUT_MS;')
+          p=Path(paths[-1]);s=p.read_text();needle="import { types } from 'node:util';"
+          assert s.count(needle)==1
+          p.write_text(s.replace(needle,needle+"\n\nimport { OPENCODE_LOADING_TIMEOUT_MS } from '@shared/constants/runtimeLoading';"))
+          model_test="""  it.each(['complete', 'timeout'] as const)(
+            'preserves the full slow model-picker allowance: %s',
+            async (outcome) => {
+              vi.useFakeTimers();
+              let finishModels!: (value: unknown) => void;
+              const loadModels = vi.fn(() => new Promise<unknown>((resolve) => { finishModels = resolve; }));
+              const page = {
+                schemaVersion: 1,
+                runtimeId: 'opencode',
+                models: {
+                  runtimeId: 'opencode', providerId: 'openai',
+                  models: [{ modelId: 'openai/TEST-slow-model', providerId: 'openai', displayName: 'Slow model',
+                    sourceLabel: 'OpenCode catalog', free: false, default: false, availability: 'available' }],
+                  defaultModelId: null, diagnostics: [],
+                },
+              };
+              Object.defineProperty(window, 'electronAPI', {
+                configurable: true,
+                value: { runtimeProviderManagement: {
+                  loadView: vi.fn(async () => ({ schemaVersion: 1, runtimeId: 'opencode', view: createRuntimeView([createOpenAiLocalProvider()]) })),
+                  loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()), loadModels,
+                } } as unknown as ElectronAPI,
+              });
+              const root = createRoot(host);
+              try {
+                await act(async () => { root.render(React.createElement(EnabledHarness, { projectPath: '/TEST/slow-picker' })); });
+                await act(async () => { await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1)); });
+                await act(async () => { await vi.advanceTimersByTimeAsync(180_001); });
+                expect(state?.modelsLoading).toBe(true);
+                expect(state?.modelsError).toBeNull();
+                if (outcome === 'timeout') {
+                  await act(async () => { await vi.advanceTimersByTimeAsync(150_000); });
+                  expect(state?.modelsLoading).toBe(false);
+                  expect(state?.modelsError).toBe('Provider models load timed out');
+                }
+                await act(async () => { finishModels(page); await Promise.resolve(); });
+                if (outcome === 'complete') {
+                  expect(state?.models.map((model) => model.modelId)).toEqual(['openai/TEST-slow-model']);
+                  expect(state?.modelsLoading).toBe(false);
+                  await act(async () => { await vi.advanceTimersByTimeAsync(330_000); });
+                  expect(state?.modelsError).toBeNull();
+                } else {
+                  expect(state?.models).toEqual([]);
+                  expect(state?.modelsError).toBe('Provider models load timed out');
+                }
+              } finally {
+                await act(async () => { root.unmount(); });
+                vi.useRealTimers();
+              }
+            }
+          );
+
+          """
+          anchor="  it('clears model loading when switching from model picker to setup form', async () => {"
+          change('test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts',anchor,model_test+anchor)
+          handshake_test="""  it.each([
+            [undefined, 180_000], [300_000, 180_000], [42_000, 42_000],
+          ] as const)('handshake loading preserves the caller budget %s', async (callerBudget, expected) => {
+            vi.useFakeTimers();
+            bridge.resultFactory = ({ command, options }) => bridgeSuccess({
+              command, requestId: options.requestId, data: handshakePort.nextHandshake,
+            });
+            const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity });
+            await port.handshake({
+              requiredCommand: 'opencode.launchTeam', expectedRunId: null,
+              expectedCapabilitySnapshotId: null, expectedManifestHighWatermark: null,
+              timeoutMs: callerBudget,
+            });
+            expect(bridge.calls).toHaveLength(1);
+            expect(bridge.calls[0].options.timeoutMs).toBe(expected);
+          });
+
+          """
+          anchor="  it('retries a busy registry handshake before dispatch within the original deadline', async () => {"
+          change('test/main/services/team/OpenCodeStateChangingBridgeCommandService.test.ts',anchor,handshake_test+anchor)
+          Path('candidate-files.json').write_text(json.dumps(paths))
+          PY
+          node --input-type=module -e "import {readFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';const files=JSON.parse(readFileSync('candidate-files.json','utf8'));execFileSync('pnpm',['exec','prettier','--write',...files],{stdio:'inherit'});execFileSync('pnpm',['exec','eslint','--config','eslint.fast.config.js','--fix','--fix-type','layout',...files],{stdio:'inherit'});"
+          git diff --check
+      - name: Check both process type graphs
+        if: always() && steps.edit.outcome == 'success'
+        run: pnpm typecheck
+      - name: Test actual picker lifecycle and handshake cancellation contracts
+        if: always() && steps.edit.outcome == 'success'
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+          test/main/services/team/OpenCodeStateChangingBridgeCommandService.test.ts
+          test/main/services/team/OpenCodeReadinessHandshake.test.ts
+          src/features/runtime-provider-management/renderer/hooks/runtimeProviderLoading.test.ts
+          src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.test.ts
+          test/main/services/team/OpenCodeReadinessBridge.test.ts
+      - name: Export exact candidate blobs, never update refs
+        if: always() && steps.edit.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {readFileSync,writeFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+          const files=JSON.parse(readFileSync('candidate-files.json','utf8'));
+          assert.deepEqual(git('diff','--name-only').split('\n').sort(),[...files].sort());
+          writeFileSync('candidate.patch',execFileSync('git',['diff'],{encoding:'utf8'}));
+          const entries=[];
+          for(const path of files){
+            const response=await fetch('https://api.github.com/repos/777genius/agent-teams-ai/git/blobs',{
+              method:'POST',headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`,'Content-Type':'application/json'},
+              body:JSON.stringify({content:readFileSync(path,'utf8'),encoding:'utf-8'}),signal:AbortSignal.timeout(60000),
+            });
+            assert(response.ok,`Blob upload: ${response.status}`);const {sha}=await response.json();assert.match(sha,/^[a-f0-9]{40}$/);
+            entries.push({path,mode:'100644',type:'blob',sha});
+          }
+          const result={parent:git('rev-parse','HEAD'),baseTree:git('rev-parse','HEAD^{tree}'),entries};
+          writeFileSync('candidate-tree.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opencode-desktop-final-audit
+          path: |
+            candidate.patch
+            candidate-tree.json
+          retention-days: 3
+  runtime:
+    runs-on: ubicloud-standard-4
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: a162e722e929cbe5fcf7b467d9c8268141c9ff1c
+          token: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          persist-credentials: false
+      - run: git archive --format=tar.gz HEAD > runtime-source.tar.gz
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+      - run: bun install --frozen-lockfile
+      - name: Apply exact reviewed health-budget assertions
+        id: edit
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.test.ts')
+          text=p.read_text();before='        healthTimeoutMs: 10_000,';assert text.count(before)==2
+          p.write_text(text.replace(before,'        healthTimeoutMs: 180_000,'))
+          PY
+          git diff --check
+          git diff > candidate.patch
+      - name: Provider settings and body deadline regressions
+        run: bun test src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.test.ts src/services/opencode/OpenCodeProviderIdentity.test.ts src/services/opencode/OpenCodeInventoryService.test.ts src/services/opencode/OpenCodeProviderLabelRegression.test.ts src/services/opencode/OpenCodeClientFactory.test.ts --timeout 30000
+      - name: Export exact runtime blob, never update refs
+        if: always() && steps.edit.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: |
+          bun --eval '
+          import assert from "node:assert/strict";import {execFileSync} from "node:child_process";
+          const git=(...args)=>execFileSync("git",args,{encoding:"utf8"}).trim();
+          const path="src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.test.ts";
+          assert.equal(git("diff","--name-only"),path);
+          const r=await fetch("https://api.github.com/repos/777genius/agent_teams_orchestrator/git/blobs",{
+            method:"POST",headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`,"Content-Type":"application/json"},
+            body:JSON.stringify({content:await Bun.file(path).text(),encoding:"utf-8"}),signal:AbortSignal.timeout(60000),
+          });
+          assert(r.ok,`Blob upload: ${r.status}`);const {sha}=await r.json();assert.match(sha,/^[a-f0-9]{40}$/);
+          const result={parent:git("rev-parse","HEAD"),baseTree:git("rev-parse","HEAD^{tree}"),entries:[{path,mode:"100644",type:"blob",sha}]};
+          await Bun.write("candidate-tree.json",JSON.stringify(result,null,2));console.log(JSON.stringify(result));'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opencode-runtime-final-audit
+          path: |
+            runtime-source.tar.gz
+            candidate.patch
+            candidate-tree.json
+          retention-days: 3
