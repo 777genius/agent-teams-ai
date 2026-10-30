@@ -26,9 +26,13 @@ describe('provider loading timeout ladder', () => {
 
   it('accepts slow loading after the previous 70-second and three-minute cutoffs', async () => {
     let finish!: (value: string) => void;
-    const pending = new Promise<string>((resolve) => { finish = resolve; });
+    const pending = new Promise<string>((resolve) => {
+      finish = resolve;
+    });
     let settled = false;
-    const result = withUiTimeout(pending, 'TEST loading timed out').finally(() => { settled = true; });
+    const result = withUiTimeout(pending, 'TEST loading timed out').finally(() => {
+      settled = true;
+    });
     await vi.advanceTimersByTimeAsync(180_001);
     expect(settled).toBe(false);
     finish('loaded');
@@ -39,8 +43,13 @@ describe('provider loading timeout ladder', () => {
   it('still stops waiting at the finite outer deadline', async () => {
     let settled = false;
     const result = withUiTimeout(new Promise<never>(() => {}), 'TEST timeout')
-      .then(() => 'unexpected', (error: Error) => error.message)
-      .finally(() => { settled = true; });
+      .then(
+        () => 'unexpected',
+        (error: Error) => error.message
+      )
+      .finally(() => {
+        settled = true;
+      });
     await vi.advanceTimersByTimeAsync(PROVIDER_UI_TIMEOUT_MS - 1);
     expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
@@ -48,8 +57,10 @@ describe('provider loading timeout ladder', () => {
   });
 
   it('honors a deliberate shorter override', async () => {
-    const result = withUiTimeout(new Promise<never>(() => {}), 'TEST short timeout', 500)
-      .then(() => 'unexpected', (error: Error) => error.message);
+    const result = withUiTimeout(new Promise<never>(() => {}), 'TEST short timeout', 500).then(
+      () => 'unexpected',
+      (error: Error) => error.message
+    );
     await vi.advanceTimersByTimeAsync(500);
     await expect(result).resolves.toBe('TEST short timeout');
   });

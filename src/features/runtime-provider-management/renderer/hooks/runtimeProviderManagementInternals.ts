@@ -1,3 +1,4 @@
+import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 import type {
   RuntimeProviderModelDto,
   RuntimeProviderSetupAuthOptionDto,
@@ -18,7 +19,7 @@ export function mergeModelPages(
 export function withUiTimeout<T>(
   promise: Promise<T>,
   message: string,
-  timeoutMs = 70_000
+  timeoutMs = PROVIDER_UI_TIMEOUT_MS
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
