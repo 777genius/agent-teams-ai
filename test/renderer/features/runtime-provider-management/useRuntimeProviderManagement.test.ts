@@ -4471,7 +4471,7 @@ describe('useRuntimeProviderManagement', () => {
     }
   });
 
-  it('keeps the clear-project watchdog beyond the 90-second main-process timeout', async () => {
+  it('keeps the clear-project watchdog beyond the 300-second main-process timeout', async () => {
     vi.useFakeTimers();
     const loadView = vi.fn(() =>
       Promise.resolve({
@@ -4528,13 +4528,13 @@ describe('useRuntimeProviderManagement', () => {
       });
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(90_001);
+        await vi.advanceTimersByTimeAsync(300_001);
       });
       expect(clearHook.state?.clearingProjectDefault).toBe(true);
       expect(clearHook.state?.error).toBeNull();
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(9_999);
+        await vi.advanceTimersByTimeAsync(29_999);
         await clearPromise;
       });
       expect(clearHook.state?.clearingProjectDefault).toBe(false);
