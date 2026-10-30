@@ -559,7 +559,9 @@ export class InternalStorageWorkerClient
       this.failWorker(worker, err instanceof Error ? err : new Error(String(err)));
     });
     worker.on('exit', (code) => {
-      if (code !== 0) {
+      // A worker we already retired (close, timeout, error) exits through our own
+      // terminate(), which reports code 1. Only an exit of the live worker is news.
+      if (code !== 0 && this.worker === worker) {
         logger.warn(`internal-storage worker exited with code ${code}`);
       }
       this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`), true);
