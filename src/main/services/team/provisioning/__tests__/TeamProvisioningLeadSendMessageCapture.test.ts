@@ -33,19 +33,16 @@ function createPorts(
 ): TeamProvisioningLeadSendMessageCapturePorts & {
   pushed: InboxMessage[];
   sent: InboxMessage[];
-  inbox: Array<{ recipient: string; message: InboxMessage }>;
   inboxChanges: string[];
   leadChanges: string[];
 } {
   const pushed: InboxMessage[] = [];
   const sent: InboxMessage[] = [];
-  const inbox: Array<{ recipient: string; message: InboxMessage }> = [];
   const inboxChanges: string[] = [];
   const leadChanges: string[] = [];
   return {
     pushed,
     sent,
-    inbox,
     inboxChanges,
     leadChanges,
     nowIso: () => '2026-01-01T00:00:00.000Z',
@@ -59,7 +56,6 @@ function createPorts(
     getTrackedRunId: () => 'run-1',
     pushLiveLeadProcessMessage: (_teamName, message) => pushed.push(message),
     persistSentMessage: (_teamName, message) => sent.push(message),
-    persistInboxMessage: (_teamName, recipient, message) => inbox.push({ recipient, message }),
     emitLeadMessageChange: (_teamName, _runId, detail) => leadChanges.push(detail),
     emitInboxChange: (_teamName, detail) => inboxChanges.push(detail),
     ...overrides,
@@ -124,7 +120,7 @@ describe('lead SendMessage capture helpers', () => {
     );
   });
 
-  it('captures native SendMessage to a teammate inbox with relay provenance', () => {
+  it('keeps a live copy of native SendMessage to a teammate without writing its inbox', () => {
     const run = createRun({
       pendingInboxRelayCandidates: [
         {
@@ -150,17 +146,17 @@ describe('lead SendMessage capture helpers', () => {
       ports
     );
 
-    expect(ports.inbox).toEqual([
-      {
-        recipient: 'worker',
-        message: expect.objectContaining({
-          to: 'worker',
-          relayOfMessageId: 'source-1',
-          read: true,
-        }),
-      },
+    expect(ports.pushed).toEqual([
+      expect.objectContaining({
+        to: 'worker',
+        relayOfMessageId: 'source-1',
+        read: true,
+        source: 'lead_process',
+      }),
     ]);
-    expect(ports.inboxChanges).toEqual(['inboxes/worker.json']);
+    // The runtime is the single durable writer of teammate inboxes.
+    expect(ports.inboxChanges).toEqual([]);
+    expect(ports.leadChanges).toEqual(['lead-send-message']);
   });
 
   it('marks direct cross-team send tools for sent-message refresh', () => {

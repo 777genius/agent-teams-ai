@@ -1078,12 +1078,8 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(live.map((message) => ({ to: message.to, text: message.text }))).toEqual([
       { to: 'alice', text: 'Please review the release notes.' },
     ]);
-    const aliceInbox = JSON.parse(
-      hoisted.files.get(`/mock/teams/${teamName}/inboxes/alice.json`) ?? '[]'
-    ) as Array<{ member?: string; text?: string }>;
-    expect(aliceInbox).toMatchObject([
-      { member: 'alice', text: 'Please review the release notes.' },
-    ]);
+    // The runtime, not the app, writes the teammate inbox.
+    expect(hoisted.files.get(`/mock/teams/${teamName}/inboxes/alice.json`)).toBeUndefined();
     expect(hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`)).toBeUndefined();
   });
 
@@ -2001,12 +1997,15 @@ Messages:
 
     const inbox = JSON.parse(
       hoisted.files.get(`/mock/teams/${teamName}/inboxes/alice.json`) ?? '[]'
-    ) as Array<{ messageId?: string; relayOfMessageId?: string; source?: string }>;
-    const relayedCopy = inbox.find((row) => row.messageId?.startsWith('lead-sendmsg-run-1-'));
-    expect(relayedCopy).toMatchObject({
-      source: 'lead_process',
-      relayOfMessageId: 'm-alice-1',
-    });
+    ) as Array<{ messageId?: string }>;
+    expect(inbox.some((row) => row.messageId?.startsWith('lead-sendmsg-run-1-'))).toBe(false);
+    expect(service.getLiveLeadProcessMessages(teamName)).toEqual([
+      expect.objectContaining({
+        to: 'alice',
+        source: 'lead_process',
+        relayOfMessageId: 'm-alice-1',
+      }),
+    ]);
   });
 
   it('does not capture user-dm silent forwards as extra lead_process messages', () => {
