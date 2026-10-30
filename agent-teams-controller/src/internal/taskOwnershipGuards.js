@@ -15,6 +15,21 @@ function assertKnownTaskActor(context, value, label) {
     });
 }
 
+// Same member and lead-alias rules as assertKnownTaskActor, without throwing, so
+// callers can word their own error. leadName is the configured lead, if any.
+function resolveTaskActor(context, actor) {
+    return {
+        memberName: runtimeHelpers.resolveExplicitTeamMemberName(context.paths, actor, {
+            allowLeadAliases: true,
+        }),
+        leadName: runtimeHelpers.resolveExplicitTeamMemberName(
+            context.paths,
+            runtimeHelpers.inferLeadName(context.paths),
+            { allowLeadAliases: false }
+        ),
+    };
+}
+
 function resolveAgentTaskMutationActor(context, actor, action) {
     const normalizedActor = normalizeActorName(actor);
     if (context.allowUserMessageSender !== false) {
@@ -136,4 +151,5 @@ module.exports = {
     isSameTaskMember,
     normalizeActorName,
     readMutableTask,
+    resolveTaskActor,
 };
