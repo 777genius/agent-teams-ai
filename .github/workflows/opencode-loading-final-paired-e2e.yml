@@ -1,0 +1,22 @@
+name: OpenCode final paired loading E2E
+on:
+  push:
+    branches: [test/opencode-loading-final-e2e]
+    paths: [.github/workflows/opencode-loading-final-paired-e2e.yml]
+permissions:
+  contents: read
+jobs:
+  native-windows:
+    if: github.repository == '777genius/agent-teams-ai' && github.ref == 'refs/heads/test/opencode-loading-final-e2e'
+    uses: ./.github/workflows/opencode-native-windows-e2e.yml
+    with:
+      arch: x64
+      sdk_ref: dd73234b55ae326d87c39c71768d676ba6260ab2
+      model: openrouter/openai/gpt-4.1-mini
+      versions: current
+      provider_only: false
+      short_tasks: false
+      source_only: false
+    secrets:
+      RUNTIME_BUILD_DISPATCH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
