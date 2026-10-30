@@ -83,6 +83,7 @@ export interface TeamProvisioningStopAllPorts {
   cancelPendingRuntimeAdapterLaunchesForShutdown(): Promise<void>;
   waitForInFlightTeamOperationsForShutdown(): Promise<void>;
   listPersistedTeamNames(): string[];
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
   stopPersistentTeamMembers(teamName: string): void;
   cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName: string): Promise<void>;
   logger: StopLogger;
@@ -254,10 +255,22 @@ export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Pro
   await ports.stopTrackedTeamsForShutdown('Shutdown follow-up');
 
   const persistedTeamNames = ports.listPersistedTeamNames();
-  const orphanOnly = getOrphanPersistedTeamNames(persistedTeamNames, [
+  const untrackedTeamNames = getOrphanPersistedTeamNames(persistedTeamNames, [
     ...initialTracked,
     ...ports.getShutdownTrackedTeamNames(),
   ]);
+  // The teams directory is shared with other app profiles and native sessions.
+  // Their teams are not leftovers of this profile: no pause, kill or rewrite.
+  const orphanOnly: string[] = [];
+  for (const teamName of untrackedTeamNames) {
+    if (await ports.isManagedByThisProfile(teamName)) {
+      orphanOnly.push(teamName);
+    }
+  }
+  const foreignCount = untrackedTeamNames.length - orphanOnly.length;
+  if (foreignCount > 0) {
+    ports.logger.info(`Leaving ${foreignCount} team(s) not managed by this app profile untouched`);
+  }
   if (orphanOnly.length > 0) {
     ports.logger.info(
       `Cleaning up persisted teammate runtimes on shutdown: ${orphanOnly.join(', ')}`

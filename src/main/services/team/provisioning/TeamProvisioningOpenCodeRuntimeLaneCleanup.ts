@@ -47,6 +47,7 @@ export interface StoppedOpenCodeRuntimeLanePidStopPorts {
 
 export interface StopOpenCodeRuntimeLanesForStoppedTeamPorts {
   withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
   canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readPreviousLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -298,6 +299,11 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
   ports: StopOpenCodeRuntimeLanesForStoppedTeamPorts;
 }): Promise<number> {
   const { ports, teamName, teamsBasePath } = input;
+  // Lanes of a team this profile does not manage belong to another app
+  // instance or a native session: never stop, kill or clear them from here.
+  if (!(await ports.isManagedByThisProfile(teamName))) {
+    return 0;
+  }
   const freshness = await readTeamLaunchFreshnessFromTeamDir(
     path.join(teamsBasePath, teamName),
     teamName

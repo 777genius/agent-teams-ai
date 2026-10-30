@@ -13,6 +13,7 @@ function createPorts(
 ): TeamProvisioningOpenCodeStoppedLaneCleanupPorts {
   return {
     withTeamLock: vi.fn(async (_teamName, operation) => operation()),
+    isManagedByThisProfile: vi.fn(async () => true),
     canDeliverToOpenCodeRuntimeForTeam: vi.fn(() => false),
     getOpenCodeRuntimeAdapter: vi.fn(() => null),
     readPreviousLaunchState: vi.fn(async () => null),

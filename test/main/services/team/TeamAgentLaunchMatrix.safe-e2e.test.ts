@@ -73,6 +73,7 @@ import {
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
 import { createOpenCodePromptDeliveryLedger } from '../../../../src/main/services/team/provisioning/OpenCodePromptDeliveryQueries';
+import { claimTeamForThisProfile } from '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import {
   cancelRuntimeAdapterProvisioning,
   type RuntimeAdapterCancellationPorts,
@@ -15437,6 +15438,7 @@ describe(
     it('does not scan or deliver orphaned mixed OpenCode lanes after app restart when team is stopped', async () => {
       const teamName = 'mixed-opencode-stopped-orphaned-lane-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await upsertOpenCodeRuntimeLaneIndexEntry({
@@ -15815,6 +15817,7 @@ describe(
     it('recovers a missing mixed OpenCode lane index before watchdog scans unread OpenCode inbox', async () => {
       const teamName = 'mixed-opencode-watchdog-recovers-missing-lane-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await fs.writeFile(
@@ -15949,6 +15952,7 @@ describe(
       const laneId = 'secondary:opencode:bob';
       const runId = 'session-evidence-opencode-run';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await writeOpenCodeBootstrapSessionEvidenceForTest({
@@ -16071,6 +16075,7 @@ describe(
     it('recovers one missing mixed OpenCode lane before watchdog scans while sibling lane is active', async () => {
       const teamName = 'mixed-opencode-watchdog-recovers-one-missing-lane-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await fs.writeFile(
@@ -23494,6 +23499,11 @@ function trackLiveRun(svc: TeamProvisioningService, run: any): void {
   (svc as any).runs.set(run.runId, run);
   (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
   (svc as any).aliveRunByTeam.set(run.teamName, run.runId);
+}
+
+/** The restarted service only recovers or cleans up teams this app profile launched. */
+async function markLaunchedByThisProfile(teamName: string): Promise<void> {
+  await claimTeamForThisProfile({ teamsBasePath: getTeamsBasePath(), teamName, reason: 'launch' });
 }
 
 async function writeAliveProcessRegistry(teamName: string): Promise<void> {

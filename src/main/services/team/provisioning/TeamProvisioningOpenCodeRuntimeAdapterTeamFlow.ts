@@ -29,6 +29,8 @@ export interface OpenCodeRuntimeAdapterTeamFlowPorts {
   ensureCwdExists(cwd: string): Promise<void>;
   // A returned path proves directory creation; void provides no fresh-ownership evidence.
   mkdir(directoryPath: string): Promise<string | void>;
+  /** Records this app profile as the owner of the created team; throws when it cannot. */
+  claimCreatedTeam(teamName: string): Promise<void>;
   nowMs(): number;
   writeTeamMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void>;
   writeMembersMeta(
@@ -100,6 +102,8 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   const createdTeamDirectory = await ports.mkdir(teamDir);
   await ports.mkdir(path.join(ports.getTasksBasePath(), launchRequest.teamName));
   if (createdTeamDirectory) await ports.mkdir(path.join(teamDir, 'inboxes'));
+  // Before any spawn and fail-closed, like the launch admission claim.
+  await ports.claimCreatedTeam(launchRequest.teamName);
   await ports.writeTeamMeta(launchRequest.teamName, {
     displayName: launchRequest.displayName,
     description: launchRequest.description,

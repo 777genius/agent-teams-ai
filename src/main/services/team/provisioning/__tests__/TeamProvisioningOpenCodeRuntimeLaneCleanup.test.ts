@@ -272,6 +272,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           teamsBasePath,
           ports: {
             withTeamLock: async (_teamName, operation) => operation(),
+            isManagedByThisProfile: async () => true,
             canDeliverToOpenCodeRuntimeForTeam: () => false,
             getOpenCodeRuntimeAdapter: () =>
               ({
@@ -344,6 +345,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
         teamsBasePath,
         ports: {
           withTeamLock: async (_teamName, operation) => operation(),
+          isManagedByThisProfile: async () => true,
           canDeliverToOpenCodeRuntimeForTeam: () => false,
           getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', stop }) as never,
           readPreviousLaunchState: async () => null,
@@ -397,6 +399,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
         teamsBasePath,
         ports: {
           withTeamLock: async (_teamName, operation) => operation(),
+          isManagedByThisProfile: async () => true,
           canDeliverToOpenCodeRuntimeForTeam: () => false,
           getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', stop }) as never,
           readPreviousLaunchState: async () => null,
@@ -474,6 +477,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
         teamsBasePath,
         ports: {
           withTeamLock: async (_teamName, operation) => operation(),
+          isManagedByThisProfile: async () => true,
           canDeliverToOpenCodeRuntimeForTeam: () => false,
           getOpenCodeRuntimeAdapter: () =>
             ({
@@ -568,6 +572,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
             await lockRelease;
             return await operation();
           },
+          isManagedByThisProfile: async () => true,
           canDeliverToOpenCodeRuntimeForTeam: () => canDeliver,
           getOpenCodeRuntimeAdapter: () =>
             ({ providerId: 'opencode', stop }) as unknown as ReturnType<
@@ -633,6 +638,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           teamsBasePath,
           ports: {
             withTeamLock: async (_teamName, operation) => operation(),
+            isManagedByThisProfile: async () => true,
             canDeliverToOpenCodeRuntimeForTeam: () => false,
             getOpenCodeRuntimeAdapter: () => null,
             readPreviousLaunchState: async () => null,

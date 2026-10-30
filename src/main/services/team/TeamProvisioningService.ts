@@ -109,6 +109,29 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     this.teamChangeEmitter = emitter;
   }
 
+  /** Teams of other app profiles and native sessions are read-only for background passes. */
+  async isTeamManagedByThisProfile(teamName: string): Promise<boolean> {
+    return this.profileOwnership.isManagedByThisProfile(teamName);
+  }
+
+  /**
+   * The startup pass may recover, deliver to and stop lanes, so it is admitted
+   * only for teams this profile manages. The continuity pass already requires a
+   * runtime this process tracks.
+   */
+  async scanOpenCodePromptDeliveryWatchdog(
+    teamName: string,
+    pass: 'startup_recovery' | 'continuity' = 'startup_recovery'
+  ): Promise<number> {
+    if (pass === 'continuity') {
+      return this.openCodePromptDeliveryWatchdogCoordinator.scanContinuity(teamName);
+    }
+    if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
+      return 0;
+    }
+    return this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
+  }
+
   setRuntimeRecoveryFailureObserver(
     observer: ((failure: LeadRuntimeFailureObservation) => void) | null
   ): void {
