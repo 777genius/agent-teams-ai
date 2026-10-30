@@ -1595,7 +1595,7 @@ describe('agent-teams-mcp tools', () => {
           startImmediately: true,
         })
       ).rejects.toThrow(
-        `Unknown task actor "${actor}". Use "user", the team lead "lead", or a configured team member name.`
+        `Unknown task actor "${actor}". Use the team lead "lead", a configured team member name, or "user" only when acting for the user.`
       );
     }
     expect(fs.readdirSync(taskDir)).toEqual(taskFilesBeforeRejectedActor);
@@ -1675,12 +1675,35 @@ describe('agent-teams-mcp tools', () => {
         createdBy: 'leader',
       })
     ).rejects.toThrow(
-      'Unknown task actor "leader". Use "user", the team lead "team-lead", or a configured team member name.'
+      'Unknown task actor "leader". Use the team lead "team-lead", a configured team member name, or "user" only when acting for the user.'
     );
     expect(fs.readdirSync(taskDir)).toEqual(taskFilesBeforeRejectedActor);
   });
 
-  it('prefers a member named "lead" over the lead alias and never invents a lead', async () => {
+  it('records the lead alias as a custom-named configured lead, not as a literal team-lead', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'custom-lead-name';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'boss', agentType: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+
+    for (const actor of ['lead', 'team-lead']) {
+      const task = parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject: `Created by alias ${actor}`,
+          createdBy: actor,
+        })
+      );
+      expect(task.createdBy).toBe('boss');
+    }
+  });
+
+  it('prefers a member named "lead" over the lead alias', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'lead-named-member';
     writeTeamConfig(claudeDir, teamName, {
@@ -1704,17 +1727,39 @@ describe('agent-teams-mcp tools', () => {
       );
       expect(task.createdBy).toBe(expected);
     }
+  });
 
-    const leaderlessTeam = 'leaderless-team';
-    writeTeamConfig(claudeDir, leaderlessTeam, { members: [] });
+  // Current controller rule, shared with task owners: with no member marked as
+  // lead, inferLeadName treats the first configured member as the lead.
+  it('resolves the lead alias to the first configured member when no member is marked as lead', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'unmarked-lead';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [{ name: 'alice', role: 'developer' }],
+    });
+
+    const task = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Created by the unmarked lead',
+        createdBy: 'lead',
+      })
+    );
+    expect(task.createdBy).toBe('alice');
+
+    const emptyTeam = 'empty-team';
+    writeTeamConfig(claudeDir, emptyTeam, { members: [] });
     await expect(
       getTool('task_create').execute({
         claudeDir,
-        teamName: leaderlessTeam,
-        subject: 'No lead to resolve',
+        teamName: emptyTeam,
+        subject: 'No member to resolve',
         createdBy: 'lead',
       })
-    ).rejects.toThrow('Unknown task actor "lead". Use "user" or a configured team member name.');
+    ).rejects.toThrow(
+      'Unknown task actor "lead". Use a configured team member name, or "user" only when acting for the user.'
+    );
   });
 
   it('uses Codex-native MCP wording for task_create owner notifications', async () => {
@@ -2823,7 +2868,7 @@ describe('agent-teams-mcp tools', () => {
           createdBy: 'external-integration',
         })
       ).rejects.toThrow(
-        'Unknown task actor "external-integration". Use "user", the team lead "lead", or a configured team member name.'
+        'Unknown task actor "external-integration". Use the team lead "lead", a configured team member name, or "user" only when acting for the user.'
       );
       expect(fs.readdirSync(taskDir)).toEqual([]);
 

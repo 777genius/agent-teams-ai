@@ -80,9 +80,9 @@ export function assertConfiguredTaskActor(
     return memberName;
   }
 
-  const leadHint = leadName ? `, the team lead "${leadName}",` : '';
+  const leadHint = leadName ? `the team lead "${leadName}", ` : '';
   throw new Error(
-    `Unknown task actor "${normalizedActor}". Use "user"${leadHint} or a configured team member name.`
+    `Unknown task actor "${normalizedActor}". Use ${leadHint}a configured team member name, or "user" only when acting for the user.`
   );
 }
 

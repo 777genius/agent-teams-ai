@@ -240,7 +240,7 @@ describe('lead launch prompts include the teammate roster rules', () => {
     expect(prompt).not.toContain('EXACTLY: team-lead');
   });
 
-  it('gives the lead its own name as the task creation actor', () => {
+  it('gives the lead its own name in the task creation and review templates', () => {
     const context = buildPersistentLeadContext({
       teamName: 'matrix-team',
       leadName: 'boss',
@@ -250,7 +250,15 @@ describe('lead launch prompts include the teammate roster rules', () => {
 
     expect(context).toContain('createdBy?: "boss"');
     expect(context).toContain('createdBy: "boss"');
-    expect(context).not.toContain('createdBy?: "<your-name>"');
+    expect(context).toContain(
+      'review_approve { teamName: "matrix-team", taskId: "<id>", from: "boss"'
+    );
+    expect(context).toContain(
+      'review_request_changes { teamName: "matrix-team", taskId: "<id>", from: "boss"'
+    );
+    // The shared process protocol still uses a generic placeholder; the lead-only
+    // task and review templates must not.
+    expect(context).not.toMatch(/(createdBy\??|review_\w+ \{[^}]*from): "<your-name>"/);
   });
 
   it('keeps the integrity rules in the compact post-compact persistent context', () => {
