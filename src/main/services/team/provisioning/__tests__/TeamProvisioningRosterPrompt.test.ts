@@ -105,6 +105,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
     );
     expect(wrapped).toContain('NEVER invent, guess, rename, or paraphrase teammate names');
     expect(wrapped).toContain('Your team is "alpha"');
+    expect(wrapped).toContain('You are "team-lead", the team lead.');
     expect(
       wrapped.endsWith(
         'User instructions:\ncreate one task per teammate: each writes hello-<their-name>.md'
@@ -140,6 +141,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
       expect(prompt).toContain(protocols.buildChatVisualizationProtocolText());
       expect(prompt).not.toContain('Team roster (authoritative');
       expect(prompt).toContain('Your team is "alpha"');
+      expect(prompt).toContain('You are "team-lead", the team lead.');
       expect(prompt.endsWith('User instructions:\nsolo work')).toBe(true);
     }
   });
@@ -236,6 +238,19 @@ describe('lead launch prompts include the teammate roster rules', () => {
     );
     expect(prompt).toContain('NEVER invent, guess, rename, or paraphrase teammate names');
     expect(prompt).not.toContain('EXACTLY: team-lead');
+  });
+
+  it('gives the lead its own name as the task creation actor', () => {
+    const context = buildPersistentLeadContext({
+      teamName: 'matrix-team',
+      leadName: 'boss',
+      isSolo: false,
+      members: teammates,
+    });
+
+    expect(context).toContain('createdBy?: "boss"');
+    expect(context).toContain('createdBy: "boss"');
+    expect(context).not.toContain('createdBy?: "<your-name>"');
   });
 
   it('keeps the integrity rules in the compact post-compact persistent context', () => {

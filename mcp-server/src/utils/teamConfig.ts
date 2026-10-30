@@ -12,7 +12,6 @@ function resolveTeamPaths(
   claudeDir?: string
 ): {
   configPath: string;
-  membersMetaPath: string;
   metaPath: string;
 } {
   const controller = getController(teamName, claudeDir) as {
@@ -24,7 +23,6 @@ function resolveTeamPaths(
   }
   return {
     configPath: path.join(teamDir, 'config.json'),
-    membersMetaPath: path.join(teamDir, 'members.meta.json'),
     metaPath: path.join(teamDir, 'team.meta.json'),
   };
 }
@@ -73,50 +71,18 @@ export function assertConfiguredTaskActor(
     return 'user';
   }
 
-  const { configPath, membersMetaPath } = resolveTeamPaths(teamName, claudeDir);
-  const parsed = readJsonObject(configPath);
-  if (!parsed || !isConfiguredTeamConfig(parsed)) {
-    throw new Error(unknownTeamMessage(teamName));
+  assertConfiguredTeam(teamName, claudeDir);
+  // The controller owns member and lead-alias rules ("lead"/"team-lead" -> the real lead name).
+  const { memberName, leadName } = getController(teamName, claudeDir).taskBoard.resolveTaskActor(
+    normalizedActor
+  );
+  if (memberName) {
+    return memberName;
   }
 
-  const memberNamesByKey = new Map<string, string>();
-  const applyMember = (member: unknown, fromMeta: boolean): void => {
-    if (!member || typeof member !== 'object') {
-      return;
-    }
-    const record = member as Record<string, unknown>;
-    const name = typeof record.name === 'string' ? record.name.trim() : '';
-    if (!name) {
-      return;
-    }
-    const key = name.toLowerCase();
-    if (fromMeta && typeof record.removedAt === 'number') {
-      memberNamesByKey.delete(key);
-      return;
-    }
-    memberNamesByKey.set(key, name);
-  };
-
-  if (Array.isArray(parsed.members)) {
-    for (const member of parsed.members) {
-      applyMember(member, false);
-    }
-  }
-
-  const membersMeta = readJsonObject(membersMetaPath);
-  if (Array.isArray(membersMeta?.members)) {
-    for (const member of membersMeta.members) {
-      applyMember(member, true);
-    }
-  }
-
-  const configuredMemberName = memberNamesByKey.get(normalizedActor.toLowerCase());
-  if (configuredMemberName) {
-    return configuredMemberName;
-  }
-
+  const leadHint = leadName ? `, the team lead "${leadName}",` : '';
   throw new Error(
-    `Unknown task actor "${normalizedActor}". Use "user" or a configured team member name.`
+    `Unknown task actor "${normalizedActor}". Use "user"${leadHint} or a configured team member name.`
   );
 }
 
