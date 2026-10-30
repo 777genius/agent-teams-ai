@@ -1,6 +1,7 @@
 const kanban = require('./kanban.js');
 const review = require('./review.js');
 const tasks = require('./tasks.js');
+const taskOwnershipGuards = require('./taskOwnershipGuards.js');
 
 // Application boundary for task-board lifecycle writes.
 // Keep this thin so existing task, review, and kanban behavior remains stable.
@@ -35,6 +36,10 @@ function listDeletedTasks(context) {
 
 function resolveTaskId(context, taskRef) {
   return tasks.resolveTaskId(context, taskRef);
+}
+
+function resolveTaskActor(context, actor) {
+  return taskOwnershipGuards.resolveTaskActor(context, actor);
 }
 
 function setTaskStatus(context, taskId, status, actor) {
@@ -178,6 +183,7 @@ module.exports = {
   reconcileTaskCreation,
   requestChanges,
   requestReview,
+  resolveTaskActor,
   resolveTaskId,
   restoreTask,
   setKanbanColumn,

@@ -105,6 +105,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
     );
     expect(wrapped).toContain('NEVER invent, guess, rename, or paraphrase teammate names');
     expect(wrapped).toContain('Your team is "alpha"');
+    expect(wrapped).toContain('You are "team-lead", the team lead.');
     expect(
       wrapped.endsWith(
         'User instructions:\ncreate one task per teammate: each writes hello-<their-name>.md'
@@ -140,6 +141,7 @@ describe('buildCreateBootstrapUserPrompt', () => {
       expect(prompt).toContain(protocols.buildChatVisualizationProtocolText());
       expect(prompt).not.toContain('Team roster (authoritative');
       expect(prompt).toContain('Your team is "alpha"');
+      expect(prompt).toContain('You are "team-lead", the team lead.');
       expect(prompt.endsWith('User instructions:\nsolo work')).toBe(true);
     }
   });
@@ -236,6 +238,27 @@ describe('lead launch prompts include the teammate roster rules', () => {
     );
     expect(prompt).toContain('NEVER invent, guess, rename, or paraphrase teammate names');
     expect(prompt).not.toContain('EXACTLY: team-lead');
+  });
+
+  it('gives the lead its own name in the task creation and review templates', () => {
+    const context = buildPersistentLeadContext({
+      teamName: 'matrix-team',
+      leadName: 'boss',
+      isSolo: false,
+      members: teammates,
+    });
+
+    expect(context).toContain('createdBy?: "boss"');
+    expect(context).toContain('createdBy: "boss"');
+    expect(context).toContain(
+      'review_approve { teamName: "matrix-team", taskId: "<id>", from: "boss"'
+    );
+    expect(context).toContain(
+      'review_request_changes { teamName: "matrix-team", taskId: "<id>", from: "boss"'
+    );
+    // The shared process protocol still uses a generic placeholder; the lead-only
+    // task and review templates must not.
+    expect(context).not.toMatch(/(createdBy\??|review_\w+ \{[^}]*from): "<your-name>"/);
   });
 
   it('keeps the integrity rules in the compact post-compact persistent context', () => {

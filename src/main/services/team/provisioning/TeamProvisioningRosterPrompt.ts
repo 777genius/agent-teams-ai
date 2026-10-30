@@ -1,5 +1,10 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
-import { isLeadMember, isLeadNameAlias, isReservedLeadRole } from '@shared/utils/leadDetection';
+import {
+  isLeadMember,
+  isLeadNameAlias,
+  isReservedLeadRole,
+  resolveRuntimeLeadName,
+} from '@shared/utils/leadDetection';
 import { protocols } from 'agent-teams-controller';
 
 import type { TeamCreateRequest } from '@shared/types';
@@ -87,7 +92,7 @@ export function buildLeadRosterIntegrityRules(
 }
 
 // Create mode has no launch-hydration turn, so this deferred first prompt is the
-// lead's only source of its team scope and roster. The runtime prepends it after
+// lead's only source of its name, team scope and roster. The runtime prepends it after
 // deterministic bootstrap (TeamCreate + teammate spawns) finishes: teammates
 // exist (or failed) but may still be finishing their first turn.
 export function buildCreateBootstrapUserPrompt(
@@ -103,6 +108,7 @@ export function buildCreateBootstrapUserPrompt(
   const roster = buildMembersPrompt(teammates.map(({ workflow: _workflow, ...member }) => member));
   return [
     wrapAgentBlock(protocols.buildChatVisualizationProtocolText()),
+    `You are "${resolveRuntimeLeadName(members)}", the team lead.`,
     ...(teammates.length > 0
       ? [
           'Team roster (authoritative — from the team configuration):',

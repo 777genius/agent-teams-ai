@@ -1595,7 +1595,7 @@ describe('agent-teams-mcp tools', () => {
           startImmediately: true,
         })
       ).rejects.toThrow(
-        `Unknown task actor "${actor}". Use "user" or a configured team member name.`
+        `Unknown task actor "${actor}". Use the team lead "lead", a configured team member name, or "user" only when acting for the user.`
       );
     }
     expect(fs.readdirSync(taskDir)).toEqual(taskFilesBeforeRejectedActor);
@@ -1628,6 +1628,138 @@ describe('agent-teams-mcp tools', () => {
       'Raw/headless calls do not inject a user actor or auto-start'
     );
     expect(getTool('task_create').description).toContain("createdBy: 'user'");
+  });
+
+  it('records the lead alias task actor as the configured lead name', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'lead-alias-actor';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+
+    for (const [index, [actorField, actor]] of (
+      [
+        ['createdBy', 'lead'],
+        ['createdBy', 'Lead'],
+        ['createdBy', 'TEAM-LEAD'],
+        ['from', 'lead'],
+      ] as const
+    ).entries()) {
+      const task = parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject: `Lead alias task ${index + 1}`,
+          owner: 'alice',
+          [actorField]: actor,
+        })
+      );
+      expect(task.createdBy).toBe('team-lead');
+      expect(task.historyEvents?.[0]?.actor).toBe('team-lead');
+    }
+    const aliceInbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json'), 'utf8')
+    ) as Array<{ from: string }>;
+    expect(aliceInbox.map((message) => message.from)).toEqual(Array(4).fill('team-lead'));
+
+    const taskDir = path.join(claudeDir, 'tasks', teamName);
+    const taskFilesBeforeRejectedActor = fs.readdirSync(taskDir);
+    await expect(
+      getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Reject an unknown actor',
+        createdBy: 'leader',
+      })
+    ).rejects.toThrow(
+      'Unknown task actor "leader". Use the team lead "team-lead", a configured team member name, or "user" only when acting for the user.'
+    );
+    expect(fs.readdirSync(taskDir)).toEqual(taskFilesBeforeRejectedActor);
+  });
+
+  it('records the lead alias as a custom-named configured lead, not as a literal team-lead', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'custom-lead-name';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'boss', agentType: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+
+    for (const actor of ['lead', 'team-lead']) {
+      const task = parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject: `Created by alias ${actor}`,
+          createdBy: actor,
+        })
+      );
+      expect(task.createdBy).toBe('boss');
+    }
+  });
+
+  it('prefers a member named "lead" over the lead alias', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'lead-named-member';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'lead', role: 'developer' },
+      ],
+    });
+
+    for (const [actor, expected] of [
+      ['LEAD', 'lead'],
+      ['team-lead', 'team-lead'],
+    ] as const) {
+      const task = parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject: `Created by ${actor}`,
+          createdBy: actor,
+        })
+      );
+      expect(task.createdBy).toBe(expected);
+    }
+  });
+
+  // Current controller rule, shared with task owners: with no member marked as
+  // lead, inferLeadName treats the first configured member as the lead.
+  it('resolves the lead alias to the first configured member when no member is marked as lead', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'unmarked-lead';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [{ name: 'alice', role: 'developer' }],
+    });
+
+    const task = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Created by the unmarked lead',
+        createdBy: 'lead',
+      })
+    );
+    expect(task.createdBy).toBe('alice');
+
+    const emptyTeam = 'empty-team';
+    writeTeamConfig(claudeDir, emptyTeam, { members: [] });
+    await expect(
+      getTool('task_create').execute({
+        claudeDir,
+        teamName: emptyTeam,
+        subject: 'No member to resolve',
+        createdBy: 'lead',
+      })
+    ).rejects.toThrow(
+      'Unknown task actor "lead". Use a configured team member name, or "user" only when acting for the user.'
+    );
   });
 
   it('uses Codex-native MCP wording for task_create owner notifications', async () => {
@@ -2736,7 +2868,7 @@ describe('agent-teams-mcp tools', () => {
           createdBy: 'external-integration',
         })
       ).rejects.toThrow(
-        'Unknown task actor "external-integration". Use "user" or a configured team member name.'
+        'Unknown task actor "external-integration". Use the team lead "lead", a configured team member name, or "user" only when acting for the user.'
       );
       expect(fs.readdirSync(taskDir)).toEqual([]);
 
