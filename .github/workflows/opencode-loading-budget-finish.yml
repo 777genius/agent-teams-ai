@@ -1,0 +1,108 @@
+name: OpenCode loading budget focused validation
+on:
+  push:
+    branches: [fix/opencode-three-minute-loading]
+    paths: [.github/workflows/opencode-loading-budget-finish.yml]
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.repository == '777genius/agent-teams-ai' && github.ref == 'refs/heads/fix/opencode-three-minute-loading'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Align only the old provider command timeout expectations
+        id: edit
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD^'], {encoding:'utf8'}).trim(), '9c18c740c0bab7fbcf7b567f0fe4aa267bdc90d3');
+          const file = 'test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts';
+          const source = readFileSync(file, 'utf8');
+          const matches = source.match(/90_000/g) ?? [];
+          assert(matches.length > 0 && matches.length <= 10, 'Unexpected old-timeout assertion count');
+          writeFileSync(file, source.replaceAll('90_000', '300_000'));
+          console.log('Updated old provider command timeout assertions: ' + matches.length);
+          JS
+          pnpm exec eslint --fix --fix-type layout \
+            src/shared/constants/runtimeLoading.ts \
+            src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts \
+            src/features/runtime-provider-management/main/infrastructure/RuntimeProviderLoadingBudget.test.ts \
+            src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementInternals.ts \
+            src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts \
+            src/features/runtime-provider-management/renderer/hooks/runtimeProviderLoading.test.ts \
+            src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy.ts \
+            test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+      - name: Typecheck
+        if: always() && steps.edit.outcome == 'success'
+        run: pnpm typecheck
+      - name: Focused provider loading and readiness tests
+        if: always() && steps.edit.outcome == 'success'
+        run: >-
+          pnpm exec vitest run
+          src/features/runtime-provider-management/renderer/hooks/runtimeProviderLoading.test.ts
+          src/features/runtime-provider-management/main/infrastructure/RuntimeProviderLoadingBudget.test.ts
+          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          test/main/services/team/opencode
+      - name: Export exact edited blobs without updating refs
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const git = (...args) => execFileSync('git', args, {encoding:'utf8'}).trim();
+          const allow = new Set([
+            'src/shared/constants/runtimeLoading.ts',
+            'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts',
+            'src/features/runtime-provider-management/main/infrastructure/RuntimeProviderLoadingBudget.test.ts',
+            'src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementInternals.ts',
+            'src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts',
+            'src/features/runtime-provider-management/renderer/hooks/runtimeProviderLoading.test.ts',
+            'src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy.ts',
+            'test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts',
+          ]);
+          const paths = git('diff', '--name-only').split('\n').filter(Boolean);
+          assert(paths.length && paths.every(path => allow.has(path)), 'Unreviewed edit outside the scoped files');
+          execFileSync('git',['diff','--check'],{stdio:'inherit'});
+          writeFileSync('candidate.patch', execFileSync('git',['diff'],{encoding:'utf8'}));
+          console.log(readFileSync('candidate.patch','utf8'));
+          const entries = [];
+          for (const path of paths) {
+            const response = await fetch('https://api.github.com/repos/777genius/agent-teams-ai/git/blobs', {
+              method:'POST', headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},
+              body:JSON.stringify({content:readFileSync(path,'utf8'),encoding:'utf-8'}), signal:AbortSignal.timeout(60000),
+            });
+            assert(response.ok, `Blob upload failed: ${response.status}`);
+            const {sha} = await response.json(); assert.match(sha,/^[a-f0-9]{40}$/);
+            entries.push({path,mode:'100644',type:'blob',sha});
+          }
+          const receipt = {parent:git('rev-parse','HEAD'),baseTree:git('rev-parse','HEAD^{tree}'),entries};
+          writeFileSync('candidate-tree.json',JSON.stringify(receipt,null,2)+'\n');
+          console.log(JSON.stringify(receipt));
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opencode-desktop-loading-validation
+          path: |
+            candidate-tree.json
+            candidate.patch
+          retention-days: 7
