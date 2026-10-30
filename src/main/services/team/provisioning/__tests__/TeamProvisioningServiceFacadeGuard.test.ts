@@ -41,7 +41,7 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'isTeamManagedByThisProfile',
   'launchTeam',
   'restartLeadRuntime',
-  // The startup recovery pass is admitted only for teams this profile manages.
+  // Both watchdog passes are admitted only for teams this profile manages.
   'scanOpenCodePromptDeliveryWatchdog',
   'setLaunchAdmissionGuard',
   'setRuntimeRecoveryFailureObserver',

@@ -38,9 +38,9 @@ export interface TeamProfileOwnership {
 }
 
 export interface TeamProfileOwnershipPorts {
-  isTrackedInThisProcess(teamName: string): boolean;
-  getTeamsBasePath?(): string;
-  getProfileScope?(): string;
+  isTrackedInThisProcess: (teamName: string) => boolean;
+  getTeamsBasePath?: () => string;
+  getProfileScope?: () => string;
 }
 
 /**
@@ -107,10 +107,12 @@ export function createTeamProfileOwnership(ports: TeamProfileOwnershipPorts): Te
 
 /**
  * Records this profile as the team's owner. Callers do this before the first
- * spawn and abort the start when it fails, so every process this profile ever
- * starts for a team is reachable by its own cleanup after a crash. Rewriting a
- * marker of another profile is deliberate: an explicit create or launch takes
- * the team over.
+ * spawn and abort the start when it fails, so a team never runs processes of
+ * this profile without first carrying its marker; after a crash the next
+ * process of this profile still recognises the team. Rewriting a marker of
+ * another profile is deliberate: an explicit create or launch takes the team
+ * over, and from then on the previous profile leaves the team alone, including
+ * anything it had left running there.
  */
 export async function claimTeamForThisProfile(input: {
   teamsBasePath: string;
@@ -147,16 +149,32 @@ export async function claimTeamForThisProfile(input: {
 /**
  * Launch claims the team under the team lock before anything is spawned. A
  * team directory that does not exist is left alone: there is nothing to claim,
- * and both launch flows reject the missing config.json before spawning.
+ * and both launch flows reject the missing config.json before spawning. A
+ * marker that already names this profile is kept as it is, so a relaunch does
+ * not depend on a write; any other marker, or one that cannot be read, is
+ * rewritten and a failed write still aborts the launch.
  */
 export async function claimExistingTeamForLaunch(
   teamName: string,
   teamsBasePath: string = getDefaultTeamsBasePath()
 ): Promise<void> {
+  const teamDir = path.join(teamsBasePath, teamName);
   try {
-    await fs.promises.stat(path.join(teamsBasePath, teamName));
+    await fs.promises.stat(teamDir);
   } catch (error) {
     if ((error as NodeJS.ErrnoException | null)?.code === 'ENOENT') {
+      return;
+    }
+  }
+  if (isPlainTeamDirectoryName(teamName)) {
+    const ownerScope = await readTeamOwnerProfileScope(teamDir);
+    let profileScope: string | null = null;
+    try {
+      profileScope = resolveThisAppProfileScope();
+    } catch {
+      // The claim below reports the unresolvable scope and aborts the launch.
+    }
+    if (ownerScope !== null && ownerScope === profileScope) {
       return;
     }
   }

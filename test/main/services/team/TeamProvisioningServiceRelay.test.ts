@@ -4049,6 +4049,11 @@ Messages:
       expect(identity.ok).toBe(true);
       laneIndexSpy = mockActiveOpenCodeLaneIndex(identity.laneId);
       vi.spyOn(service as any, 'canDeliverToOpenCodeRuntimeForTeam').mockReturnValue(true);
+      // A team of this app profile: the continuity scan skips teams of other profiles.
+      const { profileOwnership } = service as unknown as {
+        profileOwnership: { isManagedByThisProfile(teamName: string): Promise<boolean> };
+      };
+      vi.spyOn(profileOwnership, 'isManagedByThisProfile').mockResolvedValue(true);
       const records: any[] = [];
       const ledger = createPromptDeliveryLedgerFake(records);
       vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue(ledger);

@@ -272,6 +272,7 @@ describe('team provisioning stop flow', () => {
     const stopping = stopAllTeamsFlow({
       incrementStopAllTeamsGeneration: () => events.push('generation'),
       getShutdownTrackedTeamNames: () => ['team-a'],
+      getShutdownRunningTeamNames: () => ['team-a'],
       pauseActiveIntervalsForTeam: () => events.push('pause'),
       killTrackedCliProcesses: () => events.push('kill-cli'),
       killTransientProbeProcessesForShutdown: () => events.push('kill-probes'),

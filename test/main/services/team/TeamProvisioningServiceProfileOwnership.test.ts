@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -10,6 +10,7 @@ vi.mock('@features/tmux-installer/main', async (importOriginal) => ({
 }));
 
 import { buildOpenCodeAppProfileScope } from '../../../../src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import { writeOpenCodeRuntimeLaneIndex } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { claimTeamForThisProfile } from '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import {
@@ -32,8 +33,21 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+/** A team with an active lane and a live process recorded by whoever launched it. */
 async function writeTeam(teamName: string, ownerUserData?: string): Promise<void> {
-  await mkdir(path.join(getTeamsBasePath(), teamName), { recursive: true });
+  const teamDir = path.join(getTeamsBasePath(), teamName);
+  await mkdir(teamDir, { recursive: true });
+  await writeFile(
+    path.join(teamDir, 'processes.json'),
+    `${JSON.stringify([{ id: 'lead-process', pid: process.pid, registeredAt: 'now' }])}\n`
+  );
+  await writeOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName, {
+    version: 1,
+    updatedAt: '2026-10-28T10:00:00.000Z',
+    lanes: {
+      primary: { laneId: 'primary', state: 'active', updatedAt: '2026-10-28T10:00:00.000Z' },
+    },
+  });
   if (ownerUserData) {
     await claimTeamForThisProfile({
       teamsBasePath: getTeamsBasePath(),
@@ -44,32 +58,44 @@ async function writeTeam(teamName: string, ownerUserData?: string): Promise<void
   }
 }
 
+interface WatchdogInternals {
+  openCodePromptDeliveryWatchdogCoordinator: {
+    scan(teamName: string): Promise<number>;
+    scanActiveLanes(teamName: string, laneIds: string[]): Promise<number>;
+  };
+  runTracking: { canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean };
+}
+
 describe('TeamProvisioningService profile ownership', () => {
-  it('admits the startup watchdog scan only for teams this app profile manages', async () => {
+  it('admits both watchdog passes only for teams this app profile manages', async () => {
     await writeTeam('own', path.join(root, 'user-data-a'));
     await writeTeam('other-profile', path.join(root, 'user-data-b'));
     await writeTeam('session-native');
     const service = new TeamProvisioningService();
-    const coordinator = (
-      service as unknown as {
-        openCodePromptDeliveryWatchdogCoordinator: {
-          scan(teamName: string): Promise<number>;
-          scanContinuity(teamName: string): Promise<number>;
-        };
-      }
-    ).openCodePromptDeliveryWatchdogCoordinator;
+    const internals = service as unknown as WatchdogInternals;
+    const coordinator = internals.openCodePromptDeliveryWatchdogCoordinator;
     const scan = vi.spyOn(coordinator, 'scan').mockResolvedValue(2);
-    const scanContinuity = vi.spyOn(coordinator, 'scanContinuity').mockResolvedValue(0);
+    const scanActiveLanes = vi.spyOn(coordinator, 'scanActiveLanes').mockResolvedValue(1);
 
+    // A live recorded pid makes the foreign runtime look reachable to delivery.
+    expect(internals.runTracking.canDeliverToOpenCodeRuntimeForTeam('other-profile')).toBe(true);
     await expect(service.isTeamManagedByThisProfile('own')).resolves.toBe(true);
     await expect(service.isTeamManagedByThisProfile('other-profile')).resolves.toBe(false);
-    await expect(service.scanOpenCodePromptDeliveryWatchdog('other-profile')).resolves.toBe(0);
-    await expect(service.scanOpenCodePromptDeliveryWatchdog('session-native')).resolves.toBe(0);
-    await expect(service.scanOpenCodePromptDeliveryWatchdog('own')).resolves.toBe(2);
-    expect(scan.mock.calls).toEqual([['own']]);
 
-    // The continuity pass is gated on a tracked runtime by the coordinator itself.
-    await service.scanOpenCodePromptDeliveryWatchdog('other-profile', 'continuity');
-    expect(scanContinuity.mock.calls).toEqual([['other-profile']]);
+    for (const teamName of ['other-profile', 'session-native']) {
+      await expect(service.scanOpenCodePromptDeliveryWatchdog(teamName)).resolves.toBe(0);
+      await expect(
+        service.scanOpenCodePromptDeliveryWatchdog(teamName, 'continuity')
+      ).resolves.toBe(0);
+    }
+    expect(scan).not.toHaveBeenCalled();
+    expect(scanActiveLanes).not.toHaveBeenCalled();
+
+    await expect(service.scanOpenCodePromptDeliveryWatchdog('own')).resolves.toBe(2);
+    await expect(service.scanOpenCodePromptDeliveryWatchdog('own', 'continuity')).resolves.toBe(1);
+    expect(scan.mock.calls).toEqual([['own']]);
+    expect(scanActiveLanes).toHaveBeenCalledWith('own', ['primary'], {
+      recordlessUnreadRows: 'wake',
+    });
   });
 });

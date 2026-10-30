@@ -76,6 +76,7 @@ export interface TeamProvisioningStopTeamPorts<TRun extends TeamProvisioningStop
 export interface TeamProvisioningStopAllPorts {
   incrementStopAllTeamsGeneration(): void;
   getShutdownTrackedTeamNames(): string[];
+  getShutdownRunningTeamNames(): string[];
   pauseActiveIntervalsForTeam(teamName: string): void;
   killTrackedCliProcesses(signal: 'SIGKILL'): void;
   killTransientProbeProcessesForShutdown(): void;
@@ -232,7 +233,10 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {
   ports.incrementStopAllTeamsGeneration();
-  const initialTracked = ports.getShutdownTrackedTeamNames();
+  // Synchronous on purpose: the quit path may not wait for I/O. A team known
+  // only through a held lock may belong to another app profile, so it is left
+  // to stopTrackedTeamsForShutdown, which checks ownership before stopping it.
+  const initialTracked = ports.getShutdownRunningTeamNames();
   for (const teamName of initialTracked) {
     ports.pauseActiveIntervalsForTeam(teamName);
   }
@@ -276,6 +280,13 @@ export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Pro
       `Cleaning up persisted teammate runtimes on shutdown: ${orphanOnly.join(', ')}`
     );
     for (const teamName of orphanOnly) {
+      // Earlier cleanups take seconds; another profile may have claimed the team since.
+      if (!(await ports.isManagedByThisProfile(teamName))) {
+        ports.logger.info(
+          `[${teamName}] No longer managed by this app profile; leaving it untouched`
+        );
+        continue;
+      }
       ports.pauseActiveIntervalsForTeam(teamName);
       ports.stopPersistentTeamMembers(teamName);
       await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);

@@ -43,6 +43,7 @@ import {
   createTeamProvisioningRequestAdmissionBoundary,
   type TeamProvisioningRequestAdmissionServiceHost,
 } from '../TeamProvisioningRequestAdmission';
+import { createTeamProvisioningShutdownCoordination } from '../TeamProvisioningShutdownCoordination';
 import { stopAllTeamsFlow } from '../TeamProvisioningStopFlow';
 import {
   killOrphanedTeamAgentProcesses,
@@ -177,9 +178,19 @@ function createProcessTable(entries: Record<string, number>) {
   };
 }
 
+/**
+ * Runs the real quit sequence of a fresh process of profile A over the temp
+ * Claude root. `stopTeam` performs the same destructive steps as a tracked
+ * stop (pause, pane/process kill, handle rewrite), so any stop of a foreign
+ * team shows up in the assertions.
+ */
 async function runShutdown(
   ownership: TeamProfileOwnership,
-  table: ReturnType<typeof createProcessTable>
+  table: ReturnType<typeof createProcessTable>,
+  options: {
+    lockedTeamNames?: string[];
+    afterOrphanCleanup?: (teamName: string) => Promise<void>;
+  } = {}
 ) {
   const cleanupAnthropicTeamApiKeyHelperForTeam = vi.fn(async () => undefined);
   const activity = new TeamTaskActivityIntervalService();
@@ -191,9 +202,9 @@ async function runShutdown(
       }),
     killPersistedPaneMembers: (teamName, members) =>
       killPersistedPaneMembers(teamName, members, logger),
-    killOrphanedTeamAgentProcesses: (teamName, currentRunPid, knownPids, options) =>
+    killOrphanedTeamAgentProcesses: (teamName, currentRunPid, knownPids, killOptions) =>
       killOrphanedTeamAgentProcesses(
-        { teamName, currentRunPid, knownPids, isRecheck: options?.isRecheck, logger },
+        { teamName, currentRunPid, knownPids, isRecheck: killOptions?.isRecheck, logger },
         table.overrides
       ),
     getCurrentRunPid: () => undefined,
@@ -207,27 +218,65 @@ async function runShutdown(
     sleep: async () => undefined,
     logger,
   });
+  const stopTeam = vi.fn(async (teamName: string) => {
+    activity.pauseActiveIntervalsForTeam(teamName);
+    persistent.stopPersistentTeamMembers(teamName);
+    await persistent.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+  });
+  // Operations holding these locks finish while shutdown waits for them.
+  const teamOpLocks = new Map(
+    (options.lockedTeamNames ?? []).map((teamName) => [teamName, Promise.resolve()])
+  );
+  const coordination = createTeamProvisioningShutdownCoordination(
+    {
+      provisioningRunByTeam: new Map(),
+      aliveRunByTeam: new Map(),
+      runtimeAdapterRunByTeam: new Map(),
+      secondaryRuntimeRunByTeam: new Map(),
+      teamOpLocks,
+      runtimeAdapterProgressByRunId: new Map(),
+      transientProbeProcesses: new Set(),
+    },
+    {
+      isCancellableRuntimeAdapterProgress: () => false,
+      getOpenCodeAggregatePrimaryRestartTeamNames: () => [],
+      getOpenCodeRuntimeAdapterStopInFlightTeamNames: () => [],
+      stopTeam,
+      cancelRuntimeAdapterProvisioning: async () => undefined,
+      killProcessTree: vi.fn(),
+      isManagedByThisProfile: (teamName) => ownership.isManagedByThisProfile(teamName),
+      logger,
+    }
+  );
   await stopAllTeamsFlow({
     incrementStopAllTeamsGeneration: vi.fn(),
-    getShutdownTrackedTeamNames: () => [],
+    getShutdownTrackedTeamNames: () => coordination.getShutdownTrackedTeamNames(),
+    getShutdownRunningTeamNames: () => coordination.getShutdownRunningTeamNames(),
     pauseActiveIntervalsForTeam: (teamName) => {
       activity.pauseActiveIntervalsForTeam(teamName);
     },
     killTrackedCliProcesses: vi.fn(),
-    killTransientProbeProcessesForShutdown: vi.fn(),
-    stopTrackedTeamsForShutdown: async () => [],
-    cancelPendingRuntimeAdapterLaunchesForShutdown: async () => undefined,
-    waitForInFlightTeamOperationsForShutdown: async () => undefined,
+    killTransientProbeProcessesForShutdown: () =>
+      coordination.killTransientProbeProcessesForShutdown(),
+    stopTrackedTeamsForShutdown: (label) => coordination.stopTrackedTeamsForShutdown(label),
+    cancelPendingRuntimeAdapterLaunchesForShutdown: () =>
+      coordination.cancelPendingRuntimeAdapterLaunchesForShutdown(),
+    waitForInFlightTeamOperationsForShutdown: async () => {
+      await coordination.waitForInFlightTeamOperationsForShutdown();
+      teamOpLocks.clear();
+    },
     listPersistedTeamNames: () => listPersistedTeamNames(getTeamsBasePath()),
     isManagedByThisProfile: (teamName) => ownership.isManagedByThisProfile(teamName),
     stopPersistentTeamMembers: (teamName) => {
       persistent.stopPersistentTeamMembers(teamName);
     },
-    cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: (teamName) =>
-      persistent.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName),
+    cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: async (teamName) => {
+      await persistent.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+      await options.afterOrphanCleanup?.(teamName);
+    },
     logger,
   });
-  return { cleanupAnthropicTeamApiKeyHelperForTeam };
+  return { cleanupAnthropicTeamApiKeyHelperForTeam, stopTeam };
 }
 
 describe('shutdown leftovers cleanup (F1)', () => {
@@ -258,14 +307,63 @@ describe('shutdown leftovers cleanup (F1)', () => {
 
     const ownAfter = await snapshotTeam('own');
     expect(ownAfter).not.toEqual(ownBefore);
-    const ownConfig = JSON.parse(ownAfter.team['config.json']!) as {
+    const ownConfig = JSON.parse(ownAfter.team['config.json']) as {
       members: { tmuxPaneId?: string }[];
     };
     expect(ownConfig.members.every((member) => member.tmuxPaneId === undefined)).toBe(true);
-    const ownTask = JSON.parse(ownAfter.tasks['held.json']!) as {
+    const ownTask = JSON.parse(ownAfter.tasks['held.json']) as {
       workIntervals: { completedAt?: string }[];
     };
     expect(ownTask.workIntervals.every((interval) => !!interval.completedAt)).toBe(true);
+  });
+
+  it('does not stop a foreign team that is known only through a held team lock', async () => {
+    await writeTeam('foreign-locked', { paneId: '%14', ownerScope: scopeOf(userDataB) });
+    await writeTeam('own-locked', { paneId: '%15', ownerScope: scopeOf(userDataA) });
+    const foreignBefore = await snapshotTeam('foreign-locked');
+    const table = createProcessTable({ 'foreign-locked': 44, 'own-locked': 45 });
+
+    const { stopTeam } = await runShutdown(freshOwnership(), table, {
+      lockedTeamNames: ['foreign-locked', 'own-locked'],
+    });
+
+    expect(stopTeam.mock.calls.map(([teamName]) => teamName)).toEqual(['own-locked']);
+    expect(table.killPid.mock.calls).toEqual([[45]]);
+    expect(tmuxMocks.killTmuxPaneForCurrentPlatformSync.mock.calls).toEqual([['%15']]);
+    expect(await snapshotTeam('foreign-locked')).toEqual(foreignBefore);
+  });
+
+  it('skips an orphan whose ownership moved after the sweep started', async () => {
+    await writeTeam('own-a', { paneId: '%16', ownerScope: scopeOf(userDataA) });
+    await writeTeam('own-b', { paneId: '%17', ownerScope: scopeOf(userDataA) });
+    const table = createProcessTable({ 'own-a': 46, 'own-b': 47 });
+    const takeover: { teamName: string | null; snapshot: unknown } = {
+      teamName: null,
+      snapshot: null,
+    };
+
+    await runShutdown(freshOwnership(), table, {
+      afterOrphanCleanup: async (cleanedTeamName) => {
+        if (takeover.teamName) return;
+        const otherTeamName = cleanedTeamName === 'own-a' ? 'own-b' : 'own-a';
+        // Another profile launches the other team while this one is cleaned up.
+        await claimTeamForThisProfile({
+          teamsBasePath: getTeamsBasePath(),
+          teamName: otherTeamName,
+          reason: 'launch',
+          profileScope: scopeOf(userDataB),
+        });
+        takeover.teamName = otherTeamName;
+        takeover.snapshot = await snapshotTeam(otherTeamName);
+      },
+    });
+
+    const takenOver = takeover.teamName;
+    if (!takenOver) throw new Error('no orphan was cleaned up');
+    const cleanedOwn = takenOver === 'own-a' ? { pid: 47, pane: '%17' } : { pid: 46, pane: '%16' };
+    expect(table.killPid.mock.calls).toEqual([[cleanedOwn.pid]]);
+    expect(tmuxMocks.killTmuxPaneForCurrentPlatformSync.mock.calls).toEqual([[cleanedOwn.pane]]);
+    expect(await snapshotTeam(takenOver)).toEqual(takeover.snapshot);
   });
 });
 
@@ -317,9 +415,13 @@ function createStoppedLaneCleanup(
   }));
   const killProcessByPid = vi.fn();
   const markStoppedTeamOpenCodeRuntimeLanesCleaned = vi.fn();
+  const withTeamLock = vi.fn();
   const boundary = createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary(
     {
-      withTeamLock: async (_teamName, operation) => operation(),
+      withTeamLock: async (teamName, operation) => {
+        withTeamLock(teamName);
+        return operation();
+      },
       isManagedByThisProfile: (teamName) => ownership.isManagedByThisProfile(teamName),
       canDeliverToOpenCodeRuntimeForTeam: () => false,
       getOpenCodeRuntimeAdapter: () =>
@@ -343,7 +445,13 @@ function createStoppedLaneCleanup(
       },
     }
   );
-  return { boundary, stop, killProcessByPid, markStoppedTeamOpenCodeRuntimeLanesCleaned };
+  return {
+    boundary,
+    stop,
+    killProcessByPid,
+    markStoppedTeamOpenCodeRuntimeLanesCleaned,
+    withTeamLock,
+  };
 }
 
 describe('stopped-team OpenCode lane cleanup (F2)', () => {
@@ -370,6 +478,8 @@ describe('stopped-team OpenCode lane cleanup (F2)', () => {
     expect(cleanup.stop).not.toHaveBeenCalled();
     expect(cleanup.killProcessByPid).not.toHaveBeenCalled();
     expect(cleanup.markStoppedTeamOpenCodeRuntimeLanesCleaned).not.toHaveBeenCalled();
+    // Not even the team lock: a held lock makes a team look like this app's at shutdown.
+    expect(cleanup.withTeamLock).not.toHaveBeenCalled();
     expect(await snapshotTeam('foreign-unmarked')).toEqual(before.unmarked);
     expect(await snapshotTeam('foreign-other-profile')).toEqual(before.otherProfile);
   });
@@ -527,6 +637,65 @@ describe('fail-closed claim', () => {
       }
     });
   }
+});
+
+describe('launch claim', () => {
+  const markerPath = () =>
+    path.join(getTeamsBasePath(), 'interrupted', TEAM_PROFILE_OWNER_MARKER_FILE);
+
+  async function launch(): Promise<ReturnType<typeof vi.fn>> {
+    const spawn = vi.fn(async () => ({ runId: 'run-launched' }));
+    await createTeamProvisioningRequestAdmissionBoundary(
+      createAdmissionHost(spawn),
+      async () => null
+    ).launchTeam(launchRequest, vi.fn());
+    return spawn;
+  }
+
+  async function writeOwnMarker(): Promise<string> {
+    await claimTeamForThisProfile({
+      teamsBasePath: getTeamsBasePath(),
+      teamName: 'interrupted',
+      reason: 'create',
+      profileScope: scopeOf(userDataA),
+      now: () => new Date('2026-10-01T00:00:00.000Z'),
+    });
+    return readFile(markerPath(), 'utf8');
+  }
+
+  it('keeps a marker that already names this profile', async () => {
+    await writeTeam('interrupted', { paneId: '%91' });
+    const before = await writeOwnMarker();
+
+    expect(await launch()).toHaveBeenCalledOnce();
+    expect(await readFile(markerPath(), 'utf8')).toBe(before);
+  });
+
+  it.each([
+    ['another profile', { paneId: '%92', ownerScope: 'b'.repeat(64) }],
+    ['a malformed marker', { paneId: '%93', ownerMarkerRaw: '{"schemaVersion":1,' }],
+  ])('takes the team over from %s', async (_name, team) => {
+    await writeTeam('interrupted', team);
+
+    expect(await launch()).toHaveBeenCalledOnce();
+    expect(JSON.parse(await readFile(markerPath(), 'utf8'))).toMatchObject({
+      schemaVersion: 1,
+      profileScope: scopeOf(userDataA),
+      reason: 'launch',
+    });
+  });
+
+  it.skipIf(!canChmodDeny)('relaunches its own team without writing to it', async () => {
+    await writeTeam('interrupted', { paneId: '%94' });
+    await writeOwnMarker();
+    const teamDir = path.join(getTeamsBasePath(), 'interrupted');
+    await chmod(teamDir, 0o500);
+    try {
+      expect(await launch()).toHaveBeenCalledOnce();
+    } finally {
+      await chmod(teamDir, 0o700);
+    }
+  });
 });
 
 describe('isManagedByThisProfile', () => {

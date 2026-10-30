@@ -64,6 +64,7 @@ export interface TeamProvisioningStopCleanupCompatibilityServiceHost<
   ): void;
   shutdownCoordination: {
     getShutdownTrackedTeamNames(): string[];
+    getShutdownRunningTeamNames(): string[];
     killTransientProbeProcessesForShutdown(): void;
     stopTrackedTeamsForShutdown(label: string): Promise<string[]>;
     cancelPendingRuntimeAdapterLaunchesForShutdown(): Promise<void>;
@@ -226,6 +227,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
         this.stopAllTeamsGeneration += 1;
       },
       getShutdownTrackedTeamNames: () => service.shutdownCoordination.getShutdownTrackedTeamNames(),
+      getShutdownRunningTeamNames: () => service.shutdownCoordination.getShutdownRunningTeamNames(),
       pauseActiveIntervalsForTeam: (teamName) =>
         service.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
       killTrackedCliProcesses,

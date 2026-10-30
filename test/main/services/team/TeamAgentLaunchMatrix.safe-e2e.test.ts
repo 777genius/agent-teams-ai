@@ -16029,6 +16029,7 @@ describe(
       const laneId = 'secondary:opencode:bob';
       const runId = 'stopped-session-evidence-opencode-run';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await writeOpenCodeBootstrapSessionEvidenceForTest({

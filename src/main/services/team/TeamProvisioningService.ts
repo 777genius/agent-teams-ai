@@ -115,21 +115,22 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   /**
-   * The startup pass may recover, deliver to and stop lanes, so it is admitted
-   * only for teams this profile manages. The continuity pass already requires a
-   * runtime this process tracks.
+   * Both passes are admitted only for teams this profile manages. The startup
+   * pass may recover, deliver to and stop lanes. The continuity pass delivers
+   * to any team whose runtime looks reachable, and a live pid recorded in the
+   * team's processes.json counts as reachable even when another app instance
+   * owns that process.
    */
   async scanOpenCodePromptDeliveryWatchdog(
     teamName: string,
     pass: 'startup_recovery' | 'continuity' = 'startup_recovery'
   ): Promise<number> {
-    if (pass === 'continuity') {
-      return this.openCodePromptDeliveryWatchdogCoordinator.scanContinuity(teamName);
-    }
     if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
       return 0;
     }
-    return this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
+    return pass === 'continuity'
+      ? this.openCodePromptDeliveryWatchdogCoordinator.scanContinuity(teamName)
+      : this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
   }
 
   setRuntimeRecoveryFailureObserver(

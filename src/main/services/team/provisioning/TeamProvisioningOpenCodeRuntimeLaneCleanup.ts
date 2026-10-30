@@ -288,6 +288,11 @@ export async function stopOpenCodeRuntimeLanesForStoppedTeam(input: {
   teamsBasePath: string;
   ports: StopOpenCodeRuntimeLanesForStoppedTeamPorts;
 }): Promise<number> {
+  // Checked before the lock as well: holding the team lock would make a
+  // foreign team look like an in-flight operation of this app at shutdown.
+  if (!(await input.ports.isManagedByThisProfile(input.teamName))) {
+    return 0;
+  }
   return await input.ports.withTeamLock(input.teamName, () =>
     stopOpenCodeRuntimeLanesForStoppedTeamLocked(input)
   );
@@ -301,6 +306,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
   const { ports, teamName, teamsBasePath } = input;
   // Lanes of a team this profile does not manage belong to another app
   // instance or a native session: never stop, kill or clear them from here.
+  // Re-checked under the lock: the team may have been claimed meanwhile.
   if (!(await ports.isManagedByThisProfile(teamName))) {
     return 0;
   }
