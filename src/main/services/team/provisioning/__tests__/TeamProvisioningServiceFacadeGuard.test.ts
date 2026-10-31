@@ -60,6 +60,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'cancelProvisioning',
   'cleanupPrelaunchBackup',
   'clearPendingCrossTeamReplyExpectation',
+  'clearStoppedLaneStopBackoff',
   'createTeam',
   'deliverOpenCodeLaunchPromptToLead',
   'deliverOpenCodeMemberMessage',

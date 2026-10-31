@@ -713,6 +713,7 @@ describe('ipc teams handlers', () => {
     ),
     skipMemberForLaunch: vi.fn(() => resolvedUndefined()),
     stopTeam: vi.fn(() => Promise.resolve()),
+    clearStoppedLaneStopBackoff: vi.fn(),
     repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve(undefined)),
     attachLiveRosterMember: vi.fn(() => resolvedUndefined()),
     detachLiveRosterMember: vi.fn(() => resolvedUndefined()),
@@ -740,6 +741,7 @@ describe('ipc teams handlers', () => {
     runtime: {
       getRuntimeState: teamHandlerMocks.getRuntimeState,
       stopTeam: teamHandlerMocks.stopTeam,
+      clearStoppedLaneStopBackoff: teamHandlerMocks.clearStoppedLaneStopBackoff,
       isTeamAlive: teamHandlerMocks.isTeamAlive,
       getAliveTeams: teamHandlerMocks.getAliveTeams,
       getCurrentRunId: teamHandlerMocks.getCurrentRunId,
@@ -5210,6 +5212,62 @@ describe('ipc teams handlers', () => {
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('my-team');
       messageAttachmentDelete.mockRestore();
       taskAttachmentDelete.mockRestore();
+    });
+
+    it('runs one stop and delete for repeated Move to trash requests and frees the team after each settles', async () => {
+      const deleteHandler = handlers.get(TEAM_DELETE_TEAM)!;
+      let finishDelete!: () => void;
+      let failDelete!: (error: Error) => void;
+      service.deleteTeam.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishDelete = resolve;
+          })
+      );
+
+      const first = deleteHandler({} as never, 'my-team') as Promise<{ success: boolean }>;
+      const repeated = deleteHandler({} as never, 'my-team') as Promise<{ success: boolean }>;
+      await vi.waitFor(() => expect(service.deleteTeam).toHaveBeenCalledTimes(1));
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledTimes(1);
+
+      expect(teamHandlerMocks.clearStoppedLaneStopBackoff).not.toHaveBeenCalled();
+      finishDelete();
+      await expect(first).resolves.toMatchObject({ success: true });
+      await expect(repeated).resolves.toMatchObject({ success: true });
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledTimes(1);
+      expect(service.deleteTeam).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.clearStoppedLaneStopBackoff).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.clearStoppedLaneStopBackoff).toHaveBeenCalledWith('my-team');
+
+      // A failed request frees the team as well, and both callers see the failure.
+      service.deleteTeam.mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            failDelete = reject;
+          })
+      );
+      const failing = deleteHandler({} as never, 'my-team') as Promise<{ success: boolean }>;
+      const failingRepeated = deleteHandler({} as never, 'my-team') as Promise<{
+        success: boolean;
+      }>;
+      await vi.waitFor(() => expect(service.deleteTeam).toHaveBeenCalledTimes(2));
+      failDelete(new Error('Team is busy'));
+      await expect(failing).resolves.toMatchObject({ success: false, error: 'Team is busy' });
+      await expect(failingRepeated).resolves.toMatchObject({
+        success: false,
+        error: 'Team is busy',
+      });
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledTimes(2);
+      expect(teamHandlerMocks.clearStoppedLaneStopBackoff).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.error).mock.calls).toEqual([
+        ['[IPC:teams]', '[teams:deleteTeam] Team is busy'],
+        ['[IPC:teams]', '[teams:deleteTeam] Team is busy'],
+      ]);
+      vi.mocked(console.error).mockClear();
+
+      await expect(deleteHandler({} as never, 'my-team')).resolves.toMatchObject({ success: true });
+      expect(teamHandlerMocks.stopTeam).toHaveBeenCalledTimes(3);
+      expect(service.deleteTeam).toHaveBeenCalledTimes(3);
     });
 
     it('does not delete team files before member work sync is quiesced', async () => {

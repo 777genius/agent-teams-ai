@@ -12,6 +12,10 @@ import {
   type StopOpenCodeRuntimeLanesForStoppedTeamPorts,
   tryStopPersistedOpenCodeRuntimePidForStoppedLane,
 } from './TeamProvisioningOpenCodeRuntimeLaneCleanup';
+import {
+  createOpenCodeStoppedLaneStopBackoff,
+  type OpenCodeStoppedLaneStopBackoff,
+} from './TeamProvisioningOpenCodeStoppedLaneStopBackoff';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
@@ -35,8 +39,17 @@ export interface TeamProvisioningOpenCodeStoppedLaneCleanupPorts {
 export interface TeamProvisioningOpenCodeStoppedLaneCleanupBoundary {
   hasAlivePersistedTeamProcess(teamName: string): boolean;
   hasOnlyExplicitlyStoppedPersistedTeamProcesses(teamName: string): boolean;
+  /** Background passes only: lane runs left unconfirmed recently are not retried. */
   cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName: string): void;
+  /** Background passes only: lane runs left unconfirmed recently are not retried. */
   stopOpenCodeRuntimeLanesForStoppedTeam(teamName: string): Promise<number>;
+  /**
+   * Forget the unconfirmed-stop backoff of a team, so the next background pass
+   * tries its lanes again at once. Called after the team was moved to the trash.
+   * Explicit Stop, relaunch and trash never go through the background entry
+   * points above, so they are not held back by the backoff in the first place.
+   */
+  clearStopBackoff(teamName: string): void;
 }
 
 export interface TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryHelpers {
@@ -53,6 +66,8 @@ export interface TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryHelpers {
 
 export interface TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryDeps {
   getTeamsBasePath(): string;
+  /** Clock for the unconfirmed-stop backoff; tests pass their own. */
+  nowMs?: () => number;
   helpers?: Partial<TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryHelpers>;
 }
 
@@ -77,12 +92,15 @@ export function createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary(
     ...deps.helpers,
   };
   const inFlight = new Map<string, Promise<number>>();
+  const stopBackoff = createOpenCodeStoppedLaneStopBackoff({
+    nowMs: deps.nowMs ?? (() => Date.now()),
+  });
 
   const stopInternal = async (teamName: string): Promise<number> =>
     await helpers.stopOpenCodeRuntimeLanesForStoppedTeam({
       teamName,
       teamsBasePath: deps.getTeamsBasePath(),
-      ports: createStopPorts(ports, helpers),
+      ports: createStopPorts(ports, helpers, stopBackoff),
     });
 
   const stopOpenCodeRuntimeLanesForStoppedTeamBoundary = (teamName: string): Promise<number> =>
@@ -116,12 +134,17 @@ export function createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary(
     },
 
     stopOpenCodeRuntimeLanesForStoppedTeam: stopOpenCodeRuntimeLanesForStoppedTeamBoundary,
+
+    clearStopBackoff(teamName) {
+      stopBackoff.clearTeam(teamName);
+    },
   };
 }
 
 function createStopPorts(
   ports: TeamProvisioningOpenCodeStoppedLaneCleanupPorts,
-  helpers: TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryHelpers
+  helpers: TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryHelpers,
+  stopBackoff: OpenCodeStoppedLaneStopBackoff
 ): StopOpenCodeRuntimeLanesForStoppedTeamPorts {
   return {
     withTeamLock: (teamName, operation) => ports.withTeamLock(teamName, operation),
@@ -146,6 +169,7 @@ function createStopPorts(
     clearPrimaryRuntimeRun: (teamName) => ports.clearPrimaryRuntimeRun(teamName),
     markStoppedTeamOpenCodeRuntimeLanesCleaned: (teamName) =>
       ports.markStoppedTeamOpenCodeRuntimeLanesCleaned(teamName),
+    stopBackoff,
     logWarning: ports.logWarning,
   };
 }

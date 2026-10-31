@@ -1,10 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  setOpenCodeRuntimeActiveRunManifest,
+  writeOpenCodeRuntimeLaneIndex,
+} from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
   type TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryDeps,
   type TeamProvisioningOpenCodeStoppedLaneCleanupPorts,
 } from '../TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
+import { OPENCODE_STOPPED_LANE_STOP_BACKOFF_MS } from '../TeamProvisioningOpenCodeStoppedLaneStopBackoff';
+
+import type { TeamRuntimeStopInput } from '../../runtime';
 
 type Helpers = NonNullable<TeamProvisioningOpenCodeStoppedLaneCleanupBoundaryDeps['helpers']>;
 
@@ -146,5 +157,117 @@ describe('TeamProvisioningOpenCodeStoppedLaneCleanupBoundary', () => {
     expect(ports.clearPrimaryRuntimeRun).toHaveBeenCalledWith('alpha');
     expect(ports.markStoppedTeamOpenCodeRuntimeLanesCleaned).toHaveBeenCalledWith('alpha');
     expect(ports.logWarning).toHaveBeenCalledWith('warn');
+  });
+
+  describe('backoff after an unconfirmed stop', () => {
+    let teamsBasePath: string;
+    let nowMs: number;
+
+    beforeEach(async () => {
+      teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-lane-stop-backoff-'));
+      nowMs = 1_000_000;
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          primary: { laneId: 'primary', state: 'active', updatedAt: '2026-01-01T00:00:00.000Z' },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId: 'primary',
+        runId: 'run-1',
+      });
+    });
+
+    afterEach(() => {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    });
+
+    function createUnconfirmingBoundary(): {
+      boundary: ReturnType<typeof createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary>;
+      lockCalls: () => number;
+      logWarning: ReturnType<typeof vi.fn>;
+      stop: ReturnType<typeof vi.fn>;
+    } {
+      const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: false,
+        members: {},
+        warnings: [],
+        diagnostics: ['runtime still active'],
+      }));
+      let lockCalls = 0;
+      const withTeamLock: TeamProvisioningOpenCodeStoppedLaneCleanupPorts['withTeamLock'] = async (
+        _teamName,
+        operation
+      ) => {
+        lockCalls += 1;
+        return await operation();
+      };
+      const logWarning = vi.fn();
+      const ports = createPorts({
+        withTeamLock,
+        getOpenCodeRuntimeAdapter: vi.fn(() => ({ providerId: 'opencode', stop }) as never),
+        logWarning,
+      });
+      const boundary = createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary(ports, {
+        getTeamsBasePath: () => teamsBasePath,
+        nowMs: () => nowMs,
+      });
+      return { boundary, lockCalls: () => lockCalls, logWarning, stop };
+    }
+
+    it('does not ask the bridge again or take the team lock until the backoff ends', async () => {
+      const { boundary, lockCalls, logWarning, stop } = createUnconfirmingBoundary();
+
+      await expect(boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team')).resolves.toBe(0);
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(lockCalls()).toBe(1);
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('[team] OpenCode lane primary did not confirm stop')
+      );
+
+      nowMs += OPENCODE_STOPPED_LANE_STOP_BACKOFF_MS - 1;
+      boundary.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground('team');
+      // Joins the background pass above if it is still running.
+      await expect(boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team')).resolves.toBe(0);
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(lockCalls()).toBe(1);
+
+      nowMs += 1;
+      await boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team');
+      expect(stop).toHaveBeenCalledTimes(2);
+      expect(lockCalls()).toBe(2);
+    });
+
+    it('retries at once once the backoff of the team was cleared', async () => {
+      const { boundary, lockCalls, stop } = createUnconfirmingBoundary();
+      await boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team');
+
+      boundary.clearStopBackoff('team');
+      await boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team');
+
+      expect(stop).toHaveBeenCalledTimes(2);
+      expect(lockCalls()).toBe(2);
+    });
+
+    it('does not back off a new run of the same lane', async () => {
+      const { boundary, stop } = createUnconfirmingBoundary();
+      await boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team');
+
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId: 'primary',
+        runId: 'run-2',
+      });
+      await boundary.stopOpenCodeRuntimeLanesForStoppedTeam('team');
+
+      expect(stop).toHaveBeenCalledTimes(2);
+      expect(stop).toHaveBeenLastCalledWith(expect.objectContaining({ runId: 'run-2' }));
+    });
   });
 });
