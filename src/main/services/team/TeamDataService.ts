@@ -2664,6 +2664,11 @@ export class TeamDataService {
     return result;
   }
 
+  /**
+   * Writes an app-originated notice into the lead inbox. `system` is not a team
+   * member, so the controller's message_send path rejects it as a sender; the
+   * notice goes straight to the inbox writer like the app's other system notices.
+   */
   async sendSystemNotificationToLead(args: {
     teamName: string;
     summary: string;
@@ -2671,7 +2676,7 @@ export class TeamDataService {
     taskRefs?: TaskRef[];
   }): Promise<SendMessageResult> {
     const leadName = await this.resolveLeadName(args.teamName);
-    return this.sendMessage(args.teamName, {
+    return this.sendRuntimeRecipientMessage(args.teamName, {
       member: leadName,
       from: 'system',
       summary: args.summary,

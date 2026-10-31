@@ -393,14 +393,27 @@ export class TeamTaskStallMonitor {
       // pickup ladder climb to `silenced`: an unjournaled rung keeps
       // `priorAlertCount` at the same value, so the same alert would be rebuilt
       // on every scan for the rest of the run and the ladder would never end.
+      let leadAlertFailed = false;
       if (isTeamTaskStallAlertsEnabled()) {
-        await this.notifier.notifyLead(teamName, leadFallbackAlerts);
+        // A failed lead write must not cost the owner nudges already sent in
+        // this scan their journal entries. The lead alerts stay unjournaled, so
+        // the next scan tries the lead again.
+        try {
+          await this.notifier.notifyLead(teamName, leadFallbackAlerts);
+        } catch (error) {
+          leadAlertFailed = true;
+          logger.warn(
+            `Task stall lead alert failed for ${teamName}, retrying on the next scan (${leadFallbackAlerts.length}): ${String(error)}`
+          );
+        }
         if (!this.shouldContinueScan(scanRun)) {
           return;
         }
       }
-      for (const alert of leadFallbackAlerts) {
-        alertedEpochKeys.add(alert.epochKey);
+      if (!leadAlertFailed) {
+        for (const alert of leadFallbackAlerts) {
+          alertedEpochKeys.add(alert.epochKey);
+        }
       }
     }
 
