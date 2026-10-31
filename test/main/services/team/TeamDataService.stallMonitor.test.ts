@@ -157,6 +157,19 @@ describe('TeamDataService system notifications to the lead', () => {
     ]);
   });
 
+  it('fails instead of guessing the lead inbox when the config is unavailable', async () => {
+    await rm(path.join(getTeamsBasePath(), 'demo', 'config.json'));
+
+    await expect(
+      new TeamDataService().sendSystemNotificationToLead({
+        teamName: 'demo',
+        summary: 'Potential stalled tasks detected',
+        text: '- #abcd1234 [work] Investigate - Potential work stall.',
+      })
+    ).rejects.toThrow('lead notice not written');
+    await expect(readFile(inboxPath('team-lead'))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('keeps refusing system as a sender on the member message path', async () => {
     // Agents send through the same controller sender check; a forged system
     // sender would make their messages look like app notices.
