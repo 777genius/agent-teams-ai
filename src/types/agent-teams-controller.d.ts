@@ -181,7 +181,11 @@ declare module 'agent-teams-controller' {
     registerProcess(flags: Record<string, unknown>): unknown;
     stopProcess(flags: Record<string, unknown>): unknown;
     unregisterProcess(flags: Record<string, unknown>): unknown;
-    listProcesses(): unknown[];
+    /**
+     * `readOnly` leaves processes.json as it is. A stopped row it cannot settle
+     * gets a stable stoppedAt estimate (the row's registeredAt).
+     */
+    listProcesses(flags?: { readOnly?: boolean }): unknown[];
   }
 
   export interface ControllerMaintenanceApi {
