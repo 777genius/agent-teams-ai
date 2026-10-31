@@ -548,9 +548,12 @@ export class TeamTaskStallMonitor {
   private logExhaustedEscalations(teamName: string, newlyExhaustedAlerts: TaskStallAlert[]): void {
     for (const alert of newlyExhaustedAlerts) {
       if (alert.remediationKind !== 'pending_pickup') {
-        logger.warn(
-          `[${teamName}] Stall monitor stopped alerting on task #${alert.displayId} (${alert.branch}): stall_alerts_exhausted - ${STALL_ALERT_RUNGS} alerts were raised and the task shows no new activity.`
-        );
+        // With lead alerts off the rungs ran out without a word to anyone.
+        if (isTeamTaskStallAlertsEnabled()) {
+          logger.warn(
+            `[${teamName}] Stall monitor stopped alerting on task #${alert.displayId} (${alert.branch}): stall_alerts_exhausted - ${STALL_ALERT_RUNGS} alerts were raised and the task shows no new activity.`
+          );
+        }
         continue;
       }
       logger.warn(

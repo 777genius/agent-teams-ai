@@ -38,6 +38,10 @@ interface StallTask {
   owner: string;
   /** Stands in for the last activity the policy keys an epoch on. */
   epoch: string;
+  /** The owner's OpenCode turn is running: the policy skips the task meanwhile. */
+  laneActive?: boolean;
+  /** Lands in the alert text, like the lane idle time of an OpenCode stall. */
+  idleSince?: string;
 }
 
 const writerTask = (): StallTask => ({
@@ -55,14 +59,24 @@ const openCodeTask = (): StallTask => ({
   epoch: 'epoch',
 });
 
-function workAlert(task: StallTask) {
+function evaluateWork(task: StallTask) {
+  if (task.laneActive) {
+    return {
+      status: 'skip',
+      taskId: task.id,
+      reason: 'OpenCode lane turn is still active.',
+      skipReason: 'lane_active',
+    };
+  }
   return {
     status: 'alert',
     taskId: task.id,
     branch: 'work',
     signal: 'turn_ended_after_touch',
     epochKey: `${task.id}:${task.epoch}`,
-    reason: 'Potential work stall.',
+    reason: task.idleSince
+      ? `Potential work stall: OpenCode lane idle since ${task.idleSince}.`
+      : 'Potential work stall.',
   };
 }
 
@@ -76,6 +90,22 @@ async function readInbox(memberName: string): Promise<InboxMessage[]> {
   return JSON.parse(await readFile(inboxPath(memberName), 'utf8')) as InboxMessage[];
 }
 
+async function countLeadRows(): Promise<number> {
+  try {
+    return (await readInbox('team-lead')).length;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+    throw error;
+  }
+}
+
+async function readJournalEpochKeys(): Promise<string[]> {
+  const entries = JSON.parse(
+    await readFile(getStallMonitorJournalPath('demo'), 'utf8')
+  ) as TaskStallJournalEntry[];
+  return entries.map((entry) => entry.epochKey);
+}
+
 async function readJournalStates(): Promise<Record<string, string>> {
   const entries = JSON.parse(
     await readFile(getStallMonitorJournalPath('demo'), 'utf8')
@@ -83,11 +113,15 @@ async function readJournalStates(): Promise<Record<string, string>> {
   return Object.fromEntries(entries.map((entry) => [entry.taskId, entry.state]));
 }
 
+interface OwnerRelayResult {
+  lastDelivery: { delivered: boolean; accepted?: boolean; reason?: string };
+}
+
 function createMonitor(
   tasks: StallTask[],
-  relayOpenCodeMemberInboxMessages = vi.fn(async () => ({
-    lastDelivery: { delivered: true, accepted: true },
-  }))
+  relayOpenCodeMemberInboxMessages = vi.fn(
+    async (): Promise<OwnerRelayResult> => ({ lastDelivery: { delivered: true, accepted: true } })
+  )
 ) {
   const journal = new TeamTaskStallJournal({ alertCooldownMs: 10 * 60_000 });
   const markAlerted = vi.spyOn(journal, 'markAlerted');
@@ -117,7 +151,7 @@ function createMonitor(
     } as never,
     { getSnapshot: vi.fn(async () => snapshot) } as never,
     {
-      evaluateWork: vi.fn(({ task }: { task: StallTask }) => workAlert(task)),
+      evaluateWork: vi.fn(({ task }: { task: StallTask }) => evaluateWork(task)),
       evaluateReview: vi.fn(),
     } as never,
     journal,
@@ -270,6 +304,66 @@ describe('task stall lead alert delivery', () => {
     await scan(T0 + 57 * MINUTE_MS);
 
     expect(await leadTexts()).toHaveLength(4);
+    expect(await readJournalEpochKeys()).toEqual(['task-w:epoch-after-new-activity']);
+  });
+
+  it('keeps counting an alerted epoch through owner turns that skip it', async () => {
+    // The owner nudge is never accepted, so every rung falls back to the lead.
+    const task: StallTask = { ...openCodeTask(), idleSince: 'turn 0' };
+    const { scan } = createMonitor(
+      [task],
+      vi.fn(async () => ({
+        lastDelivery: { delivered: true, reason: 'opencode_inbox_message_already_read' },
+      }))
+    );
+    const leadAlertScanMs: number[] = [];
+    let atMs = T0;
+    const step = async (): Promise<void> => {
+      const before = await countLeadRows();
+      await scan(atMs);
+      if ((await countLeadRows()) > before) leadAlertScanMs.push(atMs);
+      atMs += SCAN_INTERVAL_MS;
+    };
+
+    await step();
+    await step();
+    // Each owner turn skips the task for two scans and leaves a new idle time
+    // in the alert text: same epoch, different text, so a different message id.
+    for (let turn = 1; turn <= 20; turn += 1) {
+      task.laneActive = true;
+      await step();
+      await step();
+      task.laneActive = false;
+      task.idleSince = `turn ${turn}`;
+      await step();
+      await step();
+    }
+
+    expect(leadAlertScanMs).toHaveLength(3);
+    for (let index = 1; index < leadAlertScanMs.length; index += 1) {
+      expect(leadAlertScanMs[index] - leadAlertScanMs[index - 1]).toBeGreaterThanOrEqual(
+        10 * MINUTE_MS
+      );
+    }
+    expect(vi.mocked(console.warn)).toHaveBeenCalledWith(
+      '[Service:TeamTaskStallMonitor]',
+      expect.stringContaining('stall_alerts_exhausted')
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('drops the journal entry of a task that is no longer active', async () => {
+    const tasks = [writerTask()];
+    const { scan } = createMonitor(tasks);
+
+    await scan();
+    await scan();
+    expect(await readJournalEpochKeys()).toEqual(['task-w:epoch']);
+
+    tasks.splice(0);
+    await scan();
+
+    expect(await readJournalEpochKeys()).toEqual([]);
   });
 
   it('does not write the lead alert twice when the journal update after it failed', async () => {
