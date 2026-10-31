@@ -10,6 +10,8 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 
+import { clearSlowConfigReadWarnings } from '../../../helpers/slowConfigReadWarnings';
+
 import type { TaskRef, TeamSummary } from '../../../../src/shared/types';
 
 function createService(configReaderOverrides: Record<string, unknown> = {}): TeamDataService {
@@ -126,6 +128,7 @@ describe('TeamDataService system notifications to the lead', () => {
   });
 
   afterEach(async () => {
+    clearSlowConfigReadWarnings();
     setClaudeBasePathOverride(null);
     await rm(root, { recursive: true, force: true });
   });

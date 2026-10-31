@@ -15,6 +15,8 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../../src/main/utils/pathDecoder';
 
+import { clearSlowConfigReadWarnings } from '../../../../helpers/slowConfigReadWarnings';
+
 import type { TaskStallJournalEntry } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
 import type { InboxMessage } from '../../../../../src/shared/types';
 
@@ -97,6 +99,14 @@ async function countLeadRows(): Promise<number> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
     throw error;
   }
+}
+
+function exhaustionWarnings(): unknown[][] {
+  return vi
+    .mocked(console.warn)
+    .mock.calls.filter((call) =>
+      call.some((part) => String(part).includes('stall_alerts_exhausted'))
+    );
 }
 
 async function readJournalEpochKeys(): Promise<string[]> {
@@ -194,6 +204,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await Promise.all(monitors.splice(0).map((monitor) => monitor.stop()));
+  clearSlowConfigReadWarnings();
   vi.unstubAllEnvs();
   setClaudeBasePathOverride(null);
   await rm(root, { recursive: true, force: true });
@@ -292,11 +303,9 @@ describe('task stall lead alert delivery', () => {
     expect(new Set((await readInbox('team-lead')).map((message) => message.messageId)).size).toBe(
       3
     );
-    expect(vi.mocked(console.warn)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(console.warn)).toHaveBeenCalledWith(
-      '[Service:TeamTaskStallMonitor]',
-      expect.stringContaining('stall_alerts_exhausted')
-    );
+    expect(exhaustionWarnings()).toEqual([
+      ['[Service:TeamTaskStallMonitor]', expect.stringContaining('stall_alerts_exhausted')],
+    ]);
     vi.mocked(console.warn).mockClear();
 
     task.epoch = 'epoch-after-new-activity';
@@ -350,6 +359,24 @@ describe('task stall lead alert delivery', () => {
       expect.stringContaining('stall_alerts_exhausted')
     );
     vi.mocked(console.warn).mockClear();
+  });
+
+  it('spends the rungs without logging their run-out while lead alerts are off', async () => {
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED', '0');
+    const { scan } = createMonitor([writerTask()]);
+
+    await scan(T0);
+    for (const minute of [1, 12, 23, 34, 45]) {
+      await scan(T0 + minute * MINUTE_MS);
+    }
+
+    // Three rungs reached, then two silenced scans: the cap ran out.
+    const entries = JSON.parse(
+      await readFile(getStallMonitorJournalPath('demo'), 'utf8')
+    ) as TaskStallJournalEntry[];
+    expect(entries.map((entry) => entry.alertCount)).toEqual([5]);
+    expect(await countLeadRows()).toBe(0);
+    expect(exhaustionWarnings()).toEqual([]);
   });
 
   it('drops the journal entry of a task that is no longer active', async () => {
