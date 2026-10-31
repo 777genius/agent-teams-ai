@@ -23292,6 +23292,7 @@ function createMixedLiveRun(input: {
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
     pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     mcpConfigPath: null,
     bootstrapSpecPath: null,
     bootstrapUserPromptPath: null,

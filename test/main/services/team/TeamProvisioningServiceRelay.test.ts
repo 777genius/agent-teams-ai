@@ -347,6 +347,7 @@ function attachAliveRun(
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
     pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     pendingApprovals: new Map(),
     processedPermissionRequestIds: new Set(),
     silentUserDmForward: null,
@@ -1159,6 +1160,147 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     ]);
   });
 
+  describe('relay reply next to a SendMessage that may fail', () => {
+    async function startUserRelay(service: TeamProvisioningService, teamName: string) {
+      seedConfig(teamName);
+      seedLeadInbox(teamName, [
+        {
+          from: 'user',
+          text: 'Are the release notes ready?',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: false,
+          summary: 'Release notes',
+          messageId: 'user-msg-visibility',
+          source: 'user_sent',
+        },
+      ]);
+      attachAliveRun(service, teamName);
+      const relayPromise = service.relayLeadInboxMessages(teamName);
+      const run = await waitForCapture(service);
+      const handle = (msg: Record<string, unknown>) =>
+        (service as any).handleStreamJsonMessage(run, msg);
+      return { relayPromise, handle, run };
+    }
+
+    function readSentRows(teamName: string): Array<{ to?: string; text?: string }> {
+      return JSON.parse(
+        hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`) ?? '[]'
+      ) as Array<{ to?: string; text?: string }>;
+    }
+
+    it('keeps the plain reply when the runtime rejects SendMessage to the user', async () => {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      const { relayPromise, handle } = await startUserRelay(service, teamName);
+
+      handle({
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu-user-rejected',
+            name: 'SendMessage',
+            input: { recipient: 'user', content: 'Yes, they are ready.' },
+          },
+        ],
+      });
+      handle({
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu-user-rejected',
+              content: 'summary is required',
+              is_error: true,
+            },
+          ],
+        },
+      });
+      handle({ type: 'assistant', content: [{ type: 'text', text: 'Yes, the notes are ready.' }] });
+      handle({ type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      expect(
+        service.getLiveLeadProcessMessages(teamName).map(({ to, text }) => ({ to, text }))
+      ).toEqual([{ to: 'user', text: 'Yes, the notes are ready.' }]);
+      expect(readSentRows(teamName)).toMatchObject([
+        { to: 'user', text: 'Yes, the notes are ready.' },
+      ]);
+    });
+
+    it('still hides the plain reply after SendMessage to the user succeeds', async () => {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      const { relayPromise, handle } = await startUserRelay(service, teamName);
+
+      handle({
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu-user-ok',
+            name: 'SendMessage',
+            input: { recipient: 'user', content: 'Yes, they are ready.', summary: 'Ready' },
+          },
+        ],
+      });
+      handle({
+        type: 'user',
+        message: {
+          content: [{ type: 'tool_result', tool_use_id: 'toolu-user-ok', content: 'Message sent' }],
+        },
+      });
+      handle({ type: 'assistant', content: [{ type: 'text', text: 'Told the user.' }] });
+      handle({ type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      expect(
+        service.getLiveLeadProcessMessages(teamName).map(({ to, text }) => ({ to, text }))
+      ).toEqual([{ to: 'user', text: 'Yes, they are ready.' }]);
+      expect(readSentRows(teamName)).toMatchObject([{ to: 'user', text: 'Yes, they are ready.' }]);
+    });
+
+    it('does not turn a rejected group send into a plaintext reply', async () => {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      const { relayPromise, handle, run } = await startUserRelay(service, teamName);
+      // The group tool goes through runtime tool activity, which reads this map on its result.
+      run.memberSpawnToolUseIds = new Map();
+
+      handle({
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu-group',
+            name: 'mcp__agent_teams__group_chat_send',
+            input: { teamName, groupChatId: 'group-1', text: 'Notes are ready.' },
+          },
+        ],
+      });
+      handle({
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu-group',
+              content: 'group not found',
+              is_error: true,
+            },
+          ],
+        },
+      });
+      handle({ type: 'assistant', content: [{ type: 'text', text: 'Notes are ready.' }] });
+      handle({ type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      expect(service.getLiveLeadProcessMessages(teamName)).toEqual([]);
+      expect(readSentRows(teamName)).toEqual([]);
+    });
+  });
+
   it('treats member work sync nudges as actionable in lead relay prompt', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -1443,6 +1585,7 @@ Messages:
       activeCrossTeamReplyHints: [],
       pendingInboxRelayCandidates: [],
       pendingLeadSendMessages: new Map(),
+      leadSendMessageSeq: 0,
       silentUserDmForward: null,
       silentUserDmForwardClearHandle: null,
       child: { stdin: { writable: true, write: writeSpy } },

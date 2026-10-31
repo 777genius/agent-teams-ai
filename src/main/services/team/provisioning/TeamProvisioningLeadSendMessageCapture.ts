@@ -35,6 +35,8 @@ export interface TeamProvisioningLeadSendMessageRun extends InboxRelayCandidateR
    * call (for example an unknown recipient), so nothing is delivered or shown before success.
    */
   pendingLeadSendMessages: Map<string, PendingLeadSendMessage>;
+  /** Numbers captured send calls within the run; tool_use ids may repeat across turns. */
+  leadSendMessageSeq: number;
 }
 
 export interface CrossTeamSendRequest {
@@ -50,6 +52,10 @@ export interface CrossTeamSendRequest {
   conversationId?: string;
   replyToConversationId?: string;
 }
+
+// Same charset and length as validateMessageId in src/main/ipc/guards.ts.
+const MESSAGE_ID_MAX_LENGTH = 128;
+const MESSAGE_ID_UNSAFE_CHARS = /[^A-Za-z0-9_-]/g;
 
 type LeadCrossTeamSendRequest = CrossTeamSendRequest &
   Required<Pick<CrossTeamSendRequest, 'toMember' | 'summary' | 'messageId' | 'timestamp'>>;
@@ -155,8 +161,8 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
     );
     localRecipientNames.add('user');
     localRecipientNames.add('team-lead');
-    // A tool_use id is unique per call, so parallel calls in the same millisecond keep apart.
-    const messageId = `lead-sendmsg-${run.runId}-${toolUseId}`;
+    run.leadSendMessageSeq += 1;
+    const messageId = leadSendMessageId(run.runId, run.leadSendMessageSeq, toolUseId);
 
     const mistakenToolHint = isCrossTeamToolRecipientName(recipient)
       ? resolveSingleActiveCrossTeamReplyHint(run.activeCrossTeamReplyHints)
@@ -233,13 +239,27 @@ export function captureLeadSendMessages<TRun extends TeamProvisioningLeadSendMes
 
 /** Forgets send calls that can no longer get a result (the turn ended). Nothing is sent. */
 export function dropUnsettledLeadSendMessages(
-  run: { teamName: string; pendingLeadSendMessages: Map<string, unknown> },
+  run: { teamName: string; pendingLeadSendMessages: Map<string, PendingLeadSendMessage> },
   logger: Pick<TeamProvisioningLeadSendMessageCaptureLogger, 'warn'>
 ): void {
-  const count = run.pendingLeadSendMessages.size;
-  if (count === 0) return;
+  if (run.pendingLeadSendMessages.size === 0) return;
+  const calls = Array.from(run.pendingLeadSendMessages, ([toolUseId, call]) => {
+    const kind =
+      call.kind === 'cross_team' ? 'cross-team' : call.recipient === 'user' ? 'user' : 'member';
+    return `${toolUseId} (${kind})`;
+  });
   run.pendingLeadSendMessages.clear();
-  logger.warn(`[${run.teamName}] Dropped ${count} lead send call(s) that got no tool result`);
+  logger.warn(
+    `[${run.teamName}] Dropped lead SendMessage call(s) that got no tool result: ${calls.join(', ')}`
+  );
+}
+
+/** `lead-sendmsg-<runId>-<seq>-<toolUseId>`, kept within the IPC messageId charset and length. */
+function leadSendMessageId(runId: string, seq: number, toolUseId: string): string {
+  const base = `lead-sendmsg-${runId}-${seq}`;
+  const room = MESSAGE_ID_MAX_LENGTH - base.length - 1;
+  if (room <= 0) return base;
+  return `${base}-${toolUseId.replace(MESSAGE_ID_UNSAFE_CHARS, '_').slice(0, room)}`;
 }
 
 function settleLeadSendMessage(

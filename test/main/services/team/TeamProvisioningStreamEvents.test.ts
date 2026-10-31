@@ -101,6 +101,7 @@ function createDeterministicBootstrapRun(overrides: Partial<DeterministicBootstr
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
     pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     silentUserDmForwardClearHandle: null,
     leadContextUsage: null,
     apiRetryWarningIndex: null,
@@ -654,7 +655,12 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
 
   it('drops lead send calls still waiting for a tool result when the turn fails', () => {
     const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
-    run.pendingLeadSendMessages.set('toolu-1', {});
+    run.pendingLeadSendMessages.set('toolu-1', {
+      kind: 'local',
+      recipient: 'user',
+      summary: '',
+      message: { from: 'team-lead', to: 'user', text: 'hi', timestamp: NOW, read: false },
+    });
     const ports = makeResultPorts();
 
     handleTeamProvisioningStreamJsonMessage(
@@ -665,7 +671,9 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
 
     expect(run.pendingLeadSendMessages.size).toBe(0);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toContainEqual(
-      expect.stringContaining('Dropped 1 lead send call(s) that got no tool result')
+      expect.stringContaining(
+        'Dropped lead SendMessage call(s) that got no tool result: toolu-1 (user)'
+      )
     );
     clearExpectedWarnings();
   });

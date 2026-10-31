@@ -15,83 +15,77 @@ function isCapturedGroupSend(
   );
 }
 
-export function hasCapturedVisibleSendMessage(
-  content: Record<string, unknown>[],
+/** How a lead send tool_use affects relay text: shown to someone, shown to the user, or a group send. */
+export interface CapturedSendVisibility {
+  visible: boolean;
+  userVisible: boolean;
+  group: boolean;
+}
+
+export function classifyCapturedSend(
+  part: Record<string, unknown>,
   teamName: string
-): boolean {
-  return content.some((part) => {
-    if (!part || typeof part !== 'object') return false;
-    if (part.type !== 'tool_use' || typeof part.name !== 'string') return false;
+): CapturedSendVisibility | null {
+  if (!part || typeof part !== 'object') return null;
+  if (part.type !== 'tool_use' || typeof part.name !== 'string') return null;
 
-    const input = part.input;
-    if (!input || typeof input !== 'object') return false;
-    const inp = input as Record<string, unknown>;
-    // A rejected group attempt must never become a private/plaintext fallback.
-    if (isCapturedGroupSend(part.name, inp, teamName)) return true;
+  const input = part.input;
+  if (!input || typeof input !== 'object') return null;
+  const inp = input as Record<string, unknown>;
+  // A rejected group attempt must never become a private/plaintext fallback.
+  if (isCapturedGroupSend(part.name, inp, teamName)) {
+    return { visible: true, userVisible: true, group: true };
+  }
 
-    if (part.name === 'SendMessage') {
-      const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim();
-      const text = (typeof inp.content === 'string' ? inp.content : '').trim();
-      return target.length > 0 && text.length > 0;
-    }
+  if (part.name === 'SendMessage') {
+    const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim();
+    const text = (typeof inp.content === 'string' ? inp.content : '').trim();
+    if (target.length === 0 || text.length === 0) return null;
+    return { visible: true, userVisible: target.toLowerCase() === 'user', group: false };
+  }
 
-    const isTeamMessageSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'message_send',
-      toolInput: inp,
-      currentTeamName: teamName,
-    });
-    const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'cross_team_send',
-      toolInput: inp,
-      currentTeamName: teamName,
-    });
-    if (!isTeamMessageSendTool && !isDirectCrossTeamSendTool) return false;
+  const isTeamMessageSendTool = isAgentTeamsToolUse({
+    rawName: part.name,
+    canonicalName: 'message_send',
+    toolInput: inp,
+    currentTeamName: teamName,
+  });
+  const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
+    rawName: part.name,
+    canonicalName: 'cross_team_send',
+    toolInput: inp,
+    currentTeamName: teamName,
+  });
+  if (!isTeamMessageSendTool && !isDirectCrossTeamSendTool) return null;
 
-    const target = isTeamMessageSendTool
+  const target = (
+    isTeamMessageSendTool
       ? typeof inp.to === 'string'
         ? inp.to
         : ''
       : typeof inp.toTeam === 'string'
         ? inp.toTeam
-        : '';
-    const text = typeof inp.text === 'string' ? inp.text : '';
+        : ''
+  ).trim();
+  const text = typeof inp.text === 'string' ? inp.text.trim() : '';
+  if (target.length === 0 || text.length === 0) return null;
+  return {
+    visible: true,
+    userVisible: isTeamMessageSendTool && target.toLowerCase() === 'user',
+    group: false,
+  };
+}
 
-    return target.trim().length > 0 && text.trim().length > 0;
-  });
+export function hasCapturedVisibleSendMessage(
+  content: Record<string, unknown>[],
+  teamName: string
+): boolean {
+  return content.some((part) => classifyCapturedSend(part, teamName)?.visible === true);
 }
 
 export function hasCapturedUserVisibleSendMessage(
   content: Record<string, unknown>[],
   teamName: string
 ): boolean {
-  return content.some((part) => {
-    if (!part || typeof part !== 'object') return false;
-    if (part.type !== 'tool_use' || typeof part.name !== 'string') return false;
-
-    const input = part.input;
-    if (!input || typeof input !== 'object') return false;
-    const inp = input as Record<string, unknown>;
-    // A rejected group attempt must never become a private/plaintext fallback.
-    if (isCapturedGroupSend(part.name, inp, teamName)) return true;
-
-    if (part.name === 'SendMessage') {
-      const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim().toLowerCase();
-      const text = (typeof inp.content === 'string' ? inp.content : '').trim();
-      return target === 'user' && text.length > 0;
-    }
-
-    const isTeamMessageSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'message_send',
-      toolInput: inp,
-      currentTeamName: teamName,
-    });
-    if (!isTeamMessageSendTool) return false;
-
-    const target = typeof inp.to === 'string' ? inp.to.trim().toLowerCase() : '';
-    const text = typeof inp.text === 'string' ? inp.text.trim() : '';
-    return target === 'user' && text.length > 0;
-  });
+  return content.some((part) => classifyCapturedSend(part, teamName)?.userVisible === true);
 }

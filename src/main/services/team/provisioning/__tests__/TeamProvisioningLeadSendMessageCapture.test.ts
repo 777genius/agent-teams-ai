@@ -1,3 +1,4 @@
+import { validateMessageId } from '@main/ipc/guards';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -26,6 +27,7 @@ function createRun(
     silentUserDmForward: null,
     pendingInboxRelayCandidates: [],
     pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     ...overrides,
   };
 }
@@ -97,7 +99,7 @@ describe('lead SendMessage capture helpers', () => {
         from: 'team-lead',
         to: 'user',
         text: 'Hello user',
-        messageId: 'lead-sendmsg-run-1-toolu-1',
+        messageId: 'lead-sendmsg-run-1-1-toolu-1',
       }),
     ]);
     expect(ports.sent).toHaveLength(1);
@@ -156,7 +158,7 @@ describe('lead SendMessage capture helpers', () => {
       expect.objectContaining({
         to: 'worker',
         relayOfMessageId: 'source-1',
-        messageId: 'lead-sendmsg-run-1-toolu-1',
+        messageId: 'lead-sendmsg-run-1-1-toolu-1',
         timestamp: '2026-01-01T00:00:00.000Z',
         read: true,
         source: 'lead_process',
@@ -271,6 +273,33 @@ describe('lead SendMessage capture helpers', () => {
     expect(crossTeamSender).toHaveBeenCalledWith(
       expect.objectContaining({ toTeam: 'beta', toMember: 'team-lead', text: 'reply' })
     );
+  });
+
+  it('keeps message ids valid and unique for unusual or repeated tool_use ids', () => {
+    const run = createRun();
+    const ports = createPorts();
+    const toolUseIds = ['item:0.a', 'item:0.a', `call.${'x'.repeat(200)}`];
+
+    // Each id gets its own turn: a runtime may reuse tool_use ids across turns.
+    for (const toolUseId of toolUseIds) {
+      captureLeadSendMessages(
+        run,
+        [sendMessageCall(toolUseId, { recipient: 'worker', content: `hi ${toolUseId}` })],
+        ports
+      );
+      captureLeadSendMessages(run, [toolResult(toolUseId)], ports);
+    }
+
+    const messageIds = ports.pushed.map((message) => message.messageId ?? '');
+    expect(messageIds.slice(0, 2)).toEqual([
+      'lead-sendmsg-run-1-1-item_0_a',
+      'lead-sendmsg-run-1-2-item_0_a',
+    ]);
+    expect(new Set(messageIds).size).toBe(3);
+    for (const messageId of messageIds) {
+      expect(messageId.length).toBeLessThanOrEqual(128);
+      expect(validateMessageId(messageId)).toMatchObject({ valid: true });
+    }
   });
 
   it('ignores a SendMessage without a tool_use id because its result cannot be checked', async () => {
@@ -395,7 +424,7 @@ describe('lead send calls wait for their tool result', () => {
       toMember: 'worker',
       text: 'hello',
       summary: 'hi',
-      messageId: 'lead-sendmsg-run-1-toolu-1',
+      messageId: 'lead-sendmsg-run-1-1-toolu-1',
       timestamp: '2026-01-01T00:00:00.000Z',
       conversationId: undefined,
       replyToConversationId: undefined,
@@ -449,7 +478,7 @@ describe('lead send calls wait for their tool result', () => {
     expect(crossTeamSender).toHaveBeenCalledTimes(1);
     expect(crossTeamSender).toHaveBeenCalledWith(expect.objectContaining({ text: 'to beta' }));
     expect(ports.pushed.map((message) => [message.to, message.messageId])).toEqual([
-      ['user', 'lead-sendmsg-run-1-toolu-c'],
+      ['user', 'lead-sendmsg-run-1-3-toolu-c'],
       ['beta.worker', 'cross-1'],
     ]);
     expect(ports.sent).toEqual([expect.objectContaining({ to: 'user', text: 'to user' })]);
@@ -524,7 +553,7 @@ describe('lead send calls wait for their tool result', () => {
 
     expect(run.pendingLeadSendMessages.size).toBe(0);
     expect(logger.warn).toHaveBeenCalledWith(
-      '[alpha] Dropped 2 lead send call(s) that got no tool result'
+      '[alpha] Dropped lead SendMessage call(s) that got no tool result: toolu-1 (cross-team), toolu-2 (member)'
     );
     expect(crossTeamSender).not.toHaveBeenCalled();
     expect(ports.pushed).toEqual([]);

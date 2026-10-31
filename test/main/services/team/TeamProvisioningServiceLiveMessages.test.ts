@@ -173,6 +173,7 @@ interface RunLike {
   activeCrossTeamReplyHints?: Array<{ toTeam: string; conversationId: string }>;
   pendingInboxRelayCandidates?: unknown[];
   pendingLeadSendMessages: Map<string, unknown>;
+  leadSendMessageSeq: number;
   liveLeadTextBuffer?: unknown;
   memberSpawnStatuses: Map<string, unknown>;
   pendingApprovals: Map<string, unknown>;
@@ -212,6 +213,7 @@ function attachRun(
     silentUserDmForward: null,
     pendingInboxRelayCandidates: [],
     pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     child: { stdin: { writable: true, write: vi.fn(), end: vi.fn() } },
     processKilled: false,
     cancelRequested: false,
@@ -859,7 +861,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
       expect.objectContaining({
         toTeam: 'team-best',
         text: 'Second try',
-        messageId: 'lead-sendmsg-run-1-toolu-ok',
+        messageId: 'lead-sendmsg-run-1-2-toolu-ok',
       })
     );
     expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
@@ -896,7 +898,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(run.pendingLeadSendMessages.size).toBe(0);
     expect(vi.mocked(console.warn)).toHaveBeenCalledOnce();
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'Dropped 2 lead send call(s) that got no tool result'
+      'Dropped lead SendMessage call(s) that got no tool result: toolu-1 (cross-team), toolu-2 (member)'
     );
     vi.mocked(console.warn).mockClear();
 
@@ -958,7 +960,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
       expect.objectContaining({
         to: 'alice',
         text: 'Right recipient',
-        messageId: 'lead-sendmsg-run-1-toolu-ok',
+        messageId: 'lead-sendmsg-run-1-2-toolu-ok',
         source: 'lead_process',
       }),
     ]);

@@ -26,6 +26,7 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { LaunchExpectedMembersResolution } from './TeamProvisioningConfigLaunchNormalization';
+import type { PendingLeadSendMessage } from './TeamProvisioningLeadSendMessageCapture';
 import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   MemberSpawnStatusEntry,
@@ -331,7 +332,8 @@ export function createDeterministicLaunchProvisioningRun<
     silentUserDmForward: null,
     silentUserDmForwardClearHandle: null,
     pendingInboxRelayCandidates: [],
-    pendingLeadSendMessages: new Map<string, never>(),
+    pendingLeadSendMessages: new Map<string, PendingLeadSendMessage>(),
+    leadSendMessageSeq: 0,
     provisioningOutputParts: [],
     provisioningTraceLines: [],
     lastProvisioningTraceKey: null,

@@ -210,6 +210,8 @@ export interface ProvisioningRun {
   pendingInboxRelayCandidates: PendingInboxRelayCandidate[];
   /** Lead send calls waiting for their tool_result, keyed by tool_use id. */
   pendingLeadSendMessages: Map<string, PendingLeadSendMessage>;
+  /** Numbers captured lead send calls within the run. */
+  leadSendMessageSeq: number;
   /** Accumulates assistant text during provisioning phase for live UI preview. */
   provisioningOutputParts: string[];
   /** Bounded orchestration checkpoints shown in the Live output panel. */

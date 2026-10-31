@@ -26,6 +26,7 @@ function createRun(
     silentUserDmForward: null,
     pendingInboxRelayCandidates: [],
     pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     leadMsgSeq: 0,
     liveLeadTextBuffer: null,
     pendingToolCalls: [],

@@ -11,21 +11,23 @@ import {
   extractProvisioningStreamError,
   extractStreamUserText,
 } from './extractProvisioningStreamError';
-import {
-  hasCapturedUserVisibleSendMessage,
-  hasCapturedVisibleSendMessage,
-} from './leadRelayCapturedMessageTools';
+import { hasCapturedVisibleSendMessage } from './leadRelayCapturedMessageTools';
 import {
   appendLeadRelayCaptureAssistantText,
   isSyntheticLeadTextChunk,
   type LeadRelayCaptureStreamState,
+  noteLeadRelayCaptureSendCalls,
   resolveLeadRelayCaptureOnTerminalResult,
+  settleLeadRelayCaptureSendCalls,
 } from './leadRelayCaptureStreamHooks';
 import {
   clearGeminiPostLaunchHydrationState,
   clearPostCompactReminderState,
 } from './TeamProvisioningCleanup';
-import { dropUnsettledLeadSendMessages } from './TeamProvisioningLeadSendMessageCapture';
+import {
+  dropUnsettledLeadSendMessages,
+  type PendingLeadSendMessage,
+} from './TeamProvisioningLeadSendMessageCapture';
 import { buildRestartStillRunningReason } from './TeamProvisioningMemberSpawnStatusPolicy';
 import { recordProvisioningFirstTurnStart } from './TeamProvisioningTimeoutLifecycle';
 
@@ -85,7 +87,7 @@ export interface TeamProvisioningStreamRun {
   suppressGeminiPostLaunchHydrationOutput: boolean;
   activeCrossTeamReplyHints: unknown[];
   pendingInboxRelayCandidates: unknown[];
-  pendingLeadSendMessages: Map<string, unknown>;
+  pendingLeadSendMessages: Map<string, PendingLeadSendMessage>;
   silentUserDmForwardClearHandle: NodeJS.Timeout | null;
   leadContextUsage: {
     promptInputTokens: number | null;
@@ -597,7 +599,10 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
       );
     }
     if (hasToolResult) {
-      // Lead send side effects wait for the runtime to accept the call.
+      // Lead send side effects and relay suppression wait for the runtime to accept the call.
+      if (run.leadRelayCapture) {
+        settleLeadRelayCaptureSendCalls(run.leadRelayCapture, content);
+      }
       ports.captureSendMessages(run, content);
     }
     ports.handleNativeTeammateUserMessage(run, msg);
@@ -609,12 +614,7 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
 
     const hasVisibleSendMessage = hasCapturedVisibleSendMessage(content, run.teamName);
     if (run.leadRelayCapture) {
-      if (hasVisibleSendMessage) {
-        run.leadRelayCapture.hasVisibleSendMessage = true;
-      }
-      if (hasCapturedUserVisibleSendMessage(content, run.teamName)) {
-        run.leadRelayCapture.hasUserVisibleSendMessage = true;
-      }
+      noteLeadRelayCaptureSendCalls(run.leadRelayCapture, content, run.teamName);
     }
 
     const textParts = content
