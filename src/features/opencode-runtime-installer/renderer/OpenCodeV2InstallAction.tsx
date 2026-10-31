@@ -37,12 +37,11 @@ export const OpenCodeV2InstallAction = ({
       </Button>
     );
   }
-  // A first-time install uses V1; this action only manages existing runtimes.
+  // Fresh installations show V1 only; keep diagnostics for a broken binary override.
   if (
     !status ||
-    !status.installed ||
-    status.version?.startsWith('1.') ||
-    status.version?.startsWith('2.')
+    (!status.installed && status.source !== 'override') ||
+    (status.installed && (status.version?.startsWith('1.') || status.version?.startsWith('2.')))
   )
     return null;
   if (status.source === 'override') {
