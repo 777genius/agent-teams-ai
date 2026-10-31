@@ -7,8 +7,10 @@ from the pinned runtime qualification contract; native metadata stays beside bin
 The existing IPC/preload/store transports accept an optional generation choice.
 Focused tests cover package identity, archive safety and managed activation.
 
-Existing V1 installations stay on V1 without a dashboard offer to migrate to V2.
-Fresh installs can still select the qualified V2 through the primary install action.
+Fresh installs select V1 by default, including platforms with qualified V2 support.
+Existing V1/V2 installs remain in their selected generation on update; explicit
+V2 requests and support-only repair are preserved. The dashboard does not promote
+V2 during first-time installation.
 
 External V2 support is an optional ZIP delivery pinned by the runtime lock. The
 main support installer streams verified archive records into immutable UUID

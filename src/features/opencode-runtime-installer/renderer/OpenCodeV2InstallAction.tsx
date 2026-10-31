@@ -37,12 +37,14 @@ export const OpenCodeV2InstallAction = ({
       </Button>
     );
   }
+  // A first-time install uses V1; this action only manages existing runtimes.
   if (
     !status ||
-    (status.installed && (status.version?.startsWith('1.') || status.version?.startsWith('2.')))
+    !status.installed ||
+    status.version?.startsWith('1.') ||
+    status.version?.startsWith('2.')
   )
     return null;
-  if (!status.installed && status.compatibleV2Version) return null;
   if (status.source === 'override') {
     return (
       <span className="max-w-64 text-[10px] text-[var(--color-text-muted)]">

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { OpenCodeV2InstallAction } from '@features/opencode-runtime-installer/renderer';
+import { getRuntimeInstallLabel } from '@renderer/components/dashboard/runtimeInstallActionUi';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { OpenCodeRuntimeStatus } from '@shared/types';
@@ -16,6 +17,14 @@ function render(status: OpenCodeRuntimeStatus): string {
 }
 
 describe('V2 installation choice', () => {
+  it('labels the first-time primary install as OpenCode V1', () => {
+    const t = ((key: string) => key) as Parameters<typeof getRuntimeInstallLabel>[1];
+    const label = getRuntimeInstallLabel(
+      { installed: false, source: 'missing', state: 'idle', compatibleV2Version: '2.1.4' },
+      t
+    );
+    expect(label).toBe('cliStatus.runtimeInstall.install OpenCode V1');
+  });
   it.each(['required', 'ready'] as const)(
     'exposes support-only install/repair for native V2 with %s availability',
     (v2Support) => {
@@ -66,7 +75,7 @@ describe('V2 installation choice', () => {
       }
     }
   );
-  it('explains override selection and an unqualified platform without a misleading V2 action', () => {
+  it('explains override selection without promoting V2 for new installs', () => {
     const override = render({
       installed: true,
       source: 'override',
@@ -82,7 +91,7 @@ describe('V2 installation choice', () => {
       state: 'idle',
       compatibleV2Version: null,
     });
-    expect(unsupported).toContain('v2Unavailable');
-    expect(unsupported).not.toContain('<button');
+    expect(unsupported).toBe('');
+    expect(render({ installed: false, source: 'missing', state: 'idle', compatibleV2Version: '2.1.4' })).toBe('');
   });
 });
