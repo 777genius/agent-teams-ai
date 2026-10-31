@@ -54,6 +54,7 @@ function workAlert(task: typeof writerTask) {
 }
 
 let root: string;
+const monitors: TeamTaskStallMonitor[] = [];
 
 const inboxPath = (memberName: string): string =>
   path.join(getTeamsBasePath(), 'demo', 'inboxes', `${memberName}.json`);
@@ -107,12 +108,13 @@ function createMonitor(
     notifier
   );
   monitor.start();
+  monitors.push(monitor);
   let scans = 0;
   const scan = (): Promise<void> =>
     (monitor as unknown as ScanDriver).scanTeam('demo', new Date(T0 + SCAN_INTERVAL_MS * scans++), {
       cancelled: false,
     });
-  return { monitor, scan, markAlerted, relayOpenCodeMemberInboxMessages };
+  return { scan, markAlerted, relayOpenCodeMemberInboxMessages };
 }
 
 beforeEach(async () => {
@@ -138,15 +140,15 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await Promise.all(monitors.splice(0).map((monitor) => monitor.stop()));
   vi.unstubAllEnvs();
-  vi.restoreAllMocks();
   setClaudeBasePathOverride(null);
   await rm(root, { recursive: true, force: true });
 });
 
 describe('task stall lead alert delivery', () => {
   it('writes a confirmed stall into the lead inbox once and journals it', async () => {
-    const { monitor, scan, markAlerted } = createMonitor([writerTask]);
+    const { scan, markAlerted } = createMonitor([writerTask]);
 
     await scan();
     await expect(readFile(inboxPath('team-lead'))).rejects.toMatchObject({ code: 'ENOENT' });
@@ -171,13 +173,10 @@ describe('task stall lead alert delivery', () => {
     await scan();
     expect(await readInbox('team-lead')).toHaveLength(1);
     expect(markAlerted).toHaveBeenCalledTimes(1);
-
-    await monitor.stop();
   });
 
   it('journals the owner nudge when the lead alert fails and retries only the lead', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const { monitor, scan, markAlerted, relayOpenCodeMemberInboxMessages } = createMonitor([
+    const { scan, markAlerted, relayOpenCodeMemberInboxMessages } = createMonitor([
       openCodeTask,
       writerTask,
     ]);
@@ -197,10 +196,12 @@ describe('task stall lead alert delivery', () => {
     ]);
     expect(markAlerted.mock.calls.map(([, epochKey]) => epochKey)).toEqual(['task-o:epoch']);
     expect(await readJournalStates()).toEqual({ 'task-o': 'alerted', 'task-w': 'alert_ready' });
-    expect(warn).toHaveBeenCalledWith(
+    // test/setup.ts fails the test on any other console.warn.
+    expect(vi.mocked(console.warn)).toHaveBeenCalledWith(
       '[Service:TeamTaskStallMonitor]',
       expect.stringContaining('Task stall lead alert failed for demo')
     );
+    vi.mocked(console.warn).mockClear();
 
     await writeFile(inboxPath('team-lead'), '[]');
     await scan();
@@ -218,7 +219,5 @@ describe('task stall lead alert delivery', () => {
       'task-w:epoch',
     ]);
     expect(await readJournalStates()).toEqual({ 'task-o': 'alerted', 'task-w': 'alerted' });
-
-    await monitor.stop();
   });
 });

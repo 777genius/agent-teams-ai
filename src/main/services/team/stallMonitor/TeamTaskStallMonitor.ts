@@ -388,8 +388,8 @@ export class TeamTaskStallMonitor {
       (alert) => !alertedEpochKeys.has(alert.epochKey)
     );
     if (leadFallbackAlerts.length > 0) {
-      // A rung is consumed by REACHING it, not by the notification landing.
-      // With lead alerts switched off, journaling these anyway is what lets the
+      // With lead alerts switched off, a rung is consumed by REACHING it, not by
+      // the notification landing. Journaling these anyway is what lets the
       // pickup ladder climb to `silenced`: an unjournaled rung keeps
       // `priorAlertCount` at the same value, so the same alert would be rebuilt
       // on every scan for the rest of the run and the ladder would never end.

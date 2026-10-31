@@ -158,8 +158,8 @@ describe('TeamDataService system notifications to the lead', () => {
   });
 
   it('keeps refusing system as a sender on the member message path', async () => {
-    // Agents reach the inbox through this path; a forged system sender would
-    // make their messages look like app notices.
+    // Agents send through the same controller sender check; a forged system
+    // sender would make their messages look like app notices.
     await expect(
       new TeamDataService().sendMessage('demo', {
         member: 'atlas',
