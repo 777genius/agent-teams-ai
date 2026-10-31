@@ -42,6 +42,7 @@ function cleanupRun(overrides: Partial<CleanupRunWithLogs> = {}): CleanupRunWith
     memberSpawnStatuses: new Map(),
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
     pendingApprovals: new Map(),
     mcpConfigPath: null,
     bootstrapSpecPath: null,

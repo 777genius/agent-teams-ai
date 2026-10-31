@@ -26,6 +26,7 @@ import {
 } from './TeamProvisioningProgressBuffers';
 import { getPromptSizeSummary, type PromptSizeSummary } from './TeamProvisioningRuntimeDiagnostics';
 
+import type { PendingLeadSendMessage } from './TeamProvisioningLeadSendMessageCapture';
 import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   TeamRuntimeLaunchArgsPlan,
@@ -261,6 +262,8 @@ export function createDeterministicCreateProvisioningRun<
     silentUserDmForward: null,
     silentUserDmForwardClearHandle: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map<string, PendingLeadSendMessage>(),
+    leadSendMessageSeq: 0,
     provisioningOutputParts: [],
     provisioningTraceLines: [],
     lastProvisioningTraceKey: null,

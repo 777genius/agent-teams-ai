@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { promises as fsPromises } from 'fs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
@@ -210,6 +210,27 @@ function seedLeadInbox(teamName: string, messages: unknown[]): void {
   hoisted.files.set(`/mock/teams/${teamName}/inboxes/team-lead.json`, JSON.stringify(messages));
 }
 
+/** Feeds an assistant message, then a successful tool_result for each tool_use, as the runtime does. */
+function handleLeadToolTurn(
+  service: TeamProvisioningService,
+  run: unknown,
+  msg: Record<string, unknown>
+): void {
+  const handle = (
+    service as unknown as { handleStreamJsonMessage: (r: unknown, m: unknown) => void }
+  ).handleStreamJsonMessage.bind(service);
+  handle(run, msg);
+  const content = (msg.content ?? []) as Array<Record<string, unknown>>;
+  handle(run, {
+    type: 'user',
+    message: {
+      content: content
+        .filter((block) => block.type === 'tool_use' && typeof block.id === 'string')
+        .map((block) => ({ type: 'tool_result', tool_use_id: block.id, content: 'Message sent' })),
+    },
+  });
+}
+
 function seedMemberInbox(teamName: string, memberName: string, messages: unknown[]): void {
   hoisted.files.set(`/mock/teams/${teamName}/inboxes/${memberName}.json`, JSON.stringify(messages));
 }
@@ -337,6 +358,8 @@ function attachAliveRun(
     lastLeadTextEmitMs: 0,
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     pendingApprovals: new Map(),
     processedPermissionRequestIds: new Set(),
     silentUserDmForward: null,
@@ -1019,12 +1042,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const relayPromise = service.relayLeadInboxMessages(teamName);
     const run = await waitForCapture(service);
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Sending the user update now.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-1',
           name: 'SendMessage',
           input: {
             recipient: 'user',
@@ -1068,12 +1092,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const relayPromise = service.relayLeadInboxMessages(teamName);
     const run = await waitForCapture(service);
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Sending Alice the handoff.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-2',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
@@ -1115,12 +1140,13 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const relayPromise = service.relayLeadInboxMessages(teamName);
     const run = await waitForCapture(service);
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Asked Alice to review the release notes.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-3',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
@@ -1144,6 +1170,251 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(sentRows).toMatchObject([
       { to: 'user', text: 'Asked Alice to review the release notes.' },
     ]);
+  });
+
+  describe('relay reply next to a SendMessage that may fail', () => {
+    async function startUserRelay(service: TeamProvisioningService, teamName: string) {
+      seedConfig(teamName);
+      seedLeadInbox(teamName, [
+        {
+          from: 'user',
+          text: 'Are the release notes ready?',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: false,
+          summary: 'Release notes',
+          messageId: 'user-msg-visibility',
+          source: 'user_sent',
+        },
+      ]);
+      attachAliveRun(service, teamName);
+      const relayPromise = service.relayLeadInboxMessages(teamName);
+      const run = await waitForCapture(service);
+      const handle = (msg: Record<string, unknown>) =>
+        (service as any).handleStreamJsonMessage(run, msg);
+      return { relayPromise, handle, run };
+    }
+
+    function readSentRows(teamName: string): Array<{ to?: string; text?: string }> {
+      return JSON.parse(
+        hoisted.files.get(`/mock/teams/${teamName}/sentMessages.json`) ?? '[]'
+      ) as Array<{ to?: string; text?: string }>;
+    }
+
+    it('keeps the plain reply when the runtime rejects SendMessage to the user', async () => {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      const { relayPromise, handle } = await startUserRelay(service, teamName);
+
+      handle({
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu-user-rejected',
+            name: 'SendMessage',
+            input: { recipient: 'user', content: 'Yes, they are ready.' },
+          },
+        ],
+      });
+      handle({
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu-user-rejected',
+              content: 'summary is required',
+              is_error: true,
+            },
+          ],
+        },
+      });
+      handle({ type: 'assistant', content: [{ type: 'text', text: 'Yes, the notes are ready.' }] });
+      handle({ type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      expect(
+        service.getLiveLeadProcessMessages(teamName).map(({ to, text }) => ({ to, text }))
+      ).toEqual([{ to: 'user', text: 'Yes, the notes are ready.' }]);
+      expect(readSentRows(teamName)).toMatchObject([
+        { to: 'user', text: 'Yes, the notes are ready.' },
+      ]);
+    });
+
+    it('still hides the plain reply after SendMessage to the user succeeds', async () => {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      const { relayPromise, handle } = await startUserRelay(service, teamName);
+
+      handle({
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu-user-ok',
+            name: 'SendMessage',
+            input: { recipient: 'user', content: 'Yes, they are ready.', summary: 'Ready' },
+          },
+        ],
+      });
+      handle({
+        type: 'user',
+        message: {
+          content: [{ type: 'tool_result', tool_use_id: 'toolu-user-ok', content: 'Message sent' }],
+        },
+      });
+      handle({ type: 'assistant', content: [{ type: 'text', text: 'Told the user.' }] });
+      handle({ type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      expect(
+        service.getLiveLeadProcessMessages(teamName).map(({ to, text }) => ({ to, text }))
+      ).toEqual([{ to: 'user', text: 'Yes, they are ready.' }]);
+      expect(readSentRows(teamName)).toMatchObject([{ to: 'user', text: 'Yes, they are ready.' }]);
+    });
+
+    it('does not turn a rejected group send into a plaintext reply', async () => {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      const { relayPromise, handle, run } = await startUserRelay(service, teamName);
+      // The group tool goes through runtime tool activity, which reads this map on its result.
+      run.memberSpawnToolUseIds = new Map();
+
+      handle({
+        type: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu-group',
+            name: 'mcp__agent_teams__group_chat_send',
+            input: { teamName, groupChatId: 'group-1', text: 'Notes are ready.' },
+          },
+        ],
+      });
+      handle({
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu-group',
+              content: 'group not found',
+              is_error: true,
+            },
+          ],
+        },
+      });
+      handle({ type: 'assistant', content: [{ type: 'text', text: 'Notes are ready.' }] });
+      handle({ type: 'result', subtype: 'success' });
+
+      await expect(relayPromise).resolves.toBe(1);
+      expect(service.getLiveLeadProcessMessages(teamName)).toEqual([]);
+      expect(readSentRows(teamName)).toEqual([]);
+    });
+
+    function sendCall(id: string, name: string, input: Record<string, unknown>) {
+      return { type: 'assistant', content: [{ type: 'tool_use', id, name, input }] };
+    }
+
+    function toolResult(id: string, isError: boolean) {
+      return {
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: id,
+              content: isError ? 'rejected' : 'Message sent',
+              is_error: isError,
+            },
+          ],
+        },
+      };
+    }
+
+    function feed(service: TeamProvisioningService, teamName: string) {
+      return service.getLiveLeadProcessMessages(teamName).map(({ to, text }) => ({ to, text }));
+    }
+
+    it.each([
+      { outcome: 'rejected', isError: true, expected: [{ to: 'user', text: 'Plain answer.' }] },
+      { outcome: 'accepted', isError: false, expected: [] },
+    ])(
+      'hides the plain reply only when message_send to the user is $outcome',
+      async ({ isError, expected }) => {
+        const service = new TeamProvisioningService();
+        const teamName = 'my-team';
+        const { relayPromise, handle, run } = await startUserRelay(service, teamName);
+        // message_send goes through runtime tool activity, which reads this map on its result.
+        run.memberSpawnToolUseIds = new Map();
+
+        handle(
+          sendCall('toolu-board', 'mcp__agent-teams__message_send', {
+            teamName,
+            to: 'user',
+            text: 'Via the board.',
+            from: 'team-lead',
+          })
+        );
+        handle(toolResult('toolu-board', isError));
+        handle({ type: 'assistant', content: [{ type: 'text', text: 'Plain answer.' }] });
+        handle({ type: 'result', subtype: 'success' });
+
+        await expect(relayPromise).resolves.toBe(1);
+        // The board writes the accepted message itself; the app only decides about the reply.
+        expect(feed(service, teamName)).toEqual(expected);
+      }
+    );
+
+    describe('when the capture closes on the 800 ms text idle', () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('shows both the reply and the copy when the success arrives after the idle', async () => {
+        const service = new TeamProvisioningService();
+        const teamName = 'my-team';
+        const { relayPromise, handle } = await startUserRelay(service, teamName);
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldClearNativeTimers: true });
+
+        handle({ type: 'assistant', content: [{ type: 'text', text: 'Plain answer.' }] });
+        handle(
+          sendCall('toolu-late', 'SendMessage', {
+            recipient: 'user',
+            content: 'Tool answer.',
+            summary: 'Answer',
+          })
+        );
+        await vi.advanceTimersByTimeAsync(1_000);
+        handle(toolResult('toolu-late', false));
+        handle({ type: 'result', subtype: 'success' });
+
+        await expect(relayPromise).resolves.toBe(1);
+        // A late result can only add a duplicate, never lose the reply.
+        expect(feed(service, teamName)).toEqual(
+          expect.arrayContaining([
+            { to: 'user', text: 'Plain answer.' },
+            { to: 'user', text: 'Tool answer.' },
+          ])
+        );
+        expect(feed(service, teamName)).toHaveLength(2);
+      });
+
+      it('keeps the reply after a rejected SendMessage when no turn result arrives', async () => {
+        const service = new TeamProvisioningService();
+        const teamName = 'my-team';
+        const { relayPromise, handle } = await startUserRelay(service, teamName);
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldClearNativeTimers: true });
+
+        handle(sendCall('toolu-rejected', 'SendMessage', { recipient: 'user', content: 'Draft.' }));
+        handle(toolResult('toolu-rejected', true));
+        handle({ type: 'assistant', content: [{ type: 'text', text: 'Plain answer.' }] });
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        await expect(relayPromise).resolves.toBe(1);
+        expect(feed(service, teamName)).toEqual([{ to: 'user', text: 'Plain answer.' }]);
+      });
+    });
   });
 
   it('treats member work sync nudges as actionable in lead relay prompt', async () => {
@@ -1429,6 +1700,8 @@ Messages:
       lastLeadTextEmitMs: 0,
       activeCrossTeamReplyHints: [],
       pendingInboxRelayCandidates: [],
+      pendingLeadSendMessages: new Map(),
+      leadSendMessageSeq: 0,
       silentUserDmForward: null,
       silentUserDmForwardClearHandle: null,
       child: { stdin: { writable: true, write: writeSpy } },
@@ -1990,11 +2263,12 @@ Messages:
     const run = (service as unknown as { runs: Map<string, unknown> }).runs.get('run-1') as unknown;
     expect(run).toBeTruthy();
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-4',
           name: 'SendMessage',
           input: {
             recipient: 'alice',
@@ -2039,11 +2313,12 @@ Messages:
       mode: 'user_dm',
     };
 
-    (service as any).handleStreamJsonMessage(run, {
+    handleLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-5',
           name: 'SendMessage',
           input: {
             recipient: 'alice',

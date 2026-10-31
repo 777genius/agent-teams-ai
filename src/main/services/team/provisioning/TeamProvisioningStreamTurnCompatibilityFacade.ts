@@ -69,7 +69,8 @@ export abstract class TeamProvisioningStreamTurnCompatibilityFacade<
   }
 
   /**
-   * Intercept SendMessage tool_use blocks from the lead stream-json output.
+   * Intercept SendMessage tool_use blocks from the lead stream-json output and act on them
+   * once their tool_result reports success.
    * Persisting them here keeps Messages accurate even if the provider resumes with stale team context.
    */
   protected captureSendMessages(run: TRun, content: Record<string, unknown>[]): void {

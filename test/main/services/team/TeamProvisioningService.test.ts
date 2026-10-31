@@ -1257,6 +1257,8 @@ function createClaudeLogsRun(overrides: Record<string, unknown> = {}) {
     memberSpawnStatuses: new Map(),
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     pendingApprovals: new Map(),
     mcpConfigPath: null,
     bootstrapSpecPath: null,

@@ -57,6 +57,7 @@ export interface TeamProvisioningCleanupRun
   memberSpawnStatuses: Map<string, unknown>;
   activeCrossTeamReplyHints: unknown[];
   pendingInboxRelayCandidates: unknown[];
+  pendingLeadSendMessages: Map<string, unknown>;
   pendingApprovals: {
     size: number;
     keys(): IterableIterator<string>;
@@ -294,6 +295,7 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
   }
   run.activeCrossTeamReplyHints = [];
   run.pendingInboxRelayCandidates = [];
+  run.pendingLeadSendMessages.clear();
   if (!hasNewerTrackedRun) {
     for (const key of Array.from(ports.memberInboxRelayInFlight.keys())) {
       if (key.startsWith(`${run.teamName}:`)) {

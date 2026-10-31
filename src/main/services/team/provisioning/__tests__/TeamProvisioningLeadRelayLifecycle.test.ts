@@ -122,6 +122,7 @@ function cleanupRun(
     ]),
     activeCrossTeamReplyHints: [{}],
     pendingInboxRelayCandidates: [{}],
+    pendingLeadSendMessages: new Map(),
     pendingApprovals: new Map([['approval-1', {}]]),
     mcpConfigPath: null,
     bootstrapSpecPath: null,
