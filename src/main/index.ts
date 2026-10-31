@@ -1850,17 +1850,29 @@ async function initializeServices(): Promise<void> {
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
   ptyTerminalService = new PtyTerminalService();
-  const teamMemberLogsFinder = new TeamMemberLogsFinder();
-  // The tracker creates its freshness dirs only in teams this profile manages.
-  // Before the provisioning service exists, no team counts as managed.
-  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder, (teamName) =>
+  // Transcript lookups write a team's index or repair its config.json only for teams this
+  // profile manages. Before the provisioning service exists, no team counts as managed.
+  const isTeamManagedByThisProfile = (teamName: string): Promise<boolean> =>
     teamProvisioningService
       ? teamProvisioningService.isTeamManagedByThisProfile(teamName)
-      : Promise.resolve(false)
+      : Promise.resolve(false);
+  const teamMemberLogsConfigReader = new TeamConfigReader();
+  const teamMemberLogsFinder = new TeamMemberLogsFinder(
+    teamMemberLogsConfigReader,
+    new TeamInboxReader(),
+    new TeamMembersMetaStore(),
+    new TeamTranscriptProjectResolver(isTeamManagedByThisProfile, {
+      getConfig: (teamName) => teamMemberLogsConfigReader.getConfigSnapshot(teamName),
+    })
+  );
+  // The tracker creates its freshness dirs only in teams this profile manages.
+  const teamLogSourceTracker = new TeamLogSourceTracker(
+    teamMemberLogsFinder,
+    isTeamManagedByThisProfile
   );
   const taskLogConfigReader = new TeamConfigReader();
   const teamTranscriptSourceLocator = new TeamTranscriptSourceLocator(
-    new TeamTranscriptProjectResolver({
+    new TeamTranscriptProjectResolver(isTeamManagedByThisProfile, {
       getConfig: (teamName) => taskLogConfigReader.getConfigSnapshot(teamName),
     })
   );
@@ -2587,6 +2599,7 @@ async function initializeServices(): Promise<void> {
     taskReader: new TeamTaskReader(),
     kanbanManager: new TeamKanbanManager(),
     membersMetaStore: new TeamMembersMetaStore(),
+    isManagedByThisProfile: isTeamManagedByThisProfile,
     internalStorageBackend: internalStorageFeature?.memberWorkSyncBackend ?? null,
     isTeamActive: isTeamActiveForMemberWorkSync,
     isMemberActive: isMemberActiveForMemberWorkSync,

@@ -91,6 +91,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
+import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
 import type { AgentActionMode } from '@shared/types';
@@ -341,9 +342,10 @@ function readConfigForUiSnapshot(
 }
 
 function createUiSnapshotProjectResolver(
-  configReader: TeamConfigReader
+  configReader: TeamConfigReader,
+  canWriteTeamFiles: TeamFileWritePolicy
 ): TeamTranscriptProjectResolver {
-  return new TeamTranscriptProjectResolver({
+  return new TeamTranscriptProjectResolver(canWriteTeamFiles, {
     getConfig: (teamName) => readConfigForUiSnapshot(configReader, teamName),
   });
 }
@@ -446,11 +448,13 @@ export class TeamDataService {
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
   private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
   /**
-   * Until wired, no team counts as this profile's, so lead notifications write
-   * nothing and process listings only read. The team data worker is never wired.
+   * Until wired, no team counts as this profile's, so lead notifications and transcript
+   * lookups write nothing under a team directory and process listings only read. The
+   * team data worker is never wired.
    */
   private teamProfileOwnership: (teamName: string) => Promise<boolean> = () =>
     Promise.resolve(false);
+  private readonly projectResolver: TeamTranscriptProjectResolver;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -472,11 +476,14 @@ export class TeamDataService {
     private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
     private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
     private readonly leadSessionParseCache: LeadSessionParseCache = new LeadSessionParseCache(),
-    private readonly projectResolver: TeamTranscriptProjectResolver = createUiSnapshotProjectResolver(
-      configReader
-    ),
+    projectResolver?: TeamTranscriptProjectResolver,
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
+    this.projectResolver =
+      projectResolver ??
+      createUiSnapshotProjectResolver(configReader, (teamName) =>
+        this.isTeamManagedByThisProfile(teamName)
+      );
     const getInboxMessagesWindow =
       typeof this.inboxReader.getMessagesWindow === 'function'
         ? (teamName: string, options: Parameters<TeamInboxReader['getMessagesWindow']>[1]) =>
@@ -682,6 +689,8 @@ export class TeamDataService {
    * ~/.claude/teams is shared with other app profiles and native sessions. Lead
    * notifications about teammate task starts and comments write the team's
    * comment journal and lead inbox, so they run only for teams this profile manages.
+   * The same check decides whether transcript lookups may write the team's transcript
+   * index or repair the projectPath in its config.json.
    */
   setTeamProfileOwnership(isManagedByThisProfile: (teamName: string) => Promise<boolean>): void {
     this.teamProfileOwnership = isManagedByThisProfile;
