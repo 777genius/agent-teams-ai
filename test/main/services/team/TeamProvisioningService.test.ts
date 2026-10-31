@@ -200,6 +200,18 @@ vi.mock(
   }
 );
 
+// These fixtures model teams of this app profile; ownership itself is covered by
+// TeamProvisioningServiceProfileOwnership.test.ts.
+vi.mock(
+  '@main/services/team/provisioning/TeamProvisioningProfileOwnership',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('@main/services/team/provisioning/TeamProvisioningProfileOwnership')
+    >()),
+    createTeamProfileOwnership: () => ({ isManagedByThisProfile: () => Promise.resolve(true) }),
+  })
+);
+
 import {
   killTmuxPaneForCurrentPlatformSync,
   listRuntimeProcessTableForCurrentPlatform,
