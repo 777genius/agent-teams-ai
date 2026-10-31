@@ -1735,7 +1735,7 @@ describe('measured V2 launch timeout policy', () => {
         expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, platform)).toBe(300_000);
     }
     for (const version of ['1.19.0', undefined, null])
-      expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(120_000);
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(180_000);
   });
   it('preserves larger local and serial allowances independently of the native baseline', () => {
     expect(
@@ -1761,7 +1761,7 @@ describe('measured V2 launch timeout policy', () => {
       resolveOpenCodeLaunchTimeoutMs(input(undefined, 'cursor-acp/model'), undefined, 'win32')
     ).toBe(300_000);
     expect(resolveOpenCodeLaunchTimeoutMs(input(undefined, 'kiro/model'), undefined, 'linux')).toBe(
-      120_000
+      180_000
     );
   });
 });

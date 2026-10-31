@@ -293,14 +293,21 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     'forwards exact launch model and approval scope to the handshake (%s)',
     async (skipPermissions) => {
       const input = buildLaunchInput();
-      input.body = { ...(input.body as object), selectedModel: 'openai/gpt-5.4', skipPermissions, effort: 'low' };
+      input.body = {
+        ...(input.body as object),
+        selectedModel: 'openai/gpt-5.4',
+        skipPermissions,
+        effort: 'low',
+      };
       expect(manifestReader.manifest.highWatermark).toBeGreaterThan(0);
       await createService().execute(input);
       expect(handshakePort.calls[0]).toMatchObject({
         selectedModel: 'openai/gpt-5.4',
         effort: 'low',
         expectedManifestHighWatermark: null,
-        executionProofIdentity: stableHash((input.body as Record<string, unknown>).executionProof ?? null),
+        executionProofIdentity: stableHash(
+          (input.body as Record<string, unknown>).executionProof ?? null
+        ),
         toolApprovalMode: skipPermissions ? 'auto' : 'manual',
         teamId: 'team-a',
         laneId: null,
@@ -365,6 +372,33 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       options: { cwd: '/tmp/project' },
     });
   });
+
+  it.each([
+    [undefined, 180_000],
+    [300_000, 180_000],
+    [42_000, 42_000],
+  ] as const)(
+    'handshake loading preserves the caller budget %s',
+    async (callerBudget, expected) => {
+      vi.useFakeTimers();
+      bridge.resultFactory = ({ command, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: handshakePort.nextHandshake,
+        });
+      const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity });
+      await port.handshake({
+        requiredCommand: 'opencode.launchTeam',
+        expectedRunId: null,
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: null,
+        timeoutMs: callerBudget,
+      });
+      expect(bridge.calls).toHaveLength(1);
+      expect(bridge.calls[0].options.timeoutMs).toBe(expected);
+    }
+  );
 
   it('retries a busy registry handshake before dispatch within the original deadline', async () => {
     vi.useFakeTimers();
@@ -476,7 +510,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
             requestId: options.requestId,
             data: handshakePort.nextHandshake,
           });
-    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 60_000 });
+    const port = new OpenCodeBridgeCommandHandshakePort({
+      bridge,
+      clientIdentity,
+      timeoutMs: 60_000,
+    });
     const pending = port.handshake({
       requiredCommand: 'opencode.launchTeam',
       expectedRunId: null,
@@ -513,7 +551,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
             requestId: options.requestId,
             data: handshakePort.nextHandshake,
           });
-    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    const port = new OpenCodeBridgeCommandHandshakePort({
+      bridge,
+      clientIdentity,
+      timeoutMs: 10_000,
+    });
     const pending = port.handshake({
       requiredCommand: 'opencode.launchTeam',
       expectedRunId: null,
@@ -540,7 +582,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         retryable: true,
       },
     });
-    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    const port = new OpenCodeBridgeCommandHandshakePort({
+      bridge,
+      clientIdentity,
+      timeoutMs: 10_000,
+    });
     await expect(
       port.handshake({
         requiredCommand: 'opencode.stopTeam',

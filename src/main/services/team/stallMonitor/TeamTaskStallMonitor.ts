@@ -238,6 +238,18 @@ export class TeamTaskStallMonitor {
     return this.started && !scanRun.cancelled;
   }
 
+  /** Asked right before the scan writes into a team: journal first, alert marks last. */
+  private async shouldWriteIntoTeam(
+    teamName: string,
+    scanRun: TeamTaskStallScanRun
+  ): Promise<boolean> {
+    if (!(await this.registry.isTeamOfThisProfile(teamName))) {
+      logger.debug(`Task stall scan left ${teamName} alone: another profile manages the team`);
+      return false;
+    }
+    return this.shouldContinueScan(scanRun);
+  }
+
   private async runScanBody(scanRun: TeamTaskStallScanRun): Promise<void> {
     const activeTeams = await this.registry.listActiveTeams();
     if (!this.shouldContinueScan(scanRun)) {
@@ -308,6 +320,11 @@ export class TeamTaskStallMonitor {
       return;
     }
     if (!snapshot) {
+      return;
+    }
+    // The registry admitted the team when the scan began, but another profile
+    // can take it over meanwhile, and from here on the scan writes into it.
+    if (!(await this.shouldWriteIntoTeam(teamName, scanRun))) {
       return;
     }
 
@@ -394,8 +411,13 @@ export class TeamTaskStallMonitor {
       // `priorAlertCount` at the same value, so the same alert would be rebuilt
       // on every scan for the rest of the run and the ladder would never end.
       if (isTeamTaskStallAlertsEnabled()) {
-        await this.notifier.notifyLead(teamName, leadFallbackAlerts);
+        const sent = await this.notifier.notifyLead(teamName, leadFallbackAlerts);
         if (!this.shouldContinueScan(scanRun)) {
+          return;
+        }
+        // Not sent: another profile took the team over, so nothing of this
+        // scan is journaled into it.
+        if (!sent) {
           return;
         }
       }
@@ -415,7 +437,7 @@ export class TeamTaskStallMonitor {
       return;
     }
 
-    if (!this.shouldContinueScan(scanRun)) {
+    if (!(await this.shouldWriteIntoTeam(teamName, scanRun))) {
       return;
     }
     await Promise.all(

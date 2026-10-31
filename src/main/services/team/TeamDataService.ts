@@ -426,6 +426,7 @@ interface FileWatchReconcileTrigger {
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
+  private processHealthTickInFlight = false;
   /** Tracks notified task-start transitions to avoid duplicate lead notifications. */
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
@@ -448,9 +449,10 @@ export class TeamDataService {
   private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
   /**
    * Until wired, no team counts as this profile's, so lead notifications and transcript
-   * lookups write nothing under a team directory. Worker threads never wire it.
+   * lookups write nothing under a team directory and process listings only read. The
+   * team data worker is never wired.
    */
-  private isTeamManagedByThisProfile: (teamName: string) => Promise<boolean> = () =>
+  private teamProfileOwnership: (teamName: string) => Promise<boolean> = () =>
     Promise.resolve(false);
   private readonly projectResolver: TeamTranscriptProjectResolver;
 
@@ -691,7 +693,12 @@ export class TeamDataService {
    * index or repair the projectPath in its config.json.
    */
   setTeamProfileOwnership(isManagedByThisProfile: (teamName: string) => Promise<boolean>): void {
-    this.isTeamManagedByThisProfile = isManagedByThisProfile;
+    this.teamProfileOwnership = isManagedByThisProfile;
+  }
+
+  /** The wired ownership check; background writers into a team ask it first. */
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean> {
+    return this.teamProfileOwnership(teamName);
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
@@ -1799,17 +1806,31 @@ export class TeamDataService {
   }
 
   private async processHealthTick(): Promise<void> {
-    for (const teamName of this.processHealthTeams) {
-      try {
-        this.getController(teamName).processes.listProcesses();
-      } catch {
-        // best-effort per team
+    // The interval does not wait for a slow tick, so a tick still running skips the next.
+    if (this.processHealthTickInFlight) return;
+    this.processHealthTickInFlight = true;
+    try {
+      for (const teamName of [...this.processHealthTeams]) {
+        try {
+          await this.readProcesses(teamName);
+        } catch {
+          // best-effort per team
+        }
       }
+    } finally {
+      this.processHealthTickInFlight = false;
     }
   }
 
+  /**
+   * Listing settles rows whose pid is gone by writing their stoppedAt back to
+   * processes.json. Only a team this profile manages is written: the teams
+   * directory is shared with other app profiles, and their listing gets the
+   * same rows while the file stays as it is.
+   */
   private async readProcesses(teamName: string): Promise<TeamProcess[]> {
-    return this.getController(teamName).processes.listProcesses() as TeamProcess[];
+    const readOnly = !(await this.isTeamManagedByThisProfile(teamName));
+    return this.getController(teamName).processes.listProcesses({ readOnly }) as TeamProcess[];
   }
 
   /**

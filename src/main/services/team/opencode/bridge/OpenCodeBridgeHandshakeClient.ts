@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { types } from 'node:util';
 
+import { OPENCODE_LOADING_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
+
 import {
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
@@ -313,7 +315,7 @@ export interface OpenCodeBridgeCommandHandshakePortOptions {
   readinessHandshake?: OpenCodeReadinessHandshake;
 }
 
-const DEFAULT_HANDSHAKE_TIMEOUT_MS = 120_000;
+const DEFAULT_HANDSHAKE_TIMEOUT_MS = OPENCODE_LOADING_TIMEOUT_MS;
 
 /** Escalating contention backoff; the handshake deadline stays the only bound. */
 const OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS = [250, 500, 1000, 2000, 4000] as const;
