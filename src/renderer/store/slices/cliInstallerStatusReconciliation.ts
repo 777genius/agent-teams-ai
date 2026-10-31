@@ -154,7 +154,11 @@ export function shouldRetryCliProviderStatusCheck(
     (providerId === 'opencode' &&
       provider.statusCheckErrorCode === 'partial_response' &&
       provider.statusCheckOutcome !== 'model_only') ||
-    (provider.statusCheckOutcome === 'transient_error' &&
+    // Do not retry an OpenCode timeout right away. Its full status check already
+    // waits out the runtime's loading budget, so a second try on a busy machine
+    // only doubles the wait.
+    (providerId !== 'opencode' &&
+      provider.statusCheckOutcome === 'transient_error' &&
       provider.statusCheckErrorCode === 'timeout')
   );
 }

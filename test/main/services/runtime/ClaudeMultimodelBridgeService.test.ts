@@ -1317,6 +1317,37 @@ describe('ClaudeMultimodelBridgeService', () => {
     );
   });
 
+  it('gives a project-scoped OpenCode full status the runtime loading budget', async () => {
+    execCliMock.mockImplementation((_binaryPath, args, options) =>
+      Promise.reject(
+        new Error(`Command timed out after ${options?.timeout}ms: /mock/runtime ${args.join(' ')}`)
+      )
+    );
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/runtime', 'opencode', undefined, {
+      projectPath: '/tmp/slow-opencode-project',
+    });
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      capabilities: { teamLaunch: false },
+    });
+    // The runtime allows this read 180 s plus its own cleanup.
+    expect(execCliMock.mock.calls.map((call) => [call[1].join(' '), call[2]?.timeout])).toEqual([
+      ['runtime status --json --provider opencode', 240_000],
+    ]);
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      expect.stringContaining('Provider-scoped full runtime status unavailable for opencode'),
+    ]);
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('coalesces concurrent project-scoped status reads across bridge consumers', async () => {
     let resolveStatus!: (value: ReturnType<typeof statusReply>) => void;
     execCliMock.mockImplementation(
