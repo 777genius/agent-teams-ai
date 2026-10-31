@@ -89,7 +89,7 @@ describe('JsonTeamRuntimeRecoveryRepository', () => {
     expect(files.some((file) => file.startsWith('state.json.invalid.'))).toBe(true);
   });
 
-  describe('cancellation of a team this app may not own', () => {
+  describe('no-op updates', () => {
     const NOW = '2026-10-30T10:00:00.000Z';
 
     function stateWithJob(teamName: string, status: 'pending' | 'completed') {
@@ -129,12 +129,12 @@ describe('JsonTeamRuntimeRecoveryRepository', () => {
 
     async function setUp(state?: ReturnType<typeof stateWithJob>) {
       const { root, paths, repository } = await createRepository();
-      const teamDir = join(root, 'other-profile');
+      const teamDir = join(root, 'sandbox-team');
       await mkdir(teamDir, { recursive: true });
-      await writeFile(join(teamDir, 'config.json'), '{"name":"other-profile"}\n', 'utf8');
+      await writeFile(join(teamDir, 'config.json'), '{"name":"sandbox-team"}\n', 'utf8');
       if (state) {
-        await mkdir(paths.getTeamDir('other-profile'), { recursive: true });
-        await writeFile(paths.getStatePath('other-profile'), JSON.stringify(state), 'utf8');
+        await mkdir(paths.getTeamDir('sandbox-team'), { recursive: true });
+        await writeFile(paths.getStatePath('sandbox-team'), JSON.stringify(state), 'utf8');
       }
       const cancel = new CancelRuntimeRecoveries({
         clock: { now: () => new Date('2026-10-30T10:05:00.000Z') },
@@ -152,32 +152,53 @@ describe('JsonTeamRuntimeRecoveryRepository', () => {
       const { teamDir, cancel } = await setUp();
 
       await expect(
-        cancel.execute({ teamName: 'other-profile', reason: 'team_stopped' })
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
       ).resolves.toBe(0);
 
       expect(await readdir(teamDir)).toEqual(['config.json']);
     });
 
     it('does not rewrite a state that has no cancellable job', async () => {
-      const { paths, cancel } = await setUp(stateWithJob('other-profile', 'completed'));
-      const before = await fileIdentity(paths.getStatePath('other-profile'));
+      const { paths, cancel } = await setUp(stateWithJob('sandbox-team', 'completed'));
+      const before = await fileIdentity(paths.getStatePath('sandbox-team'));
 
       await expect(
-        cancel.execute({ teamName: 'other-profile', reason: 'team_stopped' })
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
       ).resolves.toBe(0);
 
-      expect(await fileIdentity(paths.getStatePath('other-profile'))).toEqual(before);
-      expect(await readdir(paths.getTeamDir('other-profile'))).toEqual(['state.json']);
+      expect(await fileIdentity(paths.getStatePath('sandbox-team'))).toEqual(before);
+      expect(await readdir(paths.getTeamDir('sandbox-team'))).toEqual(['state.json']);
+    });
+
+    it('rechecks under the lock and writes nothing when the change is already gone', async () => {
+      const { paths } = await setUp();
+      const repository = new JsonTeamRuntimeRecoveryRepository(paths);
+      let calls = 0;
+
+      // The unlocked read saw something to change; by the time the lock is
+      // held, another writer has already made the state what this update wants.
+      await repository.update('sandbox-team', (state) => {
+        calls += 1;
+        return {
+          state: calls === 1 ? { ...state, processedSignalIds: ['signal-1'] } : state,
+          result: undefined,
+        };
+      });
+
+      expect(calls).toBe(2);
+      await expect(readFile(paths.getStatePath('sandbox-team'), 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
     });
 
     it('still persists a real cancellation', async () => {
-      const { paths, cancel } = await setUp(stateWithJob('other-profile', 'pending'));
+      const { paths, cancel } = await setUp(stateWithJob('sandbox-team', 'pending'));
 
       await expect(
-        cancel.execute({ teamName: 'other-profile', reason: 'team_stopped' })
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
       ).resolves.toBe(1);
 
-      const persisted = JSON.parse(await readFile(paths.getStatePath('other-profile'), 'utf8'));
+      const persisted = JSON.parse(await readFile(paths.getStatePath('sandbox-team'), 'utf8'));
       expect(persisted.jobs).toEqual([
         expect.objectContaining({ id: 'job-1', status: 'cancelled', lastError: 'team_stopped' }),
       ]);

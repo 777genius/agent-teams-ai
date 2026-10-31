@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
+import { TEAM_PROFILE_OWNER_MARKER_FILE } from './provisioning/TeamProvisioningProfileOwnership';
 import { readBackupManifestStrict } from './teamBackupManifest';
 import { isValidConfig } from './TeamBackupRestoreService';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -57,6 +58,7 @@ interface RestorePorts {
   restoreLegacy(teamName: string): Promise<boolean>;
   restoreGeneric(teamName: string): Promise<boolean>;
   restoreGenericHoles(teamName: string): Promise<boolean>;
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
 }
 
 /** Backup-owner orchestration; no feature facade or admission re-entry under locks. */
@@ -127,6 +129,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
     };
     await runBounded(active, RESTORE_CONCURRENCY, async ([teamName, entry]) => {
       try {
+        if (!(await this.mayRestoreInto(teamName))) return;
         if (this.binding) {
           if (await this.isFenced(teamName, entry.identityId)) return;
           if (await this.canSkipConfiguredRestore(teamName, entry.identityId)) {
@@ -169,6 +172,7 @@ export class TeamBackupWorkSyncRestoreCoordinator {
           this.ports.withTeamMutex(teamName, async () => {
             if (this.ports.isShuttingDown()) return;
             if (!(await this.canSkipConfiguredRestore(teamName, entry.identityId))) return;
+            if (!(await this.mayRestoreInto(teamName))) return;
             await this.ports.restoreGenericHoles(teamName);
           })
         );
@@ -176,6 +180,29 @@ export class TeamBackupWorkSyncRestoreCoordinator {
         logger.warn(`[Backup] deferred hole-fill failed for ${teamName}: ${String(error)}`);
       }
     });
+  }
+
+  /**
+   * Startup restore writes into the live team directory: it refills missing
+   * files and brings back a lost team. Older versions backed up every team in
+   * the shared directory, so the registry still lists teams of other profiles
+   * and native sessions, and their backups stopped following their owners.
+   * Restore writes only into a team this profile manages, or into one that has
+   * lost both its config.json and its owner marker, which is what a team of
+   * this profile looks like after the CLI cleaned it up.
+   */
+  private async mayRestoreInto(teamName: string): Promise<boolean> {
+    if (await this.ports.isManagedByThisProfile(teamName)) return true;
+    const teamDir = path.join(getTeamsBasePath(), teamName);
+    for (const fileName of ['config.json', TEAM_PROFILE_OWNER_MARKER_FILE]) {
+      try {
+        await fs.lstat(path.join(teamDir, fileName));
+        return false;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return false;
+      }
+    }
+    return true;
   }
 
   private async canSkipConfiguredRestore(teamName: string, identityId: string): Promise<boolean> {

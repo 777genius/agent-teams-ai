@@ -32,8 +32,9 @@ const LEGACY_NOTIFICATION_FILENAMES = [
 
 /**
  * Path to the notifications storage file, under the Claude root this app uses
- * (~/.claude unless another root is configured). Resolved on every call, so a
- * root override applied after this module loads is honoured.
+ * (~/.claude unless another root is configured). Resolved when called, not when
+ * this module loads, so a root applied during startup is honoured. A running
+ * NotificationManager keeps the path it initialized with.
  */
 export function getNotificationsPath(): string {
   return path.join(getClaudeBasePath(), NOTIFICATIONS_FILENAME);

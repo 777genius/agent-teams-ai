@@ -2020,6 +2020,8 @@ async function initializeServices(): Promise<void> {
     getCurrentContextId: () => contextRegistry.getActive().id,
     listActiveTeamNames: async () => teamProvisioningService.getAliveTeams(),
     isTeamActive: async (teamName) => teamProvisioningService.isTeamAlive(teamName),
+    isTeamManagedByThisProfile: (teamName) =>
+      teamProvisioningService.isTeamManagedByThisProfile(teamName),
     getRuntimeState: (teamName) => teamProvisioningService.getRuntimeState(teamName),
     getRuntimeSnapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),

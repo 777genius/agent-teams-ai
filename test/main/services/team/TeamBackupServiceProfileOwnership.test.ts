@@ -2,7 +2,8 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promise
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { MemberWorkSyncTeamOperationGate } from '@features/member-work-sync/main';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildOpenCodeAppProfileScope } from '../../../../src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
@@ -42,6 +43,10 @@ function configPath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, 'config.json');
 }
 
+function inboxDir(teamName: string): string {
+  return path.join(getTeamsBasePath(), teamName, 'inboxes');
+}
+
 function backupDir(teamName: string): string {
   return path.join(getBackupsBasePath(), 'teams', teamName);
 }
@@ -73,10 +78,17 @@ async function writeTeams(): Promise<void> {
 }
 
 async function createService(
-  ownership?: ConstructorParameters<typeof TeamBackupService>[1]
+  ownership?: ConstructorParameters<typeof TeamBackupService>[1],
+  options: { workSyncRestore?: boolean } = {}
 ): Promise<TeamBackupService> {
   const service = new TeamBackupService(undefined, ownership);
   services.push(service);
+  if (options.workSyncRestore) {
+    // As in the app: startup restore of a live team defers its hole fill.
+    service.configureWorkSyncRestore(new MemberWorkSyncTeamOperationGate(), {
+      prepare: async () => ({ importAndVerify: async () => undefined }),
+    });
+  }
   await service.initialize();
   return service;
 }
@@ -133,6 +145,39 @@ describe('TeamBackupService and teams of other app profiles', () => {
     }
     expect(await backupIdentityOf(OWN)).toEqual(expect.any(String));
   });
+
+  it.each([
+    { workSyncRestore: false, label: 'legacy restore' },
+    { workSyncRestore: true, label: 'deferred hole fill' },
+  ])(
+    'does not bring back files another profile deleted from its team ($label)',
+    async ({ workSyncRestore }) => {
+      await writeTeams();
+      for (const teamName of [OWN, OTHER_PROFILE]) {
+        await mkdir(inboxDir(teamName), { recursive: true });
+        await writeFile(path.join(inboxDir(teamName), 'bob.json'), '[]\n');
+      }
+      // An older version backed up every team, the other profile's one included.
+      const legacy = await createService({
+        isManagedByThisProfile: async () => true,
+        isManagedByThisProfileSync: () => true,
+      });
+      await (legacy as unknown as { runPeriodicBackup(): Promise<void> }).runPeriodicBackup();
+      legacy.dispose();
+      for (const teamName of [OWN, OTHER_PROFILE]) {
+        await rm(path.join(inboxDir(teamName), 'bob.json'));
+      }
+
+      await createService(undefined, { workSyncRestore });
+
+      // This profile's own team is still repaired from its backup.
+      await vi.waitFor(async () => {
+        expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(true);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(await exists(path.join(inboxDir(OTHER_PROFILE), 'bob.json'))).toBe(false);
+    }
+  );
 
   it('restores a team of this profile together with its owner marker', async () => {
     await writeTeams();

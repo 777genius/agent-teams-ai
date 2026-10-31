@@ -191,8 +191,9 @@ export class JsonTeamRuntimeRecoveryRepository implements RuntimeRecoveryReposit
    * is not rewritten. Startup and activity reconciliation cancel recoveries for
    * every team with state, teams of other app profiles included, and nearly all
    * of those cancellations are no-ops. The no-op is decided on an unlocked read,
-   * which is safe because every write here is published atomically; only a real
-   * change takes the lock and runs the updater again on the locked state.
+   * which is safe because every write here is published atomically; a read that
+   * proves nothing (unreadable or invalid state) and every real change take the
+   * lock and run the updater again on the locked state.
    */
   async update<T>(
     teamName: string,
@@ -202,10 +203,12 @@ export class JsonTeamRuntimeRecoveryRepository implements RuntimeRecoveryReposit
     }
   ): Promise<T> {
     const statePath = this.paths.getStatePath(teamName);
-    const observed = await this.readUnlocked(teamName, false);
-    const probe = updater(structuredClone(observed));
-    if (isSameState(observed, withIdentity(probe.state, teamName))) {
-      return probe.result;
+    const observed = await this.readStoredOrEmpty(teamName);
+    if (observed) {
+      const probe = updater(structuredClone(observed));
+      if (isSameState(observed, withIdentity(probe.state, teamName))) {
+        return probe.result;
+      }
     }
     return withFileLock(statePath, async () => {
       const current = await this.readUnlocked(teamName, true);
@@ -238,6 +241,18 @@ export class JsonTeamRuntimeRecoveryRepository implements RuntimeRecoveryReposit
       }
     }
     return teamNames.sort();
+  }
+
+  /** The stored state, an empty one when none is stored, or null when the read proves neither. */
+  private async readStoredOrEmpty(teamName: string): Promise<RuntimeRecoveryTeamState | null> {
+    try {
+      const parsed: unknown = JSON.parse(await readFile(this.paths.getStatePath(teamName), 'utf8'));
+      return isRuntimeRecoveryTeamState(parsed) && parsed.teamName === teamName ? parsed : null;
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === 'ENOENT'
+        ? emptyState(teamName, this.now().toISOString())
+        : null;
+    }
   }
 
   private async readUnlocked(

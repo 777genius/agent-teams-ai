@@ -331,4 +331,32 @@ describe('NotificationManager storage under the app Claude root', () => {
       pathDecoder.setClaudeBasePathOverride(null);
     }
   });
+  it('migrates a legacy history file that lives in the configured Claude root', async () => {
+    const home = makeTempDir('notification-root-home-');
+    const claudeRoot = makeTempDir('notification-root-claude-');
+    vi.stubEnv('HOME', home);
+    const legacyNotifications = [storedNotification('root-legacy-notification')];
+    fs.writeFileSync(
+      path.join(claudeRoot, 'claude-devtools-notifications.json'),
+      JSON.stringify(legacyNotifications),
+      'utf8'
+    );
+
+    const { pathDecoder, NotificationManager } = await loadModules();
+    pathDecoder.setClaudeBasePathOverride(claudeRoot);
+    try {
+      const manager = new NotificationManager(createConfigManagerStub() as never);
+      await manager.initialize();
+
+      expect(
+        (await manager.getNotifications({ limit: 10 })).notifications.map(({ id }) => id)
+      ).toEqual(['root-legacy-notification']);
+      expect(
+        JSON.parse(fs.readFileSync(path.join(claudeRoot, 'agent-teams-notifications.json'), 'utf8'))
+      ).toEqual(legacyNotifications);
+      expect(fs.existsSync(path.join(home, '.claude'))).toBe(false);
+    } finally {
+      pathDecoder.setClaudeBasePathOverride(null);
+    }
+  });
 });

@@ -117,6 +117,7 @@ export class TeamBackupService {
     restoreLegacy: (name) => this.restoreTeam(name),
     restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
     restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
+    isManagedByThisProfile: (name) => this.ownership.isManagedByThisProfile(name),
   });
 
   /**

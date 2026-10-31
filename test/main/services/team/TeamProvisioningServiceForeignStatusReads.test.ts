@@ -146,7 +146,13 @@ describe('TeamProvisioningService status reads of teams this profile does not ma
     for (const teamName of ['other-profile', 'session-native'] as const) {
       const statuses = await service.getMemberSpawnStatuses(teamName);
       expect(statuses.expectedMembers).toEqual(['bob']);
-      expect(statuses.statuses.bob).toBeDefined();
+      // Reported as the owner persisted it, with the live check's warning attached;
+      // only the team's owner may reconcile it, and it may well be running there.
+      expect(statuses.statuses.bob).toMatchObject({
+        launchState: 'confirmed_alive',
+        runtimeAlive: true,
+        runtimeDiagnostic: 'runtime process not found',
+      });
       // The background work-sync pass reads through the runtime snapshot.
       const snapshot = await service.getTeamAgentRuntimeSnapshot(teamName);
       expect(snapshot.teamName).toBe(teamName);

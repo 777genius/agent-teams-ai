@@ -59,6 +59,7 @@ function createCoordinator(gate: MemberWorkSyncTeamOperationGate) {
     restoreLegacy: async () => false,
     restoreGeneric: async () => false,
     restoreGenericHoles: () => Promise.resolve(false),
+    isManagedByThisProfile: () => Promise.resolve(true),
   });
   owner.configure(gate, {
     prepare: async () => ({ importAndVerify: async () => undefined }),
@@ -109,6 +110,7 @@ describe('TeamBackupWorkSyncRestoreCoordinator.runWhileQuiesced', () => {
       restoreLegacy: async () => false,
       restoreGeneric: async () => false,
       restoreGenericHoles: () => Promise.resolve(false),
+      isManagedByThisProfile: () => Promise.resolve(true),
     });
     await expect(owner.runWhileQuiesced('team-a', async () => 'copied')).resolves.toBe('copied');
   });
