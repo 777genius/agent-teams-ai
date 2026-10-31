@@ -223,6 +223,7 @@ function createFeature(input: {
     },
   ];
   return createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: input.lifecycleIdentity ?? createTestWorkSyncIdentity(input.incarnation),
     teamsBasePath: input.teamsBasePath,
     ...(input.recoveryAllocation ? { recoveryAllocation: input.recoveryAllocation } : {}),

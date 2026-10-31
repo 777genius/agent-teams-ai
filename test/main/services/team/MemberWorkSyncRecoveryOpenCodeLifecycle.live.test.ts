@@ -119,6 +119,7 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     teamName = `member-work-sync-recovery-opencode-recreate-${Date.now()}`;
     const createFeature = (svc: TeamProvisioningService) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: identity!,
         teamsBasePath: getTeamsBasePath(),
         recoveryAllocation: { enabled: false },
@@ -238,6 +239,7 @@ liveDescribe('Member work sync recovery OpenCode live lifecycle', () => {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
     const createFeature = (svc: TeamProvisioningService) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: identity!,
         teamsBasePath: getTeamsBasePath(),
         recoveryAllocation: { enabled: true },

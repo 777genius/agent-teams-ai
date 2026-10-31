@@ -80,6 +80,7 @@ liveDescribe('OpenCode review pickup live e2e', () => {
         projectPath: PROJECT_PATH,
       });
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath: getTeamsBasePath(),
         configReader: new TeamConfigReader(),

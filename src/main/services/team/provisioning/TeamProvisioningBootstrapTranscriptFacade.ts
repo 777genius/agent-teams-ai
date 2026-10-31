@@ -14,6 +14,7 @@ import { type RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs'
 import { TeamProvisioningTranscriptClaudeLogsCache } from './TeamProvisioningTranscriptClaudeLogs';
 
 import type { TeamConfigReader } from '../TeamConfigReader';
+import type { TeamFileWritePolicy } from '../teamFileWritePolicy';
 import type { TeamInboxReader } from '../TeamInboxReader';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { TeamConfig } from '@shared/types';
@@ -30,6 +31,8 @@ export interface TeamProvisioningBootstrapTranscriptMemberLogsPort {
 export interface TeamProvisioningBootstrapTranscriptFacadeDeps {
   nowIso(): string;
   isLookupCacheEnabled(teamName: string): boolean;
+  /** Decides for the transcript lookups built here whether they may write the team's files. */
+  canWriteTeamFiles: TeamFileWritePolicy;
   configReader?: TeamConfigReader;
   inboxReader?: TeamInboxReader;
   membersMetaStore?: TeamMembersMetaStore;
@@ -56,6 +59,8 @@ export interface TeamProvisioningBootstrapTranscriptFacadeServiceHost {
   configFacade: {
     readConfigSnapshot(teamName: string): Promise<TeamConfig | null>;
   };
+  /** Public `TeamProvisioningService.isTeamManagedByThisProfile`. */
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean>;
 }
 
 export interface TeamProvisioningBootstrapTranscriptFacadeServiceHostOptions {
@@ -71,6 +76,9 @@ export function createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(
     isLookupCacheEnabled: (teamName) =>
       !service.runTracking.getTrackedRunId(teamName) &&
       !service.runtimeAdapterRunByTeam.has(teamName),
+    // Launching a team claims it for this profile first, so its own transcript
+    // index and projectPath repair keep being written; other teams are read only.
+    canWriteTeamFiles: (teamName) => service.isTeamManagedByThisProfile(teamName),
     configReader: service.configReader,
     inboxReader: service.inboxReader,
     membersMetaStore: service.membersMetaStore,
@@ -107,24 +115,25 @@ export class TeamProvisioningBootstrapTranscriptFacade {
   private readonly bootstrapTranscriptOutcomePorts: TeamProvisioningBootstrapTranscriptOutcomePorts;
 
   constructor(deps: TeamProvisioningBootstrapTranscriptFacadeDeps) {
+    const createTranscriptProjectResolver = (): TeamTranscriptProjectResolver =>
+      new TeamTranscriptProjectResolver(deps.canWriteTeamFiles, {
+        getConfig: (teamName) =>
+          requireBootstrapTranscriptFacadeDependency(
+            deps.configReader,
+            'configReader'
+          ).getConfigSnapshot(teamName),
+      });
     this.memberLogsFinder =
       deps.memberLogsFinder ??
       new TeamMemberLogsFinder(
         requireBootstrapTranscriptFacadeDependency(deps.configReader, 'configReader'),
         requireBootstrapTranscriptFacadeDependency(deps.inboxReader, 'inboxReader'),
-        requireBootstrapTranscriptFacadeDependency(deps.membersMetaStore, 'membersMetaStore')
+        requireBootstrapTranscriptFacadeDependency(deps.membersMetaStore, 'membersMetaStore'),
+        createTranscriptProjectResolver()
       );
     this.transcriptProjectResolver =
       deps.transcriptProjectResolver ??
-      (deps.persistedTranscriptClaudeLogs
-        ? null
-        : new TeamTranscriptProjectResolver({
-            getConfig: (teamName) =>
-              requireBootstrapTranscriptFacadeDependency(
-                deps.configReader,
-                'configReader'
-              ).getConfigSnapshot(teamName),
-          }));
+      (deps.persistedTranscriptClaudeLogs ? null : createTranscriptProjectResolver());
     this.persistedTranscriptClaudeLogs =
       deps.persistedTranscriptClaudeLogs ??
       new TeamProvisioningTranscriptClaudeLogsCache({
