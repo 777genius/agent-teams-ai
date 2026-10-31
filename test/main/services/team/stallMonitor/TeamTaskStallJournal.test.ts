@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { TeamTaskStallJournal } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallJournal';
 import { setClaudeBasePathOverride } from '../../../../../src/main/utils/pathDecoder';
 
+import type { TaskStallEvaluation } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
+
 describe('TeamTaskStallJournal', () => {
   let tmpDir: string | null = null;
 
@@ -132,6 +134,116 @@ describe('TeamTaskStallJournal', () => {
         now: '2026-04-19T12:12:00.000Z',
       })
     ).resolves.toEqual([{ ...evaluation, priorAlertCount: 1 }]);
+  });
+
+  it('keeps an alerted epoch through a scan that does not report it, until a new epoch replaces it', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
+
+    const journal = new TeamTaskStallJournal({ alertCooldownMs: 10 * 60_000 });
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-a:epoch-1',
+      reason: 'Potential work stall',
+    } as const;
+    const scan = (evaluations: TaskStallEvaluation[], now: string) =>
+      journal.reconcileScan({ teamName: 'demo', evaluations, activeTaskIds: ['task-a'], now });
+
+    await scan([evaluation], '2026-04-19T12:00:00.000Z');
+    await scan([evaluation], '2026-04-19T12:01:00.000Z');
+    await journal.markAlerted('demo', 'task-a:epoch-1', '2026-04-19T12:01:00.000Z');
+
+    // A skipped scan (the owner's turn is running) reports no candidate.
+    await expect(scan([], '2026-04-19T12:02:00.000Z')).resolves.toEqual([]);
+    // Back inside the cooldown: no alert, and the count was not reset.
+    await expect(scan([evaluation], '2026-04-19T12:03:00.000Z')).resolves.toEqual([]);
+    await expect(scan([evaluation], '2026-04-19T12:12:00.000Z')).resolves.toEqual([
+      { ...evaluation, priorAlertCount: 1 },
+    ]);
+
+    // New activity gives a new epoch, which starts over at the two-scan rule.
+    const nextEpoch = { ...evaluation, epochKey: 'task-a:epoch-2' };
+    await expect(scan([nextEpoch], '2026-04-19T12:13:00.000Z')).resolves.toEqual([]);
+    await expect(scan([nextEpoch], '2026-04-19T12:14:00.000Z')).resolves.toEqual([nextEpoch]);
+  });
+
+  it('keeps a re-armed epoch whose lead alert failed through a skipped scan', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
+
+    const journal = new TeamTaskStallJournal({ alertCooldownMs: 10 * 60_000 });
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-a:epoch-1',
+      reason: 'Potential work stall',
+    } as const;
+    const scan = (evaluations: TaskStallEvaluation[], now: string) =>
+      journal.reconcileScan({ teamName: 'demo', evaluations, activeTaskIds: ['task-a'], now });
+
+    await scan([evaluation], '2026-04-19T12:00:00.000Z');
+    await scan([evaluation], '2026-04-19T12:01:00.000Z');
+    await journal.markAlerted('demo', 'task-a:epoch-1', '2026-04-19T12:01:00.000Z');
+    // Re-armed after the cooldown, but the lead write fails: no markAlerted, so
+    // the entry is `alert_ready` with one alert behind it.
+    await expect(scan([evaluation], '2026-04-19T12:12:00.000Z')).resolves.toEqual([
+      { ...evaluation, priorAlertCount: 1 },
+    ]);
+
+    await expect(scan([], '2026-04-19T12:13:00.000Z')).resolves.toEqual([]);
+
+    await expect(scan([evaluation], '2026-04-19T12:14:00.000Z')).resolves.toEqual([
+      { ...evaluation, priorAlertCount: 1 },
+    ]);
+  });
+
+  it('keeps an alerted entry written before alert counts existed through a skipped scan', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stall-journal-'));
+    setClaudeBasePathOverride(tmpDir);
+    const teamDir = path.join(tmpDir, 'teams', 'demo');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'stall-monitor-journal.json'),
+      JSON.stringify([
+        {
+          epochKey: 'task-a:epoch-1',
+          teamName: 'demo',
+          taskId: 'task-a',
+          branch: 'work',
+          signal: 'turn_ended_after_touch',
+          state: 'alerted',
+          consecutiveScans: 2,
+          createdAt: '2026-04-19T12:00:00.000Z',
+          updatedAt: '2026-04-19T12:01:00.000Z',
+          alertedAt: '2026-04-19T12:01:00.000Z',
+        },
+      ])
+    );
+
+    const journal = new TeamTaskStallJournal({ alertCooldownMs: 10 * 60_000 });
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'task-a:epoch-1',
+      reason: 'Potential work stall',
+    } as const;
+    const scan = (evaluations: TaskStallEvaluation[], now: string) =>
+      journal.reconcileScan({ teamName: 'demo', evaluations, activeTaskIds: ['task-a'], now });
+
+    await expect(scan([], '2026-04-19T12:02:00.000Z')).resolves.toEqual([]);
+
+    // Still alerted: past the cooldown it is ready on the first scan back,
+    // where a fresh entry would wait for the two-scan rule.
+    await expect(scan([evaluation], '2026-04-19T12:12:00.000Z')).resolves.toEqual([evaluation]);
   });
 
   it('counts every dispatched alert for an epoch so an escalation ladder can be bounded', async () => {

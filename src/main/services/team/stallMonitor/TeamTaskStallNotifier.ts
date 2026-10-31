@@ -1,5 +1,6 @@
 import { createLogger } from '@shared/utils/logger';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
+import { createHash } from 'crypto';
 
 import { TeamInboxReader } from '../TeamInboxReader';
 import { TeamInboxWriter } from '../TeamInboxWriter';
@@ -67,6 +68,25 @@ function buildLeadAlertText(alerts: TaskStallAlert[]): string {
         `- ${formatTaskDisplayLabel({ id: alert.taskId, displayId: alert.displayId })} [${alert.branch}] ${alert.subject} - ${alert.reason}`
     )
     .join('\n');
+}
+
+/**
+ * One id per batch of alert rungs and text, so a lead alert that was written
+ * but not journaled (cancelled scan, failed markAlerted) is not written twice.
+ * The rung count gives each repeat after the cooldown its own id. The text is
+ * part of the key because the inbox writer refuses an explicit id whose text
+ * changed, which would fail the retry on every scan.
+ */
+function buildLeadAlertMessageId(teamName: string, alerts: TaskStallAlert[], text: string): string {
+  const stableKey = JSON.stringify({
+    teamName,
+    rungs: alerts
+      .map((alert) => `${alert.epochKey}@${alert.priorAlertCount ?? 0}`)
+      .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
+    text,
+  });
+  const digest = createHash('sha256').update(stableKey).digest('hex').slice(0, 20);
+  return `task-stall-lead-alert:${digest}`;
 }
 
 function buildOpenCodeOwnerNudgeText(alert: TaskStallAlert): string {
@@ -163,11 +183,13 @@ export class TeamTaskStallNotifier {
       return false;
     }
 
+    const text = buildLeadAlertText(alerts);
     await this.teamDataService.sendSystemNotificationToLead({
       teamName,
       summary: 'Potential stalled tasks detected',
-      text: buildLeadAlertText(alerts),
+      text,
       taskRefs: alerts.map((alert) => alert.taskRef),
+      messageId: buildLeadAlertMessageId(teamName, alerts, text),
     });
     return true;
   }
