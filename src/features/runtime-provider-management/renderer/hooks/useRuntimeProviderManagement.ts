@@ -7,6 +7,7 @@ import {
   recordProviderConnectionEnd,
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
+import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 
 import {
   getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,
@@ -111,7 +112,6 @@ export type RuntimeProviderChangeKind =
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
 const OAUTH_UI_TIMEOUT_MS = 18 * 60_000;
-const CLEAR_PROJECT_DEFAULT_UI_TIMEOUT_MS = 100_000;
 
 export interface RuntimeProviderManagementState {
   view: RuntimeProviderManagementViewDto | null;
@@ -792,8 +792,7 @@ export function useRuntimeProviderManagement(
             cursor: input.cursor ?? null,
             requestGroupId: `provider-model-picker:${options.runtimeId}:${projectContext.path ?? ''}:${providerId}`,
           }),
-          'Provider models load timed out',
-          100_000
+          'Provider models load timed out'
         );
         if (!requestIsCurrent()) {
           return;
@@ -1771,7 +1770,7 @@ export function useRuntimeProviderManagement(
             projectPath: normalizedIntendedProjectPath,
           }),
           'Clear project default timed out',
-          CLEAR_PROJECT_DEFAULT_UI_TIMEOUT_MS
+          PROVIDER_UI_TIMEOUT_MS
         );
         if (!isProjectContextCurrent(projectContext)) return;
         if (response.error) {

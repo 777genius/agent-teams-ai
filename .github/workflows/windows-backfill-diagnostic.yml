@@ -49,7 +49,7 @@ jobs:
       WINDOWS_BACKFILL_APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       # Reviewed ownership helper; native identity and teardown passed in run 34313093482.
       # This pin does not claim the separate fake-provider MCP smoke passed.
-      WINDOWS_BACKFILL_SUPPORT_SHA: '391ce5c8915951e1c412c84ff2970ab9065e4ac6'
+      WINDOWS_BACKFILL_SUPPORT_SHA: 'cb0b0995290218c2caa5f09541cc1d828a0fa832'
       WINDOWS_BACKFILL_SUPPORT_ROOT: ${{ github.workspace }}/backfill-test-support
     defaults:
       run:

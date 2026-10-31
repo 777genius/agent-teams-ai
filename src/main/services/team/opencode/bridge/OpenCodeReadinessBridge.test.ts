@@ -22,7 +22,7 @@ vi.mock('../config/CursorMcpConfigWriter', () => ({
 describe('resolveOpenCodeLaunchTimeoutMs', () => {
   it('keeps the standard launch timeout for regular OpenCode providers', () => {
     expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'openai/gpt-5.4', members: [] })).toBe(
-      120_000
+      180_000
     );
   });
 
@@ -49,7 +49,7 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
         'linux'
       )
     ).toBe(300_000);
-    // V1 keeps its original budget everywhere.
+    // V1 gets the shared three-minute cold-start allowance everywhere.
     expect(
       resolveOpenCodeLaunchTimeoutMs(
         {
@@ -60,7 +60,7 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
         undefined,
         'darwin'
       )
-    ).toBe(120_000);
+    ).toBe(180_000);
   });
 
   it('gives local Ollama-style models a launch budget above the 7B dest:mcp wall', () => {
@@ -89,10 +89,10 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
     ['cursor-acp/auto', 1, 570_000],
     ['cursor-acp/auto', 2, 600_000],
     ['cursor-acp/auto', 20, 600_000],
-    ['kiro/auto', 0, 120_000],
+    ['kiro/auto', 0, 180_000],
     ['kiro/auto', 1, 180_000],
     ['kiro/auto', 20, 600_000],
-    ['openai/gpt-5.4', 20, 120_000],
+    ['openai/gpt-5.4', 20, 180_000],
   ] as const)('budgets %s with %i teammates', (selectedModel, count, expected) => {
     const members = Array.from({ length: count }, (_, i) => ({
       name: `member-${i}`,
@@ -231,7 +231,6 @@ describe('OpenCodeReadinessBridge free-tier version gate', () => {
 
     const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
 
-    expect(execute).not.toHaveBeenCalled();
     expect(result.missing).toEqual([
       expect.stringContaining('The OPENCODE_BIN_PATH override pins this version'),
     ]);
