@@ -411,7 +411,6 @@ describe('Kimi Code routes by OpenCode generation', () => {
 
 describe('Kimi Code route guard', () => {
   const plan = getRuntimeProviderOnboardingPlan('kimi-code-membership');
-  const routes = [{ providerId: 'kimi-for-coding' }, { providerId: 'Kimi-Code-Plan-Global' }];
 
   it('uses the connected route integration with the pinned runtime on V2 only', () => {
     const entries = [
@@ -427,19 +426,32 @@ describe('Kimi Code route guard', () => {
   });
 
   it('keeps routes off for a runtime that does not serve them', () => {
-    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, false)).toBe('v1');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', false)).toBe('v1');
   });
 
-  it('uses routes on V2 only when the runtime serves and lists a route integration', () => {
-    expect(
-      resolveRuntimeProviderOnboardingRouteGeneration(
-        plan,
-        'v2',
-        [{ providerId: 'kimi-for-coding' }],
-        true
-      )
-    ).toBe('v1');
-    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, true)).toBe('v2');
-    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v1', routes, true)).toBe('v1');
+  it('uses routes on V2 whenever the runtime serves them, and never on V1', () => {
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', true)).toBe('v2');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v1', true)).toBe('v1');
+    const zai = getRuntimeProviderOnboardingPlan('zai-coding-plan');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(zai, 'v2', true)).toBe('v1');
+  });
+
+  it('offers the V2 routes for the summary directory, which lists only the curated id', () => {
+    // Real summary shape: route integrations are absent until one of them is connected.
+    const entries = [
+      directoryEntry({ providerId: 'opencode', state: 'connected' }),
+      directoryEntry({ providerId: 'kimi-for-coding', state: 'not-connected' }),
+    ];
+    const entry = findRuntimeProviderOnboardingPlanEntry('kimi-code-membership', 'v2', entries);
+    expect(entry?.providerId).toBe('kimi-for-coding');
+    const resolved = resolveRuntimeProviderOnboardingPlan(
+      plan,
+      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', true),
+      null
+    );
+    expect(resolved.routeChoices?.map((route) => route.v2ProviderId)).toEqual([
+      'kimi-code-plan-cn',
+      'kimi-code-plan-global',
+    ]);
   });
 });
