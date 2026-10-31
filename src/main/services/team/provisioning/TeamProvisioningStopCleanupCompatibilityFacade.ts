@@ -16,6 +16,10 @@ import {
   createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
   type TeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
 } from './TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
+import {
+  createTeamProfileOwnership,
+  type TeamProfileOwnership,
+} from './TeamProvisioningProfileOwnership';
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { killTeamProcess, nowIso, updateProgress } from './TeamProvisioningRunProgress';
 import { stopAllTeamsFlow } from './TeamProvisioningStopFlow';
@@ -60,6 +64,7 @@ export interface TeamProvisioningStopCleanupCompatibilityServiceHost<
   ): void;
   shutdownCoordination: {
     getShutdownTrackedTeamNames(): string[];
+    getShutdownRunningTeamNames(): string[];
     killTransientProbeProcessesForShutdown(): void;
     stopTrackedTeamsForShutdown(label: string): Promise<string[]>;
     cancelPendingRuntimeAdapterLaunchesForShutdown(): Promise<void>;
@@ -83,6 +88,17 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   private stopFlowBoundaryValue: TeamProvisioningStopFlowBoundary | null = null;
   private openCodeStoppedLaneCleanupBoundary: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary | null =
     null;
+  /** Whether background passes may stop, clean up or recover a team's runtime. */
+  protected readonly profileOwnership: TeamProfileOwnership = createTeamProfileOwnership({
+    isTrackedInThisProcess: (teamName) => {
+      const service = this.stopCleanupServiceHost;
+      return (
+        service.runTracking.getTrackedRunId(teamName) !== null ||
+        service.runtimeAdapterRunByTeam.has(teamName) ||
+        service.hasSecondaryRuntimeRuns(teamName)
+      );
+    },
+  });
 
   protected get openCodeStoppedLaneCleanup(): TeamProvisioningOpenCodeStoppedLaneCleanupBoundary {
     if (!this.openCodeStoppedLaneCleanupBoundary) {
@@ -91,6 +107,8 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
         createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary(
           {
             withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),
+            isManagedByThisProfile: (teamName) =>
+              this.profileOwnership.isManagedByThisProfile(teamName),
             canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
               (service.hasSecondaryRuntimeRuns(teamName) && this.isTeamAlive(teamName)) ||
               service.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
@@ -209,6 +227,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
         this.stopAllTeamsGeneration += 1;
       },
       getShutdownTrackedTeamNames: () => service.shutdownCoordination.getShutdownTrackedTeamNames(),
+      getShutdownRunningTeamNames: () => service.shutdownCoordination.getShutdownRunningTeamNames(),
       pauseActiveIntervalsForTeam: (teamName) =>
         service.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
       killTrackedCliProcesses,
@@ -221,6 +240,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
       waitForInFlightTeamOperationsForShutdown: () =>
         service.shutdownCoordination.waitForInFlightTeamOperationsForShutdown(),
       listPersistedTeamNames: () => service.configFacade.listPersistedTeamNames(),
+      isManagedByThisProfile: (teamName) => this.profileOwnership.isManagedByThisProfile(teamName),
       stopPersistentTeamMembers: (teamName) =>
         service.persistentRuntimeCleanup.stopPersistentTeamMembers(teamName),
       cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: (teamName) =>

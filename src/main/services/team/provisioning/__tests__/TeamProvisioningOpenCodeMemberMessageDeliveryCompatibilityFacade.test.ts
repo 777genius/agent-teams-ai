@@ -605,6 +605,7 @@ function createService(
 function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
   return {
     createDeliveryHost: vi.fn(() => deliveryHostWithUnavailableBridge()),
+    isManagedByThisProfile: vi.fn(async () => true),
     inboxRelayHost: {
       getOpenCodeMemberRelayKey: vi.fn((teamName, memberName) => `relay/${teamName}/${memberName}`),
       scheduleOpenCodeMemberInboxDeliveryWake: vi.fn(),

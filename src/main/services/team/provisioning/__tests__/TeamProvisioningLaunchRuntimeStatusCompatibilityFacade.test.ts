@@ -195,7 +195,7 @@ class TestLaunchRuntimeStatusFacade extends TeamProvisioningLaunchRuntimeStatusC
   protected readonly verificationProbePorts = {} as never;
   protected readonly transientRunState = {} as never;
   protected readonly helpOutputCache = { output: null as string | null, cachedAtMs: 0 };
-  protected readonly shutdownCoordination = { getShutdownTrackedTeamNames: vi.fn(() => []) };
+  protected readonly shutdownCoordination = { getShutdownRunningTeamNames: vi.fn(() => []) };
   protected readonly liveLeadMessagePortsBoundary = {} as never;
   protected readonly openCodeRuntimeControlApi = {} as never;
   protected readonly openCodeRuntimeDeliveryBoundaryHost = {} as never;

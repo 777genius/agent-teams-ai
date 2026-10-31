@@ -37,8 +37,12 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'deliverOpenCodeLaunchPromptToLead',
   // App composition reads HTTP runtime ownership and installs the synchronous launch fence.
   'hasLiveOpenCodeMcpConsumers',
+  // Startup passes leave teams of other app profiles and native sessions alone.
+  'isTeamManagedByThisProfile',
   'launchTeam',
   'restartLeadRuntime',
+  // Both watchdog passes are admitted only for teams this profile manages.
+  'scanOpenCodePromptDeliveryWatchdog',
   'setLaunchAdmissionGuard',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
@@ -87,6 +91,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
   'isTeamAlive',
+  'isTeamManagedByThisProfile',
   'launchTeam',
   'notifyLanguageChange',
   'prepareForProvisioning',
