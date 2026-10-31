@@ -29,7 +29,6 @@ import {
   getOpenCodeCatalogProviderIds,
   resolveOpenCodeCompatibilityModel,
 } from './OpenCodeModelCompatibility';
-import { blockOpenCodeModelsNotInV2Catalog } from './OpenCodeV2CatalogPreflight';
 import {
   buildOpenCodeProviderVerificationDeferredLine,
   isOpenCodeModelPrepareBusyDeferred,
@@ -651,26 +650,15 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     provider.supported &&
     provider.statusCheckOutcome === 'model_only'
   ) {
-    const deferredModelIds = await blockOpenCodeModelsNotInV2Catalog({
-      provider,
-      modelIds: catalogModelIds,
-      cwd,
-      readOpenCodeRuntimeStatus,
-      appendPreflightDebugLog,
-      result: { details, blockingMessages, issues },
-    });
-    if (deferredModelIds.length === 0) {
-      return { details, warnings, blockingMessages, issues, supportDiagnostics };
-    }
     const warning =
       'OpenCode passive status cannot prove catalog authority. Compatibility is deferred to strict deep verification.';
     warnings.push(warning);
-    for (const modelId of deferredModelIds) {
+    for (const modelId of catalogModelIds) {
       details.push(`Selected model ${modelId} requires strict deep verification.`);
     }
     appendPreflightDebugLog('opencode_compatibility_batch_catalog_deferred', {
       cwd,
-      modelIds: deferredModelIds,
+      modelIds: catalogModelIds,
       statusCheckOutcome: provider.statusCheckOutcome,
     });
     return { details, warnings, blockingMessages, issues, supportDiagnostics };

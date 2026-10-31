@@ -8,7 +8,6 @@ import {
   type TeamModelRuntimeProviderStatus,
 } from './teamModelAvailability';
 
-import type { OpenCodeGeneration } from '@features/runtime-provider-management';
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
 type SupportedProviderId = CliProviderId | TeamProviderId;
@@ -18,8 +17,6 @@ export interface OpenCodeScopedPreparationEvidence {
   scopedStatusBySourceId: ReadonlyMap<string, CliProviderStatus | null | undefined>;
   localSourceIds?: ReadonlySet<string>;
   localProviderLookupAuthoritative?: boolean;
-  /** Installed OpenCode generation, V1 when absent. V2 runs only models from its catalog. */
-  generation?: OpenCodeGeneration;
 }
 
 export function canSettleOpenCodeStatusWithScopedPreparation(
