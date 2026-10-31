@@ -1,4 +1,7 @@
-import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
+import {
+  reconcileCliProviderSnapshot,
+  shouldRetryCliProviderStatusCheck,
+} from '@renderer/store/slices/cliInstallerStatusReconciliation';
 import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
@@ -114,5 +117,42 @@ describe('cli provider status reconciliation', () => {
     expect(reconciled.modelCatalog?.status).toBe('stale');
     expect(reconciled.modelCatalogRefreshState).toBe('loading');
     expect(reconciled.capabilities.teamLaunch).toBe(false);
+  });
+});
+
+describe('cli provider status retry', () => {
+  const timedOut = {
+    statusCheckOutcome: 'transient_error',
+    statusCheckErrorCode: 'timeout',
+  } as const satisfies Partial<CliProviderStatus>;
+
+  it('does not retry an OpenCode timeout right away', () => {
+    expect(
+      shouldRetryCliProviderStatusCheck(
+        'opencode',
+        false,
+        provider({ providerId: 'opencode', ...timedOut })
+      )
+    ).toBe(false);
+  });
+
+  it.each(['anthropic', 'codex'] as const)('still retries one %s timeout', (providerId) => {
+    expect(
+      shouldRetryCliProviderStatusCheck(providerId, false, provider({ providerId, ...timedOut }))
+    ).toBe(true);
+  });
+
+  it('still retries one partial OpenCode response', () => {
+    expect(
+      shouldRetryCliProviderStatusCheck(
+        'opencode',
+        false,
+        provider({
+          providerId: 'opencode',
+          statusCheckOutcome: 'pending',
+          statusCheckErrorCode: 'partial_response',
+        })
+      )
+    ).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
 import { resolveInteractiveShellEnvBestEffort, waitForPendingShellEnv } from '@main/utils/shellEnv';
+import { OPENCODE_LOADING_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { mkdtemp, readFile, rm } from 'fs/promises';
@@ -50,6 +51,10 @@ import type {
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
 const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
+// The runtime gives a full OpenCode status read the shared loading allowance and
+// then cleans up the server it owns. Stopping it earlier throws that work away,
+// so the next read starts cold again.
+const OPENCODE_FULL_STATUS_TIMEOUT_MS = OPENCODE_LOADING_TIMEOUT_MS + 60_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
 const CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 15_000;
 const SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
@@ -844,6 +849,9 @@ export class ClaudeMultimodelBridgeService {
           : PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
       return Math.min(options.timeoutMs ?? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS, fallbackTimeout);
     }
+    if (providerId === 'opencode' && !options.summary && options.timeoutMs === undefined) {
+      return OPENCODE_FULL_STATUS_TIMEOUT_MS;
+    }
     return (
       options.timeoutMs ??
       (options.summary ? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS : PROVIDER_STATUS_TIMEOUT_MS)
@@ -1627,14 +1635,15 @@ export class ClaudeMultimodelBridgeService {
       }
     }
 
+    // OpenCode's passive summary intentionally omits authentication and its
+    // model catalog. A project-scoped launch check needs the exact catalog,
+    // otherwise a healthy installed CLI is misclassified as runtime_missing.
+    const summary = providerId !== 'opencode' || !projectPath;
     const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);
     let backgroundHydrationOwnsGenerationCleanup = false;
     try {
       const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
-        // OpenCode's passive summary intentionally omits authentication and its
-        // model catalog. A project-scoped launch check needs the exact catalog,
-        // otherwise a healthy installed CLI is misclassified as runtime_missing.
-        summary: providerId !== 'opencode' || !projectPath,
+        summary,
         projectPath,
       });
       if (projectPath && canHydrateProviderCatalog(provider)) {
@@ -1721,9 +1730,9 @@ export class ClaudeMultimodelBridgeService {
       }
       return provider;
     } catch (error) {
-      const summaryStatusError = error instanceof Error ? error.message : String(error);
+      const statusError = error instanceof Error ? error.message : String(error);
       logger.warn(
-        `Provider-scoped summary runtime status unavailable for ${providerId}; returning scoped degraded status without fallback: ${summaryStatusError}`
+        `Provider-scoped ${summary ? 'summary' : 'full'} runtime status unavailable for ${providerId}; returning scoped degraded status without fallback: ${statusError}`
       );
       return createRuntimeStatusErrorProviderStatus(providerId, error);
     } finally {
