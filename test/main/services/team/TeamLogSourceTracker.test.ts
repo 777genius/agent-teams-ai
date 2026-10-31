@@ -13,6 +13,9 @@ import {
 import type { TeamMemberLogsFinder } from '../../../../src/main/services/team/TeamMemberLogsFinder';
 import type { TeamChangeEvent } from '../../../../src/shared/types';
 
+/** These cases cover a team this profile manages; foreign teams have their own suite. */
+const managedByThisProfile = (): Promise<boolean> => Promise.resolve(true);
+
 const originalChokidarUsePolling = process.env.CHOKIDAR_USEPOLLING;
 const originalChokidarInterval = process.env.CHOKIDAR_INTERVAL;
 
@@ -65,7 +68,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -104,7 +107,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -149,7 +152,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
 
     await tracker.enableTracking('demo', 'stall_monitor');
@@ -188,7 +191,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
 
     await tracker.enableTracking('demo', 'stall_monitor');
@@ -214,7 +217,7 @@ describe('TeamLogSourceTracker', () => {
     const logsFinder = {
       getLiveLogSourceWatchContext: vi.fn(async () => null),
     } as unknown as TeamMemberLogsFinder;
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
 
     await expect(tracker.forceReleaseTeam('never-tracked')).resolves.toBeNull();
   });
@@ -231,7 +234,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
 
     await tracker.enableTracking('demo', 'stall_monitor');
@@ -268,7 +271,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
 
     await tracker.enableTracking('demo', 'stall_monitor');
@@ -305,7 +308,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -347,7 +350,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -396,7 +399,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -447,7 +450,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -480,7 +483,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -507,7 +510,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -538,7 +541,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
 
     await tracker.enableTracking('demo', 'tool_activity');
     await tracker.enableTracking('demo', 'task_log_stream');
@@ -560,7 +563,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
 
     for (let i = 0; i < 5; i += 1) {
       await tracker.ensureTracking('demo');
@@ -589,7 +592,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
 
     await tracker.ensureTracking('demo');
     await tracker.enableTracking('demo', 'tool_activity');
@@ -618,7 +621,7 @@ describe('TeamLogSourceTracker', () => {
         watchSessionIds: [],
       })),
     } as unknown as TeamMemberLogsFinder;
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const events: string[] = [];
     tracker.onLogSourceChange(() => {
       events.push('listener');
@@ -648,7 +651,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 
@@ -684,7 +687,7 @@ describe('TeamLogSourceTracker', () => {
       })),
     } as unknown as TeamMemberLogsFinder;
 
-    const tracker = new TeamLogSourceTracker(logsFinder);
+    const tracker = new TeamLogSourceTracker(logsFinder, managedByThisProfile);
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     tracker.setEmitter(emitter);
 

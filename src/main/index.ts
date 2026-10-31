@@ -1850,8 +1850,7 @@ async function initializeServices(): Promise<void> {
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
   ptyTerminalService = new PtyTerminalService();
-  // Transcript lookups write a team's index or repair its config.json only for teams this
-  // profile manages. Before the provisioning service exists, no team counts as managed.
+  // Transcript lookups and the log tracker write only in teams this profile manages (none yet).
   const isTeamManagedByThisProfile = (teamName: string): Promise<boolean> =>
     teamProvisioningService
       ? teamProvisioningService.isTeamManagedByThisProfile(teamName)
@@ -1865,7 +1864,9 @@ async function initializeServices(): Promise<void> {
       getConfig: (teamName) => teamMemberLogsConfigReader.getConfigSnapshot(teamName),
     })
   );
-  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder);
+  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder, (teamName) =>
+    isTeamManagedByThisProfile(teamName)
+  );
   const taskLogConfigReader = new TeamConfigReader();
   const teamTranscriptSourceLocator = new TeamTranscriptSourceLocator(
     new TeamTranscriptProjectResolver(isTeamManagedByThisProfile, {
