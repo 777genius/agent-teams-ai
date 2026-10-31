@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { mergeCodexCliStatusWithSnapshot } from '@features/codex-account/renderer';
+import { findOpenCodeModelsNotInV2Catalog } from '@features/runtime-provider-management';
 import {
   hasEffectiveProviderLaunchAuthority,
   useLaunchAuthorityGatedCliStatus,
@@ -13,6 +14,7 @@ import {
   type OpenCodeScopedPreparationEvidence,
 } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import type { CliInstallationStatus, CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -52,6 +54,32 @@ function getProviderStatusDetail(provider: CliProviderStatus): string | null {
     provider.statusMessage?.trim() ||
     null
   );
+}
+
+/**
+ * The real reason a launch cannot pass on OpenCode V2: a selected model is missing from its
+ * loaded catalog. Without this the V2 status text, which never grants launch, hides it.
+ * Local routes are skipped; they may run outside the general catalog.
+ */
+function getOpenCodeV2CatalogBlockDetail(
+  provider: CliProviderStatus | null,
+  evidence: OpenCodeScopedPreparationEvidence | undefined
+): string | null {
+  if (!evidence) return null;
+  const modelIds = evidence.selectedModels.filter((model) => {
+    const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId;
+    return (
+      sourceId !== undefined &&
+      !isOpenCodeLocalProviderId(sourceId) &&
+      evidence.localSourceIds?.has(sourceId) !== true
+    );
+  });
+  const missing = findOpenCodeModelsNotInV2Catalog({
+    generation: evidence.generation ?? 'v1',
+    providerStatus: provider,
+    modelIds,
+  });
+  return missing.length > 0 ? missing.map((entry) => entry.message).join(' ') : null;
 }
 
 /** A failed duplicate source refresh cannot revoke fresher exact-project authority.
@@ -160,7 +188,10 @@ export function createLaunchGuard(
             {
               providerId,
               providerStatus: provider,
-              detail: getProviderLaunchReadinessDetail(provider, now),
+              detail:
+                (providerId === 'opencode'
+                  ? getOpenCodeV2CatalogBlockDetail(provider, openCodeEvidence)
+                  : null) ?? getProviderLaunchReadinessDetail(provider, now),
             },
           ];
     });

@@ -10,6 +10,7 @@ import { describe, expect, it, type Mock, vi } from 'vitest';
 import { openCodeProviderStatus } from './fixtures/openCodeProviderStatus';
 
 import type { TeamLaunchRuntimeAdapter } from '@main/services/team/runtime';
+import type { CliProviderStatus } from '@shared/types';
 
 type PrepareMock = Mock<TeamLaunchRuntimeAdapter['prepare']>;
 
@@ -326,6 +327,144 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
         expectedMembers: [],
       })
     );
+  });
+
+  describe('OpenCode V2 catalog', () => {
+    const readV2Runtime = async () => ({ installed: true, version: '2.1.4' });
+    const listedKimi = 'kimi-code-plan-global/kimi-for-coding';
+    const v1Kimi = 'kimi-for-coding/kimi-for-coding';
+
+    // The V2 passive status: model_only with its native catalog, never launch authority.
+    function v2Status(models: string[]): CliProviderStatus {
+      const status = openCodeProviderStatus(models);
+      return {
+        ...status,
+        authenticated: false,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        capabilities: { ...status.capabilities, teamLaunch: false, oneShot: false },
+        modelCatalog: { ...status.modelCatalog!, staleAt: status.modelCatalog!.fetchedAt },
+      };
+    }
+
+    async function prepareCompatibility(input: {
+      provider: CliProviderStatus;
+      modelIds: string[];
+      readOpenCodeRuntimeStatus?: () => Promise<{ installed: boolean; version?: string }>;
+    }) {
+      const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+      const result = await prepareSelectedOpenCodeModelsForProvisioning({
+        adapter: createAdapter({ prepare }),
+        readOpenCodeRuntimeStatus: input.readOpenCodeRuntimeStatus ?? readV2Runtime,
+        readProviderStatus: async () => input.provider,
+        cwd: '/workspace/project',
+        modelIds: input.modelIds,
+        verificationMode: 'compatibility',
+      });
+      expect(prepare).not.toHaveBeenCalled();
+      return result;
+    }
+
+    it('blocks a model the loaded V2 catalog does not list and names the V2 provider ids', async () => {
+      const unlisted = 'zai-coding-plan/glm-5.1';
+      const result = await prepareCompatibility({
+        provider: v2Status([listedKimi, 'opencode/big-pickle']),
+        modelIds: [v1Kimi, listedKimi, unlisted],
+      });
+
+      const kimiReason =
+        'This model is not in the OpenCode V2 model catalog. OpenCode V2 serves Kimi Code ' +
+        'Membership under different provider ids: kimi-code-plan-cn or kimi-code-plan-global. ' +
+        'Pick a model from the V2 catalog.';
+      const genericReason =
+        'This model is not in the OpenCode V2 model catalog. Its provider may be missing in V2 ' +
+        'or use a different id there. Pick a model from the V2 catalog.';
+      const lines = [
+        `Selected model ${v1Kimi} is unavailable. ${kimiReason}`,
+        `Selected model ${unlisted} is unavailable. ${genericReason}`,
+      ];
+      expect(result.blockingMessages).toEqual(lines);
+      expect(result.issues).toEqual(
+        [
+          [v1Kimi, kimiReason],
+          [unlisted, genericReason],
+        ].map(([modelId, message]) => ({
+          providerId: 'opencode',
+          modelId,
+          scope: 'model',
+          severity: 'blocking',
+          code: 'model_not_in_v2_catalog',
+          message,
+        }))
+      );
+      // The listed model still goes to strict deep verification.
+      expect(result.details).toEqual([
+        ...lines,
+        `Selected model ${listedKimi} requires strict deep verification.`,
+      ]);
+      expect(result.warnings).toEqual([
+        'OpenCode passive status cannot prove catalog authority. Compatibility is deferred to strict deep verification.',
+      ]);
+    });
+
+    it('defers only to deep verification when the V2 catalog lists every selected model', async () => {
+      const result = await prepareCompatibility({
+        provider: v2Status([listedKimi]),
+        modelIds: [listedKimi],
+      });
+
+      expect(result.blockingMessages).toEqual([]);
+      expect(result.issues).toEqual([]);
+      expect(result.details).toEqual([
+        `Selected model ${listedKimi} requires strict deep verification.`,
+      ]);
+    });
+
+    it.each(['no catalog', 'empty catalog', 'catalog not ready', 'runtime unreadable'])(
+      'keeps the previous deferral while the V2 catalog cannot judge (%s)',
+      async (kind) => {
+        const provider = v2Status([listedKimi]);
+        if (kind === 'no catalog') provider.modelCatalog = null;
+        if (kind === 'empty catalog') provider.modelCatalog!.models = [];
+        if (kind === 'catalog not ready') provider.modelCatalog!.status = 'degraded';
+        const result = await prepareCompatibility({
+          provider,
+          modelIds: [v1Kimi],
+          ...(kind === 'runtime unreadable'
+            ? { readOpenCodeRuntimeStatus: () => Promise.reject(new Error('probe failed')) }
+            : {}),
+        });
+
+        expect(result.blockingMessages).toEqual([]);
+        expect(result.details).toEqual([
+          `Selected model ${v1Kimi} requires strict deep verification.`,
+        ]);
+      }
+    );
+
+    it('leaves OpenCode V1 model_only status on the previous deferral', async () => {
+      const readV1Runtime = vi.fn(async () => ({ installed: true, version: '1.17.18' }));
+      const withCatalog = await prepareCompatibility({
+        provider: v2Status([listedKimi]),
+        modelIds: [v1Kimi],
+        readOpenCodeRuntimeStatus: readV1Runtime,
+      });
+      expect(withCatalog.blockingMessages).toEqual([]);
+      expect(withCatalog.details).toEqual([
+        `Selected model ${v1Kimi} requires strict deep verification.`,
+      ]);
+
+      readV1Runtime.mockClear();
+      const passive = v2Status([]);
+      passive.modelCatalog = null;
+      const withoutCatalog = await prepareCompatibility({
+        provider: passive,
+        modelIds: [v1Kimi],
+        readOpenCodeRuntimeStatus: readV1Runtime,
+      });
+      expect(withoutCatalog.blockingMessages).toEqual([]);
+      expect(readV1Runtime).not.toHaveBeenCalled();
+    });
   });
 
   it('never promotes a previous launch snapshot when the catalog reader is missing', async () => {

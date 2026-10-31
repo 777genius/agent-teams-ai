@@ -50,9 +50,8 @@ export function findDirectoryEntry(
 }
 
 /**
- * The generation a plan's routes use (the runtime must list a route integration, see
- * resolveRuntimeProviderOnboardingRouteGeneration) and the route already connected, which is
- * the account region in use.
+ * The generation a plan's routes use (see resolveRuntimeProviderOnboardingRouteGeneration) and
+ * the route already connected, which is the account region in use.
  */
 export function getOnboardingRouteState(
   plan: RuntimeProviderOnboardingPlan | null,
@@ -63,7 +62,6 @@ export function getOnboardingRouteState(
   const routeGeneration = resolveRuntimeProviderOnboardingRouteGeneration(
     plan,
     generation,
-    state.directoryEntries,
     OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED
   );
   const connectedRouteProviderId =
