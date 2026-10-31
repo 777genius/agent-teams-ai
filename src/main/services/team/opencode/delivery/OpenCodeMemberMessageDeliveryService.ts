@@ -430,8 +430,8 @@ export class OpenCodeMemberMessageDeliveryService {
       if (!bootstrapSession) {
         if (laneIdentity.laneKind === 'secondary') {
           restoreConsumedLane();
-          wakePendingDelivery();
-          return buildOpenCodeBootstrapDeferredDelivery(canonicalMemberName);
+          const retryArmed = wakePendingDelivery();
+          return buildOpenCodeBootstrapDeferredDelivery(canonicalMemberName, retryArmed);
         }
         // A sessionless primary may self-heal only while its tracked owner is deliverable.
         const healed = trackedRunId
