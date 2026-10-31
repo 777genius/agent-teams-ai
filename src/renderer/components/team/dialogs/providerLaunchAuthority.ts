@@ -2,6 +2,10 @@ import { useMemo } from 'react';
 
 import { mergeCodexCliStatusWithSnapshot } from '@features/codex-account/renderer';
 import {
+  findOpenCodeModelsBlockedOnV2,
+  readLoadedOpenCodeV2Catalog,
+} from '@features/runtime-provider-management';
+import {
   hasEffectiveProviderLaunchAuthority,
   useLaunchAuthorityGatedCliStatus,
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
@@ -13,6 +17,7 @@ import {
   type OpenCodeScopedPreparationEvidence,
 } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import type { CliInstallationStatus, CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -52,6 +57,32 @@ function getProviderStatusDetail(provider: CliProviderStatus): string | null {
     provider.statusMessage?.trim() ||
     null
   );
+}
+
+/**
+ * The real reason a launch cannot pass when OpenCode V2 provably cannot run a selected model,
+ * the same one the preflight gives. Without it the fixed V2 status text hides the cause.
+ * Local and app-managed custom routes are left to deep verification.
+ */
+function getOpenCodeV2ModelBlockDetail(
+  provider: CliProviderStatus | null,
+  evidence: OpenCodeScopedPreparationEvidence | undefined
+): string | null {
+  if (!evidence) return null;
+  const modelIds = evidence.selectedModels.filter((model) => {
+    const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId;
+    return (
+      sourceId !== undefined &&
+      !isOpenCodeLocalProviderId(sourceId) &&
+      evidence.localSourceIds?.has(sourceId) !== true
+    );
+  });
+  const blocked = findOpenCodeModelsBlockedOnV2({
+    generation: evidence.generation ?? 'v1',
+    catalog: readLoadedOpenCodeV2Catalog(provider),
+    modelIds,
+  });
+  return blocked.length > 0 ? blocked.map((entry) => entry.message).join(' ') : null;
 }
 
 /** A failed duplicate source refresh cannot revoke fresher exact-project authority.
@@ -160,7 +191,10 @@ export function createLaunchGuard(
             {
               providerId,
               providerStatus: provider,
-              detail: getProviderLaunchReadinessDetail(provider, now),
+              detail:
+                (providerId === 'opencode'
+                  ? getOpenCodeV2ModelBlockDetail(provider, openCodeEvidence)
+                  : null) ?? getProviderLaunchReadinessDetail(provider, now),
             },
           ];
     });

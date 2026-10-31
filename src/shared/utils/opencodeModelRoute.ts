@@ -48,6 +48,24 @@ export function isOpenCodeLocalProviderId(providerId: string | null | undefined)
   return normalized ? OPEN_CODE_LOCAL_PROVIDER_IDS.has(normalized) : false;
 }
 
+/** Catalog models that route the same model with or without the openrouter/ prefix. */
+export function findEquivalentOpenRouterModelIds(
+  requestedModelId: string,
+  availableModels: readonly string[]
+): string[] {
+  const equivalentIds = new Set<string>();
+  if (requestedModelId.startsWith('openrouter/')) {
+    equivalentIds.add(requestedModelId.slice('openrouter/'.length));
+  } else if (requestedModelId.includes('/')) {
+    equivalentIds.add(`openrouter/${requestedModelId}`);
+  }
+  return equivalentIds.size === 0
+    ? []
+    : Array.from(
+        new Set(availableModels.filter((candidate) => equivalentIds.has(candidate.trim())))
+      );
+}
+
 export function isKnownConfiguredLocalOpenCodeCatalogModel(
   modelId: string | null | undefined,
   catalogModel?: {
