@@ -11,17 +11,6 @@ vi.mock('@renderer/posthog', () => ({
   capturePostHogEvent: posthogMocks.capturePostHogEvent,
 }));
 
-// Route tests describe a runtime that serves V2 route integrations; the directory still decides.
-vi.mock(
-  '../../../../src/features/runtime-provider-management/core/domain',
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import('../../../../src/features/runtime-provider-management/core/domain')
-    >()),
-    OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED: true,
-  })
-);
-
 import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
@@ -622,10 +611,14 @@ describe('useRuntimeProviderOnboarding', () => {
     );
   });
 
-  it('keeps the V1 Kimi path on OpenCode V2 until the runtime lists a route integration', async () => {
-    // Runtime 0.0.137 lists only the curated id on V2 and serves no form for the routes.
+  it('asks for the Kimi account region on OpenCode V2 when the summary directory has no route', async () => {
+    // The runtime's summary directory lists the curated kimi-for-coding id and leaves the V2
+    // Kimi integrations out until one is connected. V2 has no integration under that id.
     loadProviderDirectory.mockResolvedValue(
-      directoryResponse([directoryEntry('kimi-for-coding', 'available')])
+      directoryResponse([
+        directoryEntry('opencode', 'connected', 'api'),
+        directoryEntry('kimi-for-coding', 'available'),
+      ])
     );
 
     await act(async () =>
@@ -641,13 +634,25 @@ describe('useRuntimeProviderOnboarding', () => {
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     });
 
-    expect(currentState?.activePlan?.providerId).toBe('kimi-for-coding');
-    expect(currentState?.activePlan?.routeChoices).toBeUndefined();
+    expect(loadProviderDirectory).toHaveBeenCalledWith(expect.objectContaining({ summary: true }));
+    expect(currentState?.activePlan?.routeChoices?.map((route) => route.v2ProviderId)).toEqual([
+      'kimi-code-plan-cn',
+      'kimi-code-plan-global',
+    ]);
+    expect(loadSetupForm).not.toHaveBeenCalled();
+
+    await act(async () => currentActions?.chooseRoute('kimi-code-plan-global'));
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    });
+
+    expect(currentState?.activePlan?.providerId).toBe('kimi-code-plan-global');
     expect(loadSetupForm).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'kimi-code-plan-global' })
+    );
+    expect(loadSetupForm).not.toHaveBeenCalledWith(
       expect.objectContaining({ providerId: 'kimi-for-coding' })
     );
-    await act(async () => currentActions?.chooseRoute('kimi-code-plan-global'));
-    expect(currentState?.activePlan?.providerId).toBe('kimi-for-coding');
   });
 
   it('switches the Kimi integration when the user picks the other domain', async () => {
