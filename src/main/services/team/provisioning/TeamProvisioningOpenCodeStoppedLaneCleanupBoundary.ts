@@ -18,6 +18,7 @@ import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@share
 
 export interface TeamProvisioningOpenCodeStoppedLaneCleanupPorts {
   withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
   canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readPreviousLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -124,6 +125,7 @@ function createStopPorts(
 ): StopOpenCodeRuntimeLanesForStoppedTeamPorts {
   return {
     withTeamLock: (teamName, operation) => ports.withTeamLock(teamName, operation),
+    isManagedByThisProfile: (teamName) => ports.isManagedByThisProfile(teamName),
     canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
       ports.canDeliverToOpenCodeRuntimeForTeam(teamName),
     getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),

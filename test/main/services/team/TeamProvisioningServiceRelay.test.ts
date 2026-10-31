@@ -151,6 +151,18 @@ vi.mock(
   }
 );
 
+// The relay fixtures live in a mocked filesystem and model teams of this app
+// profile; ownership itself is covered by TeamProvisioningServiceProfileOwnership.test.ts.
+vi.mock(
+  '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership')
+    >()),
+    createTeamProfileOwnership: () => ({ isManagedByThisProfile: () => Promise.resolve(true) }),
+  })
+);
+
 vi.mock('agent-teams-controller', () => ({
   AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES: [] as readonly string[],

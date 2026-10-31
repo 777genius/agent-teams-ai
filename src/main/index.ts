@@ -3254,6 +3254,8 @@ function runPostRendererStartupTasks(): void {
           activeTeamNames,
           STARTUP_RECOVERY_CONCURRENCY,
           async (teamName) => {
+            // ~/.claude/teams is shared with other app profiles and native sessions.
+            if (!(await teamProvisioningService.isTeamManagedByThisProfile(teamName))) return;
             await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
           }
         );

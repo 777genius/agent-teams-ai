@@ -145,6 +145,25 @@ describe('TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory', () => {
     expect(deps.logger.warn).toHaveBeenCalledWith('warning');
   });
 
+  it('leaves the inbox of a team of another app profile to that profile', async () => {
+    const deps = createDeps({ isManagedByThisProfile: vi.fn(async () => false) });
+
+    await expect(
+      createTeamProvisioningOpenCodeMemberInboxRelayBoundary(deps).relayOpenCodeMemberInboxMessages(
+        'team-a',
+        'worker'
+      )
+    ).resolves.toEqual({
+      relayed: 0,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      diagnostics: ['opencode_member_inbox_relay_skipped_team_of_another_app_profile'],
+    });
+    expect(deps.isManagedByThisProfile).toHaveBeenCalledWith('team-a');
+    expect(relayWithPortsMock).not.toHaveBeenCalled();
+  });
+
   it('keeps the task-reader fallback local to the boundary and preserves catch-to-empty behavior', async () => {
     getTasksMock.mockRejectedValueOnce(new Error('read failed'));
     relayWithPortsMock.mockImplementationOnce(async (_input, ports) => {
@@ -231,6 +250,7 @@ function createDeps(
   };
 
   return {
+    isManagedByThisProfile: vi.fn(async () => true),
     host: {
       getOpenCodeMemberRelayKey: vi.fn((teamName, memberName) => `relay/${teamName}/${memberName}`),
       scheduleOpenCodeMemberInboxDeliveryWake: vi.fn(),
