@@ -171,7 +171,6 @@ export function createTeamProvisioningLiveLeadMessagePortsBoundary<
     captureSendMessages: (run, content) =>
       captureLeadSendMessages(run, content, {
         nowIso: deps.nowIso,
-        nowMs: deps.nowMs,
         logger: deps.logger,
         crossTeamSender: deps.getCrossTeamSender(),
         resolveCrossTeamReplyMetadata,
