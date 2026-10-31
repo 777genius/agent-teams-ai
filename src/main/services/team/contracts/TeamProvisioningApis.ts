@@ -110,6 +110,8 @@ export type TeamRuntimeControlCompatibilityApi = OpenCodeRuntimeControlApi;
 export interface TeamRuntimeApi {
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
   stopTeam(teamName: string): Promise<void>;
+  /** Forget the background OpenCode lane stop backoff of a team moved to the trash. */
+  clearStoppedLaneStopBackoff(teamName: string): void;
   isTeamAlive(teamName: string): boolean;
   getAliveTeams(): string[];
   getCurrentRunId(teamName: string): string | null;
@@ -496,6 +498,7 @@ export function bindTeamRuntimeApi(source: TeamRuntimeApi): TeamRuntimeApi {
   return {
     getRuntimeState: source.getRuntimeState.bind(source),
     stopTeam: source.stopTeam.bind(source),
+    clearStoppedLaneStopBackoff: source.clearStoppedLaneStopBackoff.bind(source),
     isTeamAlive: source.isTeamAlive.bind(source),
     getAliveTeams: source.getAliveTeams.bind(source),
     getCurrentRunId: source.getCurrentRunId.bind(source),

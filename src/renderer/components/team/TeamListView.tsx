@@ -69,7 +69,9 @@ import { useShallow } from 'zustand/react/shallow';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { buildCopiedTeamMembers } from './teamCopyData';
+import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
+import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
 import { TeamManagementNotice } from './TeamManagementNotice';
@@ -408,15 +410,12 @@ const ActiveTeamCard = ({
                   <Copy size={14} />
                 </button>
               ) : null}
-              <button
-                type="button"
-                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
+              <TeamDeleteButton
+                teamName={team.teamName}
+                placement="card"
+                label={deleteTitle}
                 onClick={(event) => onDeleteTeam(team.teamName, !!team.pendingCreate, event)}
-                aria-label={deleteTitle}
-                title={deleteTitle}
-              >
-                <Trash2 size={14} />
-              </button>
+              />
             </div>
           </div>
         </div>
@@ -814,7 +813,9 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           variant: 'danger',
         });
         if (confirmed) {
-          await deleteTeam(teamName).catch((error: unknown) => showTeamDeleteError(t, error));
+          await runTeamDeleteOnce(teamName, () => deleteTeam(teamName)).catch((error: unknown) =>
+            showTeamDeleteError(t, error)
+          );
         }
       })();
     },

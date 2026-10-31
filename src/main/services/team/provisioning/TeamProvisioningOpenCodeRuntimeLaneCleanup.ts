@@ -5,7 +5,10 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { readAttributedCursorAgentProcesses } from '../opencode/bridge/CursorAgentAttributionRecords';
+import {
+  type AttributedCursorAgentProcess,
+  readAttributedCursorAgentProcesses,
+} from '../opencode/bridge/CursorAgentAttributionRecords';
 import { isOpenCodeServeCommand } from '../opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import {
   clearOpenCodeRuntimeLaneStorage,
@@ -29,6 +32,7 @@ import {
 } from './TeamProvisioningOpenCodeStoppedLaneStopTargets';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
+import type { OpenCodeStoppedLaneStopBackoff } from './TeamProvisioningOpenCodeStoppedLaneStopBackoff';
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
 
 export type StoppedOpenCodeRuntimeLanePidStopResult = 'stopped' | 'no_pid' | 'unsafe';
@@ -62,6 +66,8 @@ export interface StopOpenCodeRuntimeLanesForStoppedTeamPorts {
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   clearPrimaryRuntimeRun(teamName: string): void;
   markStoppedTeamOpenCodeRuntimeLanesCleaned(teamName: string): void;
+  /** Lane runs this cleanup does not ask the bridge to stop again for now. */
+  stopBackoff: OpenCodeStoppedLaneStopBackoff;
   logWarning(message: string): void;
 }
 
@@ -293,9 +299,77 @@ export async function stopOpenCodeRuntimeLanesForStoppedTeam(input: {
   if (!(await input.ports.isManagedByThisProfile(input.teamName))) {
     return 0;
   }
+  // A pass that would only repeat stops left unconfirmed moments ago ends here,
+  // before the lock: each such retry can hold it for minutes of bridge calls.
+  if (await isEveryStoppedLaneStopBackedOff(input)) {
+    return 0;
+  }
   return await input.ports.withTeamLock(input.teamName, () =>
     stopOpenCodeRuntimeLanesForStoppedTeamLocked(input)
   );
+}
+
+/**
+ * Unlocked snapshot of the lanes a pass would target. Used only to skip a
+ * pass; the locked pass reads everything again and skips backed off runs itself.
+ */
+async function isEveryStoppedLaneStopBackedOff(input: {
+  teamName: string;
+  teamsBasePath: string;
+  ports: StopOpenCodeRuntimeLanesForStoppedTeamPorts;
+}): Promise<boolean> {
+  const { ports, teamName, teamsBasePath } = input;
+  if (!ports.stopBackoff.hasBackedOffRuns(teamName)) {
+    return false;
+  }
+  const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName).catch(() => null);
+  const laneIds = selectStoppedTeamOpenCodeRuntimeLaneIds(laneIndex);
+  if (laneIds.length === 0) {
+    return false;
+  }
+  const previousLaunchState = await ports.readPreviousLaunchState(teamName).catch(() => null);
+  const attributed = await readAttributedCursorAgentProcesses().catch(() => []);
+  const evidenceReader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath });
+  for (const laneId of laneIds) {
+    const { targetedRunIds } = await readStoppedLaneStopTargets({
+      teamName,
+      laneId,
+      evidenceReader,
+      previousLaunchState,
+      attributed,
+    });
+    const backedOff =
+      targetedRunIds.length > 0 &&
+      targetedRunIds.every((runId) => ports.stopBackoff.isBackedOff({ teamName, laneId, runId }));
+    if (!backedOff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function readStoppedLaneStopTargets(input: {
+  teamName: string;
+  laneId: string;
+  evidenceReader: OpenCodeRuntimeManifestEvidenceReader;
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  attributed: readonly AttributedCursorAgentProcess[];
+}): Promise<{ expectedRunId: string | null; targetedRunIds: string[] }> {
+  const evidence = await input.evidenceReader.read(input.teamName, input.laneId).catch(() => null);
+  const expectedRunId = evidence?.activeRunId?.trim() || null;
+  const launchStateRunId = Object.values(input.previousLaunchState?.members ?? {}).find(
+    (member) => member.laneId === input.laneId
+  )?.runtimeRunId;
+  return {
+    expectedRunId,
+    targetedRunIds: collectOpenCodeStoppedLaneStopRunIds({
+      teamName: input.teamName,
+      laneId: input.laneId,
+      manifestRunId: expectedRunId,
+      launchStateRunId,
+      attributed: input.attributed,
+    }),
+  };
 }
 
 async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
@@ -341,16 +415,11 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
   let stopped = 0;
   let cleaned = 0;
   for (const laneId of laneIds) {
-    const evidence = await evidenceReader.read(teamName, laneId).catch(() => null);
-    const expectedRunId = evidence?.activeRunId?.trim() || null;
-    const launchStateRunId = Object.values(previousLaunchState?.members ?? {}).find(
-      (member) => member.laneId === laneId
-    )?.runtimeRunId;
-    const targetedRunIds = collectOpenCodeStoppedLaneStopRunIds({
+    const { expectedRunId, targetedRunIds } = await readStoppedLaneStopTargets({
       teamName,
       laneId,
-      manifestRunId: expectedRunId,
-      launchStateRunId,
+      evidenceReader,
+      previousLaunchState,
       attributed,
     });
     const adapterOwnership = await evaluateStoppedTeamOpenCodeLaneOwnership({
@@ -370,7 +439,15 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
       }
       continue;
     }
-    if (adapter && targetedRunIds.length > 0) {
+    // Runs whose stop was left unconfirmed moments ago are not asked again until
+    // their backoff ends. A new run of the lane is not backed off.
+    const stopRunIds = targetedRunIds.filter(
+      (runId) => !ports.stopBackoff.isBackedOff({ teamName, laneId, runId })
+    );
+    if (targetedRunIds.length > 0 && stopRunIds.length === 0) {
+      continue;
+    }
+    if (adapter && stopRunIds.length > 0) {
       let laneStopped = false;
       const unconfirmedAttempts: string[] = [];
       const cwd = resolveOpenCodeRuntimeLaneCleanupCwd({
@@ -379,7 +456,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
         metaMembers,
         persistedTeamProjectPath: ports.readPersistedTeamProjectPath(teamName),
       });
-      for (const runId of targetedRunIds) {
+      for (const runId of stopRunIds) {
         try {
           const result = await adapter.stop({
             runId,
@@ -416,8 +493,16 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
         ports.logWarning(
           `[${teamName}] OpenCode lane ${laneId} did not confirm stop; retaining runtime ownership and storage. ${attempts}`
         );
+        ports.stopBackoff.recordUnconfirmedStop({ teamName, laneId, runIds: stopRunIds });
+        ports.logWarning(
+          `[${teamName}] Background cleanup will not retry stopping OpenCode lane ${laneId} run(s) ${sanitizeOpenCodeRuntimeStopDetail(
+            stopRunIds.join(', '),
+            400
+          )} for ${Math.round(ports.stopBackoff.backoffMs / 1_000)}s.`
+        );
         continue;
       }
+      ports.stopBackoff.clearLane(teamName, laneId);
       stopped += 1;
     } else if (targetedRunIds.length > 0) {
       ports.logWarning(

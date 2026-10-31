@@ -20,9 +20,14 @@ import {
   stopOpenCodeRuntimeLanesForStoppedTeamOnce,
   tryStopPersistedOpenCodeRuntimePidForStoppedLane,
 } from '../TeamProvisioningOpenCodeRuntimeLaneCleanup';
+import { createOpenCodeStoppedLaneStopBackoff } from '../TeamProvisioningOpenCodeStoppedLaneStopBackoff';
 
 import type { TeamRuntimeStopInput } from '../../runtime';
 import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
+
+function createTestStopBackoff(): ReturnType<typeof createOpenCodeStoppedLaneStopBackoff> {
+  return createOpenCodeStoppedLaneStopBackoff({ nowMs: () => Date.now() });
+}
 
 function buildLaunchSnapshot(member: Record<string, unknown>): PersistedTeamLaunchSnapshot {
   return {
@@ -288,6 +293,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
             readMembersMeta: async () => [],
             readPersistedTeamProjectPath: () => null,
             tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+            stopBackoff: createTestStopBackoff(),
             deleteSecondaryRuntimeRun,
             clearPrimaryRuntimeRun,
             markStoppedTeamOpenCodeRuntimeLanesCleaned,
@@ -353,6 +359,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           readMembersMeta: async () => [],
           readPersistedTeamProjectPath: () => null,
           tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          stopBackoff: createTestStopBackoff(),
           deleteSecondaryRuntimeRun: vi.fn(),
           clearPrimaryRuntimeRun: vi.fn(),
           markStoppedTeamOpenCodeRuntimeLanesCleaned,
@@ -407,6 +414,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           readMembersMeta: async () => [],
           readPersistedTeamProjectPath: () => null,
           tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          stopBackoff: createTestStopBackoff(),
           deleteSecondaryRuntimeRun: vi.fn(),
           clearPrimaryRuntimeRun: vi.fn(),
           markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
@@ -493,6 +501,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           readMembersMeta: async () => [],
           readPersistedTeamProjectPath: () => null,
           tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          stopBackoff: createTestStopBackoff(),
           deleteSecondaryRuntimeRun,
           clearPrimaryRuntimeRun,
           markStoppedTeamOpenCodeRuntimeLanesCleaned,
@@ -585,6 +594,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
           readMembersMeta: async () => [],
           readPersistedTeamProjectPath: () => null,
           tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          stopBackoff: createTestStopBackoff(),
           deleteSecondaryRuntimeRun,
           clearPrimaryRuntimeRun,
           markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
@@ -646,6 +656,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
             readMembersMeta: async () => [],
             readPersistedTeamProjectPath: () => null,
             tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+            stopBackoff: createTestStopBackoff(),
             deleteSecondaryRuntimeRun: vi.fn(),
             clearPrimaryRuntimeRun: vi.fn(),
             markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
@@ -655,6 +666,75 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
       ).resolves.toBe(0);
 
       expect(logWarning).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('skips a backed off run, stops the next one and clears the lane backoff once confirmed', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-backoff-'));
+    const nowMs = 1_000_000;
+    const stopBackoff = createOpenCodeStoppedLaneStopBackoff({ nowMs: () => nowMs });
+    stopBackoff.recordUnconfirmedStop({ teamName: 'team', laneId: 'primary', runIds: ['run-1'] });
+    const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: true,
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    }));
+
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          primary: { laneId: 'primary', state: 'active', updatedAt: '2026-01-01T00:00:00.000Z' },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId: 'primary',
+        runId: 'run-1',
+      });
+
+      await expect(
+        stopOpenCodeRuntimeLanesForStoppedTeam({
+          teamName: 'team',
+          teamsBasePath,
+          ports: {
+            withTeamLock: async (_teamName, operation) => operation(),
+            isManagedByThisProfile: async () => true,
+            canDeliverToOpenCodeRuntimeForTeam: () => false,
+            getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', stop }) as never,
+            // The launch state still names an older run of the lane.
+            readPreviousLaunchState: async () =>
+              buildLaunchSnapshot({
+                providerId: 'opencode',
+                laneId: 'primary',
+                runtimeRunId: 'run-2',
+              }),
+            readConfigForObservation: async () => null,
+            readMembersMeta: async () => [],
+            readPersistedTeamProjectPath: () => null,
+            tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+            deleteSecondaryRuntimeRun: vi.fn(),
+            clearPrimaryRuntimeRun: vi.fn(),
+            markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
+            stopBackoff,
+            logWarning: vi.fn(),
+          },
+        })
+      ).resolves.toBe(1);
+
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(stop).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-2' }));
+      expect(stopBackoff.isBackedOff({ teamName: 'team', laneId: 'primary', runId: 'run-1' })).toBe(
+        false
+      );
+      expect(stopBackoff.hasBackedOffRuns('team')).toBe(false);
     } finally {
       rmSync(teamsBasePath, { recursive: true, force: true });
     }

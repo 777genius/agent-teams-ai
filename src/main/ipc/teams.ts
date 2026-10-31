@@ -204,7 +204,7 @@ import { teamMessageNotificationScanner } from './teams/teamMessageNotificationS
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
-import { softDeleteTeamWithBestEffortStop } from './teams/teamSoftDeleteFlow';
+import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
@@ -588,6 +588,7 @@ const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
+const teamSoftDeleteRequests = createTeamSoftDeleteRequests();
 function isValidStoredAttachmentMimeType(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const v = value.trim();
@@ -1431,10 +1432,11 @@ async function handleDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('deleteTeam', async () => {
-    await softDeleteTeamWithBestEffortStop(validated.value!, {
+    await teamSoftDeleteRequests.softDelete(validated.value!, {
       stopTeam: (tn) => getTeamRuntimeApi().stopTeam(tn),
       softDeleteTeam: (tn) => getTeamDataService().deleteTeam(tn),
       invalidateTeamConfig: (tn) => getTeamDataWorkerClient().invalidateTeamConfig(tn),
+      clearStoppedLaneStopBackoff: (tn) => getTeamRuntimeApi().clearStoppedLaneStopBackoff(tn),
       logWarning: (message) => logger.warn(message),
     });
   });
