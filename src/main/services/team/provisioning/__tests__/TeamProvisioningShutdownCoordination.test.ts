@@ -67,6 +67,7 @@ function makePorts(
     stopTeam: vi.fn(),
     cancelRuntimeAdapterProvisioning: vi.fn(),
     killProcessTree: vi.fn(),
+    isManagedByThisProfile: vi.fn(async () => true),
     logger: makeLogger(),
     ...overrides,
   };
@@ -105,6 +106,31 @@ describe('team provisioning shutdown coordination', () => {
       'locked-team',
       'pending-team',
     ]);
+  });
+
+  it('stops a team known only through a held lock only when this profile manages it', async () => {
+    const isManagedByThisProfile = vi.fn(async (teamName: string) => teamName === 'own-locked');
+    const stopTeam = vi.fn(async () => undefined);
+    const state = makeState({
+      provisioningRunByTeam: new Map([['tracked-team', 'run-1']]),
+      teamOpLocks: new Map([
+        ['tracked-team', Promise.resolve()],
+        ['own-locked', Promise.resolve()],
+        ['foreign-locked', Promise.resolve()],
+      ]),
+    });
+
+    await expect(
+      stopTrackedTeamsForShutdown(
+        'Shutdown',
+        state,
+        makePorts({ isManagedByThisProfile, stopTeam })
+      )
+    ).resolves.toEqual(['tracked-team', 'own-locked']);
+
+    expect(stopTeam.mock.calls).toEqual([['tracked-team'], ['own-locked']]);
+    // Teams this process runs are stopped without asking: ownership is for lock-only names.
+    expect(isManagedByThisProfile.mock.calls).toEqual([['own-locked'], ['foreign-locked']]);
   });
 
   it('logs stop warnings while continuing best-effort shutdown stops', async () => {

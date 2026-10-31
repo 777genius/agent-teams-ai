@@ -1268,46 +1268,53 @@ export class ClaudeMultimodelBridgeService {
     const existing = providerStatusReadInFlight.get(requestKey);
     if (existing) return existing;
 
-    const request = (async () => {
-      if (shouldResolveAnthropicShellEnv(providerId)) {
-        await resolveInteractiveShellEnvBestEffort({
-          source: 'provider-status:anthropic',
-          timeoutMs: 1_500,
-          fallbackEnv: process.env,
+    const request = Promise.resolve()
+      .then(async () => {
+        if (shouldResolveAnthropicShellEnv(providerId)) {
+          await resolveInteractiveShellEnvBestEffort({
+            source: 'provider-status:anthropic',
+            timeoutMs: 1_500,
+            fallbackEnv: process.env,
+          });
+          // Catalog hydration can finish discovery in the background after the bounded summary.
+          if (options.summary !== true) await waitForPendingShellEnv();
+        }
+        const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
+          binaryPath,
+          providerId,
         });
-        // Catalog hydration can finish discovery in the background after the bounded summary.
-        if (options.summary !== true) await waitForPendingShellEnv();
-      }
-      const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
-        binaryPath,
-        providerId,
+        const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
+          passiveEnv,
+          providerId
+        );
+        if (providerId === 'anthropic' && options.summary !== true) {
+          await providerConnectionService.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
+        }
+        const status = await this.getProviderStatusFromRuntimeStatusCommand(
+          binaryPath,
+          providerId,
+          env,
+          connectionIssues,
+          options
+        );
+        if (
+          canReuseCompletedRead &&
+          status.statusCheckOutcome === 'authoritative' &&
+          // Installation/invalidation can detach this read before its subprocess finishes.
+          providerStatusReadInFlight.get(requestKey) === request
+        ) {
+          providerStatusReadCache.set(requestKey, {
+            expiresAt: Date.now() + OPENCODE_PROJECT_STATUS_CACHE_TTL_MS,
+            status,
+          });
+        }
+        return status;
+      })
+      .finally(() => {
+        if (providerStatusReadInFlight.get(requestKey) === request) {
+          providerStatusReadInFlight.delete(requestKey);
+        }
       });
-      const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
-        passiveEnv,
-        providerId
-      );
-      if (providerId === 'anthropic' && options.summary !== true) {
-        await providerConnectionService.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
-      }
-      const status = await this.getProviderStatusFromRuntimeStatusCommand(
-        binaryPath,
-        providerId,
-        env,
-        connectionIssues,
-        options
-      );
-      if (canReuseCompletedRead && status.statusCheckOutcome === 'authoritative') {
-        providerStatusReadCache.set(requestKey, {
-          expiresAt: Date.now() + OPENCODE_PROJECT_STATUS_CACHE_TTL_MS,
-          status,
-        });
-      }
-      return status;
-    })().finally(() => {
-      if (providerStatusReadInFlight.get(requestKey) === request) {
-        providerStatusReadInFlight.delete(requestKey);
-      }
-    });
     providerStatusReadInFlight.set(requestKey, request);
     return request;
   }

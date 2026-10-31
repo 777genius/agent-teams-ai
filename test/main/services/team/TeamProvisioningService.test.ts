@@ -200,6 +200,21 @@ vi.mock(
   }
 );
 
+// These fixtures model teams of this app profile; ownership itself is covered by
+// TeamProvisioningServiceProfileOwnership.test.ts.
+vi.mock(
+  '@main/services/team/provisioning/TeamProvisioningProfileOwnership',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('@main/services/team/provisioning/TeamProvisioningProfileOwnership')
+    >()),
+    createTeamProfileOwnership: () => ({
+      isManagedByThisProfile: () => Promise.resolve(true),
+      isManagedByThisProfileSync: () => true,
+    }),
+  })
+);
+
 import {
   killTmuxPaneForCurrentPlatformSync,
   listRuntimeProcessTableForCurrentPlatform,
@@ -1245,6 +1260,8 @@ function createClaudeLogsRun(overrides: Record<string, unknown> = {}) {
     memberSpawnStatuses: new Map(),
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     pendingApprovals: new Map(),
     mcpConfigPath: null,
     bootstrapSpecPath: null,

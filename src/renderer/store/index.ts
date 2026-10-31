@@ -2406,14 +2406,7 @@ export function initializeNotificationListeners(): () => void {
   if (api.openCodeRuntime?.onProgress) {
     const cleanup = api.openCodeRuntime.onProgress((_event: unknown, data: unknown) => {
       const status = data as OpenCodeRuntimeStatus;
-      useStore.setState({
-        openCodeRuntimeStatus: status,
-        openCodeRuntimeError: status.error ?? null,
-        openCodeRuntimeStatusLoading:
-          status.state === 'checking' ||
-          status.state === 'downloading' ||
-          status.state === 'installing',
-      });
+      useStore.getState().applyOpenCodeRuntimeProgress(status);
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);

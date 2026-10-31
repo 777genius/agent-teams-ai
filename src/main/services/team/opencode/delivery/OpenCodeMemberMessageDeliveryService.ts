@@ -931,12 +931,14 @@ export class OpenCodeMemberMessageDeliveryService {
         }
         // Turn activity is decided before the stale-pending guard: both read the
         // same observation, and the guard must see the richer signal.
+        const observeFailed = !observed.ok || responseObservation?.state === 'reconcile_failed';
         const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
           previousAssistantMessageId,
           previousToolCallCount,
           previousAssistantPreview,
           observation: responseObservation,
           observedDiagnostics: observed.diagnostics,
+          observationUnavailable: observeFailed && hasOpenCodeAcceptedRuntimePrompt(ledgerRecord),
           pendingAgeMs: turnActivityAgeMs,
         });
         if (
@@ -1022,9 +1024,8 @@ export class OpenCodeMemberMessageDeliveryService {
           visibleReply: proof.visibleReply,
           readAllowed,
         });
-        const turnStillActive = turnActivity.active;
-        const retryDue = retryDueBeforeObserve && !turnStillActive;
-        if (retryDueBeforeObserve && retryable && turnStillActive) {
+        const retryDue = retryDueBeforeObserve && !turnActivity.active;
+        if (retryDueBeforeObserve && retryable && turnActivity.active) {
           this.deps.logOpenCodePromptDeliveryEvent(
             'opencode_prompt_delivery_retry_deferred_turn_active',
             ledgerRecord,

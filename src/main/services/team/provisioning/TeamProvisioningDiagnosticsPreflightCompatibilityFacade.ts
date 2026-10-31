@@ -115,7 +115,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     'appendCliLogs'
   >;
   protected abstract readonly helpOutputCache: CliHelpOutputCache;
-  protected abstract readonly shutdownCoordination: { getShutdownTrackedTeamNames(): string[] };
+  protected abstract readonly shutdownCoordination: { getShutdownRunningTeamNames(): string[] };
   protected abstract readonly toolApprovalFacade: Pick<
     TeamProvisioningToolApprovalFacade<TRun>,
     | 'dismissApprovalNotification'
@@ -336,7 +336,8 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   }
 
   hasActiveTeamRuntimes(): boolean {
-    return this.shutdownCoordination.getShutdownTrackedTeamNames().length > 0;
+    // A held team lock alone can belong to a read of another profile's team.
+    return this.shutdownCoordination.getShutdownRunningTeamNames().length > 0;
   }
 
   async notifyLanguageChange(newLangCode: string): Promise<void> {

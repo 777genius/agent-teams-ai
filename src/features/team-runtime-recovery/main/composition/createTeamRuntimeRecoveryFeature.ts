@@ -73,6 +73,12 @@ export function createTeamRuntimeRecoveryFeature(deps: {
   getCurrentContextId(): string;
   listActiveTeamNames(): Promise<string[]>;
   isTeamActive(teamName: string): Promise<boolean>;
+  /**
+   * The teams directory is shared with other app profiles and native sessions.
+   * Their inboxes are not scanned for failures and their recovery jobs are not
+   * cancelled from here; those belong to whoever runs the team.
+   */
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean>;
   getRuntimeState(teamName: string): Promise<{ isAlive: boolean; runId: string | null }>;
   getRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
   getLeadName(teamName: string): Promise<string | null>;
@@ -236,6 +242,7 @@ export function createTeamRuntimeRecoveryFeature(deps: {
     const existing = scansInFlight.get(teamName);
     if (existing) return existing;
     const request = (async () => {
+      if (!(await deps.isTeamManagedByThisProfile(teamName))) return;
       await signals.scanTeamInbox(teamName);
       const snapshot = await deps.getRuntimeSnapshot(teamName);
       for (const entry of Object.values(snapshot.members)) {
@@ -279,6 +286,7 @@ export function createTeamRuntimeRecoveryFeature(deps: {
       const current = config.getConfig();
       const teams = await repository.listTeamNames();
       for (const teamName of teams) {
+        if (!(await deps.isTeamManagedByThisProfile(teamName))) continue;
         await cancel.execute({
           teamName,
           reason: 'setting_disabled',
@@ -306,7 +314,7 @@ export function createTeamRuntimeRecoveryFeature(deps: {
         .then(async ([activeTeamNames, persistedTeamNames]) => {
           const active = new Set(activeTeamNames);
           for (const teamName of persistedTeamNames) {
-            if (!active.has(teamName)) {
+            if (!active.has(teamName) && (await deps.isTeamManagedByThisProfile(teamName))) {
               await cancel.execute({ teamName, reason: 'team_stopped' });
             }
           }
@@ -332,9 +340,11 @@ export function createTeamRuntimeRecoveryFeature(deps: {
       if (event.type === 'process' || event.type === 'lead-activity') {
         void deps
           .isTeamActive(event.teamName)
-          .then((active) => {
+          .then(async (active) => {
             if (active) scheduleScan(event.teamName);
-            else return cancel.execute({ teamName: event.teamName, reason: 'team_stopped' });
+            else if (await deps.isTeamManagedByThisProfile(event.teamName)) {
+              await cancel.execute({ teamName: event.teamName, reason: 'team_stopped' });
+            }
           })
           .catch((error) =>
             deps.logger?.warn('team runtime recovery activity reconciliation failed', {
@@ -361,7 +371,11 @@ export function createTeamRuntimeRecoveryFeature(deps: {
     async cancelAll(reason) {
       const teamNames = await repository.listTeamNames();
       const counts = await Promise.all(
-        teamNames.map((teamName) => cancel.execute({ teamName, reason }))
+        teamNames.map(async (teamName) =>
+          (await deps.isTeamManagedByThisProfile(teamName))
+            ? cancel.execute({ teamName, reason })
+            : 0
+        )
       );
       return counts.reduce((total, count) => total + count, 0);
     },

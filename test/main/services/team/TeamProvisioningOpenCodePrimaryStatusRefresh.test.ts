@@ -164,6 +164,11 @@ function fixture() {
     nowIso: () => new Date().toISOString(),
   } as unknown as MemberSpawnStatusesSnapshotPorts<MemberSpawnStatusRun>;
   Object.assign(service, {
+    // The fixture team is this profile's: its run is tracked here.
+    profileOwnership: {
+      isManagedByThisProfile: async () => true,
+      isManagedByThisProfileSync: () => true,
+    },
     runtimeAdapterRunByTeam: owners,
     runtimeAdapterProgressByRunId: runtimeProgress,
     openCodePrimaryStatusRefreshByOwner: new WeakMap(),

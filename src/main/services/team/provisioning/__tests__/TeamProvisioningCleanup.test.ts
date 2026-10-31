@@ -69,6 +69,7 @@ function cleanupRun(
     ]),
     activeCrossTeamReplyHints: [{}],
     pendingInboxRelayCandidates: [{}],
+    pendingLeadSendMessages: new Map([['toolu-send-1', {}]]),
     pendingApprovals: new Map([['approval-1', {}]]),
     mcpConfigPath: '/tmp/team-a-mcp.json',
     bootstrapSpecPath: null,
@@ -285,6 +286,7 @@ describe('team provisioning cleanup policy', () => {
     expect(cleanup.pendingGeminiPostLaunchHydration).toBe(false);
     expect(cleanup.activeCrossTeamReplyHints).toEqual([]);
     expect(cleanup.pendingInboxRelayCandidates).toEqual([]);
+    expect(cleanup.pendingLeadSendMessages.size).toBe(0);
     expect(cleanup.pendingApprovals.size).toBe(0);
     expect(cleanup.mcpConfigPath).toBeNull();
 

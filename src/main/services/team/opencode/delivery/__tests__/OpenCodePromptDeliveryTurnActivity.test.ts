@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   decideOpenCodePromptDeliveryTurnActivity,
+  OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS,
   OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS,
   type OpenCodePromptDeliveryTurnActivityInput,
 } from '../OpenCodePromptDeliveryWatchdog';
@@ -23,6 +24,7 @@ function activityInput(
       latestAssistantPreview: 'Creating the board.',
     },
     observedDiagnostics: [TREATED_IDLE],
+    observationUnavailable: false,
     pendingAgeMs: 90_000,
     ...overrides,
   };
@@ -137,6 +139,39 @@ describe('decideOpenCodePromptDeliveryTurnActivity', () => {
         })
       )
     ).toEqual({ active: true, reason: 'session_status_busy' });
+  });
+
+  it('never reads an unavailable observation of an accepted prompt as an idle turn', () => {
+    // Nothing moved only because nothing could be read. Calling it idle
+    // re-prompts a member that may already have answered.
+    expect(
+      decideOpenCodePromptDeliveryTurnActivity(activityInput({ observationUnavailable: true }))
+    ).toEqual({ active: true, reason: 'observation_unavailable' });
+  });
+
+  it('caps an unavailable observation sooner than the inferred activity signals', () => {
+    // Past the short cap but well inside the turn-activity cap: a bridge that
+    // keeps failing to observe must not hold the member's queue for ten minutes.
+    const pendingAgeMs = OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS + 60_000;
+    expect(pendingAgeMs).toBeLessThan(OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS);
+    expect(
+      decideOpenCodePromptDeliveryTurnActivity(
+        activityInput({ observationUnavailable: true, pendingAgeMs })
+      )
+    ).toEqual({ active: false, reason: 'observation_unavailable_cap' });
+    // The short cap applies to the unavailable branch only.
+    expect(
+      decideOpenCodePromptDeliveryTurnActivity(
+        activityInput({
+          pendingAgeMs,
+          observation: {
+            assistantMessageId: 'msg_assistant',
+            toolCallNames: ['task_create', 'task_create', 'task_create'],
+            latestAssistantPreview: 'Creating the board.',
+          },
+        })
+      )
+    ).toEqual({ active: true, reason: 'tool_calls_progressed' });
   });
 
   it('closes the first-observation hole left by acceptance-mode sends', () => {

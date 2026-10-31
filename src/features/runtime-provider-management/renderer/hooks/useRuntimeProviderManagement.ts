@@ -21,6 +21,7 @@ import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
 } from '../view-models/openCodeDefaultModelInheritance';
+import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
 import {
   getProviderConnectErrorDiagnostics,
@@ -61,9 +62,11 @@ import {
   applyModelTestResultToModels,
   applyModelTestResultToView,
   buildFailedModelTestResult,
+  refreshAfterModelTest,
   startModelTest,
 } from './runtimeProviderModelTestState';
 import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
+import { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectContext';
 
 import type { RuntimeProviderConnectionIntent } from '../../core/domain';
 import type {
@@ -103,16 +106,12 @@ export type RuntimeProviderChangeKind =
   | 'connection'
   | 'credential_removed'
   | 'configuration'
+  | 'model_tested'
   | 'oauth_cancelled';
 
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
 const OAUTH_UI_TIMEOUT_MS = 18 * 60_000;
-
-interface ProjectContextSnapshot {
-  path: string | null;
-  generation: number;
-}
 
 export interface RuntimeProviderManagementState {
   view: RuntimeProviderManagementViewDto | null;
@@ -337,26 +336,9 @@ export function useRuntimeProviderManagement(
       void cancelModelTest({ requestGroupId: `${group}:${token}` }).catch(() => undefined);
     }
   }, []);
-  const projectContextRef = useRef<ProjectContextSnapshot>({
-    path: currentProjectPath,
-    generation: 0,
-  });
-  if (projectContextRef.current.path !== currentProjectPath) {
-    projectContextRef.current = {
-      path: currentProjectPath,
-      generation: projectContextRef.current.generation + 1,
-    };
-  }
-
-  const getProjectContextSnapshot = useCallback(
-    (): ProjectContextSnapshot => projectContextRef.current,
-    []
-  );
-  const isProjectContextCurrent = useCallback(
-    (snapshot: ProjectContextSnapshot): boolean =>
-      projectContextRef.current.path === snapshot.path &&
-      projectContextRef.current.generation === snapshot.generation,
-    []
+  const { getProjectContextSnapshot, isProjectContextCurrent } = useRuntimeProviderProjectContext(
+    currentProjectPath,
+    options.runtimeId
   );
 
   const openModelPickerState = useCallback(
@@ -903,10 +885,8 @@ export function useRuntimeProviderManagement(
       (provider) => provider.providerId === selectedProviderId
     );
     if (
-      (selectedProvider?.state === 'connected' && selectedProvider.modelCount > 0) ||
-      ((selectedDirectoryProvider?.state === 'connected' ||
-        selectedDirectoryProvider?.metadata.configuredAuthless === true) &&
-        selectedDirectoryProvider.modelCount !== 0)
+      runtimeProviderDirectoryInteraction(selectedProvider).canSelectModels ||
+      runtimeProviderDirectoryInteraction(selectedDirectoryProvider).canSelectModels
     ) {
       const providerId = selectedProvider?.providerId ?? selectedDirectoryProvider!.providerId;
       if (modelPickerProviderId !== providerId) {
@@ -999,13 +979,10 @@ export function useRuntimeProviderManagement(
       const directoryProvider = directoryEntries.find(
         (provider) => provider.providerId === providerId
       );
-      const connected =
-        compactProvider?.state === 'connected' ||
-        directoryProvider?.state === 'connected' ||
-        directoryProvider?.metadata.configuredAuthless === true;
-      const modelCount = compactProvider?.modelCount ?? directoryProvider?.modelCount ?? null;
-
-      if (connected && modelCount !== 0) {
+      if (
+        runtimeProviderDirectoryInteraction(compactProvider).canSelectModels ||
+        runtimeProviderDirectoryInteraction(directoryProvider).canSelectModels
+      ) {
         openModelPickerState(providerId, 'use');
       } else {
         closeModelPickerState();
@@ -1579,6 +1556,14 @@ export function useRuntimeProviderManagement(
         modelProbeGenerationRef.current === probeGeneration &&
         (activeProviderAtStart === null || activeModelPickerProviderRef.current === providerId) &&
         isProjectContextCurrent(projectContext);
+      const recordProbeResult = (result: RuntimeProviderModelTestResultDto): void => {
+        if (isProjectContextCurrent(projectContext))
+          void refreshAfterModelTest(() => onProviderChanged?.('model_tested'));
+        if (!shouldRecordProbeResult()) return;
+        setModelResults((current) => ({ ...current, [modelId]: result }));
+        setModels((current) => applyModelTestResultToModels(current, result));
+        setView((current) => applyModelTestResultToView(current, result));
+      };
       setModelTestStartedAt((current) => startModelTest(current, modelId));
       setTestingModelIds((ids) => (ids.includes(modelId) ? ids : [...ids, modelId]));
       setError(null);
@@ -1604,23 +1589,14 @@ export function useRuntimeProviderManagement(
             setError(response.error.message);
             setErrorDiagnostics(response.error.diagnostics);
           }
-          if (shouldRecordProbeResult()) {
-            setModelResults((current) => ({ ...current, [modelId]: result }));
-            setModels((current) => applyModelTestResultToModels(current, result));
-            setView((current) => applyModelTestResultToView(current, result));
-          }
+          recordProbeResult(result);
           return result;
         }
-        if (response.result && shouldRecordProbeResult()) {
-          const result = response.result;
-          setModelResults((current) => ({ ...current, [modelId]: result }));
-          setModels((current) => applyModelTestResultToModels(current, result));
-          setView((current) => applyModelTestResultToView(current, result));
-        }
-        return (
+        const result =
           response.result ??
-          buildFailedModelTestResult(providerId, modelId, 'Model test response was empty')
-        );
+          buildFailedModelTestResult(providerId, modelId, 'Model test response was empty');
+        recordProbeResult(result);
+        return result;
       } catch (testError) {
         await pendingModelStopsRef.current.get(`${requestGroupId}:${requestToken}`);
         const result = buildFailedModelTestResult(
@@ -1628,11 +1604,7 @@ export function useRuntimeProviderManagement(
           modelId,
           testError instanceof Error ? testError.message : 'Failed to test model'
         );
-        if (shouldRecordProbeResult()) {
-          setModelResults((current) => ({ ...current, [modelId]: result }));
-          setModels((current) => applyModelTestResultToModels(current, result));
-          setView((current) => applyModelTestResultToView(current, result));
-        }
+        recordProbeResult(result);
         return result;
       } finally {
         if (shouldRecordProbeResult()) {
@@ -1644,7 +1616,7 @@ export function useRuntimeProviderManagement(
         }
       }
     },
-    [getProjectContextSnapshot, isProjectContextCurrent, options.runtimeId]
+    [getProjectContextSnapshot, isProjectContextCurrent, onProviderChanged, options.runtimeId]
   );
 
   const setDefaultModel = useCallback(

@@ -25,6 +25,8 @@ function createRun(
     pendingDirectCrossTeamSendRefresh: false,
     silentUserDmForward: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     leadMsgSeq: 0,
     liveLeadTextBuffer: null,
     pendingToolCalls: [],
@@ -58,7 +60,6 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
         getCrossTeamSender: vi.fn(() => null),
       },
       persistSentMessage: vi.fn(),
-      persistInboxMessage: vi.fn(),
       teamChangeEmitter: (event: TeamChangeEvent) => emitted.push(event),
     } satisfies TeamProvisioningLiveLeadMessageServiceHost<TeamProvisioningLiveLeadMessagePortsFactoryRun>;
 
@@ -102,7 +103,6 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
       getRunLeadName: () => 'lead',
       getCrossTeamSender: () => null,
       persistSentMessage: vi.fn(),
-      persistInboxMessage: vi.fn(),
       emitTeamChange: (event) => emitted.push(event),
       logger: { debug: vi.fn(), warn: vi.fn() },
       nowIso: () => '2026-01-01T00:00:00.000Z',
@@ -151,7 +151,6 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
     const runs = new Map([[run.runId, run]]);
     const liveLeadProcessMessages = new Map<string, InboxMessage[]>();
     const sent: InboxMessage[] = [];
-    const inbox: { recipient: string; message: InboxMessage }[] = [];
     const emitted: TeamChangeEvent[] = [];
     const crossTeamSender = vi.fn().mockResolvedValue({ messageId: 'cross-1' });
     let nowMs = 5_000;
@@ -163,7 +162,6 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
       getRunLeadName: () => 'lead',
       getCrossTeamSender: () => crossTeamSender,
       persistSentMessage: (_teamName, message) => sent.push(message),
-      persistInboxMessage: (_teamName, recipient, message) => inbox.push({ recipient, message }),
       emitTeamChange: (event) => emitted.push(event),
       logger: { debug: vi.fn(), warn: vi.fn() },
       nowIso: () => '2026-01-01T00:00:00.000Z',
@@ -175,29 +173,34 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
     ports.captureSendMessages(run, [
       {
         type: 'tool_use',
+        id: 'toolu-user',
         name: 'SendMessage',
         input: { recipient: 'user', content: 'hello user', summary: 'hello' },
       },
       {
         type: 'tool_use',
+        id: 'toolu-worker',
         name: 'SendMessage',
         input: { recipient: 'worker', content: 'hello worker', summary: 'worker' },
       },
       {
         type: 'tool_use',
+        id: 'toolu-beta',
         name: 'SendMessage',
         input: { recipient: 'beta.lead', content: 'hello beta', summary: 'beta' },
       },
     ]);
+    ports.captureSendMessages(
+      run,
+      ['toolu-user', 'toolu-worker', 'toolu-beta'].map((id) => ({
+        type: 'tool_result',
+        tool_use_id: id,
+        content: 'Message sent',
+      }))
+    );
     await Promise.resolve();
 
     expect(sent).toEqual([expect.objectContaining({ to: 'user', text: 'hello user' })]);
-    expect(inbox).toEqual([
-      {
-        recipient: 'worker',
-        message: expect.objectContaining({ to: 'worker', text: 'hello worker' }),
-      },
-    ]);
     expect(crossTeamSender).toHaveBeenCalledWith(
       expect.objectContaining({
         fromTeam: 'alpha',
@@ -217,7 +220,7 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
     ]);
     expect(emitted).toEqual([
       { type: 'inbox', teamName: 'alpha', detail: 'sentMessages.json' },
-      { type: 'inbox', teamName: 'alpha', detail: 'inboxes/worker.json' },
+      { type: 'lead-message', teamName: 'alpha', runId: 'run-1', detail: 'lead-send-message' },
       {
         type: 'lead-message',
         teamName: 'alpha',

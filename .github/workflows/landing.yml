@@ -6,9 +6,8 @@ on:
     paths:
       - landing/**
       - scripts/announcements/**
-      - scripts/ci/node-forge-security*
+      - scripts/ci/transitive-security*
       - scripts/ci/audit-dependencies.mjs
-      - patches/node-forge@1.4.0.patch
       - pnpm-workspace.yaml
       - package.json
       - pnpm-lock.yaml
@@ -18,9 +17,8 @@ on:
     paths:
       - landing/**
       - scripts/announcements/**
-      - scripts/ci/node-forge-security*
+      - scripts/ci/transitive-security*
       - scripts/ci/audit-dependencies.mjs
-      - patches/node-forge@1.4.0.patch
       - pnpm-workspace.yaml
       - package.json
       - pnpm-lock.yaml

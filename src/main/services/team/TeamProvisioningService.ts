@@ -109,6 +109,47 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     this.teamChangeEmitter = emitter;
   }
 
+  /** Teams of other app profiles and native sessions are read-only for background passes. */
+  async isTeamManagedByThisProfile(teamName: string): Promise<boolean> {
+    return this.profileOwnership.isManagedByThisProfile(teamName);
+  }
+
+  /** Synchronous twin for passes that cannot await, such as the quit-time backup. */
+  isTeamManagedByThisProfileSync(teamName: string): boolean {
+    return this.profileOwnership.isManagedByThisProfileSync(teamName);
+  }
+
+  /**
+   * Opening a team in the UI or over HTTP closes task intervals a crash left
+   * open in tasks/<team>/*.json. A team of another app profile or a native
+   * session keeps its task clocks for its owner to settle.
+   */
+  async repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void> {
+    if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
+      return;
+    }
+    await super.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+  }
+
+  /**
+   * Both passes are admitted only for teams this profile manages. The startup
+   * pass may recover, deliver to and stop lanes. The continuity pass delivers
+   * to any team whose runtime looks reachable, and a live pid recorded in the
+   * team's processes.json counts as reachable even when another app instance
+   * owns that process.
+   */
+  async scanOpenCodePromptDeliveryWatchdog(
+    teamName: string,
+    pass: 'startup_recovery' | 'continuity' = 'startup_recovery'
+  ): Promise<number> {
+    if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
+      return 0;
+    }
+    return pass === 'continuity'
+      ? this.openCodePromptDeliveryWatchdogCoordinator.scanContinuity(teamName)
+      : this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
+  }
+
   setRuntimeRecoveryFailureObserver(
     observer: ((failure: LeadRuntimeFailureObservation) => void) | null
   ): void {

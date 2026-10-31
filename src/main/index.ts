@@ -231,6 +231,7 @@ import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import {
   bindMemberWorkSyncProvisioningRuntime,
   createDeferredWorkSyncStallObservation,
+  listMemberWorkSyncLifecycleActiveTeamNames as listMemberWorkSyncLifecycleTeams,
   runShutdownBackupAfterWorkSyncDrain,
   startPreparedMemberWorkSyncFeature,
 } from './startMemberWorkSyncFeature';
@@ -1953,6 +1954,9 @@ async function initializeServices(): Promise<void> {
     resolveOpenCodeInputDeclaration,
     gatewayLaunchRuntime.seams
   );
+  teamDataService.setTeamProfileOwnership((teamName) =>
+    teamProvisioningService.isTeamManagedByThisProfile(teamName)
+  );
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
@@ -2016,6 +2020,8 @@ async function initializeServices(): Promise<void> {
     getCurrentContextId: () => contextRegistry.getActive().id,
     listActiveTeamNames: async () => teamProvisioningService.getAliveTeams(),
     isTeamActive: async (teamName) => teamProvisioningService.isTeamAlive(teamName),
+    isTeamManagedByThisProfile: (teamName) =>
+      teamProvisioningService.isTeamManagedByThisProfile(teamName),
     getRuntimeState: (teamName) => teamProvisioningService.getRuntimeState(teamName),
     getRuntimeSnapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),
@@ -2102,7 +2108,11 @@ async function initializeServices(): Promise<void> {
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
-  const initializedBackupOwner = (teamBackupService = new TeamBackupService(teamDataService));
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService(teamDataService, {
+    isManagedByThisProfile: (name) => teamProvisioningService.isTeamManagedByThisProfile(name),
+    isManagedByThisProfileSync: (name) =>
+      teamProvisioningService.isTeamManagedByThisProfileSync(name),
+  }));
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2542,33 +2552,23 @@ async function initializeServices(): Promise<void> {
       teamIpcHandlerApis.provisioningRun.hasProvisioningRun(input.teamName)
     );
   };
-  const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
-    const teams = (await teamDataService.listTeams()).filter((team) => !team.deletedAt);
-    const activeTeamNames: string[] = [];
-    await runStartupJobsBounded(
-      teams,
-      MEMBER_WORK_SYNC_LIFECYCLE_ACTIVE_TEAM_CHECK_CONCURRENCY,
-      async (team) => {
-        try {
-          if (await isTeamActiveForMemberWorkSync(team.teamName)) {
-            activeTeamNames.push(team.teamName);
-          }
-        } catch (error) {
-          memberWorkSyncLogger.warn('member work sync lifecycle team activity check failed', {
-            teamName: team.teamName,
-            error: String(error),
-          });
-          if (
-            teamIpcHandlerApis.runtime.isTeamAlive(team.teamName) ||
-            teamIpcHandlerApis.provisioningRun.hasProvisioningRun(team.teamName)
-          ) {
-            activeTeamNames.push(team.teamName);
-          }
-        }
-      }
-    );
-    return activeTeamNames;
-  };
+  const listMemberWorkSyncLifecycleActiveTeamNames = (): Promise<string[]> =>
+    listMemberWorkSyncLifecycleTeams({
+      listTeams: () => teamDataService.listTeams(),
+      isManagedByThisProfile: (teamName) =>
+        teamProvisioningService.isTeamManagedByThisProfile(teamName),
+      isTeamActive: isTeamActiveForMemberWorkSync,
+      hasLocalRuntime: (teamName) =>
+        teamIpcHandlerApis.runtime.isTeamAlive(teamName) ||
+        teamIpcHandlerApis.provisioningRun.hasProvisioningRun(teamName),
+      runBounded: (teamNames, run) =>
+        runStartupJobsBounded(
+          teamNames,
+          MEMBER_WORK_SYNC_LIFECYCLE_ACTIVE_TEAM_CHECK_CONCURRENCY,
+          run
+        ),
+      logger: memberWorkSyncLogger,
+    });
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
@@ -3254,6 +3254,8 @@ function runPostRendererStartupTasks(): void {
           activeTeamNames,
           STARTUP_RECOVERY_CONCURRENCY,
           async (teamName) => {
+            // ~/.claude/teams is shared with other app profiles and native sessions.
+            if (!(await teamProvisioningService.isTeamManagedByThisProfile(teamName))) return;
             await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
           }
         );
