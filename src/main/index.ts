@@ -1851,7 +1851,13 @@ async function initializeServices(): Promise<void> {
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
   ptyTerminalService = new PtyTerminalService();
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
-  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder);
+  // The tracker creates its freshness dirs only in teams this profile manages.
+  // Before the provisioning service exists, no team counts as managed.
+  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder, (teamName) =>
+    teamProvisioningService
+      ? teamProvisioningService.isTeamManagedByThisProfile(teamName)
+      : Promise.resolve(false)
+  );
   const taskLogConfigReader = new TeamConfigReader();
   const teamTranscriptSourceLocator = new TeamTranscriptSourceLocator(
     new TeamTranscriptProjectResolver({
