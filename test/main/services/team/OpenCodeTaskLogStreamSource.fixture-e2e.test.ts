@@ -15,6 +15,7 @@ import {
   V1_OFFLINE_TRANSCRIPT_SCRIPT,
 } from '../../../../scripts/e2e/opencode-native-windows-full';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import { OpenCodeShutdownStopTally } from '../../../../src/main/services/team/opencode/bridge/OpenCodeShutdownStopEnvironment';
 import { assertOpenCodeRuntimeStopEffective } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { BoardTaskExactLogChunkBuilder } from '../../../../src/main/services/team/taskLogs/exact/BoardTaskExactLogChunkBuilder';
@@ -788,14 +789,15 @@ describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
     const stopFailureMessage = async (message: string) => {
       // Exercise the real three production wrappers, not a copied format string.
       const stopData = await OpenCodeReadinessBridge.prototype.stopOpenCodeTeam.call(
-        {
+        Object.assign(Object.create(OpenCodeReadinessBridge.prototype) as object, {
           options: {},
+          shutdownStops: new OpenCodeShutdownStopTally(),
           executeStateChangingCommand: async () => ({
             ok: false,
             error: { kind: 'provider_error', message },
             diagnostics: [],
           }),
-        } as never,
+        }) as never,
         {
           runId: 'TEST-owned-run',
           laneId: 'primary',

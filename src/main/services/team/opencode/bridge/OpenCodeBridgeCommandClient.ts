@@ -30,11 +30,9 @@ import {
   openCodeBridgeWatchdogDetails,
   openCodeBridgeWatchdogMessage,
 } from './OpenCodeBridgeWatchdogDiagnostics';
-import {
-  hasOpenCodeOwnedChildBinding,
-  prepareOpenCodeShutdownCleanupEnvironment,
-} from './OpenCodeMcpBridgeEnv';
+import { hasOpenCodeOwnedChildBinding } from './OpenCodeMcpBridgeEnv';
 import { appendRegistryLockDiagnostics } from './OpenCodeRegistryLockDiagnostics';
+import { OpenCodeShutdownStopEnvironment } from './OpenCodeShutdownStopEnvironment';
 import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
@@ -213,7 +211,7 @@ export class OpenCodeBridgeCommandClient {
   private readonly env: NodeJS.ProcessEnv;
   private readonly envProvider: OpenCodeBridgeCommandClientOptions['envProvider'] | null;
   private lastSuccessfulOwnedChildEnv: NodeJS.ProcessEnv | null = null;
-  private shutdownCleanupEnv: NodeJS.ProcessEnv | null = null;
+  private readonly shutdownStop = new OpenCodeShutdownStopEnvironment();
   private readonly keepInputFile: boolean;
   private readonly ensureWindowsNodeModulesJunction: (
     profileId: string,
@@ -236,13 +234,18 @@ export class OpenCodeBridgeCommandClient {
       options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
   }
 
-  /** Prepare one registry-only shutdown child while the current app binding is still open. */
-  prepareShutdownCleanup(currentBoundChildEnv: Readonly<Record<string, string>>): void {
-    this.shutdownCleanupEnv = null;
-    this.shutdownCleanupEnv = prepareOpenCodeShutdownCleanupEnvironment(
-      this.lastSuccessfulOwnedChildEnv,
-      currentBoundChildEnv
-    );
+  /** Capture Stop authority for quit while the current app binding is still open. */
+  prepareShutdownStop(currentBoundChildEnv: Readonly<Record<string, string>>): void {
+    this.shutdownStop.capture(this.lastSuccessfulOwnedChildEnv, currentBoundChildEnv);
+  }
+
+  /** Lend the captured environment to Stop children until release; false if none. */
+  openShutdownStop(): boolean {
+    return this.shutdownStop.open();
+  }
+
+  releaseShutdownStop(): void {
+    this.shutdownStop.release();
   }
 
   /** Read only the original request's retained response; never launch another CLI. */
@@ -403,16 +406,8 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
-        const prepared =
-          command === 'opencode.cleanupHosts' &&
-          body &&
-          typeof body === 'object' &&
-          'reason' in body &&
-          body.reason === 'shutdown'
-            ? this.shutdownCleanupEnv
-            : null;
-        if (prepared) this.shutdownCleanupEnv = null;
-        const env = prepared ? { ...prepared } : await this.resolveEnv(command);
+        const prepared = this.shutdownStop.environmentFor(command, body);
+        const env = prepared ?? (await this.resolveEnv(command));
         if (options.canDispatch?.() === false) {
           retainStartupEvidence = false;
           return this.contractFailure(
