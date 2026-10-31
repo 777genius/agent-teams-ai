@@ -1,10 +1,7 @@
 import { useMemo } from 'react';
 
 import { mergeCodexCliStatusWithSnapshot } from '@features/codex-account/renderer';
-import {
-  findOpenCodeModelsBlockedOnV2,
-  readLoadedOpenCodeV2Catalog,
-} from '@features/runtime-provider-management';
+import { findOpenCodeModelsBlockedOnV2 } from '@features/runtime-provider-management';
 import {
   hasEffectiveProviderLaunchAuthority,
   useLaunchAuthorityGatedCliStatus,
@@ -79,7 +76,7 @@ function getOpenCodeV2ModelBlockDetail(
   });
   const blocked = findOpenCodeModelsBlockedOnV2({
     generation: evidence.generation ?? 'v1',
-    catalog: readLoadedOpenCodeV2Catalog(provider),
+    providerStatus: provider,
     modelIds,
   });
   return blocked.length > 0 ? blocked.map((entry) => entry.message).join(' ') : null;

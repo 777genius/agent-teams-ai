@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  findOpenCodeModelsBlockedOnV2,
-  readLoadedOpenCodeV2Catalog,
-} from '../../../../src/features/runtime-provider-management/core/domain/openCodeV2ModelCatalog';
+import { findOpenCodeModelsBlockedOnV2 } from '../../../../src/features/runtime-provider-management/core/domain/openCodeV2ModelCatalog';
 
 import type { CliProviderStatus } from '../../../../src/shared/types';
 
@@ -72,59 +69,53 @@ function blocked(
   return Object.fromEntries(
     findOpenCodeModelsBlockedOnV2({
       generation,
-      catalog: readLoadedOpenCodeV2Catalog(provider),
+      providerStatus: provider,
       modelIds,
     }).map((entry) => [entry.modelId, entry.reason])
   );
 }
 
 describe('findOpenCodeModelsBlockedOnV2', () => {
-  it('tells to pick the listed V2 Kimi route for a V1 Kimi id', () => {
+  it('blocks a V1 Kimi id and names the V2 Kimi ids without saying whether one is connected', () => {
     expect(blocked(v2Status(['kimi-code-plan-global/kimi-for-coding']), [V1_KIMI])).toEqual({
       [V1_KIMI]:
-        'Kimi Code Membership uses a different provider id in OpenCode V2 ' +
-        '(kimi-code-plan-cn / kimi-code-plan-global), so this V1 model id cannot run there. ' +
-        'Pick its model under kimi-code-plan-global in the V2 catalog instead.',
+        'Kimi Code Membership uses different provider ids in OpenCode V2 ' +
+        '(kimi-code-plan-cn / kimi-code-plan-global). Pick a model under one of them; ' +
+        'connect Kimi Code Membership first if you have not.',
     });
   });
 
-  it('tells to connect Kimi on V2 when no Kimi route is in the catalog', () => {
+  it('only says the V1 id is unavailable on a V2 release without Kimi routes (2.0.0)', () => {
     expect(blocked(v2Status(['opencode/big-pickle']), [V1_KIMI])).toEqual({
       [V1_KIMI]:
-        'Kimi Code Membership uses a different provider id in OpenCode V2 ' +
-        '(kimi-code-plan-cn / kimi-code-plan-global), so this V1 model id cannot run there. ' +
-        'Connect Kimi Code Membership for OpenCode V2 in the provider settings ' +
-        '(kimi.com or kimi.ai), then pick its model.',
+        'Kimi Code Membership is not available as kimi-for-coding in OpenCode V2. ' +
+        'Pick a model from the V2 catalog.',
     });
   });
 
-  it('blocks a model missing from a provider the catalog lists', () => {
-    expect(blocked(v2Status(['zai-coding-plan/glm-5.1']), ['zai-coding-plan/glm-9'])).toEqual({
-      'zai-coding-plan/glm-9':
-        'OpenCode V2 lists the provider zai-coding-plan, but not this model. ' +
-        'Pick one of its models from the V2 catalog.',
-    });
+  it('defers a model missing from the list of a provider the catalog has', () => {
+    // The status catalog leaves out the user's global config, which a launch imports.
+    expect(blocked(v2Status(['zai-coding-plan/glm-5.1']), ['zai-coding-plan/glm-9'])).toEqual({});
   });
 
   it('leaves every case it cannot prove to deep verification', () => {
     const status = v2Status([
       'kimi-code-plan-global/kimi-for-coding',
-      'openrouter/anthropic/claude-sonnet-5',
-      'qwen/qwen3-coder',
       'zai-coding-plan/glm-5.1',
       'ollama/llama3',
     ]);
     expect(
       blocked(status, [
         'kimi-code-plan-global/kimi-for-coding', // listed
-        'zai-coding-plan/glm-5.1', // listed
-        'openrouter/qwen/qwen3-coder', // listed provider, OpenRouter equivalent is listed
-        'anthropic/claude-sonnet-5', // provider unknown to the catalog
+        'kimi-code-plan-global/k3', // listed provider, model not in its list
+        'anthropic/claude-sonnet-5', // provider unknown to the catalog, not a V1 plan id
         'kimi-code-plan-cn/kimi-for-coding', // V2 route not in the catalog, not a V1 plan id
-        'ollama/qwen3-coder', // local route, even with its provider listed
+        'ollama/qwen3-coder', // local route
         'kimi-for-coding', // unqualified
       ])
     ).toEqual({});
+    // A catalog that has the V1 id as a provider of its own does not prove anything either.
+    expect(blocked(v2Status(['kimi-for-coding/custom']), [V1_KIMI])).toEqual({});
   });
 
   it('judges nothing on V1 or when the status cannot say the V2 catalog was read', () => {

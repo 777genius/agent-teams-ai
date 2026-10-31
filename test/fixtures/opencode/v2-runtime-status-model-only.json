@@ -51,7 +51,6 @@
       "models": [
         "kimi-code-plan-global/kimi-for-coding",
         "opencode/big-pickle",
-        "openrouter/qwen/qwen3-coder",
         "zai-coding-plan/glm-5.1"
       ],
       "backend": {
@@ -109,7 +108,7 @@
             "defaultReasoningEffort": null,
             "inputModalities": ["text"],
             "supportsPersonality": false,
-            "isDefault": false,
+            "isDefault": true,
             "upgrade": false,
             "source": "app-server",
             "statusMessage": "capabilities_pending: catalog entry only",
@@ -131,29 +130,6 @@
                 "requiresExecutionProof": true,
                 "reason": "Listed as free by OpenCode; selected-model execution proof is required."
               }
-            }
-          },
-          {
-            "id": "openrouter/qwen/qwen3-coder",
-            "launchModel": "openrouter/qwen/qwen3-coder",
-            "displayName": "openrouter/qwen/qwen3-coder",
-            "hidden": false,
-            "supportedReasoningEfforts": [],
-            "defaultReasoningEffort": null,
-            "inputModalities": ["text"],
-            "supportsPersonality": false,
-            "isDefault": false,
-            "upgrade": false,
-            "source": "app-server",
-            "statusMessage": "capabilities_pending: catalog entry only",
-            "badgeLabel": null,
-            "metadata": {
-              "context": 262144,
-              "limits": {
-                "context": 262144,
-                "output": 32768
-              },
-              "free": false
             }
           },
           {

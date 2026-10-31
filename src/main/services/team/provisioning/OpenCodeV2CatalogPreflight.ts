@@ -1,16 +1,16 @@
 import {
   findOpenCodeModelsBlockedOnV2,
   getOpenCodeGeneration,
+  isLoadedOpenCodeV2Catalog,
   OPENCODE_MODEL_NOT_IN_V2_CATALOG_CODE,
-  readLoadedOpenCodeV2Catalog,
 } from '@features/runtime-provider-management';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import type { CliProviderStatus, TeamProvisioningPrepareIssue } from '@shared/types';
 
 /**
- * OpenCode V2 runs only models it can read, and the deep check would start a V2 server for a
- * model it cannot. Blocks the selected models that V2 provably cannot run (see
+ * The deep check would start a V2 server for a V1 model id that V2 does not serve, and that
+ * server cannot read the provider. Blocks the selected models that V2 provably cannot run (see
  * findOpenCodeModelsBlockedOnV2) and returns the rest, which still go to strict deep
  * verification. The status is the fresh model_only read for this project folder; a V1 passive
  * status carries no catalog, so it keeps the previous deferral without a runtime version read.
@@ -27,8 +27,9 @@ export async function blockOpenCodeModelsNotRunnableOnV2(input: {
     issues: TeamProvisioningPrepareIssue[];
   };
 }): Promise<readonly string[]> {
-  const catalog = readLoadedOpenCodeV2Catalog(input.provider);
-  if (!catalog || !input.readOpenCodeRuntimeStatus) return input.modelIds;
+  if (!isLoadedOpenCodeV2Catalog(input.provider) || !input.readOpenCodeRuntimeStatus) {
+    return input.modelIds;
+  }
   let version: string | undefined;
   try {
     version = (await input.readOpenCodeRuntimeStatus()).version;
@@ -41,7 +42,7 @@ export async function blockOpenCodeModelsNotRunnableOnV2(input: {
   }
   const blocked = findOpenCodeModelsBlockedOnV2({
     generation: getOpenCodeGeneration(version),
-    catalog,
+    providerStatus: input.provider,
     modelIds: input.modelIds,
   });
   if (blocked.length === 0) return input.modelIds;

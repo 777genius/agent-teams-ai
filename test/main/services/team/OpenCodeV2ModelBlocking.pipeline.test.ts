@@ -50,9 +50,12 @@ const V1_KIMI = 'kimi-for-coding/kimi-for-coding';
 const V2_STATUS_TEXT =
   'Authentication, team launch and one-shot execution remain unqualified. Only an existing verified V2 native selection is supported for reads.';
 const KIMI_REASON =
-  'Kimi Code Membership uses a different provider id in OpenCode V2 ' +
-  '(kimi-code-plan-cn / kimi-code-plan-global), so this V1 model id cannot run there. ' +
-  'Pick its model under kimi-code-plan-global in the V2 catalog instead.';
+  'Kimi Code Membership uses different provider ids in OpenCode V2 ' +
+  '(kimi-code-plan-cn / kimi-code-plan-global). Pick a model under one of them; ' +
+  'connect Kimi Code Membership first if you have not.';
+const NO_ROUTE_REASON =
+  'Kimi Code Membership is not available as kimi-for-coding in OpenCode V2. ' +
+  'Pick a model from the V2 catalog.';
 
 /** The `runtime status --json` answer of OpenCode V2 with a ready catalog, as the runtime sends it. */
 function readRawV2RuntimeStatus(): { providers: { opencode: Record<string, unknown> } } {
@@ -146,10 +149,38 @@ describe('OpenCode V2 model blocking on the real status path', () => {
   });
 
   it('blocks every selected model without a deferral when none can run on V2', async () => {
-    const result = await preflight(mapInMain(), [V1_KIMI, 'zai-coding-plan/glm-9']);
+    const result = await preflight(mapInMain(), [V1_KIMI, 'kimi-for-coding/k3']);
     expect(result.blockingMessages).toHaveLength(2);
     expect(result.details).toEqual(result.blockingMessages);
     expect(result.warnings).toEqual([]);
+  });
+
+  it('defers a model missing from the list of a provider the V2 catalog has', async () => {
+    // The status catalog has only the snapshot and the project config; a launch also imports
+    // the user's global config, where this model may be declared.
+    const missing = 'zai-coding-plan/glm-9';
+    const result = await preflight(mapInMain(), [missing]);
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.details).toEqual([
+      `Selected model ${missing} requires strict deep verification.`,
+    ]);
+  });
+
+  it('only says the V1 Kimi id is unavailable when this V2 release has no Kimi routes', async () => {
+    const raw = readRawV2RuntimeStatus();
+    const catalog = raw.providers.opencode.modelCatalog as { models: Array<{ id: string }> };
+    catalog.models = catalog.models.filter((model) => !model.id.startsWith('kimi-code-plan-'));
+    const mapped = mapInMain(raw);
+    const result = await preflight(mapped, [V1_KIMI]);
+    const line = `Selected model ${V1_KIMI} is unavailable. ${NO_ROUTE_REASON}`;
+    expect(result.blockingMessages).toEqual([line]);
+
+    const blockers = createLaunchGuard(
+      ['opencode'],
+      new Map([['opencode', projectToRenderer(mapped)]]),
+      { selectedModels: [V1_KIMI], scopedStatusBySourceId: new Map(), generation: 'v2' }
+    ).blockers(true);
+    expect(blockers.map((blocker) => blocker.detail)).toEqual([line]);
   });
 
   it('does not name a model whose source is an app-managed local provider', () => {

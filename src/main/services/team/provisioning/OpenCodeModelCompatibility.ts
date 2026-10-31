@@ -1,7 +1,3 @@
-import { findEquivalentOpenRouterModelIds } from '@shared/utils/opencodeModelRoute';
-
-export { findEquivalentOpenRouterModelIds };
-
 export function resolveOpenCodeCompatibilityModel(
   requestedModelId: string,
   availableModels: readonly string[]
@@ -91,4 +87,21 @@ export function getOpenCodeCatalogProviderIds(availableModels: readonly string[]
         .filter((providerId): providerId is string => Boolean(providerId))
     )
   ).sort((left, right) => left.localeCompare(right));
+}
+
+export function findEquivalentOpenRouterModelIds(
+  requestedModelId: string,
+  availableModels: readonly string[]
+): string[] {
+  const equivalentIds = new Set<string>();
+  if (requestedModelId.startsWith('openrouter/')) {
+    equivalentIds.add(requestedModelId.slice('openrouter/'.length));
+  } else if (requestedModelId.includes('/')) {
+    equivalentIds.add(`openrouter/${requestedModelId}`);
+  }
+  return equivalentIds.size === 0
+    ? []
+    : Array.from(
+        new Set(availableModels.filter((candidate) => equivalentIds.has(candidate.trim())))
+      );
 }
