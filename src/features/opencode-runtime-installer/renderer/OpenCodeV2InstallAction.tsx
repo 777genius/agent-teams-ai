@@ -37,12 +37,13 @@ export const OpenCodeV2InstallAction = ({
       </Button>
     );
   }
+  // Fresh installations show V1 only; keep diagnostics for a broken binary override.
   if (
     !status ||
+    (!status.installed && status.source !== 'override') ||
     (status.installed && (status.version?.startsWith('1.') || status.version?.startsWith('2.')))
   )
     return null;
-  if (!status.installed && status.compatibleV2Version) return null;
   if (status.source === 'override') {
     return (
       <span className="max-w-64 text-[10px] text-[var(--color-text-muted)]">

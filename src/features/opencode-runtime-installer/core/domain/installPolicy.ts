@@ -1,15 +1,15 @@
 import type { OpenCodeInstallGeneration, OpenCodeRuntimeInstallOptions } from '../../contracts';
 
-/** Updates stay in their selected generation; fresh installs prefer qualified V2. */
+/** Keep updates in their installed generation; fresh installs default to stable V1. */
 export function chooseOpenCodeInstallGeneration(
   requested: OpenCodeInstallGeneration | undefined,
   installedVersion: string | undefined,
-  qualifiedV2Version: string | null
+  _qualifiedV2Version: string | null
 ): OpenCodeInstallGeneration {
   if (requested) return requested;
   if (installedVersion?.startsWith('2.')) return 'v2';
   if (installedVersion?.startsWith('1.')) return 'v1';
-  return qualifiedV2Version ? 'v2' : 'v1';
+  return 'v1';
 }
 
 export function parseOpenCodeInstallOptions(value: unknown): OpenCodeRuntimeInstallOptions {
