@@ -9,6 +9,7 @@ import { TeamTaskStallJournal } from '../../../../../src/main/services/team/stal
 import { TeamTaskStallMonitor } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallMonitor';
 import { TeamTaskStallNotifier } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallNotifier';
 import { TeamDataService } from '../../../../../src/main/services/team/TeamDataService';
+import { isTaskStallRemediationMessage } from '../../../../../src/shared/utils/teamAutomationMessages';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
@@ -28,27 +29,39 @@ interface ScanDriver {
 
 const T0 = Date.parse('2026-10-31T10:00:00.000Z');
 const SCAN_INTERVAL_MS = 30_000;
+const MINUTE_MS = 60_000;
 
-const writerTask = {
+interface StallTask {
+  id: string;
+  displayId: string;
+  subject: string;
+  owner: string;
+  /** Stands in for the last activity the policy keys an epoch on. */
+  epoch: string;
+}
+
+const writerTask = (): StallTask => ({
   id: 'task-w',
   displayId: 'abcd1234',
   subject: 'Write the parser',
   owner: 'bob',
-};
-const openCodeTask = {
+  epoch: 'epoch',
+});
+const openCodeTask = (): StallTask => ({
   id: 'task-o',
   displayId: 'feed5678',
   subject: 'Port the CLI',
   owner: 'alice',
-};
+  epoch: 'epoch',
+});
 
-function workAlert(task: typeof writerTask) {
+function workAlert(task: StallTask) {
   return {
     status: 'alert',
     taskId: task.id,
     branch: 'work',
     signal: 'turn_ended_after_touch',
-    epochKey: `${task.id}:epoch`,
+    epochKey: `${task.id}:${task.epoch}`,
     reason: 'Potential work stall.',
   };
 }
@@ -71,7 +84,7 @@ async function readJournalStates(): Promise<Record<string, string>> {
 }
 
 function createMonitor(
-  tasks: (typeof writerTask)[],
+  tasks: StallTask[],
   relayOpenCodeMemberInboxMessages = vi.fn(async () => ({
     lastDelivery: { delivered: true, accepted: true },
   }))
@@ -104,7 +117,7 @@ function createMonitor(
     } as never,
     { getSnapshot: vi.fn(async () => snapshot) } as never,
     {
-      evaluateWork: vi.fn(({ task }: { task: typeof writerTask }) => workAlert(task)),
+      evaluateWork: vi.fn(({ task }: { task: StallTask }) => workAlert(task)),
       evaluateReview: vi.fn(),
     } as never,
     journal,
@@ -112,11 +125,14 @@ function createMonitor(
   );
   monitor.start();
   monitors.push(monitor);
-  let scans = 0;
-  const scan = (): Promise<void> =>
-    (monitor as unknown as ScanDriver).scanTeam('demo', new Date(T0 + SCAN_INTERVAL_MS * scans++), {
+  // Without an explicit time each scan runs one scan interval after the last.
+  let lastScanMs = T0 - SCAN_INTERVAL_MS;
+  const scan = (atMs = lastScanMs + SCAN_INTERVAL_MS): Promise<void> => {
+    lastScanMs = atMs;
+    return (monitor as unknown as ScanDriver).scanTeam('demo', new Date(atMs), {
       cancelled: false,
     });
+  };
   return { scan, markAlerted, relayOpenCodeMemberInboxMessages };
 }
 
@@ -151,7 +167,7 @@ afterEach(async () => {
 
 describe('task stall lead alert delivery', () => {
   it('writes a confirmed stall into the lead inbox once and journals it', async () => {
-    const { scan, markAlerted } = createMonitor([writerTask]);
+    const { scan, markAlerted } = createMonitor([writerTask()]);
 
     await scan();
     await expect(readFile(inboxPath('team-lead'))).rejects.toMatchObject({ code: 'ENOENT' });
@@ -171,6 +187,8 @@ describe('task stall lead alert delivery', () => {
     expect(markAlerted).toHaveBeenCalledTimes(1);
     expect(markAlerted).toHaveBeenCalledWith('demo', 'task-w:epoch', expect.any(String));
     expect(await readJournalStates()).toEqual({ 'task-w': 'alerted' });
+    // A plain lead alert, not an owner remediation row the feed hides by default.
+    expect(isTaskStallRemediationMessage((await readInbox('team-lead'))[0])).toBe(false);
 
     // Inside the alert cooldown the next scan sends nothing new.
     await scan();
@@ -180,8 +198,8 @@ describe('task stall lead alert delivery', () => {
 
   it('journals the owner nudge when the lead alert fails and retries only the lead', async () => {
     const { scan, markAlerted, relayOpenCodeMemberInboxMessages } = createMonitor([
-      openCodeTask,
-      writerTask,
+      openCodeTask(),
+      writerTask(),
     ]);
     await mkdir(path.dirname(inboxPath('team-lead')), { recursive: true });
     await writeFile(inboxPath('team-lead'), '{ not json');
@@ -222,5 +240,67 @@ describe('task stall lead alert delivery', () => {
       'task-w:epoch',
     ]);
     expect(await readJournalStates()).toEqual({ 'task-o': 'alerted', 'task-w': 'alerted' });
+  });
+
+  it('alerts the lead at most three times per stall epoch and starts over on new activity', async () => {
+    const task = writerTask();
+    const { scan } = createMonitor([task]);
+    const leadTexts = async (): Promise<string[]> =>
+      (await readInbox('team-lead')).map((message) => message.text);
+
+    await scan(T0);
+    // Each later scan lands after the 10 minute cooldown of the previous alert.
+    for (const minute of [1, 12, 23, 34, 45]) {
+      await scan(T0 + minute * MINUTE_MS);
+    }
+
+    expect(await leadTexts()).toHaveLength(3);
+    expect(new Set((await readInbox('team-lead')).map((message) => message.messageId)).size).toBe(
+      3
+    );
+    expect(vi.mocked(console.warn)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn)).toHaveBeenCalledWith(
+      '[Service:TeamTaskStallMonitor]',
+      expect.stringContaining('stall_alerts_exhausted')
+    );
+    vi.mocked(console.warn).mockClear();
+
+    task.epoch = 'epoch-after-new-activity';
+    await scan(T0 + 56 * MINUTE_MS);
+    await scan(T0 + 57 * MINUTE_MS);
+
+    expect(await leadTexts()).toHaveLength(4);
+  });
+
+  it('does not write the lead alert twice when the journal update after it failed', async () => {
+    const { scan, markAlerted } = createMonitor([writerTask()]);
+    markAlerted.mockRejectedValueOnce(new Error('journal busy'));
+
+    await scan();
+    await expect(scan()).rejects.toThrow('journal busy');
+    expect(await readInbox('team-lead')).toHaveLength(1);
+
+    await scan();
+
+    expect(await readInbox('team-lead')).toHaveLength(1);
+    expect(await readJournalStates()).toEqual({ 'task-w': 'alerted' });
+  });
+
+  it('writes the retried alert as a new row when its text changed meanwhile', async () => {
+    const task = writerTask();
+    const { scan, markAlerted } = createMonitor([task]);
+    markAlerted.mockRejectedValueOnce(new Error('journal busy'));
+
+    await scan();
+    await expect(scan()).rejects.toThrow('journal busy');
+    task.subject = 'Write the streaming parser';
+
+    await expect(scan()).resolves.toBeUndefined();
+
+    expect((await readInbox('team-lead')).map((message) => message.text)).toEqual([
+      '- #abcd1234 [work] Write the parser - Potential work stall.',
+      '- #abcd1234 [work] Write the streaming parser - Potential work stall.',
+    ]);
+    expect(await readJournalStates()).toEqual({ 'task-w': 'alerted' });
   });
 });

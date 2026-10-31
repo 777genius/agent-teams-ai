@@ -2699,6 +2699,7 @@ export class TeamDataService {
     summary: string;
     text: string;
     taskRefs?: TaskRef[];
+    messageId?: string;
   }): Promise<SendMessageResult> {
     const config = await readConfigForUiSnapshot(this.configReader, args.teamName);
     if (!config) {
@@ -2710,6 +2711,7 @@ export class TeamDataService {
       summary: args.summary,
       text: args.text,
       ...(args.taskRefs && args.taskRefs.length > 0 ? { taskRefs: args.taskRefs } : {}),
+      ...(args.messageId ? { messageId: args.messageId } : {}),
       source: TASK_COMMENT_NOTIFICATION_SOURCE,
     });
   }

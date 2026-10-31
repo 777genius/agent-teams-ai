@@ -43,6 +43,13 @@ const OPENCODE_HELD_ALERT_LOG_DELAY_MS = 2 * 60_000;
 /** Rungs of the pickup ladder: nudge the owner once, tell the lead once, then stop. */
 const PICKUP_ESCALATION_RUNGS = 2;
 
+/**
+ * Alerts one work or review stall epoch may send before it goes silent. The
+ * cooldown alone would repeat a stalled task to the lead every cooldown for as
+ * long as it stays stalled; a new epoch (new activity on the task) starts over.
+ */
+const STALL_ALERT_RUNGS = 3;
+
 interface PickupEscalationState {
   priorAlertCount: number;
   clockMs: number;
@@ -52,7 +59,7 @@ interface PickupEscalationPlan {
   ownerAlerts: TaskStallAlert[];
   leadOnlyAlerts: TaskStallAlert[];
   silencedAlerts: TaskStallAlert[];
-  /** The subset of silenced alerts whose ladder ran out on this scan; logged once. */
+  /** The subset of silenced alerts whose rungs ran out on this scan; logged once. */
   newlyExhaustedAlerts: TaskStallAlert[];
 }
 
@@ -380,8 +387,8 @@ export class TeamTaskStallMonitor {
     }
 
     const { ownerAlerts, leadOnlyAlerts, silencedAlerts, newlyExhaustedAlerts } =
-      this.planPickupEscalation(alerts, readyEvaluations);
-    this.logExhaustedPickupEscalations(teamName, newlyExhaustedAlerts);
+      this.planAlertEscalation(alerts, readyEvaluations);
+    this.logExhaustedEscalations(teamName, newlyExhaustedAlerts);
     const routableAlerts = [...ownerAlerts, ...leadOnlyAlerts];
 
     const alertedEpochKeys = new Set<string>();
@@ -466,8 +473,10 @@ export class TeamTaskStallMonitor {
    * silence - and only the oldest pending task per member reaches that member's
    * lane in one scan. Alerts held back by the per-member cap are left
    * unjournaled so the next scan reconsiders them instead of burning a rung.
+   * Work and review alerts get `STALL_ALERT_RUNGS` rungs per epoch, then the
+   * same silence.
    */
-  private planPickupEscalation(
+  private planAlertEscalation(
     alerts: TaskStallAlert[],
     readyEvaluations: TaskStallEvaluation[]
   ): PickupEscalationPlan {
@@ -488,16 +497,18 @@ export class TeamTaskStallMonitor {
     };
     const pickupAlertsByMember = new Map<string, TaskStallAlert[]>();
     for (const alert of alerts) {
-      if (alert.remediationKind !== 'pending_pickup') {
-        plan.ownerAlerts.push(alert);
-        continue;
-      }
       const priorAlertCount = stateByEpochKey.get(alert.epochKey)?.priorAlertCount ?? 0;
-      if (priorAlertCount >= PICKUP_ESCALATION_RUNGS) {
+      const rungs =
+        alert.remediationKind === 'pending_pickup' ? PICKUP_ESCALATION_RUNGS : STALL_ALERT_RUNGS;
+      if (priorAlertCount >= rungs) {
         plan.silencedAlerts.push(alert);
-        if (priorAlertCount === PICKUP_ESCALATION_RUNGS) {
+        if (priorAlertCount === rungs) {
           plan.newlyExhaustedAlerts.push(alert);
         }
+        continue;
+      }
+      if (alert.remediationKind !== 'pending_pickup') {
+        plan.ownerAlerts.push(alert);
         continue;
       }
       const memberKey = alert.owner?.trim().toLowerCase() ?? '';
@@ -534,11 +545,14 @@ export class TeamTaskStallMonitor {
    * silencing the same alert but say nothing, so an abandoned task does not
    * repeat a warn line for the rest of the run.
    */
-  private logExhaustedPickupEscalations(
-    teamName: string,
-    newlyExhaustedAlerts: TaskStallAlert[]
-  ): void {
+  private logExhaustedEscalations(teamName: string, newlyExhaustedAlerts: TaskStallAlert[]): void {
     for (const alert of newlyExhaustedAlerts) {
+      if (alert.remediationKind !== 'pending_pickup') {
+        logger.warn(
+          `[${teamName}] Stall monitor stopped alerting on task #${alert.displayId} (${alert.branch}): stall_alerts_exhausted - ${STALL_ALERT_RUNGS} alerts were raised and the task shows no new activity.`
+        );
+        continue;
+      }
       logger.warn(
         `[${teamName}] Stall monitor stopped escalating task #${alert.displayId} (owner ${alert.owner ?? 'unknown'}): pickup_escalation_exhausted - the owner nudge and the lead alert are spent and the task is still pending.`
       );
@@ -581,6 +595,7 @@ export class TeamTaskStallMonitor {
       ...(evaluation.remediationKind ? { remediationKind: evaluation.remediationKind } : {}),
       reason: evaluation.reason,
       epochKey: evaluation.epochKey,
+      ...(evaluation.priorAlertCount ? { priorAlertCount: evaluation.priorAlertCount } : {}),
       ...(task.owner ? { owner: task.owner } : {}),
       ...(evaluation.branch === 'review' && evaluation.memberName
         ? { reviewer: evaluation.memberName }
