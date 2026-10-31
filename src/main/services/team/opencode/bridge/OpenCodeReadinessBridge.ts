@@ -31,6 +31,7 @@ import {
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
 import { recoverOpenCodeSendMessageOutcome } from './OpenCodeSendMessageOutcomeRecovery';
+import { OpenCodeShutdownStopTally } from './OpenCodeShutdownStopEnvironment';
 import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
 import { type OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 import { isOpenCodePromptNotSubmittedFailure } from './OpenCodeStateChangingBridgePreconditions';
@@ -67,6 +68,7 @@ import type {
 import type { OpenCodeReadinessHandshake } from './OpenCodeReadinessHandshake';
 import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
 import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
+import type { OpenCodeShutdownStopSummary } from './OpenCodeShutdownStopEnvironment';
 import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
 import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
 
@@ -78,7 +80,9 @@ export interface OpenCodeLedgerBackfillPort {
 }
 
 export interface OpenCodeReadinessBridgeCommandExecutor {
-  prepareShutdownCleanup?(currentBoundChildEnv: Readonly<Record<string, string>>): void;
+  prepareShutdownStop?(currentBoundChildEnv: Readonly<Record<string, string>>): void;
+  openShutdownStop?(): boolean;
+  releaseShutdownStop?(): void;
   getRuntimeIdentity?(): Promise<string | null>;
   observeStartupCleanup?(
     requestId: string
@@ -130,25 +134,38 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     string,
     OpenCodeBridgeRuntimeSnapshot
   >();
+  private readonly shutdownStops = new OpenCodeShutdownStopTally();
 
   constructor(
     private readonly bridge: OpenCodeReadinessBridgeCommandExecutor,
     private readonly options: OpenCodeReadinessBridgeOptions = {}
   ) {}
 
-  prepareShutdownCleanup(): void {
-    if (!this.bridge.prepareShutdownCleanup) return;
+  /** Quit only, before the admission drain: capture the binding Stop children will need. */
+  prepareShutdownStop(): void {
+    if (!this.bridge.prepareShutdownStop) return;
     let current: Record<string, string> = {};
     try {
       current = getDesktopMcpChildEnvironment();
     } catch {
-      /* No current binding must clear any previously prepared cleanup. */
+      /* No current binding must clear any previously captured Stop authority. */
     }
     try {
-      this.bridge.prepareShutdownCleanup(current);
+      this.bridge.prepareShutdownStop(current);
     } catch {
       /* Preparation never replaces the normal environment-provider refusal. */
     }
+  }
+
+  /** Lend the captured binding to Stop children and count lane stops until release. */
+  openShutdownStop(): void {
+    this.shutdownStops.open(this.bridge.openShutdownStop?.() ?? false);
+  }
+
+  /** Only drops references, so quit can call it from `finally` right before host cleanup. */
+  releaseShutdownStop(): OpenCodeShutdownStopSummary | null {
+    this.bridge.releaseShutdownStop?.();
+    return this.shutdownStops.release();
   }
 
   getRuntimeIdentity(): Promise<string | null> {
@@ -324,6 +341,16 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async stopOpenCodeTeam(
+    input: OpenCodeStopTeamCommandBody
+  ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation> {
+    // A reconciled observation is the adapter's confirmed stop of the original session.
+    return this.shutdownStops.track(
+      () => this.executeStopTeam(input),
+      (data) => 'status' in data || data.stopped
+    );
+  }
+
+  private async executeStopTeam(
     input: OpenCodeStopTeamCommandBody
   ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation> {
     const cwd = input.projectPath ?? process.cwd();

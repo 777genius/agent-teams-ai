@@ -23,6 +23,7 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 
 import type {
+  OpenCodeBridgeCommandName,
   OpenCodeBridgeDiagnosticEvent,
   OpenCodeBridgeSuccess,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
@@ -117,94 +118,103 @@ describe('OpenCodeBridgeCommandClient', () => {
     }
   });
 
-  it('prepares only one shutdown registry child before real admission closure, with copied authority', async () => {
+  it('lends the pre-drain binding only to Stop children while the shutdown window is open', async () => {
     const context = new BoundControlContext('app-test', tempDir);
     const binding = {
       AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
       CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
       CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
     };
+    const refused = 'Desktop MCP control context is unavailable';
     const revoke = configureDesktopMcpEnvironment(() => {
-      if (!context.isOpen) throw new Error('Desktop MCP control context is unavailable');
+      if (!context.isOpen) throw new Error(refused);
       return {
         ...binding,
         AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:5001',
         AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context.snapshot()),
       };
     });
+    const echo = createEchoRunner();
     try {
       const client = createClient({
+        processRunner: echo,
         envProvider: () => ({ PATH: '/owned/bin', ...getDesktopMcpChildEnvironment() }),
       });
       const bridge = new OpenCodeReadinessBridge(client);
-      runner.nextResult = {
-        stdout: JSON.stringify(bridgeSuccess()),
-        stderr: '',
-        exitCode: 0,
-        timedOut: false,
-      };
-      await client.execute(
-        'opencode.launchTeam',
-        { runId: 'run-1' },
-        { cwd: tempDir, timeoutMs: 100 }
-      );
-      runner.calls[0].env.PATH = '/mutated-runner-copy';
-      bridge.prepareShutdownCleanup?.();
+      const execute = (command: OpenCodeBridgeCommandName, body: unknown) =>
+        client.execute(command, body, { cwd: tempDir, timeoutMs: 100 });
+      expect(await execute('opencode.launchTeam', { runId: 'run-1' })).toMatchObject({ ok: true });
+      echo.calls[0].env.PATH = '/mutated-runner-copy';
+      const capturedContext = JSON.stringify(context.snapshot());
+      bridge.prepareShutdownStop();
       binding.CLAUDE_TEAM_APP_PROFILE_SCOPE = 'mutated-caller-copy';
       await context.closeAdmission();
-      await expect(
-        client.execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 })
-      ).rejects.toThrow('Desktop MCP control context is unavailable');
-      const startup = await client.execute(
-        'opencode.cleanupStartupHosts',
-        {},
-        { cwd: tempDir, timeoutMs: 100 }
-      );
-      expect(startup).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });
-      await expect(
-        bridge.cleanupOpenCodeHosts({ reason: 'startup', projectPath: tempDir })
-      ).rejects.toThrow('Desktop MCP control context is unavailable');
-      expect(runner.calls).toHaveLength(1);
-      runner.nextResult = {
-        stdout: JSON.stringify(
-          bridgeSuccess({
-            command: 'opencode.cleanupHosts',
-            data: { cleaned: 1, remaining: 0, hosts: [], diagnostics: [] },
-          })
-        ),
-        stderr: '',
-        exitCode: 0,
-        timedOut: false,
-      };
-      expect(
-        await bridge.cleanupOpenCodeHosts({ reason: 'shutdown', projectPath: tempDir })
-      ).toEqual({ cleaned: 1, remaining: 0, hosts: [], diagnostics: [] });
-      expect(runner.calls).toHaveLength(2);
-      expect(runner.calls[1].env).toMatchObject({
-        ...binding,
-        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
-        PATH: '/owned/bin',
-        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:5001',
+
+      // Captured before the drain, but not lent until the stop step opens the window.
+      await expect(execute('opencode.stopTeam', { runId: 'run-1' })).rejects.toThrow(refused);
+      bridge.openShutdownStop();
+      for (const [command, body] of [
+        ['opencode.launchTeam', { runId: 'run-2' }],
+        ['opencode.sendMessage', { runId: 'run-1' }],
+        ['opencode.observeMessageDelivery', {}],
+        ['opencode.commandStatus', {}],
+        ['opencode.reconcileTeam', {}],
+        ['opencode.answerPermission', {}],
+        ['opencode.readiness', {}],
+        ['opencode.handshake', { requiredCommand: 'opencode.launchTeam' }],
+        ['opencode.handshake', { requiredCommand: 'opencode.sendMessage' }],
+        ['opencode.handshake', {}],
+        ['opencode.cleanupHosts', { reason: 'shutdown' }],
+      ] as const) {
+        await expect(execute(command, body)).rejects.toThrow(refused);
+      }
+      expect(await execute('opencode.cleanupStartupHosts', {})).toMatchObject({
+        ok: false,
+        error: { kind: 'invalid_input' },
       });
-      expect(
-        JSON.parse(runner.calls[1].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)
-      ).toMatchObject({
-        AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify({
-          ...context.snapshot(),
-          connectionGeneration: 1,
-        }),
-      });
-      runner.calls[1].env.CLAUDE_TEAM_APP_PROFILE_SCOPE = 'mutated-returned-copy';
+      expect(echo.calls).toHaveLength(1);
+
+      const stopChildren = [
+        ['opencode.handshake', { requiredCommand: 'opencode.stopTeam' }],
+        ['opencode.stopTeam', { runId: 'run-1' }],
+        ['opencode.handshake', { requiredCommand: 'opencode.stopOutcome' }],
+        ['opencode.stopOutcome', {}],
+        ['opencode.reconcileStop', {}],
+        ['opencode.stopTeam', { runId: 'run-2' }],
+      ] as const;
+      for (const [command, body] of stopChildren) {
+        expect(await execute(command, body)).toMatchObject({ ok: true, command });
+        const child = echo.calls.at(-1)!.env;
+        expect(child).toMatchObject({
+          ...binding,
+          CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+          PATH: '/owned/bin',
+          AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:5001',
+          AGENT_TEAMS_BOUND_CONTEXT_JSON: capturedContext,
+        });
+        expect(JSON.parse(child.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toMatchObject({
+          AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:5001',
+          AGENT_TEAMS_BOUND_CONTEXT_JSON: capturedContext,
+        });
+        child.CLAUDE_TEAM_APP_PROFILE_SCOPE = 'mutated-returned-copy';
+      }
+      expect(echo.calls).toHaveLength(1 + stopChildren.length);
+
+      bridge.releaseShutdownStop();
+      await expect(execute('opencode.stopTeam', { runId: 'run-1' })).rejects.toThrow(refused);
       await expect(
-        bridge.cleanupOpenCodeHosts({ reason: 'shutdown', projectPath: tempDir })
-      ).rejects.toThrow('Desktop MCP control context is unavailable');
-      expect(runner.calls).toHaveLength(2);
+        execute('opencode.handshake', { requiredCommand: 'opencode.stopTeam' })
+      ).rejects.toThrow(refused);
+      // A released capture is gone; reopening the window lends nothing.
+      bridge.openShutdownStop();
+      await expect(execute('opencode.stopTeam', { runId: 'run-1' })).rejects.toThrow(refused);
+      expect(echo.calls).toHaveLength(1 + stopChildren.length);
     } finally {
       revoke();
     }
   });
 
-  it('clears prior preparation when the current bound factory becomes unavailable', async () => {
+  it('clears a prior capture when the current bound factory becomes unavailable', async () => {
     const owned = {
       AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
       CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
@@ -225,11 +235,12 @@ describe('OpenCodeBridgeCommandClient', () => {
         timedOut: false,
       };
       await client.execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 });
-      bridge.prepareShutdownCleanup?.();
+      bridge.prepareShutdownStop();
       open = false;
-      expect(() => bridge.prepareShutdownCleanup?.()).not.toThrow();
+      expect(() => bridge.prepareShutdownStop()).not.toThrow();
+      bridge.openShutdownStop();
       await expect(
-        bridge.cleanupOpenCodeHosts({ reason: 'shutdown', projectPath: tempDir })
+        client.execute('opencode.stopTeam', {}, { cwd: tempDir, timeoutMs: 100 })
       ).rejects.toThrow('closed-owned-context');
       expect(runner.calls).toHaveLength(1);
     } finally {
@@ -241,7 +252,7 @@ describe('OpenCodeBridgeCommandClient', () => {
     'AGENT_TEAMS_MCP_CLAUDE_DIR',
     'CLAUDE_TEAM_APP_INSTANCE_ID',
     'CLAUDE_TEAM_APP_PROFILE_SCOPE',
-  ])('rejects changed %s preparation without replacing fresh-provider refusal', async (changed) => {
+  ])('refuses Stop authority captured against a changed %s', async (changed) => {
     const owned = {
       AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
       CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
@@ -261,20 +272,22 @@ describe('OpenCodeBridgeCommandClient', () => {
       timedOut: false,
     };
     await client.execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 });
-    client.prepareShutdownCleanup?.({ ...owned, [changed]: 'foreign' });
+    client.prepareShutdownStop({ ...owned, [changed]: 'foreign' });
+    expect(client.openShutdownStop()).toBe(false);
     open = false;
-    await expect(
-      client.execute(
-        'opencode.cleanupHosts',
-        { reason: 'shutdown' },
-        { cwd: tempDir, timeoutMs: 100 }
-      )
-    ).rejects.toThrow('closed-owned-context');
+    for (const [command, body] of [
+      ['opencode.stopTeam', {}],
+      ['opencode.handshake', { requiredCommand: 'opencode.stopTeam' }],
+    ] as const) {
+      await expect(client.execute(command, body, { cwd: tempDir, timeoutMs: 100 })).rejects.toThrow(
+        'closed-owned-context'
+      );
+    }
     expect(runner.calls).toHaveLength(1);
   });
 
   it.each(['constructor-only', 'failed-provider', 'failed-command', 'missing-binding'])(
-    'does not prepare authority from %s',
+    'does not capture Stop authority from %s',
     async (source) => {
       const owned = {
         AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
@@ -298,14 +311,11 @@ describe('OpenCodeBridgeCommandClient', () => {
           .execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 })
           .catch(() => undefined);
       const dispatched = runner.calls.length;
-      client.prepareShutdownCleanup?.(owned);
+      client.prepareShutdownStop(owned);
+      expect(client.openShutdownStop()).toBe(false);
       open = false;
       await expect(
-        client.execute(
-          'opencode.cleanupHosts',
-          { reason: 'shutdown' },
-          { cwd: tempDir, timeoutMs: 100 }
-        )
+        client.execute('opencode.stopTeam', {}, { cwd: tempDir, timeoutMs: 100 })
       ).rejects.toThrow('closed-owned-context');
       expect(runner.calls).toHaveLength(dispatched);
     }
@@ -1515,6 +1525,31 @@ function bridgeSuccess(
       runId: 'run-1',
     },
     ...overrides,
+  };
+}
+
+/** Answers every child with a success for its own request, so only the env decides. */
+function createEchoRunner(): OpenCodeBridgeProcessRunner & {
+  calls: OpenCodeBridgeProcessRunInput[];
+} {
+  const calls: OpenCodeBridgeProcessRunInput[] = [];
+  return {
+    calls,
+    async run(input) {
+      calls.push(input);
+      const envelope = JSON.parse(await fs.readFile(input.args[4], 'utf8')) as Pick<
+        OpenCodeBridgeSuccess<unknown>,
+        'requestId' | 'command'
+      >;
+      return {
+        stdout: JSON.stringify(
+          bridgeSuccess({ requestId: envelope.requestId, command: envelope.command })
+        ),
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      };
+    },
   };
 }
 

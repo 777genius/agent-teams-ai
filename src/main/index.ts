@@ -3014,7 +3014,8 @@ async function shutdownServices(): Promise<void> {
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
-    openCodeLifecycleBridge?.prepareShutdownCleanup();
+    // Stop children need the control binding the admission drain below revokes.
+    openCodeLifecycleBridge?.prepareShutdownStop();
     clearStartupTimers();
     clearInboxNotifyTimers();
     // Ahead of the first awaited step: runShutdownStep stops waiting on a step
@@ -3042,8 +3043,26 @@ async function shutdownServices(): Promise<void> {
     // Kill all team CLI processes via SIGKILL before anything else.
     // This must happen before the OS closes stdin pipes on app exit, because
     // stdin EOF triggers CLI cleanup that can delete team files.
-    if (teamProvisioningService) {
-      await runShutdownStep('stop all teams', () => teamProvisioningService.stopAllTeams(), 10_000);
+    // The captured binding is lent to OpenCode Stop children only inside this
+    // step, and is released before host cleanup even when the step times out.
+    const stopAllTeamsStartedAtMs = Date.now();
+    try {
+      openCodeLifecycleBridge?.openShutdownStop();
+      if (teamProvisioningService) {
+        await runShutdownStep(
+          'stop all teams',
+          () => teamProvisioningService.stopAllTeams(),
+          10_000
+        );
+      }
+    } finally {
+      const stops = openCodeLifecycleBridge?.releaseShutdownStop();
+      logger.diagnostic(
+        `Shutdown stop all teams took ${Date.now() - stopAllTeamsStartedAtMs}ms` +
+          (stops
+            ? `; OpenCode lane stops confirmed=${stops.confirmed} unconfirmed=${stops.unconfirmed} pending=${stops.pending} capturedStopAuthority=${stops.captured}`
+            : '')
+      );
     }
     await runShutdownStep(
       'OpenCode host registry cleanup',
