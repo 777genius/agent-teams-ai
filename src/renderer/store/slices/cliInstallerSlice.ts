@@ -18,13 +18,21 @@ import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import {
+  getProviderDisplayName,
+  isMultimodelCliStatus,
   reconcileCliProviderSnapshot,
   revokeProviderLaunchAuthority,
   settleCliProviderStatusLoading,
   settleOpenCodePartialStatus,
   shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
-import { preserveOpenCodeRuntimeUpdateMetadata } from './openCodeRuntimeUpdateMetadata';
+import {
+  getCliProviderStatusScopeKey,
+  invalidateCliProviderScopeReads,
+  setBoundedScopedProviderStatus,
+} from './cliProviderStatusScope';
+import { captureOpenCodeMetadataRead } from './openCodeMetadataPublication';
+import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
 import type { AppState } from '../types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -38,6 +46,11 @@ import type {
 } from '@shared/types';
 import type { StateCreator } from 'zustand';
 
+export {
+  CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT,
+  getCliProviderStatusScopeKey,
+} from './cliProviderStatusScope';
+
 const logger = createLogger('Store:cliInstaller');
 
 /** Max log lines to keep in UI (reserved for future use) */
@@ -48,7 +61,6 @@ const CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
 const CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
 const CODEX_CATALOG_LOADING_REFRESH_ATTEMPTS = 6;
 const CODEX_CATALOG_LOADING_REFRESH_RETRY_DELAY_MS = 5_000;
-export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
 export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = isGeminiUiFrozen()
   ? ['anthropic', 'codex', 'opencode']
@@ -59,6 +71,7 @@ export interface CliProviderStatusFetchOptions {
   silent?: boolean;
   epoch?: number;
   verifyModels?: boolean;
+  requireModelList?: boolean;
   checkReason?: AnalyticsProviderCheckReason;
   projectPath?: string | null;
 }
@@ -129,19 +142,12 @@ function isModelOnlyFallbackProviderStatus(provider: CliProviderStatus | undefin
 }
 
 function isOpenCodeSummaryOnlyCatalogStatus(provider: CliProviderStatus | undefined): boolean {
-  if (provider?.providerId !== 'opencode') {
-    return false;
-  }
-
-  if (provider.modelCatalog?.providerId === 'opencode') {
-    return false;
-  }
-
-  if (provider.modelCatalogRefreshState === 'error') {
-    return false;
-  }
-
-  return provider.runtimeCapabilities?.modelCatalog?.dynamic === true;
+  return (
+    provider?.providerId === 'opencode' &&
+    provider.modelCatalog?.providerId !== 'opencode' &&
+    provider.modelCatalogRefreshState !== 'error' &&
+    provider.runtimeCapabilities?.modelCatalog?.dynamic === true
+  );
 }
 
 function isDeferredMultimodelProviderStatus(provider: CliProviderStatus | undefined): boolean {
@@ -192,9 +198,10 @@ function sleep(ms: number): Promise<void> {
 
 function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
   for (const key of cliProviderStatusInFlight.keys()) {
-    if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
-      cliProviderStatusInFlight.delete(key);
-    }
+    if (key.startsWith(`${providerId}:`)) cliProviderStatusInFlight.delete(key);
+  }
+  for (const key of cliProviderStatusActiveRequestIds.keys()) {
+    if (key.startsWith(`${providerId}\0`)) cliProviderStatusActiveRequestIds.delete(key);
   }
 }
 
@@ -217,6 +224,11 @@ function isCodexCatalogLoadingSnapshot(provider: CliProviderStatus | undefined):
 function hasOpenCodeModels(provider: CliProviderStatus | undefined): boolean {
   return (
     provider?.providerId === 'opencode' &&
+    provider.statusCheckOutcome !== 'pending' &&
+    provider.statusCheckOutcome !== 'transient_error' &&
+    (provider.statusCheckErrorCode == null ||
+      (provider.statusCheckOutcome === 'model_only' &&
+        provider.statusCheckErrorCode === 'partial_response')) &&
     provider.models.length > 0 &&
     !isOpenCodeSummaryOnlyCatalogStatus(provider)
   );
@@ -668,14 +680,13 @@ export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
   for (let attempt = 1; attempt <= OPENCODE_PROVIDER_INSTALL_REFRESH_ATTEMPTS; attempt += 1) {
     await api.cliInstaller.invalidateStatus();
     clearCliProviderStatusInFlight('opencode');
-    const epoch = ++cliStatusEpoch;
-    await get().fetchCliProviderStatus('opencode', {
+    const refreshed = await get().fetchCliProviderStatus('opencode', {
       silent: false,
-      epoch,
+      requireModelList: true,
       checkReason: 'runtime_install',
     });
 
-    if (hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
+    if (refreshed && hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
       return;
     }
 
@@ -712,12 +723,6 @@ export async function refreshCodexProviderStatusAfterRuntimeInstall(
   }
 }
 
-function isMultimodelCliStatus(
-  status: CliInstallationStatus | null | undefined
-): status is CliInstallationStatus & { flavor: 'agent_teams_orchestrator' } {
-  return status?.flavor === 'agent_teams_orchestrator';
-}
-
 function hasActiveProviderStatusLoading(
   providerLoading: Partial<Record<CliProviderId, boolean>>
 ): boolean {
@@ -748,19 +753,6 @@ function buildMultimodelCliAuthState(params: {
     authMethod: authenticatedProvider?.authMethod ?? null,
     authStatusChecking: params.status.installed && hasActiveProviderStatusLoading(providerLoading),
   };
-}
-
-function getProviderDisplayName(providerId: CliProviderId): string {
-  switch (providerId) {
-    case 'anthropic':
-      return 'Anthropic';
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'opencode':
-      return 'OpenCode (200+ models)';
-  }
 }
 
 function createProviderStatusErrorSnapshot(params: {
@@ -864,10 +856,11 @@ export interface CliInstallerSlice {
     providerId: CliProviderId,
     options?: CliProviderStatusFetchOptions
   ) => Promise<boolean>;
-  invalidateCliProviderModelCatalog: () => void;
+  invalidateCliProviderModelCatalog: (options?: { scopedOnly?: boolean }) => void;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
+  applyOpenCodeRuntimeProgress: (status: OpenCodeRuntimeStatus) => void;
   installOpenCodeRuntime: (options?: OpenCodeRuntimeInstallOptions) => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
   fetchCodexRuntimeStatus: () => Promise<void>;
@@ -877,34 +870,14 @@ export interface CliInstallerSlice {
 
 let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
+const cliProviderStatusRequestEpochs = new WeakMap<Promise<boolean>, number>();
 let cliStatusEpoch = 0;
 let cliProviderStatusGeneration = 0;
 let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
-let openCodeRuntimeStatusInFlight: Promise<void> | null = null;
 let codexRuntimeStatusInFlight: Promise<void> | null = null;
-
-export function getCliProviderStatusScopeKey(
-  providerId: CliProviderId,
-  projectPath: string | null | undefined
-): string {
-  return `${providerId}\0${projectPath?.trim() ?? ''}`;
-}
-
-function setBoundedScopedProviderStatus(
-  current: Readonly<Record<string, CliProviderStatus>>,
-  scopeKey: string,
-  providerStatus: CliProviderStatus
-): Readonly<Record<string, CliProviderStatus>> {
-  const entries = Object.entries(current).filter(([key]) => key !== scopeKey);
-  entries.push([scopeKey, providerStatus]);
-  if (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
-    entries.splice(0, entries.length - CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
-  }
-  return Object.fromEntries(entries);
-}
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -955,25 +928,6 @@ function scheduleCodexCatalogLoadingRefreshes(
   scheduleCodexCatalogLoadingRefresh(get, 'codex');
 }
 
-function createFailedOpenCodeRuntimeStatus(
-  previousStatus: OpenCodeRuntimeStatus | null,
-  message: string
-): OpenCodeRuntimeStatus {
-  return {
-    installed: previousStatus?.installed ?? false,
-    ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
-    ...(previousStatus?.version ? { version: previousStatus.version } : {}),
-    ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
-    source: previousStatus?.source ?? 'missing',
-    state: 'failed',
-    progress: {
-      phase: 'failed',
-      detail: message,
-    },
-    error: message,
-  };
-}
-
 // =============================================================================
 // Slice Creator
 // =============================================================================
@@ -1014,7 +968,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       return get().fetchCliStatus();
     }
 
+    const metadataRead = captureOpenCodeMetadataRead(get);
     const epoch = ++cliStatusEpoch;
+    get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     const currentStatus = get().cliStatus;
     const initialStatus =
       currentStatus?.flavor === 'agent_teams_orchestrator'
@@ -1024,6 +980,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       MULTIMODEL_PROVIDER_IDS.map((providerId) => [
         providerId,
         hydrateProviders &&
+          metadataRead.canHydrate(providerId) &&
           initialStatus.installed &&
           !isHydratedMultimodelProviderStatus(
             initialStatus.providers.find((provider) => provider.providerId === providerId)
@@ -1043,8 +1000,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     );
 
     try {
-      const metadata = await api.cliInstaller.getStatus(
-        providerStatusMode === 'defer' ? { providerStatusMode } : undefined
+      const metadata = metadataRead.protect(
+        await api.cliInstaller.getStatus(
+          providerStatusMode === 'defer' ? { providerStatusMode } : undefined
+        )
       );
       if (metadata.flavor !== 'agent_teams_orchestrator') {
         set((state) => {
@@ -1076,6 +1035,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           MULTIMODEL_PROVIDER_IDS.map((providerId) => [
             providerId,
             hydrateProviders &&
+              metadataRead.canHydrate(providerId) &&
               !isHydratedMultimodelProviderStatus(
                 nextCliStatus.providers.find((provider) => provider.providerId === providerId)
               ),
@@ -1120,7 +1080,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
 
       await Promise.allSettled(
-        pendingProviderIds.map((providerId) =>
+        pendingProviderIds.filter(metadataRead.canHydrate).map((providerId) =>
           get().fetchCliProviderStatus(providerId, {
             silent: false,
             epoch,
@@ -1136,7 +1096,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     try {
       if (hydrateProviders) {
         await Promise.allSettled(
-          MULTIMODEL_PROVIDER_IDS.map((providerId) =>
+          MULTIMODEL_PROVIDER_IDS.filter(metadataRead.canHydrate).map((providerId) =>
             get().fetchCliProviderStatus(providerId, {
               silent: false,
               epoch,
@@ -1156,14 +1116,16 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (!api.cliInstaller) return;
     if (cliStatusInFlight) return cliStatusInFlight;
 
+    const metadataRead = captureOpenCodeMetadataRead(get);
     const epoch = ++cliStatusEpoch;
+    get().invalidateCliProviderModelCatalog({ scopedOnly: true });
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<void>;
     // eslint-disable-next-line prefer-const
     request = (async () => {
       set({ cliStatusLoading: true, cliStatusError: null });
       try {
-        const status = await api.cliInstaller.getStatus();
+        const status = metadataRead.protect(await api.cliInstaller.getStatus());
         if (epoch !== cliStatusEpoch) {
           return;
         }
@@ -1185,7 +1147,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         scheduleCodexCatalogLoadingRefreshes(get);
         if (status.installed) {
           for (const provider of status.providers) {
-            if (!isActiveMultimodelProviderId(provider.providerId)) {
+            if (
+              !isActiveMultimodelProviderId(provider.providerId) ||
+              !metadataRead.canHydrate(provider.providerId)
+            ) {
               continue;
             }
             void get().fetchCliProviderStatus(provider.providerId, {
@@ -1219,21 +1184,27 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (get().cliStatus && !get().cliStatus?.installed) {
       return false;
     }
+    const requestEpoch = options?.epoch ?? cliStatusEpoch;
+    if (requestEpoch !== cliStatusEpoch) return false;
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const projectPath = options?.projectPath?.trim() || null;
-    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
+    const mode = verifyModels ? 'verify' : options?.requireModelList ? 'models' : 'status';
+    const requestKey = `${providerId}:${mode}:${projectPath ?? ''}`;
+    // A lighter status read can join the current model refresh, never retire it.
+    if (providerId === 'opencode' && mode === 'status') {
+      const models = cliProviderStatusInFlight.get(`opencode:models:${projectPath ?? ''}`);
+      if (models && cliProviderStatusRequestEpochs.get(models) === requestEpoch) return models;
+    }
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestKey);
-    if (inFlight) return inFlight;
+    if (inFlight && cliProviderStatusRequestEpochs.get(inFlight) === requestEpoch) return inFlight;
 
-    const requestEpoch = options?.epoch ?? cliStatusEpoch;
     const requestGeneration = cliProviderStatusGeneration;
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
     const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
     cliProviderStatusActiveRequestIds.set(scopeKey, requestId);
-
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<boolean>;
     // eslint-disable-next-line prefer-const
@@ -1244,7 +1215,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             ...state.cliProviderStatusLoading,
             [providerId]: true,
           };
-
           return {
             cliStatusError: null,
             cliProviderStatusLoading: nextLoading,
@@ -1278,7 +1248,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           };
         });
       }
-
       try {
         const requestProviderStatus = async (): Promise<CliProviderStatus | null> =>
           verifyModels
@@ -1345,7 +1314,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           ) {
             return {};
           }
-
           if (projectPath) {
             const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
             return {
@@ -1414,6 +1382,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         return Boolean(
           requestIsCurrent &&
           settledProviderStatus &&
+          (!options?.requireModelList || providerStatus.models.length > 0) &&
           (!projectPath || isTeamProviderModelCatalogFresh(providerId, settledProviderStatus))
         );
       } catch (error) {
@@ -1540,27 +1509,22 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
       }
     })();
-
     cliProviderStatusInFlight.set(requestKey, request);
+    cliProviderStatusRequestEpochs.set(request, requestEpoch);
     return request;
   },
 
-  invalidateCliProviderModelCatalog: () => {
-    const invalidatedProviderIds = new Set<CliProviderId>();
-    for (const requestKey of cliProviderStatusActiveRequestIds.keys()) {
-      invalidatedProviderIds.add(requestKey.split('\0', 1)[0] as CliProviderId);
-    }
-    cliProviderStatusGeneration += 1;
-    cliProviderStatusInFlight.clear();
-    cliProviderStatusActiveRequestIds.clear();
-    set((state) => {
-      const nextLoading = { ...state.cliProviderStatusLoading };
-      for (const providerId of invalidatedProviderIds) delete nextLoading[providerId];
-      return {
-        cliProviderStatusLoading: nextLoading,
-        cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
-      };
-    });
+  invalidateCliProviderModelCatalog: (options) => {
+    const scopedOnly = options?.scopedOnly === true;
+    if (!scopedOnly) cliProviderStatusGeneration += 1;
+    set(
+      invalidateCliProviderScopeReads(
+        get(),
+        cliProviderStatusInFlight,
+        cliProviderStatusActiveRequestIds,
+        scopedOnly
+      )
+    );
   },
 
   invalidateCliStatus: async () => {
@@ -1570,14 +1534,18 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
     cliProviderStatusActiveRequestIds.clear();
-    set((state) => ({
+    set({
       cliProviderStatusByScope: {},
-      cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
       cliStatusLoading: false,
       cliProviderStatusLoading: {},
-    }));
-    await api.cliInstaller?.invalidateStatus();
-    if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+    });
+    try {
+      await api.cliInstaller?.invalidateStatus();
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+    } finally {
+      // Even an older IPC completion can retire a cache read made before main invalidation.
+      get().invalidateCliProviderModelCatalog({ scopedOnly: true });
+    }
   },
   installCli: () => {
     set({
@@ -1596,96 +1564,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     });
   },
 
-  fetchOpenCodeRuntimeStatus: async () => {
-    if (!api.openCodeRuntime) return;
-    if (openCodeRuntimeStatusInFlight) return openCodeRuntimeStatusInFlight;
-
-    openCodeRuntimeStatusInFlight = (async () => {
-      set({ openCodeRuntimeStatusLoading: true, openCodeRuntimeError: null });
-      try {
-        const status = await api.openCodeRuntime.getStatus();
-        set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to check OpenCode runtime status';
-        logger.error('Failed to fetch OpenCode runtime status:', error);
-        set({
-          openCodeRuntimeStatus: createFailedOpenCodeRuntimeStatus(
-            get().openCodeRuntimeStatus,
-            message
-          ),
-          openCodeRuntimeError: message,
-        });
-      } finally {
-        set({ openCodeRuntimeStatusLoading: false });
-        openCodeRuntimeStatusInFlight = null;
-      }
-    })();
-
-    return openCodeRuntimeStatusInFlight;
-  },
-
-  installOpenCodeRuntime: async (options) => {
-    if (!api.openCodeRuntime) return;
-    const installStartedAtMs = Date.now();
-    const previousStatus = get().openCodeRuntimeStatus;
-    set({
-      openCodeRuntimeStatusLoading: true,
-      openCodeRuntimeError: null,
-      openCodeRuntimeStatus: {
-        installed: previousStatus?.installed ?? false,
-        ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
-        ...(previousStatus?.version ? { version: previousStatus.version } : {}),
-        ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
-        source: previousStatus?.source ?? 'missing',
-        state: 'checking',
-        progress: {
-          phase: 'checking',
-          detail: 'Resolving latest OpenCode package...',
-        },
-      },
-    });
-    try {
-      const status = await api.openCodeRuntime.install(options);
-      const installSucceeded = status.installed && status.state === 'ready';
-      set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
-      recordRuntimeInstallEnd({
-        runtime: 'opencode',
-        success: installSucceeded,
-        source: status.source,
-        errorClass: installSucceeded ? 'none' : classifyAnalyticsError(status.error),
-        durationMs: elapsedMsSince(installStartedAtMs),
-      });
-      if (status.installed) {
-        await api.openCodeRuntime.invalidateStatus();
-        await refreshOpenCodeProviderStatusAfterRuntimeInstall(get);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
-      logger.error('Failed to install OpenCode runtime:', error);
-      set({
-        openCodeRuntimeStatus: createFailedOpenCodeRuntimeStatus(
-          get().openCodeRuntimeStatus,
-          message
-        ),
-        openCodeRuntimeError: message,
-      });
-      recordRuntimeInstallEnd({
-        runtime: 'opencode',
-        success: false,
-        source: 'unknown',
-        errorClass: classifyAnalyticsError(error),
-        durationMs: elapsedMsSince(installStartedAtMs),
-      });
-    } finally {
-      set({ openCodeRuntimeStatusLoading: false });
-    }
-  },
-
-  invalidateOpenCodeRuntimeStatus: async () => {
-    await api.openCodeRuntime?.invalidateStatus();
-    set({ openCodeRuntimeStatus: null });
-  },
+  ...createOpenCodeRuntimeActions(
+    set,
+    get,
+    () => refreshOpenCodeProviderStatusAfterRuntimeInstall(get),
+    () => clearCliProviderStatusInFlight('opencode')
+  ),
 
   fetchCodexRuntimeStatus: async () => {
     if (!api.codexRuntime) return;

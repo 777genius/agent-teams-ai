@@ -6,7 +6,26 @@ import {
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
-import type { CliProviderId, CliProviderStatus } from '@shared/types';
+import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+
+export function getProviderDisplayName(providerId: CliProviderId): string {
+  switch (providerId) {
+    case 'anthropic':
+      return 'Anthropic';
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'opencode':
+      return 'OpenCode (200+ models)';
+  }
+}
+
+export function isMultimodelCliStatus(
+  status: CliInstallationStatus | null | undefined
+): status is CliInstallationStatus & { flavor: 'agent_teams_orchestrator' } {
+  return status?.flavor === 'agent_teams_orchestrator';
+}
 
 export function settleCliProviderStatusLoading(
   currentLoading: Partial<Record<CliProviderId, boolean>>,
