@@ -1850,11 +1850,26 @@ async function initializeServices(): Promise<void> {
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
   ptyTerminalService = new PtyTerminalService();
-  const teamMemberLogsFinder = new TeamMemberLogsFinder();
+  // Transcript lookups read any team, but write a team's transcript index or repair its
+  // config.json only for teams this profile manages. Before the provisioning service
+  // exists, every team is read only.
+  const canWriteTeamFiles = (teamName: string): Promise<boolean> =>
+    teamProvisioningService
+      ? teamProvisioningService.isTeamManagedByThisProfile(teamName)
+      : Promise.resolve(false);
+  const teamMemberLogsConfigReader = new TeamConfigReader();
+  const teamMemberLogsFinder = new TeamMemberLogsFinder(
+    teamMemberLogsConfigReader,
+    new TeamInboxReader(),
+    new TeamMembersMetaStore(),
+    new TeamTranscriptProjectResolver(canWriteTeamFiles, {
+      getConfig: (teamName) => teamMemberLogsConfigReader.getConfigSnapshot(teamName),
+    })
+  );
   const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder);
   const taskLogConfigReader = new TeamConfigReader();
   const teamTranscriptSourceLocator = new TeamTranscriptSourceLocator(
-    new TeamTranscriptProjectResolver({
+    new TeamTranscriptProjectResolver(canWriteTeamFiles, {
       getConfig: (teamName) => taskLogConfigReader.getConfigSnapshot(teamName),
     })
   );
@@ -2581,6 +2596,8 @@ async function initializeServices(): Promise<void> {
     taskReader: new TeamTaskReader(),
     kanbanManager: new TeamKanbanManager(),
     membersMetaStore: new TeamMembersMetaStore(),
+    isManagedByThisProfile: (teamName) =>
+      teamProvisioningService.isTeamManagedByThisProfile(teamName),
     internalStorageBackend: internalStorageFeature?.memberWorkSyncBackend ?? null,
     isTeamActive: isTeamActiveForMemberWorkSync,
     isMemberActive: isMemberActiveForMemberWorkSync,

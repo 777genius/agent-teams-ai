@@ -247,10 +247,10 @@ export class TeamMemberLogsFinder {
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     private readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
+    // Read only by default; a caller that may write team files passes its own resolver.
     private readonly projectResolver: TeamTranscriptProjectResolver = new TeamTranscriptProjectResolver(
-      {
-        getConfig: (teamName) => configReader.getConfigSnapshot(teamName),
-      }
+      () => Promise.resolve(false),
+      { getConfig: (teamName) => configReader.getConfigSnapshot(teamName) }
     ),
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {}

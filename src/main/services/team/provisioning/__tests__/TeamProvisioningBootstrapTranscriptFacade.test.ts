@@ -37,6 +37,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const membersMetaStore =
       {} as TeamProvisioningBootstrapTranscriptFacadeServiceHost['membersMetaStore'];
     const readConfigSnapshot = vi.fn(async () => null);
+    const isManagedByThisProfile = vi.fn(async (teamName: string) => teamName === 'alpha');
     const service = {
       runTracking: {
         getTrackedRunId,
@@ -48,6 +49,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
       configFacade: {
         readConfigSnapshot,
       },
+      profileOwnership: { isManagedByThisProfile },
     } satisfies TeamProvisioningBootstrapTranscriptFacadeServiceHost;
     const deps = createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(service, {
       nowIso: () => NOW,
@@ -64,8 +66,11 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     getTrackedRunId.mockReturnValue('run-1');
     expect(deps.isLookupCacheEnabled('alpha')).toBe(false);
     await deps.readConfigSnapshot('alpha');
+    await expect(deps.canWriteTeamFiles('alpha')).resolves.toBe(true);
+    await expect(deps.canWriteTeamFiles('other-profile-team')).resolves.toBe(false);
 
     expect(readConfigSnapshot).toHaveBeenCalledWith('alpha');
+    expect(isManagedByThisProfile).toHaveBeenCalledWith('other-profile-team');
   });
 
   it('owns transcript outcome lookup ports and exposes their parsed tail cache', async () => {
@@ -86,6 +91,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const facade = new TeamProvisioningBootstrapTranscriptFacade({
       nowIso: () => NOW,
       isLookupCacheEnabled: () => false,
+      canWriteTeamFiles: async () => true,
       memberLogsFinder: { findMemberLogs },
       persistedTranscriptClaudeLogs: {
         get: vi.fn(async () => null),
@@ -119,6 +125,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const facade = new TeamProvisioningBootstrapTranscriptFacade({
       nowIso: () => NOW,
       isLookupCacheEnabled: () => false,
+      canWriteTeamFiles: async () => true,
       memberLogsFinder: { findMemberLogs: vi.fn(async () => []) },
       persistedTranscriptClaudeLogs: { get, invalidate },
       readConfigSnapshot: vi.fn(async () => null),
@@ -147,6 +154,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const facade = new TeamProvisioningBootstrapTranscriptFacade({
       nowIso: () => NOW,
       isLookupCacheEnabled: () => false,
+      canWriteTeamFiles: async () => true,
       memberLogsFinder: { findMemberLogs: vi.fn(async () => []) },
       transcriptProjectResolver: { getContext },
       readConfigSnapshot: vi.fn(async () => null),

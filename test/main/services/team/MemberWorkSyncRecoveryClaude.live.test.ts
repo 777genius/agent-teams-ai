@@ -258,6 +258,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity,
         teamsBasePath: workSyncTeamsBasePath,
         recoveryAllocation: { enabled: false },
@@ -386,6 +387,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity,
         teamsBasePath: workSyncTeamsBasePath,
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
@@ -558,6 +560,7 @@ liveDescribe('Member work sync recovery Claude live canary', () => {
     const configReader = new TeamConfigReader();
     const createFeature = (busy = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: owned!.identity,
         teamsBasePath: workSyncTeamsBasePath,
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,

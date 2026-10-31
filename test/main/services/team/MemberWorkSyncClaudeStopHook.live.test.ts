@@ -227,6 +227,7 @@ liveDescribe('Member work sync Claude Stop hook live e2e', () => {
     const configReader = new TeamConfigReader();
     const membersMetaStore = new TeamMembersMetaStore();
     feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader,

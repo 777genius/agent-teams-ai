@@ -104,6 +104,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
           activeService = svc;
           const configReader = new TeamConfigReader();
           feature = createMemberWorkSyncFeature({
+            isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
             teamsBasePath: getTeamsBasePath(),
             configReader,
@@ -266,6 +267,7 @@ liveDescribe('Member work sync OpenCode live e2e', () => {
       teamName = `member-work-sync-opencode-idle-${Date.now()}`;
       const taskId = 'task-opencode-idle';
       feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath: getTeamsBasePath(),
         configReader: {

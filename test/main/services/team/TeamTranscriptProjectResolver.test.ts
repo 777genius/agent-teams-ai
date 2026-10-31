@@ -11,6 +11,9 @@ import type { TeamConfig } from '../../../../src/shared/types/team';
 
 describe('TeamTranscriptProjectResolver', () => {
   let tmpDir: string | null = null;
+  // These scenarios cover teams this profile manages, so writes stay allowed. Read-only
+  // resolution for other teams lives in TeamTranscriptProjectResolverForeignTeams.test.ts.
+  const writeOwnTeamFiles = (): Promise<boolean> => Promise.resolve(true);
   const originalAffinityIndexEnv = process.env.CLAUDE_TEAM_TRANSCRIPT_AFFINITY_INDEX;
 
   afterEach(async () => {
@@ -218,7 +221,7 @@ describe('TeamTranscriptProjectResolver', () => {
       leadSessionId: 'lead-session-1',
       members: [{ name: 'team-lead', agentType: 'team-lead' }],
     }));
-    const resolver = new TeamTranscriptProjectResolver({
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles, {
       getConfig,
       getConfigSnapshot,
     });
@@ -246,7 +249,7 @@ describe('TeamTranscriptProjectResolver', () => {
       leadSessionId: 'lead-session',
       members: [{ name: 'team-lead', agentType: 'team-lead' }],
     }));
-    const resolver = new TeamTranscriptProjectResolver({
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles, {
       getConfig,
       getConfigSnapshot,
     });
@@ -277,7 +280,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
     const persisted = await readTeamConfig(teamName);
 
@@ -306,7 +309,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: alternateProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
     const persisted = await readTeamConfig(teamName);
 
@@ -336,7 +339,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
     const persisted = await readTeamConfig(teamName);
 
@@ -364,7 +367,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
 
     expect(context?.projectDir).toBe(repaired.projectDir);
@@ -390,7 +393,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
     const persisted = await readTeamConfig(teamName);
 
@@ -421,7 +424,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
 
     expect(context?.projectDir).toBe(repaired.projectDir);
@@ -448,7 +451,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: configuredProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const warnSpy = vi.mocked(console.warn);
     const context = await resolver.getContext(teamName);
     const persisted = await readTeamConfig(teamName);
@@ -486,7 +489,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead' }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const warnSpy = vi.mocked(console.warn);
     const context = await resolver.getContext(teamName);
     const persisted = await readTeamConfig(teamName);
@@ -520,7 +523,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
 
     expect(context?.projectDir).toBe(fallback.projectDir);
@@ -548,7 +551,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
 
     expect(context?.projectDir).toBe(repaired.projectDir);
@@ -576,7 +579,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const context = await resolver.getContext(teamName);
 
     expect(context?.projectDir).toBe(repaired.projectDir);
@@ -604,7 +607,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: repairedProjectPath }],
     });
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const firstContext = await resolver.getContext(teamName, { forceRefresh: true });
 
     expect(firstContext?.projectDir).toBe(repaired.projectDir);
@@ -673,7 +676,7 @@ describe('TeamTranscriptProjectResolver', () => {
       ],
     } as TeamConfig);
 
-    const resolver = new TeamTranscriptProjectResolver();
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const fastContext = await resolver.getContext(teamName, {
       forceRefresh: true,
       includeTeamSubagentSessionDiscovery: false,
@@ -700,14 +703,14 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const firstResolver = new TeamTranscriptProjectResolver();
+    const firstResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const firstContext = await firstResolver.getContext(teamName, { forceRefresh: true });
     expect(firstContext?.sessionIds).toContain(sessionId);
 
     type ResolverScanProbe = {
       getTeamAffinityHeadMetadata: (...args: unknown[]) => Promise<unknown>;
     };
-    const secondResolver = new TeamTranscriptProjectResolver();
+    const secondResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const scanSpy = vi.spyOn(
       secondResolver as unknown as ResolverScanProbe,
       'getTeamAffinityHeadMetadata'
@@ -734,7 +737,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const firstResolver = new TeamTranscriptProjectResolver();
+    const firstResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const firstContext = await firstResolver.getContext(teamName, { forceRefresh: true });
     expect(firstContext?.sessionIds).toContain(sessionId);
 
@@ -749,7 +752,7 @@ describe('TeamTranscriptProjectResolver', () => {
     const updatedAt = new Date(Date.now() + 5_000);
     await fs.utimes(created.jsonlPath, updatedAt, updatedAt);
 
-    const secondResolver = new TeamTranscriptProjectResolver();
+    const secondResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const secondContext = await secondResolver.getContext(teamName, { forceRefresh: true });
 
     expect(secondContext?.sessionIds).not.toContain(sessionId);
@@ -771,7 +774,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const firstResolver = new TeamTranscriptProjectResolver();
+    const firstResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const firstContext = await firstResolver.getContext(teamName, { forceRefresh: true });
     expect(firstContext?.sessionIds).toContain(sessionId);
 
@@ -787,7 +790,7 @@ describe('TeamTranscriptProjectResolver', () => {
       indexedBefore.entries[`${sessionId}.jsonl`].signature.ctimeMs
     );
 
-    const secondResolver = new TeamTranscriptProjectResolver();
+    const secondResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const secondContext = await secondResolver.getContext(teamName, { forceRefresh: true });
 
     expect(secondContext?.sessionIds).not.toContain(sessionId);
@@ -807,7 +810,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const firstResolver = new TeamTranscriptProjectResolver();
+    const firstResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const firstContext = await firstResolver.getContext(teamName, { forceRefresh: true });
     expect(firstContext?.sessionIds).toContain(sessionId);
 
@@ -818,7 +821,7 @@ describe('TeamTranscriptProjectResolver', () => {
     type ResolverScanProbe = {
       getTeamAffinityHeadMetadata: (...args: unknown[]) => Promise<unknown>;
     };
-    const secondResolver = new TeamTranscriptProjectResolver();
+    const secondResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const scanSpy = vi.spyOn(
       secondResolver as unknown as ResolverScanProbe,
       'getTeamAffinityHeadMetadata'
@@ -855,14 +858,14 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const firstResolver = new TeamTranscriptProjectResolver();
+    const firstResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const firstContext = await firstResolver.getContext(teamName, { forceRefresh: true });
     expect(firstContext?.sessionIds).not.toContain(sessionId);
 
     type ResolverScanProbe = {
       getTeamAffinityHeadMetadata: (...args: unknown[]) => Promise<unknown>;
     };
-    const secondResolver = new TeamTranscriptProjectResolver();
+    const secondResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const scanSpy = vi.spyOn(
       secondResolver as unknown as ResolverScanProbe,
       'getTeamAffinityHeadMetadata'
@@ -888,7 +891,7 @@ describe('TeamTranscriptProjectResolver', () => {
     const updatedAt = new Date(Date.now() + 5_000);
     await fs.utimes(jsonlPath, updatedAt, updatedAt);
 
-    const thirdResolver = new TeamTranscriptProjectResolver();
+    const thirdResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const thirdContext = await thirdResolver.getContext(teamName, { forceRefresh: true });
 
     expect(thirdContext?.sessionIds).toContain(sessionId);
@@ -915,7 +918,7 @@ describe('TeamTranscriptProjectResolver', () => {
       members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
     });
 
-    const firstResolver = new TeamTranscriptProjectResolver();
+    const firstResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     await firstResolver.getContext(teamName, { forceRefresh: true });
     const indexedBefore = await readAffinityIndex(teamName, projectId);
     expect(Object.keys(indexedBefore.entries).sort()).toEqual([
@@ -928,7 +931,7 @@ describe('TeamTranscriptProjectResolver', () => {
     type ResolverScanProbe = {
       getTeamAffinityHeadMetadata: (...args: unknown[]) => Promise<unknown>;
     };
-    const secondResolver = new TeamTranscriptProjectResolver();
+    const secondResolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles);
     const scanSpy = vi.spyOn(
       secondResolver as unknown as ResolverScanProbe,
       'getTeamAffinityHeadMetadata'
@@ -967,7 +970,7 @@ describe('TeamTranscriptProjectResolver', () => {
         throw new Error('write failed');
       }),
     };
-    const resolver = new TeamTranscriptProjectResolver(undefined, store);
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles, undefined, store);
 
     const context = await resolver.getContext(teamName, { forceRefresh: true });
 
@@ -997,7 +1000,7 @@ describe('TeamTranscriptProjectResolver', () => {
       }),
       upsertProjectEntries: vi.fn(async () => undefined),
     };
-    const resolver = new TeamTranscriptProjectResolver(undefined, store);
+    const resolver = new TeamTranscriptProjectResolver(writeOwnTeamFiles, undefined, store);
 
     const context = await resolver.getContext(teamName, { forceRefresh: true });
 
@@ -1042,7 +1045,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('caches a full-head-window negative and stops re-scanning a growing non-matching transcript', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'absent-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/neg-durable'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1076,7 +1081,9 @@ describe('TeamTranscriptProjectResolver', () => {
   // lines is still detected (the verdict flips to true).
   it('re-scans a short-file negative on growth and flips to true when the head gains a team mention', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'team-x';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/short-neg'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1117,7 +1124,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('does not reuse an in-memory positive growth shortcut after the cached head is rewritten', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'rewrite-positive-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/rewrite-positive'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1142,7 +1151,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('does not reuse an in-memory full-head negative shortcut after the cached head is rewritten', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'rewrite-negative-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/rewrite-negative'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1169,7 +1180,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('does not reuse in-memory exact caches after a same-size rewrite with restored mtime', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'same-size-rewrite-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/same-size-rewrite'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1204,7 +1217,9 @@ describe('TeamTranscriptProjectResolver', () => {
   // stat with a deliberately distinct size/mtime must be the one recorded in the cache.
   it('reuses a caller-supplied stat instead of re-statting the file', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'absent-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/precomp'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1229,7 +1244,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('reuses parsed head metadata across different team lookups for the same file signature', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/head-cache'));
     await fs.mkdir(projectDir, { recursive: true });
     const jsonlPath = path.join(projectDir, 'shared.jsonl');
@@ -1272,7 +1289,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('refreshes parsed head metadata when the file signature changes before a new team lookup', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/head-cache-refresh'));
     await fs.mkdir(projectDir, { recursive: true });
     const jsonlPath = path.join(projectDir, 'changing.jsonl');
@@ -1302,7 +1321,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('caches malformed head lines as inspected non-matches while ignoring blank lines', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/head-cache-malformed'));
     await fs.mkdir(projectDir, { recursive: true });
     const jsonlPath = path.join(projectDir, 'malformed.jsonl');
@@ -1321,7 +1342,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('does not retain full normalized text content in cached head metadata', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'memory-safe-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/head-cache-text-retention'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1356,7 +1379,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('keeps cached head metadata bounded to 40 lines when the first lookup matches early', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/head-cache-bound'));
     await fs.mkdir(projectDir, { recursive: true });
     const jsonlPath = path.join(projectDir, 'bound.jsonl');
@@ -1393,7 +1418,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('matches with CRLF line endings and a final line that has no trailing newline', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'crlf-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/crlf'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1409,7 +1436,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('matches a team mention located past the 64KB read boundary with multi-byte content', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'boundary-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/mb'));
     await fs.mkdir(projectDir, { recursive: true });
@@ -1426,7 +1455,9 @@ describe('TeamTranscriptProjectResolver', () => {
 
   it('ignores a team mention that appears only after the 40-line head window', async () => {
     await setupClaudeRoot();
-    const resolver = new TeamTranscriptProjectResolver() as unknown as ResolverProbe;
+    const resolver = new TeamTranscriptProjectResolver(
+      writeOwnTeamFiles
+    ) as unknown as ResolverProbe;
     const team = 'late-team';
     const projectDir = path.join(tmpDir!, 'projects', encodePath('/repo/late'));
     await fs.mkdir(projectDir, { recursive: true });

@@ -32,6 +32,12 @@ export interface AttributedMemberFileSource {
 export interface TeamRuntimeTurnSettledTargetResolverDeps {
   teamSource: RuntimeTurnSettledTeamSource;
   membersMetaStore: TeamMembersMetaStore;
+  /**
+   * The teams directory is shared with other app profiles and native sessions. A
+   * Claude Stop hook names only its session, so the resolver searches teams for it:
+   * only teams this profile manages, and another team's files are never opened.
+   */
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
   memberLogsFinder?: AttributedMemberFileSource;
   maxTeamsToScan?: number;
 }
@@ -94,9 +100,7 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       return { ok: false, reason: 'missing_session_identity' };
     }
 
-    const teams = (await this.deps.teamSource.listTeams())
-      .filter((team) => !team.deletedAt)
-      .slice(0, this.maxTeamsToScan);
+    const teams = await this.listOwnTeamsToScan();
 
     const candidates: {
       teamName: string;
@@ -153,6 +157,28 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       teamName: candidate.teamName,
       memberName: normalizeMemberName(member.name),
     };
+  }
+
+  /** Ownership is checked before the scan limit, so other profiles' teams never use it up. */
+  private async listOwnTeamsToScan(): Promise<TeamSummary[]> {
+    const ownTeams: TeamSummary[] = [];
+    for (const team of await this.deps.teamSource.listTeams()) {
+      if (ownTeams.length >= this.maxTeamsToScan) {
+        break;
+      }
+      if (!team.deletedAt && (await this.isManagedByThisProfile(team.teamName))) {
+        ownTeams.push(team);
+      }
+    }
+    return ownTeams;
+  }
+
+  private async isManagedByThisProfile(teamName: string): Promise<boolean> {
+    try {
+      return (await this.deps.isManagedByThisProfile(teamName)) === true;
+    } catch {
+      return false;
+    }
   }
 
   private async resolveProviderOwnedEvent(

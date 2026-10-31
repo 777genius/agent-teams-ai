@@ -61,6 +61,7 @@ it('resumes a deleted same-name team only after config is materialized again', a
   const teamName = 'recreated-team';
   const resumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
   const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath,
     configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -92,6 +93,7 @@ it('replays pending reports when a team process or teammate spawn becomes active
     .spyOn(JsonMemberWorkSyncStore.prototype, 'listPendingReports')
     .mockResolvedValue([]);
   const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath: path.join(makeTempRoot(), 'teams'),
     configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -131,6 +133,7 @@ it('creates a deleted tombstone when durable recovery completes without local pr
     'enqueueStartupScan'
   );
   const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath,
     configFileAccess: configAccess,
@@ -197,6 +200,7 @@ it('ignores stale config access from an older deleted generation', async () => {
   const configAccess = vi.fn(() => staleConfigAccess.promise);
   const resumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
   const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath,
     configFileAccess: configAccess,
@@ -760,6 +764,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
       });
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: path.join(makeTempRoot(), 'teams'),
       configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -814,6 +819,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const close = vi.spyOn(gate, 'close');
     const awaitIdle = vi.spyOn(gate, 'awaitIdle');
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: path.join(makeTempRoot(), 'teams'),
       configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -839,6 +845,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('retries turn-settled reconcile after backup quiescence instead of dropping it', async () => {
     const gate = new MemberWorkSyncTeamOperationGate();
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: path.join(makeTempRoot(), 'teams'),
       configReader: {
@@ -896,6 +903,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       .mockResolvedValue(undefined);
     const queueStop = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'stop');
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(async () => null) } as never,
@@ -975,6 +983,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1028,6 +1037,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1090,6 +1100,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1130,6 +1141,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1208,6 +1220,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-continue-now';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1277,6 +1290,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       });
     const queueResumeTeam = vi.spyOn(MemberWorkSyncEventQueue.prototype, 'resumeTeam');
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1374,6 +1388,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       'enqueueStartupScan'
     );
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1490,6 +1505,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const auditResumeTeam = vi.spyOn(QuiescingMemberWorkSyncAuditJournal.prototype, 'resumeTeam');
     const routerResumeTeam = vi.spyOn(MemberWorkSyncTeamChangeRouter.prototype, 'resumeTeam');
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       teamsBasePath,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1566,6 +1582,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       'beginTeamQuiesce'
     );
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       teamsBasePath,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1610,6 +1627,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       .mockResolvedValue(undefined);
     const operationResumeTeam = vi.spyOn(MemberWorkSyncTeamOperationGate.prototype, 'resumeTeam');
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       teamsBasePath,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1680,6 +1698,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     vi.useFakeTimers();
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1796,6 +1815,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       };
     });
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -1905,6 +1925,7 @@ describe('createMemberWorkSyncFeature composition', () => {
         return [];
       });
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: { getConfig: vi.fn(() => Promise.resolve(null)) } as never,
@@ -1962,6 +1983,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       })),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2058,6 +2080,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let canDispatchNudges = false;
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2151,6 +2174,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ]);
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2210,6 +2234,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     let releaseFirst!: () => void;
     const startedTeams: string[] = [];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2261,6 +2286,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2322,6 +2348,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2429,6 +2456,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-codex-status-only-recovery';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       recoveryAllocation: { enabled: true },
@@ -2575,6 +2603,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const teamName = `team-opencode-${outcome.replace(/_/g, '-')}-recovery`;
       const memberName = 'bob';
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         // The explicit drain below owns event consumption.
@@ -2707,6 +2736,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       const teamName = 'team-opencode-turnid-only-ignored';
       const memberName = 'bob';
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -2834,6 +2864,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -2934,6 +2965,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3034,6 +3066,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       recoveryAllocation: { enabled: true },
@@ -3157,6 +3190,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3282,6 +3316,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3407,6 +3442,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3516,6 +3552,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       recoveryAllocation: { enabled: true },
@@ -3620,6 +3657,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3715,6 +3753,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3810,6 +3849,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       schedule: vi.fn(async () => undefined),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -3922,6 +3962,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       ),
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -4055,6 +4096,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -4180,6 +4222,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const safetyMemberName = 'alice';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -4310,6 +4353,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     let canDispatchNudges = false;
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -4480,6 +4524,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const listLifecycleActiveTeamNames = vi.fn(async () => [' ', teamName, teamName]);
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -4679,6 +4724,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -4864,6 +4910,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -5055,6 +5102,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -5253,6 +5301,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -5450,6 +5499,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -5630,6 +5680,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -5829,6 +5880,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     };
     const createFeature = (withScheduler = false) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -5990,6 +6042,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const targetMemberName = 'bob';
     let canDispatchNudges = false;
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -6159,6 +6212,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     };
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -6277,6 +6331,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
         configReader: {
@@ -6391,6 +6446,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -6631,6 +6687,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -6776,6 +6833,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let teamActive = true;
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -6883,6 +6941,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7030,6 +7089,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7177,6 +7237,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7281,6 +7342,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       },
     ];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7423,6 +7485,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7535,6 +7598,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let controlUrl: string | null = null;
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7632,6 +7696,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7758,6 +7823,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -7897,6 +7963,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8002,6 +8069,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8085,6 +8153,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8162,6 +8231,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       owner: string;
     }> = [];
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8236,6 +8306,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8301,6 +8372,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     const storePaths = new MemberWorkSyncStorePaths(teamsBasePath);
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8408,6 +8480,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8474,6 +8547,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const teamName = 'team-a';
     const memberName = 'bob';
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8548,6 +8622,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     const memberName = 'bob';
     let teamActive = true;
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath,
       configReader: {
@@ -8608,6 +8683,7 @@ describe('createMemberWorkSyncFeature composition', () => {
       members: [{ name: 'alice' }],
     }));
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: makeTempRoot(),
       configReader: {
@@ -8633,6 +8709,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('builds Claude Stop hook settings with nudges active by default', async () => {
     const root = makeTempRoot();
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: root,
       configReader: {} as never,
@@ -8670,6 +8747,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('builds Codex turn-settled environment with nudges active by default', async () => {
     const root = makeTempRoot();
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: root,
       configReader: {} as never,
@@ -8694,6 +8772,7 @@ describe('createMemberWorkSyncFeature composition', () => {
   it('builds OpenCode turn-settled environment with nudges active by default', async () => {
     const root = makeTempRoot();
     const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: root,
       configReader: {} as never,
@@ -8739,6 +8818,7 @@ it('uses the preexisting restore admission before its first normal status read',
   const restore = gate.beginOwnedTeamQuiesce('team-a');
   const getTasks = vi.fn(async () => []);
   const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath: getTeamsBasePath(),
     operationGate: gate,
@@ -8772,6 +8852,7 @@ it.each([false, true])('defers scheduler starts and respects disposed=%s', async
   const drainStart = vi.spyOn(RuntimeTurnSettledDrainScheduler.prototype, 'start');
   const dispatchStart = vi.spyOn(MemberWorkSyncNudgeDispatchScheduler.prototype, 'start');
   const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath: makeTempRoot(),
     startBackground: false,
