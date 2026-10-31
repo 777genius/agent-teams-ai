@@ -1,4 +1,7 @@
-import { TeamRuntimeTurnSettledTargetResolver } from '@features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver';
+import {
+  OWNERSHIP_CHECK_BATCH_SIZE,
+  TeamRuntimeTurnSettledTargetResolver,
+} from '@features/member-work-sync/main/adapters/output/TeamRuntimeTurnSettledTargetResolver';
 import {
   claimTeamForThisProfile,
   createTeamProfileOwnership,
@@ -419,21 +422,34 @@ describe('TeamRuntimeTurnSettledTargetResolver with teams of several app profile
     expect(await snapshotDirectoryTree(foreign.projectDir)).toEqual(foreignProjectBefore);
   });
 
-  it('keeps the scan limit for own teams and stops checking ownership once it is reached', async () => {
-    const isManagedByThisProfile = vi.fn(async (teamName: string) => teamName !== 'foreign');
+  it('keeps the scan limit for own teams in list order and stops checking after the batch that reaches it', async () => {
+    const foreignTeams = Array.from(
+      { length: OWNERSHIP_CHECK_BATCH_SIZE },
+      (_, index) => `foreign-${index}`
+    );
+    const ownTeams = Array.from(
+      { length: OWNERSHIP_CHECK_BATCH_SIZE * 2 },
+      (_, index) => `own-${index}`
+    );
+    const teamNames = [...foreignTeams, ...ownTeams];
+    // The first own team answers last: the scan still follows list order, not answer order.
+    const isManagedByThisProfile = vi.fn(async (teamName: string) => {
+      if (teamName === 'own-0') {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      return teamName.startsWith('own-');
+    });
     const listAttributedMemberFiles = vi.fn(async () => []);
     const resolver = new TeamRuntimeTurnSettledTargetResolver({
       teamSource: {
         listTeams: async () =>
-          ['foreign', 'own-a', 'own-b'].map(
-            (teamName) => ({ teamName, displayName: teamName }) as never
-          ),
+          teamNames.map((teamName) => ({ teamName, displayName: teamName }) as never),
         getConfig: async () => null,
       },
       membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
       isManagedByThisProfile,
       memberLogsFinder: { listAttributedMemberFiles },
-      maxTeamsToScan: 1,
+      maxTeamsToScan: 2,
     });
 
     await resolver.resolve({
@@ -446,8 +462,12 @@ describe('TeamRuntimeTurnSettledTargetResolver with teams of several app profile
       sessionId: 'ses-1',
     });
 
-    expect(listAttributedMemberFiles.mock.calls).toEqual([['own-a']]);
-    expect(isManagedByThisProfile.mock.calls).toEqual([['foreign'], ['own-a']]);
+    expect(listAttributedMemberFiles.mock.calls).toEqual([['own-0'], ['own-1']]);
+    // A batch of other profiles' teams does not use up the limit; the batch after the
+    // one that reached it is never checked.
+    expect(isManagedByThisProfile.mock.calls.map(([teamName]) => teamName)).toEqual(
+      teamNames.slice(0, OWNERSHIP_CHECK_BATCH_SIZE * 2)
+    );
   });
 
   it('treats a failing ownership check as another profile', async () => {

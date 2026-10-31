@@ -17,7 +17,6 @@ import type { TeamConfigReader } from '../TeamConfigReader';
 import type { TeamFileWritePolicy } from '../teamFileWritePolicy';
 import type { TeamInboxReader } from '../TeamInboxReader';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
-import type { TeamProfileOwnership } from './TeamProvisioningProfileOwnership';
 import type { TeamConfig } from '@shared/types';
 
 export interface TeamProvisioningBootstrapTranscriptClaudeLogsPort {
@@ -60,7 +59,8 @@ export interface TeamProvisioningBootstrapTranscriptFacadeServiceHost {
   configFacade: {
     readConfigSnapshot(teamName: string): Promise<TeamConfig | null>;
   };
-  profileOwnership: Pick<TeamProfileOwnership, 'isManagedByThisProfile'>;
+  /** Public `TeamProvisioningService.isTeamManagedByThisProfile`. */
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean>;
 }
 
 export interface TeamProvisioningBootstrapTranscriptFacadeServiceHostOptions {
@@ -78,7 +78,7 @@ export function createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(
       !service.runtimeAdapterRunByTeam.has(teamName),
     // Launching a team claims it for this profile first, so its own transcript
     // index and projectPath repair keep being written; other teams are read only.
-    canWriteTeamFiles: (teamName) => service.profileOwnership.isManagedByThisProfile(teamName),
+    canWriteTeamFiles: (teamName) => service.isTeamManagedByThisProfile(teamName),
     configReader: service.configReader,
     inboxReader: service.inboxReader,
     membersMetaStore: service.membersMetaStore,

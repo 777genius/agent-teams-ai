@@ -1,13 +1,15 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningBootstrapTranscriptFacadeDepsFromService,
   TeamProvisioningBootstrapTranscriptFacade,
   type TeamProvisioningBootstrapTranscriptFacadeServiceHost,
 } from '../TeamProvisioningBootstrapTranscriptFacade';
+
+import type { TeamProvisioningService } from '../../TeamProvisioningService';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -37,7 +39,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const membersMetaStore =
       {} as TeamProvisioningBootstrapTranscriptFacadeServiceHost['membersMetaStore'];
     const readConfigSnapshot = vi.fn(async () => null);
-    const isManagedByThisProfile = vi.fn(async (teamName: string) => teamName === 'alpha');
+    const isTeamManagedByThisProfile = vi.fn(async (teamName: string) => teamName === 'alpha');
     const service = {
       runTracking: {
         getTrackedRunId,
@@ -49,7 +51,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
       configFacade: {
         readConfigSnapshot,
       },
-      profileOwnership: { isManagedByThisProfile },
+      isTeamManagedByThisProfile,
     } satisfies TeamProvisioningBootstrapTranscriptFacadeServiceHost;
     const deps = createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(service, {
       nowIso: () => NOW,
@@ -70,7 +72,16 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     await expect(deps.canWriteTeamFiles('other-profile-team')).resolves.toBe(false);
 
     expect(readConfigSnapshot).toHaveBeenCalledWith('alpha');
-    expect(isManagedByThisProfile).toHaveBeenCalledWith('other-profile-team');
+    expect(isTeamManagedByThisProfile).toHaveBeenCalledWith('other-profile-team');
+  });
+
+  it('reads ownership through a public service method', () => {
+    // The host is cast from the service, and a missing method would only make every team
+    // read only at runtime. `Pick` takes public members only, so renaming or hiding the
+    // method fails to compile here.
+    expectTypeOf<Pick<TeamProvisioningService, 'isTeamManagedByThisProfile'>>().toExtend<
+      Pick<TeamProvisioningBootstrapTranscriptFacadeServiceHost, 'isTeamManagedByThisProfile'>
+    >();
   });
 
   it('owns transcript outcome lookup ports and exposes their parsed tail cache', async () => {

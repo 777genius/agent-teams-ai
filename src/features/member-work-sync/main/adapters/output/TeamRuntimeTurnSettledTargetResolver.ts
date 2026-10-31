@@ -42,6 +42,9 @@ export interface TeamRuntimeTurnSettledTargetResolverDeps {
   maxTeamsToScan?: number;
 }
 
+/** Each ownership check reads one small marker file. */
+export const OWNERSHIP_CHECK_BATCH_SIZE = 8;
+
 function memberKey(member: Pick<TeamMember, 'name'>): string {
   return normalizeMemberName(member.name);
 }
@@ -159,18 +162,26 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
     };
   }
 
-  /** Ownership is checked before the scan limit, so other profiles' teams never use it up. */
+  /**
+   * Ownership is checked before the scan limit, so other profiles' teams never use it up.
+   * Checks run in small parallel batches in list order and stop after the batch that
+   * reaches the limit.
+   */
   private async listOwnTeamsToScan(): Promise<TeamSummary[]> {
+    const liveTeams = (await this.deps.teamSource.listTeams()).filter((team) => !team.deletedAt);
     const ownTeams: TeamSummary[] = [];
-    for (const team of await this.deps.teamSource.listTeams()) {
-      if (ownTeams.length >= this.maxTeamsToScan) {
-        break;
-      }
-      if (!team.deletedAt && (await this.isManagedByThisProfile(team.teamName))) {
-        ownTeams.push(team);
-      }
+    for (
+      let start = 0;
+      start < liveTeams.length && ownTeams.length < this.maxTeamsToScan;
+      start += OWNERSHIP_CHECK_BATCH_SIZE
+    ) {
+      const batch = liveTeams.slice(start, start + OWNERSHIP_CHECK_BATCH_SIZE);
+      const owned = await Promise.all(
+        batch.map((team) => this.isManagedByThisProfile(team.teamName))
+      );
+      ownTeams.push(...batch.filter((_team, index) => owned[index]));
     }
-    return ownTeams;
+    return ownTeams.slice(0, this.maxTeamsToScan);
   }
 
   private async isManagedByThisProfile(teamName: string): Promise<boolean> {

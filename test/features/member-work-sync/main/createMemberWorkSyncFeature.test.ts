@@ -19,6 +19,8 @@ import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/
 import { QuiescingMemberWorkSyncAuditJournal } from '@features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import { RuntimeTurnSettledDrainScheduler } from '@features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import { RuntimeTurnSettledSpoolPaths } from '@features/member-work-sync/main/infrastructure/RuntimeTurnSettledSpoolPaths';
+import { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFinder';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
 import os from 'os';
@@ -8875,3 +8877,63 @@ it.each([false, true])('defers scheduler starts and respects disposed=%s', async
     await feature.dispose();
   }
 });
+
+// A Claude Stop hook names only its session, so the feature searches teams for it. The
+// ownership check it is given decides which teams are searched at all.
+it.each([
+  { managed: false, outcome: 'unresolved', scannedTeams: [] },
+  { managed: true, outcome: 'enqueued', scannedTeams: [['team-a']] },
+])(
+  'searches team logs for a Claude Stop hook only when the team is managed=$managed',
+  async ({ managed, outcome, scannedTeams }) => {
+    const teamsBasePath = path.join(makeTempRoot(), 'teams');
+    const teamName = 'team-a';
+    const sessionId = 'claude-bob-session';
+    const listAttributedMemberFiles = vi
+      .spyOn(TeamMemberLogsFinder.prototype, 'listAttributedMemberFiles')
+      .mockResolvedValue([
+        { memberName: 'bob', sessionId, filePath: `/projects/${sessionId}.jsonl`, mtimeMs: 1 },
+      ]);
+    const isManagedByThisProfile = vi.fn(async () => managed);
+    const feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile,
+      lifecycleIdentity: createTestWorkSyncIdentity(),
+      teamsBasePath,
+      startBackground: false,
+      configReader: {
+        listTeams: vi.fn(async () => [{ teamName, displayName: teamName }]),
+        getConfig: vi.fn(async () => ({ name: teamName, members: [{ name: 'bob' }] })),
+      } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({ teamName, reviewers: [], tasks: {} })),
+      } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+    });
+    try {
+      await feature.buildRuntimeTurnSettledHookSettings({ provider: 'claude' });
+      const spoolPaths = new RuntimeTurnSettledSpoolPaths(teamsBasePath);
+      const eventFileName = '20260505T120000000Z-test.claude.json';
+      await fs.promises.writeFile(
+        path.join(spoolPaths.getIncomingDir(), eventFileName),
+        JSON.stringify({ hook_event_name: 'Stop', session_id: sessionId }),
+        'utf8'
+      );
+
+      await feature.drainRuntimeTurnSettledEvents();
+
+      expect(isManagedByThisProfile).toHaveBeenCalledWith(teamName);
+      expect(listAttributedMemberFiles.mock.calls).toEqual(scannedTeams);
+      const processedMeta = JSON.parse(
+        await fs.promises.readFile(
+          path.join(spoolPaths.getProcessedDir(), `${eventFileName}.meta.json`),
+          'utf8'
+        )
+      ) as { outcome?: string };
+      expect(processedMeta.outcome).toBe(outcome);
+    } finally {
+      listAttributedMemberFiles.mockRestore();
+      await feature.dispose();
+    }
+  }
+);

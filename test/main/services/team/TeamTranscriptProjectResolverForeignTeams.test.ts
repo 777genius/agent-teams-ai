@@ -3,6 +3,12 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createTeamProvisioningBootstrapTranscriptFacadeFromService } from '../../../../src/main/services/team/provisioning/TeamProvisioningBootstrapTranscriptFacade';
+import { TeamTranscriptSourceLocator } from '../../../../src/main/services/team/taskLogs/discovery/TeamTranscriptSourceLocator';
+import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
+import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
+import { TeamMemberLogsFinder } from '../../../../src/main/services/team/TeamMemberLogsFinder';
+import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
 import { TeamTranscriptProjectResolver } from '../../../../src/main/services/team/TeamTranscriptProjectResolver';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 import { snapshotDirectoryTree } from '../../../helpers/directorySnapshot';
@@ -282,6 +288,96 @@ describe('TeamTranscriptProjectResolver for teams it may not write', () => {
       expect(context?.projectDir).toBe(repairedProjectDir);
       expect(persisted.projectPath).toBe(repairedProjectPath);
       expect(persisted.projectPathHistory).toEqual([staleProjectPath]);
+    });
+  });
+
+  // Worker threads build these lookups with their defaults: they cannot tell which teams
+  // this profile manages, so the defaults must never write.
+  describe('lookups built without a write policy', () => {
+    it('TeamMemberLogsFinder reads a team with a stale index without writing it', async () => {
+      const root = await setupClaudeRoot();
+      const teamName = 'default-finder-team';
+      await setupTeamWithStaleIndex(teamName, '/Users/test/default-finder');
+      const before = await snapshotDirectoryTree(root);
+      const getContext = vi.spyOn(TeamTranscriptProjectResolver.prototype, 'getContext');
+
+      try {
+        await new TeamMemberLogsFinder().listAttributedMemberFiles(teamName);
+
+        expect(getContext.mock.calls.map(([name]) => name)).toContain(teamName);
+        expect(await snapshotDirectoryTree(root)).toEqual(before);
+      } finally {
+        getContext.mockRestore();
+      }
+    });
+
+    it('TeamTranscriptSourceLocator reads a team with a stale index without writing it', async () => {
+      const root = await setupClaudeRoot();
+      const teamName = 'default-locator-team';
+      await setupTeamWithStaleIndex(teamName, '/Users/test/default-locator');
+      const before = await snapshotDirectoryTree(root);
+
+      const context = await new TeamTranscriptSourceLocator().getContext(teamName);
+
+      expect(context?.transcriptFiles.map((filePath) => path.basename(filePath)).sort()).toEqual([
+        'indexed-session.jsonl',
+        'new-session.jsonl',
+      ]);
+      expect(await snapshotDirectoryTree(root)).toEqual(before);
+    });
+  });
+
+  describe('bootstrap transcript facade', () => {
+    function createFacade(isTeamManagedByThisProfile: (teamName: string) => Promise<boolean>) {
+      const configReader = new TeamConfigReader();
+      return createTeamProvisioningBootstrapTranscriptFacadeFromService(
+        {
+          runTracking: { getTrackedRunId: () => null },
+          runtimeAdapterRunByTeam: new Map<string, unknown>(),
+          configReader,
+          inboxReader: new TeamInboxReader(),
+          membersMetaStore: new TeamMembersMetaStore(),
+          configFacade: { readConfigSnapshot: (name) => configReader.getConfigSnapshot(name) },
+          isTeamManagedByThisProfile,
+        },
+        { nowIso: () => '2026-04-18T10:05:00.000Z' }
+      );
+    }
+
+    // Each lookup the facade owns gets its own pair of teams, so a lookup that loses the
+    // policy fails here even when the other one still has it.
+    it.each([
+      [
+        'member logs',
+        (facade: ReturnType<typeof createFacade>, teamName: string) =>
+          facade.findBootstrapTranscriptOutcome(teamName, 'team-lead', null),
+      ],
+      [
+        'retained Claude logs',
+        (facade: ReturnType<typeof createFacade>, teamName: string) =>
+          facade.getPersistedTranscriptClaudeLogs(teamName),
+      ],
+    ])('lets its %s lookup write only teams this profile manages', async (_label, lookUp) => {
+      const root = await setupClaudeRoot();
+      const ownTeam = 'bootstrap-own-team';
+      const ownProjectPath = '/Users/test/bootstrap-own';
+      const foreignTeam = 'bootstrap-foreign-team';
+      await setupTeamWithStaleIndex(ownTeam, ownProjectPath);
+      await setupTeamWithStaleIndex(foreignTeam, '/Users/test/bootstrap-foreign');
+      const foreignTeamDir = path.join(root, 'teams', foreignTeam);
+      const foreignBefore = await snapshotDirectoryTree(foreignTeamDir);
+      const isTeamManagedByThisProfile = vi.fn(async (teamName: string) => teamName === ownTeam);
+      const facade = createFacade(isTeamManagedByThisProfile);
+
+      await lookUp(facade, foreignTeam);
+      await lookUp(facade, ownTeam);
+
+      expect(isTeamManagedByThisProfile).toHaveBeenCalledWith(foreignTeam);
+      expect(await snapshotDirectoryTree(foreignTeamDir)).toEqual(foreignBefore);
+      await expect(readIndexedFileNames(ownTeam, ownProjectPath)).resolves.toEqual([
+        'indexed-session.jsonl',
+        'new-session.jsonl',
+      ]);
     });
   });
 });
