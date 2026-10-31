@@ -162,6 +162,15 @@ function isRuntimeRecoveryTeamState(value: unknown): value is RuntimeRecoveryTea
   );
 }
 
+function withIdentity(state: RuntimeRecoveryTeamState, teamName: string): RuntimeRecoveryTeamState {
+  return { ...state, schemaVersion: 1, teamName };
+}
+
+/** Equal when both states serialize to the same JSON, i.e. writing one over the other changes nothing. */
+function isSameState(left: RuntimeRecoveryTeamState, right: RuntimeRecoveryTeamState): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 async function quarantine(filePath: string): Promise<void> {
   await renamePathWithRetry(filePath, `${filePath}.invalid.${Date.now()}`).catch(() => undefined);
 }
@@ -176,6 +185,15 @@ export class JsonTeamRuntimeRecoveryRepository implements RuntimeRecoveryReposit
     return this.readUnlocked(teamName, true);
   }
 
+  /**
+   * An update that changes nothing touches nothing: no recovery directory, lock
+   * or state file is created for a team without state, and an unchanged state
+   * is not rewritten. Startup and activity reconciliation cancel recoveries for
+   * every team with state, teams of other app profiles included, and nearly all
+   * of those cancellations are no-ops. The no-op is decided on an unlocked read,
+   * which is safe because every write here is published atomically; only a real
+   * change takes the lock and runs the updater again on the locked state.
+   */
   async update<T>(
     teamName: string,
     updater: (state: RuntimeRecoveryTeamState) => {
@@ -184,16 +202,20 @@ export class JsonTeamRuntimeRecoveryRepository implements RuntimeRecoveryReposit
     }
   ): Promise<T> {
     const statePath = this.paths.getStatePath(teamName);
+    const observed = await this.readUnlocked(teamName, false);
+    const probe = updater(structuredClone(observed));
+    if (isSameState(observed, withIdentity(probe.state, teamName))) {
+      return probe.result;
+    }
     return withFileLock(statePath, async () => {
       const current = await this.readUnlocked(teamName, true);
       const updated = updater(structuredClone(current));
-      const nextState: RuntimeRecoveryTeamState = {
-        ...updated.state,
-        schemaVersion: 1,
-        teamName,
-      };
+      const nextState = withIdentity(updated.state, teamName);
       if (!isRuntimeRecoveryTeamState(nextState)) {
         throw new Error(`Invalid runtime recovery state for team "${teamName}"`);
+      }
+      if (isSameState(current, nextState)) {
+        return updated.result;
       }
       await mkdir(dirname(statePath), { recursive: true });
       await atomicWriteAsync(statePath, `${JSON.stringify(nextState, null, 2)}\n`);

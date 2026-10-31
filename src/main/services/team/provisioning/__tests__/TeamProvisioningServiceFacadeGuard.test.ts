@@ -39,6 +39,8 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'hasLiveOpenCodeMcpConsumers',
   // Startup passes leave teams of other app profiles and native sessions alone.
   'isTeamManagedByThisProfile',
+  // The synchronous quit-time backup leaves them alone too.
+  'isTeamManagedByThisProfileSync',
   'launchTeam',
   'restartLeadRuntime',
   // Both watchdog passes are admitted only for teams this profile manages.
@@ -92,6 +94,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'isOpenCodeRuntimeRecipient',
   'isTeamAlive',
   'isTeamManagedByThisProfile',
+  'isTeamManagedByThisProfileSync',
   'launchTeam',
   'notifyLanguageChange',
   'prepareForProvisioning',

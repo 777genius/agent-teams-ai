@@ -114,6 +114,11 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     return this.profileOwnership.isManagedByThisProfile(teamName);
   }
 
+  /** Synchronous twin for passes that cannot await, such as the quit-time backup. */
+  isTeamManagedByThisProfileSync(teamName: string): boolean {
+    return this.profileOwnership.isManagedByThisProfileSync(teamName);
+  }
+
   /**
    * Both passes are admitted only for teams this profile manages. The startup
    * pass may recover, deliver to and stop lanes. The continuity pass delivers

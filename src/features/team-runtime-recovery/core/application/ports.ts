@@ -24,6 +24,7 @@ export interface RuntimeRecoveryConfigPort {
 
 export interface RuntimeRecoveryRepositoryPort {
   read(teamName: string): Promise<RuntimeRecoveryTeamState>;
+  /** `updater` may run more than once per call, so it must have no side effects. */
   update<T>(
     teamName: string,
     updater: (state: RuntimeRecoveryTeamState) => { state: RuntimeRecoveryTeamState; result: T }

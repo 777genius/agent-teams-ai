@@ -216,3 +216,119 @@ describe('NotificationManager storage migration', () => {
     );
   });
 });
+
+describe('NotificationManager storage under the app Claude root', () => {
+  const tempDirs: string[] = [];
+
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  function makeTempDir(prefix: string): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+    tempDirs.push(dir);
+    return dir;
+  }
+
+  function storedNotification(id: string) {
+    return {
+      id,
+      title: id,
+      message: 'Stored',
+      timestamp: new Date().toISOString(),
+      type: 'error',
+      isRead: false,
+      createdAt: Date.now(),
+    };
+  }
+
+  async function loadModules() {
+    const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
+    const { getNotificationsPath } =
+      await import('../../../../src/main/services/infrastructure/notificationHistoryFile');
+    const { NotificationManager } =
+      await import('../../../../src/main/services/infrastructure/NotificationManager');
+    return { pathDecoder, getNotificationsPath, NotificationManager };
+  }
+
+  async function addOneNotification(
+    manager: Pick<
+      import('../../../../src/main/services/infrastructure/NotificationManager').NotificationManager,
+      'addTeamNotification'
+    >
+  ): Promise<void> {
+    await manager.addTeamNotification({
+      teamEventType: 'user_inbox',
+      teamName: 'team-a',
+      teamDisplayName: 'Team A',
+      from: 'alice',
+      summary: 'Fresh message',
+      body: 'Fresh message',
+      dedupeKey: 'claude-root-fresh-message',
+      suppressToast: true,
+    });
+  }
+
+  it('keeps ~/.claude/agent-teams-notifications.json when the default root is used', async () => {
+    const home = makeTempDir('notification-root-home-');
+    vi.stubEnv('HOME', home);
+    const homePath = path.join(home, '.claude', 'agent-teams-notifications.json');
+    fs.mkdirSync(path.dirname(homePath), { recursive: true });
+    fs.writeFileSync(homePath, JSON.stringify([storedNotification('home-notification')]), 'utf8');
+
+    const { getNotificationsPath, NotificationManager } = await loadModules();
+    expect(getNotificationsPath()).toBe(homePath);
+    const manager = new NotificationManager(createConfigManagerStub() as never);
+    await manager.initialize();
+    await addOneNotification(manager);
+
+    expect((await manager.getNotifications({ limit: 10 })).notifications).toHaveLength(2);
+    await vi.waitFor(() => {
+      expect(JSON.parse(fs.readFileSync(homePath, 'utf8'))).toHaveLength(2);
+    });
+  });
+
+  it('reads and writes under a Claude root configured after startup and leaves ~/.claude alone', async () => {
+    const home = makeTempDir('notification-root-home-');
+    const claudeRoot = makeTempDir('notification-root-claude-');
+    vi.stubEnv('HOME', home);
+    const homeDir = path.join(home, '.claude');
+    fs.mkdirSync(homeDir, { recursive: true });
+    const homeFiles = {
+      'agent-teams-notifications.json': JSON.stringify([storedNotification('home-notification')]),
+      'claude-devtools-notifications.json': JSON.stringify([storedNotification('home-legacy')]),
+    };
+    for (const [name, data] of Object.entries(homeFiles)) {
+      fs.writeFileSync(path.join(homeDir, name), data, 'utf8');
+    }
+
+    const { pathDecoder, getNotificationsPath, NotificationManager } = await loadModules();
+    // Applied after the history module loaded, like a configured root at runtime.
+    pathDecoder.setClaudeBasePathOverride(claudeRoot);
+    try {
+      const rootPath = path.join(claudeRoot, 'agent-teams-notifications.json');
+      expect(getNotificationsPath()).toBe(rootPath);
+      const manager = new NotificationManager(createConfigManagerStub() as never);
+      await manager.initialize();
+
+      // Nothing is migrated from ~/.claude into the configured root.
+      expect((await manager.getNotifications({ limit: 10 })).notifications).toEqual([]);
+      await addOneNotification(manager);
+      await vi.waitFor(() => {
+        const stored = JSON.parse(fs.readFileSync(rootPath, 'utf8')) as { summary?: string }[];
+        expect(stored).toHaveLength(1);
+      });
+      expect(
+        Object.fromEntries(
+          fs
+            .readdirSync(homeDir)
+            .map((name) => [name, fs.readFileSync(path.join(homeDir, name), 'utf8')])
+        )
+      ).toEqual(homeFiles);
+    } finally {
+      pathDecoder.setClaudeBasePathOverride(null);
+    }
+  });
+});

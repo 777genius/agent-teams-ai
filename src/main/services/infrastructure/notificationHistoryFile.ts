@@ -8,7 +8,7 @@
  */
 
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { getHomeDir } from '@main/utils/pathDecoder';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 
@@ -24,19 +24,20 @@ export interface StoredNotification extends DetectedError {
   createdAt: number;
 }
 
-/** Path to notifications storage file */
-export const NOTIFICATIONS_PATH = path.join(
-  getHomeDir(),
-  '.claude',
-  'agent-teams-notifications.json'
-);
+const NOTIFICATIONS_FILENAME = 'agent-teams-notifications.json';
 const LEGACY_NOTIFICATION_FILENAMES = [
   'claude-devtools-notifications.json',
   'claude-code-context-notifications.json',
 ] as const;
-const LEGACY_NOTIFICATION_PATHS = LEGACY_NOTIFICATION_FILENAMES.map((filename) =>
-  path.join(getHomeDir(), '.claude', filename)
-);
+
+/**
+ * Path to the notifications storage file, under the Claude root this app uses
+ * (~/.claude unless another root is configured). Resolved on every call, so a
+ * root override applied after this module loads is honoured.
+ */
+export function getNotificationsPath(): string {
+  return path.join(getClaudeBasePath(), NOTIFICATIONS_FILENAME);
+}
 
 interface LegacyNotificationData {
   path: string;
@@ -44,40 +45,47 @@ interface LegacyNotificationData {
 }
 
 export async function migrateLegacyNotificationPath(): Promise<string> {
+  const notificationsPath = getNotificationsPath();
   try {
-    await fsp.readFile(NOTIFICATIONS_PATH, 'utf8');
-    return NOTIFICATIONS_PATH;
+    await fsp.readFile(notificationsPath, 'utf8');
+    return notificationsPath;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      return NOTIFICATIONS_PATH;
+      return notificationsPath;
     }
   }
 
-  const legacyNotificationData = await selectLegacyNotificationData();
+  const legacyNotificationData = await selectLegacyNotificationData(
+    path.dirname(notificationsPath)
+  );
   if (!legacyNotificationData) {
-    return NOTIFICATIONS_PATH;
+    return notificationsPath;
   }
 
   try {
-    await fsp.mkdir(path.dirname(NOTIFICATIONS_PATH), { recursive: true });
-    await fsp.writeFile(NOTIFICATIONS_PATH, legacyNotificationData.data, {
+    await fsp.mkdir(path.dirname(notificationsPath), { recursive: true });
+    await fsp.writeFile(notificationsPath, legacyNotificationData.data, {
       encoding: 'utf8',
       flag: 'wx',
     });
-    return NOTIFICATIONS_PATH;
+    return notificationsPath;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-      return NOTIFICATIONS_PATH;
+      return notificationsPath;
     }
 
     return legacyNotificationData.path;
   }
 }
 
-async function selectLegacyNotificationData(): Promise<LegacyNotificationData | null> {
+async function selectLegacyNotificationData(
+  claudeRoot: string
+): Promise<LegacyNotificationData | null> {
   const readableData: LegacyNotificationData[] = [];
 
-  for (const legacyPath of LEGACY_NOTIFICATION_PATHS) {
+  for (const legacyPath of LEGACY_NOTIFICATION_FILENAMES.map((filename) =>
+    path.join(claudeRoot, filename)
+  )) {
     try {
       const legacyData = await fsp.readFile(legacyPath, 'utf8');
       const candidate = { path: legacyPath, data: legacyData };

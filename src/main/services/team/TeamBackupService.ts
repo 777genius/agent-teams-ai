@@ -23,9 +23,18 @@ import {
   type TeamPermanentDeletionIntent,
 } from './permanent-deletion/TeamPermanentDeletionTypes';
 import {
+  createTeamProfileOwnership,
+  type TeamProfileOwnership,
+} from './provisioning/TeamProvisioningProfileOwnership';
+import {
+  APP_DATA_DEEP_SUBDIRS,
+  APP_DATA_SUBDIRS,
   type BackupFileDescriptor,
   collectRecursiveFiles,
   collectRecursiveFilesSync,
+  TEAM_RECURSIVE_SUBDIRS,
+  TEAM_ROOT_FILES,
+  TEAM_SUBDIRS,
 } from './TeamBackupFileCollection';
 import {
   type BackupManifest,
@@ -58,26 +67,6 @@ const PERIODIC_INTERVAL_MS = 3 * 60 * 1000;
 const TASK_DEBOUNCE_MS = 500;
 const DELETED_RETENTION_DAYS = 30;
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-
-const TEAM_ROOT_FILES = [
-  'config.json',
-  'team.meta.json',
-  'launch-state.json',
-  'launch-summary.json',
-  TEAM_LAUNCH_STOPPED_MARKER_FILE,
-  'kanban-state.json',
-  'sentMessages.json',
-  'sent-cross-team.json',
-  'members.meta.json',
-  'comment-notification-journal.json',
-];
-
-// Subdirs under ~/.claude/teams/{teamName}/
-const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
-const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members', '.member-work-sync'];
-// Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
-const APP_DATA_SUBDIRS = ['attachments'];
-const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
 
 function isEnoent(err: unknown): boolean {
   return (err as NodeJS.ErrnoException).code === 'ENOENT';
@@ -130,7 +119,18 @@ export class TeamBackupService {
     restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
   });
 
-  constructor(configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'>) {
+  /**
+   * The teams directory is shared with other app profiles and native sessions,
+   * and a backup writes its identity marker into the team's config.json, so
+   * only teams this profile manages are backed up. Without the provisioning
+   * service's view a team is this profile's only when its owner marker says so.
+   */
+  constructor(
+    configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'>,
+    private readonly ownership: TeamProfileOwnership = createTeamProfileOwnership({
+      isTrackedInThisProcess: () => false,
+    })
+  ) {
     configuration?.setConfigurationIdentityFence((name, operation) =>
       this.withTeamIdentityFence(name, operation)
     );
@@ -404,6 +404,7 @@ export class TeamBackupService {
 
   private async doBackupTeam(teamName: string): Promise<void> {
     const gen = this.backupGeneration;
+    if (!(await this.ownership.isManagedByThisProfile(teamName))) return;
     if (!(await this.isConfigReady(teamName))) return;
     if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
 
@@ -536,6 +537,7 @@ export class TeamBackupService {
   private doBackupTeamSync(teamName: string): void {
     const teamDir = path.join(getTeamsBasePath(), teamName);
     const configPath = path.join(teamDir, 'config.json');
+    if (!this.ownership.isManagedByThisProfileSync(teamName)) return;
     if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName)) return;
     try {
       const raw = fs.readFileSync(configPath, 'utf8');
