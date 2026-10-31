@@ -71,6 +71,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
   /** Tracked run that owns the OpenCode primary lane for a team, if any. */
   resolveLeadActivityRun(teamName: string): TRun | null;
   inboxRelayHost: TeamProvisioningOpenCodeMemberInboxRelayHost;
+  isManagedByThisProfile: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['isManagedByThisProfile'];
   getInboxReader(): ReturnType<
     TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['getInboxReader']
   >;
@@ -102,6 +103,9 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
   openCodeRuntimeRecoveryIdentity: OpenCodeMemberMessageDeliveryCompatibilityRuntimeIdentity;
   openCodeVisibleReplyProofService: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeVisibleReplyProofService'];
   cleanedStoppedTeamOpenCodeRuntimeLanes: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['cleanedStoppedTeamOpenCodeRuntimeLanes'];
+  profileOwnership: {
+    isManagedByThisProfile: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['isManagedByThisProfile'];
+  };
   runs: { get(runId: string): (TRun & OpenCodeMemberMessageDeliveryHostRun) | undefined };
   isCurrentTrackedRun(run: TRun): boolean;
   setLeadActivity(run: TRun, state: OpenCodeLeadTurnActivityNotification['state']): void;
@@ -148,6 +152,7 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
       this.openCodeMemberInboxRelayBoundaryValue =
         createTeamProvisioningOpenCodeMemberInboxRelayBoundary({
           host: this.deps.inboxRelayHost,
+          isManagedByThisProfile: (teamName) => this.deps.isManagedByThisProfile(teamName),
           inFlight: this.openCodeMemberInboxRelayInFlight,
           getInboxReader: () => this.deps.getInboxReader(),
           openCodeRuntimeRecoveryIdentity: {
@@ -349,6 +354,7 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
     inboxRelayHost: createTeamProvisioningOpenCodeMemberInboxRelayHostFromService(
       service as unknown as TeamProvisioningOpenCodeMemberInboxRelayServiceHost
     ),
+    isManagedByThisProfile: (teamName) => service.profileOwnership.isManagedByThisProfile(teamName),
     getInboxReader: () => service.inboxReader,
     getAttachmentStore: () => service.attachmentStore,
     getOpenCodeRuntimeRecoveryIdentity: () => service.openCodeRuntimeRecoveryIdentity,

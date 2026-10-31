@@ -272,6 +272,7 @@ describe('team provisioning stop flow', () => {
     const stopping = stopAllTeamsFlow({
       incrementStopAllTeamsGeneration: () => events.push('generation'),
       getShutdownTrackedTeamNames: () => ['team-a'],
+      getShutdownRunningTeamNames: () => ['team-a'],
       pauseActiveIntervalsForTeam: () => events.push('pause'),
       killTrackedCliProcesses: () => events.push('kill-cli'),
       killTransientProbeProcessesForShutdown: () => events.push('kill-probes'),
@@ -291,6 +292,7 @@ describe('team provisioning stop flow', () => {
         events.push('wait-locks');
       },
       listPersistedTeamNames: () => [],
+      isManagedByThisProfile: async () => true,
       stopPersistentTeamMembers: () => events.push('stop-persisted'),
       cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: async () => undefined,
       logger: { info: vi.fn() },
@@ -330,17 +332,32 @@ describe('team provisioning stop flow', () => {
     setClaudeBasePathOverride(root);
     try {
       await mkdir(path.dirname(taskPath), { recursive: true });
-      await writeFile(taskPath, JSON.stringify({ id: 'held', owner: 'alice', status: 'in_progress',
-        historyEvents: [{ type: 'task_created', status: 'in_progress', timestamp: '2026-10-28T10:00:00.000Z' }],
-        workIntervals: [{ startedAt: '2026-10-28T10:00:00.000Z' }] }));
+      await writeFile(
+        taskPath,
+        JSON.stringify({
+          id: 'held',
+          owner: 'alice',
+          status: 'in_progress',
+          historyEvents: [
+            { type: 'task_created', status: 'in_progress', timestamp: '2026-10-28T10:00:00.000Z' },
+          ],
+          workIntervals: [{ startedAt: '2026-10-28T10:00:00.000Z' }],
+        })
+      );
       const activity = new TeamTaskActivityIntervalService();
       const ports = makePorts(teamName, new Map(), new Map([[teamName, 'run-clock']]));
       ports.runtimeAdapterRunByTeam.set(teamName, { runId: 'run-clock', providerId: 'opencode' });
-      ports.pauseActiveIntervalsForTeam = vi.fn(() => activity.pauseActiveIntervalsForTeam(teamName));
+      ports.pauseActiveIntervalsForTeam = vi.fn(() =>
+        activity.pauseActiveIntervalsForTeam(teamName)
+      );
       let finishStop!: () => void;
       let stopStarted!: () => void;
-      const started = new Promise<void>(resolve => { stopStarted = resolve; });
-      const deferred = new Promise<void>(resolve => { finishStop = resolve; });
+      const started = new Promise<void>((resolve) => {
+        stopStarted = resolve;
+      });
+      const deferred = new Promise<void>((resolve) => {
+        finishStop = resolve;
+      });
       ports.stopOpenCodeRuntimeAdapterTeam = vi.fn(async () => {
         activity.resumeActiveIntervalsForMember(teamName, 'alice');
         stopStarted();
@@ -356,8 +373,14 @@ describe('team provisioning stop flow', () => {
       const stoppedTask = JSON.parse(stoppedBytes);
       expect(stoppedTask.owner).toBe('alice');
       expect(stoppedTask.status).toBe('in_progress');
-      expect(stoppedTask.workIntervals.every((interval: { completedAt?: string }) => !!interval.completedAt)).toBe(true);
-      expect(new TeamTaskActivityIntervalService().repairStaleIntervalsAfterCrash(teamName).changedTasks).toBe(0);
+      expect(
+        stoppedTask.workIntervals.every(
+          (interval: { completedAt?: string }) => !!interval.completedAt
+        )
+      ).toBe(true);
+      expect(
+        new TeamTaskActivityIntervalService().repairStaleIntervalsAfterCrash(teamName).changedTasks
+      ).toBe(0);
       expect(await readFile(taskPath, 'utf8')).toBe(stoppedBytes);
     } finally {
       setClaudeBasePathOverride(null);
@@ -365,40 +388,61 @@ describe('team provisioning stop flow', () => {
     }
   });
 
-  it.each(['failed-result', 'throw'] as const)('retires processes before recovering an initial task-clock %s', async mode => {
-    const teamName = 'team-clock-recover';
-    const run = makeRun('run-clock', teamName);
-    const ports = makePorts(teamName, new Map([[run.runId, run]]), new Map([[teamName, run.runId]]));
-    vi.mocked(ports.pauseActiveIntervalsForTeam).mockImplementationOnce(() => {
-      if (mode === 'throw') throw new Error('TEST initial clock failure');
-      return { failed: true };
-    });
-    vi.mocked(ports.pauseActiveIntervalsForTeam).mockImplementationOnce(() => {
-      expect(run.child?.killed).toBe(true);
-      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
-      expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
-      return { failed: false };
-    });
-    await expect(stopTeamFlow(teamName, ports)).resolves.toBeUndefined();
-  });
+  it.each(['failed-result', 'throw'] as const)(
+    'retires processes before recovering an initial task-clock %s',
+    async (mode) => {
+      const teamName = 'team-clock-recover';
+      const run = makeRun('run-clock', teamName);
+      const ports = makePorts(
+        teamName,
+        new Map([[run.runId, run]]),
+        new Map([[teamName, run.runId]])
+      );
+      vi.mocked(ports.pauseActiveIntervalsForTeam).mockImplementationOnce(() => {
+        if (mode === 'throw') throw new Error('TEST initial clock failure');
+        return { failed: true };
+      });
+      vi.mocked(ports.pauseActiveIntervalsForTeam).mockImplementationOnce(() => {
+        expect(run.child?.killed).toBe(true);
+        expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+        expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(
+          teamName
+        );
+        return { failed: false };
+      });
+      await expect(stopTeamFlow(teamName, ports)).resolves.toBeUndefined();
+    }
+  );
 
   it('reports final task-clock failure after cleanup and preserves an original stop failure', async () => {
     const teamName = 'team-clock-final';
     const run = makeRun('run-clock', teamName);
-    const ports = makePorts(teamName, new Map([[run.runId, run]]), new Map([[teamName, run.runId]]));
+    const ports = makePorts(
+      teamName,
+      new Map([[run.runId, run]]),
+      new Map([[teamName, run.runId]])
+    );
     vi.mocked(ports.pauseActiveIntervalsForTeam).mockImplementationOnce(() => undefined);
     vi.mocked(ports.pauseActiveIntervalsForTeam).mockImplementationOnce(() => {
       expect(run.child?.killed).toBe(true);
-      expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
+      expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(
+        teamName
+      );
       return { failed: true };
     });
-    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('task_activity_interval_pause_failed_after_stop');
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow(
+      'task_activity_interval_pause_failed_after_stop'
+    );
     const stopFailure = new Error('TEST original stop failure');
     const failingPorts = makePorts(teamName, new Map());
-    failingPorts.cancelOpenCodePromptDeliveries = vi.fn(async () => { throw stopFailure; });
+    failingPorts.cancelOpenCodePromptDeliveries = vi.fn(async () => {
+      throw stopFailure;
+    });
     vi.mocked(failingPorts.pauseActiveIntervalsForTeam).mockReturnValue({ failed: true });
     await expect(stopTeamFlow(teamName, failingPorts)).rejects.toBe(stopFailure);
-    expect(failingPorts.logger.info).toHaveBeenCalledWith('task_activity_interval_pause_failed_after_stop');
+    expect(failingPorts.logger.info).toHaveBeenCalledWith(
+      'task_activity_interval_pause_failed_after_stop'
+    );
   });
 
   it('cancels OpenCode runtime advisory timers even when no tracked run remains', async () => {

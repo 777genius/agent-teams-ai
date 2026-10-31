@@ -26,11 +26,14 @@ export interface TeamProvisioningShutdownCoordinationPorts<TProbeProcess> {
     progress: TeamProvisioningProgress
   ): Promise<void>;
   killProcessTree(child: TProbeProcess): void;
+  /** Only consulted for teams that are known here through a held team lock alone. */
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
   logger: ShutdownLogger;
 }
 
 export interface TeamProvisioningShutdownCoordination {
   getShutdownTrackedTeamNames(): string[];
+  getShutdownRunningTeamNames(): string[];
   stopTrackedTeamsForShutdown(label: string): Promise<string[]>;
   cancelPendingRuntimeAdapterLaunchesForShutdown(): Promise<void>;
   waitForInFlightTeamOperationsForShutdown(timeoutMs?: number): Promise<void>;
@@ -84,6 +87,46 @@ export function getShutdownTrackedTeamNames(
   return Array.from(teamNames);
 }
 
+/**
+ * Teams with a run, lane, restart, stop or pending launch of this process.
+ * Unlike getShutdownTrackedTeamNames it leaves out teams known only through a
+ * held team lock: background reads and deliveries can lock a team of another
+ * app profile, so a lock alone proves nothing about ownership.
+ */
+export function getShutdownRunningTeamNames(
+  state: Pick<
+    TeamProvisioningShutdownCoordinationState<unknown>,
+    | 'provisioningRunByTeam'
+    | 'aliveRunByTeam'
+    | 'runtimeAdapterRunByTeam'
+    | 'secondaryRuntimeRunByTeam'
+    | 'runtimeAdapterProgressByRunId'
+  >,
+  ports: Pick<
+    TeamProvisioningShutdownCoordinationPorts<unknown>,
+    | 'isCancellableRuntimeAdapterProgress'
+    | 'getOpenCodeAggregatePrimaryRestartTeamNames'
+    | 'getOpenCodeRuntimeAdapterStopInFlightTeamNames'
+  >
+): string[] {
+  return getShutdownTrackedTeamNames({ ...state, teamOpLocks: new Map() }, ports);
+}
+
+function stopTeamsForShutdown(
+  teamNames: readonly string[],
+  ports: Pick<TeamProvisioningShutdownCoordinationPorts<unknown>, 'stopTeam' | 'logger'>
+): Promise<void>[] {
+  return teamNames.map((teamName) =>
+    ports.stopTeam(teamName).catch((error) => {
+      ports.logger.warn(
+        `[${teamName}] Failed to stop team during shutdown: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    })
+  );
+}
+
 export async function stopTrackedTeamsForShutdown(
   label: string,
   state: Pick<
@@ -100,28 +143,33 @@ export async function stopTrackedTeamsForShutdown(
     | 'isCancellableRuntimeAdapterProgress'
     | 'getOpenCodeAggregatePrimaryRestartTeamNames'
     | 'getOpenCodeRuntimeAdapterStopInFlightTeamNames'
+    | 'isManagedByThisProfile'
     | 'stopTeam'
     | 'logger'
   >
 ): Promise<string[]> {
-  const teamNames = getShutdownTrackedTeamNames(state, ports);
-  if (teamNames.length === 0) {
-    return teamNames;
+  // Started synchronously: the quit path may not wait for any I/O.
+  const runningTeamNames = getShutdownRunningTeamNames(state, ports);
+  if (runningTeamNames.length > 0) {
+    ports.logger.info(`${label}: stopping tracked team processes: ${runningTeamNames.join(', ')}`);
   }
+  const stops = stopTeamsForShutdown(runningTeamNames, ports);
 
-  ports.logger.info(`${label}: stopping tracked team processes: ${teamNames.join(', ')}`);
-  await Promise.all(
-    teamNames.map((teamName) =>
-      ports.stopTeam(teamName).catch((error) => {
-        ports.logger.warn(
-          `[${teamName}] Failed to stop team during shutdown: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      })
-    )
-  );
-  return teamNames;
+  const running = new Set(runningTeamNames);
+  const lockedTeamNames: string[] = [];
+  for (const teamName of [...state.teamOpLocks.keys()]) {
+    if (!running.has(teamName) && (await ports.isManagedByThisProfile(teamName))) {
+      lockedTeamNames.push(teamName);
+    }
+  }
+  if (lockedTeamNames.length > 0) {
+    ports.logger.info(
+      `${label}: stopping teams with in-flight operations: ${lockedTeamNames.join(', ')}`
+    );
+    stops.push(...stopTeamsForShutdown(lockedTeamNames, ports));
+  }
+  await Promise.all(stops);
+  return [...runningTeamNames, ...lockedTeamNames];
 }
 
 export async function cancelPendingRuntimeAdapterLaunchesForShutdown(
@@ -212,6 +260,7 @@ export function createTeamProvisioningShutdownCoordination<TProbeProcess>(
 ): TeamProvisioningShutdownCoordination {
   return {
     getShutdownTrackedTeamNames: () => getShutdownTrackedTeamNames(state, ports),
+    getShutdownRunningTeamNames: () => getShutdownRunningTeamNames(state, ports),
     stopTrackedTeamsForShutdown: (label) => stopTrackedTeamsForShutdown(label, state, ports),
     cancelPendingRuntimeAdapterLaunchesForShutdown: () =>
       cancelPendingRuntimeAdapterLaunchesForShutdown(state, ports),
