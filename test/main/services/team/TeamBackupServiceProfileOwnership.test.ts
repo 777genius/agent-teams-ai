@@ -179,6 +179,61 @@ describe('TeamBackupService and teams of other app profiles', () => {
     }
   );
 
+  it.each([
+    { workSyncRestore: false, label: 'legacy restore' },
+    { workSyncRestore: true, label: 'deferred hole fill' },
+  ])(
+    'finishes a restore of this profile interrupted before the owner marker ($label)',
+    async ({ workSyncRestore }) => {
+      await writeTeams();
+      await mkdir(inboxDir(OWN), { recursive: true });
+      await writeFile(path.join(inboxDir(OWN), 'bob.json'), '[]\n');
+      const first = await createService();
+      await first.backupTeam(OWN);
+      first.dispose();
+      // config.json is restored first; the app quit before the rest came back.
+      const markerPath = path.join(getTeamsBasePath(), OWN, TEAM_PROFILE_OWNER_MARKER_FILE);
+      await rm(markerPath);
+      await rm(path.join(inboxDir(OWN), 'bob.json'));
+
+      await createService(undefined, { workSyncRestore });
+
+      await vi.waitFor(async () => {
+        expect(await exists(markerPath)).toBe(true);
+        expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(true);
+      });
+    }
+  );
+
+  it('leaves a backed-up team alone once another profile has taken it over', async () => {
+    await writeTeams();
+    await mkdir(inboxDir(OWN), { recursive: true });
+    await writeFile(path.join(inboxDir(OWN), 'bob.json'), '[]\n');
+    const first = await createService();
+    await first.backupTeam(OWN);
+    first.dispose();
+    const otherScope = buildOpenCodeAppProfileScope(
+      path.join(root, 'user-data-b'),
+      path.join(root, 'claude')
+    );
+    await claimTeamForThisProfile({
+      teamsBasePath: getTeamsBasePath(),
+      teamName: OWN,
+      reason: 'launch',
+      profileScope: otherScope,
+    });
+    await rm(path.join(inboxDir(OWN), 'bob.json'));
+
+    await createService(undefined, { workSyncRestore: true });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(false);
+    const marker = JSON.parse(
+      await readFile(path.join(getTeamsBasePath(), OWN, TEAM_PROFILE_OWNER_MARKER_FILE), 'utf8')
+    ) as { profileScope: string };
+    expect(marker.profileScope).toBe(otherScope);
+  });
+
   it('restores a team of this profile together with its owner marker', async () => {
     await writeTeams();
     const service = await createService();

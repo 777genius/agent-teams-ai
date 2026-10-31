@@ -170,6 +170,23 @@ describe('JsonTeamRuntimeRecoveryRepository', () => {
       expect(await readdir(paths.getTeamDir('sandbox-team'))).toEqual(['state.json']);
     });
 
+    it.each([
+      ['unparseable', '{not-json'],
+      ['invalid', '{"schemaVersion":1,"teamName":"sandbox-team","jobs":"none"}'],
+    ])('takes the locked path when the stored state is %s', async (_kind, raw) => {
+      const { paths, cancel } = await setUp();
+      await mkdir(paths.getTeamDir('sandbox-team'), { recursive: true });
+      await writeFile(paths.getStatePath('sandbox-team'), raw, 'utf8');
+
+      await expect(
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
+      ).resolves.toBe(0);
+
+      // Only the locked read quarantines; a state that proves nothing is never taken as empty.
+      const files = await readdir(paths.getTeamDir('sandbox-team'));
+      expect(files.some((file) => file.startsWith('state.json.invalid.'))).toBe(true);
+    });
+
     it('rechecks under the lock and writes nothing when the change is already gone', async () => {
       const { paths } = await setUp();
       const repository = new JsonTeamRuntimeRecoveryRepository(paths);

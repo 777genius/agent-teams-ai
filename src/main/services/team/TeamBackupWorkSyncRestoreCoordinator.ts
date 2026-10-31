@@ -4,7 +4,11 @@ import * as path from 'node:path';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
-import { TEAM_PROFILE_OWNER_MARKER_FILE } from './provisioning/TeamProvisioningProfileOwnership';
+import {
+  readTeamOwnerProfileScope,
+  resolveThisAppProfileScope,
+  TEAM_PROFILE_OWNER_MARKER_FILE,
+} from './provisioning/TeamProvisioningProfileOwnership';
 import { readBackupManifestStrict } from './teamBackupManifest';
 import { isValidConfig } from './TeamBackupRestoreService';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -27,6 +31,16 @@ export interface TeamBackupRestoreProgress {
   total: number;
 }
 const RESTORE_CONCURRENCY = 16;
+
+/** False only for a proven ENOENT: a path that cannot be checked may exist. */
+async function pathMayExist(filePath: string): Promise<boolean> {
+  try {
+    await fs.lstat(filePath);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
+}
 
 async function runBounded<T>(
   items: readonly T[],
@@ -187,22 +201,28 @@ export class TeamBackupWorkSyncRestoreCoordinator {
    * files and brings back a lost team. Older versions backed up every team in
    * the shared directory, so the registry still lists teams of other profiles
    * and native sessions, and their backups stopped following their owners.
-   * Restore writes only into a team this profile manages, or into one that has
-   * lost both its config.json and its owner marker, which is what a team of
-   * this profile looks like after the CLI cleaned it up.
+   * Restore writes only into a team this profile manages, or into one without
+   * any owner marker when the backup itself carries this profile's marker (a
+   * full restore interrupted after config.json and before the marker), or when
+   * config.json is gone too, which is what a team of this profile looks like
+   * after the CLI cleaned it up.
    */
   private async mayRestoreInto(teamName: string): Promise<boolean> {
     if (await this.ports.isManagedByThisProfile(teamName)) return true;
     const teamDir = path.join(getTeamsBasePath(), teamName);
-    for (const fileName of ['config.json', TEAM_PROFILE_OWNER_MARKER_FILE]) {
-      try {
-        await fs.lstat(path.join(teamDir, fileName));
-        return false;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return false;
-      }
+    if (await pathMayExist(path.join(teamDir, TEAM_PROFILE_OWNER_MARKER_FILE))) return false;
+    if (await this.isBackupOfThisProfile(teamName)) return true;
+    return !(await pathMayExist(path.join(teamDir, 'config.json')));
+  }
+
+  /** Only backups of teams this profile managed carry its owner marker. */
+  private async isBackupOfThisProfile(teamName: string): Promise<boolean> {
+    const backupScope = await readTeamOwnerProfileScope(this.ports.getBackupDir(teamName));
+    try {
+      return backupScope !== null && backupScope === resolveThisAppProfileScope();
+    } catch {
+      return false;
     }
-    return true;
   }
 
   private async canSkipConfiguredRestore(teamName: string, identityId: string): Promise<boolean> {
