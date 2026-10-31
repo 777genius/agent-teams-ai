@@ -50,6 +50,7 @@ export interface TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps {
   readTaskRefInferenceTasks?: OpenCodeMemberInboxRelayPorts['readTaskRefInferenceTasks'];
   logger: {
     warn(message: string): void;
+    diagnostic(message: string): void;
   };
   nowIso: OpenCodeMemberInboxRelayPorts['nowIso'];
   getErrorMessage: OpenCodeMemberInboxRelayPorts['getErrorMessage'];
@@ -161,6 +162,7 @@ export function createTeamProvisioningOpenCodeMemberInboxRelayBoundary(
           suppressRuntimeInactiveWarning: (teamName) =>
             deps.cleanedStoppedTeamOpenCodeRuntimeLanes.has(teamName),
           logWarning: (message) => deps.logger.warn(message),
+          logDiagnostic: (message) => deps.logger.diagnostic(message),
           nowIso: deps.nowIso,
           getErrorMessage: deps.getErrorMessage,
         }

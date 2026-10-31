@@ -660,6 +660,7 @@ function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
     })),
     logger: {
       warn: vi.fn(),
+      diagnostic: vi.fn(),
     },
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     getErrorMessage: vi.fn((error) => (error instanceof Error ? error.message : String(error))),

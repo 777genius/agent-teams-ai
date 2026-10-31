@@ -1600,7 +1600,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
                 openCodeRelayDiagnosticsLogGate.log(logger, {
                   dedupKey: `${teamName}/${inboxName}`,
                   prefix: `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}`,
-                  diagnostics: relay.diagnostics,
+                  outcome: relay,
                   nowMs: Date.now(),
                 });
               })

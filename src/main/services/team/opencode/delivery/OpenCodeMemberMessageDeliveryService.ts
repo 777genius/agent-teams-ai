@@ -24,7 +24,10 @@ import {
   prepareOpenCodeDeliveryAttachments,
   resolveOpenCodeDeliveryModel,
 } from './OpenCodeAttachmentPreparation';
-import { createOpenCodeBootstrapPendingDeliveryWake } from './OpenCodeBootstrapPendingDeliveryWake';
+import {
+  buildOpenCodeBootstrapDeferredDelivery,
+  createOpenCodeBootstrapPendingDeliveryWake,
+} from './OpenCodeBootstrapPendingDeliveryWake';
 import {
   markOpenCodeGroupHandoff,
   observedOpenCodeDelivery,
@@ -427,15 +430,8 @@ export class OpenCodeMemberMessageDeliveryService {
       if (!bootstrapSession) {
         if (laneIdentity.laneKind === 'secondary') {
           restoreConsumedLane();
-          wakePendingDelivery();
-          return {
-            delivered: false,
-            reason: 'opencode_runtime_not_active',
-            diagnostics: [
-              `OpenCode runtime bootstrap is not confirmed for ${canonicalMemberName}. ` +
-                'Message was saved and will be retried after runtime check-in.',
-            ],
-          };
+          const retryArmed = wakePendingDelivery();
+          return buildOpenCodeBootstrapDeferredDelivery(canonicalMemberName, retryArmed);
         }
         // A sessionless primary may self-heal only while its tracked owner is deliverable.
         const healed = trackedRunId

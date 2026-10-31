@@ -14149,19 +14149,20 @@ describe('TeamProvisioningService', () => {
         ]),
       };
 
-      await expect(
-        svc.deliverOpenCodeMemberMessage(teamName, {
-          memberName: 'bob',
-          text: 'must wait for committed bootstrap evidence',
-          messageId: 'msg-live-lane-without-committed-evidence',
-        })
-      ).resolves.toMatchObject({
+      const result = await svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'bob',
+        text: 'must wait for committed bootstrap evidence',
+        messageId: 'msg-live-lane-without-committed-evidence',
+      });
+      expect(result).toMatchObject({
         delivered: false,
         reason: 'opencode_runtime_not_active',
         diagnostics: [
           expect.stringContaining('OpenCode runtime bootstrap is not confirmed for bob'),
         ],
       });
+      // This setup arms no bootstrap wake, so the deferral stays unflagged and still warns.
+      expect(result).not.toHaveProperty('deferredUntilBootstrap');
       expect(sendMessageToMember).not.toHaveBeenCalled();
     });
 
@@ -14222,19 +14223,20 @@ describe('TeamProvisioningService', () => {
         sessions: [],
       });
 
-      await expect(
-        svc.deliverOpenCodeMemberMessage(teamName, {
-          memberName: 'bob',
-          text: 'must wait for bootstrap',
-          messageId: 'msg-before-bootstrap-checkin',
-        })
-      ).resolves.toMatchObject({
+      const result = await svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'bob',
+        text: 'must wait for bootstrap',
+        messageId: 'msg-before-bootstrap-checkin',
+      });
+      expect(result).toMatchObject({
         delivered: false,
         reason: 'opencode_runtime_not_active',
         diagnostics: [
           expect.stringContaining('OpenCode runtime bootstrap is not confirmed for bob'),
         ],
       });
+      // This setup arms no bootstrap wake, so the deferral stays unflagged and still warns.
+      expect(result).not.toHaveProperty('deferredUntilBootstrap');
       expect(sendMessageToMember).not.toHaveBeenCalled();
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {
@@ -14314,19 +14316,20 @@ describe('TeamProvisioningService', () => {
         'utf8'
       );
 
-      await expect(
-        svc.deliverOpenCodeMemberMessage(teamName, {
-          memberName: 'bob',
-          text: 'must not deliver to empty durable lane',
-          messageId: 'msg-stale-empty-manifest',
-        })
-      ).resolves.toMatchObject({
+      const result = await svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'bob',
+        text: 'must not deliver to empty durable lane',
+        messageId: 'msg-stale-empty-manifest',
+      });
+      expect(result).toMatchObject({
         delivered: false,
         reason: 'opencode_runtime_not_active',
         diagnostics: [
           expect.stringContaining('runtime manifest has no committed runtime evidence'),
         ],
       });
+      // Evidence not ready is not the armed bootstrap wait: it must keep warning.
+      expect(result).not.toHaveProperty('deferredUntilBootstrap');
       expect(sendMessageToMember).not.toHaveBeenCalled();
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {
@@ -14407,19 +14410,20 @@ describe('TeamProvisioningService', () => {
         'utf8'
       );
 
-      await expect(
-        svc.deliverOpenCodeMemberMessage(teamName, {
-          memberName: 'bob',
-          text: 'wait until runtime check-in',
-          messageId: 'msg-fresh-empty-manifest',
-        })
-      ).resolves.toMatchObject({
+      const result = await svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'bob',
+        text: 'wait until runtime check-in',
+        messageId: 'msg-fresh-empty-manifest',
+      });
+      expect(result).toMatchObject({
         delivered: false,
         reason: 'opencode_runtime_not_active',
         diagnostics: [
           expect.stringContaining('OpenCode runtime bootstrap evidence is not ready for bob'),
         ],
       });
+      // Evidence not ready is not the armed bootstrap wait: it must keep warning.
+      expect(result).not.toHaveProperty('deferredUntilBootstrap');
       expect(sendMessageToMember).not.toHaveBeenCalled();
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {
