@@ -1,5 +1,6 @@
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { parseCrossTeamPrefix, stripCrossTeamPrefix } from '@shared/constants/crossTeam';
+import { toSafeMessageId } from '@shared/utils/messageId';
 
 import { isAgentTeamsToolUse } from '../agentTeamsToolNames';
 
@@ -52,10 +53,6 @@ export interface CrossTeamSendRequest {
   conversationId?: string;
   replyToConversationId?: string;
 }
-
-// Same charset and length as validateMessageId in src/main/ipc/guards.ts.
-const MESSAGE_ID_MAX_LENGTH = 128;
-const MESSAGE_ID_UNSAFE_CHARS = /[^A-Za-z0-9_-]/g;
 
 type LeadCrossTeamSendRequest = CrossTeamSendRequest &
   Required<Pick<CrossTeamSendRequest, 'toMember' | 'summary' | 'messageId' | 'timestamp'>>;
@@ -254,12 +251,9 @@ export function dropUnsettledLeadSendMessages(
   );
 }
 
-/** `lead-sendmsg-<runId>-<seq>-<toolUseId>`, kept within the IPC messageId charset and length. */
+/** `lead-sendmsg-<runId>-<seq>-<toolUseId>`; an over-long tool_use id loses its tail. */
 function leadSendMessageId(runId: string, seq: number, toolUseId: string): string {
-  const base = `lead-sendmsg-${runId}-${seq}`;
-  const room = MESSAGE_ID_MAX_LENGTH - base.length - 1;
-  if (room <= 0) return base;
-  return `${base}-${toolUseId.replace(MESSAGE_ID_UNSAFE_CHARS, '_').slice(0, room)}`;
+  return toSafeMessageId(`lead-sendmsg-${runId}-${seq}-${toolUseId}`);
 }
 
 function settleLeadSendMessage(

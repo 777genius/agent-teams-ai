@@ -15,9 +15,8 @@ function isCapturedGroupSend(
   );
 }
 
-/** How a lead send tool_use affects relay text: shown to someone, shown to the user, or a group send. */
+/** A lead send tool_use that makes relay text visible elsewhere: to the user or not, group or not. */
 export interface CapturedSendVisibility {
-  visible: boolean;
   userVisible: boolean;
   group: boolean;
 }
@@ -34,14 +33,14 @@ export function classifyCapturedSend(
   const inp = input as Record<string, unknown>;
   // A rejected group attempt must never become a private/plaintext fallback.
   if (isCapturedGroupSend(part.name, inp, teamName)) {
-    return { visible: true, userVisible: true, group: true };
+    return { userVisible: true, group: true };
   }
 
   if (part.name === 'SendMessage') {
     const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim();
     const text = (typeof inp.content === 'string' ? inp.content : '').trim();
     if (target.length === 0 || text.length === 0) return null;
-    return { visible: true, userVisible: target.toLowerCase() === 'user', group: false };
+    return { userVisible: target.toLowerCase() === 'user', group: false };
   }
 
   const isTeamMessageSendTool = isAgentTeamsToolUse({
@@ -69,23 +68,12 @@ export function classifyCapturedSend(
   ).trim();
   const text = typeof inp.text === 'string' ? inp.text.trim() : '';
   if (target.length === 0 || text.length === 0) return null;
-  return {
-    visible: true,
-    userVisible: isTeamMessageSendTool && target.toLowerCase() === 'user',
-    group: false,
-  };
+  return { userVisible: isTeamMessageSendTool && target.toLowerCase() === 'user', group: false };
 }
 
 export function hasCapturedVisibleSendMessage(
   content: Record<string, unknown>[],
   teamName: string
 ): boolean {
-  return content.some((part) => classifyCapturedSend(part, teamName)?.visible === true);
-}
-
-export function hasCapturedUserVisibleSendMessage(
-  content: Record<string, unknown>[],
-  teamName: string
-): boolean {
-  return content.some((part) => classifyCapturedSend(part, teamName)?.userVisible === true);
+  return content.some((part) => classifyCapturedSend(part, teamName) !== null);
 }

@@ -14,8 +14,8 @@ export interface LeadRelayCaptureStreamState {
   terminalResultSucceeded?: boolean;
   hasVisibleSendMessage?: boolean;
   hasUserVisibleSendMessage?: boolean;
-  /** Send calls of this capture waiting for their tool_result, keyed by tool_use id. */
-  pendingSendVisibility?: Map<string, { visible: boolean; userVisible: boolean }>;
+  /** Send calls of this capture waiting for their tool_result: tool_use id -> user-visible. */
+  pendingSendVisibility?: Map<string, boolean>;
   settled: boolean;
   idleHandle: NodeJS.Timeout | null;
   idleMs: number;
@@ -91,10 +91,7 @@ export function noteLeadRelayCaptureSendCalls(
     // Without an id the result can't be matched; a duplicate reply is better than a lost one.
     if (typeof part.id !== 'string' || part.id.length === 0) continue;
     capture.pendingSendVisibility ??= new Map();
-    capture.pendingSendVisibility.set(part.id, {
-      visible: send.visible,
-      userVisible: send.userVisible,
-    });
+    capture.pendingSendVisibility.set(part.id, send.userVisible);
   }
 }
 
@@ -106,11 +103,11 @@ export function settleLeadRelayCaptureSendCalls(
   if (!pending) return;
   for (const part of content) {
     if (part.type !== 'tool_result' || typeof part.tool_use_id !== 'string') continue;
-    const send = pending.get(part.tool_use_id);
-    if (!send) continue;
+    const userVisible = pending.get(part.tool_use_id);
+    if (userVisible === undefined) continue;
     pending.delete(part.tool_use_id);
     if (part.is_error === true) continue;
-    if (send.visible) capture.hasVisibleSendMessage = true;
-    if (send.userVisible) capture.hasUserVisibleSendMessage = true;
+    capture.hasVisibleSendMessage = true;
+    if (userVisible) capture.hasUserVisibleSendMessage = true;
   }
 }

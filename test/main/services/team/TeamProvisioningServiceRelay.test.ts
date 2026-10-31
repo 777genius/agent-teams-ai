@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { promises as fsPromises } from 'fs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
@@ -1310,6 +1310,110 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       await expect(relayPromise).resolves.toBe(1);
       expect(service.getLiveLeadProcessMessages(teamName)).toEqual([]);
       expect(readSentRows(teamName)).toEqual([]);
+    });
+
+    function sendCall(id: string, name: string, input: Record<string, unknown>) {
+      return { type: 'assistant', content: [{ type: 'tool_use', id, name, input }] };
+    }
+
+    function toolResult(id: string, isError: boolean) {
+      return {
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: id,
+              content: isError ? 'rejected' : 'Message sent',
+              is_error: isError,
+            },
+          ],
+        },
+      };
+    }
+
+    function feed(service: TeamProvisioningService, teamName: string) {
+      return service.getLiveLeadProcessMessages(teamName).map(({ to, text }) => ({ to, text }));
+    }
+
+    it.each([
+      { outcome: 'rejected', isError: true, expected: [{ to: 'user', text: 'Plain answer.' }] },
+      { outcome: 'accepted', isError: false, expected: [] },
+    ])(
+      'hides the plain reply only when message_send to the user is $outcome',
+      async ({ isError, expected }) => {
+        const service = new TeamProvisioningService();
+        const teamName = 'my-team';
+        const { relayPromise, handle, run } = await startUserRelay(service, teamName);
+        // message_send goes through runtime tool activity, which reads this map on its result.
+        run.memberSpawnToolUseIds = new Map();
+
+        handle(
+          sendCall('toolu-board', 'mcp__agent-teams__message_send', {
+            teamName,
+            to: 'user',
+            text: 'Via the board.',
+            from: 'team-lead',
+          })
+        );
+        handle(toolResult('toolu-board', isError));
+        handle({ type: 'assistant', content: [{ type: 'text', text: 'Plain answer.' }] });
+        handle({ type: 'result', subtype: 'success' });
+
+        await expect(relayPromise).resolves.toBe(1);
+        // The board writes the accepted message itself; the app only decides about the reply.
+        expect(feed(service, teamName)).toEqual(expected);
+      }
+    );
+
+    describe('when the capture closes on the 800 ms text idle', () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('shows both the reply and the copy when the success arrives after the idle', async () => {
+        const service = new TeamProvisioningService();
+        const teamName = 'my-team';
+        const { relayPromise, handle } = await startUserRelay(service, teamName);
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldClearNativeTimers: true });
+
+        handle({ type: 'assistant', content: [{ type: 'text', text: 'Plain answer.' }] });
+        handle(
+          sendCall('toolu-late', 'SendMessage', {
+            recipient: 'user',
+            content: 'Tool answer.',
+            summary: 'Answer',
+          })
+        );
+        await vi.advanceTimersByTimeAsync(1_000);
+        handle(toolResult('toolu-late', false));
+        handle({ type: 'result', subtype: 'success' });
+
+        await expect(relayPromise).resolves.toBe(1);
+        // A late result can only add a duplicate, never lose the reply.
+        expect(feed(service, teamName)).toEqual(
+          expect.arrayContaining([
+            { to: 'user', text: 'Plain answer.' },
+            { to: 'user', text: 'Tool answer.' },
+          ])
+        );
+        expect(feed(service, teamName)).toHaveLength(2);
+      });
+
+      it('keeps the reply after a rejected SendMessage when no turn result arrives', async () => {
+        const service = new TeamProvisioningService();
+        const teamName = 'my-team';
+        const { relayPromise, handle } = await startUserRelay(service, teamName);
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldClearNativeTimers: true });
+
+        handle(sendCall('toolu-rejected', 'SendMessage', { recipient: 'user', content: 'Draft.' }));
+        handle(toolResult('toolu-rejected', true));
+        handle({ type: 'assistant', content: [{ type: 'text', text: 'Plain answer.' }] });
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        await expect(relayPromise).resolves.toBe(1);
+        expect(feed(service, teamName)).toEqual([{ to: 'user', text: 'Plain answer.' }]);
+      });
     });
   });
 

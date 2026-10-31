@@ -1,3 +1,4 @@
+import { classifyCapturedSend } from '@main/services/team/provisioning/leadRelayCapturedMessageTools';
 import { setMemberSpawnStatusForRun } from '@main/services/team/provisioning/TeamProvisioningMemberSpawnSnapshots';
 import {
   extractProvisioningStreamError,
@@ -6,7 +7,6 @@ import {
   getStableLeadThoughtMessageId,
   handleDeterministicBootstrapEvent,
   handleTeamProvisioningStreamJsonMessage,
-  hasCapturedUserVisibleSendMessage,
   hasCapturedVisibleSendMessage,
   shouldAcceptDeterministicBootstrapEvent,
   type TeamProvisioningStreamEventPorts,
@@ -248,7 +248,10 @@ describe('TeamProvisioningStreamEvents', () => {
     ];
 
     expect(hasCapturedVisibleSendMessage(content, 'atlas-hq')).toBe(true);
-    expect(hasCapturedUserVisibleSendMessage(content, 'atlas-hq')).toBe(true);
+    expect(classifyCapturedSend(content[0], 'atlas-hq')).toEqual({
+      userVisible: true,
+      group: false,
+    });
   });
 
   it('suppresses private echoes after explicit group sends including rejected attempts', () => {
@@ -260,8 +263,11 @@ describe('TeamProvisioningStreamEvents', () => {
       },
     ];
     expect(hasCapturedVisibleSendMessage(content, 'atlas-hq')).toBe(true);
-    expect(hasCapturedUserVisibleSendMessage(content, 'atlas-hq')).toBe(true);
-    expect(hasCapturedUserVisibleSendMessage(content, 'other-team')).toBe(false);
+    expect(classifyCapturedSend(content[0], 'atlas-hq')).toEqual({
+      userVisible: true,
+      group: true,
+    });
+    expect(classifyCapturedSend(content[0], 'other-team')).toBeNull();
   });
 
   it('builds stable lead thought ids from stream metadata', () => {

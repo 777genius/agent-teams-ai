@@ -291,10 +291,7 @@ export function extractStreamContentBlocks(
   return Array.isArray(innerContent) ? (innerContent as Record<string, unknown>[]) : [];
 }
 
-export {
-  hasCapturedUserVisibleSendMessage,
-  hasCapturedVisibleSendMessage,
-} from './leadRelayCapturedMessageTools';
+export { hasCapturedVisibleSendMessage } from './leadRelayCapturedMessageTools';
 
 export function getStableLeadThoughtMessageId(msg: Record<string, unknown>): string | null {
   const entryUuid = typeof msg.uuid === 'string' ? msg.uuid.trim() : '';
