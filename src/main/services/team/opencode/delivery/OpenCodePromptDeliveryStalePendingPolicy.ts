@@ -230,6 +230,9 @@ export function decideOpenCodeStalePendingResolution(input: {
   config: OpenCodeStalePendingPolicyConfig;
 }): OpenCodeStalePendingResolution {
   const { record } = input;
+  // A failed observe pass leaves the record `reconcile_failed`, outside this
+  // set, so it gets `none` here on purpose: the retry gate's
+  // OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS bounds it instead.
   if (!isOpenCodePromptDeliveryObserveOnlyPendingRecord(record)) {
     return { action: 'none' };
   }

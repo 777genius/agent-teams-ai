@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   decideOpenCodePromptDeliveryTurnActivity,
+  OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS,
   OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS,
   type OpenCodePromptDeliveryTurnActivityInput,
 } from '../OpenCodePromptDeliveryWatchdog';
@@ -146,14 +147,31 @@ describe('decideOpenCodePromptDeliveryTurnActivity', () => {
     expect(
       decideOpenCodePromptDeliveryTurnActivity(activityInput({ observationUnavailable: true }))
     ).toEqual({ active: true, reason: 'observation_unavailable' });
+  });
+
+  it('caps an unavailable observation sooner than the inferred activity signals', () => {
+    // Past the short cap but well inside the turn-activity cap: a bridge that
+    // keeps failing to observe must not hold the member's queue for ten minutes.
+    const pendingAgeMs = OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS + 60_000;
+    expect(pendingAgeMs).toBeLessThan(OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS);
+    expect(
+      decideOpenCodePromptDeliveryTurnActivity(
+        activityInput({ observationUnavailable: true, pendingAgeMs })
+      )
+    ).toEqual({ active: false, reason: 'observation_unavailable_cap' });
+    // The short cap applies to the unavailable branch only.
     expect(
       decideOpenCodePromptDeliveryTurnActivity(
         activityInput({
-          observationUnavailable: true,
-          pendingAgeMs: OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS + 1,
+          pendingAgeMs,
+          observation: {
+            assistantMessageId: 'msg_assistant',
+            toolCallNames: ['task_create', 'task_create', 'task_create'],
+            latestAssistantPreview: 'Creating the board.',
+          },
         })
       )
-    ).toEqual({ active: false, reason: 'turn_activity_absolute_cap' });
+    ).toEqual({ active: true, reason: 'tool_calls_progressed' });
   });
 
   it('closes the first-observation hole left by acceptance-mode sends', () => {

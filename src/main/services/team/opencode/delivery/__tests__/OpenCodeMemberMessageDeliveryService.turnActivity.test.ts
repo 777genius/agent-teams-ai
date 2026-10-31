@@ -21,12 +21,16 @@ import {
 import { isOpenCodeDeliveryResponseReadCommitAllowed } from '../OpenCodePromptDeliveryReadCommitPolicy';
 import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../OpenCodePromptDeliveryStalePendingPolicy';
 import {
+  OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS,
   OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS,
   OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS,
 } from '../OpenCodePromptDeliveryWatchdog';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
-import type { OpenCodeDeliveryResponseObservation } from '../../bridge/OpenCodeBridgeCommandContract';
+import type {
+  OpenCodeDeliveryResponseObservation,
+  OpenCodeDeliveryResponseState,
+} from '../../bridge/OpenCodeBridgeCommandContract';
 
 const PRIMARY_LANE: OpenCodeMemberLaneIdentity = {
   laneId: 'primary',
@@ -139,9 +143,14 @@ async function seedRetryDueRecord(
     assistantMessageId?: string | null;
     latestAssistantPreview?: string | null;
     ageMinutes?: number;
+    /** Sender the reply goes to; `user` is the launch prompt, a teammate name a peer message. */
+    replyRecipient?: string;
+    /** State the earlier observation left; defaults to a tool-call answer. */
+    responseState?: OpenCodeDeliveryResponseState;
   }
 ): Promise<OpenCodePromptDeliveryLedgerRecord> {
   const accepted = options.accepted !== false;
+  const replyRecipient = options.replyRecipient ?? 'user';
   const at = new Date(Date.now() - (options.ageMinutes ?? 3) * 60_000).toISOString();
   const created = await ledger.ensurePending({
     teamName: TEAM,
@@ -151,13 +160,13 @@ async function seedRetryDueRecord(
     inboxMessageId: launchPrompt.messageId!,
     inboxTimestamp: at,
     source: 'watcher',
-    replyRecipient: 'user',
+    replyRecipient,
     actionMode: null,
     messageKind: launchPrompt.messageKind ?? null,
     taskRefs: [],
     payloadHash: hashOpenCodePromptDeliveryPayload({
       text: launchPrompt.text,
-      replyRecipient: 'user',
+      replyRecipient,
       actionMode: null,
       taskRefs: [],
       source: launchPrompt.source,
@@ -168,12 +177,15 @@ async function seedRetryDueRecord(
     id: created.id,
     accepted,
     attempted: true,
-    responseObservation: respondedToolCallObservation({
-      toolCallNames: options.toolCallNames,
-      deliveredUserMessageId: accepted ? 'msg_prompt' : null,
-      assistantMessageId: options.assistantMessageId,
-      latestAssistantPreview: options.latestAssistantPreview,
-    }),
+    responseObservation: {
+      ...respondedToolCallObservation({
+        toolCallNames: options.toolCallNames,
+        deliveredUserMessageId: accepted ? 'msg_prompt' : null,
+        assistantMessageId: options.assistantMessageId,
+        latestAssistantPreview: options.latestAssistantPreview,
+      }),
+      ...(options.responseState ? { state: options.responseState } : {}),
+    },
     sessionId: 'ses_1',
     runtimePromptMessageId: accepted ? 'msg_prompt' : null,
     deliveryAttemptId: `${created.id}:1`,
@@ -500,7 +512,11 @@ describe('OpenCodeMemberMessageDeliveryService launch-prompt turn activity', () 
         observe: async () => unobservedResult({ ok, withObservation }),
         realFollowUps: true,
       });
-      const seeded = await seedRetryDueRecord(harness.ledger, { toolCallNames: ['task_create'] });
+      // The incident retry was due about half a minute after the send.
+      const seeded = await seedRetryDueRecord(harness.ledger, {
+        toolCallNames: ['task_create'],
+        ageMinutes: 1,
+      });
 
       const delivery = await harness.service.deliver(TEAM, launchPrompt);
 
@@ -525,7 +541,9 @@ describe('OpenCodeMemberMessageDeliveryService launch-prompt turn activity', () 
     }
   );
 
-  it('re-delivers only the redelivery marker once the result stays unobservable past the cap', async () => {
+  it('re-delivers only the redelivery marker once the result stays unobservable past its cap', async () => {
+    // Between the two caps: the observation-unavailable cap has run out, the
+    // turn-activity cap has not, so only the shorter one can release the retry.
     const harness = createHarness({
       ledgerDir,
       observe: async () => unobservedResult({ ok: false, withObservation: true }),
@@ -533,7 +551,11 @@ describe('OpenCodeMemberMessageDeliveryService launch-prompt turn activity', () 
     });
     await seedRetryDueRecord(harness.ledger, {
       toolCallNames: ['task_create'],
-      ageMinutes: Math.ceil(OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS / 60_000) + 5,
+      ageMinutes:
+        (OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS +
+          OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS) /
+        2 /
+        60_000,
     });
 
     await harness.service.deliver(TEAM, launchPrompt);
@@ -541,6 +563,66 @@ describe('OpenCodeMemberMessageDeliveryService launch-prompt turn activity', () 
     expect(harness.send).toHaveBeenCalledTimes(1);
     expect(sentText(harness.send)).toContain('<opencode_delivery_redelivery>');
     expect(sentText(harness.send)).not.toContain(LAUNCH_PROMPT_BODY);
+  });
+
+  it('settles a peer message without any send once the next observation finds the answer', async () => {
+    // The case the deferral exists for: a one-off observe failure on a teammate
+    // message the member has already answered. The next pass, a retry delay
+    // later, reads the answer and closes the record; nothing is sent again.
+    const peerMessage: OpenCodeMemberMessageDeliveryInput = {
+      ...launchPrompt,
+      replyRecipient: 'atlas',
+    };
+    let observeCalls = 0;
+    const harness = createHarness({
+      ledgerDir,
+      observe: async () =>
+        ++observeCalls === 1
+          ? unobservedResult({ ok: false, withObservation: true })
+          : observedResult(
+              respondedToolCallObservation({
+                toolCallNames: ['task_create', 'message_send'],
+                deliveredUserMessageId: 'msg_prompt',
+              })
+            ),
+      realFollowUps: true,
+    });
+    // Accepted, but no answer was seen yet: that is why the retry is due.
+    await seedRetryDueRecord(harness.ledger, {
+      toolCallNames: [],
+      assistantMessageId: null,
+      ageMinutes: 1,
+      replyRecipient: 'atlas',
+      responseState: 'prompt_delivered_no_assistant_message',
+    });
+
+    const deferred = await harness.service.deliver(TEAM, peerMessage);
+    expect(deferred).toMatchObject({ accepted: true, responsePending: true });
+    expect(harness.logEvent).toHaveBeenCalledWith(
+      'opencode_prompt_delivery_retry_deferred_turn_active',
+      expect.anything(),
+      expect.objectContaining({ turnActivityReason: 'observation_unavailable' })
+    );
+
+    const rearmedAtMs = Date.now();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(rearmedAtMs + OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS + 1_000);
+      const settled = await harness.service.deliver(TEAM, peerMessage);
+      expect(settled).toMatchObject({ delivered: true });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(harness.observe).toHaveBeenCalledTimes(2);
+    expect(harness.send).not.toHaveBeenCalled();
+    const record = await harness.ledger.getByInboxMessage({
+      teamName: TEAM,
+      memberName: LEAD,
+      laneId: PRIMARY_LANE.laneId,
+      inboxMessageId: peerMessage.messageId!,
+    });
+    expect(record).toMatchObject({ status: 'responded', responseState: 'responded_tool_call' });
   });
 
   it('still re-delivers the full prompt after a failed observe when the runtime never accepted it', async () => {
