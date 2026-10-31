@@ -236,6 +236,46 @@ export async function startPreparedMemberWorkSyncFeature(input: {
   return input.prepared;
 }
 
+/**
+ * Teams whose member work sync runs this cycle: the startup scan, the pending
+ * report replay and the periodic nudge dispatch all start from this list. The
+ * activity check reads member spawn statuses and runtime snapshots, so a team
+ * of another app profile or a native session is dropped before it is probed.
+ */
+export async function listMemberWorkSyncLifecycleActiveTeamNames(deps: {
+  listTeams(): Promise<readonly { teamName: string; deletedAt?: string }[]>;
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
+  isTeamActive(teamName: string): Promise<boolean>;
+  /** Fallback when the activity check fails: a run or provisioning tracked here. */
+  hasLocalRuntime(teamName: string): boolean;
+  runBounded(teamNames: readonly string[], run: (teamName: string) => Promise<void>): Promise<void>;
+  logger: { warn(message: string, metadata: Record<string, unknown>): void };
+}): Promise<string[]> {
+  const teamNames = (await deps.listTeams())
+    .filter((team) => !team.deletedAt)
+    .map((team) => team.teamName);
+  const activeTeamNames: string[] = [];
+  await deps.runBounded(teamNames, async (teamName) => {
+    if (!(await deps.isManagedByThisProfile(teamName))) {
+      return;
+    }
+    try {
+      if (await deps.isTeamActive(teamName)) {
+        activeTeamNames.push(teamName);
+      }
+    } catch (error) {
+      deps.logger.warn('member work sync lifecycle team activity check failed', {
+        teamName,
+        error: String(error),
+      });
+      if (deps.hasLocalRuntime(teamName)) {
+        activeTeamNames.push(teamName);
+      }
+    }
+  });
+  return activeTeamNames;
+}
+
 export async function runShutdownBackupAfterWorkSyncDrain(input: {
   closeIngress?: () => void | Promise<void>;
   drainWorkSync: () => Promise<void>;

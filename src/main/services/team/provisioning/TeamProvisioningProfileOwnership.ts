@@ -35,6 +35,8 @@ export interface TeamProfileOwnerMarker {
 export interface TeamProfileOwnership {
   /** Never throws: anything that cannot be proven to be this profile's is foreign. */
   isManagedByThisProfile(teamName: string): Promise<boolean>;
+  /** The same decision with synchronous reads, for passes that cannot await (the quit-time backup). */
+  isManagedByThisProfileSync(teamName: string): boolean;
 }
 
 export interface TeamProfileOwnershipPorts {
@@ -61,24 +63,43 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function isTrustedMarkerFile(stat: fs.Stats): boolean {
+  return stat.isFile() && stat.size <= TEAM_PROFILE_OWNER_MARKER_MAX_BYTES;
+}
+
+function parseTeamOwnerProfileScope(raw: string): string | null {
+  const parsed = JSON.parse(raw) as unknown;
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+  const marker = parsed as Partial<Record<keyof TeamProfileOwnerMarker, unknown>>;
+  return marker.schemaVersion === TEAM_PROFILE_OWNER_MARKER_SCHEMA_VERSION &&
+    typeof marker.profileScope === 'string' &&
+    marker.profileScope.length > 0
+    ? marker.profileScope
+    : null;
+}
+
 /** The profile scope recorded in the team's marker, or null when none can be trusted. */
 export async function readTeamOwnerProfileScope(teamDir: string): Promise<string | null> {
   const markerPath = path.join(teamDir, TEAM_PROFILE_OWNER_MARKER_FILE);
   try {
-    const stat = await fs.promises.lstat(markerPath);
-    if (!stat.isFile() || stat.size > TEAM_PROFILE_OWNER_MARKER_MAX_BYTES) {
+    if (!isTrustedMarkerFile(await fs.promises.lstat(markerPath))) {
       return null;
     }
-    const parsed = JSON.parse(await fs.promises.readFile(markerPath, 'utf8')) as unknown;
-    if (!parsed || typeof parsed !== 'object') {
+    return parseTeamOwnerProfileScope(await fs.promises.readFile(markerPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function readTeamOwnerProfileScopeSync(teamDir: string): string | null {
+  const markerPath = path.join(teamDir, TEAM_PROFILE_OWNER_MARKER_FILE);
+  try {
+    if (!isTrustedMarkerFile(fs.lstatSync(markerPath))) {
       return null;
     }
-    const marker = parsed as Partial<Record<keyof TeamProfileOwnerMarker, unknown>>;
-    return marker.schemaVersion === TEAM_PROFILE_OWNER_MARKER_SCHEMA_VERSION &&
-      typeof marker.profileScope === 'string' &&
-      marker.profileScope.length > 0
-      ? marker.profileScope
-      : null;
+    return parseTeamOwnerProfileScope(fs.readFileSync(markerPath, 'utf8'));
   } catch {
     return null;
   }
@@ -87,6 +108,8 @@ export async function readTeamOwnerProfileScope(teamDir: string): Promise<string
 export function createTeamProfileOwnership(ports: TeamProfileOwnershipPorts): TeamProfileOwnership {
   const getTeamsBasePath = ports.getTeamsBasePath ?? getDefaultTeamsBasePath;
   const getProfileScope = ports.getProfileScope ?? resolveThisAppProfileScope;
+  const isOwnedByThisProfile = (ownerScope: string | null): boolean =>
+    ownerScope !== null && ownerScope === getProfileScope();
   return {
     async isManagedByThisProfile(teamName) {
       if (ports.isTrackedInThisProcess(teamName)) {
@@ -96,8 +119,24 @@ export function createTeamProfileOwnership(ports: TeamProfileOwnershipPorts): Te
         return false;
       }
       try {
-        const ownerScope = await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName));
-        return ownerScope !== null && ownerScope === getProfileScope();
+        return isOwnedByThisProfile(
+          await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName))
+        );
+      } catch {
+        return false;
+      }
+    },
+    isManagedByThisProfileSync(teamName) {
+      if (ports.isTrackedInThisProcess(teamName)) {
+        return true;
+      }
+      if (!isPlainTeamDirectoryName(teamName)) {
+        return false;
+      }
+      try {
+        return isOwnedByThisProfile(
+          readTeamOwnerProfileScopeSync(path.join(getTeamsBasePath(), teamName))
+        );
       } catch {
         return false;
       }

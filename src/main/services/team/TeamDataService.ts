@@ -444,6 +444,9 @@ export class TeamDataService {
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
   private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
+  /** Until wired, no team counts as this profile's, so lead notifications write nothing. */
+  private isTeamManagedByThisProfile: (teamName: string) => Promise<boolean> = () =>
+    Promise.resolve(false);
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -669,6 +672,15 @@ export class TeamDataService {
   /** Composition-time backend swap; must run before notification processing starts. */
   setTaskCommentNotificationJournalStore(store: TaskCommentNotificationJournalStore): void {
     this.taskCommentNotificationJournal.setStore(store);
+  }
+
+  /**
+   * ~/.claude/teams is shared with other app profiles and native sessions. Lead
+   * notifications about teammate task starts and comments write the team's
+   * comment journal and lead inbox, so they run only for teams this profile manages.
+   */
+  setTeamProfileOwnership(isManagedByThisProfile: (teamName: string) => Promise<boolean>): void {
+    this.isTeamManagedByThisProfile = isManagedByThisProfile;
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
@@ -2418,6 +2430,7 @@ export class TeamDataService {
       const last = events[events.length - 1];
       if (last.type !== 'status_changed' || last.to !== 'in_progress') return;
       if (!last.actor || last.actor === 'user') return;
+      if (!(await this.isTeamManagedByThisProfile(teamName))) return;
 
       // Dedup: only notify once per unique transition (keyed by team+task+timestamp).
       const dedupKey = `${teamName}:${taskId}:${last.timestamp}`;
@@ -3089,6 +3102,8 @@ export class TeamDataService {
     const recoverPending = options?.recoverPending === true;
     const teamContext = options?.teamContext;
     if (teamContext?.deletedAt) return;
+    // Even the first journal read publishes a fallback replica into the team directory.
+    if (!(await this.isTeamManagedByThisProfile(teamName))) return;
 
     let leadName = teamContext?.leadName?.trim() ?? '';
     let leadSessionId = teamContext?.leadSessionId;

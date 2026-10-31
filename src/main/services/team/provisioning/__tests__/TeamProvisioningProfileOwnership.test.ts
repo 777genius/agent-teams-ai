@@ -778,6 +778,8 @@ describe('isManagedByThisProfile', () => {
     });
 
     await expect(ownership.isManagedByThisProfile('own')).resolves.toBe(true);
+    // The quit-time backup cannot await; its synchronous twin must decide the same.
+    expect(ownership.isManagedByThisProfileSync('own')).toBe(true);
     for (const teamName of [
       'unmarked',
       'other-profile',
@@ -790,6 +792,7 @@ describe('isManagedByThisProfile', () => {
       'own/../own',
     ]) {
       await expect(ownership.isManagedByThisProfile(teamName)).resolves.toBe(false);
+      expect(ownership.isManagedByThisProfileSync(teamName)).toBe(false);
     }
   });
 
@@ -800,6 +803,7 @@ describe('isManagedByThisProfile', () => {
     try {
       expect((await stat(markerPath)).mode & 0o777).toBe(0);
       await expect(freshOwnership().isManagedByThisProfile('unreadable')).resolves.toBe(false);
+      expect(freshOwnership().isManagedByThisProfileSync('unreadable')).toBe(false);
     } finally {
       await chmod(markerPath, 0o600);
     }
@@ -812,5 +816,6 @@ describe('isManagedByThisProfile', () => {
     });
 
     await expect(ownership.isManagedByThisProfile('tracked')).resolves.toBe(true);
+    expect(ownership.isManagedByThisProfileSync('tracked')).toBe(true);
   });
 });

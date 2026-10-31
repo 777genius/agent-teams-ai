@@ -24033,6 +24033,8 @@ async function writePureAnthropicTeamConfigWithMembers(input: {
     )}\n`,
     'utf8'
   );
+  // Persisted-state fixtures model a team this app profile launched before a restart.
+  await markLaunchedByThisProfile(input.teamName);
 }
 
 async function writeMixedTeamConfig(input: {
@@ -24125,6 +24127,8 @@ async function writeMixedTeamConfig(input: {
     )}\n`,
     'utf8'
   );
+  // Persisted-state fixtures model a team this app profile launched before a restart.
+  await markLaunchedByThisProfile(input.teamName);
 }
 
 async function writeMixedTeamConfigWithoutOpenCodeProviderMetadata(input: {

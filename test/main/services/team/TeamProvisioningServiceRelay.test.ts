@@ -159,7 +159,10 @@ vi.mock(
     ...(await importOriginal<
       typeof import('../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership')
     >()),
-    createTeamProfileOwnership: () => ({ isManagedByThisProfile: () => Promise.resolve(true) }),
+    createTeamProfileOwnership: () => ({
+      isManagedByThisProfile: () => Promise.resolve(true),
+      isManagedByThisProfileSync: () => true,
+    }),
   })
 );
 

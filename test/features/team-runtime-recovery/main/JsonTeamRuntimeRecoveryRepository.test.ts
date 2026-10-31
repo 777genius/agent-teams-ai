@@ -1,8 +1,9 @@
+import { CancelRuntimeRecoveries } from '@features/team-runtime-recovery/core/application';
 import {
   JsonTeamRuntimeRecoveryRepository,
   TeamRuntimeRecoveryStorePaths,
 } from '@features/team-runtime-recovery/main';
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -86,6 +87,140 @@ describe('JsonTeamRuntimeRecoveryRepository', () => {
     expect((await repository.read('sandbox-team')).jobs).toEqual([]);
     const files = await readdir(paths.getTeamDir('sandbox-team'));
     expect(files.some((file) => file.startsWith('state.json.invalid.'))).toBe(true);
+  });
+
+  describe('no-op updates', () => {
+    const NOW = '2026-10-30T10:00:00.000Z';
+
+    function stateWithJob(teamName: string, status: 'pending' | 'completed') {
+      return {
+        schemaVersion: 1,
+        teamName,
+        jobs: [
+          {
+            id: 'job-1',
+            status,
+            signal: {
+              id: 'signal-1',
+              source: 'lead_stream',
+              phase: 'terminal',
+              observedAt: NOW,
+              contextId: 'local',
+              teamName,
+              memberName: 'team-lead',
+              targetKind: 'lead',
+              detail: 'rate limited',
+            },
+            reasonCode: 'rate_limited',
+            normalizedDetailHash: 'detail-hash',
+            circuitKey: 'circuit-1',
+            attempt: 0,
+            nextAttemptAt: NOW,
+            expiresAt: '2026-10-30T11:00:00.000Z',
+            createdAt: NOW,
+            updatedAt: NOW,
+          },
+        ],
+        circuits: [],
+        processedSignalIds: ['signal-1'],
+        updatedAt: NOW,
+      };
+    }
+
+    async function setUp(state?: ReturnType<typeof stateWithJob>) {
+      const { root, paths, repository } = await createRepository();
+      const teamDir = join(root, 'sandbox-team');
+      await mkdir(teamDir, { recursive: true });
+      await writeFile(join(teamDir, 'config.json'), '{"name":"sandbox-team"}\n', 'utf8');
+      if (state) {
+        await mkdir(paths.getTeamDir('sandbox-team'), { recursive: true });
+        await writeFile(paths.getStatePath('sandbox-team'), JSON.stringify(state), 'utf8');
+      }
+      const cancel = new CancelRuntimeRecoveries({
+        clock: { now: () => new Date('2026-10-30T10:05:00.000Z') },
+        repository,
+      });
+      return { teamDir, paths, cancel };
+    }
+
+    async function fileIdentity(filePath: string) {
+      const info = await stat(filePath);
+      return { ino: info.ino, mtimeMs: info.mtimeMs, bytes: await readFile(filePath, 'utf8') };
+    }
+
+    it('creates no recovery directory, lock or state file when there is nothing to cancel', async () => {
+      const { teamDir, cancel } = await setUp();
+
+      await expect(
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
+      ).resolves.toBe(0);
+
+      expect(await readdir(teamDir)).toEqual(['config.json']);
+    });
+
+    it('does not rewrite a state that has no cancellable job', async () => {
+      const { paths, cancel } = await setUp(stateWithJob('sandbox-team', 'completed'));
+      const before = await fileIdentity(paths.getStatePath('sandbox-team'));
+
+      await expect(
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
+      ).resolves.toBe(0);
+
+      expect(await fileIdentity(paths.getStatePath('sandbox-team'))).toEqual(before);
+      expect(await readdir(paths.getTeamDir('sandbox-team'))).toEqual(['state.json']);
+    });
+
+    it.each([
+      ['unparseable', '{not-json'],
+      ['invalid', '{"schemaVersion":1,"teamName":"sandbox-team","jobs":"none"}'],
+    ])('takes the locked path when the stored state is %s', async (_kind, raw) => {
+      const { paths, cancel } = await setUp();
+      await mkdir(paths.getTeamDir('sandbox-team'), { recursive: true });
+      await writeFile(paths.getStatePath('sandbox-team'), raw, 'utf8');
+
+      await expect(
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
+      ).resolves.toBe(0);
+
+      // Only the locked read quarantines; a state that proves nothing is never taken as empty.
+      const files = await readdir(paths.getTeamDir('sandbox-team'));
+      expect(files.some((file) => file.startsWith('state.json.invalid.'))).toBe(true);
+    });
+
+    it('rechecks under the lock and writes nothing when the change is already gone', async () => {
+      const { paths } = await setUp();
+      const repository = new JsonTeamRuntimeRecoveryRepository(paths);
+      let calls = 0;
+
+      // The unlocked read saw something to change; by the time the lock is
+      // held, another writer has already made the state what this update wants.
+      await repository.update('sandbox-team', (state) => {
+        calls += 1;
+        return {
+          state: calls === 1 ? { ...state, processedSignalIds: ['signal-1'] } : state,
+          result: undefined,
+        };
+      });
+
+      expect(calls).toBe(2);
+      await expect(readFile(paths.getStatePath('sandbox-team'), 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    });
+
+    it('still persists a real cancellation', async () => {
+      const { paths, cancel } = await setUp(stateWithJob('sandbox-team', 'pending'));
+
+      await expect(
+        cancel.execute({ teamName: 'sandbox-team', reason: 'team_stopped' })
+      ).resolves.toBe(1);
+
+      const persisted = JSON.parse(await readFile(paths.getStatePath('sandbox-team'), 'utf8'));
+      expect(persisted.jobs).toEqual([
+        expect.objectContaining({ id: 'job-1', status: 'cancelled', lastError: 'team_stopped' }),
+      ]);
+      expect(persisted.updatedAt).toBe('2026-10-30T10:05:00.000Z');
+    });
   });
 
   it('rejects path traversal team names', async () => {

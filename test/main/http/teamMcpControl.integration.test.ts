@@ -3,6 +3,7 @@
 import { BoundControlContext } from '@features/external-agent-connection/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { registerTeamRoutes } from '@main/http/teams';
+import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamDataService } from '@main/services/team/TeamDataService';
@@ -1251,6 +1252,12 @@ describe('MCP team tools over the local REST control API', () => {
           members: [{ name: 'builder' }],
         })
       );
+      // The team was launched by this app profile before the crash.
+      await claimTeamForThisProfile({
+        teamsBasePath: path.join(root, 'teams'),
+        teamName,
+        reason: 'launch',
+      });
       await writeFile(
         taskPath,
         JSON.stringify({

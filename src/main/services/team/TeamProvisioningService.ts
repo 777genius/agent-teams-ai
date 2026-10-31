@@ -114,6 +114,23 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     return this.profileOwnership.isManagedByThisProfile(teamName);
   }
 
+  /** Synchronous twin for passes that cannot await, such as the quit-time backup. */
+  isTeamManagedByThisProfileSync(teamName: string): boolean {
+    return this.profileOwnership.isManagedByThisProfileSync(teamName);
+  }
+
+  /**
+   * Opening a team in the UI or over HTTP closes task intervals a crash left
+   * open in tasks/<team>/*.json. A team of another app profile or a native
+   * session keeps its task clocks for its owner to settle.
+   */
+  async repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void> {
+    if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
+      return;
+    }
+    await super.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+  }
+
   /**
    * Both passes are admitted only for teams this profile manages. The startup
    * pass may recover, deliver to and stop lanes. The continuity pass delivers

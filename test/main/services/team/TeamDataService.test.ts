@@ -1202,6 +1202,7 @@ function createTaskCommentForwardingService(options: {
     (() => ({}) as never) as never,
     journal as never
   );
+  service.setTeamProfileOwnership(async () => true);
 
   return { service, inboxWriter, journal };
 }
@@ -4258,6 +4259,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4351,6 +4353,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4432,6 +4435,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
@@ -4544,6 +4548,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -4630,6 +4635,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -4730,6 +4736,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4829,6 +4836,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4919,6 +4927,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -5021,6 +5030,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       const second = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
@@ -5141,6 +5151,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       await firstJournalWriteStarted;
@@ -5270,6 +5281,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       await firstJournalWriteStarted;
@@ -5364,6 +5376,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -5627,6 +5640,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const initPromise = service.initializeTaskCommentNotificationState();
       const notifyPromise = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
