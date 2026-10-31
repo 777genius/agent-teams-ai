@@ -3015,7 +3015,9 @@ async function shutdownServices(): Promise<void> {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
     // Stop children need the control binding the admission drain below revokes.
-    openCodeLifecycleBridge?.prepareShutdownStop();
+    // One bridge instance captures, lends and releases it.
+    const shutdownStopBridge = openCodeLifecycleBridge;
+    shutdownStopBridge?.prepareShutdownStop();
     clearStartupTimers();
     clearInboxNotifyTimers();
     // Ahead of the first awaited step: runShutdownStep stops waiting on a step
@@ -3047,7 +3049,7 @@ async function shutdownServices(): Promise<void> {
     // step, and is released before host cleanup even when the step times out.
     const stopAllTeamsStartedAtMs = Date.now();
     try {
-      openCodeLifecycleBridge?.openShutdownStop();
+      shutdownStopBridge?.openShutdownStop();
       if (teamProvisioningService) {
         await runShutdownStep(
           'stop all teams',
@@ -3056,7 +3058,7 @@ async function shutdownServices(): Promise<void> {
         );
       }
     } finally {
-      const stops = openCodeLifecycleBridge?.releaseShutdownStop();
+      const stops = shutdownStopBridge?.releaseShutdownStop();
       logger.diagnostic(
         `Shutdown stop all teams took ${Date.now() - stopAllTeamsStartedAtMs}ms` +
           (stops

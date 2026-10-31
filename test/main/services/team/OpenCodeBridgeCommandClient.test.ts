@@ -6,6 +6,7 @@ import {
 import { OpenCodeBridgeDiagnosticsStore } from '@main/services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
 import { classifyOpenCodeBridgeTermination } from '@main/services/team/opencode/bridge/OpenCodeBridgeWatchdogDiagnostics';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import { OpenCodeShutdownStopEnvironment } from '@main/services/team/opencode/bridge/OpenCodeShutdownStopEnvironment';
 import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
 import { promises as fs } from 'fs';
 import * as os from 'os';
@@ -284,6 +285,63 @@ describe('OpenCodeBridgeCommandClient', () => {
       );
     }
     expect(runner.calls).toHaveLength(1);
+  });
+
+  it('gives every Stop child its own copy of the captured environment', () => {
+    const owned = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+    };
+    const previous: NodeJS.ProcessEnv = { ...owned, PATH: '/owned/bin' };
+    const stop = new OpenCodeShutdownStopEnvironment();
+    stop.capture(previous, owned);
+    previous.PATH = '/changed-after-capture';
+    expect(stop.open()).toBe(true);
+    const first = stop.environmentFor('opencode.stopTeam', {})!;
+    const second = stop.environmentFor('opencode.handshake', {
+      requiredCommand: 'opencode.stopTeam',
+    })!;
+    expect(second).not.toBe(first);
+    first.PATH = '/changed-by-first-child';
+    first.CLAUDE_TEAM_APP_PROFILE_SCOPE = 'foreign';
+    expect(second).toMatchObject({ ...owned, PATH: '/owned/bin' });
+    expect(stop.environmentFor('opencode.reconcileStop', {})).toMatchObject({
+      ...owned,
+      PATH: '/owned/bin',
+    });
+  });
+
+  it('captures the next Stop authority from the last regular child, never from a lent Stop child', async () => {
+    const owned = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+    };
+    let providerPath = '/owned/first';
+    const echo = createEchoRunner();
+    const client = createClient({
+      processRunner: echo,
+      envProvider: () => ({ ...owned, PATH: providerPath }),
+    });
+    const execute = (command: OpenCodeBridgeCommandName, body: unknown) =>
+      client.execute(command, body, { cwd: tempDir, timeoutMs: 100 });
+    await execute('opencode.launchTeam', { runId: 'run-1' });
+    client.prepareShutdownStop(owned);
+    // A regular child succeeds with a newer environment after the capture.
+    providerPath = '/owned/second';
+    expect(await execute('opencode.launchTeam', { runId: 'run-2' })).toMatchObject({ ok: true });
+    expect(client.openShutdownStop()).toBe(true);
+    expect(await execute('opencode.stopTeam', { runId: 'run-1' })).toMatchObject({ ok: true });
+    expect(echo.calls.at(-1)!.env.PATH).toBe('/owned/first');
+    client.releaseShutdownStop();
+
+    // The lent Stop child succeeded last, but it is not a regular owned child.
+    client.prepareShutdownStop(owned);
+    expect(client.openShutdownStop()).toBe(true);
+    expect(await execute('opencode.stopTeam', { runId: 'run-2' })).toMatchObject({ ok: true });
+    expect(echo.calls.at(-1)!.env.PATH).toBe('/owned/second');
+    client.releaseShutdownStop();
   });
 
   it.each(['constructor-only', 'failed-provider', 'failed-command', 'missing-binding'])(

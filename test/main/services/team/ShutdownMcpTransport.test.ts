@@ -752,6 +752,23 @@ describe('shutdown MCP transport authority', () => {
           throw finished;
         },
       }) as () => Promise<void>;
+      // Real timers taken before the fake ones: a regression fails here within
+      // seconds and restores real timers, instead of hanging this file.
+      const realSetTimeout = setTimeout;
+      const realClearTimeout = clearTimeout;
+      const settlesSoon = async <T>(promise: Promise<T>, what: string): Promise<T> => {
+        let guard: ReturnType<typeof setTimeout> | undefined;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+              guard = realSetTimeout(() => reject(new Error(`${what} did not settle`)), 5_000);
+            }),
+          ]);
+        } finally {
+          realClearTimeout(guard);
+        }
+      };
       if (outcome === 'times out') vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
         expect(await execute('opencode.launchTeam', { runId: 'run-1' })).toMatchObject({
@@ -761,10 +778,10 @@ describe('shutdown MCP transport authority', () => {
         const launched = children.length;
         const shutting = shutdown();
         if (outcome === 'times out') {
-          await holding;
+          await settlesSoon(holding, 'the hung Stop child');
           await vi.advanceTimersByTimeAsync(10_000);
         }
-        await expect(shutting).rejects.toBe(finished);
+        await expect(settlesSoon(shutting, 'bounded shutdown')).rejects.toBe(finished);
         expect(order).toEqual(['announcements', 'stop all teams', 'host registry cleanup']);
         expect(prepare.mock.invocationCallOrder[0]).toBeLessThan(
           closeAdmission.mock.invocationCallOrder[0]
@@ -787,7 +804,9 @@ describe('shutdown MCP transport authority', () => {
         );
         if (outcome === 'times out') {
           finishHungChild();
-          expect(await lateLaneStop).toMatchObject({ stopped: true });
+          expect(await settlesSoon(lateLaneStop!, 'the late lane stop')).toMatchObject({
+            stopped: true,
+          });
         }
         const lent = children.slice(launched);
         expect(lent.map(({ command, runId }) => [command, runId])).toEqual([
