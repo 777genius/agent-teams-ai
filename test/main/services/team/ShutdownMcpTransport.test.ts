@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -23,6 +23,7 @@ import {
   type OpenCodeBridgeProcessRunInput,
 } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { buildOpenCodeAppScopedMcpUrl } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
@@ -32,6 +33,8 @@ import * as pathDecoder from '@main/utils/pathDecoder';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
+
+import type { OpenCodeBridgeCommandName } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/sandbox/shutdown-profile', getVersion: () => 'test' },
@@ -473,10 +476,12 @@ describe('shutdown MCP transport authority', () => {
     const finished = new Error('bounded shutdown completed MCP teardown');
     const stopStartupAdmission = vi.fn();
     const disposeTokenUsage = vi.fn();
-    const prepareShutdownCleanup = vi.fn();
+    const prepareShutdownStop = vi.fn();
+    const openShutdownStop = vi.fn();
+    const releaseShutdownStop = vi.fn(() => null);
     const drainCatalog = vi.fn(async () => {});
     const closeAdmission = vi.fn(() => {
-      expect(prepareShutdownCleanup).toHaveBeenCalledExactlyOnceWith();
+      expect(prepareShutdownStop).toHaveBeenCalledExactlyOnceWith();
     });
     const noOp = vi.fn();
     const stopContinuityScan = vi.fn();
@@ -490,7 +495,7 @@ describe('shutdown MCP transport authority', () => {
     const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
       shutdownPromise: null,
       stopAdmittingOpenCodeStartupCleanup: stopStartupAdmission,
-      openCodeLifecycleBridge: { prepareShutdownCleanup },
+      openCodeLifecycleBridge: { prepareShutdownStop, openShutdownStop, releaseShutdownStop },
       runtimeProviderManagementFeature: { shutdown: drainCatalog },
       externalAgentConnection: {
         closeAdmission,
@@ -501,7 +506,7 @@ describe('shutdown MCP transport authority', () => {
       },
       removeExternalAgentConnectionIpc: noOp,
       ipcMain: {},
-      logger: { info: noOp },
+      logger: { info: noOp, diagnostic: noOp },
       announcementsLifecycle: { dispose: noOp },
       tokenUsageFeature: { dispose: disposeTokenUsage },
       runShutdownStep: async (_name: string, step: () => unknown) => {
@@ -541,9 +546,11 @@ describe('shutdown MCP transport authority', () => {
       expect(drainCatalog.mock.invocationCallOrder[0]).toBeLessThan(
         closeAdmission.mock.invocationCallOrder[0]
       );
-      expect(prepareShutdownCleanup.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(prepareShutdownStop.mock.invocationCallOrder[0]).toBeLessThan(
         closeAdmission.mock.invocationCallOrder[0]
       );
+      expect(openShutdownStop).toHaveBeenCalledExactlyOnceWith();
+      expect(releaseShutdownStop).toHaveBeenCalledExactlyOnceWith();
       expect(acceptedStops).toBe(2);
       expect(teardown).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
       const after = await resolveEnv();
@@ -566,6 +573,274 @@ describe('shutdown MCP transport authority', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it.each(['settles', 'fails', 'times out'] as const)(
+    'lends the pre-drain binding only to Stop children inside stop all teams (step %s)',
+    async (outcome) => {
+      const refused = 'Desktop MCP control context is unavailable';
+      const directory = await mkdtemp(join(tmpdir(), 'shutdown-stop-env-'));
+      const live = vi.spyOn(server, 'getCurrentHandle').mockReturnValue(handle);
+      const start = vi.spyOn(server, 'ensureStarted').mockResolvedValue(handle);
+      const teardown = vi.spyOn(server, 'stop').mockResolvedValue(undefined);
+      const connection = createDesktopExternalAgentConnection({
+        appInstanceId: 'review-host',
+        userDataPath: '/sandbox/app-profile',
+        cdp: {
+          read: async () => ({ cdp: { status: 'disabled' }, reason: null }),
+        } as unknown as NativeRendererCdp,
+        getRoot: getClaudeBasePath,
+        getMainContents: () => null,
+        getCdpEnabled: () => false,
+        getAppVersion: () => 'test',
+        isLocalContext: () => true,
+        getControlUrl: () => 'http://127.0.0.1:41000',
+        startControl: async () => undefined,
+        reconfigureRoot: async () => undefined,
+        mcp: server,
+        httpEnabled: true,
+      });
+      const children: { command: string; runId?: string; env: NodeJS.ProcessEnv }[] = [];
+      let finishHungChild!: () => void;
+      const hungChild = new Promise<void>((resolve) => {
+        finishHungChild = resolve;
+      });
+      const client = new OpenCodeBridgeCommandClient({
+        binaryPath: '/sandbox/cli',
+        tempDirectory: directory,
+        env: hostEnv(),
+        envProvider: bridgeResolver(hostEnv(), { refreshDesktopBridgeEnvironment }) as NonNullable<
+          ConstructorParameters<typeof OpenCodeBridgeCommandClient>[0]['envProvider']
+        >,
+        processRunner: {
+          async run(input) {
+            const envelope = JSON.parse(await readFile(input.args[4], 'utf8')) as {
+              requestId: string;
+              command: string;
+              body?: { runId?: string };
+            };
+            const runId = envelope.body?.runId;
+            children.push({ command: envelope.command, runId, env: input.env });
+            if (runId === 'hung-run') {
+              reachedHold();
+              await hungChild;
+            }
+            return {
+              stdout: JSON.stringify({
+                ok: true,
+                schemaVersion: 1,
+                requestId: envelope.requestId,
+                command: envelope.command,
+                completedAt: '2026-10-31T00:00:00.000Z',
+                durationMs: 1,
+                runtime: {
+                  providerId: 'opencode',
+                  binaryPath: '/sandbox/opencode',
+                  binaryFingerprint: 'test-bin',
+                  version: '1.0.0',
+                  capabilitySnapshotId: 'test-cap',
+                },
+                diagnostics: [],
+                data:
+                  envelope.command === 'opencode.stopTeam'
+                    ? { runId, stopped: true, members: {}, warnings: [], diagnostics: [] }
+                    : { runId },
+              }),
+              stderr: '',
+              exitCode: 0,
+              timedOut: false,
+            };
+          },
+        },
+      });
+      const bridge = new OpenCodeReadinessBridge(client);
+      const stopLane = (runId: string) =>
+        bridge.stopOpenCodeTeam({
+          runId,
+          laneId: 'lane-a',
+          teamId: 'sandbox-team',
+          teamName: 'sandbox-team',
+          projectPath: directory,
+          reason: 'user_requested',
+          force: true,
+        });
+      const execute = (command: OpenCodeBridgeCommandName, body: unknown) =>
+        client.execute(command, body, { cwd: directory, timeoutMs: 1000 });
+      const logger = { info: vi.fn(), warn: vi.fn(), diagnostic: vi.fn() };
+      const realRunShutdownStep = compileExpression(
+        sourceNode('runShutdownStep').getText(mainSource),
+        { logger, SHUTDOWN_STEP_TIMEOUT_MS: 10_000 }
+      ) as (label: string, action: () => unknown, timeoutMs?: number) => Promise<void>;
+      const prepare = vi.spyOn(bridge, 'prepareShutdownStop');
+      const open = vi.spyOn(bridge, 'openShutdownStop');
+      const release = vi.spyOn(bridge, 'releaseShutdownStop');
+      const closeAdmission = vi.fn(() => connection.closeAdmission());
+      const order: string[] = [];
+      let reachedHold!: () => void;
+      const holding = new Promise<void>((resolve) => {
+        reachedHold = resolve;
+      });
+      let finishHold!: () => void;
+      const hold = new Promise<void>((resolve) => {
+        finishHold = resolve;
+      });
+      let stopAllTeamsRun: Promise<void> | undefined;
+      let lateLaneStop: Promise<unknown> | undefined;
+      const stopAllTeams = async () => {
+        order.push('stop all teams');
+        for (const [command, body] of [
+          ['opencode.launchTeam', { runId: 'late-launch' }],
+          ['opencode.sendMessage', { runId: 'run-1' }],
+          ['opencode.handshake', { requiredCommand: 'opencode.launchTeam' }],
+        ] as const) {
+          await expect(execute(command, body)).rejects.toThrow(refused);
+        }
+        expect(
+          await execute('opencode.handshake', { requiredCommand: 'opencode.stopTeam' })
+        ).toMatchObject({ ok: true });
+        // The first pass and the "Shutdown follow-up" pass share one window.
+        expect(await stopLane('run-1')).toMatchObject({ stopped: true });
+        expect(await stopLane('run-2')).toMatchObject({ stopped: true });
+        if (outcome === 'fails') throw new Error('stop all teams failed');
+        if (outcome === 'times out') {
+          // Still running when the step is abandoned: counted as pending.
+          lateLaneStop = stopLane('hung-run');
+          await hold;
+          await expect(stopLane('after-timeout')).rejects.toThrow(refused);
+        }
+      };
+      const finished = new Error('bounded shutdown reached subprocess cleanup');
+      const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
+        shutdownPromise: null,
+        stopAdmittingOpenCodeStartupCleanup: vi.fn(),
+        openCodeLifecycleBridge: bridge,
+        runtimeProviderManagementFeature: null,
+        externalAgentConnection: { ...connection, closeAdmission },
+        removeExternalAgentConnectionIpc: vi.fn(),
+        ipcMain: {},
+        logger,
+        announcementsLifecycle: {
+          dispose: async () => {
+            order.push('announcements');
+            // Captured before the drain, but not lent before the stop step.
+            await expect(stopLane('before-window')).rejects.toThrow(refused);
+          },
+        },
+        tokenUsageFeature: null,
+        rendererRecoveryController: null,
+        openCodePromptDeliveryContinuityScan: null,
+        stopPeriodicOpenCodeHostStartupLockPurge: null,
+        clearStartupTimers: vi.fn(),
+        clearInboxNotifyTimers: vi.fn(),
+        runShutdownStep: (label: string, step: () => unknown, timeoutMs?: number) =>
+          label === 'stop all teams' ? realRunShutdownStep(label, step, timeoutMs) : step(),
+        teamRuntimeRecoveryFeature: null,
+        teamProvisioningService: {
+          setRuntimeRecoveryFailureObserver: vi.fn(),
+          stopAllTeams: () => (stopAllTeamsRun = stopAllTeams()),
+        },
+        cleanupOpenCodeHostsForLifecycle: async () => {
+          order.push('host registry cleanup');
+          await expect(execute('opencode.stopTeam', { runId: 'run-1' })).rejects.toThrow(refused);
+          if (outcome === 'times out') {
+            // The abandoned step resumes only after the window closed behind it.
+            finishHold();
+            await stopAllTeamsRun;
+          }
+        },
+        agentTeamsMcpHttpServer: server,
+        killTrackedCliProcesses: () => {
+          throw finished;
+        },
+      }) as () => Promise<void>;
+      // Real timers taken before the fake ones: a regression fails here within
+      // seconds and restores real timers, instead of hanging this file.
+      const realSetTimeout = setTimeout;
+      const realClearTimeout = clearTimeout;
+      const settlesSoon = async <T>(promise: Promise<T>, what: string): Promise<T> => {
+        let guard: ReturnType<typeof setTimeout> | undefined;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+              guard = realSetTimeout(() => reject(new Error(`${what} did not settle`)), 5_000);
+            }),
+          ]);
+        } finally {
+          realClearTimeout(guard);
+        }
+      };
+      if (outcome === 'times out') vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        expect(await execute('opencode.launchTeam', { runId: 'run-1' })).toMatchObject({
+          ok: true,
+        });
+        const binding = getDesktopMcpChildEnvironment();
+        const launched = children.length;
+        const shutting = shutdown();
+        if (outcome === 'times out') {
+          await settlesSoon(holding, 'the hung Stop child');
+          await vi.advanceTimersByTimeAsync(10_000);
+        }
+        await expect(settlesSoon(shutting, 'bounded shutdown')).rejects.toBe(finished);
+        expect(order).toEqual(['announcements', 'stop all teams', 'host registry cleanup']);
+        expect(prepare.mock.invocationCallOrder[0]).toBeLessThan(
+          closeAdmission.mock.invocationCallOrder[0]
+        );
+        expect(open).toHaveBeenCalledOnce();
+        expect(release).toHaveBeenCalledOnce();
+        expect(open.mock.invocationCallOrder[0]).toBeLessThan(release.mock.invocationCallOrder[0]);
+        if (outcome === 'fails')
+          expect(logger.warn).toHaveBeenCalledWith(
+            'Shutdown step failed (stop all teams): stop all teams failed'
+          );
+        expect(logger.diagnostic).toHaveBeenCalledExactlyOnceWith(
+          expect.stringMatching(
+            new RegExp(
+              `^Shutdown stop all teams took \\d+ms; OpenCode lane stops confirmed=2 unconfirmed=0 pending=${
+                outcome === 'times out' ? 1 : 0
+              } capturedStopAuthority=true$`
+            )
+          )
+        );
+        if (outcome === 'times out') {
+          finishHungChild();
+          expect(await settlesSoon(lateLaneStop!, 'the late lane stop')).toMatchObject({
+            stopped: true,
+          });
+        }
+        const lent = children.slice(launched);
+        expect(lent.map(({ command, runId }) => [command, runId])).toEqual([
+          ['opencode.handshake', undefined],
+          ['opencode.stopTeam', 'run-1'],
+          ['opencode.stopTeam', 'run-2'],
+          ...(outcome === 'times out' ? [['opencode.stopTeam', 'hung-run']] : []),
+        ]);
+        for (const { env } of lent) {
+          expect(env).toMatchObject({
+            AGENT_TEAMS_BOUND_CONTROL_URL: binding.AGENT_TEAMS_BOUND_CONTROL_URL,
+            AGENT_TEAMS_BOUND_CONTEXT_JSON: binding.AGENT_TEAMS_BOUND_CONTEXT_JSON,
+            AGENT_TEAMS_MCP_CLAUDE_DIR: binding.AGENT_TEAMS_MCP_CLAUDE_DIR,
+            CLAUDE_TEAM_APP_INSTANCE_ID: 'review-host',
+            CLAUDE_TEAM_APP_PROFILE_SCOPE: binding.CLAUDE_TEAM_APP_PROFILE_SCOPE,
+          });
+          expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)).toMatchObject({
+            AGENT_TEAMS_BOUND_CONTEXT_JSON: binding.AGENT_TEAMS_BOUND_CONTEXT_JSON,
+          });
+        }
+        expect(teardown).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
+      } finally {
+        vi.useRealTimers();
+        finishHungChild();
+        finishHold();
+        await stopAllTeamsRun?.catch(() => undefined);
+        await connection.shutdown().catch(() => undefined);
+        teardown.mockRestore();
+        start.mockRestore();
+        live.mockRestore();
+        await rm(directory, { recursive: true, force: true });
+      }
+    }
+  );
 
   it.each([true, false])(
     'refreshes a new main command spool with current authority=%s',

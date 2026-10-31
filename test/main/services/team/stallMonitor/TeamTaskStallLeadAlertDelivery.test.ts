@@ -78,7 +78,9 @@ function createMonitor(
 ) {
   const journal = new TeamTaskStallJournal({ alertCooldownMs: 10 * 60_000 });
   const markAlerted = vi.spyOn(journal, 'markAlerted');
-  const notifier = new TeamTaskStallNotifier(new TeamDataService(), {
+  const teamDataService = new TeamDataService();
+  teamDataService.setTeamProfileOwnership(async () => true);
+  const notifier = new TeamTaskStallNotifier(teamDataService, {
     relayOpenCodeMemberInboxMessages,
   });
   const snapshot = {
@@ -98,6 +100,7 @@ function createMonitor(
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => []),
+      isTeamOfThisProfile: vi.fn(async () => true),
     } as never,
     { getSnapshot: vi.fn(async () => snapshot) } as never,
     {

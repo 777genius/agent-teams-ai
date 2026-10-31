@@ -46,6 +46,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => []),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const monitor = new TeamTaskStallMonitor(
       registry as never,
@@ -77,6 +78,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => ['demo']),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const snapshot = {
       teamName: 'demo',
@@ -117,7 +119,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async () => []),
     };
 
@@ -138,6 +140,60 @@ describe('TeamTaskStallMonitor', () => {
     expect(journal.markAlerted).toHaveBeenCalledWith('demo', 'work-a:epoch', expect.any(String));
   });
 
+  it('does not journal a lead alert the notifier did not send', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+
+    const task = { id: 'task-a', displayId: 'abcd1234', subject: 'Task A' };
+    const evaluation = {
+      status: 'alert',
+      taskId: 'task-a',
+      branch: 'work',
+      signal: 'turn_ended_after_touch',
+      epochKey: 'work-a:epoch',
+      reason: 'Potential work stall.',
+    };
+    const journal = {
+      reconcileScan: vi.fn(async () => [evaluation]),
+      markAlerted: vi.fn(async () => undefined),
+    };
+    // The notifier skips the send when another profile took the team over.
+    const notifier = {
+      notifyLead: vi.fn(async () => false),
+      notifyOpenCodeOwners: vi.fn(async () => []),
+    };
+    const monitor = new TeamTaskStallMonitor(
+      {
+        start: vi.fn(),
+        stop: vi.fn(async () => undefined),
+        noteTeamChange: vi.fn(),
+        listActiveTeams: vi.fn(async () => ['demo']),
+        isTeamOfThisProfile: vi.fn(async () => true),
+      } as never,
+      {
+        getSnapshot: vi.fn(async () => ({
+          teamName: 'demo',
+          inProgressTasks: [task],
+          reviewOpenTasks: [],
+          allTasksById: new Map([['task-a', task]]),
+        })),
+      } as never,
+      { evaluateWork: vi.fn(() => evaluation), evaluateReview: vi.fn() } as never,
+      journal as never,
+      notifier as never
+    );
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(2_100);
+    await vi.advanceTimersByTimeAsync(2_100);
+    await monitor.stop();
+
+    expect(notifier.notifyLead).toHaveBeenCalled();
+    expect(journal.markAlerted).not.toHaveBeenCalled();
+  });
+
   it('records work-sync stall observations when OpenCode remediation is disabled', async () => {
     vi.useFakeTimers();
     vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
@@ -150,6 +206,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => ['demo']),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const snapshot = {
       teamName: 'demo',
@@ -190,7 +247,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async () => []),
       recordWorkSyncObservations: vi.fn(async () => undefined),
     };
@@ -230,6 +287,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => ['demo']),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const snapshot = {
       teamName: 'demo',
@@ -257,7 +315,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async () => []),
     };
 
@@ -298,6 +356,7 @@ describe('TeamTaskStallMonitor', () => {
         stop: vi.fn(async () => undefined),
         noteTeamChange: vi.fn(),
         listActiveTeams: vi.fn(async () => ['demo']),
+        isTeamOfThisProfile: vi.fn(async () => true),
       } as never,
       snapshotSource as never,
       { evaluateWork: vi.fn(), evaluateReview: vi.fn() } as never,
@@ -360,7 +419,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async () => []),
     };
     const monitor = new TeamTaskStallMonitor(
@@ -369,6 +428,7 @@ describe('TeamTaskStallMonitor', () => {
         stop: vi.fn(async () => undefined),
         noteTeamChange: vi.fn(),
         listActiveTeams: vi.fn(async () => ['stuck', 'healthy']),
+        isTeamOfThisProfile: vi.fn(async () => true),
       } as never,
       snapshotSource as never,
       {
@@ -426,7 +486,7 @@ describe('TeamTaskStallMonitor', () => {
     };
     const task = { id: 'work-a', displayId: 'abcd1234', subject: 'Work A' };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async () => []),
     };
     const journal = {
@@ -442,6 +502,7 @@ describe('TeamTaskStallMonitor', () => {
         stop: vi.fn(async () => undefined),
         noteTeamChange: vi.fn(),
         listActiveTeams: vi.fn(async () => ['demo']),
+        isTeamOfThisProfile: vi.fn(async () => true),
       } as never,
       {
         getSnapshot: vi.fn(async () => ({
@@ -494,6 +555,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => ['demo']),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const task = { id: 'work-a', displayId: 'abcd1234', subject: 'Work A' };
     const monitor = new TeamTaskStallMonitor(
@@ -579,7 +641,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
     };
     const monitor = new TeamTaskStallMonitor(
@@ -588,6 +650,7 @@ describe('TeamTaskStallMonitor', () => {
         stop: vi.fn(async () => undefined),
         noteTeamChange: vi.fn(),
         listActiveTeams: vi.fn(async () => ['demo']),
+        isTeamOfThisProfile: vi.fn(async () => true),
       } as never,
       {
         getSnapshot: vi.fn(async () => ({
@@ -634,6 +697,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => ['demo']),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const task = {
       id: 'task-a',
@@ -669,7 +733,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
     };
 
@@ -724,7 +788,7 @@ describe('TeamTaskStallMonitor', () => {
       markAlerted: vi.fn(async () => undefined),
     };
     const notifier = {
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
       notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
     };
     const monitor = new TeamTaskStallMonitor(
@@ -733,6 +797,7 @@ describe('TeamTaskStallMonitor', () => {
         stop: vi.fn(async () => undefined),
         noteTeamChange: vi.fn(),
         listActiveTeams: vi.fn(async () => ['demo']),
+        isTeamOfThisProfile: vi.fn(async () => true),
       } as never,
       {
         getSnapshot: vi.fn(async () => ({
@@ -777,6 +842,7 @@ describe('TeamTaskStallMonitor', () => {
       stop: vi.fn(async () => undefined),
       noteTeamChange: vi.fn(),
       listActiveTeams: vi.fn(async () => ['demo']),
+      isTeamOfThisProfile: vi.fn(async () => true),
     };
     const task = {
       id: 'task-a',
@@ -801,7 +867,7 @@ describe('TeamTaskStallMonitor', () => {
     };
     const notifier = {
       notifyOpenCodeOwners: vi.fn(async () => []),
-      notifyLead: vi.fn(async () => undefined),
+      notifyLead: vi.fn(async () => true),
     };
     const monitor = new TeamTaskStallMonitor(
       registry as never,
@@ -876,6 +942,7 @@ describe('TeamTaskStallMonitor', () => {
         stop: vi.fn(async () => undefined),
         noteTeamChange: vi.fn(),
         listActiveTeams: vi.fn(async () => ['demo']),
+        isTeamOfThisProfile: vi.fn(async () => true),
       };
     }
 
@@ -898,7 +965,7 @@ describe('TeamTaskStallMonitor', () => {
       const store = createMemoryJournalStore();
       const journal = new TeamTaskStallJournal({ store });
       const notifier = {
-        notifyLead: vi.fn(async () => undefined),
+        notifyLead: vi.fn(async () => true),
         notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
       };
       const monitor = new TeamTaskStallMonitor(
@@ -963,7 +1030,7 @@ describe('TeamTaskStallMonitor', () => {
       const store = createMemoryJournalStore();
       const journal = new TeamTaskStallJournal({ store });
       const notifier = {
-        notifyLead: vi.fn(async () => undefined),
+        notifyLead: vi.fn(async () => true),
         notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
       };
       const monitor = new TeamTaskStallMonitor(
@@ -1007,7 +1074,7 @@ describe('TeamTaskStallMonitor', () => {
       stubScanEnv();
 
       const notifier = {
-        notifyLead: vi.fn(async () => undefined),
+        notifyLead: vi.fn(async () => true),
         notifyOpenCodeOwners: vi.fn(async () => []),
       };
       const monitor = new TeamTaskStallMonitor(
@@ -1042,7 +1109,7 @@ describe('TeamTaskStallMonitor', () => {
       // A 1 ms cooldown makes every later scan a fresh escalation attempt.
       const journal = new TeamTaskStallJournal({ store, alertCooldownMs: 1 });
       const notifier = {
-        notifyLead: vi.fn(async () => undefined),
+        notifyLead: vi.fn(async () => true),
         notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
       };
       const monitor = new TeamTaskStallMonitor(
@@ -1100,7 +1167,7 @@ describe('TeamTaskStallMonitor', () => {
       stubScanEnv();
 
       const notifier = {
-        notifyLead: vi.fn(async () => undefined),
+        notifyLead: vi.fn(async () => true),
         notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
       };
       const monitor = new TeamTaskStallMonitor(
@@ -1154,7 +1221,7 @@ describe('TeamTaskStallMonitor', () => {
         },
       };
       const notifier = {
-        notifyLead: vi.fn(async () => undefined),
+        notifyLead: vi.fn(async () => true),
         notifyOpenCodeOwners: vi.fn(async (_teamName: string, alerts: unknown[]) => alerts),
       };
       const monitor = new TeamTaskStallMonitor(
@@ -1307,6 +1374,7 @@ describe('TeamTaskStallMonitor', () => {
           stop: vi.fn(async () => undefined),
           noteTeamChange: vi.fn(),
           listActiveTeams: vi.fn(listActiveTeams),
+          isTeamOfThisProfile: vi.fn(async () => true),
         } as never,
         {
           getSnapshot: vi.fn(async () => ({
@@ -1394,6 +1462,7 @@ describe('TeamTaskStallMonitor', () => {
           stop: vi.fn(async () => undefined),
           noteTeamChange: vi.fn(),
           listActiveTeams: vi.fn(async () => ['demo']),
+          isTeamOfThisProfile: vi.fn(async () => true),
         } as never,
         {
           getSnapshot: vi.fn(async () => ({
