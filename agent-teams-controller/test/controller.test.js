@@ -3598,6 +3598,39 @@ controller.messages.sendMessage({
     expect(controller.processes.listProcesses()).toEqual([]);
   });
 
+  it('reports stale processes stopped without writing processes.json on a read-only listing', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const processesPath = path.join(claudeDir, 'teams', 'my-team', 'processes.json');
+    const original = `${JSON.stringify(
+      [
+        {
+          id: 'live-entry',
+          pid: process.pid,
+          label: 'live',
+          registeredAt: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'stale-entry',
+          pid: 999999,
+          label: 'stale',
+          registeredAt: '2024-01-01T00:00:00.000Z',
+        },
+      ],
+      null,
+      2
+    )}\n`;
+    fs.writeFileSync(processesPath, original);
+
+    const listed = controller.processes.listProcesses({ readOnly: true });
+
+    expect(listed.map((entry) => [entry.id, entry.alive, Boolean(entry.stoppedAt)])).toEqual([
+      ['live-entry', true, false],
+      ['stale-entry', false, true],
+    ]);
+    expect(fs.readFileSync(processesPath, 'utf8')).toBe(original);
+  });
+
   it('task_add_comment succeeds even when owner notification write fails', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

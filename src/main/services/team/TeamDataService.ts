@@ -444,8 +444,11 @@ export class TeamDataService {
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
   private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
-  /** Until wired, no team counts as this profile's, so lead notifications write nothing. */
-  private isTeamManagedByThisProfile: (teamName: string) => Promise<boolean> = () =>
+  /**
+   * Until wired, no team counts as this profile's, so lead notifications write
+   * nothing and process listings only read. The team data worker is never wired.
+   */
+  private teamProfileOwnership: (teamName: string) => Promise<boolean> = () =>
     Promise.resolve(false);
 
   constructor(
@@ -680,7 +683,12 @@ export class TeamDataService {
    * comment journal and lead inbox, so they run only for teams this profile manages.
    */
   setTeamProfileOwnership(isManagedByThisProfile: (teamName: string) => Promise<boolean>): void {
-    this.isTeamManagedByThisProfile = isManagedByThisProfile;
+    this.teamProfileOwnership = isManagedByThisProfile;
+  }
+
+  /** The wired ownership check; background writers into a team ask it first. */
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean> {
+    return this.teamProfileOwnership(teamName);
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
@@ -1788,17 +1796,24 @@ export class TeamDataService {
   }
 
   private async processHealthTick(): Promise<void> {
-    for (const teamName of this.processHealthTeams) {
+    for (const teamName of [...this.processHealthTeams]) {
       try {
-        this.getController(teamName).processes.listProcesses();
+        await this.readProcesses(teamName);
       } catch {
         // best-effort per team
       }
     }
   }
 
+  /**
+   * Listing settles rows whose pid is gone by writing their stoppedAt back to
+   * processes.json. Only a team this profile manages is written: the teams
+   * directory is shared with other app profiles, and their listing gets the
+   * same rows while the file stays as it is.
+   */
   private async readProcesses(teamName: string): Promise<TeamProcess[]> {
-    return this.getController(teamName).processes.listProcesses() as TeamProcess[];
+    const readOnly = !(await this.isTeamManagedByThisProfile(teamName));
+    return this.getController(teamName).processes.listProcesses({ readOnly }) as TeamProcess[];
   }
 
   /**

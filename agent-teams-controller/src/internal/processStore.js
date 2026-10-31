@@ -30,7 +30,13 @@ function writeProcesses(paths, processes) {
   writeJson(paths.processesPath, processes);
 }
 
-function listProcesses(paths) {
+/**
+ * Lists the rows with their liveness. A row whose pid is gone comes back with a
+ * stoppedAt, and by default that is written back to processes.json. With
+ * `readOnly` the result is the same but the file is left as it is, for callers
+ * that may only read the team.
+ */
+function listProcesses(paths, options = {}) {
   const existing = readProcesses(paths);
   const processes = existing.map((entry) => {
     const alive =
@@ -51,6 +57,9 @@ function listProcesses(paths) {
       alive,
     };
   });
+  if (options.readOnly === true) {
+    return processes;
+  }
 
   const changed = processes.some((entry, index) => entry.stoppedAt !== existing[index]?.stoppedAt);
   if (changed) {

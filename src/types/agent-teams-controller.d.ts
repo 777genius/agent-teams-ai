@@ -181,7 +181,8 @@ declare module 'agent-teams-controller' {
     registerProcess(flags: Record<string, unknown>): unknown;
     stopProcess(flags: Record<string, unknown>): unknown;
     unregisterProcess(flags: Record<string, unknown>): unknown;
-    listProcesses(): unknown[];
+    /** `readOnly` returns the same rows without writing settled stoppedAt values back. */
+    listProcesses(flags?: { readOnly?: boolean }): unknown[];
   }
 
   export interface ControllerMaintenanceApi {
