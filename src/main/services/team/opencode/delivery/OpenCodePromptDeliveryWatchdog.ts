@@ -39,6 +39,15 @@ export const OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS = 90_000;
  * decides when a retry may fire, never whether the record is finished.
  */
 export const OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS = 600_000;
+/**
+ * Ceiling for deferring a due retry only because the observation of an accepted
+ * prompt could not be read. Shorter than the turn-activity cap on purpose: an
+ * unreadable result is no evidence of a live turn, and every later message to
+ * the member waits behind the deferred one. A one-off failure is still settled
+ * by the next observation a retry delay later; a persistent one gets the
+ * existing redelivery marker after this long instead of after ten minutes.
+ */
+export const OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS = 3 * 60_000;
 export const OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY = 2;
 export const OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY = 2;
 
@@ -48,6 +57,8 @@ export type OpenCodePromptDeliveryTurnActivityReason =
   | 'assistant_message_progressed'
   | 'tool_calls_progressed'
   | 'assistant_text_progressed'
+  | 'observation_unavailable'
+  | 'observation_unavailable_cap'
   | 'turn_idle';
 
 export interface OpenCodePromptDeliveryTurnActivityInput {
@@ -60,6 +71,12 @@ export interface OpenCodePromptDeliveryTurnActivityInput {
     latestAssistantPreview?: string | null;
   } | null;
   observedDiagnostics: readonly string[];
+  /**
+   * The runtime already accepted the prompt, but this observation could not
+   * read what became of it (the bridge did not observe, or reported a failed
+   * reconcile). The caller decides it; it is never inferred from silence.
+   */
+  observationUnavailable: boolean;
   pendingAgeMs: number | null;
 }
 
@@ -79,6 +96,12 @@ export interface OpenCodePromptDeliveryTurnActivityDecision {
  * tool calls and growing assistant text are the signals that survive that, and
  * they are the ledger analogue of what the native lead relay already treats as
  * liveness on tool and text events.
+ *
+ * Every signal needs an observation that worked. When the bridge could not read
+ * the turn of an accepted prompt, "nothing moved" is not evidence of an idle
+ * turn - the member may well have answered already - so the retry waits for a
+ * readable observation instead of putting the same prompt in front of it again,
+ * up to `OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS`.
  */
 export function decideOpenCodePromptDeliveryTurnActivity(
   input: OpenCodePromptDeliveryTurnActivityInput
@@ -94,6 +117,15 @@ export function decideOpenCodePromptDeliveryTurnActivity(
     input.pendingAgeMs >= OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS
   ) {
     return { active: false, reason: 'turn_activity_absolute_cap' };
+  }
+  if (input.observationUnavailable) {
+    if (
+      input.pendingAgeMs !== null &&
+      input.pendingAgeMs >= OPENCODE_PROMPT_DELIVERY_OBSERVATION_UNAVAILABLE_CAP_MS
+    ) {
+      return { active: false, reason: 'observation_unavailable_cap' };
+    }
+    return { active: true, reason: 'observation_unavailable' };
   }
   const assistantMessageId = input.observation?.assistantMessageId?.trim() ?? '';
   if (

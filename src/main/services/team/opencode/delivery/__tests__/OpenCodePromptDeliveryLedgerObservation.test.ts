@@ -123,6 +123,7 @@ describe('OpenCodePromptDeliveryLedger applyObservation', () => {
         previousAssistantPreview: afterFailure.observedAssistantPreview ?? '',
         observation: observation(),
         observedDiagnostics: [],
+        observationUnavailable: false,
         pendingAgeMs: 120_000,
       })
     ).toEqual({ active: false, reason: 'turn_idle' });
