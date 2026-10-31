@@ -146,6 +146,7 @@ describe('TeamTaskStallNotifier', () => {
       summary: 'Potential stalled tasks detected',
       text: expect.stringContaining('Task A'),
       taskRefs: [alert.taskRef],
+      messageId: expect.stringMatching(/^task-stall-lead-alert:[0-9a-f]{20}$/),
     });
   });
 
