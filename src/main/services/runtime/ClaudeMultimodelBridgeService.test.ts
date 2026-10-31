@@ -68,6 +68,50 @@ function verifiedOpenCodeProvider(): CliProviderStatus {
 }
 
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
+  test.each([false, true])(
+    'does not restore a pre-invalidation project catalog (newer read completed=%s)',
+    async (readNewerFirst) => {
+      const service = new ClaudeMultimodelBridgeService();
+      service.invalidateProviderStatusHydrations();
+      const internals = service as unknown as {
+        getProviderStatusFromScopedRuntimeStatus: (
+          binaryPath: string,
+          providerId: CliProviderId,
+          options: { projectPath: string }
+        ) => Promise<CliProviderStatus>;
+        getProviderStatusFromRuntimeStatusCommand: () => Promise<CliProviderStatus>;
+      };
+      let finishOld!: (value: CliProviderStatus) => void;
+      const old = new Promise<CliProviderStatus>((resolve) => {
+        finishOld = resolve;
+      });
+      const before = { ...verifiedOpenCodeProvider(), models: ['TEST/before-install'] };
+      const after = { ...verifiedOpenCodeProvider(), models: ['TEST/after-install'] };
+      const command = vi
+        .spyOn(internals, 'getProviderStatusFromRuntimeStatusCommand')
+        .mockReturnValueOnce(old)
+        .mockResolvedValue(after);
+      const read = () =>
+        internals.getProviderStatusFromScopedRuntimeStatus('/TEST/runtime', 'opencode', {
+          projectPath: path.resolve('TEST-project'),
+        });
+      try {
+        const originalRead = read();
+        await vi.waitFor(() => expect(command).toHaveBeenCalledTimes(1));
+        service.invalidateProviderStatusHydrations();
+        if (readNewerFirst) expect(await read()).toEqual(after);
+        finishOld(before);
+        await originalRead;
+        expect(await read()).toEqual(after);
+        expect(command).toHaveBeenCalledTimes(2);
+      } finally {
+        finishOld(before);
+        service.invalidateProviderStatusHydrations();
+        command.mockRestore();
+      }
+    }
+  );
+
   test.each([' configured-model ', null, undefined, 42, {}, []])(
     'maps only the current typed effective model %j',
     (effectiveDefaultModel) => {

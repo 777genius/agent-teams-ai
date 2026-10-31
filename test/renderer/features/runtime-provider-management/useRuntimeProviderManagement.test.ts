@@ -242,10 +242,11 @@ describe('useRuntimeProviderManagement', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['startConnect', 'startReconnect', 'closeModelPicker'] as const)(
+  it.each(['startConnect', 'startReconnect', 'closeModelPicker', 'switchProvider'] as const)(
     'cancels all active probe attempts when %s closes the picker',
     async (action) => {
       let resolve!: (response: RuntimeProviderManagementModelTestResponse) => void;
+      const onProviderChanged = vi.fn();
       const cancelModelTest = vi.fn(async () => ({ ok: true }));
       Object.defineProperty(window, 'electronAPI', {
         configurable: true,
@@ -268,13 +269,20 @@ describe('useRuntimeProviderManagement', () => {
       });
       const root = createRoot(host);
       await act(async () => {
-        root.render(React.createElement(Harness));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: false,
+            projectPath: '/tmp/TEST-same-project',
+            onProviderChanged,
+          })
+        );
       });
       await act(async () => {
         void actions?.testModel('test', 'a');
       });
       await act(async () => {
-        actions?.[action]('test');
+        if (action === 'switchProvider') actions?.openModelPicker('next-provider', 'use');
+        else actions?.[action]('test');
       });
       expect(cancelModelTest).toHaveBeenCalledExactlyOnceWith({
         requestGroupId: 'runtime-provider-management:opencode:model-test:test:a:1',
@@ -295,6 +303,7 @@ describe('useRuntimeProviderManagement', () => {
         });
       });
       expect(state?.modelResults.a).toBeUndefined();
+      expect(onProviderChanged).toHaveBeenCalledExactlyOnceWith('model_tested');
     }
   );
 
@@ -3899,6 +3908,176 @@ describe('useRuntimeProviderManagement', () => {
       root.unmount();
     });
   });
+
+  it.each([true, false])(
+    'refreshes global provider status after a current model test (ok=%s)',
+    async (ok) => {
+      const modelId = 'opencode/big-pickle';
+      const onProviderChanged = vi.fn();
+      installRuntimeProviderManagementApi({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'opencode',
+          modelId,
+          ok,
+          availability: ok ? 'available' : 'unavailable',
+          message: 'Native test settled',
+          diagnostics: [],
+        },
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: false,
+            projectPath: '/tmp/TEST-v2-project',
+            onProviderChanged,
+          })
+        );
+      });
+      await act(async () => {
+        await actions?.testModel('opencode', modelId);
+      });
+      expect(onProviderChanged).toHaveBeenCalledExactlyOnceWith('model_tested');
+      expect(state?.modelResults[modelId]?.ok).toBe(ok);
+    }
+  );
+
+  it('records an empty model test response as a row failure and refreshes provider status', async () => {
+    const modelId = 'opencode/big-pickle';
+    const onProviderChanged = vi.fn();
+    installRuntimeProviderManagementApi({ schemaVersion: 1, runtimeId: 'opencode' });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: false,
+          projectPath: '/tmp/TEST-v2-project',
+          onProviderChanged,
+        })
+      );
+    });
+    await act(async () => {
+      expect(await actions?.testModel('opencode', modelId)).toMatchObject({
+        providerId: 'opencode',
+        modelId,
+        ok: false,
+        availability: 'unknown',
+        message: 'Model test response was empty',
+      });
+    });
+    expect(state?.modelResults[modelId]).toMatchObject({
+      ok: false,
+      availability: 'unknown',
+      message: 'Model test response was empty',
+    });
+    expect(onProviderChanged).toHaveBeenCalledExactlyOnceWith('model_tested');
+    expect(state?.testingModelIds).toEqual([]);
+    expect(state?.modelTestStartedAt?.[modelId]).toBeUndefined();
+    expect(state?.successMessage).toBeNull();
+  });
+
+  it('preserves successful model verification when its global status refresh rejects', async () => {
+    const modelId = 'opencode/big-pickle';
+    const onProviderChanged = vi.fn().mockRejectedValue(new Error('Status service unavailable'));
+    installRuntimeProviderManagementApi({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      result: {
+        providerId: 'opencode',
+        modelId,
+        ok: true,
+        availability: 'available',
+        message: 'Native execution and retirement verified',
+        diagnostics: [],
+      },
+    });
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: false,
+          projectPath: '/tmp/TEST-v2-project',
+          onProviderChanged,
+        })
+      );
+    });
+    await act(async () => {
+      expect((await actions?.testModel('opencode', modelId))?.ok).toBe(true);
+    });
+    expect(onProviderChanged).toHaveBeenCalledExactlyOnceWith('model_tested');
+    expect(state?.modelResults[modelId]?.ok).toBe(true);
+    expect(state?.testingModelIds).toEqual([]);
+    expect(state?.error).toBeNull();
+  });
+
+  it.each(['project change', 'unmount'] as const)(
+    'does not refresh global status from a model test after %s',
+    async (change) => {
+      let finish!: (value: RuntimeProviderManagementModelTestResponse) => void;
+      const modelId = 'opencode/big-pickle';
+      const onProviderChanged = vi.fn();
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            testModel: vi.fn(
+              () =>
+                new Promise<RuntimeProviderManagementModelTestResponse>((resolve) => {
+                  finish = resolve;
+                })
+            ),
+            cancelModelTest: vi.fn(async () => ({ ok: true })),
+          },
+        } as unknown as ElectronAPI,
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: false,
+            projectPath: '/tmp/TEST-v2-old-project',
+            onProviderChanged,
+          })
+        );
+      });
+      let pending: ReturnType<RuntimeProviderManagementActions['testModel']> | undefined;
+      await act(async () => {
+        pending = actions?.testModel('opencode', modelId);
+      });
+      await act(async () => {
+        if (change === 'unmount') {
+          root.unmount();
+          roots.delete(root);
+        } else
+          root.render(
+            React.createElement(ConfigurableHarness, {
+              enabled: false,
+              projectPath: '/tmp/TEST-v2-new-project',
+              onProviderChanged,
+            })
+          );
+      });
+      await act(async () => {
+        finish({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          result: {
+            providerId: 'opencode',
+            modelId,
+            ok: true,
+            availability: 'available',
+            message: 'Previous project passed',
+            diagnostics: [],
+          },
+        });
+        await pending;
+      });
+      expect(onProviderChanged).not.toHaveBeenCalled();
+      expect(state?.modelResults[modelId]).toBeUndefined();
+    }
+  );
 
   it('keeps failed model probes scoped to the model result instead of a global success banner', async () => {
     const modelId = 'openrouter/anthropic/claude-3.5-haiku';
