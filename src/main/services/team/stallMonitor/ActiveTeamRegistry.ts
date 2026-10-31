@@ -140,12 +140,11 @@ export class ActiveTeamRegistry {
     this.activationInFlight.add(teamName);
     const activationGeneration = this.activationGeneration;
     try {
-      if (!(await this.teamDataService.isTeamManagedByThisProfile(teamName))) {
+      if (!(await this.isTeamOfThisProfile(teamName))) {
         return;
       }
-      if (activationGeneration !== this.activationGeneration) {
-        return;
-      }
+      // A stop during the ownership check is caught by the generation check
+      // below, which undoes the tracking.
       await this.teamLogSourceTracker.enableTracking(teamName, 'stall_monitor');
       if (activationGeneration !== this.activationGeneration) {
         await this.disableStaleActivation(teamName);
@@ -159,9 +158,17 @@ export class ActiveTeamRegistry {
     }
   }
 
+  /**
+   * A scan asks again before it writes into a team: another profile can take
+   * the team over while the scan runs.
+   */
+  isTeamOfThisProfile(teamName: string): Promise<boolean> {
+    return this.teamDataService.isTeamManagedByThisProfile(teamName);
+  }
+
   private async filterTeamsOfThisProfile(teamNames: readonly string[]): Promise<string[]> {
     const managed = await Promise.all(
-      teamNames.map((teamName) => this.teamDataService.isTeamManagedByThisProfile(teamName))
+      teamNames.map((teamName) => this.isTeamOfThisProfile(teamName))
     );
     return teamNames.filter((_, index) => managed[index]);
   }

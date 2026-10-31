@@ -12,6 +12,8 @@ import {
   createTeamProfileOwnership,
 } from '../../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { ActiveTeamRegistry } from '../../../../../src/main/services/team/stallMonitor/ActiveTeamRegistry';
+import { STALL_MONITOR_JOURNAL_FILENAME } from '../../../../../src/main/services/team/stallMonitor/JsonTaskStallJournalStore';
+import { TeamTaskStallJournal } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallJournal';
 import { TeamTaskStallMonitor } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallMonitor';
 import { TeamTaskStallNotifier } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallNotifier';
 import { TeamDataService } from '../../../../../src/main/services/team/TeamDataService';
@@ -140,14 +142,29 @@ async function readProcessRows(teamName: string): Promise<{ id: string; stoppedA
   }[];
 }
 
+/** The JSON journal, its lock and the SQLite fallback replica all start with this name. */
+function journalFilesOf(teamName: string): Promise<string[]> {
+  return readdir(teamFile(teamName)).then((names) =>
+    names.filter((name) => name.startsWith(STALL_MONITOR_JOURNAL_FILENAME)).sort()
+  );
+}
+
 /**
  * Real TeamDataService, ownership, registry, notifier and inbox writer under a
  * temp Claude root. Only stall detection is stubbed: every in-progress task is
  * reported as stalled, so whatever the monitor scans gets alerts. The lead
  * alert is observed at sendSystemNotificationToLead; the OpenCode owner nudge
- * really writes the owner's inbox file.
+ * really writes the owner's inbox file. By default the journal lets every
+ * alert through on the first scan; `realJournal` uses the JSON journal, which
+ * holds an alert until the second scan that sees it.
  */
-function createHarness(options: { beforeSnapshot?: (teamName: string) => Promise<void> } = {}) {
+function createHarness(
+  options: {
+    beforeSnapshot?: (teamName: string) => Promise<void>;
+    onRelay?: (teamName: string) => Promise<void>;
+    realJournal?: boolean;
+  } = {}
+) {
   const teamDataService = new TeamDataService();
   const ownership = createTeamProfileOwnership({ isTrackedInThisProcess: () => false });
   teamDataService.setTeamProfileOwnership((teamName) => ownership.isManagedByThisProfile(teamName));
@@ -185,11 +202,17 @@ function createHarness(options: { beforeSnapshot?: (teamName: string) => Promise
     evaluateReview: vi.fn(),
     evaluatePendingPickup: vi.fn(),
   };
-  const journal = {
-    reconcileScan: async ({ evaluations }: { evaluations: TaskStallEvaluation[] }) => evaluations,
-    markAlerted: vi.fn(async () => undefined),
-  };
-  const relay = vi.fn(async () => ({ lastDelivery: { delivered: true, accepted: true } }));
+  const journal = options.realJournal
+    ? new TeamTaskStallJournal()
+    : {
+        reconcileScan: async ({ evaluations }: { evaluations: TaskStallEvaluation[] }) =>
+          evaluations,
+        markAlerted: vi.fn(async () => undefined),
+      };
+  const relay = vi.fn(async (teamName: string) => {
+    await options.onRelay?.(teamName);
+    return { lastDelivery: { delivered: true, accepted: true } };
+  });
   const monitor = new TeamTaskStallMonitor(
     registry,
     snapshotSource as never,
@@ -316,6 +339,7 @@ describe('task stall monitor and teams of other profiles', () => {
     await writeRunningTeam('own', 'a');
     let takeOverOnSnapshot = false;
     const harness = createHarness({
+      realJournal: true,
       beforeSnapshot: async (teamName) => {
         if (takeOverOnSnapshot) {
           await claimTeam(teamName, 'b');
@@ -324,13 +348,55 @@ describe('task stall monitor and teams of other profiles', () => {
     });
 
     // The registry still lists the team for the second scan; the takeover lands
-    // after that check and before the notifier writes.
+    // after that check and before the journal and the notifier write.
     await startAndScanTwice(harness, () => {
       takeOverOnSnapshot = true;
     });
 
     expect(harness.snapshotSource.getSnapshot).toHaveBeenCalledTimes(1);
+    await expect(journalFilesOf('own')).resolves.toEqual([]);
     expectNothingSentTo(harness, 'own');
+  });
+
+  it('does not mark alerts in the journal once another profile took the team over mid-scan', async () => {
+    // Lead alerts off: their alerts are journaled without a send, so only the
+    // monitor's own check stands between the takeover and the journal.
+    vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ALERTS_ENABLED', 'false');
+    await writeRunningTeam('own', 'a');
+    const journalPath = teamFile('own', STALL_MONITOR_JOURNAL_FILENAME);
+    let takeOverOnRelay = false;
+    let journalAtTakeover: string | null = null;
+    const harness = createHarness({
+      realJournal: true,
+      onRelay: async (teamName) => {
+        if (takeOverOnRelay) {
+          journalAtTakeover = await readFile(journalPath, 'utf8');
+          await claimTeam(teamName, 'b');
+        }
+      },
+    });
+
+    await harness.registry.reconcile();
+    harness.monitor.start();
+    try {
+      // Startup clock, then the journal sees both stalls once.
+      await harness.runScan();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await harness.runScan();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      // Both are ready now; the owner nudge goes out and the team changes hands
+      // while it is relayed.
+      takeOverOnRelay = true;
+      await harness.runScan();
+    } finally {
+      await harness.monitor.stop();
+    }
+
+    expect(harness.relay).toHaveBeenCalledWith('own', OPENCODE_OWNER, expect.anything());
+    expect(journalAtTakeover).not.toBeNull();
+    expect(await readFile(journalPath, 'utf8')).toBe(journalAtTakeover);
+    const entries = JSON.parse(await readFile(journalPath, 'utf8')) as { state: string }[];
+    expect(entries.map((entry) => entry.state)).toEqual(['alert_ready', 'alert_ready']);
   });
 
   it('stops scanning a team that another profile took over since the last reconcile', async () => {
@@ -344,7 +410,7 @@ describe('task stall monitor and teams of other profiles', () => {
     expectNothingSentTo(harness, 'own');
   });
 
-  it('settles exited processes in the health tick and alive-team count only for its own team', async () => {
+  it('settles exited processes in the health tick and alive-team count only for its own team, one tick at a time', async () => {
     await writeRunningTeam('own', 'a');
     await writeRunningTeam('other-profile', 'b');
     const before = await readTeamBytes('other-profile');
@@ -360,6 +426,17 @@ describe('task stall monitor and teams of other profiles', () => {
       expect.any(String)
     );
     expectSameBytes(await readTeamBytes('other-profile'), before);
+
+    // A tick that starts while the previous one still runs is skipped.
+    const ownershipCheck = vi.spyOn(teamDataService, 'isTeamManagedByThisProfile');
+    const tick = (): Promise<void> =>
+      (teamDataService as unknown as { processHealthTick(): Promise<void> }).processHealthTick();
+    await Promise.all([tick(), tick()]);
+    expect(ownershipCheck).toHaveBeenCalledTimes(2);
+    await tick();
+    expect(ownershipCheck).toHaveBeenCalledTimes(4);
+    ownershipCheck.mockRestore();
+
     // Counting live processes still reads the other profile's team.
     await expect(teamDataService.listAliveProcessTeams()).resolves.toEqual([
       'other-profile',

@@ -424,6 +424,7 @@ interface FileWatchReconcileTrigger {
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
+  private processHealthTickInFlight = false;
   /** Tracks notified task-start transitions to avoid duplicate lead notifications. */
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
@@ -1796,12 +1797,19 @@ export class TeamDataService {
   }
 
   private async processHealthTick(): Promise<void> {
-    for (const teamName of [...this.processHealthTeams]) {
-      try {
-        await this.readProcesses(teamName);
-      } catch {
-        // best-effort per team
+    // The interval does not wait for a slow tick, so a tick still running skips the next.
+    if (this.processHealthTickInFlight) return;
+    this.processHealthTickInFlight = true;
+    try {
+      for (const teamName of [...this.processHealthTeams]) {
+        try {
+          await this.readProcesses(teamName);
+        } catch {
+          // best-effort per team
+        }
       }
+    } finally {
+      this.processHealthTickInFlight = false;
     }
   }
 

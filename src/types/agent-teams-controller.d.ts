@@ -181,7 +181,10 @@ declare module 'agent-teams-controller' {
     registerProcess(flags: Record<string, unknown>): unknown;
     stopProcess(flags: Record<string, unknown>): unknown;
     unregisterProcess(flags: Record<string, unknown>): unknown;
-    /** `readOnly` returns the same rows without writing settled stoppedAt values back. */
+    /**
+     * `readOnly` leaves processes.json as it is. A stopped row it cannot settle
+     * gets a stable stoppedAt estimate (the row's registeredAt).
+     */
     listProcesses(flags?: { readOnly?: boolean }): unknown[];
   }
 

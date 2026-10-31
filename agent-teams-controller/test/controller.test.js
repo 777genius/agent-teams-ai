@@ -3598,7 +3598,7 @@ controller.messages.sendMessage({
     expect(controller.processes.listProcesses()).toEqual([]);
   });
 
-  it('reports stale processes stopped without writing processes.json on a read-only listing', () => {
+  it('reports stale processes stopped without writing processes.json on a read-only listing', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     const processesPath = path.join(claudeDir, 'teams', 'my-team', 'processes.json');
@@ -3614,20 +3614,30 @@ controller.messages.sendMessage({
           id: 'stale-entry',
           pid: 999999,
           label: 'stale',
-          registeredAt: '2024-01-01T00:00:00.000Z',
+          registeredAt: '2024-01-02T00:00:00.000Z',
+        },
+        {
+          id: 'stale-unregistered-entry',
+          pid: 999998,
+          label: 'stale without registeredAt',
         },
       ],
       null,
       2
     )}\n`;
     fs.writeFileSync(processesPath, original);
+    const fileMtime = fs.statSync(processesPath).mtime.toISOString();
 
     const listed = controller.processes.listProcesses({ readOnly: true });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const listedAgain = controller.processes.listProcesses({ readOnly: true });
 
-    expect(listed.map((entry) => [entry.id, entry.alive, Boolean(entry.stoppedAt)])).toEqual([
-      ['live-entry', true, false],
-      ['stale-entry', false, true],
+    expect(listed.map((entry) => [entry.id, entry.alive, entry.stoppedAt])).toEqual([
+      ['live-entry', true, undefined],
+      ['stale-entry', false, '2024-01-02T00:00:00.000Z'],
+      ['stale-unregistered-entry', false, fileMtime],
     ]);
+    expect(listedAgain).toEqual(listed);
     expect(fs.readFileSync(processesPath, 'utf8')).toBe(original);
   });
 

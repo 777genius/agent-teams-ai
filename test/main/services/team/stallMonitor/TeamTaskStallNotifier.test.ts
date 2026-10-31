@@ -139,7 +139,7 @@ describe('TeamTaskStallNotifier', () => {
     } as never);
     const alert = createAlert();
 
-    await notifier.notifyLead('demo', [alert]);
+    await expect(notifier.notifyLead('demo', [alert])).resolves.toBe(true);
 
     expect(sendSystemNotificationToLead).toHaveBeenCalledWith({
       teamName: 'demo',
@@ -521,7 +521,7 @@ describe('TeamTaskStallNotifier', () => {
       inboxWriter as never
     );
 
-    await leadNotifier.notifyLead('demo', [alert]);
+    await expect(leadNotifier.notifyLead('demo', [alert])).resolves.toBe(false);
     await leadNotifier.recordWorkSyncObservations('demo', [alert]);
     await expect(ownerNotifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([]);
 

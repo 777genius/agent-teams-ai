@@ -154,12 +154,13 @@ export class TeamTaskStallNotifier {
     return false;
   }
 
-  async notifyLead(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
+  /** False when nothing was sent, so the caller does not journal these alerts. */
+  async notifyLead(teamName: string, alerts: TaskStallAlert[]): Promise<boolean> {
     if (alerts.length === 0) {
-      return;
+      return false;
     }
     if (!(await this.isTeamOfThisProfile(teamName, 'lead alert'))) {
-      return;
+      return false;
     }
 
     await this.teamDataService.sendSystemNotificationToLead({
@@ -168,6 +169,7 @@ export class TeamTaskStallNotifier {
       text: buildLeadAlertText(alerts),
       taskRefs: alerts.map((alert) => alert.taskRef),
     });
+    return true;
   }
 
   dispose(): void {
