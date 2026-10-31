@@ -2,6 +2,7 @@ import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from './OpenCodePromptDeliv
 
 import type {
   DeliverableTrackedRun,
+  OpenCodeMemberInboxDelivery,
   OpenCodeMemberMessageDeliveryServiceDependencies,
 } from './OpenCodeMemberMessageDeliveryPorts';
 
@@ -53,5 +54,23 @@ export function createOpenCodeBootstrapPendingDeliveryWake(
       delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
       isCurrent,
     });
+  };
+}
+
+/**
+ * The lane is up but its bootstrap has not checked in yet, so the message stays saved and is
+ * retried after check-in. It keeps the stopped-lane reason code, flagged as an expected wait.
+ */
+export function buildOpenCodeBootstrapDeferredDelivery(
+  memberName: string
+): OpenCodeMemberInboxDelivery {
+  return {
+    delivered: false,
+    reason: 'opencode_runtime_not_active',
+    deferredUntilBootstrap: true,
+    diagnostics: [
+      `OpenCode runtime bootstrap is not confirmed for ${memberName}. ` +
+        'Message was saved and will be retried after runtime check-in.',
+    ],
   };
 }

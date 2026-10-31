@@ -15689,6 +15689,7 @@ describe(
       ).resolves.toEqual({
         delivered: false,
         reason: 'opencode_runtime_not_active',
+        deferredUntilBootstrap: true,
         diagnostics: [
           'OpenCode runtime bootstrap is not confirmed for bob. Message was saved and will be retried after runtime check-in.',
         ],

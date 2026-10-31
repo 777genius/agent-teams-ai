@@ -14158,6 +14158,7 @@ describe('TeamProvisioningService', () => {
       ).resolves.toMatchObject({
         delivered: false,
         reason: 'opencode_runtime_not_active',
+        deferredUntilBootstrap: true,
         diagnostics: [
           expect.stringContaining('OpenCode runtime bootstrap is not confirmed for bob'),
         ],
@@ -14231,6 +14232,7 @@ describe('TeamProvisioningService', () => {
       ).resolves.toMatchObject({
         delivered: false,
         reason: 'opencode_runtime_not_active',
+        deferredUntilBootstrap: true,
         diagnostics: [
           expect.stringContaining('OpenCode runtime bootstrap is not confirmed for bob'),
         ],

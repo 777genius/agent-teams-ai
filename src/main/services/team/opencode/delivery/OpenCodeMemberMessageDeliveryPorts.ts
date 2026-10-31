@@ -116,6 +116,14 @@ export interface OpenCodeMemberInboxDelivery {
    */
   coalescedNoticesDelivered?: boolean;
   reason?: string;
+  /**
+   * Set only when the lane is up but its runtime bootstrap has not checked in
+   * yet: the message stays saved and is retried after check-in. `reason` stays
+   * `opencode_runtime_not_active` so retries and status projections are
+   * unchanged; the flag only tells the relay this is an expected wait, not a
+   * stopped or missing lane.
+   */
+  deferredUntilBootstrap?: true;
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
 }
