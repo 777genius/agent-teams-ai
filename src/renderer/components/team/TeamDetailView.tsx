@@ -105,7 +105,6 @@ import {
   Power,
   Square,
   Terminal,
-  Trash2,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -124,7 +123,9 @@ import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
+import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
+import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
@@ -2630,7 +2631,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     void (async () => {
       try {
         if (!(await requestCloseChangeReviewLifecycleHost(reviewLifecycleHostId))) return;
-        await deleteTeam(teamName);
+        if (!(await runTeamDeleteOnce(teamName, () => deleteTeam(teamName)))) return;
         if (tabId) closeTab(tabId);
         openTeamsTab();
       } catch (deleteError) {
@@ -2987,20 +2988,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                           : t('detail.tooltips.editTeam')}
                       </TooltipContent>
                     </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="size-7 rounded-full p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          aria-label={t('list.moveToTrash.title')}
-                          onClick={handleDeleteTeam}
-                        >
-                          <Trash2 size={12} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">{t('list.moveToTrash.title')}</TooltipContent>
-                    </Tooltip>
+                    <TeamDeleteButton
+                      teamName={teamName}
+                      placement="header"
+                      label={t('list.moveToTrash.title')}
+                      onClick={handleDeleteTeam}
+                    />
                   </div>
                 </div>
 

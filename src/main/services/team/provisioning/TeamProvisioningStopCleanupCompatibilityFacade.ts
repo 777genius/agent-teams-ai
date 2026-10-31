@@ -207,6 +207,16 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
     );
   }
 
+  /**
+   * Forget the background lane stop backoff of a team that was moved to the
+   * trash. Called only after the soft delete succeeded: clearing it before,
+   * from stopTeam, would let a background pass take the team lock ahead of
+   * the soft delete.
+   */
+  clearStoppedLaneStopBackoff(teamName: string): void {
+    this.openCodeStoppedLaneCleanup.clearStopBackoff(teamName);
+  }
+
   protected async stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void> {
     await this.stopFlowBoundary.stopMixedSecondaryRuntimeLanes(teamName);
   }
