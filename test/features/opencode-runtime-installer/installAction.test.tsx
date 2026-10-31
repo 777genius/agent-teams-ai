@@ -85,7 +85,9 @@ describe('V2 installation choice', () => {
     });
     expect(override).toContain('overrideSelection');
     expect(override).not.toContain('<button');
-    expect(render({ installed: false, source: 'override', state: 'failed', compatibleV2Version: null })).toContain('overrideSelection');
+    expect(
+      render({ installed: false, source: 'override', state: 'failed', compatibleV2Version: null })
+    ).toContain('overrideSelection');
     const unsupported = render({
       installed: false,
       source: 'missing',
@@ -93,6 +95,8 @@ describe('V2 installation choice', () => {
       compatibleV2Version: null,
     });
     expect(unsupported).toBe('');
-    expect(render({ installed: false, source: 'missing', state: 'idle', compatibleV2Version: '2.1.4' })).toBe('');
+    expect(
+      render({ installed: false, source: 'missing', state: 'idle', compatibleV2Version: '2.1.4' })
+    ).toBe('');
   });
 });
