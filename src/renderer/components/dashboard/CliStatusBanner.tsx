@@ -111,7 +111,6 @@ import {
 import { DashboardRateLimitChips } from './DashboardRateLimitChips';
 import { FluxionSponsorBanner } from './FluxionSponsorBanner';
 import {
-  canLoadOpenCodeDashboardCatalog,
   countVerifiedOpenCodeDashboardModels,
   hasAvailableFreeOpenCodeDashboardModel,
 } from './openCodeDashboardCatalogPolicy';
@@ -124,11 +123,14 @@ import {
 } from './providerDashboardRateLimits';
 import { getRuntimeInstallLabel, isRuntimeInstalling } from './runtimeInstallActionUi';
 import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
+import {
+  useDashboardProviderRefresh,
+  useOpenCodeDashboardStatus,
+} from './useOpenCodeDashboardStatus';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { OpenCodeRuntimeInstallOptions } from '@features/opencode-runtime-installer/contracts';
-import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type {
   CliProviderAuthMode,
   CliProviderId,
@@ -1646,24 +1648,20 @@ export const CliStatusBanner = ({
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
-  const passiveOpenCodeProvider = useMemo(
-    () =>
-      loadingCliStatus?.providers.find((provider) => provider.providerId === 'opencode') ?? null,
-    [loadingCliStatus?.providers]
-  );
+  const openCodeDashboardStatus = useOpenCodeDashboardStatus({
+    enabled: isElectron && multimodelEnabled,
+    projectPath: selectedProjectPath,
+    cliStatus: loadingCliStatus,
+    runtimeStatus: openCodeRuntimeStatus,
+  });
   const openCodeDashboardCatalog = useOpenCodeConnectedModelCatalog({
-    enabled:
-      isElectron &&
-      multimodelEnabled &&
-      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
-      openCodeRuntimeStatus?.installed !== false &&
-      canLoadOpenCodeDashboardCatalog(passiveOpenCodeProvider, openCodeRuntimeStatus),
+    enabled: openCodeDashboardStatus.enabled,
     statusChecking: cliStatusLoading || cliProviderStatusLoading.opencode === true,
     refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,
-    passiveProviderStatus: passiveOpenCodeProvider,
+    passiveProviderStatus: openCodeDashboardStatus.providerStatus,
+    onCatalogRecovery: openCodeDashboardStatus.onCatalogRecovery,
   });
-  const refreshOpenCodeDashboardCatalog = openCodeDashboardCatalog.refresh;
   const visibleCliProviders = useMemo(
     () =>
       filterMainScreenCliProviders(loadingCliStatus?.providers ?? []).map((provider) =>
@@ -1819,7 +1817,7 @@ export const CliStatusBanner = ({
   ]);
 
   useDashboardStatusRefresh(isElectron && Boolean(cliStatus), () => {
-    refreshOpenCodeDashboardCatalog();
+    openCodeDashboardCatalog.refresh();
     void refreshCliStatusForCurrentMode({ multimodelEnabled, bootstrapCliStatus, fetchCliStatus });
   });
   useEffect(() => {
@@ -1842,7 +1840,7 @@ export const CliStatusBanner = ({
   }, [installCli]);
 
   const handleRefresh = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    openCodeDashboardCatalog.refresh();
     void (async () => {
       await invalidateCliStatus();
       await refreshCliStatusForCurrentMode({
@@ -1856,7 +1854,7 @@ export const CliStatusBanner = ({
     fetchCliStatus,
     invalidateCliStatus,
     multimodelEnabled,
-    refreshOpenCodeDashboardCatalog,
+    openCodeDashboardCatalog.refresh,
   ]);
 
   // An explicit OpenCode re-check must bypass the provider directory cache for
@@ -1899,7 +1897,7 @@ export const CliStatusBanner = ({
   }, [codexAccount]);
 
   const recheckAuthState = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    openCodeDashboardCatalog.refresh();
     setIsVerifyingAuth(true);
     void (async () => {
       try {
@@ -1918,7 +1916,7 @@ export const CliStatusBanner = ({
     fetchCliStatus,
     invalidateCliStatus,
     multimodelEnabled,
-    refreshOpenCodeDashboardCatalog,
+    openCodeDashboardCatalog.refresh,
   ]);
 
   const handleProviderLogin = useCallback((providerId: CliProviderId) => {
@@ -2011,26 +2009,10 @@ export const CliStatusBanner = ({
     [manageProviderId]
   );
 
-  const handleProviderRefresh = useCallback(
-    async (
-      providerId: CliProviderId,
-      checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
-    ) => {
-      let refreshed: boolean;
-      try {
-        refreshed = await fetchCliProviderStatus(providerId, { checkReason });
-      } finally {
-        // After the status check, so the grid and the connected-model catalog
-        // (which waits for status checks) start their refresh reads together
-        // and the main process can serve both with one runtime call.
-        if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
-      }
-      if (refreshed && providerId === 'anthropic') {
-        setAnthropicRateLimitsRefreshVersion((current) => current + 1);
-      }
-      return refreshed;
-    },
-    [fetchCliProviderStatus, refreshOpenCodeProviderDirectory]
+  const handleProviderRefresh = useDashboardProviderRefresh(
+    selectedProjectPath,
+    refreshOpenCodeProviderDirectory,
+    setAnthropicRateLimitsRefreshVersion
   );
 
   const handleProviderBackendChange = useCallback(

@@ -58,9 +58,9 @@ export function getOpenCodeRuntimeStatusUiState({
   }
 
   if (
-    runtimeStatus?.installed === false &&
-    runtimeStatus.source === 'missing' &&
-    runtimeStatus.state !== 'failed'
+    runtimeStatus?.state !== 'failed' &&
+    (runtimeStatus?.v2Support === 'required' ||
+      (runtimeStatus?.installed === false && runtimeStatus.source === 'missing'))
   ) {
     return 'missing';
   }
@@ -123,6 +123,7 @@ export function isOpenCodePassiveStatusReadyForCatalog(
   providerStatus: CliProviderStatus | null | undefined,
   runtimeStatus: OpenCodeRuntimeStatus | null
 ): boolean {
+  if (runtimeStatus?.v2Support === 'required') return false;
   if (isOpenCodeProjectFolderMissing(providerStatus)) return false;
   const nonAuthoritative = isOpenCodeStatusCheckNonAuthoritative(providerStatus);
   if (providerStatus?.supported && !nonAuthoritative) {
@@ -226,6 +227,13 @@ export function getOpenCodeProviderDisabledReason(input: {
     providerReady,
     loadingMessage,
   } = input;
+  if (runtimeStatus?.v2Support === 'required') {
+    return runtimeStatusUiState === 'checking'
+      ? loadingMessage
+      : (runtimeError ??
+          runtimeStatus.error ??
+          'OpenCode V2 support must be installed from the home page.');
+  }
   if (runtimeStatusUiState === 'missing') {
     return (
       providerStatus?.detailMessage ??
@@ -313,9 +321,7 @@ export function getOpenCodeSourceTabCountState(input: {
   if (input.sourceScopedStatus === 'loading') return 'pending';
   if (input.sourceScopedStatus === 'error') return 'unavailable';
   if (input.sourceScopedStatus === 'ready' || !input.directoryExpectsModels) return 'known';
-  return input.passiveCatalogState === 'settled'
-    ? 'unknown'
-    : input.passiveCatalogState;
+  return input.passiveCatalogState === 'settled' ? 'unknown' : input.passiveCatalogState;
 }
 
 export function isOpenCodeProjectFolderMissing(
@@ -471,6 +477,7 @@ export function getOpenCodeReadinessMessage(
   if (
     runtimeStatusUiState === 'checking' &&
     runtimeStatus?.installed !== false &&
+    runtimeStatus?.v2Support !== 'required' &&
     providerStatus?.supported &&
     !providerStatus.authenticated &&
     hasFreeOpenCodeModelRoute(providerStatus)
