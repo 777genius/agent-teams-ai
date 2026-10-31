@@ -42,6 +42,8 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   // The synchronous quit-time backup leaves them alone too.
   'isTeamManagedByThisProfileSync',
   'launchTeam',
+  // Opening a team repairs crash-stale task intervals only for teams this profile manages.
+  'repairStaleTaskActivityIntervalsBeforeSnapshot',
   'restartLeadRuntime',
   // Both watchdog passes are admitted only for teams this profile manages.
   'scanOpenCodePromptDeliveryWatchdog',

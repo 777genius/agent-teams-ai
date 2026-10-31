@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { MemberWorkSyncTeamOperationGate } from '@features/member-work-sync/main';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildOpenCodeAppProfileScope } from '../../../../src/main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
@@ -77,6 +77,9 @@ async function writeTeams(): Promise<void> {
   });
 }
 
+/** Startup restore defers its hole fill without awaiting it; this is that pass. */
+const deferredHoleFills = new WeakMap<TeamBackupService, Promise<void>>();
+
 async function createService(
   ownership?: ConstructorParameters<typeof TeamBackupService>[1],
   options: { workSyncRestore?: boolean } = {}
@@ -89,8 +92,24 @@ async function createService(
       prepare: async () => ({ importAndVerify: async () => undefined }),
     });
   }
+  const coordinator = (
+    service as unknown as {
+      workSyncRestore: { flushDeferredGenericHoles(names: string[]): Promise<void> };
+    }
+  ).workSyncRestore;
+  const flush = coordinator.flushDeferredGenericHoles.bind(coordinator);
+  coordinator.flushDeferredGenericHoles = (names) => {
+    const pass = flush(names);
+    deferredHoleFills.set(service, pass);
+    return pass;
+  };
   await service.initialize();
   return service;
+}
+
+/** Initialization has awaited the restore itself; wait for its deferred hole fill too. */
+async function startupRestoreSettled(service: TeamBackupService): Promise<void> {
+  await deferredHoleFills.get(service);
 }
 
 async function exists(filePath: string): Promise<boolean> {
@@ -153,29 +172,30 @@ describe('TeamBackupService and teams of other app profiles', () => {
     'does not bring back files another profile deleted from its team ($label)',
     async ({ workSyncRestore }) => {
       await writeTeams();
-      for (const teamName of [OWN, OTHER_PROFILE]) {
+      for (const teamName of [OWN, OTHER_PROFILE, NATIVE_SESSION]) {
         await mkdir(inboxDir(teamName), { recursive: true });
         await writeFile(path.join(inboxDir(teamName), 'bob.json'), '[]\n');
       }
-      // An older version backed up every team, the other profile's one included.
+      // An older version backed up every team, including a native session and
+      // another profile's team, and wrote its identity into their config.json.
       const legacy = await createService({
         isManagedByThisProfile: async () => true,
         isManagedByThisProfileSync: () => true,
       });
       await (legacy as unknown as { runPeriodicBackup(): Promise<void> }).runPeriodicBackup();
       legacy.dispose();
-      for (const teamName of [OWN, OTHER_PROFILE]) {
+      for (const teamName of [OWN, OTHER_PROFILE, NATIVE_SESSION]) {
         await rm(path.join(inboxDir(teamName), 'bob.json'));
       }
 
-      await createService(undefined, { workSyncRestore });
+      await startupRestoreSettled(await createService(undefined, { workSyncRestore }));
 
       // This profile's own team is still repaired from its backup.
-      await vi.waitFor(async () => {
-        expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(true);
-      });
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      expect(await exists(path.join(inboxDir(OTHER_PROFILE), 'bob.json'))).toBe(false);
+      expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(true);
+      // A team without a marker and with a live config.json is not ours to refill.
+      for (const teamName of [OTHER_PROFILE, NATIVE_SESSION]) {
+        expect(await exists(path.join(inboxDir(teamName), 'bob.json'))).toBe(false);
+      }
     }
   );
 
@@ -196,12 +216,10 @@ describe('TeamBackupService and teams of other app profiles', () => {
       await rm(markerPath);
       await rm(path.join(inboxDir(OWN), 'bob.json'));
 
-      await createService(undefined, { workSyncRestore });
+      await startupRestoreSettled(await createService(undefined, { workSyncRestore }));
 
-      await vi.waitFor(async () => {
-        expect(await exists(markerPath)).toBe(true);
-        expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(true);
-      });
+      expect(await exists(markerPath)).toBe(true);
+      expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(true);
     }
   );
 
@@ -224,8 +242,7 @@ describe('TeamBackupService and teams of other app profiles', () => {
     });
     await rm(path.join(inboxDir(OWN), 'bob.json'));
 
-    await createService(undefined, { workSyncRestore: true });
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await startupRestoreSettled(await createService(undefined, { workSyncRestore: true }));
 
     expect(await exists(path.join(inboxDir(OWN), 'bob.json'))).toBe(false);
     const marker = JSON.parse(

@@ -177,4 +177,26 @@ describe('TeamProvisioningService status reads of teams this profile does not ma
     expect(interval.startedAt).toBe(WORK_STARTED_AT);
     expect(interval.completedAt).toEqual(expect.any(String));
   });
+
+  it('opening a team repairs task intervals only for a team of this profile', async () => {
+    await writeCrashedTeam('other-profile', path.join(root, 'user-data-b'));
+    await writeCrashedTeam('session-native');
+    await writeCrashedTeam('own-crashed', path.join(root, 'user-data-a'));
+    const before = {
+      'other-profile': await snapshotTeamFiles('other-profile'),
+      'session-native': await snapshotTeamFiles('session-native'),
+    };
+    const service = new TeamProvisioningService();
+
+    // The IPC team snapshot and the HTTP team route run this before reading.
+    for (const teamName of ['other-profile', 'session-native'] as const) {
+      await service.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+      expect(await snapshotTeamFiles(teamName)).toEqual(before[teamName]);
+    }
+    await service.repairStaleTaskActivityIntervalsBeforeSnapshot('own-crashed');
+
+    const [interval] = (await readTask('own-crashed')).workIntervals;
+    expect(interval.startedAt).toBe(WORK_STARTED_AT);
+    expect(interval.completedAt).toEqual(expect.any(String));
+  });
 });

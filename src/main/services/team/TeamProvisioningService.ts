@@ -120,6 +120,18 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   /**
+   * Opening a team in the UI or over HTTP closes task intervals a crash left
+   * open in tasks/<team>/*.json. A team of another app profile or a native
+   * session keeps its task clocks for its owner to settle.
+   */
+  async repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void> {
+    if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
+      return;
+    }
+    await super.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+  }
+
+  /**
    * Both passes are admitted only for teams this profile manages. The startup
    * pass may recover, deliver to and stop lanes. The continuity pass delivers
    * to any team whose runtime looks reachable, and a live pid recorded in the
