@@ -90,7 +90,7 @@ describe('Windows draft backfill workflow contract', () => {
 
   it('confines draft credentials and keeps repository, tag and asset construction fixed', () => {
     expect(job.if).toBe(
-      "github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository"
+      "(github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)"
     );
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(download.env!.GH_TOKEN).toBe(
