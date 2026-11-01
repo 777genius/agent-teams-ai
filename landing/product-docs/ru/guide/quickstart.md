@@ -15,7 +15,7 @@ lang: ru-RU
 - **macOS, Windows или Linux** машина
 - **Git-репозиторий** в качестве проекта (рекомендуется для diff review и worktree isolation)
 - Бесплатная модель без авторизации для первого запуска или доступ к провайдеру, если нужны дополнительные модели: Anthropic (Claude), OpenAI (Codex), OpenRouter (OpenCode)
-- Node.js 26.10.0 Current или 24.16.0 LTS и pnpm 11.22.0 при запуске из исходников
+- Node.js 26.12.1 Current или 24.22.1 LTS и pnpm 11.22.0 при запуске из исходников
 
 Подробности и ссылки для скачивания — в разделе [Установка](/ru/guide/installation).
 

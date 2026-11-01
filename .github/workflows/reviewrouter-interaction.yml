@@ -47,7 +47,7 @@ jobs:
         with:
           # This job does not check out the repository, so .node-version is unavailable.
           # Keep in sync with .node-version.
-          node-version: "26.11.1"
+          node-version: "26.12.1"
 
       - name: Preflight ReviewRouter interaction
         id: preflight
