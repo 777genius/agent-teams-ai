@@ -975,6 +975,10 @@ describe('useRuntimeProviderOnboarding', () => {
       'zai-coding-plan', 'minimax-token-plan',
     ]);
     expect(currentState?.activePlan?.id).toBe('zai-coding-plan');
+    // The projection must not erase V1-only plans from persistent progress.
+    expect(savedProgress?.selectedPlanIds).toEqual([
+      'supergrok', 'zai-coding-plan', 'github-copilot', 'minimax-token-plan',
+    ]);
     expect(loadSetupForm).not.toHaveBeenCalledWith(expect.objectContaining({ providerId: 'xai' }));
     expect(connectProvider).not.toHaveBeenCalled();
   });

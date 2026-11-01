@@ -126,6 +126,7 @@ function onboardingState(
     wizardStarted: false,
     resumable: false,
     progress: null,
+    openCodeGeneration: 'v1',
     activePlan: null,
     planStatuses: RUNTIME_PROVIDER_ONBOARDING_PLANS.map((plan) => ({
       plan,

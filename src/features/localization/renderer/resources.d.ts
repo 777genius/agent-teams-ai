@@ -36,8 +36,6 @@ export default interface Resources {
         "offline": "You’re offline. Previously loaded articles are available; images may be missing.",
         "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused.",
         "unavailable": "News is available in the desktop app.",
-        "v2CliPluginLimitation": "Agent Teams has not verified this CLI plugin with OpenCode V2. Signing in does not confirm model access. Use OpenCode V1.",
-        "v2OAuthLimitation": "This subscription OAuth connection is not supported by Agent Teams on OpenCode V2 yet. Use OpenCode V1; saved credentials remain unchanged.",
         "writer_busy": "News is open in another app instance. You can browse the list here; open articles in the other instance."
       },
       "title": "News"
@@ -1203,6 +1201,8 @@ export default interface Resources {
         "unavailable": "Unavailable",
         "updateForSuperGrok": "Update OpenCode for OAuth",
         "updateOpenCode": "Update OpenCode",
+        "v2CliPluginLimitation": "Agent Teams has not verified this CLI plugin with OpenCode V2. Signing in does not confirm model access. Use OpenCode V1.",
+        "v2OAuthLimitation": "This subscription OAuth connection is not supported by Agent Teams on OpenCode V2 yet. Use OpenCode V1; saved credentials remain unchanged.",
         "xaiApiConnected": "xAI API connected - not SuperGrok",
         "xiaomiBaseUrlHint": "Copy either the OpenAI-compatible /v1 URL or the Anthropic-compatible /anthropic URL. Your API key is entered securely in the next step.",
         "xiaomiBaseUrlLabel": "Dedicated Base URL",

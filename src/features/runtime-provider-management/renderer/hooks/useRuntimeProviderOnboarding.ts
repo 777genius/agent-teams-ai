@@ -224,15 +224,14 @@ export function useRuntimeProviderOnboarding({
       }
       return;
     }
-    const savedProgress = getSupportedWizardProgress(
-      repositoryRef.current?.load() ?? null, openCodeGeneration
-    );
-    if (savedProgress) {
-      setProgress(savedProgress);
-      setSelectedPlanIds(savedProgress.selectedPlanIds);
+    const storedProgress = repositoryRef.current?.load() ?? null;
+    const visibleProgress = getSupportedWizardProgress(storedProgress, openCodeGeneration);
+    if (visibleProgress && storedProgress) {
+      setProgress(storedProgress);
+      setSelectedPlanIds(storedProgress.selectedPlanIds);
       setWizardStarted(true);
       setResumable(true);
-      setStage(savedProgress.currentPlanId ? 'connect' : 'ready');
+      setStage(visibleProgress.currentPlanId ? 'connect' : 'ready');
       return;
     }
     setProgress(null);
@@ -241,8 +240,8 @@ export function useRuntimeProviderOnboarding({
     setResumable(false);
   }, [directPlan, enabled, mode, openCodeGeneration, providerId]);
   useEffect(() => {
-    if (mode === 'wizard' && progress) repositoryRef.current?.save(progress);
-  }, [mode, progress]);
+    if (mode === 'wizard' && savedWizardProgress) repositoryRef.current?.save(savedWizardProgress);
+  }, [mode, savedWizardProgress]);
   const basePlan = useMemo(() => {
     if (mode === 'provider') {
       return directPlan;
@@ -701,13 +700,10 @@ export function useRuntimeProviderOnboarding({
     }
     setProgress((current) =>
       current
-        ? completeRuntimeProviderOnboardingPlan(
-            getSupportedWizardProgress(current, openCodeGeneration) ?? current,
-            activePlan.id, verifiedModelId
-          )
+        ? completeRuntimeProviderOnboardingPlan(current, activePlan.id, verifiedModelId)
         : current
     );
-  }, [activePlan, managementActions, mode, openCodeGeneration, recordOnboardingStep, verifiedModelId]);
+  }, [activePlan, managementActions, mode, recordOnboardingStep, verifiedModelId]);
 
   const openCredentialPage = useCallback(
     async (url?: string): Promise<void> => {
