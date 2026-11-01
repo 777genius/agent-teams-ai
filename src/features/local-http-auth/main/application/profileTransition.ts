@@ -1,7 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
+type ProfileResume = (() => Promise<void>) & {
+  unchanged?(assertUnchanged: () => void): Promise<void>;
+};
 interface ProfileParticipant {
-  pause(request?: FastifyRequest): Promise<() => Promise<void>>;
+  pause(request?: FastifyRequest): Promise<ProfileResume>;
 }
 const participants = new Set<ProfileParticipant>();
 let afterMutation: () => Promise<void> | void = () => {};
@@ -43,9 +46,16 @@ export function runApiProfileChange<T>(
 
 /** Serialize root changes; drain old handlers/streams before any global root or service mutation. */
 export function scheduleApiProfileChange<T>(
-  commit: () => T | Promise<T>,
+  commit: (rejectBeforeMutation: (reason: unknown) => never) => T | Promise<T>,
   request?: FastifyRequest,
-  lifecycle: { beforeResume?(): void | Promise<void>; afterResume?(): void | Promise<void> } = {}
+  lifecycle: {
+    beforePause?(): void | Promise<void>;
+    assertUnchanged?(): void;
+    beforeResume?(): void | Promise<void>;
+    afterResume?(): void | Promise<void>;
+    /** Synchronous checkpoint after every resume and final owner validation succeeded. */
+    onSuccess?(): void;
+  } = {}
 ): { result: Promise<T>; settled: Promise<void> } {
   const refused = (error: Error) => ({
     result: Promise.reject<T>(error),
@@ -72,14 +82,23 @@ export function scheduleApiProfileChange<T>(
   let failed = false;
   let failure: unknown;
   tail = tail.then(async () => {
-    const resumes: Array<() => Promise<void>> = [];
+    const resumes: ProfileResume[] = [];
+    const unchangedRejection = {};
+    let rejectionReason: unknown;
+    // Only a read-only guard inside the caller's exclusive commit section may use this signal.
+    const rejectBeforeMutation = (reason: unknown): never => {
+      rejectionReason = reason;
+      throw unchangedRejection;
+    };
     try {
+      assertActive();
+      await lifecycle.beforePause?.();
       assertActive();
       for (const participant of participants) {
         resumes.push(await participant.pause(request));
         assertActive();
       }
-      const value = await commit();
+      const value = await commit(rejectBeforeMutation);
       assertActive();
       await callback();
       assertActive();
@@ -103,12 +122,44 @@ export function scheduleApiProfileChange<T>(
       assertActive();
       await lifecycle.afterResume?.();
       assertActive();
+      lifecycle.onSuccess?.();
       if (!request) resolve(value);
     } catch (error) {
       failed = true;
-      failure = error;
-      reject(error);
-      // A failed transition stays closed. Reopening requires an explicit successful start.
+      failure = error === unchangedRejection ? rejectionReason : error;
+      // Release the initiating HTTP handler before any unchanged resume joins its response drain.
+      reject(failure);
+      if (error === unchangedRejection) {
+        try {
+          assertActive();
+          if (!lifecycle.assertUnchanged || resumes.some((resume) => !resume.unchanged))
+            throw new Error('API profile unchanged restoration is unavailable');
+          lifecycle.assertUnchanged();
+          const outcomes = await Promise.allSettled(
+            resumes.map(async (resume) => {
+              assertActive();
+              lifecycle.assertUnchanged!();
+              await resume.unchanged!(() => {
+                assertActive();
+                lifecycle.assertUnchanged!();
+              });
+            })
+          );
+          const errors = outcomes.flatMap((outcome) =>
+            outcome.status === 'rejected' ? [outcome.reason as unknown] : []
+          );
+          if (errors.length)
+            throw new AggregateError(errors, 'API profile unchanged restoration failed');
+          assertActive();
+          lifecycle.assertUnchanged();
+        } catch (restoreError) {
+          failure = new AggregateError(
+            [failure, restoreError],
+            'API profile rejection restoration failed'
+          );
+        }
+      }
+      // Mutation, unknown failure and cancellation never reopen admission.
     } finally {
       --queued;
     }

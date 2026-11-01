@@ -212,11 +212,13 @@ export class HttpServer {
         this.unregisterProfile = registerProfileParticipant({
           pause: async (request) => {
             const revision = this.stopRevision;
-            const drain = this.drain!;
+            const drain = this.drain!,
+              app = this.app,
+              authToken = this.authToken;
             drain.paused = true;
             if (this.app) closeEventStreams(this.app);
             await drain.wait(request);
-            return async () => {
+            const resume = async () => {
               await drain.wait();
               if (revision !== this.stopRevision)
                 throw new Error('HTTP server was stopped during profile change');
@@ -236,6 +238,22 @@ export class HttpServer {
                 throw error;
               }
             };
+            resume.unchanged = async (assertUnchanged: () => void) => {
+              await drain.wait();
+              if (
+                revision !== this.stopRevision ||
+                this.app !== app ||
+                this.drain !== drain ||
+                !this.running ||
+                this.authToken !== authToken
+              )
+                throw new Error('HTTP server changed during profile rejection');
+              // Recheck authority after the async response drain, immediately before reopening.
+              assertUnchanged();
+              // No root/service mutation occurred: retain the physical listener and credential epoch.
+              drain.paused = false;
+            };
+            return resume;
           },
         });
         logger.info(`HTTP server started on http://${host}:${tryPort}`);

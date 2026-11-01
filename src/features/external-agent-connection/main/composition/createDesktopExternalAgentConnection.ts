@@ -71,6 +71,8 @@ export function createDesktopExternalAgentConnection(
   let shutdownStop: Promise<void> | null = null;
   let shutdownDrain: Promise<void> | null = null;
   let revokeAuthority: (() => void) | null = null;
+  // A closed MCP context is stable only after the whole non-local transition settled successfully.
+  let settledNonLocalContext: { identity: string; authority: (() => void) | null } | null = null;
   const serialize = <T>(operation: () => Promise<T>): Promise<T> => {
     const result = tail.then(operation);
     tail = result.then(
@@ -158,11 +160,25 @@ export function createDesktopExternalAgentConnection(
       if (!stopping && deps.isLocalContext() && !context.isOpen) return restoreLocalContext();
       return connection.retryConnection();
     });
-  const change = (operation: () => Promise<void> | void, rootChanged: boolean) =>
+  const assertChangeAllowed = async (): Promise<void> => {
+    if (stopping) throw new Error('App connection is shutting down');
+    await deps.mcp.assertNoLiveConsumers?.();
+    deps.assertNoLiveRuntimeConsumers?.();
+  };
+  const change = (
+    operation: () => Promise<void> | void,
+    rootChanged: boolean,
+    rejectBeforeMutation: (reason: unknown) => never
+  ) =>
     serialize(async () => {
-      if (stopping) throw new Error('App connection is shutting down');
-      await deps.mcp.assertNoLiveConsumers?.();
-      deps.assertNoLiveRuntimeConsumers?.();
+      // Recheck under the same exclusive section as the first context mutation.
+      try {
+        await assertChangeAllowed();
+      } catch (error) {
+        rejectBeforeMutation(error);
+      }
+      // From the first mutation onward, a prior settled closure cannot authorize restoration.
+      settledNonLocalContext = null;
       await context.closeAdmission();
       if (stopping) throw new Error('App connection is shutting down');
       await deps.mcp.stop();
@@ -175,6 +191,67 @@ export function createDesktopExternalAgentConnection(
       bindAuthority();
       if (deps.isLocalContext()) context.rebind(deps.getRoot());
     });
+  const scheduleChange = (
+    operation: () => Promise<void> | void,
+    rootChanged: boolean,
+    request?: FastifyRequest
+  ): Promise<void> => {
+    const identity = (): string => {
+      const handle = deps.mcp.getCurrentHandle();
+      return JSON.stringify([
+        context.snapshot(),
+        deps.getRoot(),
+        deps.isLocalContext(),
+        boundControlUrl,
+        deps.getControlUrl(),
+        deps.getControlAuthToken(),
+        handle ? [handle.url, handle.generation] : null,
+      ]);
+    };
+    let assertUnchanged = (): void => {
+      throw new Error('App context was not captured');
+    };
+    const transition = scheduleApiProfileChange(
+      (rejectBeforeMutation) => change(operation, rootChanged, rejectBeforeMutation),
+      request,
+      {
+        beforePause: () =>
+          serialize(async () => {
+            await assertChangeAllowed();
+            const previous = identity(),
+              authority = revokeAuthority,
+              wasOpen = context.isOpen;
+            const stableNonLocalClosure =
+              !wasOpen &&
+              !deps.isLocalContext() &&
+              settledNonLocalContext?.identity === previous &&
+              settledNonLocalContext.authority === authority;
+            assertUnchanged = () => {
+              if (
+                stopping ||
+                context.isOpen !== wasOpen ||
+                (!wasOpen && !stableNonLocalClosure) ||
+                authority !== revokeAuthority ||
+                previous !== identity()
+              )
+                throw new Error('App context changed before profile rejection restoration');
+            };
+          }),
+        assertUnchanged: () => assertUnchanged(),
+        afterResume: async () => {
+          if (deps.isLocalContext()) await connection.retryConnection();
+        },
+        onSuccess: () => {
+          settledNonLocalContext =
+            !deps.isLocalContext() && !context.isOpen
+              ? { identity: identity(), authority: revokeAuthority }
+              : null;
+        },
+      }
+    );
+    void transition.settled.catch(() => undefined);
+    return transition.result;
+  };
   const closeAdmission = (): Promise<void> => {
     stopping = true;
     shutdownDrain ??= Promise.all([context.closeAdmission(), cancelApiProfileChanges()]).then(
@@ -200,24 +277,8 @@ export function createDesktopExternalAgentConnection(
     closeAdmission,
     getConnectionInfo: () => connection.getConnectionInfo(),
     retryConnection,
-    updateRoot: (applyConfig, request) => {
-      const transition = scheduleApiProfileChange(() => change(applyConfig, true), request, {
-        afterResume: async () => {
-          if (deps.isLocalContext()) await connection.retryConnection();
-        },
-      });
-      void transition.settled.catch(() => undefined);
-      return transition.result;
-    },
-    changeContext: (operation, request) => {
-      const transition = scheduleApiProfileChange(() => change(operation, false), request, {
-        afterResume: async () => {
-          if (deps.isLocalContext()) await connection.retryConnection();
-        },
-      });
-      void transition.settled.catch(() => undefined);
-      return transition.result;
-    },
+    updateRoot: (applyConfig, request) => scheduleChange(applyConfig, true, request),
+    changeContext: (operation, request) => scheduleChange(operation, false, request),
     registerHttp(app) {
       registerBoundControlHttp(app, context);
       app.get('/api/app/connection', () => connection.getConnectionInfo());
