@@ -228,6 +228,7 @@ const WizardPlanPicker = ({
   readonly actions: RuntimeProviderOnboardingActions;
   readonly disabled: boolean;
 }): JSX.Element => {
+  const { t } = useAppTranslation('dashboard');
   return (
     <div className="space-y-3">
       <div>
@@ -265,7 +266,7 @@ const WizardPlanPicker = ({
                   <span className="truncate">{plan.displayName}</span>
                   {unsupported ? (
                     <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                      Requires OpenCode V1
+                      {t('cliStatus.quickConnect.requiresV1')}
                     </span>
                   ) : status === 'connected' ? (
                     <span className="shrink-0 text-[10px] text-emerald-300">Connected</span>

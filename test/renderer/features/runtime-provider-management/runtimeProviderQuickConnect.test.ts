@@ -313,12 +313,12 @@ describe('RuntimeProviderQuickConnect', () => {
     });
     for (const id of ['supergrok', 'github-copilot', 'kiro', 'cursor']) {
       const card = host.querySelector(`[data-testid="provider-quick-card-${id}"]`);
-      expect(card?.textContent).toContain('OpenCode V1');
+      expect(card?.textContent).toMatch(/requiresV1|cliSignedInRequiresV1/);
       expect(card?.textContent).not.toContain('cliStatus.quickConnect.planConnected');
       expect(host.querySelector(`[data-testid="provider-quick-action-${id}"]`)).toBeNull();
     }
-    expect(host.querySelector('[data-testid="provider-quick-card-kiro"]')?.textContent).toContain('CLI signed in');
-    expect(host.querySelector('[data-testid="provider-quick-card-cursor"]')?.textContent).toContain('CLI signed in');
+    expect(host.querySelector('[data-testid="provider-quick-card-kiro"]')?.textContent).toContain('cliSignedInRequiresV1');
+    expect(host.querySelector('[data-testid="provider-quick-card-cursor"]')?.textContent).toContain('cliSignedInRequiresV1');
     expect(host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent).toContain('cliStatus.quickConnect.connected');
     expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
     expect(onOpenCodeProviderAction).not.toHaveBeenCalled();

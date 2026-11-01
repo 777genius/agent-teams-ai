@@ -352,8 +352,8 @@ export const RuntimeProviderQuickConnect = ({
           getCompanionState(plan.id as CompanionPlanId).status?.authenticated === true;
         const reason =
           v2Limitation === 'cli-plugin'
-            ? 'Agent Teams has not qualified this CLI plugin with OpenCode V2. A signed-in CLI does not prove model access on V2. Use OpenCode V1 for this plan.'
-            : 'Subscription OAuth sign-in for this plan is not supported by Agent Teams on OpenCode V2 yet. Use OpenCode V1; existing credentials are unchanged.';
+            ? t('cliStatus.quickConnect.v2CliPluginLimitation')
+            : t('cliStatus.quickConnect.v2OAuthLimitation');
         return {
           id: plan.id,
           providerId: plan.providerId,
@@ -361,8 +361,8 @@ export const RuntimeProviderQuickConnect = ({
           description: `${t(`cliStatus.quickConnect.${plan.descriptionKey}`)} ${reason}`,
           state: 'manual',
           stateLabel: cliSignedIn
-            ? 'CLI signed in; plan requires OpenCode V1'
-            : 'Requires OpenCode V1 (V2 not supported)',
+            ? t('cliStatus.quickConnect.cliSignedInRequiresV1')
+            : t('cliStatus.quickConnect.requiresV1'),
           actionLabel: null,
           onAction: null,
         };

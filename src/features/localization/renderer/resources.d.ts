@@ -36,6 +36,8 @@ export default interface Resources {
         "offline": "You’re offline. Previously loaded articles are available; images may be missing.",
         "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused.",
         "unavailable": "News is available in the desktop app.",
+        "v2CliPluginLimitation": "Agent Teams has not verified this CLI plugin with OpenCode V2. Signing in does not confirm model access. Use OpenCode V1.",
+        "v2OAuthLimitation": "This subscription OAuth connection is not supported by Agent Teams on OpenCode V2 yet. Use OpenCode V1; saved credentials remain unchanged.",
         "writer_busy": "News is open in another app instance. You can browse the list here; open articles in the other instance."
       },
       "title": "News"
@@ -1132,6 +1134,7 @@ export default interface Resources {
         "claudeConnected": "Connected through your local Claude CLI session.",
         "claudeDescription": "Use your Claude plan through the Claude CLI.",
         "cliNotInstalled": "CLI not installed",
+        "cliSignedInRequiresV1": "CLI signed in; OpenCode V1 required",
         "codexConnected": "Connected through your local Codex CLI session.",
         "codexDescription": "Use your ChatGPT plan through the Codex CLI.",
         "connectAllPlans": "Connect all my plans",
@@ -1186,6 +1189,7 @@ export default interface Resources {
         "refreshOpenCode": "Refresh status",
         "regionNotSelected": "Region not selected",
         "requiresOpenCode": "Requires OpenCode",
+        "requiresV1": "Requires OpenCode V1",
         "retryInstall": "Retry installation",
         "retryOpenCode": "Repair OpenCode",
         "setupModelEndpoint": "Local model or endpoint",
