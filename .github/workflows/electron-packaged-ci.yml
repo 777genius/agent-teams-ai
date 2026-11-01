@@ -8,6 +8,9 @@ on:
     paths:
       - '.github/workflows/electron-packaged-ci.yml'
       - 'scripts/ci/packaged-ci-*.mts'
+      - 'scripts/ci/verify-bundled-undici.cjs'
+      - 'test/scripts/verify-bundled-undici.test.cjs'
+      - '.node-version'
       - 'scripts/ci/ci-change-scope.mts'
       - 'scripts/ci/verify-dmg-artwork.mts'
       - 'resources/dmg/**'
@@ -137,6 +140,10 @@ jobs:
         run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
       - name: Assert Electron binary was provisioned during install
         run: node -e "const fs=require('node:fs'); const path=require('node:path'); const root=path.dirname(require.resolve('electron/package.json')); const marker=path.join(root,'path.txt'); if(!fs.existsSync(marker) || !fs.existsSync(path.join(root,'dist',fs.readFileSync(marker,'utf8')))) process.exit(1)"
+      - name: Test bundled undici security version policy
+        run: node --test test/scripts/verify-bundled-undici.test.cjs
+      - name: Verify CI Node and Electron built-in undici versions
+        run: node scripts/ci/verify-bundled-undici.cjs
       - name: Verify native rebuild
         run: pnpm exec electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3
       - name: Stage bundled runtime

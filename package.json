@@ -287,7 +287,7 @@
     "@vitest/coverage-v8": "^3.2.5",
     "autoprefixer": "^10.4.17",
     "better-sqlite3-node": "npm:better-sqlite3@12.10.1",
-    "electron": "^44.9.3",
+    "electron": "^44.10.1",
     "electron-builder": "26.17.0",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
