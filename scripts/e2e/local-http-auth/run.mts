@@ -52,6 +52,7 @@ let appClosed = false;
 let rendererObserved = false;
 let displayStopped = false;
 let displayNumber = '';
+let desktopStartupDeadline = 0;
 const pidHandles: Record<string, number> = {};
 const diagnostics: string[] = [];
 const sourceHashes: Record<string, string> = {};
@@ -365,21 +366,27 @@ try {
   await waitUntil(async () => /^\d+\n$/.test(displayNumber), 10_000);
   env.DISPLAY = `:${displayNumber.trim()}`;
   phase = 'desktop-launch';
+  // One existing four-minute dev startup budget covers loading the renderer,
+  // not just discovering its early CDP target.
+  desktopStartupDeadline = Date.now() + 240_000;
   app = spawn('pnpm', ['dev:mcp'], {
     cwd: checkout,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   observe(app, 'dev-mcp');
-  await waitUntil(async () => {
-    assert(app && isLive(app), 'App exited before renderer');
-    try {
-      rendererObserved = !!(await ownedRendererSocket());
-      return rendererObserved;
-    } catch {
-      return false;
-    }
-  }, 240_000);
+  await waitUntil(
+    async () => {
+      assert(app && isLive(app), 'App exited before renderer');
+      try {
+        rendererObserved = !!(await ownedRendererSocket());
+        return rendererObserved;
+      } catch {
+        return false;
+      }
+    },
+    Math.max(0, desktopStartupDeadline - Date.now())
+  );
   phase = 'private-authority';
   const storage: unknown = await import(pathToFileURL(path.join(checkout, modulePaths[0])).href);
   const discovery: unknown = await import(pathToFileURL(path.join(checkout, modulePaths[1])).href);
@@ -475,6 +482,7 @@ try {
     cdpOrigin,
     browserCdpOrigin,
     sourceHashes,
+    desktopStartupDeadline,
   });
   phase = succeeded ? 'complete' : 'qualification';
   await mkdir(artifactDir, { recursive: true });

@@ -631,6 +631,14 @@ export async function qualify(args: unknown): Promise<boolean> {
   loopbackOrigin(rendererOrigin, ['http:']);
   loopbackOrigin(cdpOrigin, ['http:']);
   loopbackOrigin(browserCdpOrigin, ['http:']);
+  check(
+    typeof args.desktopStartupDeadline === 'number' &&
+      Number.isSafeInteger(args.desktopStartupDeadline) &&
+      args.desktopStartupDeadline > 0 &&
+      args.desktopStartupDeadline <= Date.now() + 240_000,
+    'Invalid desktop startup deadline'
+  );
+  const desktopStartupDeadline = args.desktopStartupDeadline;
   await directory(run, true);
   await directory(checkout);
   await directory(profile, true);
@@ -660,6 +668,7 @@ export async function qualify(args: unknown): Promise<boolean> {
   const passed: string[] = [],
     denied: Array<{ path: string; authorization: string; status: number }> = [];
   let desktopCdp: Cdp | undefined;
+  let desktopUiReadyElapsedMs: number | null = null;
   let cdp: Cdp | undefined,
     phase = 'authority',
     succeeded = false,
@@ -745,15 +754,22 @@ export async function qualify(args: unknown): Promise<boolean> {
     await cdp.send('Network.enable');
     check((await cdp.inspect('location.origin')) === rendererOrigin, 'Renderer origin changed');
     phase = 'desktop-ipc';
+    check(Date.now() < desktopStartupDeadline, 'Desktop startup deadline expired');
     await until(
-      async () =>
-        cdp
-          ?.inspect(
-            "!!window.electronAPI && !!document.querySelector('#root')?.children.length && !document.querySelector('#splash')"
-          )
-          .then((value) => value === true) ?? false,
-      'Desktop UI not ready'
+      async () => {
+        if (Date.now() >= desktopStartupDeadline) return false;
+        return (
+          cdp
+            ?.inspect(
+              "!!window.electronAPI && !!document.querySelector('#root')?.children.length && !document.querySelector('#splash')"
+            )
+            .then((value) => value === true && Date.now() <= desktopStartupDeadline) ?? false
+        );
+      },
+      'Desktop UI not ready',
+      Math.max(0, desktopStartupDeadline - Date.now())
     );
+    desktopUiReadyElapsedMs = Math.max(0, Date.now() - (desktopStartupDeadline - 240_000));
     check(
       (await cdp.inspect(
         "!document.getElementById('api-access-key') && document.querySelector('#root').getBoundingClientRect().width > 0 && !!document.querySelector('#root button[aria-label=\"New tab\"]')"
@@ -1233,6 +1249,7 @@ export async function qualify(args: unknown): Promise<boolean> {
       responses: cdp?.responses ?? [],
       corsFailures: cdp?.corsFailures ?? [],
       desktopFailureState,
+      desktopUiReadyElapsedMs,
       desktopRendererNetwork: (desktopCdp ?? cdp)?.rendererNetworkSnapshot() ?? null,
       rendererFailureClasses: (desktopCdp ?? cdp)?.rendererFailures ?? [],
       browserFailureState,
