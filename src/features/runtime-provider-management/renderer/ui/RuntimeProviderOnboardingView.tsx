@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -230,7 +231,8 @@ const WizardPlanPicker = ({
 }): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   return (
-    <div className="space-y-3">
+    <TooltipProvider>
+      <div className="space-y-3">
       <div>
         <div className="text-sm font-semibold text-[var(--color-text)]">Connect all my plans</div>
         <div className="mt-1 text-xs text-[var(--color-text-muted)]">
@@ -269,17 +271,27 @@ const WizardPlanPicker = ({
                     <span className="shrink-0 text-[10px] text-emerald-300">Connected</span>
                   ) : null}
                   {unsupported || (state.openCodeGeneration === 'v2' && compatibility.state === 'unverified') ? (
-                    <span
-                      data-testid={`opencode-plan-compatibility-${plan.id}`}
-                      className="shrink-0 text-[10px] text-[var(--color-text-muted)]"
-                      title={compatibility.state === 'unverified'
-                        ? t('cliStatus.quickConnect.v2UnverifiedDetail')
-                        : undefined}
-                    >
-                      {t(unsupported
-                        ? 'cliStatus.quickConnect.requiresV1'
-                        : 'cliStatus.quickConnect.v2Unverified')}
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          data-testid={`opencode-plan-compatibility-${plan.id}`}
+                          className="shrink-0 rounded text-[10px] text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                          onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+                        >
+                          {t(unsupported
+                            ? 'cliStatus.quickConnect.requiresV1'
+                            : 'cliStatus.quickConnect.v2Unverified')}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-72 text-xs">
+                        {compatibility.state === 'unverified'
+                          ? t('cliStatus.quickConnect.v2UnverifiedDetail')
+                          : compatibility.reason === 'cli-plugin'
+                            ? t('cliStatus.quickConnect.v2CliPluginLimitation')
+                            : t('cliStatus.quickConnect.v2OAuthLimitation')}
+                      </TooltipContent>
+                    </Tooltip>
                   ) : null}
                 </span>
                 <span className="mt-0.5 block text-[10.5px] leading-4 text-[var(--color-text-muted)]">
@@ -305,6 +317,7 @@ const WizardPlanPicker = ({
         </Button>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
 
 import { getOpenCodeGeneration, resolveOpenCodeProviderCompatibility } from '../../core/domain';
 
@@ -23,7 +24,7 @@ export function OpenCodeProviderCompatibilityScope({
       : null;
   return (
     <OpenCodeGenerationContext.Provider value={generation}>
-      {children}
+      <TooltipProvider>{children}</TooltipProvider>
     </OpenCodeGenerationContext.Provider>
   );
 }
@@ -46,14 +47,23 @@ export function OpenCodeProviderCompatibilityStatus({
         ? t('cliStatus.quickConnect.v2OAuthLimitation')
         : t('cliStatus.quickConnect.v2UnverifiedDetail');
   return (
-    <span
-      data-testid={`runtime-provider-compatibility-${providerId}`}
-      className="text-[10px] text-[var(--color-text-muted)]"
-      title={reason}
-    >
-      {t(incompatible
-        ? 'cliStatus.quickConnect.requiresV1'
-        : 'cliStatus.quickConnect.v2Unverified')}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          data-testid={`runtime-provider-compatibility-${providerId}`}
+          aria-label={reason}
+          onClick={(event) => event.stopPropagation()}
+          className="rounded text-[10px] text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+        >
+          {t(incompatible
+            ? 'cliStatus.quickConnect.requiresV1'
+            : 'cliStatus.quickConnect.v2Unverified')}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start" className="max-w-72 text-pretty text-xs">
+        {reason}
+      </TooltipContent>
+    </Tooltip>
   );
 }
