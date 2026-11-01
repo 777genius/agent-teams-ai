@@ -10,7 +10,7 @@ const PROVIDER_DISPLAY_NAMES: Record<CliProviderId, string> = {
   anthropic: 'Anthropic',
   codex: 'Codex',
   gemini: 'Gemini',
-  opencode: 'OpenCode (200+ models)',
+  opencode: 'OpenCode (200+ providers)',
 };
 
 export function buildInitialCliInstallationStatus(): CliInstallationStatus {
