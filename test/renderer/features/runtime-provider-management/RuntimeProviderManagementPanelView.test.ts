@@ -2016,6 +2016,82 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.submitConnect).toHaveBeenCalledWith('xai');
   });
 
+  it('labels and blocks xAI OAuth-only directory rows on V2 but allows an API-key route', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const base = {
+      providerId: 'xai',
+      displayName: 'xAI',
+      state: 'available' as const,
+      setupKind: 'connect-oauth' as const,
+      ownership: [] as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['oauth'] as const,
+      actions: [{
+        id: 'connect' as const,
+        label: 'Connect',
+        enabled: true,
+        disabledReason: null,
+        requiresSecret: false,
+        ownershipScope: 'managed' as const,
+      }],
+      sources: ['inventory'] as const,
+      sourceLabel: 'OpenCode',
+      providerSource: 'inventory',
+      detail: null,
+      metadata: {
+        hasKnownModels: true,
+        requiresManualConfig: false,
+        supportedInlineAuth: true,
+        configuredAuthless: false,
+      },
+    };
+    const render = async (method: 'oauth' | 'api') => {
+      await act(async () => {
+        root.render(React.createElement(
+          OpenCodeProviderCompatibilityScope,
+          { generation: 'v2' },
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              directoryLoaded: true,
+              directoryTotalCount: 1,
+              directoryEntries: [{
+                ...base,
+                setupKind: method === 'oauth' ? 'connect-oauth' : 'connect-api-key',
+                authMethods: [method],
+              }],
+            }),
+            actions,
+            disabled: false,
+          })
+        ));
+        await Promise.resolve();
+      });
+    };
+    await render('oauth');
+    const row = host.querySelector<HTMLElement>('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(row?.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('Requires OpenCode V1');
+    const connect = [...(row?.querySelectorAll('button') ?? [])]
+      .find((button) => button.textContent?.trim() === 'Connect');
+    expect(connect?.disabled).toBe(true);
+    await act(async () => { row?.click(); await Promise.resolve(); });
+    expect(actions.startConnect).not.toHaveBeenCalled();
+    await render('api');
+    const nextRow = host.querySelector<HTMLElement>('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(nextRow?.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('V2 model not verified');
+    const nextConnect = [...(nextRow?.querySelectorAll('button') ?? [])]
+      .find((button) => button.textContent?.trim() === 'Connect');
+    expect(nextConnect?.disabled).toBe(false);
+    await act(async () => { nextConnect?.click(); await Promise.resolve(); });
+    expect(actions.startConnect).toHaveBeenCalledWith('xai');
+  });
+
   it('does not submit a pending xAI OAuth code after the runtime switches to V2', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
