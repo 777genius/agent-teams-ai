@@ -2108,6 +2108,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       const url = String(input);
       if (url.endsWith('/opencode-ai/1.19.5')) {
         return Response.json({
+          name: 'opencode-ai',
           version: '1.19.5',
           dist: { tarball: 'https://example.test/root.tgz', integrity },
           optionalDependencies: { [platformPackage]: '1.19.5' },

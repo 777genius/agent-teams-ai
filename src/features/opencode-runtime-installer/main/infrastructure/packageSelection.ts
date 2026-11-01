@@ -32,7 +32,8 @@ export async function selectOpenCodeInstallPackage(
     classification?.kind !== 'recognized' ||
     classification.generation !== generation ||
     (generation === 'v2' && (root.name !== rootName || root.version !== qualifiedV2Version)) ||
-    (generation === 'v1' && v1Version !== 'latest' &&
+    (generation === 'v1' &&
+      v1Version !== 'latest' &&
       (root.name !== rootName || root.version !== v1Version))
   )
     throw new Error('OpenCode npm package version does not match the selected generation');
