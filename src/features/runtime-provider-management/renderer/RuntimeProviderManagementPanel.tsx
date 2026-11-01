@@ -138,22 +138,27 @@ export const RuntimeProviderManagementPanel = ({
     (option) => option.id === state.selectedAuthOptionId
   );
   const activeSetupMethod = activeAuthOption?.method ?? state.setupForm?.method ?? null;
-  const blocked = (providerId: string, method?: string | null): boolean =>
-    isOpenCodeProviderConnectionBlocked(providerId, openCodeGeneration, method);
-  const guardedActions = {
-    ...actions,
-    startConnect: (providerId: string): void => {
-      if (!blocked(providerId)) actions.startConnect(providerId);
-    },
-    startReconnect: (providerId: string): void => {
-      if (!blocked(providerId)) actions.startReconnect(providerId);
-    },
-    submitConnect: (providerId: string) =>
-      blocked(providerId, activeSetupMethod) ? Promise.resolve(null) : actions.submitConnect(providerId),
-    submitOAuthCode: (): Promise<void> =>
-      state.activeFormProviderId && blocked(state.activeFormProviderId, 'oauth')
-        ? Promise.resolve() : actions.submitOAuthCode(),
-  };
+  const guardedActions = useMemo(() => {
+    const blocked = (providerId: string, method?: string | null): boolean =>
+      isOpenCodeProviderConnectionBlocked(providerId, openCodeGeneration, method);
+    return {
+      ...actions,
+      startConnect: (providerId: string): void => {
+        if (!blocked(providerId)) actions.startConnect(providerId);
+      },
+      startReconnect: (providerId: string): void => {
+        if (!blocked(providerId)) actions.startReconnect(providerId);
+      },
+      submitConnect: (providerId: string) =>
+        blocked(providerId, activeSetupMethod)
+          ? Promise.resolve(null)
+          : actions.submitConnect(providerId),
+      submitOAuthCode: (): Promise<void> =>
+        state.activeFormProviderId && blocked(state.activeFormProviderId, 'oauth')
+          ? Promise.resolve()
+          : actions.submitOAuthCode(),
+    };
+  }, [actions, activeSetupMethod, openCodeGeneration, state.activeFormProviderId]);
   const blockingCredentialWrite = Boolean(
     state.savingProviderId && activeSetupMethod && activeSetupMethod !== 'oauth'
   );

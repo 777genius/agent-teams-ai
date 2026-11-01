@@ -2052,7 +2052,7 @@ describe('RuntimeProviderManagementPanelView', () => {
                 authOptionId: 'oauth:0',
                 methodIndex: 0,
                 phase: 'waiting-for-code',
-                completionMethod: 'manual',
+                completionMethod: 'code',
                 instructions: 'Enter code',
                 message: 'Waiting for authorization code',
               },
