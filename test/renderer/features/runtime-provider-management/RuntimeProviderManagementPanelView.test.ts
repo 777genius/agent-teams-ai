@@ -2002,7 +2002,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     const submit = host.querySelector<HTMLButtonElement>('button[type="submit"]');
     expect(submit?.disabled).toBe(true);
     expect(host.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
-      .toContain('requiresV1');
+      .toContain('Requires OpenCode V1');
     await act(async () => {
       host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     });

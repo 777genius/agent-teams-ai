@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 
 import {
-  formatProviderState,
+  formatProviderState, inferOpenCodeProviderAuthMethod,
   getProviderAction,
   getProviderModelsLabel,
   getRuntimeProviderSetupPresentation,
@@ -1084,7 +1084,7 @@ const ProviderRow = ({
   actions,
 }: ProviderRowProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
-  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId);
+  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId, inferOpenCodeProviderAuthMethod(provider.authMethods));
   const { canOpenConnect: rawConnect, canSelectModels } = runtimeProviderDirectoryInteraction(provider);
   const canOpenConnect = rawConnect && !connectionBlocked;
   const clickable = !disabled && (canOpenConnect || canSelectModels);
@@ -1136,7 +1136,7 @@ const ProviderRow = ({
             <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
               {provider.displayName}
             </span>
-            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} />
+            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} authMethod={inferOpenCodeProviderAuthMethod(provider.authMethods)} />
             {provider.recommended ? (
               <Badge variant="secondary">{t('runtimeProvider.providers.recommended')}</Badge>
             ) : null}
@@ -1239,7 +1239,7 @@ const DirectoryProviderRow = ({
   readonly actions: RuntimeProviderManagementActions;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
-  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId);
+  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId, inferOpenCodeProviderAuthMethod(provider.authMethods));
   const connect = getDirectoryAction(provider, 'connect');
   const reconnect = getDirectoryAction(provider, 'reconnect');
   const configure = getDirectoryAction(provider, 'configure');
@@ -1294,7 +1294,7 @@ const DirectoryProviderRow = ({
             <span className="text-sm font-medium text-[var(--color-text)]">
               {provider.displayName}
             </span>
-            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} />
+            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} authMethod={inferOpenCodeProviderAuthMethod(provider.authMethods)} />
             {provider.recommended ? (
               <Badge variant="secondary">{t('runtimeProvider.providers.recommended')}</Badge>
             ) : null}

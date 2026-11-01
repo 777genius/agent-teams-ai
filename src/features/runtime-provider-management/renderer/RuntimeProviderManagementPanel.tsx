@@ -4,6 +4,7 @@ import {
   loadProjectPathProjects,
   type ProjectPathProject,
 } from '@renderer/components/team/dialogs/projectPathProjects';
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -45,12 +46,24 @@ export const RuntimeProviderManagementPanel = ({
   const repositoryGroups = useStore(useShallow((state) => state.repositoryGroups));
   const nativeOpenCodeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const fetchOpenCodeRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
-  const openCodeGeneration = nativeOpenCodeStatus?.installed && nativeOpenCodeStatus.version
-    ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
-    : null;
+  const invalidateOpenCodeRuntimeStatus = useStore((state) => state.invalidateOpenCodeRuntimeStatus);
+  const openCodeGeneration =
+    nativeOpenCodeStatus?.installed &&
+    nativeOpenCodeStatus.version &&
+    isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
+      ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
+      : null;
   useEffect(() => {
-    if (open && nativeOpenCodeStatus === null) void fetchOpenCodeRuntimeStatus();
-  }, [fetchOpenCodeRuntimeStatus, nativeOpenCodeStatus, open]);
+    if (!open) return;
+    let active = true;
+    // A replaced native binary must not reuse the previous generation's cached status.
+    void invalidateOpenCodeRuntimeStatus()
+      .catch(() => undefined)
+      .then(() => {
+        if (active) return fetchOpenCodeRuntimeStatus();
+      });
+    return () => { active = false; };
+  }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus, open]);
   const initialProjectPath = useMemo(() => projectPath?.trim() || null, [projectPath]);
   const [activeProjectPath, setActiveProjectPath] = useState<string | null>(initialProjectPath);
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);

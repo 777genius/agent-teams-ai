@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   loadProjectPathProjects: vi.fn(),
   useRuntimeProviderManagement: vi.fn(),
+  nativeRuntimeStatus: null as { installed: boolean; version: string; state: string } | null,
+  fetchOpenCodeRuntimeStatus: vi.fn(async () => undefined),
+  invalidateOpenCodeRuntimeStatus: vi.fn(async () => undefined),
+  generationProps: [] as Array<'v1' | 'v2' | null>,
   viewProps: [] as Array<{
     disabled?: boolean;
     projectContextLoading?: boolean;
@@ -18,8 +22,15 @@ vi.mock('@renderer/components/team/dialogs/projectPathProjects', () => ({
 }));
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: { repositoryGroups: never[] }) => unknown) =>
-    selector({ repositoryGroups: [] }),
+  useStore: (selector: (state: { repositoryGroups: never[] }) => unknown) => {
+    const state = {
+      repositoryGroups: [] as never[],
+      openCodeRuntimeStatus: mocks.nativeRuntimeStatus,
+      fetchOpenCodeRuntimeStatus: mocks.fetchOpenCodeRuntimeStatus,
+      invalidateOpenCodeRuntimeStatus: mocks.invalidateOpenCodeRuntimeStatus,
+    };
+    return selector(state);
+  },
 }));
 
 vi.mock(
@@ -43,12 +54,29 @@ vi.mock(
   })
 );
 
+vi.mock(
+  '../../../../src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus',
+  () => ({
+    OpenCodeProviderCompatibilityScope: ({
+      generation,
+      children,
+    }: { generation: 'v1' | 'v2' | null; children: React.ReactNode }) => {
+      mocks.generationProps.push(generation);
+      return children;
+    },
+  })
+);
+
 import { RuntimeProviderManagementPanel } from '../../../../src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel';
 
 describe('RuntimeProviderManagementPanel', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     mocks.viewProps.length = 0;
+    mocks.generationProps.length = 0;
+    mocks.nativeRuntimeStatus = null;
+    mocks.fetchOpenCodeRuntimeStatus.mockClear();
+    mocks.invalidateOpenCodeRuntimeStatus.mockClear();
     mocks.loadProjectPathProjects.mockReset();
     mocks.useRuntimeProviderManagement.mockReset();
     mocks.useRuntimeProviderManagement.mockReturnValue([
@@ -71,6 +99,31 @@ describe('RuntimeProviderManagementPanel', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('rejects unknown installed generations and always refreshes cached status on open', async () => {
+    mocks.loadProjectPathProjects.mockResolvedValue([]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (version: string) => {
+      mocks.nativeRuntimeStatus = { installed: true, version, state: 'ready' };
+      await act(async () => {
+        root.render(React.createElement(RuntimeProviderManagementPanel, {
+          runtimeId: 'opencode', open: true,
+        }));
+        await Promise.resolve();
+      });
+    };
+    await render('3.0.0');
+    expect(mocks.generationProps.at(-1)).toBeNull();
+    expect(mocks.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    await render('2.1.4');
+    expect(mocks.generationProps.at(-1)).toBe('v2');
+    await render('1.19.5');
+    expect(mocks.generationProps.at(-1)).toBe('v1');
+    await act(async () => root.unmount());
   });
 
   it('clears a deleted Windows path alias before provider-management IPC can use it', async () => {

@@ -1,4 +1,5 @@
 import {
+  inferOpenCodeProviderAuthMethod,
   isOpenCodeProviderConnectionBlocked as isBlocked,
   resolveOpenCodeProviderCompatibility as resolve,
 } from '../../../../src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility';
@@ -30,6 +31,14 @@ describe('OpenCode provider generation compatibility', () => {
     expect(resolve('xai', 'v2', 'oauth')).toEqual({
       state: 'incompatible', reason: 'subscription-oauth', canConnect: false,
     });
+  });
+
+  it('blocks xAI OAuth-only catalog rows while keeping xAI API-key connection available', () => {
+    expect(inferOpenCodeProviderAuthMethod(['oauth'])).toBe('oauth');
+    expect(inferOpenCodeProviderAuthMethod(['oauth', 'api'])).toBeNull();
+    expect(inferOpenCodeProviderAuthMethod(['api'])).toBeNull();
+    expect(resolve('xai', 'v2', inferOpenCodeProviderAuthMethod(['oauth'])).canConnect).toBe(false);
+    expect(resolve('xai', 'v2', inferOpenCodeProviderAuthMethod(['api'])).canConnect).toBe(true);
   });
 
   it('does not count an unknown V1 provider as a supported integration', () => {

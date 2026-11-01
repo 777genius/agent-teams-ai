@@ -55,6 +55,11 @@ export function resolveOpenCodeProviderCompatibility(
   return UNVERIFIED;
 }
 
+/** An OAuth-only provider row must not be treated as an available API-key route. */
+export function inferOpenCodeProviderAuthMethod(authMethods: readonly string[]): 'oauth' | null {
+  return authMethods.length === 1 && authMethods[0] === 'oauth' ? 'oauth' : null;
+}
+
 /** Undefined is used by existing, unmanaged callers. Null is an unknown selected runtime. */
 export function isOpenCodeProviderConnectionBlocked(
   providerId: string,
