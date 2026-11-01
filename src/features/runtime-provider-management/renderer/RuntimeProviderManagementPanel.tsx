@@ -7,6 +7,8 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
+import { getOpenCodeGeneration } from '../core/domain';
+
 import {
   type RuntimeProviderChangeKind,
   useRuntimeProviderManagement,
@@ -41,6 +43,10 @@ export const RuntimeProviderManagementPanel = ({
   onBlockingOperationChange,
 }: RuntimeProviderManagementPanelProps): JSX.Element => {
   const repositoryGroups = useStore(useShallow((state) => state.repositoryGroups));
+  const nativeOpenCodeStatus = useStore((state) => state.openCodeRuntimeStatus);
+  const openCodeGeneration = nativeOpenCodeStatus?.installed && nativeOpenCodeStatus.version
+    ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
+    : null;
   const initialProjectPath = useMemo(() => projectPath?.trim() || null, [projectPath]);
   const [activeProjectPath, setActiveProjectPath] = useState<string | null>(initialProjectPath);
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
@@ -188,7 +194,7 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <OpenCodeProviderCompatibilityScope>
+    <OpenCodeProviderCompatibilityScope generation={openCodeGeneration}>
       <RuntimeProviderManagementPanelView
         state={state}
         actions={actions}

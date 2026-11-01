@@ -2,9 +2,8 @@ import { createContext, useContext } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { useStore } from '@renderer/store';
 
-import { getOpenCodeGeneration, resolveOpenCodeProviderCompatibility } from '../../core/domain';
+import { resolveOpenCodeProviderCompatibility } from '../../core/domain';
 
 import type { OpenCodeGeneration } from '../../core/domain';
 import type { JSX, ReactNode } from 'react';
@@ -14,14 +13,11 @@ const OpenCodeGenerationContext = createContext<OpenCodeGeneration | null>(null)
 /** The chosen generation is the selected native runtime, never guessed from a missing status. */
 export function OpenCodeProviderCompatibilityScope({
   children,
+  generation,
 }: {
   readonly children: ReactNode;
+  readonly generation: OpenCodeGeneration | null;
 }): JSX.Element {
-  const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus);
-  const generation =
-    runtimeStatus?.installed && runtimeStatus.version
-      ? getOpenCodeGeneration(runtimeStatus.version)
-      : null;
   return (
     <OpenCodeGenerationContext.Provider value={generation}>
       <TooltipProvider>{children}</TooltipProvider>

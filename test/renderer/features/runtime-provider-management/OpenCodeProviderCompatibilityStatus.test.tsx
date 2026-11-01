@@ -10,12 +10,6 @@ import {
 } from '../../../../src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus';
 
 const mocks = vi.hoisted(() => ({ version: '2.1.4' as string | null }));
-vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: unknown) => unknown) => selector({
-    openCodeRuntimeStatus: mocks.version
-      ? { installed: true, version: mocks.version, state: 'ready' } : null,
-  }),
-}));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -43,7 +37,10 @@ describe('OpenCode provider compatibility in advanced settings', () => {
 
   async function show(): Promise<void> {
     await act(async () => root.render(
-      <OpenCodeProviderCompatibilityScope>
+      <OpenCodeProviderCompatibilityScope generation={
+        mocks.version?.startsWith('2.') ? 'v2' :
+          mocks.version?.startsWith('1.') ? 'v1' : null
+      }>
         <OpenCodeProviderCompatibilityStatus providerId="cursor-acp" />
         <OpenCodeProviderCompatibilityStatus providerId="openrouter" />
         <OpenCodeProviderCompatibilityStatus providerId="xai" />
