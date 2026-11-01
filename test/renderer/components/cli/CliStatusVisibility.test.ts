@@ -1149,6 +1149,7 @@ describe('CLI status visibility during completed install state', () => {
   it('shows an OpenCode install action on the dashboard when the OpenCode CLI is missing', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = { installed: false, source: 'missing', state: 'idle' };
     storeState.cliStatus = createInstalledCliStatus({
       flavor: 'agent_teams_orchestrator',
       displayName: 'Multimodel runtime',
@@ -1205,6 +1206,107 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
   });
+
+  it.each(['unknown', 'checking', 'refreshing', 'support required', 'support failed'] as const)(
+    'presents OpenCode native setup independently of provider loading: %s',
+    async (reason) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.cliInstallerState = 'idle';
+      storeState.openCodeRuntimeStatus =
+        reason === 'unknown'
+          ? null
+          : {
+              installed: true,
+              source: 'path',
+              state:
+                reason === 'checking'
+                  ? 'checking'
+                  : reason === 'support failed'
+                    ? 'failed'
+                    : 'idle',
+              version: '2.1.4',
+              v2Support: 'required',
+              compatibleV2Version: '2.2.0',
+              ...(reason === 'support required' && {
+                error: 'V2 support files missing: ENOENT /TEST/cache/support/package.json',
+              }),
+              ...(reason === 'support failed' && {
+                error: 'V2 support download failed: network unavailable',
+              }),
+            };
+      storeState.openCodeRuntimeStatusLoading = reason === 'refreshing';
+      storeState.cliProviderStatusLoading = { opencode: true };
+      storeState.cliStatus = createInstalledCliStatus({
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            supported: false,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'unknown',
+            statusCheckOutcome: 'pending',
+            statusCheckErrorCode: 'partial_response',
+            statusMessage: 'Checking...',
+            modelCatalogRefreshState: 'loading',
+            models: [],
+            canLoginFromUi: false,
+            capabilities: { teamLaunch: false, oneShot: false },
+            backend: null,
+          },
+        ],
+      });
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(React.createElement(CliStatusBanner));
+          await Promise.resolve();
+        });
+        const row = host
+          .querySelector('[data-testid="runtime-manage-opencode"]')
+          ?.closest('div.grid');
+        expect(row).toBeTruthy();
+        const setup = Array.from(row!.querySelectorAll('button')).filter(
+          (button) => button.textContent?.trim() === 'Finish OpenCode V2 setup'
+        );
+        const supportRequired = reason === 'support required' || reason === 'support failed';
+        expect(setup).toHaveLength(supportRequired ? 1 : 0);
+        expect(
+          Array.from(row!.querySelectorAll('button')).some((button) =>
+            /^(Install|Install OpenCode V1|Update|Retry install)$/.test(
+              button.textContent?.trim() ?? ''
+            )
+          )
+        ).toBe(false);
+        if (supportRequired) {
+          expect(row!.textContent).toContain('OpenCode V2 is installed.');
+          expect(row!.textContent).not.toContain('Loading models...');
+          expect(row!.textContent).not.toContain('Checking...');
+          expect(row!.querySelector('.animate-spin')).toBeNull();
+          expect(setup[0].disabled).toBe(false);
+          expect(row!.textContent).not.toContain('ENOENT');
+          if (reason === 'support failed') {
+            expect(row!.textContent).toContain('V2 support download failed: network unavailable');
+          }
+          await act(async () => {
+            setup[0].click();
+            await Promise.resolve();
+          });
+          expect(storeState.installOpenCodeRuntime).toHaveBeenCalledWith({
+            generation: 'v2',
+            supportOnly: true,
+          });
+          expect(storeState.installOpenCodeRuntime).toHaveBeenCalledTimes(1);
+        }
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
 
   it('offers an OpenCode update when the installed runtime predates provider OAuth support', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -1450,70 +1552,80 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('shows OpenCode app-managed install progress on the dashboard provider card', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    storeState.cliInstallerState = 'idle';
-    storeState.openCodeRuntimeStatus = {
-      installed: false,
-      source: 'missing',
-      state: 'downloading',
-      progress: {
-        phase: 'downloading',
-        downloadedBytes: 42,
-        totalBytes: 100,
-        percent: 42,
-        detail: 'Downloading OpenCode 42%',
-      },
-    };
-    storeState.openCodeRuntimeStatusLoading = true;
-    storeState.cliStatus = createInstalledCliStatus({
-      flavor: 'agent_teams_orchestrator',
-      displayName: 'Multimodel runtime',
-      supportsSelfUpdate: false,
-      showVersionDetails: false,
-      showBinaryPath: false,
-      authLoggedIn: false,
-      providers: [
-        {
-          providerId: 'opencode',
-          displayName: 'OpenCode (200+ providers)',
-          supported: false,
-          authenticated: false,
-          authMethod: null,
-          verificationState: 'error',
-          statusMessage: 'OpenCode CLI is not installed.',
-          models: [],
-          canLoginFromUi: false,
-          capabilities: {
-            teamLaunch: false,
-            oneShot: false,
-          },
-          backend: null,
+  it.each(['V1', 'V2 support'] as const)(
+    'shows OpenCode %s install progress on the dashboard provider card',
+    async (generation) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.cliInstallerState = 'idle';
+      storeState.openCodeRuntimeStatus = {
+        installed: false,
+        source: 'missing',
+        state: 'downloading',
+        ...(generation === 'V2 support' && {
+          installed: true,
+          source: 'override' as const,
+          version: '2.1.4',
+          v2Support: 'required' as const,
+          compatibleV2Version: '2.2.0',
+        }),
+        progress: {
+          phase: 'downloading',
+          downloadedBytes: 42,
+          totalBytes: 100,
+          percent: 42,
+          detail: 'Downloading OpenCode 42%',
         },
-      ],
-    });
+      };
+      storeState.openCodeRuntimeStatusLoading = true;
+      storeState.cliStatus = createInstalledCliStatus({
+        flavor: 'agent_teams_orchestrator',
+        displayName: 'Multimodel runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+        authLoggedIn: false,
+        providers: [
+          {
+            providerId: 'opencode',
+            displayName: 'OpenCode (200+ providers)',
+            supported: false,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'error',
+            statusMessage: 'OpenCode CLI is not installed.',
+            models: [],
+            canLoginFromUi: false,
+            capabilities: {
+              teamLaunch: false,
+              oneShot: false,
+            },
+            backend: null,
+          },
+        ],
+      });
 
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
 
-    await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
-      await Promise.resolve();
-    });
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner));
+        await Promise.resolve();
+      });
 
-    expect(host.textContent).toContain('Downloading 42%');
-    const progressButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Downloading 42%'
-    );
-    expect(progressButton).not.toBeUndefined();
-    expect(progressButton).toHaveProperty('disabled', true);
+      expect(host.textContent).toContain('Downloading 42%');
+      const progressButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Downloading 42%'
+      );
+      expect(progressButton).not.toBeUndefined();
+      expect(progressButton).toHaveProperty('disabled', true);
 
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  );
 
   it('does not show OpenCode retry install when the provider is effectively ready', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -4801,6 +4913,12 @@ describe('CLI status visibility during completed install state', () => {
   it('keeps other provider authority during scoped Re-check and retries the OpenCode catalog independently', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      version: '1.19.4',
+      source: 'app-managed',
+      state: 'ready',
+    };
     const anthropic = {
       ...createApiKeyMisconfiguredProvider('anthropic'),
       authenticated: true,

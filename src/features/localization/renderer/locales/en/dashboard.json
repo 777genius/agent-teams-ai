@@ -206,7 +206,8 @@
       "reinstall": "Reinstall {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportInstall": "Install V2 support",
+      "v2SupportInstall": "Finish OpenCode V2 setup",
+      "v2SupportRequiredDetail": "OpenCode V2 is installed. Add its support files to load providers and models.",
       "v2SupportRepair": "Repair V2 support",
       "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
       "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available.",

@@ -102,10 +102,8 @@ export const RuntimeProviderQuickConnect = ({
     cliStatusLoading,
   });
   const directory = useRuntimeProviderQuickConnect({
-    // Warm the provider directory while the lightweight OpenCode readiness
-    // check is still running. Waiting for the gate made these independent
-    // probes sequential and kept every plan card in a loading state longer.
-    enabled: enabled && (gate === 'checking' || gate === 'ready'),
+    // Unknown native status and missing V2 support cannot serve directory reads.
+    enabled: enabled && gate === 'ready',
     projectPath,
     refreshKey,
     // Reads cached before an install or update completed describe the old
@@ -115,7 +113,7 @@ export const RuntimeProviderQuickConnect = ({
       runtimeStatus: openCodeRuntimeStatus,
     }),
   });
-  const canWarmProviderStatus = enabled && (gate === 'checking' || gate === 'ready');
+  const canWarmProviderStatus = enabled && gate === 'ready';
   const kiroCompanion = useRuntimeProviderCompanion(
     'kiro-cli',
     canWarmProviderStatus,
@@ -135,6 +133,11 @@ export const RuntimeProviderQuickConnect = ({
   const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
   const generation = getOpenCodeGeneration(openCodeRuntimeStatus?.version);
+  const supportRequired =
+    (gate === 'support-required' || gate === 'error') &&
+    openCodeRuntimeStatus?.installed === true &&
+    openCodeRuntimeStatus.v2Support === 'required' &&
+    generation === 'v2';
   useEffect(() => {
     if (!localProviderSetupOpen) return;
     setLocalProviderProjectPath(projectPath?.trim() || null);
@@ -611,7 +614,17 @@ export const RuntimeProviderQuickConnect = ({
           ? null
           : () => setXiaomiDialogOpen(true),
     });
-    return [...gatewayCards, ...planCards];
+    return [...gatewayCards, ...planCards].map((card) =>
+      supportRequired
+        ? {
+            ...card,
+            state: 'unavailable' as const,
+            stateLabel: t('cliStatus.runtimeInstall.v2SupportInstall'),
+            actionLabel: null,
+            onAction: null,
+          }
+        : card
+    );
   }, [
     directory.entries,
     directory.error,
@@ -621,6 +634,7 @@ export const RuntimeProviderQuickConnect = ({
     directory.loading,
     connectedXiaomiEntry,
     gate,
+    supportRequired,
     getCompanionState,
     handleCompanionCardAction,
     oauthBridgeOutdated,

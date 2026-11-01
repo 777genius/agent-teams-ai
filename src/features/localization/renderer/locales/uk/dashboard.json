@@ -198,7 +198,8 @@
       "reinstall": "Перевстановити {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportInstall": "Встановити підтримку V2",
+      "v2SupportInstall": "Завершити налаштування OpenCode V2",
+      "v2SupportRequiredDetail": "OpenCode V2 встановлено. Додайте файли підтримки для завантаження провайдерів і моделей.",
       "v2SupportRepair": "Відновити підтримку V2",
       "checking": "Перевірка",
       "codexTitle": "Встановити Codex CLI у дані застосунку",
