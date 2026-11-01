@@ -144,8 +144,14 @@ export function useRuntimeProviderOnboarding({
   const [selectedPlanIds, setSelectedPlanIds] =
     useState<readonly RuntimeProviderOnboardingPlanId[]>(DEFAULT_WIZARD_PLAN_IDS);
   const [savedWizardProgress, setProgress] = useState<RuntimeProviderOnboardingProgress | null>(null);
-  const progress = getSupportedWizardProgress(savedWizardProgress, openCodeGeneration);
-  const supportedSelectedPlanIds = getSupportedWizardPlanIds(selectedPlanIds, openCodeGeneration);
+  const progress = useMemo(
+    () => getSupportedWizardProgress(savedWizardProgress, openCodeGeneration),
+    [savedWizardProgress, openCodeGeneration]
+  );
+  const supportedSelectedPlanIds = useMemo(
+    () => getSupportedWizardPlanIds(selectedPlanIds, openCodeGeneration),
+    [selectedPlanIds, openCodeGeneration]
+  );
   const [wizardStarted, setWizardStarted] = useState(false);
   const [resumable, setResumable] = useState(false);
   const [stage, setStage] = useState<RuntimeProviderOnboardingStage>('connect');
@@ -183,7 +189,6 @@ export function useRuntimeProviderOnboarding({
   });
   const retryCancelConnect = managementActions.cancelConnect;
   const retryStartConnect = managementActions.startConnect;
-
   useEffect(() => {
     if (!enabled) {
       initializedSessionRef.current = null;
@@ -208,7 +213,6 @@ export function useRuntimeProviderOnboarding({
     activePlanRef.current = null;
     runtimePrepareStartedAtRef.current = null;
     probeSequenceRef.current += 1;
-
     if (mode === 'provider') {
       setProgress(null);
       setWizardStarted(false);
@@ -220,7 +224,6 @@ export function useRuntimeProviderOnboarding({
       }
       return;
     }
-
     const savedProgress = getSupportedWizardProgress(
       repositoryRef.current?.load() ?? null, openCodeGeneration
     );
@@ -237,7 +240,6 @@ export function useRuntimeProviderOnboarding({
     setWizardStarted(false);
     setResumable(false);
   }, [directPlan, enabled, mode, openCodeGeneration, providerId]);
-
   useEffect(() => {
     if (mode === 'wizard' && progress) repositoryRef.current?.save(progress);
   }, [mode, progress]);
@@ -268,7 +270,6 @@ export function useRuntimeProviderOnboarding({
   );
 
   const v2ConnectionMessage = getOnboardingV2ConnectionMessage(activePlan, openCodeGeneration);
-
   const recordOnboardingStep = useCallback(
     (
       step: AnalyticsOnboardingStep,
@@ -295,7 +296,6 @@ export function useRuntimeProviderOnboarding({
     if (!runtimePreparing) {
       return;
     }
-
     if (runtimeGate === 'ready') {
       const startedAtMs = runtimePrepareStartedAtRef.current ?? Date.now();
       runtimePrepareStartedAtRef.current = null;
