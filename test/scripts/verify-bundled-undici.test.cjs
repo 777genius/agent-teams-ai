@@ -28,7 +28,7 @@ test('verifyRuntime checks the actual Electron subprocess result', () => {
     ciVersions,
     electronBinary: '/fixture/electron',
     run: (_electronBinary, args) => {
-      assert.match(args[1], /process\.versions\.undici/);
+      assert.match(args[1], /undici: process\.versions\.undici/);
       return { status: 0, stdout: JSON.stringify({ node: '24.22.1', undici: '7.30.1' }), stderr: '' };
     },
   }));
