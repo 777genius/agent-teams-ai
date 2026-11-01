@@ -18,7 +18,7 @@ import('./main.tsx').then(
         (error as { name?: unknown } | null | undefined)?.name;
       const message: unknown = Object.getOwnPropertyDescriptor(error, 'message')?.value;
       errorClass =
-        typeof message === 'string' && /does not provide an export named/.test(message)
+        typeof message === 'string' && message.includes('does not provide an export named')
           ? 'module-export'
           : typeof message === 'string' &&
               /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/.test(

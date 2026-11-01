@@ -54,8 +54,12 @@ export const RUN_SUPERSESSION_POLICY = {
     'release-publication-guard',
     'stage-existing-partial-draft',
   ],
-  // Manual-only Mac updater runs, reusable workflows and ReviewRouter: no workflow-level group.
+  // Keep complete per-revision security qualification; queue this workflow without cancellation.
+  qualification: ['local-http-auth-desktop'],
+  // Manual native runs, reusable workflows, ReviewRouter and independent qualification: no run group.
   unmanaged: [
+    'opencode-native-selection',
+    'private-http-storage-qualification',
     'opencode-native-windows-e2e',
     'reviewrouter-interaction',
     'reviewrouter-review',
