@@ -231,9 +231,9 @@ describe('RuntimeProviderOnboardingView', () => {
     expect(host.querySelector('[data-testid="opencode-plan-compatibility-zai-coding-plan"]')?.textContent)
       .toContain('v2Unverified');
     const unavailable = host.querySelector('#runtime-provider-wizard-supergrok');
-    expect(unavailable?.getAttribute('aria-disabled')).toBe('true');
+    expect(unavailable?.hasAttribute('disabled')).toBe(true);
     const supported = host.querySelector('#runtime-provider-wizard-zai-coding-plan');
-    expect(supported?.getAttribute('aria-disabled')).not.toBe('true');
+    expect(supported?.hasAttribute('disabled')).toBe(false);
   });
 
   it('asks before spending quota to verify an already connected plan', async () => {

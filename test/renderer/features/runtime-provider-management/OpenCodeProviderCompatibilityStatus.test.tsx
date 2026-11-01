@@ -37,13 +37,11 @@ describe('OpenCode provider compatibility in advanced settings', () => {
 
   async function show(): Promise<void> {
     await act(async () => root.render(
-      React.createElement(OpenCodeProviderCompatibilityScope, {},
-        React.createElement(React.Fragment, null,
-          React.createElement(OpenCodeProviderCompatibilityStatus, { providerId: 'cursor-acp' }),
-          React.createElement(OpenCodeProviderCompatibilityStatus, { providerId: 'openrouter' }),
-          React.createElement(OpenCodeProviderCompatibilityStatus, { providerId: 'xai' })
-        )
-      )
+      <OpenCodeProviderCompatibilityScope>
+        <OpenCodeProviderCompatibilityStatus providerId="cursor-acp" />
+        <OpenCodeProviderCompatibilityStatus providerId="openrouter" />
+        <OpenCodeProviderCompatibilityStatus providerId="xai" />
+      </OpenCodeProviderCompatibilityScope>
     ));
   }
   it('labels a V2-unadapted CLI and distinguishes unverified API-key providers', async () => {
