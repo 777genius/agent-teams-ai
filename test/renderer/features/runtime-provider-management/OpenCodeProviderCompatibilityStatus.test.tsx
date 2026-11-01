@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   OpenCodeProviderCompatibilityScope,
   OpenCodeProviderCompatibilityStatus,
+  useOpenCodeProviderConnectionBlocked,
 } from '../../../../src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus';
 
 const mocks = vi.hoisted(() => ({ version: '2.1.4' as string | null }));
@@ -18,6 +19,11 @@ vi.mock('@renderer/store', () => ({
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
+
+function ConnectAction({ providerId }: { providerId: string }): React.ReactNode {
+  const blocked = useOpenCodeProviderConnectionBlocked(providerId);
+  return <button type="button" disabled={blocked} data-testid={`connect-action-${providerId}`}>Connect</button>;
+}
 
 describe('OpenCode provider compatibility in advanced settings', () => {
   let host: HTMLDivElement;
@@ -41,6 +47,8 @@ describe('OpenCode provider compatibility in advanced settings', () => {
         <OpenCodeProviderCompatibilityStatus providerId="cursor-acp" />
         <OpenCodeProviderCompatibilityStatus providerId="openrouter" />
         <OpenCodeProviderCompatibilityStatus providerId="xai" />
+        <ConnectAction providerId="cursor-acp" />
+        <ConnectAction providerId="xai" />
       </OpenCodeProviderCompatibilityScope>
     ));
   }
@@ -52,6 +60,8 @@ describe('OpenCode provider compatibility in advanced settings', () => {
       expect(host.querySelector(`[data-testid="runtime-provider-compatibility-${id}"]`)?.textContent)
         .toContain('v2Unverified');
     }
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-cursor-acp"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai"]')?.disabled).toBe(false);
   });
   it('does not infer an installed generation from an unavailable OpenCode runtime', async () => {
     mocks.version = null;

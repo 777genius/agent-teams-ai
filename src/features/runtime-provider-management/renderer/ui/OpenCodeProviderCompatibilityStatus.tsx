@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { useStore } from '@renderer/store';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useStore } from '@renderer/store';
 
 import { getOpenCodeGeneration, resolveOpenCodeProviderCompatibility } from '../../core/domain';
 
