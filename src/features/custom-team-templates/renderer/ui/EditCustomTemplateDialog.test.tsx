@@ -149,6 +149,41 @@ afterEach(() => {
 });
 
 describe('EditCustomTemplateDialog', () => {
+  it.each([
+    { memberField: 'workflow', newline: '\n' },
+    { memberField: 'workflow', newline: '\r\n' },
+    { memberField: 'role', newline: '\n' },
+    { memberField: 'role', newline: '\r\n' },
+  ] as const)(
+    'preserves multiline $memberField through first edit and save (newline $newline)',
+    async ({ memberField, newline }) => {
+      await render({
+        ...template,
+        members: [
+          {
+            name: 'alice',
+            role: 'reviewer',
+            [memberField]: `Review change.${newline}Check risks.`,
+          },
+        ],
+      });
+      const selector = `#member-0-${memberField}`;
+      const control = field(selector);
+      // Browsers may normalize CRLF to LF; the two lines must remain distinct.
+      expect(control.value.replace(/\r\n/g, '\n')).toBe('Review change.\nCheck risks.');
+      await act(async () => {
+        setText(selector, `${control.value}${newline}Document results.`);
+      });
+      expect(control.value.replace(/\r\n/g, '\n')).toBe(
+        'Review change.\nCheck risks.\nDocument results.'
+      );
+      await save();
+      expect(
+        updateTemplate.mock.calls[0]?.[0].fields.members[0][memberField].replace(/\r\n/g, '\n')
+      ).toBe('Review change.\nCheck risks.\nDocument results.');
+    }
+  );
+
   it('saves the edited fields with the expected revision and closes on success', async () => {
     await render();
     await act(async () => {

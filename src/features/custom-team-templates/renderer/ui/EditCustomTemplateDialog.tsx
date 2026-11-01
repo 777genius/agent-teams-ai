@@ -444,8 +444,9 @@ export const EditCustomTemplateDialog = ({
                           >
                             {t('customTemplates.edit.memberRoleLabel')}
                           </Label>
-                          <Input
+                          <Textarea
                             id={`member-${index}-role`}
+                            rows={2}
                             value={member.role ?? ''}
                             disabled={locked}
                             placeholder={t('customTemplates.edit.memberRolePlaceholder')}
@@ -470,8 +471,9 @@ export const EditCustomTemplateDialog = ({
                           >
                             {t('customTemplates.edit.memberWorkflowLabel')}
                           </Label>
-                          <Input
+                          <Textarea
                             id={`member-${index}-workflow`}
+                            rows={2}
                             value={member.workflow ?? ''}
                             disabled={locked}
                             placeholder={t('customTemplates.edit.memberWorkflowPlaceholder')}
