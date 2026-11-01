@@ -52,6 +52,7 @@ function unavailableProjectStatus(
 ): CliProviderStatus | null {
   if (!global) return null;
   if (
+    runtime === null ||
     ['checking', 'downloading', 'installing'].includes(runtime?.state ?? '') ||
     (global.statusCheckOutcome === 'pending' &&
       runtime?.installed !== false &&
@@ -113,12 +114,12 @@ export function useOpenCodeDashboardStatus(input: {
   const global =
     input.cliStatus?.providers.find((provider) => provider.providerId === 'opencode') ?? null;
   const canReadCatalog =
-    input.runtimeStatus?.installed !== false &&
+    input.runtimeStatus?.installed === true &&
     !['checking', 'downloading', 'installing'].includes(input.runtimeStatus?.state ?? '') &&
     canLoadOpenCodeDashboardCatalog(global ?? scoped, input.runtimeStatus);
   const providerStatus = useMemo(
     () =>
-      !projectPath
+      !projectPath && input.runtimeStatus?.v2Support !== 'required'
         ? global
         : !canReadCatalog
           ? unavailableProjectStatus(global, input.runtimeStatus)

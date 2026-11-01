@@ -121,7 +121,11 @@ import {
   isDashboardRateLimitSubscriptionMode,
   shouldShowDashboardRateLimitSkeleton,
 } from './providerDashboardRateLimits';
-import { getRuntimeInstallLabel, isRuntimeInstalling } from './runtimeInstallActionUi';
+import {
+  getRuntimeInstallLabel,
+  isRuntimeInstalling,
+  shouldShowOpenCodeInstallAction,
+} from './runtimeInstallActionUi';
 import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 import {
   useDashboardProviderRefresh,
@@ -639,33 +643,6 @@ function hasVisibleAuthenticatedMultimodelProvider(
   return visibleProviders.some(isProviderCountedAsConnected);
 }
 
-function isOpenCodeProviderEffectivelyReady(provider: CliProviderStatus): boolean {
-  return (
-    provider.providerId === 'opencode' &&
-    provider.supported === true &&
-    provider.authenticated === true &&
-    provider.verificationState === 'verified' &&
-    provider.capabilities.teamLaunch === true
-  );
-}
-
-function shouldShowOpenCodeInstallAction(
-  provider: CliProviderStatus,
-  showSkeleton: boolean,
-  openCodeRuntimeStatus: OpenCodeRuntimeStatus | null
-): boolean {
-  return (
-    provider.providerId === 'opencode' &&
-    !showSkeleton &&
-    canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
-    (openCodeRuntimeStatus?.updateAvailable === true ||
-      isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus?.version) ||
-      (!isOpenCodeProviderEffectivelyReady(provider) &&
-        !isOpenCodeRuntimeUsable(openCodeRuntimeStatus)) ||
-      isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus))
-  );
-}
-
 function shouldShowCodexInstallAction(
   provider: CliProviderStatus,
   showSkeleton: boolean,
@@ -905,6 +882,11 @@ const InstalledBanner = ({
     openCodeRuntimeStatus,
     openCodeRuntimeStatusLoading
   );
+  const openCodeSupportRequired =
+    !openCodeRuntimeInstalling &&
+    openCodeRuntimeStatus?.installed === true &&
+    openCodeRuntimeStatus.v2Support === 'required' &&
+    getOpenCodeGeneration(openCodeRuntimeStatus.version) === 'v2';
 
   return (
     <div
@@ -1004,6 +986,8 @@ const InstalledBanner = ({
               {(providersCollapsed ||
                 !visibleProviders.some((provider) => provider.providerId === 'opencode')) &&
               openCodeRuntimeStatus?.installed &&
+              !openCodeRuntimeInstalling &&
+              openCodeRuntimeStatus.v2Support !== 'required' &&
               canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
               (openCodeRuntimeStatus.updateAvailable ||
                 isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus.version)) ? (
@@ -1134,10 +1118,12 @@ const InstalledBanner = ({
               provider,
               { providerLoading, runtimeLoading: codexRuntimeStatusLoading }
             );
+            const supportRequired = provider.providerId === 'opencode' && openCodeSupportRequired;
             const showSkeleton =
-              shouldShowProviderStatusSkeleton(provider, providerLoading) ||
-              isCodexSnapshotPending(provider, codexSnapshotPending) ||
-              maskNegativeBootstrapState;
+              !supportRequired &&
+              (shouldShowProviderStatusSkeleton(provider, providerLoading) ||
+                isCodexSnapshotPending(provider, codexSnapshotPending) ||
+                maskNegativeBootstrapState);
             const anthropicRateLimitsLoading =
               provider.providerId === 'anthropic' &&
               (anthropicRateLimitsRefreshing || provider.modelCatalogRefreshState === 'loading');
@@ -1169,24 +1155,28 @@ const InstalledBanner = ({
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
                     .length > 0
                 : provider.models.length > 0;
-            const statusText: string | null = showSkeleton
-              ? t('cliStatus.actions.checking')
-              : provider.providerId === 'opencode' &&
-                  hasProviderModels &&
-                  isProviderInventoryOnlyFallback(provider)
-                ? null
-                : isPassiveOpenCodeModelSummary
-                  ? hasProviderModels
-                    ? null
-                    : provider.modelCatalogRefreshState === 'error'
-                      ? settingsT('providerRuntime.connectionUi.status.unableToVerify')
-                      : provider.modelCatalogRefreshState === 'ready'
-                        ? 'No models from connected providers'
-                        : t('cliStatus.actions.checking')
-                  : openCodeRuntimeContradictsMissingMetadata
-                    ? t('cliStatus.quickConnect.connected')
-                    : formatProviderStatusText(provider, settingsT);
+            const statusText: string | null = supportRequired
+              ? (openCodeRuntimeStatus?.state === 'failed' && openCodeRuntimeStatus.error) ||
+                t('cliStatus.runtimeInstall.v2SupportInstall')
+              : showSkeleton
+                ? t('cliStatus.actions.checking')
+                : provider.providerId === 'opencode' &&
+                    hasProviderModels &&
+                    isProviderInventoryOnlyFallback(provider)
+                  ? null
+                  : isPassiveOpenCodeModelSummary
+                    ? hasProviderModels
+                      ? null
+                      : provider.modelCatalogRefreshState === 'error'
+                        ? settingsT('providerRuntime.connectionUi.status.unableToVerify')
+                        : provider.modelCatalogRefreshState === 'ready'
+                          ? 'No models from connected providers'
+                          : t('cliStatus.actions.checking')
+                    : openCodeRuntimeContradictsMissingMetadata
+                      ? t('cliStatus.quickConnect.connected')
+                      : formatProviderStatusText(provider, settingsT);
             const modelCatalogLoading =
+              !supportRequired &&
               !(provider.providerId === 'opencode' && hasProviderModels) &&
               (provider.modelCatalogRefreshState === 'loading' ||
                 (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider)));
@@ -1197,6 +1187,7 @@ const InstalledBanner = ({
               t
             );
             const hasDetailContent = Boolean(
+              supportRequired ||
               (provider.backend?.label && !runtimeSummary) ||
               runtimeSummary ||
               connectionModeSummary ||
@@ -1255,6 +1246,9 @@ const InstalledBanner = ({
                         className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]"
                         style={{ color: 'var(--color-text-muted)' }}
                       >
+                        {supportRequired ? (
+                          <span>{t('cliStatus.runtimeInstall.v2SupportRequiredDetail')}</span>
+                        ) : null}
                         {provider.backend?.label && !runtimeSummary && (
                           <span>
                             {t('cliStatus.provider.backend', { backend: provider.backend.label })}
@@ -1282,7 +1276,8 @@ const InstalledBanner = ({
                             />
                           )
                         ) : null}
-                        {!hasProviderModels &&
+                        {!supportRequired &&
+                          !hasProviderModels &&
                           !modelCatalogLoading &&
                           !isPassiveOpenCodeModelSummary && (
                             <span>
@@ -1388,7 +1383,7 @@ const InstalledBanner = ({
                         {getRuntimeInstallLabel(codexRuntimeStatus, t)}
                       </button>
                     ) : null}
-                    {provider.providerId === 'opencode' && !showSkeleton ? (
+                    {provider.providerId === 'opencode' ? (
                       <OpenCodeV2InstallAction
                         status={openCodeRuntimeStatus}
                         busy={openCodeRuntimeInstalling}
@@ -1398,7 +1393,8 @@ const InstalledBanner = ({
                     {shouldShowOpenCodeInstallAction(
                       provider,
                       showSkeleton,
-                      openCodeRuntimeStatus
+                      openCodeRuntimeStatus,
+                      openCodeRuntimeStatusLoading
                     ) ? (
                       <button
                         type="button"
@@ -1463,22 +1459,24 @@ const InstalledBanner = ({
                         {getProviderConnectLabel(provider, settingsT)}
                       </button>
                     ) : null}
-                    <button
-                      onClick={() => onProviderRefresh(provider.providerId)}
-                      disabled={providerLoading}
-                      className="flex items-center gap-1 rounded-md border px-1.5 py-[3px] text-[10px] transition-colors hover:bg-white/5 disabled:opacity-50"
-                      style={{
-                        borderColor: 'var(--color-border)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                      title={t('cliStatus.actions.recheckProvider', {
-                        provider: provider.displayName,
-                      })}
-                    >
-                      <RefreshCw
-                        className={providerLoading ? 'size-[11px] animate-spin' : 'size-[11px]'}
-                      />
-                    </button>
+                    {!supportRequired && (
+                      <button
+                        onClick={() => onProviderRefresh(provider.providerId)}
+                        disabled={providerLoading}
+                        className="flex items-center gap-1 rounded-md border px-1.5 py-[3px] text-[10px] transition-colors hover:bg-white/5 disabled:opacity-50"
+                        style={{
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                        title={t('cliStatus.actions.recheckProvider', {
+                          provider: provider.displayName,
+                        })}
+                      >
+                        <RefreshCw
+                          className={providerLoading ? 'size-[11px] animate-spin' : 'size-[11px]'}
+                        />
+                      </button>
+                    )}
                   </div>
                 </div>
                 {!showSkeleton && showProviderModels && (

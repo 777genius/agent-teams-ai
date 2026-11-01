@@ -10,17 +10,33 @@ vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 
-function render(status: OpenCodeRuntimeStatus): string {
+function render(status: OpenCodeRuntimeStatus, busy = false): string {
   return renderToStaticMarkup(
     createElement(OpenCodeV2InstallAction, {
       status,
-      busy: false,
+      busy,
       onInstall: vi.fn(),
     })
   );
 }
 
 describe('OpenCode V2 installation offer', () => {
+  it.each([true, false])('hides support installation during native checking (busy=%s)', (busy) => {
+    expect(
+      render(
+        {
+          installed: true,
+          version: '2.1.4',
+          source: 'path',
+          state: busy ? 'ready' : 'checking',
+          v2Support: 'required',
+          compatibleV2Version: '2.2.0',
+        },
+        busy
+      )
+    ).toBe('');
+  });
+
   it.each(['path', 'app-managed', 'override'] as const)(
     'does not offer a major upgrade for V1 selected from %s',
     (source) => {

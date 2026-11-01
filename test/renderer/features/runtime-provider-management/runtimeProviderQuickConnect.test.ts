@@ -317,9 +317,15 @@ describe('RuntimeProviderQuickConnect', () => {
       expect(card?.textContent).not.toContain('cliStatus.quickConnect.planConnected');
       expect(host.querySelector(`[data-testid="provider-quick-action-${id}"]`)).toBeNull();
     }
-    expect(host.querySelector('[data-testid="provider-quick-card-kiro"]')?.textContent).toContain('cliSignedInRequiresV1');
-    expect(host.querySelector('[data-testid="provider-quick-card-cursor"]')?.textContent).toContain('cliSignedInRequiresV1');
-    expect(host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent).toContain('cliStatus.quickConnect.connected');
+    expect(host.querySelector('[data-testid="provider-quick-card-kiro"]')?.textContent).toContain(
+      'cliSignedInRequiresV1'
+    );
+    expect(host.querySelector('[data-testid="provider-quick-card-cursor"]')?.textContent).toContain(
+      'cliSignedInRequiresV1'
+    );
+    expect(
+      host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
+    ).toContain('cliStatus.quickConnect.connected');
     expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
     expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
   });
@@ -694,41 +700,78 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xiaomi-token-plan-sgp', 'reconnect');
   });
 
-  it('warms the provider directory while OpenCode readiness is still checking', async () => {
-    mocks.directory = {
-      entries: [],
-      loaded: false,
-      loading: true,
-      authoritativeLoaded: false,
-      authoritativePending: true,
-      error: null,
-      refresh: vi.fn(),
-    };
+  it.each(['unknown', 'support required', 'support failed'] as const)(
+    'does not warm provider reads while native readiness is %s',
+    async (reason) => {
+      mocks.directory = {
+        entries: [],
+        loaded: false,
+        loading: true,
+        authoritativeLoaded: false,
+        authoritativePending: true,
+        error: null,
+        refresh: vi.fn(),
+      };
 
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderQuickConnect, {
-          enabled: true,
-          cliStatusLoading: true,
-          providers: [],
-          openCodeRuntimeStatus: null,
-          openCodeRuntimeStatusLoading: true,
-          onInstallOpenCode: vi.fn(),
-          onRefreshOpenCode: vi.fn(),
-          onOpenCodeProviderAction: vi.fn(),
-          onBrowseProviders: vi.fn(),
-        })
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderQuickConnect, {
+            enabled: true,
+            cliStatusLoading: true,
+            providers: [],
+            openCodeRuntimeStatus:
+              reason === 'unknown'
+                ? null
+                : {
+                    installed: true,
+                    source: 'path',
+                    state: reason === 'support failed' ? 'failed' : 'idle',
+                    version: '2.1.4',
+                    v2Support: 'required',
+                    compatibleV2Version: '2.2.0',
+                    ...(reason === 'support required' && {
+                      error: 'V2 support files missing: ENOENT /TEST/cache/support/package.json',
+                    }),
+                    ...(reason === 'support failed' && {
+                      error: 'V2 support download failed: network unavailable',
+                    }),
+                  },
+            openCodeRuntimeStatusLoading: reason === 'unknown',
+            onInstallOpenCode: vi.fn(),
+            onRefreshOpenCode: vi.fn(),
+            onOpenCodeProviderAction: vi.fn(),
+            onBrowseProviders: vi.fn(),
+          })
+        );
+      });
+
+      expect(mocks.quickConnectOptions?.enabled).toBe(false);
+      expect(mocks.companionOptions).toEqual(
+        new Map([
+          ['kiro-cli', false],
+          ['cursor-agent', false],
+        ])
       );
-    });
-
-    expect(mocks.quickConnectOptions).toMatchObject({ enabled: true, runtimeRevision: null });
-    expect(mocks.companionOptions).toEqual(
-      new Map([
-        ['kiro-cli', true],
-        ['cursor-agent', true],
-      ])
-    );
-  });
+      if (reason !== 'unknown') {
+        expect(host.textContent).toContain('cliStatus.runtimeInstall.v2SupportInstall');
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.requiresOpenCode');
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.checkingPlan');
+        expect(
+          host.querySelector(
+            '[data-testid="provider-quick-card-xiaomi-mimo-token-plan"] svg.animate-spin'
+          )
+        ).toBeNull();
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.installOpenCode');
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.retryOpenCode');
+        expect(host.textContent).not.toContain('ENOENT');
+        if (reason === 'support failed') {
+          expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+            'V2 support download failed: network unavailable'
+          );
+        }
+      }
+    }
+  );
 });
 
 function runtimeStatus(overrides: Partial<OpenCodeRuntimeStatus> = {}): OpenCodeRuntimeStatus {
@@ -750,7 +793,7 @@ describe('runtimeProviderQuickConnect domain policy', () => {
         provider: null,
         cliStatusLoading: false,
       })
-    ).toBe('missing');
+    ).toBe('support-required');
   });
 
   it('compares OpenCode versions without treating newer minor versions as outdated', () => {
@@ -808,7 +851,7 @@ describe('runtimeProviderQuickConnect domain policy', () => {
         provider: openCodeProvider,
         cliStatusLoading: false,
       })
-    ).toBe('missing');
+    ).toBe('checking');
   });
 
   it('requires an installer status even when generic provider authentication is available', () => {
@@ -823,7 +866,7 @@ describe('runtimeProviderQuickConnect domain policy', () => {
           provider: openCodeProvider,
           cliStatusLoading: false,
         })
-      ).toBe('missing');
+      ).toBe(status === null ? 'checking' : 'missing');
     }
     expect(
       resolveOpenCodeQuickConnectGate({

@@ -219,6 +219,42 @@ afterEach(async () => {
 });
 
 describe('selected-project dashboard proof', () => {
+  it.each([null, '/sandbox/a'])(
+    'settles blocked V2 catalog status without a spinner in scope %s',
+    async (projectPath) => {
+      globalStatus = {
+        ...globalStatus,
+        providers: [
+          {
+            ...provider(false),
+            statusCheckOutcome: 'pending',
+            statusCheckErrorCode: 'partial_response',
+            modelCatalogRefreshState: 'loading',
+            statusMessage: 'Checking...',
+          },
+        ],
+      };
+      await act(async () =>
+        root.render(
+          <Probe
+            projectPath={projectPath}
+            runtimeStatus={{ ...runtime, state: 'idle', v2Support: 'required' }}
+          />
+        )
+      );
+      expect(observed.status.enabled).toBe(false);
+      expect(observed.status.providerStatus).toMatchObject({
+        statusCheckOutcome: 'transient_error',
+        modelCatalogRefreshState: 'error',
+        models: [],
+        modelCatalog: null,
+      });
+      expect(mocks.directory).not.toHaveBeenCalled();
+      expect(mocks.models).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
+    }
+  );
+
   it.each(['native missing', 'support required'] as const)(
     'prefers the current %s diagnosis over an unrelated settled global failure',
     async (reason) => {

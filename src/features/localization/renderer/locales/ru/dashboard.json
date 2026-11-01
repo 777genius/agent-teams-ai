@@ -206,7 +206,8 @@
       "reinstall": "Переустановить {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportInstall": "Установить поддержку V2",
+      "v2SupportInstall": "Завершить настройку OpenCode V2",
+      "v2SupportRequiredDetail": "OpenCode V2 установлен. Добавьте файлы поддержки для загрузки провайдеров и моделей.",
       "v2SupportRepair": "Восстановить поддержку V2",
       "overrideSelection": "Задан явный путь к OpenCode. Уберите его, чтобы использовать установленную приложением версию.",
       "v2Unavailable": "Совместимая V2 для этой платформы недоступна. Можно установить V1.",

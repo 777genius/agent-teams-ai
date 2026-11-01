@@ -15,6 +15,8 @@ export const OpenCodeV2InstallAction = ({
   onInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
+  if (busy || !status || ['checking', 'downloading', 'installing'].includes(status.state))
+    return null;
   if (
     status?.installed &&
     status.version?.startsWith('2.') &&

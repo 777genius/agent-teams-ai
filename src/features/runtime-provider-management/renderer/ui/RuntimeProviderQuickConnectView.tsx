@@ -23,7 +23,7 @@ import {
   Settings2,
 } from 'lucide-react';
 
-import { canManagedInstallChangeOpenCodeRuntime } from '../../core/domain';
+import { canManagedInstallChangeOpenCodeRuntime, getOpenCodeGeneration } from '../../core/domain';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
 
@@ -217,17 +217,26 @@ const OpenCodePrerequisite = ({
   }
 
   const isError = gate === 'error';
+  const supportRequired =
+    runtimeStatus?.installed === true &&
+    runtimeStatus.v2Support === 'required' &&
+    getOpenCodeGeneration(runtimeStatus.version) === 'v2';
   // An override decides what launches; installing the managed runtime would not change it.
-  const canInstall = canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
+  const canInstall = !supportRequired && canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
   const isOutdated =
     Boolean(runtimeStatus?.version) &&
     !isAgentTeamsOpenCodeVersionSupported(runtimeStatus?.version);
-  const detail = isOutdated
-    ? (runtimeStatus?.error ??
-      getUnsupportedAgentTeamsOpenCodeVersionMessage(runtimeStatus?.version))
-    : gate === 'missing'
-      ? t('cliStatus.quickConnect.openCodeRequired')
-      : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
+  const detail =
+    isError && runtimeStatus?.error
+      ? runtimeStatus.error
+      : supportRequired
+        ? t('cliStatus.runtimeInstall.v2SupportRequiredDetail')
+        : isOutdated
+          ? (runtimeStatus?.error ??
+            getUnsupportedAgentTeamsOpenCodeVersionMessage(runtimeStatus?.version))
+          : gate === 'missing'
+            ? t('cliStatus.quickConnect.openCodeRequired')
+            : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
 
   return (
     <div
@@ -251,9 +260,11 @@ const OpenCodePrerequisite = ({
         )}
         <div className="min-w-0">
           <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
-            {isError
-              ? t('cliStatus.quickConnect.openCodeErrorTitle')
-              : t('cliStatus.quickConnect.openCodeTitle')}
+            {supportRequired
+              ? t('cliStatus.runtimeInstall.v2SupportInstall')
+              : isError
+                ? t('cliStatus.quickConnect.openCodeErrorTitle')
+                : t('cliStatus.quickConnect.openCodeTitle')}
           </p>
           <p
             className="text-pretty text-[10.5px] leading-4"
@@ -274,7 +285,7 @@ const OpenCodePrerequisite = ({
                 : t('cliStatus.quickConnect.installOpenCode')}
           </Button>
         ) : null}
-        {isError || !canInstall ? (
+        {(isError || !canInstall) && !supportRequired ? (
           <Button
             type="button"
             data-testid="provider-quick-opencode-refresh"

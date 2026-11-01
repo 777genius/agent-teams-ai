@@ -1235,8 +1235,9 @@ export default interface Resources {
         "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
         "retryInstall": "Retry install",
         "update": "Update",
-        "v2SupportInstall": "Install V2 support",
+        "v2SupportInstall": "Finish OpenCode V2 setup",
         "v2SupportRepair": "Repair V2 support",
+        "v2SupportRequiredDetail": "OpenCode V2 is installed. Add its support files to load providers and models.",
         "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available."
       },
       "sponsorship": {

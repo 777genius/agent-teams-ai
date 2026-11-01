@@ -1,8 +1,40 @@
 import { useAppTranslation } from '@features/localization/renderer';
-import { formatRuntimeVersionTransition } from '@shared/utils/version';
+import {
+  canManagedInstallChangeOpenCodeRuntime,
+  isOpenCodeProviderOAuthBridgeOutdated,
+  isOpenCodeRuntimeUsable,
+} from '@features/runtime-provider-management/renderer';
+import {
+  formatRuntimeVersionTransition,
+  isOpenCodeFreeTierVersionOutdated,
+} from '@shared/utils/version';
 
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
-import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
+
+export function shouldShowOpenCodeInstallAction(
+  provider: CliProviderStatus,
+  showSkeleton: boolean,
+  status: OpenCodeRuntimeStatus | null,
+  nativeLoading: boolean
+): boolean {
+  if (provider.providerId !== 'opencode' || !status) return false;
+  if (['downloading', 'installing'].includes(status.state)) return true;
+  if (nativeLoading || status.state === 'checking' || status.v2Support === 'required') return false;
+  const providerReady =
+    provider.supported &&
+    provider.authenticated &&
+    provider.verificationState === 'verified' &&
+    provider.capabilities.teamLaunch;
+  return (
+    !showSkeleton &&
+    canManagedInstallChangeOpenCodeRuntime(status) &&
+    (status.updateAvailable === true ||
+      isOpenCodeFreeTierVersionOutdated(status.version) ||
+      (!providerReady && !isOpenCodeRuntimeUsable(status)) ||
+      isOpenCodeProviderOAuthBridgeOutdated(status))
+  );
+}
 
 export function isRuntimeInstalling(
   status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null,
