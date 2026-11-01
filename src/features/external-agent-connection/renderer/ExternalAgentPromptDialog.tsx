@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { buildExternalAgentPrompt } from '@features/external-agent-connection';
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
@@ -6,7 +8,11 @@ import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
+
+import { ExternalAgentRunActions } from './ExternalAgentRunActions';
+import { TeamTemplateReferences } from './TeamTemplateReferences';
 
 import type {
   ConnectionInfoV1,
@@ -14,9 +20,6 @@ import type {
   ExternalAgentCopyRegistration,
   ExternalAgentRunApi,
 } from '../contracts';
-import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
-import { ExternalAgentRunActions } from './ExternalAgentRunActions';
-import { TeamTemplateReferences } from './TeamTemplateReferences';
 
 interface Props {
   api: ExternalAgentConnectionApi;

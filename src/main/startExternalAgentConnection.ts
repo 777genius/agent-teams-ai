@@ -1,5 +1,3 @@
-import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
-import type { ExternalAgentCopyRequest } from '@features/external-agent-connection/contracts';
 import {
   createDesktopExternalAgentConnection,
   ExternalAgentCopyHandoffService,
@@ -9,8 +7,6 @@ import {
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main';
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '@features/member-work-sync/main';
-import type { TeamPromptManagement } from '@features/team-prompt-management/main';
-import type { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
 import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
@@ -23,15 +19,20 @@ import {
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { resolveAgentTeamsMcpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
-import type { TeamChangeEvent } from '@shared/types';
 import { app, type WebContents } from 'electron';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import {
   composeTeamPromptManagement,
   type TeamPromptManagementData,
   type TeamPromptManagementLifecycle,
 } from './startTeamPromptManagement';
+
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { ExternalAgentCopyRequest } from '@features/external-agent-connection/contracts';
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
+import type { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
+import type { TeamChangeEvent } from '@shared/types';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const configManager = ConfigManager.getInstance();
 

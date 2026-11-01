@@ -10,6 +10,7 @@ export {
   isDesktopMcpEnvironmentBound,
 } from './desktopMcpEnvironment';
 export { ExternalAgentConnection } from './ExternalAgentConnection';
+export { ExternalAgentCopyHandoffService } from './ExternalAgentCopyHandoff';
 export { ExternalAgentRunService } from './ExternalAgentRunService';
 export { prepareNativeAgentRun } from './nativeAgentRun';
 export { NativeRendererCdp, prepareNativeRendererCdp } from './NativeRendererCdp';
@@ -18,5 +19,3 @@ export {
   registerExternalAgentConnectionIpc,
   removeExternalAgentConnectionIpc,
 } from './registerExternalAgentConnectionIpc';
-
-export { ExternalAgentCopyHandoffService } from './ExternalAgentCopyHandoff';

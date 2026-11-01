@@ -24,6 +24,9 @@ import { clearResolvedNodePathForTests } from '@main/services/team/TeamMcpConfig
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMcpDeploymentManifest } from '../../../../mcp-server/deploymentManifest';
+import mcpPackage from '../../../../mcp-server/package.json';
+
 const FAKE_MCP_HTTP_SERVER_SOURCE = String.raw`
 const fs = require('node:fs');
 const http = require('node:http');
@@ -342,12 +345,20 @@ describe('packaged Agent Teams MCP launch integration', () => {
     await mkdir(packagedServerDir, { recursive: true });
     await writeFile(
       path.join(packagedServerDir, 'index.js'),
-      FAKE_MCP_HTTP_SERVER_SOURCE,
+      FAKE_MCP_HTTP_SERVER_SOURCE.replace(
+        "const fs = require('node:fs');",
+        "import fs from 'node:fs';"
+      ).replace("const http = require('node:http');", "import http from 'node:http';"),
+      'utf8'
+    );
+    await writeFile(
+      path.join(packagedServerDir, 'copyHandoff.js'),
+      'throw new Error("TEST bootstrap fixture must never execute");\n',
       'utf8'
     );
     await writeFile(
       path.join(packagedServerDir, 'package.json'),
-      JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
+      JSON.stringify(createMcpDeploymentManifest(mcpPackage)),
       'utf8'
     );
     try {

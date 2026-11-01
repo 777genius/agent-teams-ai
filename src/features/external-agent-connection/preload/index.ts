@@ -1,4 +1,4 @@
-import type { IpcRenderer } from 'electron';
+import { EXTERNAL_AGENT_CONNECTION_CHANNELS, EXTERNAL_AGENT_RUN_CHANNELS } from '../contracts';
 
 import type {
   ConnectionInfoV1,
@@ -7,7 +7,7 @@ import type {
   ExternalAgentRunAvailability,
   ExternalAgentRunSnapshot,
 } from '../contracts';
-import { EXTERNAL_AGENT_CONNECTION_CHANNELS, EXTERNAL_AGENT_RUN_CHANNELS } from '../contracts';
+import type { IpcRenderer } from 'electron';
 
 export function createExternalAgentConnectionBridge(
   ipcRenderer: Pick<IpcRenderer, 'invoke'>

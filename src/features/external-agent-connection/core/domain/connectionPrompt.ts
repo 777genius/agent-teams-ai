@@ -1,10 +1,10 @@
-import type { TeamTemplateV1 } from '@features/team-templates/contracts';
-
 import {
   type ConnectionInfoV1,
   EXTERNAL_AGENT_RENDERER_MARKER,
   type ExternalAgentCopyRegistration,
 } from '../../contracts';
+
+import type { TeamTemplateV1 } from '@features/team-templates/contracts';
 
 function quoteShellArgument(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
