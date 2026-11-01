@@ -58,7 +58,7 @@ overrides:
   'fast-uri': '3.1.7'
   'file-type@21': '21.3.2'
   'flatted': '3.4.2'
-  'follow-redirects': '1.16.1'
+  'follow-redirects': '1.16.2'
   'find-my-way': '9.7.0'
   'handlebars': '4.7.10'
   'hono': '4.12.30'
@@ -82,7 +82,7 @@ overrides:
   '@electron/rebuild>node-abi': '4.35.0'
   'nanoid@3': '3.3.18'
   'nitropack': '2.13.4'
-  'node-forge': '1.4.0'
+  'node-forge': '1.4.2'
   'path-to-regexp': '8.4.0'
   'picomatch@2': '2.3.2'
   'picomatch@4': '4.0.4'
@@ -146,7 +146,6 @@ patchedDependencies:
   'mcp-proxy@6.4.1': 'patches/mcp-proxy@6.4.1.patch'
   brace-expansion@5.0.12: patches/brace-expansion@5.0.12.patch
   '@radix-ui/react-switch@1.3.7': patches/@radix-ui__react-switch@1.3.7.patch
-  'node-forge@1.4.0': 'patches/node-forge@1.4.0.patch'
   'braces@3.0.3': 'patches/braces@3.0.3.patch'
   'http-cache-semantics@4.2.0': 'patches/http-cache-semantics@4.2.0.patch'
   'zod@3.25.76': 'patches/zod@3.25.76.patch'
