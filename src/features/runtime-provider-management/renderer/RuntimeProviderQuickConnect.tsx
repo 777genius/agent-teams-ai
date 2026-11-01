@@ -16,10 +16,10 @@ import {
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
+  resolveOpenCodeProviderCompatibility,
   resolveOpenCodeQuickConnectGate,
   resolveOpenCodeQuickConnectRuntimeRevision,
   resolveOpenCodeQuickPlanState,
-  resolveOpenCodeProviderCompatibility,
 } from '../core/domain';
 
 import {

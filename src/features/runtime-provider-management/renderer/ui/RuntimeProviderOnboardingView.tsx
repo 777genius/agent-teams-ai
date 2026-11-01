@@ -23,10 +23,10 @@ import {
 } from 'lucide-react';
 
 import {
-  resolveOpenCodeProviderCompatibility,
   getRuntimeProviderOnboardingCredentialUrls,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
+  resolveOpenCodeProviderCompatibility,
 } from '../../core/domain';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
