@@ -14,7 +14,8 @@ export async function selectOpenCodeInstallPackage(
   generation: OpenCodeInstallGeneration,
   qualifiedV2Version: string | null,
   candidates: readonly { packageName: string }[],
-  fetchMetadata: (name: string, version?: string) => Promise<PackageMetadata>
+  fetchMetadata: (name: string, version?: string) => Promise<PackageMetadata>,
+  v1Version = 'latest'
 ): Promise<{
   packageName: string;
   metadata: PackageMetadata;
@@ -25,12 +26,14 @@ export async function selectOpenCodeInstallPackage(
       'No compatible OpenCode V2 is qualified for this platform. Install V1 instead.'
     );
   const rootName = generation === 'v2' ? '@opencode/cli' : 'opencode-ai';
-  const root = await fetchMetadata(rootName, generation === 'v2' ? qualifiedV2Version! : 'latest');
+  const root = await fetchMetadata(rootName, generation === 'v2' ? qualifiedV2Version! : v1Version);
   const classification = root.version ? classifyNativeVersion(root.version) : null;
   if (
     classification?.kind !== 'recognized' ||
     classification.generation !== generation ||
-    (generation === 'v2' && (root.name !== rootName || root.version !== qualifiedV2Version))
+    (generation === 'v2' && (root.name !== rootName || root.version !== qualifiedV2Version)) ||
+    (generation === 'v1' && v1Version !== 'latest' &&
+      (root.name !== rootName || root.version !== v1Version))
   )
     throw new Error('OpenCode npm package version does not match the selected generation');
   const names = candidates.map(({ packageName }) =>

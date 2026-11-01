@@ -2106,16 +2106,16 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
       const url = String(input);
-      if (url.endsWith('/opencode-ai/latest')) {
+      if (url.endsWith('/opencode-ai/1.19.5')) {
         return Response.json({
-          version: '1.18.3',
+          version: '1.19.5',
           dist: { tarball: 'https://example.test/root.tgz', integrity },
-          optionalDependencies: { [platformPackage]: '1.18.3' },
+          optionalDependencies: { [platformPackage]: '1.19.5' },
         });
       }
-      if (url.includes(`/${platformPackage}/1.18.3`)) {
+      if (url.includes(`/${platformPackage}/1.19.5`)) {
         return Response.json({
-          version: '1.18.3',
+          version: '1.19.5',
           dist: { tarball: 'https://example.test/platform.tgz', integrity },
         });
       }
@@ -2135,7 +2135,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       state: 'failed',
       error: 'binary verification failed',
     });
-    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/latest'))).toBe(
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/1.19.5'))).toBe(
       true
     );
     const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');

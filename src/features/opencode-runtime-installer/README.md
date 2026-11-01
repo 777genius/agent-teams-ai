@@ -8,6 +8,9 @@ The existing IPC/preload/store transports accept an optional generation choice.
 Focused tests cover package identity, archive safety and managed activation.
 
 Fresh installs select V1 by default, including platforms with qualified V2 support.
+A first-time implicit install requests the fixed V1 baseline `1.19.5`, not the mutable
+npm `latest` tag; explicit V1 updates still choose stable V1 `latest`. Platform
+package identity and sha512 transport integrity are verified before activation.
 Existing V1/V2 installs remain in their selected generation on update; explicit
 V2 requests and support-only repair are preserved. The dashboard does not promote
 V2 during first-time installation.

@@ -1,6 +1,7 @@
 import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
 import {
   chooseOpenCodeInstallGeneration,
+  DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
 import { selectOpenCodeInstallPackage } from '@features/opencode-runtime-installer/main';
@@ -40,6 +41,20 @@ describe('OpenCode installation policy', () => {
     { generation: 'v2', url: 'https://other.test' },
   ])('rejects invalid install options %j', (input) => {
     expect(() => parseOpenCodeInstallOptions(input)).toThrow();
+  });
+
+  it('pins the first-time V1 package and rejects redirected root metadata', async () => {
+    const fetchMetadata = vi.fn(async (name: string, version?: string) => ({
+      name,
+      version: name === 'opencode-ai' ? '1.19.4' : version,
+      optionalDependencies: { 'opencode-linux-x64': DEFAULT_OPENCODE_V1_INSTALL_VERSION },
+    }));
+    await expect(selectOpenCodeInstallPackage(
+      'v1', '2.1.4', [{ packageName: 'opencode-linux-x64' }],
+      fetchMetadata, DEFAULT_OPENCODE_V1_INSTALL_VERSION
+    )).rejects.toThrow('selected generation');
+    expect(fetchMetadata).toHaveBeenCalledTimes(1);
+    expect(fetchMetadata).toHaveBeenCalledWith('opencode-ai', DEFAULT_OPENCODE_V1_INSTALL_VERSION);
   });
 
   it('refuses V2 on an unqualified platform before contacting npm', async () => {
