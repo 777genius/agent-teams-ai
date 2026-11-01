@@ -39,17 +39,17 @@ describe('registerCustomTeamTemplatesHttp body limit', () => {
     app = Fastify();
     registerCustomTeamTemplatesHttp(app, feature);
 
-    const largeWorkflow = 'w'.repeat(600_000);
+    const largeWorkflow = 'w'.repeat(190_000);
     const body = {
       templateId: 'tmpl-1',
       expectedRevision: 5,
       fields: {
         name: 'Release Pipeline',
         teamPrompt: 'Deliver the feature.',
-        members: [
-          { name: 'alice', workflow: largeWorkflow },
-          { name: 'bob', workflow: largeWorkflow },
-        ],
+        members: Array.from({ length: 6 }, (_, index) => ({
+          name: `member-${index}`,
+          workflow: largeWorkflow,
+        })),
       },
     };
     const serialized = JSON.stringify(body);

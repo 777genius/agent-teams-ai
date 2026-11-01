@@ -20,8 +20,10 @@ import {
   type CreateCustomTeamTemplateRecordResult,
   CUSTOM_TEAM_TEMPLATE_ROUTES,
   type CustomTeamTemplateV1,
+  type DeleteCustomTeamTemplateRecordResult,
   type ListCustomTeamTemplateRecordsResult,
   type ReadCustomTeamTemplateRecordResult,
+  type UpdateCustomTeamTemplateRecordResult,
 } from '@features/custom-team-templates/contracts';
 import { registerCustomTeamTemplatesHttp } from '@features/custom-team-templates/main/adapters/input/http/registerCustomTeamTemplatesHttp';
 import {
@@ -87,11 +89,11 @@ function sqliteGateway(core: InternalStorageWorkerCore): CustomTeamTemplateStora
       ),
     customTeamTemplateUpdate: (request) =>
       Promise.resolve(
-        core.handle('customTemplate.update', request) as any
+        core.handle('customTemplate.update', request) as UpdateCustomTeamTemplateRecordResult
       ),
     customTeamTemplateDelete: (request) =>
       Promise.resolve(
-        core.handle('customTemplate.delete', request) as any
+        core.handle('customTemplate.delete', request) as DeleteCustomTeamTemplateRecordResult
       ),
   };
 }
@@ -235,6 +237,73 @@ describe('standalone custom-team-templates HTTP integration', () => {
     expect((await app.inject({ method: 'GET', url: '/api/standalone-health' })).json()).toEqual({
       status: 'ok',
     });
+  });
+
+  it('persists a valid update larger than 1 MiB and rejects stale edits across reopening', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-templates-large-update-'));
+    const dbPath = path.join(tmpDir, 'storage', 'app.db');
+    const core = trackCore(dbPath);
+    const first = sqliteFeature(core);
+    const app = serve(first.feature);
+    const { templateId } = await prepareAndSave(app, 'Release Pipeline');
+    const before = await app.inject({ method: 'GET', url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates });
+    const original = before.json().templates[0] as CustomTeamTemplateV1;
+    expect(original.revision).toBe(1);
+    const fields = {
+      name: 'Large release pipeline',
+      description: 'Six independently bounded workflows',
+      teamPrompt: 'Deliver the updated feature.',
+      members: Array.from({ length: 6 }, (_, index) => ({
+        name: `member-${index}`,
+        role: 'Engineer',
+        workflow: `${index}:` + 'w'.repeat(190_000),
+      })),
+    };
+    const payload = JSON.stringify({ templateId, expectedRevision: 1, fields });
+    expect(Buffer.byteLength(payload, 'utf8')).toBeGreaterThan(1024 * 1024);
+
+    const updated = await app.inject({
+      method: 'POST',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate,
+      headers: { 'content-type': 'application/json' },
+      payload,
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toEqual({
+      status: 'updated',
+      template: {
+        templateId,
+        ...fields,
+        schemaVersion: 1,
+        createdAt: original.createdAt,
+        revision: 2,
+      },
+    });
+    const persisted = updated.json().template as CustomTeamTemplateV1;
+    const listed = await app.inject({ method: 'GET', url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates });
+    expect(listed.json()).toEqual({ status: 'ready', templates: [persisted] });
+
+    await app.close();
+    first.feature.dispose();
+    core.close();
+    const reopened = serve(sqliteFeature(trackCore(dbPath), 100).feature);
+    const readBack = await reopened.inject({
+      method: 'GET',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
+    });
+    expect(readBack.json()).toEqual({ status: 'ready', templates: [persisted] });
+
+    const stale = await reopened.inject({
+      method: 'POST',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate,
+      payload: { templateId, expectedRevision: 1, fields: { ...fields, teamPrompt: 'Stale edit' } },
+    });
+    expect(stale.json()).toEqual({ status: 'revisionConflict', current: persisted });
+    const afterStale = await reopened.inject({
+      method: 'GET',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
+    });
+    expect(afterStale.json()).toEqual({ status: 'ready', templates: [persisted] });
   });
 
   it('persists templates across restart without duplicating records', async () => {
