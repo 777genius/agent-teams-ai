@@ -2043,12 +2043,16 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     vi.stubGlobal('fetch', fetchMock);
     execCliMock.mockRejectedValueOnce(new Error('binary verification failed'));
 
-    await expect(createNativeOnlyInstaller().install({ generation: 'v1' })).resolves.toMatchObject({
+    // First-time dashboard install supplies no generation; it must still fetch V1.
+    await expect(createNativeOnlyInstaller().install()).resolves.toMatchObject({
       installed: false,
       state: 'failed',
       error: 'binary verification failed',
     });
 
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/latest'))).toBe(
+      true
+    );
     const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
     const entries = await readdir(runtimeRoot);
     expect(entries.filter((entry) => entry.startsWith('installing-'))).toEqual([]);

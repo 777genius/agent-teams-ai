@@ -25,6 +25,15 @@ describe('V2 installation choice', () => {
     );
     expect(label).toBe('cliStatus.runtimeInstall.install OpenCode V1');
   });
+  it('labels a failed first-time OpenCode installation as retry', () => {
+    const t = ((key: string) => key) as Parameters<typeof getRuntimeInstallLabel>[1];
+    expect(
+      getRuntimeInstallLabel(
+        { installed: false, source: 'missing', state: 'failed', compatibleV2Version: '2.1.4' },
+        t
+      )
+    ).toBe('cliStatus.runtimeInstall.retryInstall');
+  });
   it.each(['required', 'ready'] as const)(
     'exposes support-only install/repair for native V2 with %s availability',
     (v2Support) => {
