@@ -46,6 +46,7 @@ describe('OpenCode provider compatibility in advanced settings', () => {
         <OpenCodeProviderCompatibilityStatus providerId="xai" />
         <ConnectAction providerId="cursor-acp" />
         <ConnectAction providerId="xai" />
+        <OpenCodeProviderCompatibilityStatus providerId="xai" authMethod="oauth" />
       </OpenCodeProviderCompatibilityScope>
     ));
   }
@@ -60,10 +61,12 @@ describe('OpenCode provider compatibility in advanced settings', () => {
     expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-cursor-acp"]')?.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai"]')?.disabled).toBe(false);
   });
-  it('does not infer an installed generation from an unavailable OpenCode runtime', async () => {
+  it('blocks connection while native status is unavailable without claiming V1', async () => {
     mocks.version = null;
     await show();
-    expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(0);
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-cursor-acp"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai"]')?.disabled).toBe(true);
+    expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(4);
   });
   it('does not show V2 warnings on an installed V1 runtime', async () => {
     mocks.version = '1.19.5';

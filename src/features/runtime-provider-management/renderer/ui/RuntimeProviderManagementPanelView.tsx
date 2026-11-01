@@ -393,7 +393,6 @@ export const ProviderSetupFormPanel = ({
   readonly actions: RuntimeProviderManagementActions;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
-  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId);
   const form = state.setupForm?.providerId === provider.providerId ? state.setupForm : null;
   const loading =
     preparing || (state.setupFormLoading && state.activeFormProviderId === provider.providerId);
@@ -407,6 +406,7 @@ export const ProviderSetupFormPanel = ({
   const secret = authOption?.secret ?? form?.secret ?? null;
   const prompts = authOption?.prompts ?? form?.prompts ?? [];
   const selectedMethod = authOption?.method ?? form?.method ?? null;
+  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId, selectedMethod);
   const verifiesWithModel =
     selectedMethod === 'api' && form?.verification?.kind === 'model-request';
   const presentation = form
@@ -482,12 +482,12 @@ export const ProviderSetupFormPanel = ({
   }, [authOption?.id, provider.providerId]);
   const submitForm = (): void => {
     if (oauthProgress?.phase === 'waiting-for-code') {
-      if (state.oauthCodeValue.trim()) {
+      if (state.oauthCodeValue.trim() && !connectionBlocked) {
         void actions.submitOAuthCode();
       }
       return;
     }
-    if (disabled || busy || loading || oauthInProgress || !canSubmit) {
+    if (disabled || connectionBlocked || busy || loading || oauthInProgress || !canSubmit) {
       return;
     }
     void actions.submitConnect(provider.providerId);
@@ -769,7 +769,7 @@ export const ProviderSetupFormPanel = ({
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!state.oauthCodeValue.trim()}
+                    disabled={!state.oauthCodeValue.trim() || connectionBlocked}
                     onClick={() => void actions.submitOAuthCode()}
                   >
                     Continue

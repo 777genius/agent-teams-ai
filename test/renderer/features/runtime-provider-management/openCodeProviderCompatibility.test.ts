@@ -1,4 +1,7 @@
-import { resolveOpenCodeProviderCompatibility as resolve } from '../../../../src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility';
+import {
+  isOpenCodeProviderConnectionBlocked as isBlocked,
+  resolveOpenCodeProviderCompatibility as resolve,
+} from '../../../../src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility';
 import { describe, expect, it } from 'vitest';
 
 describe('OpenCode provider generation compatibility', () => {
@@ -23,10 +26,28 @@ describe('OpenCode provider generation compatibility', () => {
   it('does not confuse the SuperGrok subscription with the xAI API-key provider', () => {
     expect(resolve('supergrok', 'v2').canConnect).toBe(false);
     expect(resolve('xai', 'v2').canConnect).toBe(true);
+    expect(resolve('xai', 'v2', 'api').canConnect).toBe(true);
+    expect(resolve('xai', 'v2', 'oauth')).toEqual({
+      state: 'incompatible', reason: 'subscription-oauth', canConnect: false,
+    });
   });
 
   it('does not count an unknown V1 provider as a supported integration', () => {
     expect(resolve('another-provider', 'v1').state).toBe('unverified');
     expect(resolve('OPENROUTER', 'v1').state).toBe('supported');
+  });
+});
+
+describe('OpenCode advanced connection action policy', () => {
+  it('fails closed during unknown native runtime status but not for unscoped older callers', () => {
+    expect(isBlocked('xai', null, 'api')).toBe(true);
+    expect(isBlocked('kiro', null)).toBe(true);
+    expect(isBlocked('xai', undefined, 'api')).toBe(false);
+  });
+  it('allows xAI API keys while rejecting xAI subscription OAuth on V2', () => {
+    expect(isBlocked('xai', 'v2', 'api')).toBe(false);
+    expect(isBlocked('xai', 'v2', 'oauth')).toBe(true);
+    expect(isBlocked('cursor-acp', 'v2')).toBe(true);
+    expect(isBlocked('xai', 'v1', 'oauth')).toBe(false);
   });
 });

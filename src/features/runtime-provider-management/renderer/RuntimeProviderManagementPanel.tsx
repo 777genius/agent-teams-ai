@@ -7,7 +7,7 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
-import { getOpenCodeGeneration } from '../core/domain';
+import { getOpenCodeGeneration, isOpenCodeProviderConnectionBlocked } from '../core/domain';
 
 import {
   type RuntimeProviderChangeKind,
@@ -44,9 +44,13 @@ export const RuntimeProviderManagementPanel = ({
 }: RuntimeProviderManagementPanelProps): JSX.Element => {
   const repositoryGroups = useStore(useShallow((state) => state.repositoryGroups));
   const nativeOpenCodeStatus = useStore((state) => state.openCodeRuntimeStatus);
+  const fetchOpenCodeRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
   const openCodeGeneration = nativeOpenCodeStatus?.installed && nativeOpenCodeStatus.version
     ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
     : null;
+  useEffect(() => {
+    if (open && nativeOpenCodeStatus === null) void fetchOpenCodeRuntimeStatus();
+  }, [fetchOpenCodeRuntimeStatus, nativeOpenCodeStatus, open]);
   const initialProjectPath = useMemo(() => projectPath?.trim() || null, [projectPath]);
   const [activeProjectPath, setActiveProjectPath] = useState<string | null>(initialProjectPath);
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
@@ -125,13 +129,31 @@ export const RuntimeProviderManagementPanel = ({
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
     projectPath: effectiveProjectPath,
     initialProviderId,
-    initialProviderAction,
+    initialProviderAction:
+      initialProviderId && isOpenCodeProviderConnectionBlocked(initialProviderId, openCodeGeneration)
+        ? null : initialProviderAction,
     onProviderChanged,
   });
   const activeAuthOption = state.setupForm?.authOptions?.find(
     (option) => option.id === state.selectedAuthOptionId
   );
   const activeSetupMethod = activeAuthOption?.method ?? state.setupForm?.method ?? null;
+  const blocked = (providerId: string, method?: string | null): boolean =>
+    isOpenCodeProviderConnectionBlocked(providerId, openCodeGeneration, method);
+  const guardedActions = {
+    ...actions,
+    startConnect: (providerId: string): void => {
+      if (!blocked(providerId)) actions.startConnect(providerId);
+    },
+    startReconnect: (providerId: string): void => {
+      if (!blocked(providerId)) actions.startReconnect(providerId);
+    },
+    submitConnect: (providerId: string) =>
+      blocked(providerId, activeSetupMethod) ? Promise.resolve(null) : actions.submitConnect(providerId),
+    submitOAuthCode: (): Promise<void> =>
+      state.activeFormProviderId && blocked(state.activeFormProviderId, 'oauth')
+        ? Promise.resolve() : actions.submitOAuthCode(),
+  };
   const blockingCredentialWrite = Boolean(
     state.savingProviderId && activeSetupMethod && activeSetupMethod !== 'oauth'
   );
@@ -197,7 +219,7 @@ export const RuntimeProviderManagementPanel = ({
     <OpenCodeProviderCompatibilityScope generation={openCodeGeneration}>
       <RuntimeProviderManagementPanelView
         state={state}
-        actions={actions}
+        actions={guardedActions}
         disabled={disabled || !projectContextResolved}
         projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}

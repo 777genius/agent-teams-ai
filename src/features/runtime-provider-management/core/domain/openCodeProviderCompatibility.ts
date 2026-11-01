@@ -44,11 +44,24 @@ const OAUTH_UNAVAILABLE: OpenCodeProviderCompatibility = {
  * Do not infer "supported" from a saved credential or a successful CLI login. */
 export function resolveOpenCodeProviderCompatibility(
   planOrProviderId: string,
-  generation: OpenCodeProviderGeneration
+  generation: OpenCodeProviderGeneration,
+  authMethod?: string | null
 ): OpenCodeProviderCompatibility {
   const id = planOrProviderId.trim().toLowerCase();
   if (generation === 'v1') return V1_INTEGRATIONS.has(id) ? SUPPORTED : UNVERIFIED;
   if (V2_CLI_NOT_ADAPTED.has(id)) return CLI_UNAVAILABLE;
-  if (V2_OAUTH_NOT_ADAPTED.has(id)) return OAUTH_UNAVAILABLE;
+  if ((id === 'xai' && authMethod === 'oauth') || V2_OAUTH_NOT_ADAPTED.has(id))
+    return OAUTH_UNAVAILABLE;
   return UNVERIFIED;
+}
+
+/** Undefined is used by existing, unmanaged callers. Null is an unknown selected runtime. */
+export function isOpenCodeProviderConnectionBlocked(
+  providerId: string,
+  generation: OpenCodeProviderGeneration | null | undefined,
+  authMethod?: string | null
+): boolean {
+  if (generation === undefined) return false;
+  if (generation === null) return true;
+  return !resolveOpenCodeProviderCompatibility(providerId, generation, authMethod).canConnect;
 }
