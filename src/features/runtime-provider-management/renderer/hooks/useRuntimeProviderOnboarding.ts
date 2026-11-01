@@ -27,8 +27,13 @@ import {
   DEFAULT_WIZARD_PLAN_IDS,
   findDirectoryEntry,
   getAutomaticModelProbeLimit,
+  getOnboardingPlanStatuses,
   getOnboardingRouteState,
+  getOnboardingV2ConnectionMessage,
+  getSupportedWizardPlanIds,
+  getSupportedWizardProgress,
   isCopilotExplicitModelUnsupported,
+  toggleSupportedWizardPlan,
 } from './runtimeProviderOnboardingInternals';
 import {
   type RuntimeProviderManagementActions,
@@ -51,7 +56,6 @@ import type {
 } from '@renderer/analytics/productAnalytics';
 
 export type RuntimeProviderOnboardingMode = 'provider' | 'wizard';
-
 export interface RuntimeProviderOnboardingPlanStatus {
   readonly plan: RuntimeProviderOnboardingPlan;
   readonly state: 'pending' | 'connected' | 'active' | 'ready';
@@ -64,6 +68,7 @@ export interface RuntimeProviderOnboardingState {
   readonly wizardStarted: boolean;
   readonly resumable: boolean;
   readonly progress: RuntimeProviderOnboardingProgress | null;
+  readonly openCodeGeneration: OpenCodeGeneration;
   readonly activePlan: RuntimeProviderOnboardingPlan | null;
   readonly planStatuses: readonly RuntimeProviderOnboardingPlanStatus[];
   readonly stage: RuntimeProviderOnboardingStage;
@@ -138,7 +143,15 @@ export function useRuntimeProviderOnboarding({
   >({});
   const [selectedPlanIds, setSelectedPlanIds] =
     useState<readonly RuntimeProviderOnboardingPlanId[]>(DEFAULT_WIZARD_PLAN_IDS);
-  const [progress, setProgress] = useState<RuntimeProviderOnboardingProgress | null>(null);
+  const [savedWizardProgress, setProgress] = useState<RuntimeProviderOnboardingProgress | null>(null);
+  const progress = useMemo(
+    () => getSupportedWizardProgress(savedWizardProgress, openCodeGeneration),
+    [savedWizardProgress, openCodeGeneration]
+  );
+  const supportedSelectedPlanIds = useMemo(
+    () => getSupportedWizardPlanIds(selectedPlanIds, openCodeGeneration),
+    [selectedPlanIds, openCodeGeneration]
+  );
   const [wizardStarted, setWizardStarted] = useState(false);
   const [resumable, setResumable] = useState(false);
   const [stage, setStage] = useState<RuntimeProviderOnboardingStage>('connect');
@@ -162,7 +175,6 @@ export function useRuntimeProviderOnboarding({
   const activePlanRef = useRef<RuntimeProviderOnboardingPlanId | null>(null);
   const runtimePrepareStartedAtRef = useRef<number | null>(null);
   const probeSequenceRef = useRef(0);
-
   const [management, managementActions] = useRuntimeProviderManagement({
     runtimeId: 'opencode',
     enabled,
@@ -175,10 +187,8 @@ export function useRuntimeProviderOnboarding({
     initialProviderAction: null,
     onProviderChanged,
   });
-
   const retryCancelConnect = managementActions.cancelConnect;
   const retryStartConnect = managementActions.startConnect;
-
   useEffect(() => {
     if (!enabled) {
       initializedSessionRef.current = null;
@@ -203,7 +213,6 @@ export function useRuntimeProviderOnboarding({
     activePlanRef.current = null;
     runtimePrepareStartedAtRef.current = null;
     probeSequenceRef.current += 1;
-
     if (mode === 'provider') {
       setProgress(null);
       setWizardStarted(false);
@@ -215,28 +224,24 @@ export function useRuntimeProviderOnboarding({
       }
       return;
     }
-
     const storedProgress = repositoryRef.current?.load() ?? null;
-    if (storedProgress) {
+    const visibleProgress = getSupportedWizardProgress(storedProgress, openCodeGeneration);
+    if (visibleProgress && storedProgress) {
       setProgress(storedProgress);
       setSelectedPlanIds(storedProgress.selectedPlanIds);
       setWizardStarted(true);
       setResumable(true);
-      setStage(storedProgress.currentPlanId ? 'connect' : 'ready');
+      setStage(visibleProgress.currentPlanId ? 'connect' : 'ready');
       return;
     }
     setProgress(null);
     setSelectedPlanIds(DEFAULT_WIZARD_PLAN_IDS);
     setWizardStarted(false);
     setResumable(false);
-  }, [directPlan, enabled, mode, providerId]);
-
+  }, [directPlan, enabled, mode, openCodeGeneration, providerId]);
   useEffect(() => {
-    if (mode === 'wizard' && progress) {
-      repositoryRef.current?.save(progress);
-    }
-  }, [mode, progress]);
-
+    if (mode === 'wizard' && savedWizardProgress) repositoryRef.current?.save(savedWizardProgress);
+  }, [mode, savedWizardProgress]);
   const basePlan = useMemo(() => {
     if (mode === 'provider') {
       return directPlan;
@@ -263,6 +268,7 @@ export function useRuntimeProviderOnboarding({
     [basePlan, chosenRouteProviderId, connectedRouteProviderId, routeGeneration]
   );
 
+  const v2ConnectionMessage = getOnboardingV2ConnectionMessage(activePlan, openCodeGeneration);
   const recordOnboardingStep = useCallback(
     (
       step: AnalyticsOnboardingStep,
@@ -289,7 +295,6 @@ export function useRuntimeProviderOnboarding({
     if (!runtimePreparing) {
       return;
     }
-
     if (runtimeGate === 'ready') {
       const startedAtMs = runtimePrepareStartedAtRef.current ?? Date.now();
       runtimePrepareStartedAtRef.current = null;
@@ -424,6 +429,11 @@ export function useRuntimeProviderOnboarding({
     if (!enabled || !activePlan || runtimeGate !== 'ready' || runtimeUpdateRequired) {
       return;
     }
+    if (v2ConnectionMessage) {
+      setStage('error');
+      setStageError(v2ConnectionMessage);
+      return;
+    }
     if (activePlan.routeChoices) {
       // Nothing can connect before the user picks the account region.
       setStage('connect');
@@ -532,17 +542,12 @@ export function useRuntimeProviderOnboarding({
     verifiedModelId,
     verificationRequestedPlanId,
     verifyModelCandidates,
+    v2ConnectionMessage,
   ]);
 
   const togglePlan = useCallback((planId: RuntimeProviderOnboardingPlanId): void => {
-    setSelectedPlanIds((current) =>
-      current.includes(planId)
-        ? current.filter((candidate) => candidate !== planId)
-        : RUNTIME_PROVIDER_ONBOARDING_PLANS.filter(
-            (plan) => current.includes(plan.id) || plan.id === planId
-          ).map((plan) => plan.id)
-    );
-  }, []);
+    setSelectedPlanIds((current) => toggleSupportedWizardPlan(current, planId, openCodeGeneration));
+  }, [openCodeGeneration]);
 
   const installOrUpdateRuntime = useCallback(async (): Promise<void> => {
     const startedAtMs = Date.now();
@@ -562,14 +567,14 @@ export function useRuntimeProviderOnboarding({
 
   const startWizard = useCallback(async (): Promise<void> => {
     const startedAtMs = Date.now();
-    if (selectedPlanIds.length === 0) {
+    if (supportedSelectedPlanIds.length === 0) {
       setStageError('Select at least one subscription plan.');
       return;
     }
     const firstSelectedProviderId =
-      RUNTIME_PROVIDER_ONBOARDING_PLANS.find((plan) => plan.id === selectedPlanIds[0])
+      RUNTIME_PROVIDER_ONBOARDING_PLANS.find((plan) => plan.id === supportedSelectedPlanIds[0])
         ?.providerId ?? null;
-    const nextProgress = createRuntimeProviderOnboardingProgress(selectedPlanIds);
+    const nextProgress = createRuntimeProviderOnboardingProgress(supportedSelectedPlanIds);
     setProgress(nextProgress);
     setWizardStarted(true);
     setResumable(false);
@@ -584,7 +589,7 @@ export function useRuntimeProviderOnboarding({
     recordOnboardingStep,
     runtimeGate,
     runtimeUpdateRequired,
-    selectedPlanIds,
+    supportedSelectedPlanIds,
   ]);
 
   const restartWizard = useCallback((): void => {
@@ -609,6 +614,7 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan || activePlan.routeChoices) {
       return;
     }
+    if (v2ConnectionMessage) return;
     setStage('connect');
     setStageError(null);
     setReconnectRequestedPlanId(activePlan.id);
@@ -627,6 +633,7 @@ export function useRuntimeProviderOnboarding({
     management.directoryLoaded,
     managementActions,
     recordOnboardingStep,
+    v2ConnectionMessage,
   ]);
 
   const beginVerification = useCallback((): void => {
@@ -634,18 +641,20 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan) {
       return;
     }
+    if (v2ConnectionMessage) return;
     setReconnectRequestedPlanId(null);
     setVerificationRequestedPlanId(activePlan.id);
     setStage('verifying');
     setStageError(null);
     recordOnboardingStep('verification_start', true, startedAtMs, null, activePlan.providerId);
-  }, [activePlan, recordOnboardingStep]);
+  }, [activePlan, recordOnboardingStep, v2ConnectionMessage]);
 
   const submitConnect = useCallback(async (): Promise<boolean> => {
     const startedAtMs = Date.now();
     if (!activePlan) {
       return false;
     }
+    if (v2ConnectionMessage) return false;
     setPendingConnectionPlanId(activePlan.id);
     setAcceptedConnectionProof(null);
     try {
@@ -676,7 +685,7 @@ export function useRuntimeProviderOnboarding({
       recordOnboardingStep('connection_submit', false, startedAtMs, error, activePlan.providerId);
       throw error;
     }
-  }, [activePlan, managementActions, recordOnboardingStep]);
+  }, [activePlan, managementActions, recordOnboardingStep, v2ConnectionMessage]);
 
   const acceptVerifiedModel = useCallback((): void => {
     const startedAtMs = Date.now();
@@ -744,32 +753,19 @@ export function useRuntimeProviderOnboarding({
     setResumable(false);
   }, []);
 
-  const planStatuses = useMemo<readonly RuntimeProviderOnboardingPlanStatus[]>(
-    () =>
-      RUNTIME_PROVIDER_ONBOARDING_PLANS.map((plan) => {
-        if (progress?.completedPlanIds.includes(plan.id)) {
-          return { plan, state: 'ready' as const };
-        }
-        if (activePlan?.id === plan.id && wizardStarted) {
-          return { plan, state: 'active' as const };
-        }
-        const entry = findDirectoryEntry(management, plan.providerId);
-        if (isRuntimeProviderOnboardingPlanRoutable(plan, entry)) {
-          return { plan, state: 'connected' as const };
-        }
-        return { plan, state: 'pending' as const };
-      }),
-    [activePlan?.id, management, progress?.completedPlanIds, wizardStarted]
+  const planStatuses = getOnboardingPlanStatuses(
+    activePlan, progress, wizardStarted && progress !== null, openCodeGeneration, management
   );
 
   return [
     {
       mode,
       plans: RUNTIME_PROVIDER_ONBOARDING_PLANS,
-      selectedPlanIds,
-      wizardStarted,
-      resumable,
+      selectedPlanIds: supportedSelectedPlanIds,
+      wizardStarted: wizardStarted && (mode !== 'wizard' || progress !== null),
+      resumable: resumable && progress !== null,
       progress,
+      openCodeGeneration,
       activePlan,
       planStatuses,
       stage,

@@ -1,7 +1,11 @@
 import {
+  findRuntimeProviderOnboardingPlanEntry,
+  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlanProviderIds,
+  isRuntimeProviderOnboardingPlanRoutable,
   OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED,
   resolveRuntimeProviderOnboardingRouteGeneration,
+  RUNTIME_PROVIDER_ONBOARDING_PLANS,
 } from '../../core/domain';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
@@ -9,8 +13,10 @@ import type {
   OpenCodeGeneration,
   RuntimeProviderOnboardingPlan,
   RuntimeProviderOnboardingPlanId,
+  RuntimeProviderOnboardingProgress,
 } from '../../core/domain';
 import type { RuntimeProviderManagementState } from './useRuntimeProviderManagement';
+import type { RuntimeProviderOnboardingPlanStatus } from './useRuntimeProviderOnboarding';
 
 export const DEFAULT_WIZARD_PLAN_IDS: readonly RuntimeProviderOnboardingPlanId[] = [
   'supergrok',
@@ -69,4 +75,77 @@ export function getOnboardingRouteState(
       (id) => findDirectoryEntry(state, id)?.state === 'connected'
     ) ?? null;
   return { routeGeneration, connectedRouteProviderId };
+}
+
+export function getOnboardingV2ConnectionMessage(
+  plan: RuntimeProviderOnboardingPlan | null,
+  generation: OpenCodeGeneration
+): string | null {
+  return plan && getOpenCodeV2PlanLimitation(plan.id, generation)
+    ? `${plan.displayName} cannot be connected through Agent Teams on OpenCode V2 yet. Use OpenCode V1 for this plan; the existing V2 installation is unchanged.`
+    : null;
+}
+
+export function getOnboardingPlanStatuses(
+  activePlan: RuntimeProviderOnboardingPlan | null,
+  progress: RuntimeProviderOnboardingProgress | null,
+  wizardStarted: boolean,
+  generation: OpenCodeGeneration,
+  management: RuntimeProviderManagementState
+): readonly RuntimeProviderOnboardingPlanStatus[] {
+  return RUNTIME_PROVIDER_ONBOARDING_PLANS.map((plan) => {
+    if (getOpenCodeV2PlanLimitation(plan.id, generation)) return { plan, state: 'pending' };
+    if (progress?.completedPlanIds.includes(plan.id)) return { plan, state: 'ready' };
+    if (activePlan?.id === plan.id && wizardStarted) return { plan, state: 'active' };
+    const entry = findRuntimeProviderOnboardingPlanEntry(
+      plan.id, generation, management.directoryEntries
+    );
+    return {
+      plan,
+      state: isRuntimeProviderOnboardingPlanRoutable(plan, entry) ? 'connected' : 'pending',
+    };
+  });
+}
+
+/** Wizard selections are capabilities, not evidence that an account is connected. */
+export function getSupportedWizardPlanIds(
+  ids: readonly RuntimeProviderOnboardingPlanId[],
+  generation: OpenCodeGeneration
+): RuntimeProviderOnboardingPlanId[] {
+  return ids.filter((id) => !getOpenCodeV2PlanLimitation(id, generation));
+}
+
+export function getSupportedWizardProgress(
+  progress: RuntimeProviderOnboardingProgress | null,
+  generation: OpenCodeGeneration
+): RuntimeProviderOnboardingProgress | null {
+  if (!progress) return null;
+  const selectedPlanIds = getSupportedWizardPlanIds(progress.selectedPlanIds, generation);
+  if (!selectedPlanIds.length) return null;
+  const completedPlanIds = progress.completedPlanIds.filter((id) => selectedPlanIds.includes(id));
+  const currentPlanId =
+    progress.currentPlanId && selectedPlanIds.includes(progress.currentPlanId) &&
+    !completedPlanIds.includes(progress.currentPlanId)
+      ? progress.currentPlanId
+      : (selectedPlanIds.find((id) => !completedPlanIds.includes(id)) ?? null);
+  const selectedModels = Object.fromEntries(
+    Object.entries(progress.selectedModels).filter(([id]) =>
+      selectedPlanIds.includes(id as RuntimeProviderOnboardingPlanId)
+    )
+  ) as RuntimeProviderOnboardingProgress['selectedModels'];
+  return { ...progress, selectedPlanIds, completedPlanIds, currentPlanId, selectedModels };
+}
+
+export function toggleSupportedWizardPlan(
+  current: readonly RuntimeProviderOnboardingPlanId[],
+  planId: RuntimeProviderOnboardingPlanId,
+  generation: OpenCodeGeneration
+): readonly RuntimeProviderOnboardingPlanId[] {
+  if (getOpenCodeV2PlanLimitation(planId, generation)) return getSupportedWizardPlanIds(current, generation);
+  const toggled = current.includes(planId)
+    ? current.filter((id) => id !== planId)
+    : RUNTIME_PROVIDER_ONBOARDING_PLANS.filter(
+        (plan) => current.includes(plan.id) || plan.id === planId
+      ).map((plan) => plan.id);
+  return getSupportedWizardPlanIds(toggled, generation);
 }
