@@ -11,6 +11,7 @@ import {
   type RuntimeProviderChangeKind,
   useRuntimeProviderManagement,
 } from './hooks/useRuntimeProviderManagement';
+import { OpenCodeProviderCompatibilityScope } from './ui/OpenCodeProviderCompatibilityStatus';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
 import { resolveRuntimeProviderProjectContext } from './ui/runtimeProviderProjectContext';
 
@@ -187,7 +188,7 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <>
+    <OpenCodeProviderCompatibilityScope runtimeId={runtimeId}>
       <RuntimeProviderManagementPanelView
         state={state}
         actions={actions}
@@ -198,6 +199,6 @@ export const RuntimeProviderManagementPanel = ({
         projectContextError={projectContextError}
         onProjectContextChange={setActiveProjectPath}
       />
-    </>
+    </OpenCodeProviderCompatibilityScope>
   );
 };

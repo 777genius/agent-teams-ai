@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 import {
-  getOpenCodeV2PlanLimitation,
+  resolveOpenCodeProviderCompatibility,
   getRuntimeProviderOnboardingCredentialUrls,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
@@ -240,7 +240,8 @@ const WizardPlanPicker = ({
       <div className="grid gap-2 sm:grid-cols-2">
         {state.plans.map((plan) => {
           const selected = state.selectedPlanIds.includes(plan.id);
-          const unsupported = getOpenCodeV2PlanLimitation(plan.id, state.openCodeGeneration) !== null;
+          const compatibility = resolveOpenCodeProviderCompatibility(plan.id, state.openCodeGeneration);
+          const unsupported = compatibility.state === 'incompatible';
           const status = state.planStatuses.find((entry) => entry.plan.id === plan.id)?.state;
           return (
             <Label
@@ -264,12 +265,21 @@ const WizardPlanPicker = ({
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2 text-xs font-medium text-[var(--color-text)]">
                   <span className="truncate">{plan.displayName}</span>
-                  {unsupported ? (
-                    <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                      {t('cliStatus.quickConnect.requiresV1')}
-                    </span>
-                  ) : status === 'connected' ? (
+                  {status === 'connected' && !unsupported ? (
                     <span className="shrink-0 text-[10px] text-emerald-300">Connected</span>
+                  ) : null}
+                  {unsupported || (state.openCodeGeneration === 'v2' && compatibility.state === 'unverified') ? (
+                    <span
+                      data-testid={`opencode-plan-compatibility-${plan.id}`}
+                      className="shrink-0 text-[10px] text-[var(--color-text-muted)]"
+                      title={compatibility.state === 'unverified'
+                        ? t('cliStatus.quickConnect.v2UnverifiedDetail')
+                        : undefined}
+                    >
+                      {t(unsupported
+                        ? 'cliStatus.quickConnect.requiresV1'
+                        : 'cliStatus.quickConnect.v2Unverified')}
+                    </span>
                   ) : null}
                 </span>
                 <span className="mt-0.5 block text-[10.5px] leading-4 text-[var(--color-text-muted)]">

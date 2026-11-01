@@ -58,6 +58,7 @@ import {
   OpenCodeDefaultModelInheritanceCard,
   OpenCodeDefaultTargetBanner,
 } from './OpenCodeDefaultModelInheritanceCard';
+import { OpenCodeProviderCompatibilityStatus } from './OpenCodeProviderCompatibilityStatus';
 import { ProviderBrandIcon } from './providerBrandIcons';
 import { RuntimeProviderErrorAlert } from './RuntimeProviderErrorAlert';
 import { ModelRow } from './RuntimeProviderModelRow';
@@ -123,10 +124,8 @@ interface DefaultModelSelectionTarget {
   readonly projectPath: string | null;
 }
 type SettingsT = ReturnType<typeof useAppTranslation>['t'];
-
 const PROVIDER_MODEL_VIRTUALIZATION_THRESHOLD = 40;
 const PROVIDER_MODEL_ROW_ESTIMATE_PX = 112;
-
 function getDirectoryAction(
   provider: RuntimeProviderDirectoryEntryDto,
   actionId: RuntimeProviderConnectionDto['actions'][number]['id']
@@ -476,7 +475,6 @@ export const ProviderSetupFormPanel = ({
   useEffect(() => {
     setSecretVisible(false);
   }, [authOption?.id, provider.providerId]);
-
   const submitForm = (): void => {
     if (oauthProgress?.phase === 'waiting-for-code') {
       if (state.oauthCodeValue.trim()) {
@@ -1137,6 +1135,7 @@ const ProviderRow = ({
             <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
               {provider.displayName}
             </span>
+            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} />
             {provider.recommended ? (
               <Badge variant="secondary">{t('runtimeProvider.providers.recommended')}</Badge>
             ) : null}
@@ -1293,6 +1292,7 @@ const DirectoryProviderRow = ({
             <span className="text-sm font-medium text-[var(--color-text)]">
               {provider.displayName}
             </span>
+            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} />
             {provider.recommended ? (
               <Badge variant="secondary">{t('runtimeProvider.providers.recommended')}</Badge>
             ) : null}
