@@ -270,6 +270,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
     );
     expect(path.basename(entry!)).toBe('index.js');
     expect((await stat(entry!)).size).toBeGreaterThan(0);
+    expect((await stat(path.join(path.dirname(entry!), 'copyHandoff.js'))).size).toBeGreaterThan(0);
     expect(
       JSON.parse(await readFile(path.join(path.dirname(entry!), 'package.json'), 'utf8'))
     ).toEqual({
@@ -278,6 +279,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
       private: true,
       type: 'module',
       main: 'index.js',
+      files: ['index.js', 'copyHandoff.js'],
       engines: mcpPackage.engines,
     });
     expect(

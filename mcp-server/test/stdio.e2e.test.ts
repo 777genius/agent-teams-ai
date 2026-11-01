@@ -1,5 +1,6 @@
 import { McpStdIoClient } from './McpStdIoClient';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
@@ -16,6 +17,8 @@ function parseJsonToolResult(result: unknown) {
   }
   return JSON.parse(text ?? 'null');
 }
+
+const CONTROL_AUTH_TOKEN = 'sandbox-control-token-0123456789abcdef';
 
 type TestTeamMember = Record<string, unknown>;
 
@@ -44,21 +47,69 @@ async function writeTeamConfig(
   );
 }
 
+async function publishControlAuthority(claudeDir: string, baseUrl: string): Promise<void> {
+  const directory = path.join(claudeDir, 'local-http-auth');
+  await mkdir(directory, { mode: 0o700 });
+  const authority = {
+    schemaVersion: 1,
+    service: 'api',
+    profileScope: createHash('sha256').update(claudeDir).digest('hex'),
+    instanceId: randomUUID(),
+    generation: randomUUID(),
+    baseUrl,
+    token: CONTROL_AUTH_TOKEN,
+  };
+  const descriptorPath = path.join(
+    directory,
+    `api-${authority.instanceId}-${authority.generation}.json`
+  );
+  await writeFile(descriptorPath, JSON.stringify(authority), { mode: 0o600 });
+  const reference = {
+    schemaVersion: authority.schemaVersion,
+    service: authority.service,
+    profileScope: authority.profileScope,
+    instanceId: authority.instanceId,
+    generation: authority.generation,
+    descriptorPath,
+  };
+  await writeFile(
+    path.join(directory, `api-${authority.instanceId}.ref.json`),
+    JSON.stringify(reference),
+    { mode: 0o600 }
+  );
+  await writeFile(path.join(claudeDir, 'team-control-api.json'), JSON.stringify(reference), {
+    mode: 0o600,
+  });
+}
+
 async function startControlServer(
   handler: (request: {
     method?: string;
     url?: string;
     body?: unknown;
+    authorization?: string;
   }) => Promise<{ statusCode?: number; body: unknown }> | { statusCode?: number; body: unknown }
 ) {
+  const requests: Array<{ method?: string; url?: string }> = [];
   const server = http.createServer(async (req, res) => {
+    requests.push({ method: req.method, url: req.url });
+    if (req.headers.authorization !== `Bearer ${CONTROL_AUTH_TOKEN}`) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Fixture control API requires its paired credential' }));
+      return;
+    }
     const chunks: Buffer[] = [];
     req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', async () => {
       try {
         const bodyText = Buffer.concat(chunks).toString('utf8');
         const body = bodyText ? JSON.parse(bodyText) : undefined;
-        const result = await handler({ method: req.method, url: req.url, body });
+        const result = await handler({
+          method: req.method,
+          url: req.url,
+          body,
+          authorization: req.headers.authorization,
+        });
         res.writeHead(result.statusCode ?? 200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(result.body));
       } catch (error) {
@@ -76,6 +127,7 @@ async function startControlServer(
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
+    requests,
     close: async () =>
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve()))
@@ -168,7 +220,7 @@ describe('agent-teams-mcp stdio e2e', () => {
   let claudeDir: string;
 
   beforeEach(async () => {
-    claudeDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-e2e-'));
+    claudeDir = await realpath(await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-e2e-')));
   });
 
   afterEach(async () => {
@@ -191,6 +243,7 @@ describe('agent-teams-mcp stdio e2e', () => {
       ['--transport', 'stdio', '--tool-profile', 'management'], {
         AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
         AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+        AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
         AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
         // The CLI transport must win over an inherited desktop HTTP transport.
         AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
@@ -305,7 +358,7 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   );
 
-  it('boots over stdio, lists task tools, and executes task lifecycle calls', async () => {
+  it('boots without an HTTP credential over stdio, lists task tools, and executes task lifecycle calls', async () => {
     await writeTeamConfig(claudeDir, 'e2e-team');
     const groupChatId = '11111111-1111-4111-8111-111111111111';
     const context = {
@@ -315,16 +368,19 @@ describe('agent-teams-mcp stdio e2e', () => {
     };
     const catalogRequests: unknown[] = [];
     // Controlled catalog HTTP fixture: this exercises the bundle, not a live desktop or team.
-    const control = await startControlServer(({ method, url, body }) => {
+    const control = await startControlServer(({ method, url, body, authorization }) => {
       expect(method).toBe('POST');
       expect(url).toBe('/api/teams/e2e-team/group-chats/list');
+      expect(authorization).toBe('Bearer sandbox-control-token-0123456789abcdef');
       catalogRequests.push(body);
       return { body: [{ id: groupChatId, archivedAt: null }] };
     });
-    const client = new McpStdIoClient(serverPath, workspaceRoot, [], {
+    const client = new McpStdIoClient(serverPath, workspaceRoot, ['--transport', 'stdio'], {
       AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
       AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+      AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
       AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+      AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: undefined,
     });
 
     try {
@@ -2231,7 +2287,13 @@ describe('agent-teams-mcp stdio e2e', () => {
       }
       return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
     });
-    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    await publishControlAuthority(claudeDir, controlServer.baseUrl);
+    const client = new McpStdIoClient(serverPath, workspaceRoot, ['--transport', 'stdio'], {
+      CLAUDE_TEAM_CONTROL_AUTH_REF: undefined,
+      CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF: undefined,
+      CLAUDE_TEAM_CONTROL_AUTH_TOKEN: undefined,
+      CLAUDE_TEAM_CONTROL_URL: undefined,
+    });
 
     try {
       await client.initialize();
@@ -2347,9 +2409,15 @@ describe('agent-teams-mcp stdio e2e', () => {
       }
       return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
     });
-    const previousControlUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
-    process.env.CLAUDE_TEAM_CONTROL_URL = controlServer.baseUrl;
-    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    await expect(readFile(path.join(claudeDir, 'team-control-api.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    const client = new McpStdIoClient(serverPath, workspaceRoot, ['--transport', 'stdio'], {
+      CLAUDE_TEAM_CONTROL_URL: controlServer.baseUrl,
+      CLAUDE_TEAM_CONTROL_AUTH_TOKEN: CONTROL_AUTH_TOKEN,
+      CLAUDE_TEAM_CONTROL_AUTH_REF: undefined,
+      CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF: undefined,
+    });
 
     try {
       await client.initialize();
@@ -2396,17 +2464,12 @@ describe('agent-teams-mcp stdio e2e', () => {
         '/api/teams/stdio-work-sync-env-team/member-work-sync/report',
       ]);
     } finally {
-      if (previousControlUrl === undefined) {
-        delete process.env.CLAUDE_TEAM_CONTROL_URL;
-      } else {
-        process.env.CLAUDE_TEAM_CONTROL_URL = previousControlUrl;
-      }
       await client.close();
       await controlServer.close();
     }
   });
 
-  it('falls back from stale explicit work-sync control URL to state file in real stdio MCP', async () => {
+  it('refuses a stale explicit URL before discovery and report validation over real stdio MCP', async () => {
     await writeTeamConfig(claudeDir, 'stdio-work-sync-stale-team', [
       { name: 'team-lead', agentType: 'team-lead' },
       { name: 'alice', agentType: 'teammate', role: 'developer' },
@@ -2451,12 +2514,13 @@ describe('agent-teams-mcp stdio e2e', () => {
       }
       return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
     });
-    await writeFile(
-      path.join(claudeDir, 'team-control-api.json'),
-      JSON.stringify({ baseUrl: freshServer.baseUrl, updatedAt: new Date().toISOString() }),
-      'utf8'
-    );
-    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    await publishControlAuthority(claudeDir, freshServer.baseUrl);
+    const client = new McpStdIoClient(serverPath, workspaceRoot, ['--transport', 'stdio'], {
+      CLAUDE_TEAM_CONTROL_AUTH_REF: undefined,
+      CLAUDE_TEAM_CONTROL_EXTERNAL_AUTH_REF: undefined,
+      CLAUDE_TEAM_CONTROL_AUTH_TOKEN: undefined,
+      CLAUDE_TEAM_CONTROL_URL: undefined,
+    });
 
     try {
       await client.initialize();
@@ -2471,8 +2535,13 @@ describe('agent-teams-mcp stdio e2e', () => {
         },
         207
       );
-      const status = parseJsonToolResult((statusResult as { result: unknown }).result);
-      expect(status.agenda.fingerprint).toBe('agenda:v1:stdio-stale-fallback');
+      expect(() => parseJsonToolResult((statusResult as { result: unknown }).result)).toThrow(
+        'does not match the private credential authority'
+      );
+      expect(staleCalls).toEqual([]);
+      expect(staleServer.requests).toEqual([]);
+      expect(freshCalls).toEqual([]);
+      expect(freshServer.requests).toEqual([]);
 
       const reportResult = await client.callTool(
         'member_work_sync_report',
@@ -2488,12 +2557,74 @@ describe('agent-teams-mcp stdio e2e', () => {
         },
         208
       );
-      const report = parseJsonToolResult((reportResult as { result: unknown }).result);
-      expect(report.accepted).toBe(true);
-      expect(staleCalls.map((call) => call.url)).toEqual([
-        '/api/teams/stdio-work-sync-stale-team/member-work-sync/alice/refresh',
-        '/api/teams/stdio-work-sync-stale-team/member-work-sync/report',
+      const pending = parseJsonToolResult((reportResult as { result: unknown }).result);
+      expect(pending).toMatchObject({
+        accepted: false,
+        pendingValidation: true,
+        code: 'pending_validation',
+      });
+      const pendingReports = JSON.parse(
+        await readFile(
+          path.join(
+            claudeDir,
+            'teams',
+            'stdio-work-sync-stale-team',
+            '.member-work-sync',
+            'pending-reports.json'
+          ),
+          'utf8'
+        )
+      );
+      expect(Object.values(pendingReports.intents)).toEqual([
+        expect.objectContaining({
+          id: pending.intentId,
+          teamName: 'stdio-work-sync-stale-team',
+          memberName: 'alice',
+          reason: 'control_api_unavailable',
+          status: 'pending',
+          request: {
+            teamName: 'stdio-work-sync-stale-team',
+            memberName: 'alice',
+            state: 'still_working',
+            agendaFingerprint: 'agenda:v1:stdio-stale-fallback',
+            reportToken: 'wrs:v1.stdio.stale.token',
+            taskIds: ['task-stale-1'],
+            source: 'mcp',
+          },
+        }),
       ]);
+      expect(staleCalls).toEqual([]);
+      expect(staleServer.requests).toEqual([]);
+      expect(freshCalls).toEqual([]);
+      expect(freshServer.requests).toEqual([]);
+
+      const discoveredResult = await client.callTool(
+        'member_work_sync_status',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-stale-team',
+          from: 'alice',
+        },
+        209
+      );
+      const discovered = parseJsonToolResult((discoveredResult as { result: unknown }).result);
+      expect(discovered.agenda.fingerprint).toBe('agenda:v1:stdio-stale-fallback');
+      const validatedResult = await client.callTool(
+        'member_work_sync_report',
+        {
+          claudeDir,
+          teamName: 'stdio-work-sync-stale-team',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:stdio-stale-fallback',
+          reportToken: 'wrs:v1.stdio.stale.token',
+          taskIds: ['task-stale-1'],
+        },
+        210
+      );
+      expect(parseJsonToolResult((validatedResult as { result: unknown }).result).accepted).toBe(true);
+      expect(staleCalls).toEqual([]);
+      expect(staleServer.requests).toEqual([]);
       expect(freshCalls.map((call) => call.url)).toEqual([
         '/api/teams/stdio-work-sync-stale-team/member-work-sync/alice/refresh',
         '/api/teams/stdio-work-sync-stale-team/member-work-sync/report',

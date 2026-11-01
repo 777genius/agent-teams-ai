@@ -1,3 +1,5 @@
+import { getBrowserAccessSession } from '@features/local-http-auth/renderer';
+
 /**
  * Unified API adapter.
  *
@@ -11,7 +13,6 @@
  * The instance is resolved lazily on first property access so that test code
  * can install mocks on `window.electronAPI` before the adapter resolves.
  */
-
 import { HttpAPIClient } from './httpClient';
 
 import type { ElectronAPI } from '@shared/types/api';
@@ -23,7 +24,7 @@ import type { ElectronAPI } from '@shared/types/api';
  * - Standalone/Docker (page served by the same server): use window.location.origin
  *   to avoid cross-origin issues (localhost vs 127.0.0.1)
  */
-function getHttpBaseUrl(): string {
+export function getHttpBaseUrl(): string {
   const params = new URLSearchParams(window.location.search);
   const explicitPort = params.get('port');
   if (explicitPort) {
@@ -31,6 +32,8 @@ function getHttpBaseUrl(): string {
   }
   return window.location.origin;
 }
+
+export const getHttpAccessSession = () => getBrowserAccessSession(getHttpBaseUrl());
 
 let httpClient: HttpAPIClient | null = null;
 

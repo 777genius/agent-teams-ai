@@ -1,3 +1,6 @@
+import { RetainedApiPublicationError } from '@features/local-http-auth/main';
+
+import type { HttpServices } from '@main/http';
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -15,7 +18,6 @@ import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
 import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-
 import {
   createDesktopTeamGroupChats,
   registerTeamGroupChatsIpc,
@@ -285,10 +287,11 @@ import {
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodePromptDeliveryContinuityScan } from './services/team/opencode/delivery/OpenCodePromptDeliveryContinuityScan';
 import { isOpenCodePromptDeliveryWatchdogEnabled } from './services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
+import * as apiPublication from './services/team/ApiPublicationLifecycle';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
-  writeTeamControlApiState,
+  syncTeamControlApiAuthority,
 } from './services/team/TeamControlApiState';
 import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
 import { getTeamFsWorkerClient } from './services/team/TeamFsWorkerClient';
@@ -1198,16 +1201,14 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       );
       if (!ready) return false;
 
-      if (reason === 'relaunch') app.relaunch();
       notificationManager?.closeActiveNativeNotifications('app-before-quit');
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.hide();
-      }
       try {
         await shutdownServices();
       } catch (error) {
         logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+      if (!(await apiPublication.canQuit(logger, BrowserWindow))) return false;
+      if (reason === 'relaunch') app.relaunch();
       persistentAppLog?.dispose();
       await persistentAppLog?.flush();
       shutdownComplete = true;
@@ -1448,22 +1449,11 @@ export async function disposeInternalStorageAfterWriterDrains(
 }
 
 function getTeamControlApiBaseUrl(): string | null {
-  if (!httpServer?.isRunning()) {
-    return null;
-  }
-
-  return buildTeamControlApiBaseUrl(httpServer.getPort());
+  return httpServer?.isRunning() ? buildTeamControlApiBaseUrl(httpServer.getPort()) : null;
 }
 
-async function syncTeamControlApiState(): Promise<void> {
-  const baseUrl = getTeamControlApiBaseUrl();
-  if (!baseUrl) {
-    await clearTeamControlApiState();
-    return;
-  }
-
-  await writeTeamControlApiState(baseUrl);
-}
+const syncTeamControlApiState = (): Promise<void> =>
+  syncTeamControlApiAuthority(getTeamControlApiBaseUrl(), httpServer?.getAuthToken() ?? null);
 
 /**
  * Wires file watcher events from a ServiceContext to the renderer and HTTP SSE clients.
@@ -1783,8 +1773,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
-  // An inherited endpoint belongs to a previous process, not this Host's server.
-  await startupStage(clearTeamControlApiState);
+  await startupStage(() => apiPublication.initializeDesktop(app, __dirname));
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -1843,9 +1832,9 @@ async function initializeServices(): Promise<void> {
           error instanceof Error ? error.message : String(error)
         }`
       );
-    } finally {
-      shutdownComplete = true;
     }
+    await apiPublication.requireUpdateReady();
+    shutdownComplete = true;
   });
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
@@ -2021,6 +2010,7 @@ async function initializeServices(): Promise<void> {
       contextRegistry.getActiveContextId() === 'local' &&
       !['connecting', 'connected'].includes(sshConnectionManager.getStatus().state),
     getControlUrl: getTeamControlApiBaseUrl,
+    getControlAuthToken: () => httpServer?.getAuthToken() ?? null,
     startControl: () => startHttpServer(handleModeSwitch),
     reconfigureRoot: async () => {
       reconfigureLocalContextForClaudeRoot();
@@ -2234,7 +2224,10 @@ async function initializeServices(): Promise<void> {
   });
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
-  httpServer = new HttpServer();
+  httpServer = new HttpServer({
+    getServices: currentHttpServices,
+    afterRestart: syncTeamControlApiState,
+  });
   teamProvisioningService.setControlApiBaseUrlResolver(async () => {
     // Listening alone does not prove that Host publication has committed.
     await startHttpServer(handleModeSwitch);
@@ -2960,6 +2953,29 @@ async function initializeServices(): Promise<void> {
   });
 }
 
+function currentHttpServices(): HttpServices {
+  const activeContext = contextRegistry.getActive();
+  if (!teamHttpHandlerApis) throw new Error('Team HTTP APIs are not initialized');
+  return {
+    projectScanner: activeContext.projectScanner,
+    sessionParser: activeContext.sessionParser,
+    subagentResolver: activeContext.subagentResolver,
+    chunkBuilder: activeContext.chunkBuilder,
+    dataCache: activeContext.dataCache,
+    recentProjectsFeature,
+    teamGroupChatsFeature,
+    organizationsFeature,
+    workspaceTrust: workspaceTrustStatus,
+    tokenUsageFeature: tokenUsageFeature ?? undefined,
+    memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
+    externalAgentConnection: externalAgentConnection ?? undefined,
+    updaterService,
+    sshConnectionManager,
+    teamDataApi: bindTeamHttpDataApi(teamDataService),
+    teamApis: teamHttpHandlerApis,
+  };
+}
+
 /** Starts the HTTP sidecar server with services from the active context. */
 async function startHttpServer(
   modeSwitchHandler: (mode: 'local' | 'ssh') => Promise<void>
@@ -2968,36 +2984,16 @@ async function startHttpServer(
     throw new StartupCancelledError();
   }
 
+  const wasRunning = httpServer.isRunning();
   try {
-    if (httpServer.isRunning()) {
+    if (wasRunning) {
       await startupStage(syncTeamControlApiState);
       return;
     }
 
     const config = configManager.getConfig();
-    const activeContext = contextRegistry.getActive();
-    if (!teamHttpHandlerApis) {
-      throw new Error('Team HTTP APIs are not initialized');
-    }
     const port = await httpServer.start(
-      {
-        projectScanner: activeContext.projectScanner,
-        sessionParser: activeContext.sessionParser,
-        subagentResolver: activeContext.subagentResolver,
-        chunkBuilder: activeContext.chunkBuilder,
-        dataCache: activeContext.dataCache,
-        recentProjectsFeature,
-        teamGroupChatsFeature,
-        organizationsFeature,
-        workspaceTrust: workspaceTrustStatus,
-        tokenUsageFeature: tokenUsageFeature ?? undefined,
-        memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
-        externalAgentConnection: externalAgentConnection ?? undefined,
-        updaterService,
-        sshConnectionManager,
-        teamDataApi: bindTeamHttpDataApi(teamDataService),
-        teamApis: teamHttpHandlerApis,
-      },
+      currentHttpServices(),
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
     );
@@ -3009,7 +3005,9 @@ async function startHttpServer(
     await startupStage(syncTeamControlApiState);
     logger.info(`HTTP sidecar server running on port ${port}`);
   } catch (error) {
-    await clearTeamControlApiState().catch(() => undefined);
+    if (!wasRunning && httpServer.isRunning()) await httpServer.stop().catch(() => undefined);
+    if (!wasRunning || !(error instanceof RetainedApiPublicationError))
+      await clearTeamControlApiState().catch(() => undefined);
     assertStartupActive(isShutdownStarted);
     logger.error('Failed to start HTTP server:', error);
     throw error;
@@ -3018,6 +3016,7 @@ async function startHttpServer(
 
 /** Shuts down all services. */
 async function shutdownServices(): Promise<void> {
+  apiPublication.closeAdmission();
   stopAdmittingOpenCodeStartupCleanup();
   if (shutdownPromise) {
     return shutdownPromise;
@@ -3115,7 +3114,7 @@ async function shutdownServices(): Promise<void> {
     await runShutdownBackupAfterWorkSyncDrain({
       closeIngress: () => {
         removeMemberWorkSyncIpc(ipcMain);
-        return httpServer?.isRunning() ? httpServer.stop() : undefined;
+        return httpServer?.stop();
       },
       drainWorkSync: () =>
         disposeInternalStorageAfterWriterDrains({
@@ -3128,7 +3127,7 @@ async function shutdownServices(): Promise<void> {
     });
     teamTaskStallMonitor = memberWorkSyncFeature = internalStorageFeature = null;
 
-    await runShutdownStep('team control state cleanup', () => clearTeamControlApiState());
+    await runShutdownStep('team control state cleanup', () => apiPublication.retire());
 
     await runShutdownStep('file watcher event cleanup', () => {
       if (fileChangeCleanup) {
@@ -3202,7 +3201,7 @@ async function shutdownServices(): Promise<void> {
 
     await runShutdownStep('team backup dispose', () => teamBackupService?.dispose());
 
-    logger.info('Services shut down successfully');
+    logger.info(await apiPublication.shutdownStatus());
   })();
 
   return shutdownPromise;

@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
+import { RetainedApiPublicationError } from '@features/local-http-auth/main';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -26,12 +27,27 @@ const source = ts.createSourceFile(
   ts.ScriptTarget.Latest,
   true
 );
-function functionSource(name: string): string {
-  const declaration = source.statements.find(
-    (node) => ts.isFunctionDeclaration(node) && node.name?.text === name
+const teamStateSource = ts.createSourceFile(
+  'TeamControlApiState.ts',
+  await readFile(path.resolve('src/main/services/team/TeamControlApiState.ts'), 'utf8'),
+  ts.ScriptTarget.Latest,
+  true
+);
+function declarationSource(input: ts.SourceFile, name: string): string {
+  const declaration = input.statements.find(
+    (node) =>
+      (ts.isFunctionDeclaration(node) && node.name?.text === name) ||
+      (ts.isVariableStatement(node) &&
+        node.declarationList.declarations.some(
+          (binding) => ts.isIdentifier(binding.name) && binding.name.text === name
+        ))
   );
-  if (!declaration) throw new Error(`Missing Host function ${name}`);
-  return declaration.getText(source);
+  if (!declaration) throw new Error(`Missing source declaration ${name}`);
+  // The offline VM executes the actual declaration body without module export syntax.
+  return declaration.getText(input).replace(/^export\s+/, '');
+}
+function functionSource(name: string): string {
+  return declarationSource(source, name);
 }
 
 type ResolverKind = 'provisioning' | 'memberWorkSync';
@@ -77,6 +93,7 @@ function createHost(publish = writeTeamControlApiState) {
   const server = {
     isRunning: () => running,
     getPort: () => 4591,
+    getAuthToken: () => 'sandbox-control-token-0123456789abcdef',
     start: vi.fn(() => {
       running = true;
       return Promise.resolve(4591);
@@ -86,11 +103,16 @@ function createHost(publish = writeTeamControlApiState) {
       return Promise.resolve();
     }),
   };
+  const readiness = vi.fn(async () => undefined);
   const code = ts.transpileModule(
     [
-      ...['getTeamControlApiBaseUrl', 'syncTeamControlApiState', 'startHttpServer'].map(
-        functionSource
-      ),
+      declarationSource(teamStateSource, 'syncTeamControlApiAuthority'),
+      ...[
+        'getTeamControlApiBaseUrl',
+        'syncTeamControlApiState',
+        'currentHttpServices',
+        'startHttpServer',
+      ].map(functionSource),
       `const provisioning = ${resolverSource('provisioning')};`,
       `const memberWorkSync = ${resolverSource('memberWorkSync')};`,
     ].join('\n'),
@@ -105,9 +127,11 @@ function createHost(publish = writeTeamControlApiState) {
     assertStartupActive,
     startupStage: createStartupStage(isShutdownStarted),
     StartupCancelledError,
+    RetainedApiPublicationError,
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
     writeTeamControlApiState: publish,
+    checkApiReadiness: readiness,
     handleModeSwitch: () => Promise.resolve(),
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
@@ -130,6 +154,7 @@ function createHost(publish = writeTeamControlApiState) {
   };
   return {
     server,
+    readiness,
     start: () => host.startHttpServer(() => Promise.resolve()),
     resolve: (kind: ResolverKind) => host[kind](),
     shutdown: () => {
@@ -138,10 +163,17 @@ function createHost(publish = writeTeamControlApiState) {
   };
 }
 
+async function publishedBaseUrl(root: string): Promise<string> {
+  const raw = await readFile(path.join(root, 'team-control-api.json'), 'utf8');
+  expect(raw).not.toContain('sandbox-control-token');
+  const reference = JSON.parse(raw);
+  return JSON.parse(await readFile(reference.descriptorPath, 'utf8')).baseUrl;
+}
+
 describe('existing app Host endpoint wiring', () => {
   let root: string;
   beforeEach(async () => {
-    root = await mkdtemp(path.join(os.tmpdir(), 'app-control-host-'));
+    root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'app-control-host-')));
     setClaudeBasePathOverride(root);
     vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', 'http://127.0.0.1:9999');
   });
@@ -167,16 +199,22 @@ describe('existing app Host endpoint wiring', () => {
     await host.start();
     expect(host.server.start).toHaveBeenCalledWith(expect.any(Object), expect.any(Function), 3456);
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
-    expect(
-      JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
-    ).toBe('http://127.0.0.1:4591');
+    expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
+    expect(host.readiness).toHaveBeenCalledExactlyOnceWith(
+      'http://127.0.0.1:4591',
+      'sandbox-control-token-0123456789abcdef'
+    );
     await host.start();
     expect(host.server.start).toHaveBeenCalledOnce();
+    expect(host.readiness).toHaveBeenCalledTimes(2);
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
   });
 
   it('clears both publications when server startup fails', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4590');
+    await writeTeamControlApiState(
+      'http://127.0.0.1:4590',
+      'sandbox-control-token-0123456789abcdef'
+    );
     const host = createHost();
     host.server.start.mockRejectedValueOnce(new Error('all ports occupied'));
     await expect(host.start()).rejects.toThrow('all ports occupied');
@@ -186,12 +224,29 @@ describe('existing app Host endpoint wiring', () => {
     });
   });
 
+  it('closes a newly created listener when first credential publication fails, then retries fresh startup', async () => {
+    const publish = vi.fn(writeTeamControlApiState);
+    publish.mockRejectedValueOnce(new Error('disk unavailable'));
+    const host = createHost(publish);
+    await expect(host.start()).rejects.toThrow('disk unavailable');
+    expect(host.server.isRunning()).toBe(false);
+    expect(host.server.stop).toHaveBeenCalledOnce();
+    expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+    await expect(readFile(path.join(root, 'team-control-api.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await host.start();
+    expect(host.server.start).toHaveBeenCalledTimes(2);
+    expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
+  });
+
   it.each(['provisioning', 'memberWorkSync'] as const)(
     '%s retries failed publication even when the server is already listening',
     async (kind) => {
       const publish = vi.fn(writeTeamControlApiState);
-      publish.mockRejectedValueOnce(new Error('disk unavailable'));
       const host = createHost(publish);
+      await host.start(); // A genuinely already-running owned listener.
+      publish.mockRejectedValueOnce(new Error('disk unavailable'));
       await expect(host.start()).rejects.toThrow('disk unavailable');
       expect(host.server.isRunning()).toBe(true);
       expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
@@ -202,9 +257,7 @@ describe('existing app Host endpoint wiring', () => {
       await expect(host.resolve(kind)).resolves.toBe('http://127.0.0.1:4591');
       expect(host.server.start).toHaveBeenCalledOnce();
       expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
-      expect(
-        JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
-      ).toBe('http://127.0.0.1:4591');
+      expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
     }
   );
 
@@ -218,7 +271,7 @@ describe('existing app Host endpoint wiring', () => {
       });
       const publish = vi.fn(async (baseUrl: string) => {
         await gate;
-        await writeTeamControlApiState(baseUrl);
+        await writeTeamControlApiState(baseUrl, 'sandbox-control-token-0123456789abcdef');
       });
       const host = createHost(publish);
       const starting = host.start();
@@ -242,7 +295,10 @@ describe('existing app Host endpoint wiring', () => {
   );
 
   it('clears both publications when shutdown interrupts server startup', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4590');
+    await writeTeamControlApiState(
+      'http://127.0.0.1:4590',
+      'sandbox-control-token-0123456789abcdef'
+    );
     const host = createHost();
     host.server.start.mockImplementationOnce(() => {
       host.shutdown();

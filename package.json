@@ -112,7 +112,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:critical": "vitest run --coverage --config vitest.critical.config.ts",
-    "standalone": "tsx src/main/standalone.ts",
+    "standalone": "tsx scripts/runStandalone.ts",
     "standalone:build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts",
     "standalone:start": "node dist-standalone/index.cjs",
     "prepare": "husky",
@@ -359,6 +359,7 @@
       "**/node_modules/node-pty/**"
     ],
     "extraResources": [
+      { "from": "dist-local-http-auth", "to": "local-http-auth", "filter": ["publication-helper.cjs", "manifest.json"] },
       {
         "from": "resources/pricing.json",
         "to": "pricing.json"
@@ -383,6 +384,10 @@
       {
         "from": "mcp-server/dist/index.js",
         "to": "mcp-server/index.js"
+      },
+      {
+        "from": "mcp-server/dist/copyHandoff.js",
+        "to": "mcp-server/copyHandoff.js"
       },
       {
         "from": "mcp-server/dist/package.json",

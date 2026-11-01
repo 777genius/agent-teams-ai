@@ -30,6 +30,7 @@ describe('workspace MCP bundle freshness', () => {
     const output = args[args.indexOf('--out-dir') + 1];
     await fs.mkdir(output, { recursive: true });
     await fs.writeFile(path.join(output, 'index.js'), `// bundle ${++revision}`);
+    await fs.writeFile(path.join(output, 'copyHandoff.js'), '// copy bootstrap');
     await fs.writeFile(
       path.join(output, 'package.json'),
       JSON.stringify(createMcpDeploymentManifest(manifestSource))
@@ -49,6 +50,7 @@ describe('workspace MCP bundle freshness', () => {
       'mcp-server/tsup.config.ts',
       'mcp-server/deploymentManifest.ts',
       'agent-teams-controller/package.json',
+      'src/features/local-http-auth/main/index.ts',
       'mcp-server/src/index.ts',
       'agent-teams-controller/src/index.js',
       'mcp-server/node_modules/tsup/dist/cli-default.js',
@@ -103,6 +105,7 @@ describe('workspace MCP bundle freshness', () => {
     expect(execCli).toHaveBeenCalledTimes(1);
 
     for (const relative of [
+      'src/features/local-http-auth/main/index.ts',
       'mcp-server/src/index.ts',
       'agent-teams-controller/src/index.js',
       'pnpm-lock.yaml',
@@ -115,7 +118,7 @@ describe('workspace MCP bundle freshness', () => {
       await fs.utimes(target, before.atime, before.mtime);
       expect(await resolveWorkspaceMcpBundle(root, '/node', outputRoot())).not.toBe(firstEntry);
     }
-    expect(execCli).toHaveBeenCalledTimes(6);
+    expect(execCli).toHaveBeenCalledTimes(7);
     expect(await fs.readFile(firstEntry, 'utf8')).toBe('// bundle 1');
   });
 
@@ -125,6 +128,16 @@ describe('workspace MCP bundle freshness', () => {
     const second = await resolveWorkspaceMcpBundle(root, '/node', outputRoot());
     expect(second).not.toBe(first);
     await fs.writeFile(path.join(path.dirname(second), 'package.json'), '{}');
+    expect(await resolveWorkspaceMcpBundle(root, '/node', outputRoot())).not.toBe(second);
+    expect(execCli).toHaveBeenCalledTimes(3);
+  });
+
+  it('rebuilds when the separately loaded copy bootstrap is changed or removed', async () => {
+    const first = await resolveWorkspaceMcpBundle(root, '/node', outputRoot());
+    await fs.writeFile(path.join(path.dirname(first), 'copyHandoff.js'), '// changed bootstrap');
+    const second = await resolveWorkspaceMcpBundle(root, '/node', outputRoot());
+    expect(second).not.toBe(first);
+    await fs.unlink(path.join(path.dirname(second), 'copyHandoff.js'));
     expect(await resolveWorkspaceMcpBundle(root, '/node', outputRoot())).not.toBe(second);
     expect(execCli).toHaveBeenCalledTimes(3);
   });

@@ -66,6 +66,7 @@ COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
+COPY --from=builder /app/dist-local-http-auth ./dist-local-http-auth
 COPY --from=builder /app/out/renderer ./out/renderer
 
 # Create data directory for Claude session mount

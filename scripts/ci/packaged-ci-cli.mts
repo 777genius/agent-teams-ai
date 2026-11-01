@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import {
   assertFullPackagedGate,
   classifyPackagedPr,
+  classifyCanonicalPackagedSnapshot,
   isMetadataOnlyEdit,
   readPullRequest,
 } from './packaged-ci-policy.mts';
@@ -18,6 +19,12 @@ function git(args: string[], cwd: string): string {
 }
 
 export function collectPackagedDecision(env: NodeJS.ProcessEnv, cwd: string): PackagedDecision {
+  // Push admission must fail closed outside the PR fallback-to-FULL path.
+  if (env.GITHUB_EVENT_NAME === 'push') {
+    const event: unknown = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH ?? '', 'utf8'));
+    const localHead = git(['rev-parse', '--verify', 'HEAD^{commit}'], cwd).trim();
+    return classifyCanonicalPackagedSnapshot(env, event, localHead);
+  }
   try {
     const event: unknown = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH ?? '', 'utf8'));
     const eventName = env.GITHUB_EVENT_NAME ?? '';
@@ -63,7 +70,10 @@ function main(): void {
   if (process.argv[2] === 'classify') {
     const result = collectPackagedDecision(process.env, process.cwd());
     if (process.env.GITHUB_OUTPUT) {
-      appendFileSync(process.env.GITHUB_OUTPUT, `scope=${result.scope}\nrun=${result.run}\n`);
+      appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `scope=${result.scope}\nrun=${result.run}\ncanonical_snapshot=${result.canonicalSnapshot === true}\n`
+      );
     }
     console.log(JSON.stringify(result));
     return;

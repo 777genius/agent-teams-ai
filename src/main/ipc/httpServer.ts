@@ -69,14 +69,22 @@ export function removeHttpServerHandlers(ipcMain: IpcMain): void {
 
 function handleStart(): Promise<{
   success: boolean;
-  data?: { running: boolean; port: number | null };
+  data?: { running: boolean; port: number | null; accessUrl?: string; accessKey?: string };
   error?: string;
 }> {
   return enqueueLifecycleOperation(async () => {
     try {
       await startServer();
       configManager.updateConfig('httpServer', { enabled: true, port: httpServer.getPort() });
-      return { success: true, data: { running: true, port: httpServer.getPort() } };
+      const accessUrl = httpServer.getAccessUrl?.();
+      return {
+        success: true,
+        data: {
+          running: true,
+          port: httpServer.getPort(),
+          ...(accessUrl ? { accessUrl, accessKey: httpServer.getAuthToken() ?? undefined } : {}),
+        },
+      };
     } catch (error) {
       logger.error('Failed to start HTTP server via IPC:', error);
       return {
@@ -110,7 +118,15 @@ function handleStop(): Promise<{
 
 function handleGetStatus(): {
   success: boolean;
-  data: { running: boolean; port: number | null };
+  data: { running: boolean; port: number | null; accessUrl?: string; accessKey?: string };
 } {
-  return { success: true, data: { running: httpServer.isRunning(), port: httpServer.getPort() } };
+  const accessUrl = httpServer.getAccessUrl?.();
+  return {
+    success: true,
+    data: {
+      running: httpServer.isRunning(),
+      port: httpServer.getPort(),
+      ...(accessUrl ? { accessUrl, accessKey: httpServer.getAuthToken() ?? undefined } : {}),
+    },
+  };
 }

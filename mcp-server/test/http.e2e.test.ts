@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serverEntry = path.join(repoRoot, 'dist', 'index.js');
+const MCP_AUTH_TOKEN = 'sandbox-mcp-http-token-0123456789abcdef';
 
 const children: ChildProcess[] = [];
 const tempDirectories: string[] = [];
@@ -51,23 +52,26 @@ async function postMcp(
   port: number,
   payload: Record<string, unknown>,
   sessionId?: string,
-  headers: Record<string, string> = {}
+  headers: Record<string, string | undefined> = {}
 ): Promise<McpHttpResponse> {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify(payload);
+    const requestHeaders: http.OutgoingHttpHeaders = {
+      accept: 'application/json, text/event-stream',
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(body),
+      authorization: `Bearer ${MCP_AUTH_TOKEN}`,
+      ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
+      ...headers,
+    };
+    if (requestHeaders.authorization === undefined) delete requestHeaders.authorization;
     const request = http.request(
       {
         host: '127.0.0.1',
         port,
         path: '/mcp',
         method: 'POST',
-        headers: {
-          accept: 'application/json, text/event-stream',
-          'content-type': 'application/json',
-          'content-length': Buffer.byteLength(body),
-          ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
-          ...headers,
-        },
+        headers: requestHeaders,
         timeout: 5_000,
       },
       (response) => {
@@ -91,6 +95,58 @@ async function postMcp(
   });
 }
 
+// A successful GET stays open as SSE. Inspect its real response headers, then close
+// our own stream instead of waiting for a server event or leaking the connection.
+async function requestMcpMethod(
+  port: number,
+  method: 'GET' | 'DELETE' | 'OPTIONS',
+  sessionId: string,
+  headers: Record<string, string | undefined> = {}
+): Promise<McpHttpResponse> {
+  return new Promise((resolve, reject) => {
+    const requestHeaders: http.OutgoingHttpHeaders = {
+      accept: 'text/event-stream',
+      authorization: `Bearer ${MCP_AUTH_TOKEN}`,
+      'mcp-session-id': sessionId,
+      ...headers,
+    };
+    if (requestHeaders.authorization === undefined) delete requestHeaders.authorization;
+    const request = http.request(
+      {
+        host: '127.0.0.1',
+        port,
+        path: '/mcp',
+        method,
+        headers: requestHeaders,
+        timeout: 5_000,
+      },
+      (response) => {
+        if (method === 'GET' && response.statusCode === 200) {
+          resolve({ statusCode: 200, headers: response.headers, body: '' });
+          response.destroy();
+          request.destroy();
+          return;
+        }
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk: string) => {
+          body += chunk;
+        });
+        response.on('end', () =>
+          resolve({
+            statusCode: response.statusCode ?? null,
+            headers: response.headers,
+            body,
+          })
+        );
+      }
+    );
+    request.once('timeout', () => request.destroy(new Error('HTTP MCP request timed out')));
+    request.once('error', reject);
+    request.end();
+  });
+}
+
 async function allocateLoopbackPort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -106,7 +162,10 @@ async function allocateLoopbackPort(): Promise<number> {
   });
 }
 
-async function readHealthBody(port: number): Promise<{ statusCode: number | null; body: string }> {
+async function readHealthBody(
+  port: number,
+  authenticate = true
+): Promise<{ statusCode: number | null; body: string }> {
   return new Promise((resolve) => {
     let body = '';
     const request = http.get(
@@ -115,6 +174,7 @@ async function readHealthBody(port: number): Promise<{ statusCode: number | null
         port,
         path: '/health',
         timeout: 1_000,
+        ...(authenticate ? { headers: { authorization: `Bearer ${MCP_AUTH_TOKEN}` } } : {}),
       },
       (response) => {
         response.setEncoding('utf8');
@@ -236,6 +296,8 @@ describe('agent-teams-mcp HTTP e2e', () => {
           ...process.env,
           AGENT_TEAMS_BOUND_CONTROL_URL: controlUrl,
           AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+          AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
+          AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: MCP_AUTH_TOKEN,
           AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
           CLAUDE_TEAM_CONTROL_URL: fallbackUrl,
         },
@@ -245,6 +307,7 @@ describe('agent-teams-mcp HTTP e2e', () => {
     children.push(child);
     try {
       await waitForHealthBody(port);
+      expect((await readHealthBody(port, false)).statusCode).toBe(401);
       const initializePayload = {
         jsonrpc: '2.0',
         id: 1,
@@ -255,6 +318,10 @@ describe('agent-teams-mcp HTTP e2e', () => {
           clientInfo: { name: 'bound-sandbox-test', version: '1.0.0' },
         },
       };
+      const unauthenticated = await postMcp(port, initializePayload, undefined, {
+        authorization: undefined,
+      });
+      expect(unauthenticated.statusCode).toBe(401);
       const invalidHeaders: Array<Record<string, string>> = [
         { origin: 'https://foreign.example' },
         { host: 'foreign.example' },
@@ -263,20 +330,8 @@ describe('agent-teams-mcp HTTP e2e', () => {
         const denied = await postMcp(port, initializePayload, undefined, headers);
         expect(denied.statusCode).toBe(403);
         expect(denied.headers['access-control-allow-origin']).toBeUndefined();
-        for (const method of ['GET', 'DELETE', 'OPTIONS']) {
-          const result = await new Promise<McpHttpResponse>((resolve, reject) => {
-            const req = http.request(
-              { host: '127.0.0.1', port, path: '/mcp', method, headers },
-              (res) => {
-                res.resume();
-                res.on('end', () =>
-                  resolve({ statusCode: res.statusCode ?? null, headers: res.headers, body: '' })
-                );
-              }
-            );
-            req.once('error', reject);
-            req.end();
-          });
+        for (const method of ['GET', 'DELETE', 'OPTIONS'] as const) {
+          const result = await requestMcpMethod(port, method, 'not-initialized', headers);
           expect(result.statusCode).toBe(403);
           expect(result.headers['access-control-allow-origin']).toBeUndefined();
         }
@@ -380,6 +435,7 @@ describe('agent-teams-mcp HTTP e2e', () => {
       {
         env: {
           ...process.env,
+          AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: MCP_AUTH_TOKEN,
           AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE: 'agent-teams-mcp-http',
           AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH: 'claude-dir-hash-e2e',
           AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH: 'launch-spec-hash-e2e',
@@ -440,7 +496,13 @@ describe('agent-teams-mcp HTTP e2e', () => {
         '--endpoint',
         'mcp',
       ],
-      { stdio: ['ignore', 'ignore', 'pipe'] }
+      {
+        env: {
+          ...process.env,
+          AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: MCP_AUTH_TOKEN,
+        },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      }
     );
     children.push(child);
     await waitForHealthBody(port);
@@ -494,6 +556,70 @@ describe('agent-teams-mcp HTTP e2e', () => {
     expect(created.owner).toBe('alice');
     expect(typeof created.id).toBe('string');
 
+    const taskFile = path.join(claudeDir, 'tasks', teamName, `${String(created.id)}.json`);
+    const persistedBeforeDenial = await readFile(taskFile, 'utf8');
+    const inboxFile = path.join(teamDir, 'inboxes', 'alice.json');
+    const inboxBeforeDenial = await readFile(inboxFile, 'utf8');
+    // The official initialized session ID must never act as an HTTP credential.
+    // A POST admission regression would start the task and alter its persisted state.
+    for (const authorization of [undefined, 'Bearer sandbox-wrong-mcp-token-0123456789abcdef']) {
+      const denied = await postMcp(
+        port,
+        {
+          jsonrpc: '2.0',
+          id: requestId++,
+          method: 'tools/call',
+          params: {
+            name: 'task_start',
+            arguments: { claudeDir, teamName, taskId: created.id, actor: 'alice' },
+          },
+        },
+        sessionId as string,
+        { authorization }
+      );
+      expect(denied.statusCode).toBe(401);
+      expect(denied.headers['www-authenticate']).toContain('Bearer');
+      for (const method of ['GET', 'DELETE'] as const) {
+        const rejected = await requestMcpMethod(port, method, sessionId as string, { authorization });
+        expect(rejected.statusCode).toBe(401);
+        expect(rejected.headers['access-control-allow-origin']).toBeUndefined();
+      }
+      expect(await readFile(taskFile, 'utf8')).toBe(persistedBeforeDenial);
+      expect(await readFile(inboxFile, 'utf8')).toBe(inboxBeforeDenial);
+      // A rejected DELETE must leave the same session usable with its credential.
+      const listId = requestId++;
+      const listed = await postMcp(
+        port,
+        { jsonrpc: '2.0', id: listId, method: 'tools/list', params: {} },
+        sessionId as string
+      );
+      expect(listed.statusCode).toBe(200);
+      const tools = parseMcpResponse(listed.body, listId).result as { tools: Array<{ name: string }> };
+      expect(tools.tools.map((tool) => tool.name)).toContain('task_get');
+      expect(await callTool('task_get', { claudeDir, teamName, taskId: created.id })).toMatchObject({
+        id: created.id,
+        status: 'pending',
+        owner: 'alice',
+      });
+    }
+    const invalidSessionHeaders: Array<Record<string, string>> = [
+      { origin: 'https://foreign.example' },
+      { origin: `http://127.0.0.1:${port === 65535 ? port - 1 : port + 1}` },
+      { host: 'foreign.example' },
+      { host: `127.0.0.1:${port === 65535 ? port - 1 : port + 1}` },
+    ];
+    for (const headers of invalidSessionHeaders) {
+      for (const method of ['GET', 'DELETE'] as const) {
+        const denied = await requestMcpMethod(port, method, sessionId as string, headers);
+        expect(denied.statusCode).toBe(403);
+      }
+    }
+    const stream = await requestMcpMethod(port, 'GET', sessionId as string, {
+      origin: `http://127.0.0.1:${port}`,
+    });
+    expect(stream.statusCode).toBe(200);
+    expect(stream.headers['content-type']).toContain('text/event-stream');
+
     const started = await callTool('task_start', {
       claudeDir,
       teamName,
@@ -519,5 +645,31 @@ describe('agent-teams-mcp HTTP e2e', () => {
     });
     expect(completed.status).toBe('completed');
     expect(completed.owner).toBe('bob');
+    expect(JSON.parse(await readFile(taskFile, 'utf8'))).toMatchObject({
+      id: created.id,
+      status: 'completed',
+      owner: 'bob',
+    });
+    const terminated = await requestMcpMethod(port, 'DELETE', sessionId as string);
+    expect(terminated.statusCode).toBe(200);
+    const afterDelete = await postMcp(
+      port,
+      { jsonrpc: '2.0', id: requestId++, method: 'tools/list', params: {} },
+      sessionId as string
+    );
+    // mcp-proxy can observe either the closed transport or its removed session
+    // while asynchronous cleanup finishes. Both must reject the terminated ID.
+    expect([400, 404]).toContain(afterDelete.statusCode);
+    const rejection = JSON.parse(afterDelete.body) as Record<string, unknown>;
+    expect(rejection).toMatchObject({
+      jsonrpc: '2.0',
+      error: {
+        code: afterDelete.statusCode === 400 ? -32000 : -32001,
+        message: expect.stringContaining(
+          afterDelete.statusCode === 400 ? 'No valid session ID provided' : 'Session not found'
+        ),
+      },
+    });
+    expect(rejection).not.toHaveProperty('result');
   });
 });

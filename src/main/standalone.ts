@@ -9,19 +9,36 @@
  * - HOST: Bind address (default '0.0.0.0')
  * - PORT: Listen port (default 3456)
  * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
- * - CORS_ORIGIN: CORS origin policy (default '*')
+ * - CORS_ORIGIN: Comma-separated exact allowed browser origins (same origin by default)
+ * - AGENT_TEAMS_HTTP_PUBLIC_ORIGIN: Explicit public/LAN/reverse-proxy origin
+ * - AGENT_TEAMS_HTTP_AUTH_DIR: Private generated authority directory (default app data directory)
  */
 
 // Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { type ApiAuthority } from '@features/local-http-auth/contracts';
+import {
+  apiProfileScope,
+  checkApiReadiness,
+  closePublicationAdmission,
+  configurePublicationHelper,
+  disposePublicationHelper,
+  publishApiAuthority,
+} from '@features/local-http-auth/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
+import { buildTeamControlApiBaseUrl } from './services/team/TeamControlApiState';
 import {
+  getAppDataBasePath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
@@ -46,11 +63,6 @@ const logger = createLogger('Standalone');
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
-
-// Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
-if (!process.env.CORS_ORIGIN) {
-  process.env.CORS_ORIGIN = '*';
-}
 
 // =============================================================================
 // Stub services (Electron-only features unavailable in standalone)
@@ -98,6 +110,18 @@ let httpServer: HttpServer;
 // =============================================================================
 
 async function start(): Promise<void> {
+  const moduleDirectory =
+    typeof __dirname === 'string' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+  configurePublicationHelper({
+    directory: path.resolve(
+      moduleDirectory,
+      path.basename(moduleDirectory) === 'dist-standalone'
+        ? '../dist-local-http-auth'
+        : '../../dist-local-http-auth',
+    ),
+    mode: 'node',
+    prepareStandaloneRoot: true,
+  });
   logger.info('Starting standalone server...');
 
   // Apply Claude root override if set
@@ -182,16 +206,41 @@ async function start(): Promise<void> {
 
   // Start the server
   const port = await httpServer.start(services, modeSwitchHandler, PORT, HOST);
+  const root = process.env.AGENT_TEAMS_HTTP_AUTH_DIR?.trim() || getAppDataBasePath();
+  const token = httpServer.getAuthToken();
+  if (!token) throw new Error('HTTP credential generation failed');
+  const authority: ApiAuthority = {
+    schemaVersion: 1,
+    service: 'api',
+    profileScope: apiProfileScope(root),
+    instanceId: randomUUID(),
+    generation: randomUUID(),
+    baseUrl:
+      process.env.AGENT_TEAMS_HTTP_PUBLIC_ORIGIN?.trim() ||
+      `http://${HOST === '0.0.0.0' || HOST === '::' ? 'localhost' : HOST.includes(':') ? `[${HOST}]` : HOST}:${port}`,
+    token,
+  };
+  try {
+    await checkApiReadiness(buildTeamControlApiBaseUrl(port, HOST), token);
+    await publishApiAuthority(root, authority);
+  } catch (error) {
+    await httpServer.stop();
+    throw error;
+  }
+  logger.info(
+    `API access key is in the owner-only authority descriptor referenced by ${path.join(root, 'team-control-api.json')}`
+  );
   logger.info(`Standalone server running at http://${HOST}:${port}`);
-  logger.info('Open in your browser to view Claude Code sessions');
+  logger.info(`Open ${httpServer.getAccessUrl()} and enter the generated API access key`);
 }
 
 async function shutdown(): Promise<void> {
+  closePublicationAdmission();
   logger.info('Shutting down...');
-
   if (httpServer?.isRunning()) {
     await httpServer.stop();
   }
+  await disposePublicationHelper();
 
   if (localContext) {
     localContext.dispose();

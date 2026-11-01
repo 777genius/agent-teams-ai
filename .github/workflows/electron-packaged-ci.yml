@@ -1,6 +1,8 @@
 name: Electron packaged CI
 
 on:
+  push:
+    branches: ['test/packaged-pr-*']
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
     paths:
@@ -48,6 +50,7 @@ jobs:
     outputs:
       scope: ${{ steps.scope.outputs.scope }}
       run: ${{ steps.scope.outputs.run }}
+      canonical_snapshot: ${{ steps.scope.outputs.canonical_snapshot }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -64,7 +67,11 @@ jobs:
 
   packaged-smoke:
     needs: packaged-scope
-    if: needs.packaged-scope.outputs.run == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      needs.packaged-scope.outputs.run == 'true' &&
+      ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name == 'push' && github.repository == '777genius/agent-teams-ai' &&
+        github.actor == '777genius' && needs.packaged-scope.outputs.canonical_snapshot == 'true'))
     name: ${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged smoke' || 'packaged smoke' }} (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90

@@ -1,3 +1,7 @@
 # Keep the security backports byte-identical for pnpm patching and source verification.
 patches/braces@3.0.3.patch text eol=lf
 patches/http-cache-semantics@4.2.0.patch text eol=lf
+
+# Keep the authoritative ACL policy and generated adapter byte-identical on Windows.
+src/features/local-http-auth/main/infrastructure/privateFileAcl.ts text eol=lf
+agent-teams-controller/src/internal/windowsPrivateAcl.cts text eol=lf

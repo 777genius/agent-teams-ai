@@ -17,11 +17,32 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { gzipSync } from 'zlib';
 
+const nativeEvidence = vi.hoisted(() => ({
+  platform: undefined as string | undefined,
+  arch: undefined as string | undefined,
+  libc: 'glibc' as 'glibc' | 'musl' | 'unknown',
+  avx2: 'yes' as 'yes' | 'no' | 'unknown',
+}));
+vi.mock('@main/services/runtime/openCodeNativePlatform', () => ({
+  detectOpenCodeNativeFacts: async () => ({
+    platform: nativeEvidence.platform ?? process.platform,
+    arch: nativeEvidence.arch ?? process.arch,
+    libc: (nativeEvidence.platform ?? process.platform) === 'linux' ? nativeEvidence.libc : null,
+    avx2: nativeEvidence.avx2,
+  }),
+}));
+
 const execCliMock = vi.hoisted(() => vi.fn());
 const buildMergedCliPathMock = vi.hoisted(() => vi.fn());
 const getCachedShellEnvMock = vi.hoisted(() => vi.fn());
 const getShellPreferredHomeMock = vi.hoisted(() => vi.fn());
 const resolveInteractiveShellEnvBestEffortMock = vi.hoisted(() => vi.fn());
+
+vi.mock(
+  '@features/runtime-provider-management/main',
+  async () =>
+    import('@features/runtime-provider-management/main/infrastructure/openCodeVersionDiagnostics')
+);
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: execCliMock,
@@ -45,6 +66,7 @@ import {
   getOpenCodeRuntimePlatformCandidates,
   isSupportedOpenCodeRuntimeBinaryPath,
   OpenCodeRuntimeInstallerService,
+  preparePassiveOpenCodeRuntimeBinaryProjection,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
   resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
@@ -53,7 +75,17 @@ import {
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
 import { collectWindowsNativeOpenCodeBinaryCandidates } from '@main/services/infrastructure/openCodeWindowsNpmBinaryDiscovery';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
+import { getOpenCodeNativePackages } from '@main/services/runtime/openCodeNativePolicy';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
+
+function testPlatformPackage(): string {
+  return getOpenCodeNativePackages({
+    platform: nativeEvidence.platform ?? process.platform,
+    arch: nativeEvidence.arch ?? process.arch,
+    libc: (nativeEvidence.platform ?? process.platform) === 'linux' ? nativeEvidence.libc : null,
+    avx2: nativeEvidence.avx2,
+  })[0]!;
+}
 
 /** Native selection/package fixtures start with V2 support already installed; ZIP transport has its own suite. */
 function createNativeOnlyInstaller(): OpenCodeRuntimeInstallerService {
@@ -169,12 +201,12 @@ async function createOpenCodeV2NpmInstall(
   const platformScope = options.hoisted
     ? path.join(prefix, 'node_modules', '@opencode')
     : path.join(wrapperRoot, 'node_modules', '@opencode');
-  const platformRoot = path.join(platformScope, 'cli-windows-x64');
+  const platformRoot = path.join(platformScope, `cli-windows-${process.arch}`);
   const wrapperBinary = path.join(wrapperRoot, 'bin', 'opencode.exe');
   const platformBinary = path.join(platformRoot, 'bin', 'opencode.exe');
   await writeOpenCodeNpmPackage(wrapperRoot, { name: '@opencode/cli', version: '2.2.0' });
   await writeOpenCodeNpmPackage(platformRoot, {
-    name: '@opencode/cli-windows-x64',
+    name: `@opencode/cli-windows-${process.arch}`,
     version: '2.2.0',
   });
   await mkdir(path.dirname(wrapperBinary), { recursive: true });
@@ -265,7 +297,73 @@ function createTarball(entries: { name: string; data: string }[]): Buffer {
 }
 
 describe('OpenCodeRuntimeInstallerService resolver', () => {
+  it('never projects a cold or changed rejected manifest into a passive runtime override', async () => {
+    nativeEvidence.platform = 'linux';
+    nativeEvidence.arch = 'x64';
+    const binaryPath = path.join(tempRoot!, 'TEST-passive-native-selection');
+    await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
+    const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+    await mkdir(runtimeRoot, { recursive: true });
+    const manifest = {
+      schemaVersion: 1,
+      version: '1.18.3',
+      platformPackage: 'opencode-linux-x64-musl',
+      binaryPath,
+      integrity: 'TEST',
+      installedAt: new Date().toISOString(),
+    };
+    const file = path.join(runtimeRoot, 'current.json');
+    await writeFile(file, JSON.stringify(manifest));
+    await preparePassiveOpenCodeRuntimeBinaryProjection();
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(execCliMock).not.toHaveBeenCalled();
+    await writeFile(file, JSON.stringify({ ...manifest, platformPackage: 'opencode-linux-x64' }));
+    await preparePassiveOpenCodeRuntimeBinaryProjection();
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
+    await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false });
+    expect(resolveCachedVerifiedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
+    const alias = path.join(tempRoot!, 'TEST-managed-alias');
+    await link(binaryPath, alias);
+    await writeFile(file, JSON.stringify({ ...manifest, binaryPath: alias }));
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(resolveCachedVerifiedOpenCodeRuntimeBinaryPath()).toBeNull();
+  });
+
+  it('rejects a managed cross-libc or unsupported CPU package before the version probe', async () => {
+    nativeEvidence.platform = 'linux';
+    nativeEvidence.arch = 'x64';
+    const binaryPath = path.join(tempRoot!, 'TEST-native-selection');
+    await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
+    const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+    await mkdir(runtimeRoot, { recursive: true });
+    const manifest = {
+      schemaVersion: 1,
+      version: '1.18.3',
+      platformPackage: 'opencode-linux-x64-musl',
+      binaryPath,
+      integrity: 'TEST',
+      installedAt: new Date().toISOString(),
+    };
+    const file = path.join(runtimeRoot, 'current.json');
+    await writeFile(file, JSON.stringify(manifest));
+    expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(execCliMock).not.toHaveBeenCalled();
+    nativeEvidence.avx2 = 'unknown';
+    await writeFile(file, JSON.stringify({ ...manifest, platformPackage: 'opencode-linux-x64' }));
+    expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(execCliMock).not.toHaveBeenCalled();
+    await writeFile(
+      file,
+      JSON.stringify({ ...manifest, platformPackage: 'opencode-linux-x64-baseline' })
+    );
+    expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
+  });
+
   beforeEach(async () => {
+    nativeEvidence.platform = undefined;
+    nativeEvidence.arch = undefined;
+    nativeEvidence.libc = 'glibc';
+    nativeEvidence.avx2 = 'yes';
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-resolver-'));
     setAppDataBasePath(tempRoot);
     originalPath = process.env.PATH;
@@ -475,7 +573,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         JSON.stringify({
           schemaVersion: 1,
           version,
-          platformPackage: '@opencode/cli-linux-x64',
+          platformPackage: testPlatformPackage().replace(/^opencode-/, '@opencode/cli-'),
           binaryPath,
           integrity: 'TEST',
           installedAt: new Date().toISOString(),
@@ -575,6 +673,10 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     let overridePath: string;
 
     beforeEach(async () => {
+      nativeEvidence.platform = undefined;
+      nativeEvidence.arch = undefined;
+      nativeEvidence.libc = 'glibc';
+      nativeEvidence.avx2 = 'yes';
       originalOverride = process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH;
       originalLegacyOverride = process.env.OPENCODE_BIN_PATH;
       delete process.env.OPENCODE_BIN_PATH;
@@ -589,7 +691,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         JSON.stringify({
           schemaVersion: 1,
           version: '1.18.3',
-          platformPackage: 'opencode-test',
+          platformPackage: testPlatformPackage(),
           binaryPath: managedBinaryPath,
           integrity: 'sha512-test',
           installedAt: new Date().toISOString(),
@@ -780,7 +882,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -788,6 +890,8 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       'utf8'
     );
 
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
   });
 
@@ -799,7 +903,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath: path.join(tempRoot!, 'missing-opencode'),
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -830,7 +934,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -874,7 +978,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.15.6',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-07-20T00:00:00.000Z',
@@ -912,7 +1016,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -1497,7 +1601,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     { shimTarget: 'v2' as const, expected: 'platform' as const, label: '@opencode/cli' },
     { shimTarget: 'legacy' as const, expected: 'legacy' as const, label: 'opencode-ai' },
   ])(
-    'prefers the install the npm shim targets when both packages coexist (shim -> $label)',
+    'keeps shim candidate order while selecting a qualified native delivery (shim -> $label)',
     async ({ shimTarget, expected }) => {
       await withWindowsPlatform(async () => {
         const install = await createOpenCodeCoexistingNpmInstall(
@@ -1507,34 +1611,43 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         const expectedBinary =
           expected === 'platform' ? install.platformBinary : install.legacyBinary;
         const otherBinary = expected === 'platform' ? install.legacyBinary : install.platformBinary;
-        const expectedVersion = expected === 'platform' ? '2.2.0' : '1.18.3';
+        const selectedBinary =
+          expected === 'platform' && !getLatestQualifiedOpenCodeV2Version('win32', process.arch)
+            ? install.legacyBinary
+            : expectedBinary;
+        const expectedVersion = selectedBinary === install.platformBinary ? '2.2.0' : '1.18.3';
         process.env.PATH = path.dirname(install.cmdShim);
         mockOpenCodeVersions({
           [install.platformBinary]: 'opencode v2.2.0\n',
           [install.legacyBinary]: '1.18.3\n',
         });
 
-        expect(collectWindowsNativeOpenCodeBinaryCandidates(install.cmdShim)).toEqual([
-          expectedBinary,
-          otherBinary,
-        ]);
-        expect(collectWindowsNativeOpenCodeBinaryCandidates(install.shellShim)).toEqual([
-          expectedBinary,
-          otherBinary,
-        ]);
+        expect(
+          collectWindowsNativeOpenCodeBinaryCandidates(
+            install.cmdShim,
+            (await getOpenCodeRuntimePlatformCandidates()).map((item) => item.packageName)
+          )
+        ).toEqual([expectedBinary, otherBinary]);
+        expect(
+          collectWindowsNativeOpenCodeBinaryCandidates(
+            install.shellShim,
+            (await getOpenCodeRuntimePlatformCandidates()).map((item) => item.packageName)
+          )
+        ).toEqual([expectedBinary, otherBinary]);
 
         await expect(
           resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
-        ).resolves.toBe(expectedBinary);
+        ).resolves.toBe(selectedBinary);
         await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
           installed: true,
           source: 'path',
           state: 'ready',
           version: expectedVersion,
-          binaryPath: expectedBinary,
+          binaryPath: selectedBinary,
         });
         expect(execCliMock.mock.calls[0]?.[0]).toBe(expectedBinary);
-        expectNotProbed(otherBinary, install.cmdShim, install.shellShim);
+        if (selectedBinary === expectedBinary) expectNotProbed(otherBinary);
+        expectNotProbed(install.cmdShim, install.shellShim);
       });
     }
   );
@@ -1696,10 +1809,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         [install.legacyBinary]: '1.18.3\n',
       });
 
-      expect(collectWindowsNativeOpenCodeBinaryCandidates(install.cmdShim)).toEqual([
-        install.legacyBinary,
-        install.platformBinary,
-      ]);
+      expect(
+        collectWindowsNativeOpenCodeBinaryCandidates(
+          install.cmdShim,
+          (await getOpenCodeRuntimePlatformCandidates()).map((item) => item.packageName)
+        )
+      ).toEqual([install.legacyBinary, install.platformBinary]);
       await expect(
         resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
       ).resolves.toBe(install.legacyBinary);
@@ -1816,7 +1931,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath: appManagedBinaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -1860,7 +1975,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -1909,7 +2024,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       `${JSON.stringify({
         schemaVersion: 1,
         version: '1.0.0',
-        platformPackage: 'opencode-test',
+        platformPackage: testPlatformPackage(),
         binaryPath,
         integrity: 'sha512-test',
         installedAt: '2026-05-12T00:00:00.000Z',
@@ -1940,7 +2055,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   });
 
   it('does not replace a verified identical runtime during reinstall', async () => {
-    const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+    const platformPackage = (await getOpenCodeRuntimePlatformCandidates())[0]!.packageName;
     const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
     const binaryPath = path.join(
       tempRoot!,
@@ -2018,7 +2133,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     let fakeTimersActive = false;
     let installation: ReturnType<OpenCodeRuntimeInstallerService['install']> | undefined;
     try {
-      const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+      const platformPackage = (await getOpenCodeRuntimePlatformCandidates())[0]!.packageName;
       const tarball = createTarball([{ name: 'package/bin/opencode', data: 'TEST runtime' }]);
       const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
       vi.stubGlobal(
@@ -2098,7 +2213,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
 
   it('removes a partially extracted runtime when binary verification fails', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+    const platformPackage = (await getOpenCodeRuntimePlatformCandidates())[0]!.packageName;
     const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
     const tarball = createTarball([
       { name: `package/bin/${executableName}`, data: 'broken runtime' },
@@ -2187,7 +2302,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     overrides: { metadataVersion?: string; binaryVersion?: string; integrity?: string } = {}
   ): Promise<{ packageName: string; version: string }> {
     const version = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)!;
-    const packageName = getOpenCodeRuntimePlatformCandidates()[0]!.packageName.replace(
+    const packageName = (await getOpenCodeRuntimePlatformCandidates())[0]!.packageName.replace(
       /^opencode-/,
       '@opencode/cli-'
     );
@@ -2373,35 +2488,32 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
 });
 
 describe('OpenCodeRuntimeInstallerService package safety helpers', () => {
-  it('selects expected platform packages with Linux musl and baseline fallbacks', () => {
-    expect(
-      getOpenCodeRuntimePlatformCandidates('darwin', 'arm64', false).map((item) => item.packageName)
-    ).toEqual(['opencode-darwin-arm64']);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('darwin', 'x64', false).map((item) => item.packageName)
-    ).toEqual(['opencode-darwin-x64', 'opencode-darwin-x64-baseline']);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('linux', 'x64', false).map((item) => item.packageName)
-    ).toEqual(['opencode-linux-x64', 'opencode-linux-x64-baseline', 'opencode-linux-x64-musl']);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('linux', 'x64', true).map((item) => item.packageName)
-    ).toEqual([
-      'opencode-linux-x64-musl',
-      'opencode-linux-x64-baseline-musl',
+  it('selects only the known ABI and uses standard x64 only with positive AVX2 evidence', async () => {
+    const names = async (
+      os: NodeJS.Platform,
+      arch: string,
+      musl: boolean | undefined,
+      avx2: 'yes' | 'no' | 'unknown'
+    ) =>
+      (await getOpenCodeRuntimePlatformCandidates(os, arch, musl, avx2)).map(
+        (item) => item.packageName
+      );
+    expect(await names('darwin', 'arm64', false, 'unknown')).toEqual(['opencode-darwin-arm64']);
+    for (const os of ['darwin', 'win32'] as const) {
+      const label = os === 'win32' ? 'windows' : os;
+      expect(await names(os, 'x64', false, 'yes')).toEqual([
+        `opencode-${label}-x64`,
+        `opencode-${label}-x64-baseline`,
+      ]);
+      expect(await names(os, 'x64', false, 'unknown')).toEqual([`opencode-${label}-x64-baseline`]);
+    }
+    expect(await names('linux', 'x64', false, 'yes')).toEqual([
       'opencode-linux-x64',
+      'opencode-linux-x64-baseline',
     ]);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('linux', 'arm64', false).map((item) => item.packageName)
-    ).toEqual(['opencode-linux-arm64', 'opencode-linux-arm64-musl']);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('linux', 'arm64', true).map((item) => item.packageName)
-    ).toEqual(['opencode-linux-arm64-musl', 'opencode-linux-arm64']);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('win32', 'x64', false).map((item) => item.packageName)
-    ).toEqual(['opencode-windows-x64', 'opencode-windows-x64-baseline']);
-    expect(
-      getOpenCodeRuntimePlatformCandidates('win32', 'arm64', false).map((item) => item.packageName)
-    ).toEqual(['opencode-windows-arm64']);
+    expect(await names('linux', 'x64', true, 'no')).toEqual(['opencode-linux-x64-baseline-musl']);
+    expect(await names('linux', 'arm64', true, 'unknown')).toEqual(['opencode-linux-arm64-musl']);
+    await expect(names('linux', 'x64', undefined, 'yes')).rejects.toThrow('CPU/ABI evidence');
   });
 
   it('fails npm integrity mismatches', () => {

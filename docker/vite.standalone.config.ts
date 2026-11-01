@@ -1,3 +1,4 @@
+import { publicationHelperBuildPlugin } from '../scripts/build/publicationHelper'
 /**
  * Vite build config for the standalone (non-Electron) server.
  *
@@ -96,7 +97,7 @@ export default proxyObj;
 
 export default defineConfig({
   root: ROOT,
-  plugins: [nativeModuleStub(), electronStub()],
+  plugins: [publicationHelperBuildPlugin(ROOT), nativeModuleStub(), electronStub()],
   resolve: {
     alias: {
       '@features': resolve(ROOT, 'src/features'),
