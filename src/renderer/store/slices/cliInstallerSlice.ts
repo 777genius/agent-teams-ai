@@ -1198,7 +1198,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight && cliProviderStatusRequestEpochs.get(inFlight) === requestEpoch) return inFlight;
-
     const requestGeneration = cliProviderStatusGeneration;
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
@@ -1259,7 +1258,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const shouldRetry = shouldRetryCliProviderStatusCheck(
           providerId,
           verifyModels,
-          responseProviderStatus
+          responseProviderStatus,
+          { projectPath }
         );
         const requestIsStillCurrent =
           requestEpoch === cliStatusEpoch &&

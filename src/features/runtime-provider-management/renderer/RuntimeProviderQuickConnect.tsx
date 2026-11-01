@@ -11,6 +11,7 @@ import { useStore } from '@renderer/store';
 import {
   findRuntimeProviderOnboardingPlanEntry,
   getOpenCodeGeneration,
+  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlan,
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
@@ -425,6 +426,29 @@ export const RuntimeProviderQuickConnect = ({
               ? t('cliStatus.quickConnect.installingOpenCode')
               : t('cliStatus.quickConnect.checkingOpenCode')
             : t('cliStatus.quickConnect.requiresOpenCode'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+
+      const v2Limitation = getOpenCodeV2PlanLimitation(plan.id, generation);
+      if (v2Limitation) {
+        const cliSignedIn =
+          v2Limitation === 'cli-plugin' &&
+          getCompanionState(plan.id as CompanionPlanId).status?.authenticated === true;
+        const reason =
+          v2Limitation === 'cli-plugin'
+            ? 'Agent Teams has not qualified this CLI plugin with OpenCode V2. A signed-in CLI does not prove model access on V2. Use OpenCode V1 for this plan.'
+            : 'Subscription OAuth sign-in for this plan is not supported by Agent Teams on OpenCode V2 yet. Use OpenCode V1; existing credentials are unchanged.';
+        return {
+          id: plan.id,
+          providerId: plan.providerId,
+          displayName: plan.displayName,
+          description: `${t(`cliStatus.quickConnect.${plan.descriptionKey}`)} ${reason}`,
+          state: 'manual',
+          stateLabel: cliSignedIn
+            ? 'CLI signed in; plan requires OpenCode V1'
+            : 'Requires OpenCode V1 (V2 not supported)',
           actionLabel: null,
           onAction: null,
         };

@@ -12,6 +12,7 @@ import {
   createRuntimeProviderOnboardingProgress,
   findRuntimeProviderOnboardingPlanByProviderId,
   getRuntimeProviderOnboardingCredentialUrls,
+  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlan,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
@@ -263,6 +264,11 @@ export function useRuntimeProviderOnboarding({
     [basePlan, chosenRouteProviderId, connectedRouteProviderId, routeGeneration]
   );
 
+  const v2ConnectionMessage =
+    activePlan && getOpenCodeV2PlanLimitation(activePlan.id, openCodeGeneration)
+      ? `${activePlan.displayName} cannot be connected through Agent Teams on OpenCode V2 yet. Use OpenCode V1 for this plan; the existing V2 installation is unchanged.`
+      : null;
+
   const recordOnboardingStep = useCallback(
     (
       step: AnalyticsOnboardingStep,
@@ -424,6 +430,11 @@ export function useRuntimeProviderOnboarding({
     if (!enabled || !activePlan || runtimeGate !== 'ready' || runtimeUpdateRequired) {
       return;
     }
+    if (v2ConnectionMessage) {
+      setStage('error');
+      setStageError(v2ConnectionMessage);
+      return;
+    }
     if (activePlan.routeChoices) {
       // Nothing can connect before the user picks the account region.
       setStage('connect');
@@ -532,6 +543,7 @@ export function useRuntimeProviderOnboarding({
     verifiedModelId,
     verificationRequestedPlanId,
     verifyModelCandidates,
+    v2ConnectionMessage,
   ]);
 
   const togglePlan = useCallback((planId: RuntimeProviderOnboardingPlanId): void => {
@@ -609,6 +621,11 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan || activePlan.routeChoices) {
       return;
     }
+    if (v2ConnectionMessage) {
+      setStage('error');
+      setStageError(v2ConnectionMessage);
+      return;
+    }
     setStage('connect');
     setStageError(null);
     setReconnectRequestedPlanId(activePlan.id);
@@ -627,6 +644,7 @@ export function useRuntimeProviderOnboarding({
     management.directoryLoaded,
     managementActions,
     recordOnboardingStep,
+    v2ConnectionMessage,
   ]);
 
   const beginVerification = useCallback((): void => {
@@ -634,16 +652,26 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan) {
       return;
     }
+    if (v2ConnectionMessage) {
+      setStage('error');
+      setStageError(v2ConnectionMessage);
+      return;
+    }
     setReconnectRequestedPlanId(null);
     setVerificationRequestedPlanId(activePlan.id);
     setStage('verifying');
     setStageError(null);
     recordOnboardingStep('verification_start', true, startedAtMs, null, activePlan.providerId);
-  }, [activePlan, recordOnboardingStep]);
+  }, [activePlan, recordOnboardingStep, v2ConnectionMessage]);
 
   const submitConnect = useCallback(async (): Promise<boolean> => {
     const startedAtMs = Date.now();
     if (!activePlan) {
+      return false;
+    }
+    if (v2ConnectionMessage) {
+      setStage('error');
+      setStageError(v2ConnectionMessage);
       return false;
     }
     setPendingConnectionPlanId(activePlan.id);
@@ -676,7 +704,7 @@ export function useRuntimeProviderOnboarding({
       recordOnboardingStep('connection_submit', false, startedAtMs, error, activePlan.providerId);
       throw error;
     }
-  }, [activePlan, managementActions, recordOnboardingStep]);
+  }, [activePlan, managementActions, recordOnboardingStep, v2ConnectionMessage]);
 
   const acceptVerifiedModel = useCallback((): void => {
     const startedAtMs = Date.now();
@@ -753,13 +781,16 @@ export function useRuntimeProviderOnboarding({
         if (activePlan?.id === plan.id && wizardStarted) {
           return { plan, state: 'active' as const };
         }
+        if (getOpenCodeV2PlanLimitation(plan.id, openCodeGeneration)) {
+          return { plan, state: 'pending' as const };
+        }
         const entry = findDirectoryEntry(management, plan.providerId);
         if (isRuntimeProviderOnboardingPlanRoutable(plan, entry)) {
           return { plan, state: 'connected' as const };
         }
         return { plan, state: 'pending' as const };
       }),
-    [activePlan?.id, management, progress?.completedPlanIds, wizardStarted]
+    [activePlan?.id, management, openCodeGeneration, progress?.completedPlanIds, wizardStarted]
   );
 
   return [
