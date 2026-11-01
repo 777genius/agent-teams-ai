@@ -23,6 +23,7 @@ export interface DeleteCustomTemplateDialogProps {
   template: CustomTeamTemplateV1 | null;
   onClose: () => void;
   onDeleted?: (templateId: string) => void;
+  onReload?: () => void;
 }
 
 export const DeleteCustomTemplateDialog = ({
@@ -30,6 +31,7 @@ export const DeleteCustomTemplateDialog = ({
   template,
   onClose,
   onDeleted,
+  onReload,
 }: DeleteCustomTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -59,7 +61,7 @@ export const DeleteCustomTemplateDialog = ({
   if (!template) return null;
 
   const handleDelete = async () => {
-    if (busy) return;
+    if (busy || revisionConflict) return;
     setErrorState(null);
 
     try {
@@ -75,7 +77,6 @@ export const DeleteCustomTemplateDialog = ({
           return;
         case 'revisionConflict':
           setRevisionConflict(result.current);
-          setExpectedRevision(resolveTemplateRevision(result.current));
           return;
         case 'notFound':
           setErrorState('notFound');
@@ -136,6 +137,17 @@ export const DeleteCustomTemplateDialog = ({
               <div>
                 <p className="font-medium">{t('customTemplates.delete.conflictTitle')}</p>
                 <p>{t('customTemplates.delete.conflictBody')}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    onReload?.();
+                  }}
+                >
+                  {t('customTemplates.edit.conflictReload')}
+                </Button>
               </div>
             </div>
           ) : null}
@@ -205,7 +217,7 @@ export const DeleteCustomTemplateDialog = ({
           </Button>
           <Button
             variant="destructive"
-            disabled={busy}
+            disabled={busy || revisionConflict !== null}
             aria-busy={busy}
             onClick={() => void handleDelete()}
           >

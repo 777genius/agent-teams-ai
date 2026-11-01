@@ -60,6 +60,7 @@ let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let onClose: ReturnType<typeof vi.fn>;
 let onDeleted: ReturnType<typeof vi.fn>;
+let onReload: ReturnType<typeof vi.fn>;
 
 function render(): Promise<void> {
   return act(async () => {
@@ -69,6 +70,7 @@ function render(): Promise<void> {
         template={template}
         onClose={onClose}
         onDeleted={onDeleted}
+        onReload={onReload}
       />
     );
   });
@@ -97,6 +99,7 @@ beforeEach(() => {
   } satisfies DeleteCustomTeamTemplateResult);
   onClose = vi.fn();
   onDeleted = vi.fn();
+  onReload = vi.fn();
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -175,11 +178,16 @@ describe('DeleteCustomTemplateDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('surfaces a revision conflict and refreshes the expected revision', async () => {
+  it('blocks deletion of an unseen revision until the library is reloaded for review', async () => {
     deleteTemplate
       .mockResolvedValueOnce({
         status: 'revisionConflict',
-        current: { ...template, revision: 7 },
+        current: {
+          ...template,
+          name: 'Changed release pipeline',
+          teamPrompt: 'New instructions.',
+          revision: 7,
+        },
       } satisfies DeleteCustomTeamTemplateResult)
       .mockResolvedValueOnce({
         status: 'deleted',
@@ -192,6 +200,18 @@ describe('DeleteCustomTemplateDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     await confirmDelete();
-    expect(deleteTemplate).toHaveBeenLastCalledWith({ templateId: 'tmpl-1', expectedRevision: 7 });
+    expect(confirmButton().disabled).toBe(true);
+    expect(deleteTemplate).toHaveBeenCalledTimes(1);
+    expect(deleteTemplate).toHaveBeenLastCalledWith({ templateId: 'tmpl-1', expectedRevision: 4 });
+    expect(onDeleted).not.toHaveBeenCalled();
+
+    const reloadButton = Array.from(host.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'customTemplates.edit.conflictReload'
+    );
+    expect(reloadButton).toBeDefined();
+    await act(async () => reloadButton!.click());
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(deleteTemplate).toHaveBeenCalledTimes(1);
   });
 });

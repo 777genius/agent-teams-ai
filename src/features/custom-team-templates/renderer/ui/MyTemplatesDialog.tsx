@@ -278,6 +278,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           template={deletingTemplate}
           onClose={() => setDeletingTemplate(null)}
           onDeleted={handleDeleted}
+          onReload={() => void reload()}
         />
         <CopyBuiltinTemplateDialog
           open={copyBuiltinOpen}
