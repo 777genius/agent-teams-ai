@@ -309,11 +309,15 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   const executable = findExecutable(bundlePath, platform);
-  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-TEST-'));
+  // Private storage rejects symlink ancestry (for example macOS /tmp and /var).
+  const testRoot = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-TEST-'))
+  );
   const homeDir = path.join(testRoot, 'home');
-  const claudeRoot = path.join(testRoot, 'claude');
+  // Match the isolated USERPROFILE boundary used by Windows private ACL validation.
+  const claudeRoot = path.join(homeDir, '.claude');
   const userDataDir = path.join(testRoot, 'user-data');
-  for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir);
+  for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir, { mode: 0o700 });
   fs.writeFileSync(path.join(testRoot, '.test-only'), 'packaged-app-smoke-test-v1');
   // Bundle layout can be a POSIX test fixture; inspect the actual host OS.
   const ownership =
