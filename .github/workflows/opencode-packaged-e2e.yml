@@ -45,6 +45,9 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - .github/workflows/opencode-packaged-e2e.yml
+      # Focused source changes requiring installed-app provider compatibility proof.
+      - src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts
+      - src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
       - scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
