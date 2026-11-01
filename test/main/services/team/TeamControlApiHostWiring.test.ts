@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
+import { RetainedApiPublicationError } from '@features/local-http-auth/main';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -26,12 +27,27 @@ const source = ts.createSourceFile(
   ts.ScriptTarget.Latest,
   true
 );
-function functionSource(name: string): string {
-  const declaration = source.statements.find(
-    (node) => ts.isFunctionDeclaration(node) && node.name?.text === name
+const teamStateSource = ts.createSourceFile(
+  'TeamControlApiState.ts',
+  await readFile(path.resolve('src/main/services/team/TeamControlApiState.ts'), 'utf8'),
+  ts.ScriptTarget.Latest,
+  true
+);
+function declarationSource(input: ts.SourceFile, name: string): string {
+  const declaration = input.statements.find(
+    (node) =>
+      (ts.isFunctionDeclaration(node) && node.name?.text === name) ||
+      (ts.isVariableStatement(node) &&
+        node.declarationList.declarations.some(
+          (binding) => ts.isIdentifier(binding.name) && binding.name.text === name
+        ))
   );
-  if (!declaration) throw new Error(`Missing Host function ${name}`);
-  return declaration.getText(source);
+  if (!declaration) throw new Error(`Missing source declaration ${name}`);
+  // The offline VM executes the actual declaration body without module export syntax.
+  return declaration.getText(input).replace(/^export\s+/, '');
+}
+function functionSource(name: string): string {
+  return declarationSource(source, name);
 }
 
 type ResolverKind = 'provisioning' | 'memberWorkSync';
@@ -87,8 +103,10 @@ function createHost(publish = writeTeamControlApiState) {
       return Promise.resolve();
     }),
   };
+  const readiness = vi.fn(async () => undefined);
   const code = ts.transpileModule(
     [
+      declarationSource(teamStateSource, 'syncTeamControlApiAuthority'),
       ...[
         'getTeamControlApiBaseUrl',
         'syncTeamControlApiState',
@@ -109,10 +127,11 @@ function createHost(publish = writeTeamControlApiState) {
     assertStartupActive,
     startupStage: createStartupStage(isShutdownStarted),
     StartupCancelledError,
+    RetainedApiPublicationError,
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
     writeTeamControlApiState: publish,
-    checkApiReadiness: vi.fn(async () => undefined),
+    checkApiReadiness: readiness,
     handleModeSwitch: () => Promise.resolve(),
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
@@ -135,6 +154,7 @@ function createHost(publish = writeTeamControlApiState) {
   };
   return {
     server,
+    readiness,
     start: () => host.startHttpServer(() => Promise.resolve()),
     resolve: (kind: ResolverKind) => host[kind](),
     shutdown: () => {
@@ -180,8 +200,13 @@ describe('existing app Host endpoint wiring', () => {
     expect(host.server.start).toHaveBeenCalledWith(expect.any(Object), expect.any(Function), 3456);
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
     expect(await publishedBaseUrl(root)).toBe('http://127.0.0.1:4591');
+    expect(host.readiness).toHaveBeenCalledExactlyOnceWith(
+      'http://127.0.0.1:4591',
+      'sandbox-control-token-0123456789abcdef'
+    );
     await host.start();
     expect(host.server.start).toHaveBeenCalledOnce();
+    expect(host.readiness).toHaveBeenCalledTimes(2);
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
   });
 

@@ -1,28 +1,20 @@
 // @vitest-environment node
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import {
+  cancelApiProfileChanges,
   configureApiProfileChanges,
   scheduleApiProfileChange,
 } from '@features/local-http-auth/main';
 import { HttpServer } from '@main/services/infrastructure/HttpServer';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { HttpServices } from '@main/http';
 import type { FastifyInstance } from 'fastify';
 
-function acknowledgeApiOnlyWarning(count: number): void {
-  const warnings = vi.mocked(console.warn).mock.calls.map((args) => args.map(String).join(' '));
-  expect(warnings).toHaveLength(count);
-  expect(
-    warnings.every(
-      (warning) =>
-        warning ===
-        '[Service:HttpServer] Renderer output directory not found (run `pnpm build` first), serving API only'
-    )
-  ).toBe(true);
-  vi.mocked(console.warn).mockClear();
-}
 let held: { entered(): void; wait: Promise<void> } | null = null;
 let profile = 'old';
 let transition: { settled: Promise<void> } | null = null;
@@ -45,14 +37,28 @@ vi.mock('@main/http', () => ({
   },
 }));
 let server: HttpServer | null = null;
+let fixtureRoot: string;
+beforeEach(async () => {
+  fixtureRoot = await realpath(await mkdtemp(path.join(tmpdir(), 'http-generation-TEST-')));
+  const renderer = path.join(fixtureRoot, 'renderer');
+  await mkdir(renderer, { mode: 0o700 });
+  await writeFile(path.join(renderer, 'index.html'), '<!doctype html><p>TEST renderer</p>');
+  vi.stubEnv('RENDERER_PATH', renderer);
+});
 afterEach(async () => {
   await server?.stop();
   server = null;
   transition = null;
+  held = null;
+  vi.unstubAllEnvs();
+  await rm(fixtureRoot, { recursive: true, force: true });
 });
-async function unusedPort(): Promise<number> {
+async function unusedPort(preferredPort = 0): Promise<number> {
   const listener = createServer();
-  await new Promise<void>((resolve) => listener.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve, reject) => {
+    listener.once('error', reject);
+    listener.listen(preferredPort, '127.0.0.1', resolve);
+  });
   const address = listener.address();
   if (!address || typeof address === 'string') throw new Error('Missing fixture port');
   await new Promise<void>((resolve, reject) =>
@@ -90,7 +96,6 @@ it('drains the initiating HTTP response then replaces services and key at the sa
       })
     ).json()
   ).toEqual({ profile: 'new' });
-  acknowledgeApiOnlyWarning(2);
 });
 
 it('coalesces startup and rotates a stopped physical listener credential', async () => {
@@ -108,7 +113,6 @@ it('coalesces startup and rotates a stopped physical listener credential', async
   expect(server.getAuthToken()).toBeNull();
   await server.start(services(), async () => undefined, port);
   expect(server.getAuthToken()).not.toBe(old);
-  acknowledgeApiOnlyWarning(2);
 });
 
 it('does not resurrect the HTTP listener after an explicit stop interrupts a profile drain', async () => {
@@ -132,19 +136,36 @@ it('does not resurrect the HTTP listener after an explicit stop interrupts a pro
   const afterResume = vi.fn(async () => {
     await server!.start(services(), async () => undefined, port);
   });
-  const change = scheduleApiProfileChange(() => undefined, undefined, { afterResume });
+  const commit = vi.fn(() => undefined);
+  const change = scheduleApiProfileChange(commit, undefined, { afterResume });
   const outcomes = Promise.allSettled([change.result, change.settled]);
-  await Promise.resolve();
-  const stopping = server.stop();
-  release();
-  await (await pending).text();
-  await stopping;
+  let stopping: Promise<void> | undefined;
+  try {
+    // A held handler keeps the real drain pending. Observe paused admission over
+    // the socket before stopping; one microtask does not establish this boundary.
+    await vi.waitFor(async () => {
+      const response = await fetch(`http://127.0.0.1:${port}/api/profile`, {
+        headers: { Authorization: `Bearer ${server!.getAuthToken()}` },
+      });
+      const status = response.status;
+      await response.text();
+      expect(status).toBe(503);
+    });
+    expect(server.isRunning()).toBe(false);
+    expect(commit).not.toHaveBeenCalled();
+    stopping = server.stop();
+  } finally {
+    release();
+    await (await pending).text();
+    await stopping;
+    await outcomes;
+  }
   expect((await outcomes).every((result) => result.status === 'rejected')).toBe(true);
   expect(afterResume).not.toHaveBeenCalled();
   expect(server.isRunning()).toBe(false);
   expect(server.getAuthToken()).toBeNull();
   held = null;
-  acknowledgeApiOnlyWarning(1);
+  expect(await unusedPort(port)).toBe(port); // The exact owned listener is physically closed.
 });
 
 it('cancels every coalesced startup caller when an explicit stop wins before listen', async () => {
@@ -158,4 +179,42 @@ it('cancels every coalesced startup caller when an explicit stop wins before lis
   expect(results.every((result) => result.status === 'rejected')).toBe(true);
   expect(server.isRunning()).toBe(false);
   expect(server.getAuthToken()).toBeNull();
+});
+
+it('does not resurrect the listener when shutdown cancels its owner before pause starts', async () => {
+  configureApiProfileChanges(() => undefined);
+  server = new HttpServer({ getServices: services });
+  const port = await server.start(services(), async () => undefined, await unusedPort());
+  let enter!: () => void, release!: () => void;
+  const entered = new Promise<void>((resolve) => {
+    enter = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const commit = vi.fn(() => undefined);
+  const afterResume = vi.fn(async () => {
+    await server!.start(services(), async () => undefined, port);
+  });
+  const change = scheduleApiProfileChange(commit, undefined, {
+    beforePause: async () => {
+      enter();
+      await gate;
+    },
+    afterResume,
+  });
+  const outcomes = Promise.allSettled([change.result, change.settled]);
+  await entered;
+  // Desktop closeAdmission cancels the coordinator synchronously before its
+  // later HTTP stop. This is a separate boundary from the paused-drain case.
+  const cancelled = cancelApiProfileChanges();
+  const stopped = server.stop();
+  release();
+  expect((await outcomes).every((result) => result.status === 'rejected')).toBe(true);
+  await Promise.all([cancelled, stopped]);
+  expect(commit).not.toHaveBeenCalled();
+  expect(afterResume).not.toHaveBeenCalled();
+  expect(server.isRunning()).toBe(false);
+  expect(server.getAuthToken()).toBeNull();
+  expect(await unusedPort(port)).toBe(port);
 });

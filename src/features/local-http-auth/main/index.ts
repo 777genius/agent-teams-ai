@@ -7,10 +7,10 @@ export {
   scheduleApiProfileChange,
 } from './application/profileTransition';
 export {
-  RetainedApiPublicationError,
   apiProfileScope,
   publishApiAuthority,
   removeApiAuthority,
+  RetainedApiPublicationError,
 } from './infrastructure/authorityStore';
 export { applyApiAuthReference } from './infrastructure/managedReference';
 export { preparePrivateFileDirectory } from './infrastructure/privateDirectories';

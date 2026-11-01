@@ -97,7 +97,7 @@ export function scheduleApiProfileChange<T>(
   let resumeStarted = false;
   tail = tail.then(async () => {
     const resumes: ProfileResume[] = [];
-    const unchangedRejection = {};
+    const unchangedRejection = new Error('API profile change rejected before mutation');
     let rejectionReason: unknown;
     // Only a read-only guard inside the caller's exclusive commit section may use this signal.
     const rejectBeforeMutation = (reason: unknown): never => {

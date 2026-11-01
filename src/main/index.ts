@@ -1,4 +1,5 @@
 import { RetainedApiPublicationError } from '@features/local-http-auth/main';
+
 import type { HttpServices } from '@main/http';
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
@@ -17,7 +18,6 @@ import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
 import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-
 import {
   createDesktopTeamGroupChats,
   registerTeamGroupChatsIpc,
