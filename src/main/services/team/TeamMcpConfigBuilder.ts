@@ -169,10 +169,8 @@ async function waitForRetry(delayMs: number): Promise<void> {
 
 /** Check that both index.js and package.json exist in a directory. */
 async function hasValidServerCopy(dir: string): Promise<boolean> {
-  return (
-    (await pathExists(path.join(dir, 'index.js'))) &&
-    (await pathExists(path.join(dir, 'package.json')))
-  );
+  const files = ['index.js', 'copyHandoff.js', 'package.json'];
+  return (await Promise.all(files.map((file) => pathExists(path.join(dir, file))))).every(Boolean);
 }
 
 let _resolvedNodePath: string | undefined;
@@ -441,11 +439,9 @@ async function resolvePackagedServerEntry(options?: McpLaunchSpecResolveOptions)
     // Atomic: copy to temp dir, then rename to final
     const tmpDir = path.join(baseDir, `${appVersion}.tmp-${process.pid}-${randomUUID()}`);
     await fs.promises.mkdir(tmpDir, { recursive: true });
-    await fs.promises.copyFile(path.join(sourceDir, 'index.js'), path.join(tmpDir, 'index.js'));
-    await fs.promises.copyFile(
-      path.join(sourceDir, 'package.json'),
-      path.join(tmpDir, 'package.json')
-    );
+    for (const file of ['index.js', 'copyHandoff.js', 'package.json']) {
+      await fs.promises.copyFile(path.join(sourceDir, file), path.join(tmpDir, file));
+    }
 
     try {
       await renamePathWithRetry(tmpDir, finalDir);

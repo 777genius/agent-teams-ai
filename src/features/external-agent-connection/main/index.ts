@@ -18,3 +18,5 @@ export {
   registerExternalAgentConnectionIpc,
   removeExternalAgentConnectionIpc,
 } from './registerExternalAgentConnectionIpc';
+
+export { ExternalAgentCopyHandoffService } from './ExternalAgentCopyHandoff';

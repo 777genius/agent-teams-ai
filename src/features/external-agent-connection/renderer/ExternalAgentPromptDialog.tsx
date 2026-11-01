@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-
 import { buildExternalAgentPrompt } from '@features/external-agent-connection';
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
@@ -8,17 +6,17 @@ import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { Check, Copy } from 'lucide-react';
-
-import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
-
-import { ExternalAgentRunActions } from './ExternalAgentRunActions';
-import { TeamTemplateReferences } from './TeamTemplateReferences';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   ConnectionInfoV1,
   ExternalAgentConnectionApi,
+  ExternalAgentCopyRegistration,
   ExternalAgentRunApi,
 } from '../contracts';
+import { EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH } from '../contracts';
+import { ExternalAgentRunActions } from './ExternalAgentRunActions';
+import { TeamTemplateReferences } from './TeamTemplateReferences';
 
 interface Props {
   api: ExternalAgentConnectionApi;
@@ -28,10 +26,15 @@ interface Props {
   runApi?: ExternalAgentRunApi;
 }
 
-function createPrompt(task: string, connection: ConnectionInfoV1): string {
+function createPrompt(
+  task: string,
+  connection: ConnectionInfoV1,
+  registration?: ExternalAgentCopyRegistration
+): string {
   return buildExternalAgentPrompt({
     task,
     intent: 'manage',
+    registration,
     templates: TEAM_TEMPLATES,
     connection,
     includeCdp: connection.cdp.status === 'ready' && connection.capabilities.rendererControl,
@@ -112,7 +115,12 @@ export const ExternalAgentPromptDialog = ({
     setReceipt(null);
     let writingClipboard = false;
     try {
-      const live = await api.getConnectionInfo();
+      if (!api.prepareCopyHandoff) throw new Error(t('externalPrompt.connectionRequired'));
+      const handoff = await api.prepareCopyHandoff({
+        expectedContext: currentConnection.context,
+        expectedProfileFingerprint: currentConnection.profileFingerprint,
+      });
+      const live = handoff.connection;
       if (!mounted.current) return;
       if (
         live.context.appInstanceId !== connection.context.appInstanceId ||
@@ -121,7 +129,7 @@ export const ExternalAgentPromptDialog = ({
       ) {
         throw new Error(t('externalPrompt.contextChanged'));
       }
-      const prompt = createPrompt(task, live);
+      const prompt = createPrompt(task, live, handoff.registration);
       if (currentTask.current !== task) return;
       const freshSignature = snapshotSignature(live);
       setPreviewBlocked(false);
@@ -155,7 +163,7 @@ export const ExternalAgentPromptDialog = ({
       type="button"
       size="sm"
       onClick={() => void copy()}
-      disabled={busy || !ready || !taskPresent}
+      disabled={busy || !ready || !taskPresent || !api.prepareCopyHandoff}
       data-testid={testId}
       className="h-auto min-h-8 max-w-full whitespace-normal bg-blue-600 text-white hover:bg-blue-500"
     >

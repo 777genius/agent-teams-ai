@@ -113,6 +113,7 @@ describe('TeamMcpConfigBuilder', () => {
     const dir = path.join(baseDir, 'mcp-server');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'index.js'), body);
+    fs.writeFileSync(path.join(dir, 'copyHandoff.js'), '// copy bootstrap');
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'agent-teams-mcp' }));
     return dir;
   }
@@ -1668,6 +1669,7 @@ describe('TeamMcpConfigBuilder', () => {
     const stableDir = path.join(tempAppData, 'mcp-server', '1.2.3');
     fs.mkdirSync(stableDir, { recursive: true });
     fs.writeFileSync(path.join(stableDir, 'index.js'), '// stable copy');
+    fs.writeFileSync(path.join(stableDir, 'copyHandoff.js'), '// copy bootstrap');
     fs.writeFileSync(path.join(stableDir, 'package.json'), JSON.stringify({ name: 'stable' }));
 
     const builder = new TeamMcpConfigBuilder();
@@ -1746,6 +1748,7 @@ describe('TeamMcpConfigBuilder', () => {
       if (to === stableDir) {
         fs.mkdirSync(stableDir, { recursive: true });
         fs.writeFileSync(path.join(stableDir, 'index.js'), '// winner copy');
+        fs.writeFileSync(path.join(stableDir, 'copyHandoff.js'), '// copy bootstrap');
         fs.writeFileSync(path.join(stableDir, 'package.json'), JSON.stringify({ name: 'winner' }));
         const err = new Error('EEXIST') as NodeJS.ErrnoException;
         err.code = 'EEXIST';

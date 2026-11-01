@@ -252,6 +252,7 @@ export class HttpAPIClient implements ElectronAPI {
   externalAgentConnection: ExternalAgentConnectionApi = {
     getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
     retryConnection: () => this.post<ConnectionInfoV1>('/api/app/connection/retry'),
+    prepareCopyHandoff: (request) => this.post('/api/app/connection/copy', request),
   };
   announcements: AnnouncementsApi = {
     getSnapshot: async () => this.unavailableAnnouncements(),

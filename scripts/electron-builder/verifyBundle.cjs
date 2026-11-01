@@ -119,6 +119,7 @@ function verifyBundledMcpServer(bundlePath, platform) {
   if (
     manifest.type !== 'module' ||
     manifest.main !== 'index.js' ||
+    !fs.existsSync(path.join(directory, 'copyHandoff.js')) ||
     !fs.existsSync(path.join(directory, manifest.main)) ||
     ['dependencies', 'optionalDependencies'].some(
       (field) => Object.keys(manifest[field] ?? {}).length > 0

@@ -385,6 +385,10 @@
         "to": "mcp-server/index.js"
       },
       {
+        "from": "mcp-server/dist/copyHandoff.js",
+        "to": "mcp-server/copyHandoff.js"
+      },
+      {
         "from": "mcp-server/dist/package.json",
         "to": "mcp-server/package.json"
       }

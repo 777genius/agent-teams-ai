@@ -12,6 +12,7 @@ export function createMcpDeploymentManifest(source: McpManifestSource) {
     private: true,
     type: 'module',
     main: 'index.js',
+    files: ['index.js', 'copyHandoff.js'],
     engines: source.engines,
   };
 }

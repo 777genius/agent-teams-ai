@@ -1,11 +1,16 @@
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { ExternalAgentCopyRequest } from '@features/external-agent-connection/contracts';
 import {
   createDesktopExternalAgentConnection,
+  ExternalAgentCopyHandoffService,
   ExternalAgentRunService,
   getDesktopMcpChildEnvironment,
   type NativeRendererCdp,
   prepareNativeAgentRun,
 } from '@features/external-agent-connection/main';
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '@features/member-work-sync/main';
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
+import type { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
 import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
@@ -16,20 +21,17 @@ import {
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import { resolveAgentTeamsMcpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import type { TeamChangeEvent } from '@shared/types';
 import { app, type WebContents } from 'electron';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import {
   composeTeamPromptManagement,
   type TeamPromptManagementData,
   type TeamPromptManagementLifecycle,
 } from './startTeamPromptManagement';
-
-import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
-import type { TeamPromptManagement } from '@features/team-prompt-management/main';
-import type { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
-import type { TeamChangeEvent } from '@shared/types';
-import type { FastifyRequest } from 'fastify';
 
 const configManager = ConfigManager.getInstance();
 
@@ -74,6 +76,30 @@ export function composeExternalAgentConnection(options: {
     const [data, lifecycle, emit] = options.teamManagement;
     teamPromptManagement = composeTeamPromptManagement(data, lifecycle, connection, emit);
   }
+  const copyHandoff = new ExternalAgentCopyHandoffService({
+    userDataPath: app.getPath('userData'),
+    getRoot: getClaudeBasePath,
+    getControlUrl: options.getControlUrl,
+    getConnectionInfo: connection.getConnectionInfo,
+    withExpectedContext: connection.withExpectedContext,
+    resolveLaunch: resolveAgentTeamsMcpLaunchSpec,
+  });
+  const withCopyContextCleanup = async <T>(operation: () => Promise<T>): Promise<T> => {
+    const before = await connection.getConnectionInfo();
+    const origin = options.getControlUrl();
+    try {
+      return await operation();
+    } finally {
+      const after = await connection.getConnectionInfo();
+      if (
+        JSON.stringify(before.context) !== JSON.stringify(after.context) ||
+        before.profileFingerprint !== after.profileFingerprint ||
+        origin !== options.getControlUrl()
+      ) {
+        await copyHandoff.retire();
+      }
+    }
+  };
   const directRun = new ExternalAgentRunService({
     async getAvailability() {
       const [codex, anthropic] = await Promise.all([
@@ -98,28 +124,44 @@ export function composeExternalAgentConnection(options: {
   return {
     ...connection,
     directRun,
+    prepareCopyHandoff: copyHandoff.prepare.bind(copyHandoff),
+    registerHttp(http: FastifyInstance) {
+      connection.registerHttp(http);
+      http.post('/api/app/connection/copy', (request) =>
+        copyHandoff.prepare(request.body as ExternalAgentCopyRequest)
+      );
+    },
+    retryConnection: () => withCopyContextCleanup(connection.retryConnection),
     teamPromptManagement,
     async updateRoot(applyConfig: () => void, request?: FastifyRequest) {
       await directRun.stopCurrent();
-      return connection.updateRoot(applyConfig, request);
+      return withCopyContextCleanup(() => connection.updateRoot(applyConfig, request));
     },
     async changeContext(operation: () => Promise<void> | void, request?: FastifyRequest) {
       await directRun.stopCurrent();
-      return connection.changeContext(operation, request);
+      return withCopyContextCleanup(() => connection.changeContext(operation, request));
     },
     async closeAdmission() {
       const drain = connection.closeAdmission();
       try {
         await directRun.shutdown();
       } finally {
-        await drain;
+        try {
+          await copyHandoff.shutdown();
+        } finally {
+          await drain;
+        }
       }
     },
     async shutdown() {
       try {
         await directRun.shutdown();
       } finally {
-        await connection.shutdown();
+        try {
+          await copyHandoff.shutdown();
+        } finally {
+          await connection.shutdown();
+        }
       }
     },
     async start(): Promise<void> {

@@ -233,6 +233,7 @@ export class ExternalAgentRunService implements ExternalAgentRunApi {
           templates: TEAM_TEMPLATES,
           connection: fresh,
           includeCdp: false,
+          registration: 'alreadyConfigured',
         });
         this.publish(run, { status: 'running' });
         execution = run.runtime!.launch(prompt, (chunk) => {
