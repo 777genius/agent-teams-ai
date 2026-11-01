@@ -27,9 +27,9 @@ import {
   DEFAULT_WIZARD_PLAN_IDS,
   findDirectoryEntry,
   getAutomaticModelProbeLimit,
+  getOnboardingPlanStatuses,
   getOnboardingRouteState,
   getOnboardingV2ConnectionMessage,
-  getOnboardingPlanStatuses,
   isCopilotExplicitModelUnsupported,
 } from './runtimeProviderOnboardingInternals';
 import {

@@ -39,6 +39,7 @@ import type {
   RuntimeProviderCompanionActionDto,
   RuntimeProviderDirectoryEntryDto,
 } from '../contracts';
+import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 import type { JSX } from 'react';
 
@@ -648,7 +649,9 @@ export const RuntimeProviderQuickConnect = ({
     <>
       <RuntimeProviderQuickConnectView
         cards={sortQuickConnectCards(openCodeCards).map((card) =>
-          gate === 'ready' && (!card.actionLabel || !card.onAction)
+          gate === 'ready' &&
+          !getOpenCodeV2PlanLimitation(card.id as RuntimeProviderOnboardingPlanId, generation) &&
+          (!card.actionLabel || !card.onAction)
             ? {
                 ...card,
                 actionLabel: t('cliStatus.quickConnect.checkAndConnect'),

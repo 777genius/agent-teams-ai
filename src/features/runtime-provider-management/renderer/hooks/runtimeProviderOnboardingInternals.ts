@@ -2,9 +2,9 @@ import {
   getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlanProviderIds,
   isRuntimeProviderOnboardingPlanRoutable,
-  RUNTIME_PROVIDER_ONBOARDING_PLANS,
   OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED,
   resolveRuntimeProviderOnboardingRouteGeneration,
+  RUNTIME_PROVIDER_ONBOARDING_PLANS,
 } from '../../core/domain';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
