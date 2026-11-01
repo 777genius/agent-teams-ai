@@ -1014,7 +1014,7 @@ describe('CLI status visibility during completed install state', () => {
         }),
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -1096,7 +1096,7 @@ describe('CLI status visibility during completed install state', () => {
         }),
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_managed',
@@ -1159,7 +1159,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -1185,7 +1185,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode (200+ models)');
+    expect(host.textContent).toContain('OpenCode (200+ providers)');
     expect(host.textContent).toContain('Install');
 
     const installButton = Array.from(host.querySelectorAll('button')).find(
@@ -1218,7 +1218,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'managed',
@@ -1476,7 +1476,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -1535,7 +1535,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_managed',
@@ -1619,7 +1619,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_managed',
@@ -1741,7 +1741,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_configured_local',
@@ -1859,7 +1859,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: false,
           authMethod: 'opencode_configured_local',
@@ -2033,7 +2033,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -2136,7 +2136,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: false,
           authenticated: false,
           authMethod: null,
@@ -2311,7 +2311,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_managed',
@@ -2404,7 +2404,7 @@ describe('CLI status visibility during completed install state', () => {
       providers: [
         {
           providerId: 'opencode',
-          displayName: 'OpenCode (200+ models)',
+          displayName: 'OpenCode (200+ providers)',
           supported: true,
           authenticated: true,
           authMethod: 'opencode_managed',

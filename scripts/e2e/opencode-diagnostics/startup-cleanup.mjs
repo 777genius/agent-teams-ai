@@ -252,7 +252,7 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
     evidence.attemptDeadlines = [first.request.body.deadlineUnixMs];
     await count(1);
     await observe('pending', first.requestId);
-    const manage = `(() => { const label = [...document.querySelectorAll('span')].find(s => s.textContent.trim() === 'OpenCode (200+ models)' && s.classList.contains('truncate'));
+    const manage = `(() => { const label = [...document.querySelectorAll('span')].find(s => s.textContent.trim() === 'OpenCode (200+ providers)' && s.classList.contains('truncate'));
       const row = label?.closest('div.grid'); return [...(row?.querySelectorAll('button') || [])].find(b => b.textContent.trim() === 'Manage'); })()`;
     await poll(async () => {
       if (await evaluate(`Boolean(${manage})`)) return true;
