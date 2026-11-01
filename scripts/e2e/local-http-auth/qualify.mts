@@ -42,6 +42,7 @@ export const modulePaths = [
   'src/renderer/api/index.ts',
   'src/renderer/main.tsx',
   'src/renderer/index.html',
+  'src/renderer/rendererBootstrap.ts',
   'src/renderer/App.tsx',
   'src/main/services/infrastructure/HttpServer.ts',
   'src/main/services/infrastructure/HttpServerAuth.ts',
