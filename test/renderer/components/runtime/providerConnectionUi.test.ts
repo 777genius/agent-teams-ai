@@ -250,7 +250,7 @@ describe('providerConnectionUi', () => {
   it('treats the OpenCode summary-only big-pickle model as catalog hydration', () => {
     const provider: CliProviderStatus = {
       providerId: 'opencode',
-      displayName: 'OpenCode (200+ models)',
+      displayName: 'OpenCode (200+ providers)',
       supported: true,
       authenticated: true,
       authMethod: 'opencode_managed',

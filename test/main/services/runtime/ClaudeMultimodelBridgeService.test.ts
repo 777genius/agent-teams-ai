@@ -941,7 +941,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(providers[2]).toMatchObject({
       providerId: 'opencode',
-      displayName: 'OpenCode (200+ models)',
+      displayName: 'OpenCode (200+ providers)',
       supported: false,
       authenticated: false,
       models: [],

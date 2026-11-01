@@ -6,7 +6,6 @@ import {
   type OpenCodePromptDeliveryLedgerStore,
 } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
-import { isOpenCodeAttachmentDeliveryFailureReason } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 
 import {
   isInboxRelayInFlightTimeoutError,
@@ -54,6 +53,7 @@ import {
   createOpenCodeMemberInboxRelayResult,
   dedupeOpenCodeMemberInboxRelayDiagnostics,
   type OpenCodeMemberInboxRelayResult,
+  projectOpenCodeInboxDeliveryFailure,
 } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
 import { createOpenCodeMemberInboxRunFence } from './TeamProvisioningOpenCodeMemberInboxRunFence';
 import { settleOpenCodePostCompletionNotices } from './TeamProvisioningOpenCodePostCompletionSettlement';
@@ -173,6 +173,8 @@ export interface RelayOpenCodeMemberInboxMessagesPorts {
   ): Promise<OpenCodeMemberInboxDelivery>;
   suppressRuntimeInactiveWarning(teamName: string): boolean;
   logWarning(message: string): void;
+  /** Durable log line for expected, non-failure outcomes (never the console). */
+  logDiagnostic(message: string): void;
   nowIso(): string;
   getErrorMessage(error: unknown): string;
 }
@@ -804,6 +806,12 @@ async function runOpenCodeMemberInboxRelayWork(
             delivery.reason ?? 'unknown error'
           }`
         );
+      } else if (failureProjection.shouldLogDeferral) {
+        ports.logDiagnostic(
+          `[${teamName}] OpenCode inbox relay deferred until runtime check-in for ${memberName}/${message.messageId}: ${
+            delivery.reason ?? 'unknown reason'
+          }`
+        );
       }
       break;
     }
@@ -1038,45 +1046,6 @@ export async function handleOpenCodeInboxAttachmentFailure(input: {
       diagnostics: input.attachmentPayloads.diagnostics,
     },
   });
-}
-
-export function projectOpenCodeInboxDeliveryFailure(input: {
-  delivery: OpenCodeMemberInboxDelivery;
-  suppressRuntimeInactiveWarning: boolean;
-}): {
-  result: OpenCodeMemberInboxRelayResult;
-  shouldLogWarning: boolean;
-} {
-  if (input.delivery.accepted === true && input.delivery.ledgerStatus !== 'failed_terminal') {
-    const diagnostics = input.delivery.diagnostics ?? [
-      input.delivery.reason ?? 'opencode_delivery_response_pending',
-    ];
-    return {
-      result: createOpenCodeMemberInboxRelayResult({
-        diagnostics,
-        lastDelivery: {
-          ...input.delivery,
-          diagnostics,
-        },
-      }),
-      shouldLogWarning: false,
-    };
-  }
-
-  const diagnostics = input.delivery.diagnostics ?? [
-    input.delivery.reason ?? 'opencode_message_delivery_failed',
-  ];
-  return {
-    result: createOpenCodeMemberInboxRelayResult({
-      failed: 1,
-      diagnostics,
-      lastDelivery: input.delivery,
-    }),
-    shouldLogWarning:
-      !isOpenCodeAttachmentDeliveryFailureReason(input.delivery.reason) &&
-      (input.delivery.reason !== 'opencode_runtime_not_active' ||
-        !input.suppressRuntimeInactiveWarning),
-  };
 }
 
 export async function commitOpenCodeInboxRelayReadAfterDelivery(input: {

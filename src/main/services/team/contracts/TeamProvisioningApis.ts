@@ -240,6 +240,8 @@ export interface TeamOpenCodeMemberInboxDelivery {
   visibleReplyCorrelation?: OpenCodeRuntimeDeliveryStatus['visibleReplyCorrelation'];
   queuedBehindMessageId?: string;
   reason?: string;
+  /** An armed wait for OpenCode bootstrap check-in, not a relay failure. */
+  deferredUntilBootstrap?: true;
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
 }

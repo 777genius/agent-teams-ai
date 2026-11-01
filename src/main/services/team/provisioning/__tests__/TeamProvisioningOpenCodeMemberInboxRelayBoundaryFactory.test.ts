@@ -115,6 +115,7 @@ describe('TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory', () => {
       await ports.deliverOpenCodeMemberMessage('team-a', {} as never);
       ports.suppressRuntimeInactiveWarning('team-a');
       ports.logWarning('warning');
+      ports.logDiagnostic('deferred');
       ports.nowIso();
       ports.getErrorMessage(new Error('boom'));
 
@@ -143,6 +144,7 @@ describe('TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory', () => {
     });
     expect(deps.cleanedStoppedTeamOpenCodeRuntimeLanes.has).toHaveBeenCalledWith('team-a');
     expect(deps.logger.warn).toHaveBeenCalledWith('warning');
+    expect(deps.logger.diagnostic).toHaveBeenCalledWith('deferred');
   });
 
   it('leaves the inbox of a team of another app profile to that profile', async () => {
@@ -298,6 +300,7 @@ function createDeps(
     readTaskRefInferenceTasks: vi.fn(async () => [teamTask()]),
     logger: {
       warn: vi.fn(),
+      diagnostic: vi.fn(),
     },
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     getErrorMessage: vi.fn((error) => (error instanceof Error ? error.message : String(error))),
