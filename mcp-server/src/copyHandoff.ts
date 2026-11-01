@@ -21,7 +21,9 @@ export function parseCopyConfig(value: unknown, file: string): CopyConfig {
     !item ||
     typeof item !== 'object' ||
     Array.isArray(item) ||
-    Object.keys(item).sort().join(',') !==
+    Object.keys(item)
+      .sort((left, right) => left.localeCompare(right))
+      .join(',') !==
       'authReference,context,controlUrl,profileFingerprint,root,schemaVersion' ||
     item.schemaVersion !== 1 ||
     typeof item.root !== 'string' ||
@@ -48,7 +50,9 @@ export function parseCopyConfig(value: unknown, file: string): CopyConfig {
     !context ||
     typeof context !== 'object' ||
     Array.isArray(context) ||
-    Object.keys(context).sort().join(',') !==
+    Object.keys(context)
+      .sort((left, right) => left.localeCompare(right))
+      .join(',') !==
       'appInstanceId,connectionGeneration,dataRootFingerprint' ||
     typeof context.appInstanceId !== 'string' ||
     !context.appInstanceId.trim() ||
