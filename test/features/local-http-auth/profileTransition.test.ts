@@ -1,7 +1,9 @@
 // @vitest-environment node
 import {
+  cancelApiProfileChanges,
   configureApiProfileChanges,
   registerProfileParticipant,
+  runApiProfileChange,
   scheduleApiProfileChange,
 } from '@features/local-http-auth/main/application/profileTransition';
 import { HttpServer } from '@main/services/infrastructure/HttpServer';
@@ -148,4 +150,187 @@ it('keeps unknown commit failures closed rather than treating them as unchanged 
   await expect(change.settled).rejects.toThrow('Mutation outcome unknown');
   expect(current.isRunning()).toBe(false);
   expect(physical.close).not.toHaveBeenCalled();
+});
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+it('reports sanitized late HTTP resume failure without delaying its result or detaching the queue', async () => {
+  const report = vi.fn();
+  configureApiProfileChanges(() => undefined, report);
+  const finish = deferred();
+  unregister = registerProfileParticipant({
+    pause: async () => async () => {
+      await finish.promise;
+      throw new Error('TEST-secret-token-and-config');
+    },
+  });
+  const changing = runApiProfileChange(() => 'accepted', {} as import('fastify').FastifyRequest);
+  await expect(changing).resolves.toBe('accepted');
+  expect(report).not.toHaveBeenCalled();
+  const nextCommit = vi.fn();
+  const next = scheduleApiProfileChange(nextCommit);
+  expect(nextCommit).not.toHaveBeenCalled();
+  finish.resolve();
+  // Join physical completion without pausing the next transition's participant again.
+  unregister();
+  unregister = undefined;
+  await next.settled;
+  await next.result;
+  expect(report).toHaveBeenCalledExactlyOnceWith({
+    code: 'API_PROFILE_TRANSITION_FAILED',
+    phase: 'resume',
+  });
+  expect(JSON.stringify(report.mock.calls)).not.toContain('TEST-secret');
+});
+
+it('reports failed unchanged restoration in addition to the original guard rejection', async () => {
+  const report = vi.fn();
+  configureApiProfileChanges(() => undefined, report);
+  const resume = Object.assign(async () => undefined, {
+    unchanged: async () => {
+      throw new Error('TEST-secret-config');
+    },
+  });
+  unregister = registerProfileParticipant({ pause: async () => resume });
+  const change = scheduleApiProfileChange(
+    (rejectBeforeMutation) => rejectBeforeMutation(new Error('Live consumer')),
+    undefined,
+    { assertUnchanged: () => undefined }
+  );
+  await expect(change.result).rejects.toThrow('Live consumer');
+  await expect(change.settled).rejects.toThrow('rejection restoration failed');
+  expect(report).toHaveBeenCalledExactlyOnceWith({
+    code: 'API_PROFILE_TRANSITION_FAILED',
+    phase: 'unchanged-restoration',
+  });
+});
+
+it('keeps expected early guard rejection quiet', async () => {
+  const report = vi.fn();
+  configureApiProfileChanges(() => undefined, report);
+  const change = scheduleApiProfileChange(() => undefined, undefined, {
+    beforePause: () => {
+      throw new Error('Live consumer');
+    },
+  });
+  await expect(change.result).rejects.toThrow('Live consumer');
+  await expect(change.settled).rejects.toThrow('Live consumer');
+  expect(report).not.toHaveBeenCalled();
+});
+
+it('does not notify a disposed owner when cancellation wins a late resume failure', async () => {
+  const report = vi.fn();
+  configureApiProfileChanges(() => undefined, report);
+  const finish = deferred();
+  unregister = registerProfileParticipant({
+    pause: async () => async () => {
+      await finish.promise;
+      throw new Error('Late failure');
+    },
+  });
+  const change = scheduleApiProfileChange(() => undefined, {} as import('fastify').FastifyRequest);
+  await change.result;
+  const cancelled = cancelApiProfileChanges();
+  finish.resolve();
+  await expect(change.settled).rejects.toThrow('resume failed');
+  await cancelled;
+  expect(report).not.toHaveBeenCalled();
+});
+
+it('keeps the profile queue joined even if the owner reporter itself throws', async () => {
+  configureApiProfileChanges(
+    () => undefined,
+    () => {
+      throw new Error('TEST-secret-reporter');
+    }
+  );
+  unregister = registerProfileParticipant({
+    pause: async () => async () => {
+      throw new Error('Late resume failure');
+    },
+  });
+  const failed = scheduleApiProfileChange(() => 'accepted', {} as import('fastify').FastifyRequest);
+  await expect(failed.result).resolves.toBe('accepted');
+  await expect(failed.settled).rejects.toThrow('owner failure reporting failed');
+  unregister();
+  unregister = undefined;
+  const next = scheduleApiProfileChange(() => 'next');
+  await expect(next.result).resolves.toBe('next');
+  await expect(next.settled).resolves.toBeUndefined();
+});
+
+it.each([false, true])(
+  'seals the current HTTP registration after a resumed transition fails (HTTP result=%s)',
+  async (http) => {
+    const current = await fixture();
+    const report = vi.fn();
+    configureApiProfileChanges(() => undefined, report);
+    const change = scheduleApiProfileChange(
+      () => 'accepted',
+      http ? ({} as import('fastify').FastifyRequest) : undefined,
+      {
+        afterResume: () => {
+          throw new Error('TEST-secret-after-resume');
+        },
+      }
+    );
+    if (http) await expect(change.result).resolves.toBe('accepted');
+    else await expect(change.result).rejects.toThrow('TEST-secret-after-resume');
+    await expect(change.settled).rejects.toThrow('TEST-secret-after-resume');
+    expect(current.isRunning()).toBe(false);
+    expect(physical.listen).toHaveBeenCalledTimes(2);
+    expect(physical.close).toHaveBeenCalledOnce();
+    expect(report).toHaveBeenCalledExactlyOnceWith({
+      code: 'API_PROFILE_TRANSITION_FAILED',
+      phase: 'resume',
+    });
+  }
+);
+
+it('attempts every current admission seal before reporting, even when one hook throws', async () => {
+  const order: string[] = [];
+  const report = vi.fn(() => {
+    order.push('report');
+  });
+  configureApiProfileChanges(() => undefined, report);
+  const first = registerProfileParticipant({
+    pause: async () => async () => undefined,
+    closeAdmission: () => {
+      order.push('first');
+      throw new Error('TEST-secret-hook');
+    },
+  });
+  const second = registerProfileParticipant({
+    pause: async () => async () => undefined,
+    closeAdmission: () => {
+      order.push('second');
+    },
+  });
+  unregister = () => {
+    first();
+    second();
+  };
+  const change = scheduleApiProfileChange(
+    () => 'accepted',
+    {} as import('fastify').FastifyRequest,
+    {
+      afterResume: () => {
+        throw new Error('TEST-secret-resume');
+      },
+    }
+  );
+  await expect(change.result).resolves.toBe('accepted');
+  await expect(change.settled).rejects.toThrow('admission closure failed');
+  expect(order).toEqual(['first', 'second', 'report']);
+  expect(report).toHaveBeenCalledExactlyOnceWith({
+    code: 'API_PROFILE_TRANSITION_FAILED',
+    phase: 'resume',
+  });
+  expect(JSON.stringify(report.mock.calls)).not.toContain('TEST-secret');
 });

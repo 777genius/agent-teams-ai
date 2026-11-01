@@ -3115,7 +3115,7 @@ async function shutdownServices(): Promise<void> {
     await runShutdownBackupAfterWorkSyncDrain({
       closeIngress: () => {
         removeMemberWorkSyncIpc(ipcMain);
-        return httpServer?.isRunning() ? httpServer.stop() : undefined;
+        return httpServer?.stop();
       },
       drainWorkSync: () =>
         disposeInternalStorageAfterWriterDrains({

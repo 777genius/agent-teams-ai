@@ -4,9 +4,17 @@ type ProfileResume = (() => Promise<void>) & {
   unchanged?(assertUnchanged: () => void): Promise<void>;
 };
 interface ProfileParticipant {
+  /** Synchronously seal this registration without restarting or joining the transition tail. */
+  closeAdmission?(): void;
   pause(request?: FastifyRequest): Promise<ProfileResume>;
 }
+/** No caller error, credential, configuration or path is included in an owner notification. */
+export type ApiProfileTransitionFailure = Readonly<{
+  code: 'API_PROFILE_TRANSITION_FAILED';
+  phase: 'resume' | 'unchanged-restoration';
+}>;
 const participants = new Set<ProfileParticipant>();
+let onOwnerFailure: ((status: ApiProfileTransitionFailure) => void) | undefined;
 let afterMutation: () => Promise<void> | void = () => {};
 let tail: Promise<void> = Promise.resolve();
 let queued = 0;
@@ -14,10 +22,14 @@ let rootChangesSupported = true;
 let ownerRevision = 0;
 let ownerStopped = false;
 
-export function configureApiProfileChanges(callback: () => Promise<void> | void): void {
+export function configureApiProfileChanges(
+  callback: () => Promise<void> | void,
+  reportFailure?: (status: ApiProfileTransitionFailure) => void
+): void {
   ++ownerRevision;
   ownerStopped = false;
   afterMutation = callback;
+  onOwnerFailure = reportFailure;
 }
 /** Close owner admission synchronously and join callbacks/resumes before disposing their services. */
 export function cancelApiProfileChanges(): Promise<void> {
@@ -70,6 +82,7 @@ export function scheduleApiProfileChange<T>(
   if (request && queued) return refused(new Error('An API profile change is already in progress'));
   const revision = ownerRevision;
   const callback = afterMutation;
+  const reportFailure = onOwnerFailure;
   const assertActive = (): void => {
     if (ownerStopped || revision !== ownerRevision) throw new Error('API profile change cancelled');
   };
@@ -81,6 +94,7 @@ export function scheduleApiProfileChange<T>(
   });
   let failed = false;
   let failure: unknown;
+  let resumeStarted = false;
   tail = tail.then(async () => {
     const resumes: ProfileResume[] = [];
     const unchangedRejection = {};
@@ -109,6 +123,7 @@ export function scheduleApiProfileChange<T>(
         resolve(value);
       }
       // A failing participant must not detach another participant's outstanding resume from the tail.
+      resumeStarted = true;
       const settled = await Promise.allSettled(
         resumes.map(async (resume) => {
           assertActive();
@@ -129,6 +144,7 @@ export function scheduleApiProfileChange<T>(
       failure = error === unchangedRejection ? rejectionReason : error;
       // Release the initiating HTTP handler before any unchanged resume joins its response drain.
       reject(failure);
+      let restorationFailed = false;
       if (error === unchangedRejection) {
         try {
           assertActive();
@@ -153,10 +169,38 @@ export function scheduleApiProfileChange<T>(
           assertActive();
           lifecycle.assertUnchanged();
         } catch (restoreError) {
+          restorationFailed = true;
           failure = new AggregateError(
             [failure, restoreError],
             'API profile rejection restoration failed'
           );
+        }
+      }
+      if ((resumeStarted || restorationFailed) && !ownerStopped && revision === ownerRevision) {
+        // Resuming can replace registrations. Seal the current participants, not captured old drains.
+        let admissionClosureFailed = false;
+        for (const participant of [...participants]) {
+          try {
+            participant.closeAdmission?.();
+          } catch {
+            admissionClosureFailed = true;
+          }
+        }
+        if (admissionClosureFailed)
+          failure = new AggregateError([failure], 'API profile admission closure failed');
+        try {
+          // A seal hook can synchronously dispose or replace the owner; never notify that old owner.
+          if (ownerStopped || revision !== ownerRevision) return;
+          // Synchronous state publication only: never join/cancel this same transition tail here.
+          reportFailure?.(
+            Object.freeze({
+              code: 'API_PROFILE_TRANSITION_FAILED',
+              phase: restorationFailed ? 'unchanged-restoration' : 'resume',
+            })
+          );
+        } catch {
+          // Reporter bugs cannot poison the queue or expose their arbitrary error contents.
+          failure = new AggregateError([failure], 'API profile owner failure reporting failed');
         }
       }
       // Mutation, unknown failure and cancellation never reopen admission.

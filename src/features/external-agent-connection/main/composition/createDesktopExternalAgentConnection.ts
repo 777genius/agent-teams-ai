@@ -62,11 +62,11 @@ export interface DesktopExternalAgentConnection extends ExternalAgentConnectionA
 export function createDesktopExternalAgentConnection(
   deps: Dependencies
 ): DesktopExternalAgentConnection {
-  configureApiProfileChanges(() => undefined);
   const context = new BoundControlContext(deps.appInstanceId, deps.getRoot());
   const profileFingerprint = createHash('sha256').update(deps.userDataPath).digest('hex');
   let tail = Promise.resolve();
   let stopping = false;
+  let profileTransitionFailed = false;
   let boundControlUrl: string | null = null;
   let shutdownStop: Promise<void> | null = null;
   let shutdownDrain: Promise<void> | null = null;
@@ -148,6 +148,17 @@ export function createDesktopExternalAgentConnection(
       }
     },
   });
+  configureApiProfileChanges(
+    () => undefined,
+    () => {
+      profileTransitionFailed = true;
+      settledNonLocalContext = null;
+      connection.reportProfileTransitionFailure();
+      // BoundControlContext closes admission synchronously; owner shutdown separately joins its drain.
+      // Do not call the desktop closeAdmission wrapper: it joins the current profile tail.
+      void context.closeAdmission();
+    }
+  );
   const restoreLocalContext = async () => {
     await deps.reconfigureRoot();
     if (stopping) throw new Error('App connection is shutting down');
@@ -157,10 +168,13 @@ export function createDesktopExternalAgentConnection(
   };
   const retryConnection = () =>
     serialize(async () => {
+      if (profileTransitionFailed) return connection.getConnectionInfo();
       if (!stopping && deps.isLocalContext() && !context.isOpen) return restoreLocalContext();
       return connection.retryConnection();
     });
   const assertChangeAllowed = async (): Promise<void> => {
+    if (profileTransitionFailed)
+      throw new Error('The app profile transition failed. Restart the app.');
     if (stopping) throw new Error('App connection is shutting down');
     await deps.mcp.assertNoLiveConsumers?.();
     deps.assertNoLiveRuntimeConsumers?.();

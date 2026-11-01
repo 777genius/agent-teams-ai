@@ -209,7 +209,13 @@ export class HttpServer {
         const address = this.app.server.address();
         this.port = address && typeof address !== 'string' ? address.port : tryPort;
         this.running = true;
+        const admissionApp = this.app,
+          admissionDrain = this.drain;
         this.unregisterProfile = registerProfileParticipant({
+          closeAdmission: () => {
+            admissionDrain.paused = true;
+            closeEventStreams(admissionApp);
+          },
           pause: async (request) => {
             const revision = this.stopRevision;
             const drain = this.drain!,
@@ -256,8 +262,8 @@ export class HttpServer {
             return resume;
           },
         });
-        logger.info(`HTTP server started on http://${host}:${tryPort}`);
-        return tryPort;
+        logger.info(`HTTP server started on http://${host}:${this.port}`);
+        return this.port;
       } catch (err: unknown) {
         const error = err as NodeJS.ErrnoException;
         if (error.code === 'EADDRINUSE') {

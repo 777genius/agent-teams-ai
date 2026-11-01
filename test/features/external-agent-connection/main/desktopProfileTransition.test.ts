@@ -6,7 +6,7 @@ import {
 } from '@features/local-http-auth/main/application/profileTransition';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const observed = vi.hoisted(() => ({ retry: vi.fn() }));
+const observed = vi.hoisted(() => ({ retry: vi.fn(), report: vi.fn() }));
 
 vi.mock('@features/local-http-auth/main', async () => ({
   ...(await import('@features/local-http-auth/main/application/profileTransition')),
@@ -24,6 +24,7 @@ vi.mock('@features/external-agent-connection/main/registerBoundControlHttp', () 
 vi.mock('@features/external-agent-connection/main/ExternalAgentConnection', () => ({
   ExternalAgentConnection: class {
     retryConnection = observed.retry;
+    reportProfileTransitionFailure = observed.report;
     getConnectionInfo = vi.fn();
   },
 }));
@@ -187,11 +188,23 @@ describe('desktop profile transition rejection', () => {
     const epoch = f.credentialEpoch;
     f.appearDuringDrain();
     await expect(f.connection.changeContext(f.mutate)).rejects.toThrow('Live MCP consumer');
-    await expect(f.connection.changeContext(f.mutate)).rejects.toThrow('Live MCP consumer');
+    await expect(f.connection.changeContext(f.mutate)).rejects.toThrow('profile transition failed');
+    expect(observed.report).toHaveBeenCalledOnce();
     expect(f.paused).toBe(true);
     expect(f.resume.unchanged).not.toHaveBeenCalled();
     expect(f.credentialEpoch).toBe(epoch);
     expect(() => f.connection.assertLaunchAdmission()).toThrow('changing context');
+  });
+
+  it('publishes owner failure and closes desktop admission after HTTP success but failed physical resume', async () => {
+    const f = fixture();
+    f.resume.mockRejectedValueOnce(new Error('TEST-secret-config'));
+    await expect(
+      f.connection.updateRoot(f.mutate, {} as import('fastify').FastifyRequest)
+    ).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(observed.report).toHaveBeenCalledOnce());
+    expect(() => f.connection.assertLaunchAdmission()).toThrow('changing context');
+    expect(observed.retry).not.toHaveBeenCalled();
   });
 
   it('keeps admission paused after a mutation starts and fails', async () => {
