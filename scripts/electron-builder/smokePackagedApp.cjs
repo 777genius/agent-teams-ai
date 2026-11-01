@@ -309,8 +309,8 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   const executable = findExecutable(bundlePath, platform);
-  // Private storage rejects symlink ancestry (for example macOS /tmp and /var).
-  const testRoot = fs.realpathSync(
+  // Use the same native canonicalization backend as fs.promises.realpath in private storage.
+  const testRoot = fs.realpathSync.native(
     fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-TEST-'))
   );
   const homeDir = path.join(testRoot, 'home');

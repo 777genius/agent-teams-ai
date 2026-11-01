@@ -9,7 +9,7 @@ import {
   privateDirectory,
 } from '@features/local-http-auth/main/infrastructure/privateFiles';
 import ts from 'typescript';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -18,7 +18,17 @@ afterEach(() => {
 
 // Execute the real fixture-staging statements only. Requiring/running the smoke
 // entrypoint would also load process ownership and could launch a packaged app.
-function stageSandbox(temporaryDirectory: string) {
+interface SandboxFileSystem {
+  mkdtempSync(prefix: string): string;
+  realpathSync: ((file: string) => string) & { native(file: string): string };
+  mkdirSync(file: string, options: { mode: number }): unknown;
+  writeFileSync(file: string, content: string): unknown;
+}
+function stageSandbox(
+  temporaryDirectory: string,
+  fileSystem: SandboxFileSystem = fs,
+  paths: Pick<path.PlatformPath, 'join'> = path
+) {
   const source = ts.createSourceFile(
     'smokePackagedApp.cjs',
     fs.readFileSync(path.resolve('scripts/electron-builder/smokePackagedApp.cjs'), 'utf8'),
@@ -52,8 +62,8 @@ function stageSandbox(temporaryDirectory: string) {
     .map((statement) => statement.getText(source))
     .join('\n');
   return runInNewContext(`${staging}\n({ testRoot, homeDir, claudeRoot, userDataDir })`, {
-    fs,
-    path,
+    fs: fileSystem,
+    path: paths,
     os: { tmpdir: () => temporaryDirectory },
   }) as { testRoot: string; homeDir: string; claudeRoot: string; userDataDir: string };
 }
@@ -97,3 +107,69 @@ it.skipIf(process.platform === 'win32')(
     expect(sandbox.testRoot).toBe(fs.realpathSync(sandbox.testRoot));
   }
 );
+
+it.each([
+  {
+    name: 'Windows short alias',
+    supplied: String.raw`C:\Users\RUNNER~1\AppData\Local\Temp\agent-teams-smoke-TEST-owned`,
+    canonical: String.raw`C:\Users\runneradmin\AppData\Local\Temp\agent-teams-smoke-TEST-owned`,
+  },
+  {
+    name: 'native case spelling',
+    supplied: String.raw`C:\Profiles\MIXEDCASE\agent-teams-smoke-TEST-owned`,
+    canonical: String.raw`C:\Profiles\MixedCase\agent-teams-smoke-TEST-owned`,
+  },
+])(
+  'uses the native filesystem spelling for $name before deriving TEST profile paths',
+  ({ supplied, canonical }) => {
+    const native = vi.fn(() => canonical);
+    const legacy = Object.assign(
+      vi.fn((file: string) => file),
+      { native }
+    );
+    const fileSystem: SandboxFileSystem = {
+      mkdtempSync: vi.fn(() => supplied),
+      realpathSync: legacy,
+      mkdirSync: vi.fn(),
+      writeFileSync: vi.fn(),
+    };
+    const sandbox = stageSandbox(
+      String.raw`C:\Users\RUNNER~1\AppData\Local\Temp`,
+      fileSystem,
+      path.win32
+    );
+    expect(sandbox.testRoot).toBe(canonical);
+    expect(sandbox.homeDir).toBe(path.win32.join(canonical, 'home'));
+    expect(sandbox.claudeRoot).toBe(path.win32.join(canonical, 'home', '.claude'));
+    expect(sandbox.userDataDir).toBe(path.win32.join(canonical, 'user-data'));
+    expect(native).toHaveBeenCalledExactlyOnceWith(supplied);
+    expect(legacy).not.toHaveBeenCalled();
+  }
+);
+
+it('propagates native canonicalization refusal before writing TEST profile directories', () => {
+  const native = vi.fn(() => {
+    throw new Error('TEST native path refused');
+  });
+  const legacy = Object.assign(
+    vi.fn((file: string) => file),
+    { native }
+  );
+  const mkdirSync = vi.fn(),
+    writeFileSync = vi.fn();
+  expect(() =>
+    stageSandbox(
+      String.raw`C:\Temp`,
+      {
+        mkdtempSync: () => String.raw`C:\Temp\agent-teams-smoke-TEST-owned`,
+        realpathSync: legacy,
+        mkdirSync,
+        writeFileSync,
+      },
+      path.win32
+    )
+  ).toThrow('TEST native path refused');
+  expect(legacy).not.toHaveBeenCalled();
+  expect(mkdirSync).not.toHaveBeenCalled();
+  expect(writeFileSync).not.toHaveBeenCalled();
+});
