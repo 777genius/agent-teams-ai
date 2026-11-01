@@ -268,6 +268,64 @@ describe('custom team templates worker ops', () => {
     expect(created.status).toBe('created');
   });
 
+  it('preserves an existing v6 template through the revision migration and reopening', async () => {
+    const dbPath = await makeTmpDbPath();
+    const seed = track(makeCore(dbPath));
+    const created = seed.handle(
+      'customTemplate.create',
+      createPayload({ description: 'Existing release flow' })
+    ) as CreateCustomTeamTemplateRecordResult;
+    if (created.status !== 'created') {
+      throw new Error(`expected a created template, received ${created.status}`);
+    }
+    seed.close();
+
+    // Reconstruct the released v6 shape: all existing data and indexes remain,
+    // but the A3 revision column has not yet been added.
+    const legacy = new Database(dbPath);
+    let originalRow: Record<string, unknown>;
+    try {
+      legacy.exec(
+        'ALTER TABLE custom_team_templates DROP COLUMN revision; PRAGMA user_version = 6;'
+      );
+      originalRow = legacy.prepare('SELECT * FROM custom_team_templates').get() as Record<
+        string,
+        unknown
+      >;
+    } finally {
+      legacy.close();
+    }
+
+    const upgraded = track(makeCore(dbPath));
+    const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
+    expect(info.schemaVersion).toBe(7);
+    expect(info.integrity).toBe('ok');
+    expect(upgraded.handle('customTemplate.getById', { templateId: 'template-1' })).toEqual({
+      status: 'found',
+      template: { ...created.template, revision: 1 },
+    });
+    upgraded.close();
+
+    const raw = new Database(dbPath, { readonly: true });
+    try {
+      // Preserve every stored field, including the canonical content hash and
+      // normalized name, while initializing only the new revision column.
+      expect(raw.prepare('SELECT * FROM custom_team_templates').get()).toEqual({
+        ...originalRow,
+        revision: 1,
+      });
+    } finally {
+      raw.close();
+    }
+
+    const reopened = track(makeCore(dbPath));
+    expect((reopened.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('ok');
+    expect(reopened.handle('customTemplate.list', {})).toEqual({
+      templates: [{ ...created.template, revision: 1 }],
+      unreadableRecords: [],
+    });
+  });
+
   it('creates a template and reads it back through list and getById', async () => {
     const dbPath = await makeTmpDbPath();
     const core = track(makeCore(dbPath));
