@@ -329,9 +329,10 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(
       host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
     ).toContain('cliStatus.quickConnect.v2ConnectedUnverified');
+    // Help is accessible through the card's description tooltip, not rendered inline.
     expect(
-      host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
-    ).toContain('cliStatus.quickConnect.v2UnverifiedDetail');
+      host.querySelector('[data-testid="provider-quick-card-openrouter"] [aria-label*="v2UnverifiedDetail"]')
+    ).not.toBeNull();
     expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
     expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
   });
