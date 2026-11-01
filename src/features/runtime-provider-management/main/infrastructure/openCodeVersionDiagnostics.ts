@@ -25,12 +25,14 @@ export async function probeOpenCodeBinaryVersion(
   binaryPath: string
 ): Promise<OpenCodeBinaryVersionProbe> {
   const started = performance.now();
+  // Match the runtime's bounded Darwin acquisition window for slow native startup.
+  const timeoutMs = process.platform === 'darwin' ? 60_000 : VERSION_TIMEOUT_MS;
   // Let the installed CLI choose its mode independently of Electron/Vite.
   const env = { ...process.env };
   delete env.NODE_ENV;
   try {
     const { stdout } = await execCli(binaryPath, ['--version'], {
-      timeout: VERSION_TIMEOUT_MS,
+      timeout: timeoutMs,
       windowsHide: true,
       env,
     });
@@ -50,10 +52,10 @@ export async function probeOpenCodeBinaryVersion(
       stage: 'version_probe',
       binaryRole: 'opencode',
       durationMs: Math.round(performance.now() - started),
-      timeoutMs: VERSION_TIMEOUT_MS,
+      timeoutMs,
       timedOut:
         error instanceof Error &&
-        error.message.startsWith(`Command timed out after ${VERSION_TIMEOUT_MS}ms:`),
+        error.message.startsWith(`Command timed out after ${timeoutMs}ms:`),
       ...(typeof raw.signal === 'string' ? { signal: raw.signal } : {}),
       ...(typeof raw.code === 'string' ? { systemErrorCode: raw.code } : {}),
       summary: message,
