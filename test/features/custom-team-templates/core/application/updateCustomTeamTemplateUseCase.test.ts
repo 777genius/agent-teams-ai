@@ -394,6 +394,24 @@ describe('UpdateCustomTeamTemplateUseCase', () => {
     expect(fixture.update).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['', ' \t\n '])(
+    'reconciles a committed update with blank description %j after a lost reply',
+    async (description) => {
+      const committed = storedTemplate({ revision: 2 });
+      const fixture = gatewayFixture({
+        update: [interrupted('unknown')],
+        getById: [{ status: 'found', template: committed }],
+      });
+      const useCase = new UpdateCustomTeamTemplateUseCase({ gateway: fixture.gateway, hasher });
+
+      const result = await useCase.execute(updateRequest({ description }));
+
+      expect(fixture.requests[0].template).not.toHaveProperty('description');
+      expect(result).toEqual({ status: 'updated', template: committed });
+      expect(fixture.update).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('stays unresolved when the stored row differs in prompt, members or revision', async () => {
     const scenarios: CustomTeamTemplateV1[] = [
       storedTemplate({ revision: 2, teamPrompt: 'A different prompt.' }),

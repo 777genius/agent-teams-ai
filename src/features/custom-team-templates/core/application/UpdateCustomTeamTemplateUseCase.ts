@@ -154,7 +154,7 @@ export class UpdateCustomTeamTemplateUseCase {
       return validationFailed([{ code: 'memberNameRequired', field: 'members' }]);
     }
 
-    const trimmedDescription = description?.trim();
+    const trimmedDescription = description?.trim() || undefined;
     const contentValidation = validateTemplateContent({
       schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
       teamPrompt,
