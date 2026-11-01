@@ -1,4 +1,5 @@
 import {
+  findRuntimeProviderOnboardingPlanEntry,
   getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlanProviderIds,
   isRuntimeProviderOnboardingPlanRoutable,
@@ -96,7 +97,9 @@ export function getOnboardingPlanStatuses(
     if (getOpenCodeV2PlanLimitation(plan.id, generation)) return { plan, state: 'pending' };
     if (progress?.completedPlanIds.includes(plan.id)) return { plan, state: 'ready' };
     if (activePlan?.id === plan.id && wizardStarted) return { plan, state: 'active' };
-    const entry = findDirectoryEntry(management, plan.providerId);
+    const entry = findRuntimeProviderOnboardingPlanEntry(
+      plan.id, generation, management.directoryEntries
+    );
     return {
       plan,
       state: isRuntimeProviderOnboardingPlanRoutable(plan, entry) ? 'connected' : 'pending',

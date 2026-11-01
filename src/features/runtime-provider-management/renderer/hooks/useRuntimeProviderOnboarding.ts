@@ -56,7 +56,6 @@ import type {
 } from '@renderer/analytics/productAnalytics';
 
 export type RuntimeProviderOnboardingMode = 'provider' | 'wizard';
-
 export interface RuntimeProviderOnboardingPlanStatus {
   readonly plan: RuntimeProviderOnboardingPlan;
   readonly state: 'pending' | 'connected' | 'active' | 'ready';
@@ -69,6 +68,7 @@ export interface RuntimeProviderOnboardingState {
   readonly wizardStarted: boolean;
   readonly resumable: boolean;
   readonly progress: RuntimeProviderOnboardingProgress | null;
+  readonly openCodeGeneration: OpenCodeGeneration;
   readonly activePlan: RuntimeProviderOnboardingPlan | null;
   readonly planStatuses: readonly RuntimeProviderOnboardingPlanStatus[];
   readonly stage: RuntimeProviderOnboardingStage;

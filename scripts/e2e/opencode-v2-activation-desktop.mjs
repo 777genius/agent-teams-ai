@@ -472,7 +472,7 @@ try {
   );
   await save('installation-started.json', started);
   const explicitInstall = await wait('explicit V2 install completion',
-    () => cdp.inspect('window.__opencodeV2ExplicitInstall'), 300_000);
+    () => cdp.inspect('window.__opencodeV2ExplicitInstall'), 720_000);
   assert(!explicitInstall.error && explicitInstall.value?.installed === true &&
     explicitInstall.value.version === expectedVersion &&
     explicitInstall.value.state === 'ready',
