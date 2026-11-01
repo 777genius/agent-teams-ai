@@ -61,6 +61,8 @@ function fakeLibrary() {
       const found = rows.get(templateId);
       return Promise.resolve(found ? { status: 'found', template: found } : { status: 'notFound' });
     },
+    customTeamTemplateUpdate: vi.fn(),
+    customTeamTemplateDelete: vi.fn(),
   };
   return { gateway, requests, rows };
 }

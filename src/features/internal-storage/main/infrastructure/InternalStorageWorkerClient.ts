@@ -48,9 +48,13 @@ import type {
   CreateCustomTeamTemplateRecordRequest,
   CreateCustomTeamTemplateRecordResult,
   CustomTeamTemplateStorageGateway,
+  DeleteCustomTeamTemplateRecordRequest,
+  DeleteCustomTeamTemplateRecordResult,
   ListCustomTeamTemplateRecordsResult,
   ReadCustomTeamTemplateRecordRequest,
   ReadCustomTeamTemplateRecordResult,
+  UpdateCustomTeamTemplateRecordRequest,
+  UpdateCustomTeamTemplateRecordResult,
 } from '@features/custom-team-templates/contracts';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
@@ -469,6 +473,24 @@ export class InternalStorageWorkerClient
       'customTemplate.getById',
       request
     )) as ReadCustomTeamTemplateRecordResult;
+  }
+
+  async customTeamTemplateUpdate(
+    request: UpdateCustomTeamTemplateRecordRequest
+  ): Promise<UpdateCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.update',
+      request
+    )) as UpdateCustomTeamTemplateRecordResult;
+  }
+
+  async customTeamTemplateDelete(
+    request: DeleteCustomTeamTemplateRecordRequest
+  ): Promise<DeleteCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.delete',
+      request
+    )) as DeleteCustomTeamTemplateRecordResult;
   }
 
   close(): Promise<void> {

@@ -167,6 +167,7 @@ export const customTeamTemplates = sqliteTable(
     membersJson: text('members_json').notNull(),
     contentHash: text('content_hash').notNull(),
     createdAt: text('created_at').notNull(),
+    revision: integer('revision').notNull().default(1),
   },
   (table) => [uniqueIndex('idx_custom_team_templates_name_normalized').on(table.nameNormalized)]
 );

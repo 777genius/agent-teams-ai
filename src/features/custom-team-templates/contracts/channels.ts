@@ -13,6 +13,10 @@ export const CUSTOM_TEAM_TEMPLATE_CHANNELS = {
   saveTemplate: 'custom-team-templates:save',
   recheckSave: 'custom-team-templates:recheck-save',
   listTemplates: 'custom-team-templates:list',
+  updateTemplate: 'custom-team-templates:update',
+  deleteTemplate: 'custom-team-templates:delete',
+  duplicateTemplate: 'custom-team-templates:duplicate',
+  copyBuiltinTemplate: 'custom-team-templates:copy-builtin',
 } as const;
 
 export const CUSTOM_TEAM_TEMPLATE_ROUTES = {
@@ -20,6 +24,10 @@ export const CUSTOM_TEAM_TEMPLATE_ROUTES = {
   saveTemplate: '/api/custom-team-templates/save',
   recheckSave: '/api/custom-team-templates/recheck-save',
   listTemplates: '/api/custom-team-templates/list',
+  updateTemplate: '/api/custom-team-templates/update',
+  deleteTemplate: '/api/custom-team-templates/delete',
+  duplicateTemplate: '/api/custom-team-templates/duplicate',
+  copyBuiltinTemplate: '/api/custom-team-templates/copy-builtin',
 } as const;
 
 export type CustomTeamTemplateOperation = keyof typeof CUSTOM_TEAM_TEMPLATE_CHANNELS;

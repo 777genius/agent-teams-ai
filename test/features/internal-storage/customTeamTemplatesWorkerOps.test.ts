@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
+import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { CustomTeamTemplateWorkerOps } from '@features/internal-storage/main/infrastructure/worker/customTeamTemplatesWorkerOps';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -210,7 +211,7 @@ describe('custom team templates worker ops', () => {
     }
   });
 
-  it('adds the template table in an append-only v5 to v6 migration without losing earlier rows', async () => {
+  it('adds the template table in append-only v5 to v7 migrations without losing earlier rows', async () => {
     const dbPath = await makeTmpDbPath();
     const seed = track(makeCore(dbPath));
     seed.handle('ping', {});
@@ -254,7 +255,7 @@ describe('custom team templates worker ops', () => {
       );
     raw.close();
 
-    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(6);
+    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(7);
     const upgraded = track(makeCore(dbPath));
     const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
@@ -265,6 +266,64 @@ describe('custom team templates worker ops', () => {
       createPayload()
     ) as CreateCustomTeamTemplateRecordResult;
     expect(created.status).toBe('created');
+  });
+
+  it('preserves an existing v6 template through the revision migration and reopening', async () => {
+    const dbPath = await makeTmpDbPath();
+    const seed = track(makeCore(dbPath));
+    const created = seed.handle(
+      'customTemplate.create',
+      createPayload({ description: 'Existing release flow' })
+    ) as CreateCustomTeamTemplateRecordResult;
+    if (created.status !== 'created') {
+      throw new Error(`expected a created template, received ${created.status}`);
+    }
+    seed.close();
+
+    // Reconstruct the released v6 shape: all existing data and indexes remain,
+    // but the A3 revision column has not yet been added.
+    const legacy = new Database(dbPath);
+    let originalRow: Record<string, unknown>;
+    try {
+      legacy.exec(
+        'ALTER TABLE custom_team_templates DROP COLUMN revision; PRAGMA user_version = 6;'
+      );
+      originalRow = legacy.prepare('SELECT * FROM custom_team_templates').get() as Record<
+        string,
+        unknown
+      >;
+    } finally {
+      legacy.close();
+    }
+
+    const upgraded = track(makeCore(dbPath));
+    const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
+    expect(info.schemaVersion).toBe(7);
+    expect(info.integrity).toBe('ok');
+    expect(upgraded.handle('customTemplate.getById', { templateId: 'template-1' })).toEqual({
+      status: 'found',
+      template: { ...created.template, revision: 1 },
+    });
+    upgraded.close();
+
+    const raw = new Database(dbPath, { readonly: true });
+    try {
+      // Preserve every stored field, including the canonical content hash and
+      // normalized name, while initializing only the new revision column.
+      expect(raw.prepare('SELECT * FROM custom_team_templates').get()).toEqual({
+        ...originalRow,
+        revision: 1,
+      });
+    } finally {
+      raw.close();
+    }
+
+    const reopened = track(makeCore(dbPath));
+    expect((reopened.handle('ping', {}) as InternalStorageBackendInfo).integrity).toBe('ok');
+    expect(reopened.handle('customTemplate.list', {})).toEqual({
+      templates: [{ ...created.template, revision: 1 }],
+      unreadableRecords: [],
+    });
   });
 
   it('creates a template and reads it back through list and getById', async () => {
@@ -287,6 +346,7 @@ describe('custom team templates worker ops', () => {
       teamPrompt: 'Ship the release.',
       members: [{ name: 'alice', role: 'reviewer', workflow: 'review' }],
       createdAt: FIXED_NOW.toISOString(),
+      revision: 1,
     });
 
     const listed = core.handle('customTemplate.list', {}) as ListCustomTeamTemplateRecordsResult;
@@ -301,6 +361,62 @@ describe('custom team templates worker ops', () => {
     expect(core.handle('customTemplate.getById', { templateId: 'missing' })).toEqual({
       status: 'notFound',
     });
+  });
+
+  it('drops empty optional member metadata so the persisted row matches the hashed content', async () => {
+    const dbPath = await makeTmpDbPath();
+    const core = track(makeCore(dbPath));
+
+    const created = core.handle(
+      'customTemplate.create',
+      createPayload({
+        templateId: 'template-empty',
+        members: [{ name: 'alice', role: '', workflow: '' }],
+      })
+    ) as CreateCustomTeamTemplateRecordResult;
+    if (created.status !== 'created') {
+      throw new Error(`expected a created template, received ${created.status}`);
+    }
+    expect(created.template.members).toEqual([{ name: 'alice' }]);
+    expect(Object.keys(created.template.members[0])).toEqual(['name']);
+
+    const updated = core.handle('customTemplate.update', {
+      templateId: 'template-empty',
+      expectedRevision: 1,
+      template: {
+        templateId: 'template-empty',
+        name: 'Release pipeline',
+        schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+        teamPrompt: 'Ship the release.',
+        members: [{ name: 'alice', role: '', workflow: '' }],
+      },
+      contentHash: 'hash-normalized',
+    }) as { status: string; template?: { members: CustomTeamTemplateMemberV1[] } };
+
+    expect(updated.status).toBe('updated');
+    const reread = core.handle('customTemplate.getById', {
+      templateId: 'template-empty',
+    }) as ReadCustomTeamTemplateRecordResult;
+    if (reread.status !== 'found') {
+      throw new Error(`expected a readable template, received ${reread.status}`);
+    }
+    expect(reread.template.members).toEqual([{ name: 'alice' }]);
+
+    // The readable persisted row must hash to the same canonical content the
+    // update recorded, which is what reconciliation compares against.
+    expect(
+      serializeCanonicalTemplateContent({
+        schemaVersion: reread.template.schemaVersion,
+        teamPrompt: reread.template.teamPrompt,
+        members: reread.template.members,
+      })
+    ).toBe(
+      serializeCanonicalTemplateContent({
+        schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+        teamPrompt: 'Ship the release.',
+        members: [{ name: 'alice' }],
+      })
+    );
   });
 
   it('ignores caller-supplied createdAt and unknown template fields', async () => {
@@ -323,6 +439,7 @@ describe('custom team templates worker ops', () => {
       'createdAt',
       'members',
       'name',
+      'revision',
       'schemaVersion',
       'teamPrompt',
       'templateId',

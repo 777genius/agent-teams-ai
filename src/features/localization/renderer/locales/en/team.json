@@ -3348,7 +3348,13 @@
       "retry": "Retry",
       "save": "Save template",
       "saveAsTemplate": "Save as Template",
-      "templates": "Templates"
+      "templates": "Templates",
+      "addMember": "Add member",
+      "removeMember": "Remove member",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "copyToMyTemplates": "Copy to My Templates"
     },
     "createFromTemplate": {
       "builtinGroup": "Built-in templates",
@@ -3373,7 +3379,14 @@
         "templateDescriptionTooLong": "The description is too long.",
         "templateNameInvalidCharacters": "The template name contains unsupported characters.",
         "templateNameRequired": "A template name is required.",
-        "templateNameTooLong": "The template name is too long."
+        "templateNameTooLong": "The template name is too long.",
+        "duplicateMemberName": "A member with this name already exists.",
+        "memberNameInvalid": "Member name is invalid.",
+        "memberNameRequired": "Member name is required.",
+        "memberRoleTooLong": "Member role is too long.",
+        "memberWorkflowTooLong": "Member workflow is too long.",
+        "teamPromptTooLong": "Team prompt is too long.",
+        "tooManyMembers": "Too many members."
       },
       "nameConflict": "A template with this name already exists. Change the name — existing templates are never overwritten.",
       "requestFailed": "The request failed. Try again.",
@@ -3383,7 +3396,12 @@
       "storageUnavailable": "The template library is unavailable. Nothing was saved.",
       "storageUnavailableRecheck": "The template library is unavailable, so the outcome could not be checked.",
       "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
-      "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten."
+      "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten.",
+      "builtinNotFound": "Built-in template not found.",
+      "notFound": "Template not found.",
+      "sourceNotFound": "Source template not found.",
+      "sourceUnreadable": "Source template could not be read.",
+      "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
     },
     "library": {
       "builtInDescription": "Ready-made team setups with roles and responsibilities.",
@@ -3438,6 +3456,8 @@
       "saving": "Saving…",
       "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
       "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+      "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+      "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
       "unresolvedTitle": "Outcome not confirmed"
     },
     "warnings": {
@@ -3450,6 +3470,60 @@
       "removedMembersExcluded_many": "{{count}} removed team members were excluded.",
       "removedMembersExcluded_one": "{{count}} removed team member was excluded.",
       "removedMembersExcluded_other": "{{count}} removed team members were excluded."
+    },
+    "copyBuiltin": {
+      "action": "Copy to My Templates",
+      "copying": "Copying…",
+      "description": "Create an independent copy of a built-in template in My Templates.",
+      "membersCount_few": "{{count}} members",
+      "membersCount_many": "{{count}} members",
+      "membersCount_one": "{{count}} member",
+      "membersCount_other": "{{count}} members",
+      "nameFieldLabel": "Template name",
+      "readOnlySource": "Built-in template (read-only source)",
+      "selectTemplate": "Select a template",
+      "title": "Copy built-in template"
+    },
+    "delete": {
+      "confirm": "Delete this template?",
+      "conflictBody": "This template changed since you opened it. Reload and try again.",
+      "conflictTitle": "Template changed",
+      "deleting": "Deleting…",
+      "description": "Delete this saved template. This cannot be undone.",
+      "title": "Delete template"
+    },
+    "duplicate": {
+      "action": "Duplicate",
+      "defaultName": "{{name}} (copy)",
+      "description": "Create an independent copy of this template.",
+      "duplicating": "Duplicating…",
+      "nameFieldLabel": "Template name",
+      "title": "Duplicate template"
+    },
+    "edit": {
+      "conflictBody": "This template changed since you opened it. Reload and try again.",
+      "conflictOverwrite": "Overwrite with your changes",
+      "conflictReload": "Reload latest version",
+      "conflictTitle": "Template changed",
+      "description": "Edit this saved template.",
+      "descriptionLabel": "Description",
+      "memberHeader": "Members",
+      "memberNameLabel": "Member name",
+      "memberNamePlaceholder": "Member name",
+      "memberRoleLabel": "Role",
+      "memberRolePlaceholder": "Role",
+      "membersEmpty": "No members recorded.",
+      "membersLabel": "Members",
+      "memberWorkflowLabel": "Workflow",
+      "memberWorkflowPlaceholder": "Workflow",
+      "nameFieldLabel": "Template name",
+      "promptLabel": "Team prompt",
+      "promptPlaceholder": "Team prompt",
+      "save": "Save changes",
+      "saved": "Template saved",
+      "savedBody": "“{{name}}” was updated.",
+      "saving": "Saving…",
+      "title": "Edit template"
     }
   }
 }

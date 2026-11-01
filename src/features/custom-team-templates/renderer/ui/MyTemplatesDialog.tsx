@@ -11,11 +11,21 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
+import { useTemplateManagement } from '../hooks/useTemplateManagement';
 
 import { BuiltInTemplateCatalogue } from './BuiltInTemplateCatalogue';
+import { CopyBuiltinTemplateDialog } from './CopyBuiltinTemplateDialog';
+import { DeleteCustomTemplateDialog } from './DeleteCustomTemplateDialog';
+import { DuplicateCustomTemplateDialog } from './DuplicateCustomTemplateDialog';
+import { EditCustomTemplateDialog } from './EditCustomTemplateDialog';
+
+import type {
+  BuiltinTeamTemplateId,
+  CustomTeamTemplateV1,
+} from '@features/custom-team-templates/contracts';
 
 export interface MyTemplatesDialogProps {
   open: boolean;
@@ -31,23 +41,40 @@ function formatCreatedAt(value?: string): string | null {
   return parsed.toLocaleString();
 }
 
-/**
- * Unified template browser.
- *
- * Opens on My Templates by default. The Built-in tab renders the static
- * closed catalogue and never depends on the custom-template request, so a
- * custom-template failure cannot hide or disable built-ins. The single
- * `useCustomTemplateLibrary` read is shared by both tabs without duplication,
- * and its request-sequence guard keeps late responses from overwriting newer
- * state when the dialog closes or the tab changes.
- */
 export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { state, reload } = useCustomTemplateLibrary(open);
+  const management = useTemplateManagement({ onSuccess: reload });
   const [tab, setTab] = useState<TemplateLibraryTab>('my-templates');
 
+  const [editingTemplate, setEditingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
+  const [deletingTemplate, setDeletingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
+  const [duplicatingTemplate, setDuplicatingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
+  const [copyBuiltinOpen, setCopyBuiltinOpen] = useState(false);
+  const [copyBuiltinId, setCopyBuiltinId] = useState<BuiltinTeamTemplateId | null>(null);
+
   const failed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
+
+  const handleEditSaved = (_updated: CustomTeamTemplateV1) => {
+    setEditingTemplate(null);
+    void reload();
+  };
+
+  const handleDuplicated = () => {
+    setDuplicatingTemplate(null);
+    void reload();
+  };
+
+  const handleDeleted = () => {
+    setDeletingTemplate(null);
+    void reload();
+  };
+
+  const handleCopied = () => {
+    setCopyBuiltinOpen(false);
+    void reload();
+  };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -115,6 +142,50 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                               })
                             : t('customTemplates.library.noMembers')}
                         </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            data-testid={`edit-template-${template.templateId}`}
+                            disabled={management.busy}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTemplate(template);
+                            }}
+                          >
+                            <Pencil className="size-3.5" />
+                            {t('customTemplates.actions.edit')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            data-testid={`duplicate-template-${template.templateId}`}
+                            disabled={management.busy}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDuplicatingTemplate(template);
+                            }}
+                          >
+                            <Copy className="size-3.5" />
+                            {t('customTemplates.actions.duplicate')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            data-testid={`delete-template-${template.templateId}`}
+                            disabled={management.busy}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingTemplate(template);
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                            {t('customTemplates.actions.delete')}
+                          </Button>
+                        </div>
                       </li>
                     );
                   })}
@@ -154,7 +225,27 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           </TabsContent>
 
           <TabsContent value="built-in">
-            <BuiltInTemplateCatalogue />
+            <div className="space-y-3">
+              <BuiltInTemplateCatalogue
+                onCopyBuiltin={(id) => {
+                  setCopyBuiltinId(id);
+                  setCopyBuiltinOpen(true);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-testid="copy-builtin-open"
+                onClick={() => {
+                  setCopyBuiltinId(null);
+                  setCopyBuiltinOpen(true);
+                }}
+              >
+                <Copy className="size-3.5" />
+                {t('customTemplates.actions.copyToMyTemplates')}
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
 
@@ -169,6 +260,32 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
             </Button>
           ) : null}
         </DialogFooter>
+
+        <EditCustomTemplateDialog
+          open={editingTemplate !== null}
+          template={editingTemplate}
+          onClose={() => setEditingTemplate(null)}
+          onSaved={handleEditSaved}
+        />
+        <DuplicateCustomTemplateDialog
+          open={duplicatingTemplate !== null}
+          template={duplicatingTemplate}
+          onClose={() => setDuplicatingTemplate(null)}
+          onDuplicated={handleDuplicated}
+        />
+        <DeleteCustomTemplateDialog
+          open={deletingTemplate !== null}
+          template={deletingTemplate}
+          onClose={() => setDeletingTemplate(null)}
+          onDeleted={handleDeleted}
+          onReload={() => void reload()}
+        />
+        <CopyBuiltinTemplateDialog
+          open={copyBuiltinOpen}
+          onClose={() => setCopyBuiltinOpen(false)}
+          onCopied={handleCopied}
+          initialBuiltinId={copyBuiltinId ?? undefined}
+        />
       </DialogContent>
     </Dialog>
   );

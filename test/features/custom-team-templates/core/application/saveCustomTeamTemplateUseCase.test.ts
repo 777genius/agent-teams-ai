@@ -3,8 +3,10 @@ import { InMemoryCustomTeamTemplatePreviewStore } from '@features/custom-team-te
 import { PrepareCustomTemplatePreviewUseCase } from '@features/custom-team-templates/core/application/PrepareCustomTemplatePreviewUseCase';
 import { RecheckCustomTeamTemplateSaveUseCase } from '@features/custom-team-templates/core/application/RecheckCustomTeamTemplateSaveUseCase';
 import { SaveCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/SaveCustomTeamTemplateUseCase';
+import { UpdateCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/UpdateCustomTeamTemplateUseCase';
 import { STORAGE_SETTLEMENT_TIMEOUT_MS } from '@features/custom-team-templates/core/application/waitForStorageSettlement';
 import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
+import { normalizeTemplateNameKey } from '@features/custom-team-templates/core/domain/templateNamePolicy';
 import { NodeCustomTeamTemplateHasher } from '@features/custom-team-templates/main/adapters/output/NodeCustomTeamTemplateHasher';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -120,10 +122,120 @@ function gatewayFixture(options: {
       customTeamTemplateCreate: create,
       customTeamTemplateList: vi.fn().mockResolvedValue({ templates: [], unreadableRecords: [] }),
       customTeamTemplateGetById: getById,
+      customTeamTemplateUpdate: vi.fn(),
+      customTeamTemplateDelete: vi.fn(),
     },
     create,
     getById,
     requests,
+  };
+}
+
+/**
+ * A library stand-in with the real store's identity invariants: an id is
+ * created once and kept for life, an id may only be re-used by an identical
+ * write, and a display name belongs to exactly one record.
+ */
+function libraryFixture(): {
+  gateway: CustomTeamTemplateStorageGateway;
+  rows: Map<string, CustomTeamTemplateV1>;
+} {
+  const rows = new Map<string, CustomTeamTemplateV1>();
+
+  const hashOf = (template: CustomTeamTemplateV1): string =>
+    hasher.hashCanonicalContent(
+      serializeCanonicalTemplateContent({
+        schemaVersion: template.schemaVersion,
+        teamPrompt: template.teamPrompt,
+        members: template.members,
+      })
+    );
+  const sameName = (left: string, right: string): boolean =>
+    normalizeTemplateNameKey(left) === normalizeTemplateNameKey(right);
+
+  return {
+    rows,
+    gateway: {
+      customTeamTemplateCreate: (request) => {
+        const existing = rows.get(request.template.templateId);
+        if (existing) {
+          const equivalent =
+            sameName(existing.name, request.template.name) &&
+            (existing.description ?? null) === (request.template.description ?? null) &&
+            hashOf(existing) === request.contentHash;
+          return Promise.resolve(
+            equivalent
+              ? { status: 'alreadySaved', template: existing }
+              : {
+                  status: 'conflict',
+                  reason: 'idReusedWithDifferentContent',
+                  existingTemplateId: existing.templateId,
+                }
+          );
+        }
+        const nameTaken = [...rows.values()].find((row) =>
+          sameName(row.name, request.template.name)
+        );
+        if (nameTaken) {
+          return Promise.resolve({
+            status: 'conflict',
+            reason: 'nameTaken',
+            existingTemplateId: nameTaken.templateId,
+          });
+        }
+        const created: CustomTeamTemplateV1 = {
+          ...request.template,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          revision: 1,
+        };
+        rows.set(created.templateId, created);
+        return Promise.resolve({ status: 'created', template: created });
+      },
+      customTeamTemplateList: () =>
+        Promise.resolve({ templates: [...rows.values()], unreadableRecords: [] }),
+      customTeamTemplateGetById: ({ templateId }) => {
+        const found = rows.get(templateId);
+        return Promise.resolve(
+          found ? { status: 'found', template: found } : { status: 'notFound' }
+        );
+      },
+      customTeamTemplateUpdate: (request) => {
+        const existing = rows.get(request.templateId);
+        if (!existing) {
+          return Promise.resolve({ status: 'notFound', templateId: request.templateId });
+        }
+        if ((existing.revision ?? 1) !== request.expectedRevision) {
+          return Promise.resolve({ status: 'revisionConflict', current: existing });
+        }
+        const clashing = [...rows.values()].find(
+          (row) =>
+            row.templateId !== request.templateId && sameName(row.name, request.template.name)
+        );
+        if (clashing) {
+          return Promise.resolve({
+            status: 'conflict',
+            reason: 'nameTaken',
+            existingTemplateId: clashing.templateId,
+          });
+        }
+        const updated: CustomTeamTemplateV1 = {
+          ...existing,
+          name: request.template.name,
+          teamPrompt: request.template.teamPrompt,
+          members: request.template.members,
+          revision: request.expectedRevision + 1,
+        };
+        if (request.template.description === undefined) {
+          delete updated.description;
+        } else {
+          updated.description = request.template.description;
+        }
+        rows.set(updated.templateId, updated);
+        return Promise.resolve({ status: 'updated', template: updated });
+      },
+      customTeamTemplateDelete: () =>
+        Promise.resolve({ status: 'notFound', templateId: 'tmpl-unused' }),
+    },
   };
 }
 
@@ -378,6 +490,170 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     expect(idFixture.create).toHaveBeenCalledTimes(1);
   });
 
+  it('saves the same source under its former name after that record was renamed', async () => {
+    const library = libraryFixture();
+
+    // 1. Save As the source under its original name.
+    const first = await preparedPreview({ gateway: library.gateway });
+    const firstSave = await useCase({ gateway: library.gateway }, first.store).execute({
+      previewToken: first.token,
+    });
+    expect(firstSave.status).toBe('created');
+    if (firstSave.status !== 'created') return;
+    const originalId = firstSave.template.templateId;
+    expect(originalId).toBe(first.stateTemplateId);
+
+    // 2. Rename the saved template. Editing is a compare-and-swap update, so
+    // the record keeps the id it was created with.
+    const renamed = await new UpdateCustomTeamTemplateUseCase({
+      gateway: library.gateway,
+      hasher,
+    }).execute({
+      templateId: originalId,
+      expectedRevision: 1,
+      fields: {
+        name: 'Release Pipeline Renamed',
+        teamPrompt: 'Deliver the feature.',
+        members: [{ name: 'alice', role: 'reviewer', workflow: 'Review each change.' }],
+      },
+    });
+    expect(renamed.status).toBe('updated');
+    if (renamed.status !== 'updated') return;
+    expect(renamed.template.templateId).toBe(originalId);
+
+    // 3. Save the same source again under the now-free former name. The former
+    // name still derives the renamed record's id, so the new record takes the
+    // next free candidate instead of overwriting it or failing.
+    const second = await preparedPreview({ gateway: library.gateway });
+    const secondSave = await useCase({ gateway: library.gateway }, second.store).execute({
+      previewToken: second.token,
+    });
+    expect(secondSave.status).toBe('created');
+    if (secondSave.status !== 'created') return;
+    expect(secondSave.template.name).toBe('Release Pipeline');
+    expect(secondSave.template.templateId).toBe(`${originalId}-1`);
+
+    // 4. Both records keep their own identity and content.
+    expect(library.rows.size).toBe(2);
+    const keptRenamed = library.rows.get(originalId);
+    expect(keptRenamed?.name).toBe('Release Pipeline Renamed');
+    expect(keptRenamed?.revision).toBe(2);
+    expect(keptRenamed?.teamPrompt).toBe('Deliver the feature.');
+    expect(library.rows.get(`${originalId}-1`)?.name).toBe('Release Pipeline');
+
+    // 5. Repeating the same save stays idempotent: same record, no third row.
+    const repeat = await useCase({ gateway: library.gateway }, second.store).execute({
+      previewToken: second.token,
+    });
+    expect(repeat.status).toBe('alreadySaved');
+    if (repeat.status !== 'alreadySaved') return;
+    expect(repeat.template.templateId).toBe(`${originalId}-1`);
+    expect(library.rows.size).toBe(2);
+  });
+
+  it('allocates the next free candidate id when the derived id and -1 candidate are occupied', async () => {
+    const library = libraryFixture();
+
+    // Pre-populate the store with incompatible records at the derived id and
+    // the -1 candidate, so the allocator must advance to -2.
+    library.rows.set(
+      PREVIEW_ID,
+      storedTemplate(PREVIEW_ID, {
+        name: 'Occupied Original',
+        teamPrompt: 'Different content.',
+      })
+    );
+    library.rows.set(
+      `${PREVIEW_ID}-1`,
+      storedTemplate(`${PREVIEW_ID}-1`, {
+        name: 'Occupied Candidate',
+        teamPrompt: 'Different content.',
+      })
+    );
+
+    const preview = await preparedPreview({ gateway: library.gateway });
+    const result = await useCase({ gateway: library.gateway }, preview.store).execute({
+      previewToken: preview.token,
+    });
+
+    expect(result.status).toBe('created');
+    if (result.status !== 'created') return;
+    expect(result.template.templateId).toBe(`${PREVIEW_ID}-2`);
+    expect(result.template.name).toBe('Release Pipeline');
+
+    // Neither existing record is overwritten or changed.
+    expect(library.rows.get(PREVIEW_ID)?.name).toBe('Occupied Original');
+    expect(library.rows.get(PREVIEW_ID)?.teamPrompt).toBe('Different content.');
+    expect(library.rows.get(`${PREVIEW_ID}-1`)?.name).toBe('Occupied Candidate');
+    expect(library.rows.get(`${PREVIEW_ID}-1`)?.teamPrompt).toBe('Different content.');
+
+    // Repeating the same save reconciles to alreadySaved for the new record,
+    // not a third row.
+    const repeat = await useCase({ gateway: library.gateway }, preview.store).execute({
+      previewToken: preview.token,
+    });
+    expect(repeat.status).toBe('alreadySaved');
+    if (repeat.status !== 'alreadySaved') return;
+    expect(repeat.template.templateId).toBe(`${PREVIEW_ID}-2`);
+    expect(library.rows.size).toBe(3);
+  });
+
+  it('reports an id conflict instead of writing when every candidate id is occupied', async () => {
+    const library = libraryFixture();
+    const candidates = Array.from({ length: 8 }, (_, index) =>
+      index === 0 ? PREVIEW_ID : `${PREVIEW_ID}-${index}`
+    );
+    for (const templateId of candidates) {
+      library.rows.set(
+        templateId,
+        storedTemplate(templateId, {
+          name: `Occupied ${templateId}`,
+          teamPrompt: 'Different content.',
+        })
+      );
+    }
+
+    const preview = await preparedPreview({ gateway: library.gateway });
+    const create = vi.spyOn(library.gateway, 'customTeamTemplateCreate');
+    await expect(
+      useCase({ gateway: library.gateway }, preview.store).execute({ previewToken: preview.token })
+    ).resolves.toEqual({ status: 'templateIdConflict', templateId: PREVIEW_ID });
+
+    // The bounded search never writes over an occupied identity.
+    expect(create).not.toHaveBeenCalled();
+    expect(library.rows.size).toBe(candidates.length);
+    expect(library.rows.has(PREVIEW_ID)).toBe(true);
+    for (const templateId of candidates) {
+      expect(library.rows.get(templateId)?.teamPrompt).toBe('Different content.');
+    }
+  });
+
+  it('allocates the last permitted candidate id when every earlier candidate is occupied', async () => {
+    const library = libraryFixture();
+    const occupied = Array.from({ length: 7 }, (_, index) =>
+      index === 0 ? PREVIEW_ID : `${PREVIEW_ID}-${index}`
+    );
+    for (const templateId of occupied) {
+      library.rows.set(
+        templateId,
+        storedTemplate(templateId, {
+          name: `Occupied ${templateId}`,
+          teamPrompt: 'Different content.',
+        })
+      );
+    }
+
+    const preview = await preparedPreview({ gateway: library.gateway });
+    const result = await useCase({ gateway: library.gateway }, preview.store).execute({
+      previewToken: preview.token,
+    });
+
+    // Eight candidates are probed: the derived id plus -1 through -7.
+    expect(result.status).toBe('created');
+    if (result.status !== 'created') return;
+    expect(result.template.templateId).toBe(`${PREVIEW_ID}-7`);
+  });
+
   it('retries a busy database with the identical request, then reports unavailability', async () => {
     const busy = { status: 'retryable', reason: 'databaseBusy' } as const;
     const recoverFixture = gatewayFixture({
@@ -458,6 +734,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         new CustomTeamTemplateStorageInterruptedError('worker died', 'unknown', Promise.resolve()),
       ],
       getById: [
+        // The pre-write identity probe sees a free id, so the write uses it.
+        { status: 'notFound' },
         {
           status: 'found',
           template: storedTemplate(PREVIEW_ID, { teamPrompt: 'Something else.' }),
@@ -525,7 +803,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     await expect(
       useCase({ gateway: fixture.gateway }, preview.store).execute({ previewToken: preview.token })
     ).resolves.toEqual({ status: 'storageUnavailable' });
-    expect(fixture.getById).toHaveBeenCalledTimes(2);
+    // One pre-write identity probe plus one reconciliation read per attempt.
+    expect(fixture.getById).toHaveBeenCalledTimes(3);
   });
 
   it('never claims success when the stored record cannot be read back or verified', async () => {
@@ -912,7 +1191,9 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         templateId: preview.stateTemplateId,
       });
       expect(fixture.create).toHaveBeenCalledTimes(1);
-      expect(fixture.getById).not.toHaveBeenCalled();
+      // The only read is the pre-write identity probe: no reconciliation read
+      // is issued on a writer that never confirmed it stopped.
+      expect(fixture.getById).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
@@ -938,7 +1219,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
       // A settlement timeout alone never triggers a retry.
       await expect(pending).resolves.toEqual({ status: 'storageUnavailable' });
       expect(fixture.create).toHaveBeenCalledTimes(1);
-      expect(fixture.getById).not.toHaveBeenCalled();
+      // Only the pre-write identity probe read; nothing reconciled the refusal.
+      expect(fixture.getById).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
@@ -1019,7 +1301,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     await expect(
       useCase({ gateway: fixture.gateway }, preview.store).execute({ previewToken: preview.token })
     ).resolves.toEqual({ status: 'storageUnavailable' });
-    expect(fixture.getById).toHaveBeenCalledTimes(2);
+    // One pre-write identity probe plus one reconciliation read per attempt.
+    expect(fixture.getById).toHaveBeenCalledTimes(3);
   });
 
   it('preserves uncertainty when an unknown write is followed by a not-started retry', async () => {
@@ -1057,7 +1340,7 @@ describe('SaveCustomTeamTemplateUseCase', () => {
       // No second write is issued on an unsettled unknown, and no
       // reconciliation read can prove absence while the writer may run.
       expect(fixture.create).toHaveBeenCalledTimes(1);
-      expect(fixture.getById).not.toHaveBeenCalled();
+      expect(fixture.getById).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

@@ -22,5 +22,13 @@ export function createCustomTeamTemplatesBridge(): CustomTeamTemplatesApi {
     recheckSave: (request) =>
       ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.recheckSave, request),
     listTemplates: () => ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.listTemplates),
+    updateTemplate: (request) =>
+      ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.updateTemplate, request),
+    deleteTemplate: (request) =>
+      ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.deleteTemplate, request),
+    duplicateTemplate: (request) =>
+      ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.duplicateTemplate, request),
+    copyBuiltinTemplate: (request) =>
+      ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.copyBuiltinTemplate, request),
   };
 }
