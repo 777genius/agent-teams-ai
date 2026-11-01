@@ -843,7 +843,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
       ['--version'],
       expect.objectContaining({
-        timeout: 30_000,
+        timeout: process.platform === 'darwin' ? 60_000 : 30_000,
         windowsHide: true,
       })
     );
@@ -955,7 +955,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
       ['--version'],
       expect.objectContaining({
-        timeout: 30_000,
+        timeout: process.platform === 'darwin' ? 60_000 : 30_000,
         windowsHide: true,
       })
     );
@@ -1165,7 +1165,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
       ['--version'],
       expect.objectContaining({
-        timeout: 30_000,
+        timeout: process.platform === 'darwin' ? 60_000 : 30_000,
         windowsHide: true,
       })
     );
@@ -1190,7 +1190,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
       ['--version'],
       expect.objectContaining({
-        timeout: 30_000,
+        timeout: process.platform === 'darwin' ? 60_000 : 30_000,
         windowsHide: true,
       })
     );
@@ -1233,7 +1233,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
       ['--version'],
       expect.objectContaining({
-        timeout: 30_000,
+        timeout: process.platform === 'darwin' ? 60_000 : 30_000,
         windowsHide: true,
       })
     );
@@ -2010,6 +2010,92 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     expect(entries.filter((entry) => entry.startsWith('installing-'))).toEqual([]);
   });
 
+  it('installs a Darwin binary whose version verification completes after 45 seconds', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
+    const verificationStarted = deferred<void>();
+    let verificationSettled = false;
+    let fakeTimersActive = false;
+    let installation: ReturnType<OpenCodeRuntimeInstallerService['install']> | undefined;
+    try {
+      const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+      const tarball = createTarball([{ name: 'package/bin/opencode', data: 'TEST runtime' }]);
+      const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: string | URL | Request) => {
+          const url = String(input);
+          if (url.endsWith('/opencode-ai/latest'))
+            return Response.json({
+              version: '1.18.3',
+              dist: { tarball: 'https://example.test/root.tgz', integrity },
+              optionalDependencies: { [platformPackage]: '1.18.3' },
+            });
+          if (url.includes(`/${platformPackage}/1.18.3`))
+            return Response.json({
+              version: '1.18.3',
+              dist: { tarball: 'https://example.test/platform.tgz', integrity },
+            });
+          if (url === 'https://example.test/platform.tgz')
+            return new Response(new Uint8Array(tarball));
+          throw new Error(`Unexpected fetch: ${url}`);
+        })
+      );
+      execCliMock.mockImplementation(
+        (binaryPath: string, _args: string[], options: { timeout: number }) => {
+          if (!binaryPath.includes('installing-'))
+            return Promise.resolve({ stdout: '1.18.3\n', stderr: '' });
+          vi.useFakeTimers();
+          fakeTimersActive = true;
+          verificationStarted.resolve(undefined);
+          return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+            const completion = setTimeout(() => {
+              verificationSettled = true;
+              clearTimeout(timeout);
+              resolve({ stdout: '1.18.3\n', stderr: '' });
+            }, 45_000);
+            const timeout = setTimeout(() => {
+              verificationSettled = true;
+              clearTimeout(completion);
+              reject(new Error(`Command timed out after ${options.timeout}ms: TEST --version`));
+            }, options.timeout);
+          });
+        }
+      );
+      installation = createNativeOnlyInstaller().install({ generation: 'v1' });
+      await Promise.race([
+        verificationStarted.promise,
+        installation.then(() => {
+          throw new Error('Install ended before version verification');
+        }),
+      ]);
+      await vi.advanceTimersByTimeAsync(30_001);
+      expect(verificationSettled).toBe(false);
+      await vi.advanceTimersByTimeAsync(14_999);
+      expect(verificationSettled).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      vi.useRealTimers();
+      fakeTimersActive = false;
+      await expect(installation).resolves.toMatchObject({
+        installed: true,
+        state: 'ready',
+        version: '1.18.3',
+      });
+      expect(execCliMock).toHaveBeenCalledWith(
+        expect.stringContaining('installing-'),
+        ['--version'],
+        expect.objectContaining({ timeout: 60_000 })
+      );
+    } finally {
+      if (fakeTimersActive) {
+        await vi.advanceTimersByTimeAsync(60_000);
+        vi.useRealTimers();
+      }
+      await installation;
+      Object.defineProperty(process, 'platform', originalPlatform);
+    }
+  });
+
   it('removes a partially extracted runtime when binary verification fails', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
@@ -2043,13 +2129,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     vi.stubGlobal('fetch', fetchMock);
     execCliMock.mockRejectedValueOnce(new Error('binary verification failed'));
 
-    // First-time dashboard install supplies no generation; it must still fetch V1.
+    // A first-time dashboard install supplies no generation and must still fetch V1.
     await expect(createNativeOnlyInstaller().install()).resolves.toMatchObject({
       installed: false,
       state: 'failed',
       error: 'binary verification failed',
     });
-
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/latest'))).toBe(
       true
     );

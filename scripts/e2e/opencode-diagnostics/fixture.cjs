@@ -234,7 +234,8 @@ function catalogCommand(operation) {
   };
   if (operation === 'directory' && scenario === 'catalog-timeout') {
     process.stderr.write('fixture catalog waiting api_key=DO_NOT_COPY_THIS_SECRET\n');
-    setTimeout(emit, 120000);
+    // Outlive the 300s catalog budget so the app must terminate this fixture.
+    setTimeout(emit, 360000);
   } else emit();
 }
 function refuse() {

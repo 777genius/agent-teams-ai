@@ -191,7 +191,8 @@ export async function verifyCatalog({
     let copied = '';
     let loadingCaptured = false;
     let completedCatalog;
-    for (let attempt = 0; attempt < 240; attempt++) {
+    const maxAttempts = scenario === 'catalog-timeout' ? 660 : 240;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await pause(500);
       calls = (await readPendingArtifact(path.join(root, 'calls.ndjson')))
         .trim()
@@ -266,8 +267,8 @@ export async function verifyCatalog({
       } else assert(copied.includes('provider_directory source=null'));
       if (scenario === 'catalog-timeout') {
         assert.match(copied, /timedOut: true/);
-        assert.match(copied, /timeoutMs: 90000/);
-        assert(Date.now() - directoryStart.at >= 89000);
+        assert.match(copied, /timeoutMs: 300000/);
+        assert(Date.now() - directoryStart.at >= 299000);
         assert(!calls.some((c) => c.event === 'response' && c.pid === directoryStart.pid));
         const snapshot = processes();
         await save('timeout-processes.json', JSON.stringify(snapshot, null, 2));
@@ -278,7 +279,7 @@ export async function verifyCatalog({
       }
       assert.match(copied, /stage: runtime_command/);
       assert.match(copied, /Command: runtime providers (directory|models)/);
-      assert.match(copied, /timeoutMs: 90000/);
+      assert.match(copied, /timeoutMs: 300000/);
       assert(!copied.includes('DO_NOT_COPY_THIS_SECRET'));
       await save('clipboard.txt', copied);
       await save(
@@ -346,7 +347,7 @@ export async function verifyCatalog({
         window.electronAPI.runtimeProviderManagement.${source ? 'loadModels' : 'loadProviderDirectory'}(${JSON.stringify(input)})
         .then(value => window.__catalogProbe = {done:true,value}, error => window.__catalogProbe = {done:true,error:String(error)}); void 0`);
       let result;
-      for (let i = 0; i < 240; i++) {
+      for (let i = 0; i < maxAttempts; i++) {
         result = await evaluate('window.__catalogProbe');
         if (result.done) break;
         await pause(500);

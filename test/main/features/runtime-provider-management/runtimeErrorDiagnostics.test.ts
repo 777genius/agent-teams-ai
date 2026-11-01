@@ -37,7 +37,7 @@ describe('OpenCode diagnostic transport', () => {
       const effectiveEnv = options?.env ?? process.env;
       expect(Object.hasOwn(effectiveEnv, 'NODE_ENV')).toBe(false);
       expect(effectiveEnv.TEST_OPENCODE_VERSION_KEEP).toBe('test-only-value');
-      expect(options.timeout).toBe(30_000);
+      expect(options.timeout).toBe(process.platform === 'darwin' ? 60_000 : 30_000);
       expect(process.env.NODE_ENV).toBe('development');
     } finally {
       if (previousMode === undefined) delete process.env.NODE_ENV;
@@ -46,6 +46,62 @@ describe('OpenCode diagnostic transport', () => {
       else process.env.TEST_OPENCODE_VERSION_KEEP = previousSentinel;
     }
   });
+
+  it.each([
+    { platform: 'darwin', completeAfterMs: 45_000, timeoutMs: 60_000, succeeds: true },
+    { platform: 'darwin', completeAfterMs: 75_000, timeoutMs: 60_000, succeeds: false },
+    { platform: 'linux', completeAfterMs: 45_000, timeoutMs: 30_000, succeeds: false },
+    { platform: 'win32', completeAfterMs: 45_000, timeoutMs: 30_000, succeeds: false },
+  ])(
+    'keeps version acquisition bounded on $platform ($completeAfterMs ms startup)',
+    async ({ platform, completeAfterMs, timeoutMs, succeeds }) => {
+      const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+      vi.useFakeTimers();
+      Object.defineProperty(process, 'platform', { value: platform });
+      try {
+        execCli.mockImplementationOnce(
+          (_binaryPath, _args, options) =>
+            new Promise((resolve, reject) => {
+              const completion = setTimeout(() => {
+                clearTimeout(timeout);
+                resolve({ stdout: '2.1.4\n', stderr: '' });
+              }, completeAfterMs);
+              const timeout = setTimeout(() => {
+                clearTimeout(completion);
+                reject(
+                  new Error(
+                    `Command timed out after ${options.timeout}ms: /TEST/opencode --version`
+                  )
+                );
+              }, options.timeout);
+            })
+        );
+        let settled = false;
+        const pending = probeOpenCodeBinaryVersion('/TEST/opencode').then((result) => {
+          settled = true;
+          return result;
+        });
+        await vi.advanceTimersByTimeAsync(30_001);
+        expect(settled).toBe(platform !== 'darwin');
+        await vi.advanceTimersByTimeAsync(45_000);
+        const result = await pending;
+        expect(execCli.mock.lastCall?.[2].timeout).toBe(timeoutMs);
+        if (succeeds) {
+          expect(result).toEqual({ ok: true, version: '2.1.4' });
+        } else {
+          expect(result).toMatchObject({
+            ok: false,
+            diagnostics: { platform, timeoutMs, timedOut: true },
+          });
+        }
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  );
 
   it('preserves useful platform paths and correlation IDs in opt-in support reports', () => {
     for (const value of [
@@ -146,11 +202,16 @@ describe('OpenCode diagnostic transport', () => {
   it.each([
     [
       'timeout',
-      Object.assign(new Error('Command timed out after 30000ms: /tmp/opencode --version'), {
-        killed: true,
-        signal: 'SIGTERM',
-        stderr: 'waiting',
-      }),
+      Object.assign(
+        new Error(
+          `Command timed out after ${process.platform === 'darwin' ? 60_000 : 30_000}ms: /tmp/opencode --version`
+        ),
+        {
+          killed: true,
+          signal: 'SIGTERM',
+          stderr: 'waiting',
+        }
+      ),
       true,
       null,
     ],
@@ -182,7 +243,7 @@ describe('OpenCode diagnostic transport', () => {
         binaryRole: 'opencode',
         timedOut,
         exitCode,
-        timeoutMs: 30000,
+        timeoutMs: process.platform === 'darwin' ? 60_000 : 30_000,
       });
       expect(result.diagnostics.reportId).toBeTruthy();
       expect(result.diagnostics.durationMs).toBeGreaterThanOrEqual(0);
