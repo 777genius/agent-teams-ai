@@ -7,6 +7,10 @@ export {
   scheduleApiProfileChange,
 } from './application/profileTransition';
 export {
+  revokeApiAuthorityHints,
+  selectApiAuthorityHints,
+} from './infrastructure/apiAuthorityParentHints';
+export {
   apiProfileScope,
   publishApiAuthority,
   removeApiAuthority,
@@ -22,5 +26,11 @@ export {
   validatePrivatePath,
   validateProfileRoot,
 } from './infrastructure/privateFiles';
+export {
+  closePublicationAdmission,
+  configurePublicationHelper,
+  disposePublicationHelper,
+  waitForPublicationHelperRetirement,
+} from './infrastructure/publicationHelperClient';
 export { checkApiReadiness } from './infrastructure/readiness';
 export { assertPrivateWindowsAcl } from './infrastructure/windowsPrivateAcl';

@@ -1,18 +1,21 @@
 import { randomUUID } from 'node:crypto';
 
-import { API_AUTH_REFERENCE_ENV, type ApiAuthority } from '@features/local-http-auth/contracts';
+import { type ApiAuthority } from '@features/local-http-auth/contracts';
 import {
   apiProfileScope,
   checkApiReadiness,
+  closePublicationAdmission,
   publishApiAuthority,
   removeApiAuthority,
   RetainedApiPublicationError,
+  revokeApiAuthorityHints,
+  selectApiAuthorityHints,
 } from '@features/local-http-auth/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 
-const TOKEN_ENV = 'CLAUDE_TEAM_CONTROL_AUTH_TOKEN';
 const instanceId = randomUUID();
 let revision = 0;
+let publicationClosed = false;
 let tail: Promise<void> = Promise.resolve();
 let published: { root: string; authority: ApiAuthority } | null = null;
 
@@ -20,12 +23,6 @@ function enqueue(operation: () => Promise<void>): Promise<void> {
   const result = tail.then(operation);
   tail = result.catch(() => undefined);
   return result;
-}
-
-function revokeEnvironment(): void {
-  delete process.env.CLAUDE_TEAM_CONTROL_URL;
-  delete process.env[TOKEN_ENV];
-  delete process.env[API_AUTH_REFERENCE_ENV];
 }
 
 export function buildTeamControlApiBaseUrl(port: number, host = '127.0.0.1'): string {
@@ -48,6 +45,7 @@ export async function syncTeamControlApiAuthority(
 
 /** Publish immutable credentials and switch discovery under the cross-process publication lock. */
 export function writeTeamControlApiState(baseUrl: string, authToken: string): Promise<void> {
+  if (publicationClosed) return Promise.reject(new Error('API publication admission is closed'));
   if (!/^\S{32,512}$/.test(authToken)) {
     return Promise.reject(
       new Error('Team control API auth token must be 32 to 512 non-whitespace characters')
@@ -55,7 +53,7 @@ export function writeTeamControlApiState(baseUrl: string, authToken: string): Pr
   }
   const root = getClaudeBasePath();
   const generation = ++revision;
-  revokeEnvironment();
+  revokeApiAuthorityHints();
   return enqueue(async () => {
     const previous = published;
     const authority: ApiAuthority =
@@ -83,9 +81,7 @@ export function writeTeamControlApiState(baseUrl: string, authToken: string): Pr
         generation === revision &&
         getClaudeBasePath() === root
       ) {
-        process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
-        process.env[TOKEN_ENV] = authToken;
-        process.env[API_AUTH_REFERENCE_ENV] = error.referencePath;
+        selectApiAuthorityHints(root, authority, error.referencePath);
       }
       throw error;
     }
@@ -94,20 +90,26 @@ export function writeTeamControlApiState(baseUrl: string, authToken: string): Pr
       await removeApiAuthority(previous.root, previous.authority);
     }
     if (generation !== revision || getClaudeBasePath() !== root) return;
-    process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
-    process.env[TOKEN_ENV] = authToken;
-    process.env[API_AUTH_REFERENCE_ENV] = reference;
+    selectApiAuthorityHints(root, authority, reference);
   });
 }
 
 /** A stale instance may remove only the exact generation it published. */
 export function clearTeamControlApiState(): Promise<void> {
   ++revision;
-  revokeEnvironment();
+  revokeApiAuthorityHints();
   return enqueue(async () => {
     const owned = published;
     if (!owned) return;
     await removeApiAuthority(owned.root, owned.authority);
     if (published === owned) published = null;
   });
+}
+
+/** Before any awaited shutdown step: revoke hints and prevent late owner re-selection. */
+export function closeTeamControlApiPublicationAdmission(): void {
+  publicationClosed = true;
+  ++revision;
+  revokeApiAuthorityHints();
+  closePublicationAdmission();
 }

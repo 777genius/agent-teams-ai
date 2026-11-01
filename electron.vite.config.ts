@@ -1,3 +1,4 @@
+import { publicationHelperBuildPlugin } from './scripts/build/publicationHelper'
 import { fileViewerRenderers } from '@file-viewer/vite-plugin';
 import { defineConfig } from 'electron-vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
@@ -171,7 +172,7 @@ function createTerminalPlatformSdkAliases(): Record<string, string> {
 
 export default defineConfig(({ command }) => ({
   main: {
-    plugins: [
+    plugins: [publicationHelperBuildPlugin(__dirname),
       nativeModuleStub(),
       ...createSentryPlugins('main'),
     ],

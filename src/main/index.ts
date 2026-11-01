@@ -287,6 +287,7 @@ import {
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodePromptDeliveryContinuityScan } from './services/team/opencode/delivery/OpenCodePromptDeliveryContinuityScan';
 import { isOpenCodePromptDeliveryWatchdogEnabled } from './services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
+import * as apiPublication from './services/team/ApiPublicationLifecycle';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -1200,16 +1201,14 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       );
       if (!ready) return false;
 
-      if (reason === 'relaunch') app.relaunch();
       notificationManager?.closeActiveNativeNotifications('app-before-quit');
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.hide();
-      }
       try {
         await shutdownServices();
       } catch (error) {
         logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+      if (!(await apiPublication.canQuit(logger, BrowserWindow))) return false;
+      if (reason === 'relaunch') app.relaunch();
       persistentAppLog?.dispose();
       await persistentAppLog?.flush();
       shutdownComplete = true;
@@ -1774,8 +1773,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
-  // An inherited endpoint belongs to a previous process, not this Host's server.
-  await startupStage(clearTeamControlApiState);
+  await startupStage(() => apiPublication.initializeDesktop(app, __dirname));
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -1834,9 +1832,9 @@ async function initializeServices(): Promise<void> {
           error instanceof Error ? error.message : String(error)
         }`
       );
-    } finally {
-      shutdownComplete = true;
     }
+    await apiPublication.requireUpdateReady();
+    shutdownComplete = true;
   });
   cliInstallerService = new CliInstallerService();
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
@@ -3018,6 +3016,7 @@ async function startHttpServer(
 
 /** Shuts down all services. */
 async function shutdownServices(): Promise<void> {
+  apiPublication.closeAdmission();
   stopAdmittingOpenCodeStartupCleanup();
   if (shutdownPromise) {
     return shutdownPromise;
@@ -3128,7 +3127,7 @@ async function shutdownServices(): Promise<void> {
     });
     teamTaskStallMonitor = memberWorkSyncFeature = internalStorageFeature = null;
 
-    await runShutdownStep('team control state cleanup', () => clearTeamControlApiState());
+    await runShutdownStep('team control state cleanup', () => apiPublication.retire());
 
     await runShutdownStep('file watcher event cleanup', () => {
       if (fileChangeCleanup) {
@@ -3202,7 +3201,7 @@ async function shutdownServices(): Promise<void> {
 
     await runShutdownStep('team backup dispose', () => teamBackupService?.dispose());
 
-    logger.info('Services shut down successfully');
+    logger.info(await apiPublication.shutdownStatus());
   })();
 
   return shutdownPromise;

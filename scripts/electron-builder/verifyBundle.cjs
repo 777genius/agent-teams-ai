@@ -111,6 +111,16 @@ function verifyBundledTerminalPlatformRuntime(bundlePath, platform) {
   }
 }
 
+function verifyBundledPublicationHelper(bundlePath, platform) {
+  const directory = path.join(resolveResourcesDir(bundlePath, platform), 'local-http-auth');
+  const bytes = fs.readFileSync(path.join(directory, 'publication-helper.cjs'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'manifest.json'), 'utf8'));
+  if (manifest.schemaVersion !== 1 || !/^[a-f0-9-]{36}$/.test(manifest.buildId) ||
+      manifest.bytes !== bytes.length || manifest.sha256 !== require('node:crypto').createHash('sha256').update(bytes).digest('hex')) {
+    throw new Error('Invalid bundled API publication helper');
+  }
+}
+
 function verifyBundledMcpServer(bundlePath, platform) {
   const directory = path.join(resolveResourcesDir(bundlePath, platform), 'mcp-server');
   const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'package.json'), 'utf8'));
@@ -141,6 +151,7 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   verifyBundledTerminalPlatformRuntime(bundlePath, platform);
+  verifyBundledPublicationHelper(bundlePath, platform);
   verifyBundledMcpServer(bundlePath, platform);
   const mismatches = await validateNativeBinaries(bundlePath, platform, arch);
   const blockingMismatches = mismatches.filter(

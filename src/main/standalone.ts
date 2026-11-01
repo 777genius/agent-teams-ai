@@ -20,14 +20,16 @@
 
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { type ApiAuthority } from '@features/local-http-auth/contracts';
 import {
   apiProfileScope,
   checkApiReadiness,
-  preparePrivateFileDirectory,
+  closePublicationAdmission,
+  configurePublicationHelper,
+  disposePublicationHelper,
   publishApiAuthority,
-  removeApiAuthority,
 } from '@features/local-http-auth/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
@@ -53,7 +55,6 @@ import type { SshConnectionManager } from './services/infrastructure/SshConnecti
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
 
 const logger = createLogger('Standalone');
-let publishedAuthority: { root: string; authority: ApiAuthority } | null = null;
 
 // =============================================================================
 // Configuration
@@ -109,6 +110,18 @@ let httpServer: HttpServer;
 // =============================================================================
 
 async function start(): Promise<void> {
+  const moduleDirectory =
+    typeof __dirname === 'string' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+  configurePublicationHelper({
+    directory: path.resolve(
+      moduleDirectory,
+      path.basename(moduleDirectory) === 'dist-standalone'
+        ? '../dist-local-http-auth'
+        : '../../dist-local-http-auth',
+    ),
+    mode: 'node',
+    prepareStandaloneRoot: true,
+  });
   logger.info('Starting standalone server...');
 
   // Apply Claude root override if set
@@ -209,9 +222,7 @@ async function start(): Promise<void> {
   };
   try {
     await checkApiReadiness(buildTeamControlApiBaseUrl(port, HOST), token);
-    await preparePrivateFileDirectory(path.join(root, '.profile-root'));
     await publishApiAuthority(root, authority);
-    publishedAuthority = { root, authority };
   } catch (error) {
     await httpServer.stop();
     throw error;
@@ -224,13 +235,12 @@ async function start(): Promise<void> {
 }
 
 async function shutdown(): Promise<void> {
+  closePublicationAdmission();
   logger.info('Shutting down...');
   if (httpServer?.isRunning()) {
     await httpServer.stop();
   }
-  const owned = publishedAuthority;
-  publishedAuthority = null;
-  if (owned) await removeApiAuthority(owned.root, owned.authority);
+  await disposePublicationHelper();
 
   if (localContext) {
     localContext.dispose();
