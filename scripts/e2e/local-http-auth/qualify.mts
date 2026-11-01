@@ -124,15 +124,109 @@ export class Cdp {
   readonly corsFailures: string[] = [];
   readonly rendererFailures: string[] = [];
   credentialUrlDetected = false;
+  private rendererNetworkEnableRequested = false;
+  private rendererNetworkEnableAcknowledged = false;
+  private rendererNetworkLimitReached = false;
+  private rendererNetworkPending = new Map<
+    string,
+    { type: 'Script' | 'Stylesheet'; pathnameSha256: string }
+  >();
+  private rendererNetworkFailed: Array<{ type: 'Script' | 'Stylesheet'; pathnameSha256: string }> =
+    [];
+  private rendererNetworkCounts = {
+    Script: { observed: 0, finished: 0, failed: 0, redirectedAway: 0 },
+    Stylesheet: { observed: 0, finished: 0, failed: 0, redirectedAway: 0 },
+  };
+  rendererNetworkSnapshot(): object {
+    const pending = [...this.rendererNetworkPending.values()];
+    return {
+      observedAfterNetworkEnable: this.rendererNetworkEnableRequested,
+      networkEnableAcknowledged: this.rendererNetworkEnableAcknowledged,
+      listenerAttachedBeforeEnable: true,
+      coverageLimit:
+        'only events observed after Network.enable request; earlier and unreported in-flight requests unknown',
+      exactRendererOriginOnly: true,
+      trackingLimitReached: this.rendererNetworkLimitReached,
+      Script: {
+        ...this.rendererNetworkCounts.Script,
+        pending: pending.filter((value) => value.type === 'Script').length,
+      },
+      Stylesheet: {
+        ...this.rendererNetworkCounts.Stylesheet,
+        pending: pending.filter((value) => value.type === 'Stylesheet').length,
+      },
+      pendingPathHashes: pending.slice(0, 20),
+      failedPathHashes: [...this.rendererNetworkFailed],
+    };
+  }
+  private observeRendererNetwork(message: Record<string, unknown>): void {
+    if (!this.rendererNetworkEnableRequested || !record(message.params)) return;
+    const params = message.params;
+    if (typeof params.requestId !== 'string' || params.requestId.length > 128) return;
+    const requestId = params.requestId;
+    if (
+      message.method === 'Network.requestWillBeSent' &&
+      record(params.request) &&
+      typeof params.request.url === 'string'
+    ) {
+      // CDP redirects reuse the request ID. Retire only that observed diagnostic
+      // record if it leaves the exact owned renderer origin or resource class.
+      let url: URL;
+      try {
+        url = new URL(params.request.url);
+      } catch {
+        return;
+      }
+      const previous = this.rendererNetworkPending.get(requestId);
+      if (
+        url.origin !== this.rendererOrigin ||
+        url.username ||
+        url.password ||
+        !['Script', 'Stylesheet'].includes(params.type as string)
+      ) {
+        if (previous) {
+          this.rendererNetworkPending.delete(requestId);
+          const counts = this.rendererNetworkCounts[previous.type];
+          counts.redirectedAway = Math.min(65535, counts.redirectedAway + 1);
+        }
+        return;
+      }
+      const type = params.type as 'Script' | 'Stylesheet';
+      if (!previous) {
+        const counts = this.rendererNetworkCounts[type];
+        counts.observed = Math.min(65535, counts.observed + 1);
+        if (this.rendererNetworkPending.size >= 256) {
+          this.rendererNetworkLimitReached = true;
+          return;
+        }
+      }
+      // Query, fragment, headers, response/error text and raw URLs never survive.
+      this.rendererNetworkPending.set(requestId, { type, pathnameSha256: hash(url.pathname) });
+    } else if (
+      message.method === 'Network.loadingFailed' ||
+      message.method === 'Network.loadingFinished'
+    ) {
+      const item = this.rendererNetworkPending.get(requestId);
+      if (!item) return; // No origin can be inferred from an unobserved request.
+      this.rendererNetworkPending.delete(requestId);
+      const counts = this.rendererNetworkCounts[item.type];
+      if (message.method === 'Network.loadingFailed') {
+        counts.failed = Math.min(65535, counts.failed + 1);
+        if (this.rendererNetworkFailed.length < 20) this.rendererNetworkFailed.push(item);
+      } else counts.finished = Math.min(65535, counts.finished + 1);
+    }
+  }
   private constructor(
     private socket: WebSocket,
-    private apiOrigin: string
+    private apiOrigin: string,
+    private rendererOrigin: string
   ) {
     socket.addEventListener('message', (event) => {
       try {
         check(typeof event.data === 'string', 'Nontext CDP frame');
         const message: unknown = JSON.parse(event.data);
         if (!record(message)) return;
+        this.observeRendererNetwork(message);
         if (
           message.method === 'Network.requestWillBeSent' &&
           record(message.params) &&
@@ -238,7 +332,8 @@ export class Cdp {
     socket.addEventListener('close', () => this.fail());
     socket.addEventListener('error', () => this.fail());
   }
-  static async connect(endpoint: string, origin: string): Promise<Cdp> {
+  static async connect(endpoint: string, origin: string, rendererOrigin: string): Promise<Cdp> {
+    loopbackOrigin(rendererOrigin, ['http:']);
     const socket = new WebSocket(endpoint);
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -262,7 +357,7 @@ export class Cdp {
         { once: true }
       );
     });
-    return new Cdp(socket, origin);
+    return new Cdp(socket, origin, rendererOrigin);
   }
   private fail(): void {
     for (const item of this.pending.values()) {
@@ -272,7 +367,8 @@ export class Cdp {
     this.pending.clear();
   }
   send(method: string, params: object = {}): Promise<unknown> {
-    return new Promise((resolve, reject) => {
+    if (method === 'Network.enable') this.rendererNetworkEnableRequested = true;
+    const promise = new Promise<unknown>((resolve, reject) => {
       const id = this.next++;
       const timer = setTimeout(() => {
         this.pending.delete(id);
@@ -281,6 +377,12 @@ export class Cdp {
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
+    return method === 'Network.enable'
+      ? promise.then((result) => {
+          this.rendererNetworkEnableAcknowledged = true;
+          return result;
+        })
+      : promise;
   }
   private value(result: unknown): unknown {
     check(
@@ -638,7 +740,7 @@ export async function qualify(args: unknown): Promise<boolean> {
         !ws.password,
       'Foreign CDP websocket'
     );
-    cdp = await Cdp.connect(websocket, apiOrigin);
+    cdp = await Cdp.connect(websocket, apiOrigin, rendererOrigin);
     await cdp.send('Runtime.enable');
     await cdp.send('Network.enable');
     check((await cdp.inspect('location.origin')) === rendererOrigin, 'Renderer origin changed');
@@ -897,7 +999,7 @@ export async function qualify(args: unknown): Promise<boolean> {
         !browserWs.password,
       'Foreign Chrome CDP websocket'
     );
-    cdp = await Cdp.connect(browserSocket, apiOrigin);
+    cdp = await Cdp.connect(browserSocket, apiOrigin, rendererOrigin);
     await cdp.send('Runtime.enable');
     await cdp.send('Network.enable');
     await cdp.send('Page.enable');
@@ -1131,6 +1233,7 @@ export async function qualify(args: unknown): Promise<boolean> {
       responses: cdp?.responses ?? [],
       corsFailures: cdp?.corsFailures ?? [],
       desktopFailureState,
+      desktopRendererNetwork: (desktopCdp ?? cdp)?.rendererNetworkSnapshot() ?? null,
       rendererFailureClasses: (desktopCdp ?? cdp)?.rendererFailures ?? [],
       browserFailureState,
       sourceRechecked: succeeded,
