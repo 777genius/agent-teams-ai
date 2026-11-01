@@ -8,6 +8,7 @@ on:
       - 'scripts/ci/packaged-ci-*.mts'
       - 'scripts/ci/verify-bundled-undici.cjs'
       - 'test/scripts/verify-bundled-undici.test.cjs'
+      - '.node-version'
       - 'scripts/ci/ci-change-scope.mts'
       - 'scripts/ci/verify-dmg-artwork.mts'
       - 'resources/dmg/**'
