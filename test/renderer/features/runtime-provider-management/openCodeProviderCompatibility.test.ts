@@ -35,6 +35,7 @@ describe('OpenCode provider generation compatibility', () => {
 
   it('blocks xAI OAuth-only catalog rows while keeping xAI API-key connection available', () => {
     expect(inferOpenCodeProviderAuthMethod(['oauth'])).toBe('oauth');
+    expect(inferOpenCodeProviderAuthMethod(['oauth', 'oauth'])).toBe('oauth');
     expect(inferOpenCodeProviderAuthMethod(['oauth', 'api'])).toBeNull();
     expect(inferOpenCodeProviderAuthMethod(['api'])).toBeNull();
     expect(resolve('xai', 'v2', inferOpenCodeProviderAuthMethod(['oauth'])).canConnect).toBe(false);

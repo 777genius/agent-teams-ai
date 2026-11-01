@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
 
 import {
+  inferOpenCodeProviderAuthMethod,
   isOpenCodeProviderConnectionBlocked,
   resolveOpenCodeProviderCompatibility,
 } from '../../core/domain';
@@ -35,6 +36,24 @@ export function useOpenCodeProviderConnectionBlocked(
 ): boolean {
   const generation = useContext(OpenCodeGenerationContext);
   return isOpenCodeProviderConnectionBlocked(providerId, generation, authMethod);
+}
+
+/** Keep an existing OAuth identity distinct from newly offered API-key routes. */
+export function useOpenCodeProviderRowCompatibility(provider: {
+  readonly providerId: string;
+  readonly state: string;
+  readonly authMethods: readonly string[];
+  readonly connectedAuthHint?: string | null;
+}): { connectionBlocked: boolean; reconnectBlocked: boolean; connectedAuthMethod: string | null } {
+  const generation = useContext(OpenCodeGenerationContext);
+  const offeredMethod = inferOpenCodeProviderAuthMethod(provider.authMethods);
+  const connectedAuthMethod =
+    provider.state === 'connected' ? provider.connectedAuthHint ?? offeredMethod : offeredMethod;
+  return {
+    connectionBlocked: isOpenCodeProviderConnectionBlocked(provider.providerId, generation, offeredMethod),
+    reconnectBlocked: isOpenCodeProviderConnectionBlocked(provider.providerId, generation, connectedAuthMethod),
+    connectedAuthMethod,
+  };
 }
 
 /** Neither a saved credential nor a provider listing proves model execution. */
