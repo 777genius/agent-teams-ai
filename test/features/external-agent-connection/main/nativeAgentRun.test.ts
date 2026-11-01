@@ -43,11 +43,7 @@ vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: vi.fn(async () => ({
-    env: {
-      CLAUDECODE: 'nested',
-      ELECTRON_RUN_AS_NODE: '1',
-      TEST_PROVIDER_AUTH: 'retained',
-    },
+    env: { ELECTRON_RUN_AS_NODE: '1', TEST_PROVIDER_AUTH: 'retained' },
     providerArgs: providerLaunch.args,
     connectionIssues: {},
   })),
@@ -209,7 +205,6 @@ describe('native one-shot provider transport', () => {
     expect(args).not.toContain('--model');
     expect(options?.cwd).toContain('agent-teams-native-prompt-');
     expect(options?.env?.TEST_PROVIDER_AUTH).toBe('retained');
-    expect(options?.env?.CLAUDECODE).toBeUndefined();
     expect(options?.env?.ELECTRON_RUN_AS_NODE).toBeUndefined();
     const configPath = args[args.indexOf('--mcp-config') + 1];
     expect(configPath.startsWith(join(desktop.userDataPath, 'local-http-auth'))).toBe(true);

@@ -184,17 +184,25 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
   return true;
 }
 
+/**
+ * The canonical producer for this exact PR head, base and synthetic merge:
+ * `completed` when its completed run is proven, `pending` while it still runs.
+ * A pending producer is never qualification; callers must wait for completion.
+ */
+export type MetadataProducerProof =
+  | { state: 'completed' | 'pending'; producer: number; reason: string }
+  | { state: 'rejected'; reason: string };
+
 /** Preserve only an authenticated canonical producer for this exact PR head/base. */
 export async function proveMetadataProducer(
-  env: Record<string, string | undefined>, event: unknown, read: GitHubRead, requireCompletedFull = false
-): Promise<boolean> {
+  env: Record<string, string | undefined>, event: unknown, read: GitHubRead
+): Promise<MetadataProducerProof> {
   try {
     const shards = rootTestShards(env.CI_ROOT_TEST_SHARDS);
     const mergeSha = sha(env.GITHUB_SHA);
     const payload = object(event);
     const pr = object(payload.pull_request);
     const number = positive(pr.number);
-    requireProof(!requireCompletedFull || pr.draft === false, 'A draft cannot qualify completed full CI');
     const head = sha(object(pr.head).sha);
     const runId = Number(env.GITHUB_RUN_ID);
     positive(runId);
@@ -269,7 +277,7 @@ export async function proveMetadataProducer(
     const runs = await readList();
     requireProof(runs.some((run) => runIdentity(run) === runIdentity(current)), 'Current run listing differs');
     const checked: JsonObject[] = [];
-    let canonical = false;
+    let canonical: { run: JsonObject; pending: boolean } | undefined;
     for (const candidate of runs.filter((run) => Number(run.id) !== runId).slice(0, 8)) {
       const run = object(await read(`${prefix}/actions/runs/${positive(candidate.id)}`));
       checkRun(run);
@@ -280,13 +288,12 @@ export async function proveMetadataProducer(
         const response = object(await read(`${prefix}/actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`));
         const jobs = array(response.jobs);
         requireProof(response.total_count === jobs.length && jobs.length < 100, 'Incomplete producer jobs');
-        canonical = proveCompleted(jobs, run, pr, shards, action);
+        if (proveCompleted(jobs, run, pr, shards, action)) canonical = { run, pending: false };
       } else {
         requireProof(['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(String(run.status)) &&
           run.conclusion === null && action, 'Pending producer lacks immutable attestation');
         // Edited runs can carry continuity only; they never replace full/draft CI.
-        requireProof(!requireCompletedFull || action === 'edited', 'Canonical full producer is not complete');
-        canonical = action !== 'edited';
+        if (action !== 'edited') canonical = { run, pending: true };
       }
       if (canonical) break;
     }
@@ -303,8 +310,11 @@ export async function proveMetadataProducer(
     const finalTarget = object(await read(baseRefEndpoint));
     requireProof(finalTarget.ref === target.ref && object(finalTarget.object).type === 'commit' &&
       sha(object(finalTarget.object).sha) === testedBase, 'Target base tip changed during metadata proof');
-    return true;
-  } catch {
-    return false;
+    const producer = positive(canonical.run.id);
+    return canonical.pending
+      ? { state: 'pending', producer, reason: `Same-input CI run ${producer} is still running` }
+      : { state: 'completed', producer, reason: `Authenticated completed CI run ${producer}` };
+  } catch (error) {
+    return { state: 'rejected', reason: error instanceof Error ? error.message : 'Invalid metadata proof' };
   }
 }

@@ -24,6 +24,21 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTasksBasePath: () => hoisted.tasksBase,
 }));
 
+// These fixtures model teams of this app profile; the backup ownership filter
+// itself is covered by TeamBackupServiceProfileOwnership.test.ts.
+vi.mock(
+  '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership')
+    >()),
+    createTeamProfileOwnership: () => ({
+      isManagedByThisProfile: () => Promise.resolve(true),
+      isManagedByThisProfileSync: () => true,
+    }),
+  })
+);
+
 function deferred<T = void>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((yes) => {
@@ -44,6 +59,7 @@ function createCoordinator(gate: MemberWorkSyncTeamOperationGate) {
     restoreLegacy: async () => false,
     restoreGeneric: async () => false,
     restoreGenericHoles: () => Promise.resolve(false),
+    isManagedByThisProfile: () => Promise.resolve(true),
   });
   owner.configure(gate, {
     prepare: async () => ({ importAndVerify: async () => undefined }),
@@ -94,6 +110,7 @@ describe('TeamBackupWorkSyncRestoreCoordinator.runWhileQuiesced', () => {
       restoreLegacy: async () => false,
       restoreGeneric: async () => false,
       restoreGenericHoles: () => Promise.resolve(false),
+      isManagedByThisProfile: () => Promise.resolve(true),
     });
     await expect(owner.runWhileQuiesced('team-a', async () => 'copied')).resolves.toBe('copied');
   });

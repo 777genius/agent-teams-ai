@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { API_AUTH_REFERENCE_ENV,type ApiAuthority } from '@features/local-http-auth/contracts';
 import {
   apiProfileScope,
+  checkApiReadiness,
   publishApiAuthority,
   removeApiAuthority,
 } from '@features/local-http-auth/main';
@@ -29,6 +30,16 @@ function revokeEnvironment(): void {
 export function buildTeamControlApiBaseUrl(port: number, host = '127.0.0.1'): string {
   const normalized = host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
   return `http://${normalized.includes(':') ? `[${normalized}]` : normalized}:${port}`;
+}
+
+/** Publish only after authenticated ingress is ready; otherwise revoke discovery. */
+export async function syncTeamControlApiAuthority(baseUrl: string | null, authToken: string | null): Promise<void> {
+  if (!baseUrl || !authToken) {
+    await clearTeamControlApiState();
+    return;
+  }
+  await checkApiReadiness(baseUrl, authToken);
+  await writeTeamControlApiState(baseUrl, authToken);
 }
 
 /** Publish immutable credentials and switch discovery under the cross-process publication lock. */

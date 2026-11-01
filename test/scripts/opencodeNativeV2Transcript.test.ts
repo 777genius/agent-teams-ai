@@ -84,11 +84,11 @@ describe('bounded public V2 transcript failure observation', () => {
 });
 
 describe('finite canonical command observation', () => {
-  const command = { program: 'C:\\TEST-project\\verify.cjs', marker: 'TEST_VERIFIED' };
+  const command = { executable: 'D:/TEST-node/node.exe', program: 'C:\\TEST-project\\verify.cjs', marker: 'TEST_VERIFIED' };
   const inspect = (messages: Record<string, unknown>[], runtimePromptMessageId: string | null = expected.runtimePromptMessageId) =>
     projectV2NativeTranscript({ sessionId: expected.sessionId, durableState: 'idle', messages }, { ...expected, runtimePromptMessageId, command }).commandObservation!;
   const call = (overrides: Record<string, unknown> = {}) => ({ callId: 'PRIVATE_NATIVE_ID', toolName: 'shell', status: 'completed',
-    isError: false, input: { command: `node ${command.program}`, workdir: 'C:\\TEST-project' },
+    isError: false, input: { command: `${command.executable} ${command.program}`, workdir: 'C:\\TEST-project' },
     outputText: `PRIVATE_OUTPUT\n${command.marker}\n`, output: null, ...overrides });
   const row = (id: string, toolCalls: unknown[] = [], role = 'assistant') => message({ id, toolCalls, role });
 
@@ -142,7 +142,7 @@ describe('finite canonical command observation', () => {
     ['proxy_shell', 'node C:\\TEST-project\\verify.cjs', undefined],
   ])('mirrors existing matcher input predicates for %s / %s', (toolName, inputCommand, workdir) => {
     const tool = call({ toolName, input: { command: inputCommand, workdir } });
-    const actual = nativeCommandMatch({ toolCall: { id: 'TEST-call', name: toolName!, input: tool.input } } as never, command.program, command.marker);
+    const actual = nativeCommandMatch({ toolCall: { id: 'TEST-call', name: toolName!, input: tool.input } } as never, command.program, command.marker, command.executable);
     const packet = inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [tool])]);
     expect(packet.tuples[0]?.input).toEqual({ shell: actual.shell, programMatches: actual.programMatches,
       nodeMatches: actual.nodeMatches, commandShape: actual.commandShape });

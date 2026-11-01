@@ -87,6 +87,18 @@ function testPlatformPackage(): string {
   })[0]!;
 }
 
+/** Native selection/package fixtures start with V2 support already installed; ZIP transport has its own suite. */
+function createNativeOnlyInstaller(): OpenCodeRuntimeInstallerService {
+  return new OpenCodeRuntimeInstallerService({
+    withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) =>
+      status.installed && status.version?.startsWith('2.')
+        ? { ...status, v2Support: 'ready' as const }
+        : status
+    ),
+    install: vi.fn(async () => undefined),
+  });
+}
+
 let tempRoot: string | null = null;
 let originalPath: string | undefined;
 let originalAppData: string | undefined;
@@ -410,6 +422,77 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   });
 
+  it.each([false, true])(
+    'cold PATH V2 support-only intent preserves native selection (repair=%s)',
+    async (repair) => {
+      const binaryPath = path.join(tempRoot!, 'TEST-path-v2', getTestNativeOpenCodeBinaryName());
+      await mkdir(path.dirname(binaryPath), { recursive: true });
+      await writeFile(binaryPath, 'selected native bytes', { mode: 0o755 });
+      process.env.PATH = path.dirname(binaryPath);
+      execCliMock.mockResolvedValue({ stdout: '2.9.0\n', stderr: '' });
+      let ready = repair;
+      const support = {
+        withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => ({
+          ...status,
+          v2Support: ready ? ('ready' as const) : ('required' as const),
+          ...(ready ? {} : { state: 'idle' as const }),
+        })),
+        install: vi.fn(async () => {
+          ready = true;
+        }),
+      };
+      const service = new OpenCodeRuntimeInstallerService(support);
+      await expect(service.getReadinessStatus()).resolves.toMatchObject({
+        installed: true,
+        binaryPath,
+        version: '2.9.0',
+        source: 'path',
+        state: repair ? 'ready' : 'idle',
+        v2Support: repair ? 'ready' : 'required',
+      });
+      const status = await service.install(repair ? { supportOnly: true } : undefined);
+      expect(status).toMatchObject({
+        installed: true,
+        binaryPath,
+        version: '2.9.0',
+        source: 'path',
+        state: 'ready',
+        v2Support: 'ready',
+      });
+      expect(support.install).toHaveBeenCalledWith('2.9.0', expect.any(Function));
+      expect(fetch).not.toHaveBeenCalled();
+      expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+      expect(await readFile(binaryPath, 'utf8')).toBe('selected native bytes');
+    }
+  );
+
+  it('reports selected native V2 as requiring its missing default support without downloading', async () => {
+    const binaryPath = path.join(
+      tempRoot!,
+      'TEST-missing-support',
+      getTestNativeOpenCodeBinaryName()
+    );
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'selected native bytes', { mode: 0o755 });
+    process.env.PATH = path.dirname(binaryPath);
+    execCliMock.mockResolvedValue({ stdout: '2.9.0\n', stderr: '' });
+
+    await expect(new OpenCodeRuntimeInstallerService().getReadinessStatus()).resolves.toMatchObject(
+      {
+        installed: true,
+        binaryPath,
+        version: '2.9.0',
+        source: 'path',
+        state: 'idle',
+        v2Support: 'required',
+        error: expect.stringContaining('OpenCode V2 support'),
+      }
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(await readFile(binaryPath, 'utf8')).toBe('selected native bytes');
+  });
+
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
@@ -500,7 +583,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(
         supported ? binaryPath : null
       );
-      expect(await new OpenCodeRuntimeInstallerService().getReadinessStatus()).toMatchObject({
+      expect(await createNativeOnlyInstaller().getReadinessStatus()).toMatchObject({
         installed: supported,
         source: 'app-managed',
         state: supported ? 'ready' : 'failed',
@@ -569,7 +652,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     ).rejects.toThrow('Could not verify the explicitly selected OpenCode binary');
 
-    expect(targetEnv).toEqual({ OPENCODE_BIN_PATH: binaryPath });
+    expect(targetEnv).toEqual({
+      OPENCODE_BIN_PATH: binaryPath,
+      CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT: path.join(
+        tempRoot!,
+        'data',
+        'runtimes',
+        'opencode-v2'
+      ),
+    });
     expect(bridgeEnv).toEqual(targetEnv);
     expect(resolver).not.toHaveBeenCalled();
     expect(onOverrideRejected).not.toHaveBeenCalled();
@@ -624,7 +715,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     it('reports a recognized override as the selected binary with its real version', async () => {
       mockOverrideVersion('opencode v2.0.32');
 
-      const status = await new OpenCodeRuntimeInstallerService().getStatus();
+      const status = await createNativeOnlyInstaller().getStatus();
 
       expect(status).toMatchObject({
         installed: true,
@@ -664,9 +755,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = wrapperBinary;
       execCliMock.mockResolvedValue({ stdout: 'opencode v2.0.32\n', stderr: '' });
 
-      await expect(
-        new OpenCodeRuntimeInstallerService().getReadinessStatus()
-      ).resolves.toMatchObject({
+      await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
         installed: true,
         binaryPath: await realpath(platformBinary),
         version: '2.0.32',
@@ -677,7 +766,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     it('names an unsupported override and its version next to the fallback binary', async () => {
       mockOverrideVersion('opencode v3.0.0');
 
-      const status = await new OpenCodeRuntimeInstallerService().getReadinessStatus();
+      const status = await createNativeOnlyInstaller().getReadinessStatus();
 
       expect(status).toMatchObject({
         installed: true,
@@ -701,9 +790,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       process.env.OPENCODE_BIN_PATH = missingPath;
       mockOverrideVersion('opencode v2.0.32');
 
-      await expect(
-        new OpenCodeRuntimeInstallerService().getReadinessStatus()
-      ).resolves.toMatchObject({
+      await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
         source: 'app-managed',
         version: '1.18.3',
         ignoredOverride: {
@@ -725,9 +812,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         stderr: '',
       }));
 
-      await expect(
-        new OpenCodeRuntimeInstallerService().getReadinessStatus()
-      ).resolves.toMatchObject({
+      await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
         installed: true,
         binaryPath: legacyPath,
         version: '2.0.32',
@@ -743,7 +828,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         vi.fn(async () => new Response('unavailable', { status: 503 }))
       );
 
-      const status = await new OpenCodeRuntimeInstallerService().install();
+      const status = await createNativeOnlyInstaller().install({ generation: 'v1' });
 
       expect(status).toMatchObject({
         binaryPath: overridePath,
@@ -764,7 +849,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         return { stdout: '1.18.3\n', stderr: '' };
       });
 
-      const status = await new OpenCodeRuntimeInstallerService().getReadinessStatus();
+      const status = await createNativeOnlyInstaller().getReadinessStatus();
 
       expect(status).toMatchObject({
         installed: false,
@@ -903,7 +988,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     execCliMock.mockResolvedValue({ stdout: '1.15.6\n', stderr: '' });
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBeNull();
-    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+    await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
       installed: false,
       source: 'app-managed',
       state: 'failed',
@@ -1039,7 +1124,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     getShellPreferredHomeMock.mockReturnValue(tempRoot!);
     const versionProbe = deferred<{ stdout: string; stderr: string }>();
     execCliMock.mockReturnValue(versionProbe.promise);
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
 
     const first = service.getStatus();
     const second = service.getStatus();
@@ -1067,7 +1152,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
     getShellPreferredHomeMock.mockReturnValue(tempRoot!);
     execCliMock.mockResolvedValue({ stdout: '1.17.18\n', stderr: '' });
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
 
     await expect(service.getStatus()).resolves.toMatchObject({
       version: '1.17.18',
@@ -1083,7 +1168,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
     getShellPreferredHomeMock.mockReturnValue(tempRoot!);
     execCliMock.mockResolvedValue({ stdout: '1.17.18\n', stderr: '' });
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
@@ -1116,13 +1201,11 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
     getShellPreferredHomeMock.mockReturnValue(tempRoot!);
 
-    await expect(new OpenCodeRuntimeInstallerService().getReadinessStatus()).resolves.toMatchObject(
-      {
-        installed: true,
-        binaryPath,
-        version: '1.18.3',
-      }
-    );
+    await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
+      installed: true,
+      binaryPath,
+      version: '1.18.3',
+    });
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
@@ -1139,7 +1222,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       stdout: '1.18.34\n',
       stderr: '',
     });
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
 
     const staleStatus = service.getStatus();
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
@@ -1555,9 +1638,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         await expect(
           resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
         ).resolves.toBe(selectedBinary);
-        await expect(
-          new OpenCodeRuntimeInstallerService().getReadinessStatus()
-        ).resolves.toMatchObject({
+        await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
           installed: true,
           source: 'path',
           state: 'ready',
@@ -1649,9 +1730,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         await expect(
           resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
         ).resolves.toBeNull();
-        await expect(
-          new OpenCodeRuntimeInstallerService().getReadinessStatus()
-        ).resolves.toMatchObject({
+        await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
           installed: false,
           source: 'missing',
           state: 'idle',
@@ -1691,9 +1770,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       process.env.PATH = path.dirname(install.cmdShim);
       execCliMock.mockRejectedValue(new Error('spawn EINVAL'));
 
-      await expect(
-        new OpenCodeRuntimeInstallerService().getReadinessStatus()
-      ).resolves.toMatchObject({
+      await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
         installed: false,
         source: 'path',
         state: 'failed',
@@ -1764,7 +1841,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
       workingBinaryPath
     );
-    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+    await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
       installed: true,
       source: 'path',
       state: 'ready',
@@ -1817,7 +1894,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       PATH: path.dirname(binaryPath),
     });
 
-    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+    await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
       installed: true,
       source: 'path',
       state: 'ready',
@@ -1869,7 +1946,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       return { stdout: '1.18.3\n', stderr: '' };
     });
 
-    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+    await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
       installed: true,
       source: 'path',
       state: 'ready',
@@ -1906,9 +1983,9 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       'utf8'
     );
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('registry unavailable')));
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
 
-    await expect(service.install()).resolves.toMatchObject({
+    await expect(service.install({ generation: 'v1' })).resolves.toMatchObject({
       installed: true,
       source: 'app-managed',
       state: 'failed',
@@ -1954,7 +2031,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })}\n`,
       'utf8'
     );
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
     await expect(service.getStatus()).resolves.toMatchObject({
       installed: true,
       source: 'app-managed',
@@ -1964,7 +2041,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await rm(binaryPath, { force: true });
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('registry unavailable')));
 
-    await expect(service.install()).resolves.toMatchObject({
+    await expect(service.install({ generation: 'v1' })).resolves.toMatchObject({
       installed: false,
       source: 'missing',
       state: 'failed',
@@ -2035,9 +2112,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
 
-    await expect(
-      new OpenCodeRuntimeInstallerService().install({ generation: 'v1' })
-    ).resolves.toMatchObject({
+    await expect(createNativeOnlyInstaller().install({ generation: 'v1' })).resolves.toMatchObject({
       installed: true,
       source: 'app-managed',
       state: 'ready',
@@ -2083,9 +2158,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     vi.stubGlobal('fetch', fetchMock);
     execCliMock.mockRejectedValueOnce(new Error('binary verification failed'));
 
-    await expect(
-      new OpenCodeRuntimeInstallerService().install({ generation: 'v1' })
-    ).resolves.toMatchObject({
+    await expect(createNativeOnlyInstaller().install({ generation: 'v1' })).resolves.toMatchObject({
       installed: false,
       state: 'failed',
       error: 'binary verification failed',
@@ -2120,7 +2193,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const download = deferred<Response>();
     const fetchMock = vi.fn(() => download.promise);
     vi.stubGlobal('fetch', fetchMock);
-    const service = new OpenCodeRuntimeInstallerService();
+    const service = createNativeOnlyInstaller();
     const first = service.install({ generation: 'v1' });
     const same = service.install({ generation: 'v1' });
     await expect(service.install({ generation: 'v2' })).rejects.toThrow(
@@ -2211,13 +2284,69 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     return { packageName, version };
   }
 
+  it('keeps the prior native selection when fresh V2 support acquisition fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await mockV2Download();
+    const support = {
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => status),
+      install: vi.fn(async () => {
+        throw new Error('TEST support acquisition failed');
+      }),
+    };
+    const status = await new OpenCodeRuntimeInstallerService(support).install({ generation: 'v2' });
+    expect(status).toMatchObject({ state: 'failed', error: 'TEST support acquisition failed' });
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(consoleError.mock.calls).toEqual([
+      [
+        '[OpenCodeRuntimeInstallerService]',
+        'Failed to install OpenCode runtime:',
+        'TEST support acquisition failed',
+      ],
+    ]);
+  });
+
+  it('refuses native activation when a new explicit selection appears during support acquisition', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await mockV2Download();
+    const selected = path.join(tempRoot!, 'TEST-new-selection');
+    await writeFile(selected, 'new explicit native selection');
+    const support = {
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => status),
+      install: vi.fn(async () => {
+        vi.stubEnv('CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH', selected);
+      }),
+    };
+    try {
+      const status = await new OpenCodeRuntimeInstallerService(support).install({
+        generation: 'v2',
+      });
+      expect(status).toMatchObject({
+        installed: true,
+        binaryPath: selected,
+        source: 'override',
+        state: 'failed',
+      });
+      expect(status.error).toContain('selection changed during installation');
+      expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+      expect(consoleError.mock.calls).toEqual([
+        [
+          '[OpenCodeRuntimeInstallerService]',
+          'Failed to install OpenCode runtime:',
+          'OpenCode selection changed during installation; keeping the selected native runtime',
+        ],
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('installs qualified V2 with native package identity and activates it ahead of PATH', async () => {
     const { packageName, version } = await mockV2Download();
     const pathBinary = path.join(tempRoot!, 'TEST-path', getTestNativeOpenCodeBinaryName());
     await mkdir(path.dirname(pathBinary), { recursive: true });
     await writeFile(pathBinary, 'existing user binary');
     buildMergedCliPathMock.mockReturnValue(path.dirname(pathBinary));
-    const status = await new OpenCodeRuntimeInstallerService().install({ generation: 'v2' });
+    const status = await createNativeOnlyInstaller().install({ generation: 'v2' });
     expect(status).toMatchObject({
       installed: true,
       state: 'ready',
@@ -2235,7 +2364,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
     ).resolves.toBe(binaryPath);
     await expect(readFile(pathBinary, 'utf8')).resolves.toBe('existing user binary');
-    const refreshed = await new OpenCodeRuntimeInstallerService().getStatus();
+    const refreshed = await createNativeOnlyInstaller().getStatus();
     expect(refreshed).toMatchObject({ version, latestVersion: version, updateAvailable: false });
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/opencode-ai/'))).toBe(
       false
@@ -2249,7 +2378,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   ])('does not activate a mismatched or tampered V2 download: $error', async (options) => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await mockV2Download(options);
-    const status = await new OpenCodeRuntimeInstallerService().install({ generation: 'v2' });
+    const status = await createNativeOnlyInstaller().install({ generation: 'v2' });
     expect(status.state).toBe('failed');
     expect(status.error).toContain(options.error);
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
@@ -2260,7 +2389,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await writeFile(override, 'user override');
     vi.stubEnv('CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH', override);
     const { version } = await mockV2Download();
-    const status = await new OpenCodeRuntimeInstallerService().install({ generation: 'v2' });
+    const status = await createNativeOnlyInstaller().install({ generation: 'v2' });
     expect(status).toMatchObject({ source: 'override', binaryPath: override, version });
     expect(status.progress?.detail).toContain('explicit OpenCode binary override');
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).not.toBe(override);

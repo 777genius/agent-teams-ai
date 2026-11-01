@@ -1,3 +1,4 @@
+import { classifyCapturedSend } from '@main/services/team/provisioning/leadRelayCapturedMessageTools';
 import { setMemberSpawnStatusForRun } from '@main/services/team/provisioning/TeamProvisioningMemberSpawnSnapshots';
 import {
   extractProvisioningStreamError,
@@ -6,7 +7,6 @@ import {
   getStableLeadThoughtMessageId,
   handleDeterministicBootstrapEvent,
   handleTeamProvisioningStreamJsonMessage,
-  hasCapturedUserVisibleSendMessage,
   hasCapturedVisibleSendMessage,
   shouldAcceptDeterministicBootstrapEvent,
   type TeamProvisioningStreamEventPorts,
@@ -100,6 +100,8 @@ function createDeterministicBootstrapRun(overrides: Partial<DeterministicBootstr
     suppressGeminiPostLaunchHydrationOutput: false,
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     silentUserDmForwardClearHandle: null,
     leadContextUsage: null,
     apiRetryWarningIndex: null,
@@ -246,7 +248,10 @@ describe('TeamProvisioningStreamEvents', () => {
     ];
 
     expect(hasCapturedVisibleSendMessage(content, 'atlas-hq')).toBe(true);
-    expect(hasCapturedUserVisibleSendMessage(content, 'atlas-hq')).toBe(true);
+    expect(classifyCapturedSend(content[0], 'atlas-hq')).toEqual({
+      userVisible: true,
+      group: false,
+    });
   });
 
   it('suppresses private echoes after explicit group sends including rejected attempts', () => {
@@ -258,8 +263,11 @@ describe('TeamProvisioningStreamEvents', () => {
       },
     ];
     expect(hasCapturedVisibleSendMessage(content, 'atlas-hq')).toBe(true);
-    expect(hasCapturedUserVisibleSendMessage(content, 'atlas-hq')).toBe(true);
-    expect(hasCapturedUserVisibleSendMessage(content, 'other-team')).toBe(false);
+    expect(classifyCapturedSend(content[0], 'atlas-hq')).toEqual({
+      userVisible: true,
+      group: true,
+    });
+    expect(classifyCapturedSend(content[0], 'other-team')).toBeNull();
   });
 
   it('builds stable lead thought ids from stream metadata', () => {
@@ -649,6 +657,46 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
       })
     ).toBe(`${'x'.repeat(500)}…`);
     clearExpectedWarnings();
+  });
+
+  it('drops lead send calls still waiting for a tool result when the turn fails', () => {
+    const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
+    run.pendingLeadSendMessages.set('toolu-1', {
+      kind: 'local',
+      recipient: 'user',
+      summary: '',
+      message: { from: 'team-lead', to: 'user', text: 'hi', timestamp: NOW, read: false },
+    });
+    const ports = makeResultPorts();
+
+    handleTeamProvisioningStreamJsonMessage(
+      run,
+      { type: 'result', subtype: 'error', error: 'boom' },
+      ports
+    );
+
+    expect(run.pendingLeadSendMessages.size).toBe(0);
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toContainEqual(
+      expect.stringContaining(
+        'Dropped lead SendMessage call(s) that got no tool result: toolu-1 (user)'
+      )
+    );
+    clearExpectedWarnings();
+  });
+
+  it('passes lead tool results to the send capture', () => {
+    const { run } = createDeterministicBootstrapRun({ provisioningComplete: true });
+    const captureSendMessages = vi.fn();
+    const ports = Object.assign(makeResultPorts(), {
+      captureSendMessages,
+      finishRuntimeToolActivity: vi.fn(),
+      handleNativeTeammateUserMessage: vi.fn(),
+    });
+    const content = [{ type: 'tool_result', tool_use_id: 'toolu-1', content: 'Message sent' }];
+
+    handleTeamProvisioningStreamJsonMessage(run, { type: 'user', message: { content } }, ports);
+
+    expect(captureSendMessages).toHaveBeenCalledWith(run, content);
   });
 
   it('does not fail the run for result subtype "success"', () => {

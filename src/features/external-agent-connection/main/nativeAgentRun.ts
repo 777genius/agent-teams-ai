@@ -83,8 +83,6 @@ export async function prepareNativeAgentRun(
   });
   if (preparedEnv.connectionIssues[provider]) throw new Error('Provider connection is unavailable');
   const env = { ...preparedEnv.env };
-  delete env.CLAUDECODE;
-  delete env.CLAUDE_CODE_ENTRYPOINT;
   delete env.ELECTRON_RUN_AS_NODE;
   delete env[NATIVE_MCP_BEARER_TOKEN_ENV];
   const secrets: string[] = [];

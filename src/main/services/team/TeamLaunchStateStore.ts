@@ -8,7 +8,11 @@ import * as path from 'path';
 
 import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
-import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
+import {
+  captureOpenCodeTranscriptBindings,
+  getTeamLaunchFreshnessPath,
+  readTeamLaunchFreshness,
+} from './TeamLaunchFreshness';
 import {
   createPersistedLaunchSnapshot,
   normalizePersistedLaunchSnapshot,
@@ -18,7 +22,7 @@ import {
   TEAM_LAUNCH_SUMMARY_FILE,
 } from './TeamLaunchSummaryProjection';
 
-import type { TeamLaunchFreshness } from './TeamLaunchFreshness';
+import type { OpenCodeTranscriptBindingIdentity, TeamLaunchFreshness } from './TeamLaunchFreshness';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const logger = createLogger('Service:TeamLaunchStateStore');
@@ -38,6 +42,7 @@ export interface TeamLaunchStopAuthority {
   teamName: string;
   stopIntent: number;
   freshness: TeamLaunchFreshness | null;
+  transcriptBindings?: OpenCodeTranscriptBindingIdentity[];
 }
 
 export function getTeamLaunchStatePath(teamName: string): string {
@@ -419,11 +424,18 @@ export class TeamLaunchStateStore {
   beginStop(teamName: string): Promise<TeamLaunchStopAuthority> {
     const stopIntent = (stopIntentByTeam.get(teamName) ?? 0) + 1;
     stopIntentByTeam.set(teamName, stopIntent);
-    return enqueuePublication(teamName, async () => ({
-      teamName,
-      stopIntent,
-      freshness: await readTeamLaunchFreshness(teamName),
-    }));
+    return enqueuePublication(teamName, async () => {
+      const freshness = await readTeamLaunchFreshness(teamName);
+      const publication = freshness?.kind === 'launch' ? await this.readResult(teamName) : null;
+      const transcriptBindings =
+        freshness?.kind === 'stop'
+          ? freshness.transcriptBindings
+          : publication?.status === 'snapshot' &&
+              publication.snapshot.publicationRunId === freshness?.runId
+            ? captureOpenCodeTranscriptBindings(publication.snapshot)
+            : [];
+      return { teamName, stopIntent, freshness, transcriptBindings };
+    });
   }
 
   /** A cleanup tail retains its admission; it cannot stop a successor publication. */
@@ -432,7 +444,11 @@ export class TeamLaunchStateStore {
     if (!authority) stopIntentByTeam.set(teamName, stopIntent);
     await enqueuePublication(teamName, async () => {
       const previous = await readTeamLaunchFreshness(teamName);
-      const admitted = authority ?? { teamName, stopIntent, freshness: previous };
+      const admitted: TeamLaunchStopAuthority = authority ?? {
+        teamName,
+        stopIntent,
+        freshness: previous,
+      };
       if (
         admitted.teamName !== teamName ||
         admitted.stopIntent !== stopIntentByTeam.get(teamName) ||
@@ -454,6 +470,8 @@ export class TeamLaunchStateStore {
             kind: 'stop',
             stopId,
             stoppedRunId: previous?.kind === 'launch' ? previous.runId : previous?.stoppedRunId,
+            transcriptBindings:
+              previous?.kind === 'stop' ? previous.transcriptBindings : admitted.transcriptBindings,
           }),
           { durability: 'strict', syncDirectory: true }
         );

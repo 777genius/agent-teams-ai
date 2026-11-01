@@ -605,6 +605,7 @@ function createService(
 function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
   return {
     createDeliveryHost: vi.fn(() => deliveryHostWithUnavailableBridge()),
+    isManagedByThisProfile: vi.fn(async () => true),
     inboxRelayHost: {
       getOpenCodeMemberRelayKey: vi.fn((teamName, memberName) => `relay/${teamName}/${memberName}`),
       scheduleOpenCodeMemberInboxDeliveryWake: vi.fn(),
@@ -659,6 +660,7 @@ function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
     })),
     logger: {
       warn: vi.fn(),
+      diagnostic: vi.fn(),
     },
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     getErrorMessage: vi.fn((error) => (error instanceof Error ? error.message : String(error))),

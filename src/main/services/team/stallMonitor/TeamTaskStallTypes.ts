@@ -71,8 +71,8 @@ export interface TaskStallEvaluation {
   readyAt?: string;
   /**
    * Alerts already dispatched for this epoch, stamped by the journal when it
-   * promotes an entry (absent for a first alert). Bounds the pickup escalation
-   * ladder so an abandoned task cannot nudge forever.
+   * promotes an entry (absent for a first alert). Bounds the escalation rungs
+   * so an abandoned task cannot alert forever.
    */
   priorAlertCount?: number;
   reason: string;
@@ -172,6 +172,8 @@ export interface TaskStallAlert {
   remediationKind?: 'pending_pickup';
   reason: string;
   epochKey: string;
+  /** Alerts this epoch already sent; absent for the first one. */
+  priorAlertCount?: number;
   owner?: string;
   reviewer?: string;
   ownerProviderId?: TeamProviderId;
@@ -196,6 +198,6 @@ export interface TaskStallJournalEntry {
   createdAt: string;
   updatedAt: string;
   alertedAt?: string;
-  /** How many alerts this epoch already produced; drives the pickup escalation ladder. */
+  /** How many alerts this epoch already produced; drives the escalation rungs. */
   alertCount?: number;
 }

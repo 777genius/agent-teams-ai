@@ -2,6 +2,7 @@ import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCl
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { PROVIDER_CLI_TIMEOUT_MS as COMMAND_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 
 import { getRuntimeProviderConnectTimeoutMs as connectTimeoutMs } from '../../core/domain';
 
@@ -88,7 +89,6 @@ import type {
 import type { RuntimeProviderManagementPort } from '@features/runtime-provider-management/core/application';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 
-const COMMAND_TIMEOUT_MS = 90_000;
 // Outlive the runtime's provider callback window while bounded and cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;

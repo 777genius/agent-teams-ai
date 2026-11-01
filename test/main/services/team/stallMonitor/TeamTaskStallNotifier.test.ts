@@ -4,6 +4,8 @@ import { TeamTaskStallNotifier } from '../../../../../src/main/services/team/sta
 
 import type { TaskStallAlert } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
 
+const ownsEveryTeam = async (): Promise<boolean> => true;
+
 function createAlert(overrides: Partial<TaskStallAlert> = {}): TaskStallAlert {
   return {
     teamName: 'demo',
@@ -32,14 +34,19 @@ describe('TeamTaskStallNotifier', () => {
     const inboxWriter = { sendMessage: vi.fn() };
     const relay = vi.fn();
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
       inboxWriter as never,
       { record }
     );
 
-    await expect(notifier.recordWorkSyncObservations('demo', [createAlert()])).resolves.toBeUndefined();
+    await expect(
+      notifier.recordWorkSyncObservations('demo', [createAlert()])
+    ).resolves.toBeUndefined();
     await expect(notifier.notifyOpenCodeOwners('demo', [createAlert()])).resolves.toEqual([]);
     expect(record).toHaveBeenCalledWith({
       teamName: 'demo',
@@ -55,7 +62,10 @@ describe('TeamTaskStallNotifier', () => {
   it('records review-stall observations against the reviewer, not the owner', async () => {
     const record = vi.fn(async () => undefined);
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       undefined,
       undefined,
       undefined,
@@ -84,14 +94,19 @@ describe('TeamTaskStallNotifier', () => {
   it('does not queue stall observations when the work-sync consumer is detached', async () => {
     const record = vi.fn(async () => undefined);
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       undefined,
       undefined,
       undefined,
       { record, isAttached: () => false }
     );
 
-    await expect(notifier.recordWorkSyncObservations('demo', [createAlert()])).resolves.toBeUndefined();
+    await expect(
+      notifier.recordWorkSyncObservations('demo', [createAlert()])
+    ).resolves.toBeUndefined();
     expect(record).not.toHaveBeenCalled();
   });
 
@@ -101,7 +116,10 @@ describe('TeamTaskStallNotifier', () => {
       sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
     };
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
       inboxWriter as never,
@@ -115,22 +133,27 @@ describe('TeamTaskStallNotifier', () => {
 
   it('still notifies the lead for user-visible stall attention', async () => {
     const sendSystemNotificationToLead = vi.fn(async () => undefined);
-    const notifier = new TeamTaskStallNotifier({ sendSystemNotificationToLead } as never);
+    const notifier = new TeamTaskStallNotifier({
+      sendSystemNotificationToLead,
+      isTeamManagedByThisProfile: ownsEveryTeam,
+    } as never);
     const alert = createAlert();
 
-    await notifier.notifyLead('demo', [alert]);
+    await expect(notifier.notifyLead('demo', [alert])).resolves.toBe(true);
 
     expect(sendSystemNotificationToLead).toHaveBeenCalledWith({
       teamName: 'demo',
       summary: 'Potential stalled tasks detected',
       text: expect.stringContaining('Task A'),
       taskRefs: [alert.taskRef],
+      messageId: expect.stringMatching(/^task-stall-lead-alert:[0-9a-f]{20}$/),
     });
   });
 
   it('sends OpenCode owner nudges with deterministic message ids when work-sync is unattached', async () => {
     const teamDataService = {
       sendSystemNotificationToLead: vi.fn(async () => undefined),
+      isTeamManagedByThisProfile: ownsEveryTeam,
     };
     const teamProvisioningService = {
       relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
@@ -190,7 +213,10 @@ describe('TeamTaskStallNotifier', () => {
 
   it('skips non-OpenCode owners', async () => {
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       {
         relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
           lastDelivery: { delivered: true },
@@ -210,7 +236,10 @@ describe('TeamTaskStallNotifier', () => {
   it('skips review alerts because task owner is not necessarily the reviewer', async () => {
     const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
       { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
@@ -226,7 +255,10 @@ describe('TeamTaskStallNotifier', () => {
 
   it('returns no remediated alert when OpenCode delivery is rejected', async () => {
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       {
         relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
           relayed: 0,
@@ -252,7 +284,10 @@ describe('TeamTaskStallNotifier', () => {
       sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
     };
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
       inboxWriter as never
@@ -303,7 +338,10 @@ describe('TeamTaskStallNotifier', () => {
       sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId })),
     };
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       {
         relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
           lastDelivery: { delivered: true, accepted: true },
@@ -324,7 +362,10 @@ describe('TeamTaskStallNotifier', () => {
     'does not count a %s no-op redelivery as remediated so the alert can escalate',
     async (reason, deliveryShape) => {
       const notifier = new TeamTaskStallNotifier(
-        { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+        {
+          sendSystemNotificationToLead: vi.fn(async () => undefined),
+          isTeamManagedByThisProfile: ownsEveryTeam,
+        } as never,
         {
           relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
             attempted: 1,
@@ -351,7 +392,10 @@ describe('TeamTaskStallNotifier', () => {
 
   it('does not mark queued-behind delivery as remediated even when active ledger exists', async () => {
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       {
         relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
           relayed: 0,
@@ -390,7 +434,10 @@ describe('TeamTaskStallNotifier', () => {
       },
     }));
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
       { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })) } as never
@@ -404,7 +451,10 @@ describe('TeamTaskStallNotifier', () => {
   it('does not deliver runtime nudge when inbox write fails', async () => {
     const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       { getMessagesFor: vi.fn(async () => []) } as never,
       {
@@ -426,7 +476,10 @@ describe('TeamTaskStallNotifier', () => {
     const relay = vi.fn(async () => ({ lastDelivery: { delivered: true } }));
     const inboxWrite = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' }));
     const notifier = new TeamTaskStallNotifier(
-      { sendSystemNotificationToLead: vi.fn(async () => undefined) } as never,
+      {
+        sendSystemNotificationToLead: vi.fn(async () => undefined),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      } as never,
       { relayOpenCodeMemberInboxMessages: relay } as never,
       {
         getMessagesFor: vi.fn(async () => {
@@ -443,5 +496,41 @@ describe('TeamTaskStallNotifier', () => {
       'OpenCode task stall remediation inbox write failed'
     );
     vi.mocked(console.warn).mockClear();
+  });
+
+  it('writes nothing into a team that another profile manages', async () => {
+    const sendSystemNotificationToLead = vi.fn(async () => undefined);
+    const isTeamManagedByThisProfile = vi.fn(async () => false);
+    const record = vi.fn(async () => undefined);
+    const relay = vi.fn(async () => ({ lastDelivery: { delivered: true, accepted: true } }));
+    const inboxReader = { getMessagesFor: vi.fn(async () => []) };
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg' })),
+    };
+    const alert = createAlert();
+    const leadNotifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead, isTeamManagedByThisProfile } as never,
+      undefined,
+      undefined,
+      undefined,
+      { record }
+    );
+    const ownerNotifier = new TeamTaskStallNotifier(
+      { sendSystemNotificationToLead, isTeamManagedByThisProfile } as never,
+      { relayOpenCodeMemberInboxMessages: relay } as never,
+      inboxReader as never,
+      inboxWriter as never
+    );
+
+    await expect(leadNotifier.notifyLead('demo', [alert])).resolves.toBe(false);
+    await leadNotifier.recordWorkSyncObservations('demo', [alert]);
+    await expect(ownerNotifier.notifyOpenCodeOwners('demo', [alert])).resolves.toEqual([]);
+
+    expect(isTeamManagedByThisProfile).toHaveBeenCalledWith('demo');
+    expect(sendSystemNotificationToLead).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+    expect(inboxReader.getMessagesFor).not.toHaveBeenCalled();
+    expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    expect(relay).not.toHaveBeenCalled();
   });
 });

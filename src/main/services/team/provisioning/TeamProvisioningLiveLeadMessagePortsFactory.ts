@@ -37,7 +37,6 @@ export interface TeamProvisioningLiveLeadMessagePortsFactoryDeps<
   getRunLeadName(run: TRun): string;
   getCrossTeamSender(): TeamProvisioningLeadSendMessageCapturePorts['crossTeamSender'];
   persistSentMessage(teamName: string, message: InboxMessage): void;
-  persistInboxMessage(teamName: string, recipient: string, message: InboxMessage): void;
   emitTeamChange(event: TeamChangeEvent): void;
   logger: TeamProvisioningLeadSendMessageCaptureLogger;
   nowIso(): string;
@@ -86,7 +85,6 @@ export interface TeamProvisioningLiveLeadMessageServiceHost<
     getCrossTeamSender: TeamProvisioningLiveLeadMessagePortsFactoryDeps<TRun>['getCrossTeamSender'];
   };
   persistSentMessage: TeamProvisioningLiveLeadMessagePortsFactoryDeps<TRun>['persistSentMessage'];
-  persistInboxMessage: TeamProvisioningLiveLeadMessagePortsFactoryDeps<TRun>['persistInboxMessage'];
   teamChangeEmitter?: TeamProvisioningLiveLeadMessagePortsFactoryDeps<TRun>['emitTeamChange'];
 }
 
@@ -114,8 +112,6 @@ export function createTeamProvisioningLiveLeadMessagePortsDepsFromService<
     getRunLeadName: (run) => service.getRunLeadName(run),
     getCrossTeamSender: () => service.appShellBoundary.getCrossTeamSender(),
     persistSentMessage: (teamName, message) => service.persistSentMessage(teamName, message),
-    persistInboxMessage: (teamName, recipient, message) =>
-      service.persistInboxMessage(teamName, recipient, message),
     emitTeamChange: (event) => service.teamChangeEmitter?.(event),
     logger: options.logger,
     nowIso: options.nowIso,
@@ -175,15 +171,12 @@ export function createTeamProvisioningLiveLeadMessagePortsBoundary<
     captureSendMessages: (run, content) =>
       captureLeadSendMessages(run, content, {
         nowIso: deps.nowIso,
-        nowMs: deps.nowMs,
         logger: deps.logger,
         crossTeamSender: deps.getCrossTeamSender(),
         resolveCrossTeamReplyMetadata,
         getTrackedRunId: (teamName) => deps.getTrackedRunId(teamName),
         pushLiveLeadProcessMessage: pushLiveLeadProcessMessageForTeam,
         persistSentMessage: (teamName, message) => deps.persistSentMessage(teamName, message),
-        persistInboxMessage: (teamName, recipient, message) =>
-          deps.persistInboxMessage(teamName, recipient, message),
         emitLeadMessageChange: (teamName, runId, detail) =>
           deps.emitTeamChange({ type: 'lead-message', teamName, runId, detail }),
         emitInboxChange: (teamName, detail) =>

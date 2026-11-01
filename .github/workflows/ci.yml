@@ -32,11 +32,12 @@ permissions:
   actions: read
   pull-requests: read
 
-# Every edited event is isolated before the stricter Node classifier runs.
-# Even malformed edits or failed planning must not cancel current-code CI.
+# Canonical run supersession; see docs/ci-qualification.md#run-supersession.
+# Every edited event is additionally isolated before the stricter Node classifier
+# runs. Even malformed edits or failed planning must not cancel current-code CI.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 env:
   CI_ROOT_TEST_SHARDS: '4'
@@ -91,8 +92,9 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      # Force exit: a broken gate wait loop must fail this step, not hang it.
       - name: Test feedback policy
-        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Guard runtime artifacts
@@ -245,7 +247,7 @@ jobs:
         if: matrix.shard == 1
         run: |
           set -o pipefail
-          node --test test/scripts/nodeForgeSecurity.test.mjs test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
+          node --test test/scripts/auditDependencies.test.mjs test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
 
       - name: Build MCP server for root integration tests
         run: pnpm --filter agent-teams-mcp build
@@ -255,7 +257,7 @@ jobs:
 
       - name: Test feedback policy
         if: matrix.shard == 1
-        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
 
   lint:
     env:
@@ -448,7 +450,7 @@ jobs:
           EXPECTED_SCOPE: ${{ needs.plan.outputs.scope }}
         run: node scripts/ci/ci-change-scope-check.mts
       - name: Test CI scope and feedback policy
-        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
       - name: Check changed text formatting
         run: node scripts/ci/ci-change-scope-check.mts format
 
@@ -500,10 +502,13 @@ jobs:
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required
   # context "Expected" although earlier runs for the same head had passed.
+  # A title/body edit run skips the heavy jobs and its gate waits for the
+  # same-input CI run instead of repeating it; it passes only on that run's
+  # authenticated complete success. See docs/ci-qualification.md.
   full-qualification:
     name: Full qualification
     needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
-    if: always()
+    if: always() && !cancelled()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     steps:
       - name: Checkout
@@ -512,8 +517,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+      # The script deadline (METADATA_GATE.waitMs, 90 min) fails the gate first;
+      # this timeout bounds the last proof after it. Either outcome is a failure.
       - name: Verify completed current-code qualification after metadata edits
         if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'
+        timeout-minutes: 100
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci/ci-feedback.mts metadata-gate

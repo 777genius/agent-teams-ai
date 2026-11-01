@@ -22,9 +22,25 @@ it('distinguishes a proven empty inbox from unavailable inbox history in preview
     maxItems: 3,
     textLimit: 200,
   };
-  const source = new OpenCodeMemberRuntimePreviewSource(bridge as never, {
-    resolve: vi.fn().mockResolvedValue(null),
-  });
+  const source = new OpenCodeMemberRuntimePreviewSource(
+    bridge as never,
+    {
+      resolve: vi.fn().mockResolvedValue(null),
+    },
+    undefined,
+    undefined,
+    {
+      read: async () => ({
+        kind: 'bound',
+        mode: 'active',
+        runId: 'original-run',
+        laneId: input.laneId,
+        sessionId: 'ses_original',
+        cacheKey: 'original',
+      }),
+      isCurrent: async () => true,
+    }
+  );
   const empty = await source.loadPreview(input);
   expect(empty.warnings).toEqual([
     { code: 'opencode_runtime_unavailable', message: 'OpenCode runtime bridge is unavailable.' },

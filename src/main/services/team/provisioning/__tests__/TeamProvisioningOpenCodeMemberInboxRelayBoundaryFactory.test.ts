@@ -115,6 +115,7 @@ describe('TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory', () => {
       await ports.deliverOpenCodeMemberMessage('team-a', {} as never);
       ports.suppressRuntimeInactiveWarning('team-a');
       ports.logWarning('warning');
+      ports.logDiagnostic('deferred');
       ports.nowIso();
       ports.getErrorMessage(new Error('boom'));
 
@@ -143,6 +144,26 @@ describe('TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory', () => {
     });
     expect(deps.cleanedStoppedTeamOpenCodeRuntimeLanes.has).toHaveBeenCalledWith('team-a');
     expect(deps.logger.warn).toHaveBeenCalledWith('warning');
+    expect(deps.logger.diagnostic).toHaveBeenCalledWith('deferred');
+  });
+
+  it('leaves the inbox of a team of another app profile to that profile', async () => {
+    const deps = createDeps({ isManagedByThisProfile: vi.fn(async () => false) });
+
+    await expect(
+      createTeamProvisioningOpenCodeMemberInboxRelayBoundary(deps).relayOpenCodeMemberInboxMessages(
+        'team-a',
+        'worker'
+      )
+    ).resolves.toEqual({
+      relayed: 0,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      diagnostics: ['opencode_member_inbox_relay_skipped_team_of_another_app_profile'],
+    });
+    expect(deps.isManagedByThisProfile).toHaveBeenCalledWith('team-a');
+    expect(relayWithPortsMock).not.toHaveBeenCalled();
   });
 
   it('keeps the task-reader fallback local to the boundary and preserves catch-to-empty behavior', async () => {
@@ -231,6 +252,7 @@ function createDeps(
   };
 
   return {
+    isManagedByThisProfile: vi.fn(async () => true),
     host: {
       getOpenCodeMemberRelayKey: vi.fn((teamName, memberName) => `relay/${teamName}/${memberName}`),
       scheduleOpenCodeMemberInboxDeliveryWake: vi.fn(),
@@ -278,6 +300,7 @@ function createDeps(
     readTaskRefInferenceTasks: vi.fn(async () => [teamTask()]),
     logger: {
       warn: vi.fn(),
+      diagnostic: vi.fn(),
     },
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     getErrorMessage: vi.fn((error) => (error instanceof Error ? error.message : String(error))),

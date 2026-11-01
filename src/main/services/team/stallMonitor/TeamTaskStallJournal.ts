@@ -69,12 +69,27 @@ export class TeamTaskStallJournal {
 
       const activeTaskIdSet = new Set(args.activeTaskIds);
       const scopeTaskIdSet = args.scopeTaskIds ? new Set(args.scopeTaskIds) : null;
+      const candidateTaskIdSet = new Set(
+        [...candidateByEpoch.values()].map((evaluation) => evaluation.taskId)
+      );
       for (let i = entries.length - 1; i >= 0; i -= 1) {
         const entry = entries[i];
         if (scopeTaskIdSet && !scopeTaskIdSet.has(entry.taskId)) {
           continue;
         }
-        if (!activeTaskIdSet.has(entry.taskId) || !candidateByEpoch.has(entry.epochKey)) {
+        if (!activeTaskIdSet.has(entry.taskId)) {
+          entries.splice(i, 1);
+          continue;
+        }
+        if (candidateByEpoch.has(entry.epochKey)) {
+          continue;
+        }
+        // An epoch that already alerted keeps its count and cooldown through a
+        // scan that does not report it, such as a skip while the owner's turn
+        // runs. Dropping it would start the rungs over on the next alert of the
+        // same epoch. A new epoch of the same task replaces it.
+        const alerted = (entry.alertCount ?? 0) > 0 || entry.state === 'alerted';
+        if (!alerted || candidateTaskIdSet.has(entry.taskId)) {
           entries.splice(i, 1);
         }
       }

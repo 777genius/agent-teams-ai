@@ -165,7 +165,10 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerTaskBoardApi
-    extends ControllerTaskBoardTaskApi, ControllerTaskBoardKanbanApi, ControllerReviewWriteApi {}
+    extends ControllerTaskBoardTaskApi, ControllerTaskBoardKanbanApi, ControllerReviewWriteApi {
+    /** Configured member or lead alias, by the task owner rules; leadName is the configured lead. */
+    resolveTaskActor(actor: string): { memberName: string | null; leadName: string | null };
+  }
 
   export interface ControllerMessageApi {
     appendSentMessage(flags: Record<string, unknown>): unknown;
@@ -178,7 +181,11 @@ declare module 'agent-teams-controller' {
     registerProcess(flags: Record<string, unknown>): unknown;
     stopProcess(flags: Record<string, unknown>): unknown;
     unregisterProcess(flags: Record<string, unknown>): unknown;
-    listProcesses(): unknown[];
+    /**
+     * `readOnly` leaves processes.json as it is. A stopped row it cannot settle
+     * gets a stable stoppedAt estimate (the row's registeredAt).
+     */
+    listProcesses(flags?: { readOnly?: boolean }): unknown[];
   }
 
   export interface ControllerMaintenanceApi {

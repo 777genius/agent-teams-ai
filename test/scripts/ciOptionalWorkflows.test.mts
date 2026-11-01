@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
+import {
+  RUN_SUPERSESSION_POLICY,
+  SUPERSESSION_CANCEL,
+  SUPERSESSION_GROUP,
+} from '../workflows/runSupersession.mts';
+
 const deferredJobs = {
   codeql: 'analyze',
   'codex-runtime-smoke': 'install',
@@ -9,12 +15,18 @@ const deferredJobs = {
   'opencode-desktop-e2e': 'desktop',
   'opencode-packaged-e2e': 'packaged-windows',
   'anthropic-compatible-status-e2e': 'packaged-windows',
+  'anthropic-env-portability': 'environment',
+  'sentry-owned-process-native': 'native',
+  'windows-backfill-diagnostic': 'packaged-backfill',
 };
 const workflow = (name: string) =>
   readFileSync(new URL(`../../.github/workflows/${name}.yml`, import.meta.url), 'utf8');
+// Exact text of the canonical run supersession policy. Its behavior for every
+// event is evaluated by test/workflows/runSupersession.test.ts.
+const canonicalConcurrency = `\nconcurrency:\n  group: ${SUPERSESSION_GROUP}\n  cancel-in-progress: ${SUPERSESSION_CANCEL}\n`;
 
 for (const [name, job] of Object.entries(deferredJobs)) {
-  test(`${name}: defer drafts, run on Ready, and cancel only superseded PR runs`, () => {
+  test(`${name}: defer drafts and run on Ready`, () => {
     const source = workflow(name);
     const trigger = source.split('\njobs:')[0];
     assert.match(
@@ -22,11 +34,6 @@ for (const [name, job] of Object.entries(deferredJobs)) {
       /pull_request:\n    types: \[opened, synchronize, reopened, ready_for_review, converted_to_draft\]/
     );
     assert.match(trigger, /workflow_dispatch:/);
-    assert.match(
-      trigger,
-      /group: \$\{\{ github.workflow \}\}-\$\{\{ github.event.pull_request.number \|\| github.run_id \}\}/
-    );
-    assert.match(trigger, /cancel-in-progress: \$\{\{ github.event_name == 'pull_request' \}\}/);
     const body = source.split(`\n  ${job}:\n`)[1]?.split(/\n  [\w-]+:\n/)[0];
     assert.ok(body, `Missing ${job}`);
     assert.match(
@@ -59,10 +66,15 @@ test('security schedules and main push triggers remain available', () => {
   }
 });
 
-test('announcement validation still runs on drafts, with PR-only cancellation', () => {
-  const source = workflow('announcements-content');
-  assert.match(source, /cancel-in-progress: \$\{\{ github.event_name == 'pull_request' \}\}/);
-  assert.doesNotMatch(source, /draft/);
+test('announcement validation still runs on drafts', () => {
+  assert.doesNotMatch(workflow('announcements-content'), /draft/);
+});
+
+test('automatic checks use the canonical run supersession policy verbatim', () => {
+  for (const name of RUN_SUPERSESSION_POLICY.canonical) {
+    const trigger = workflow(name).split('\njobs:')[0];
+    assert.ok(trigger.includes(canonicalConcurrency), `${name}: non-canonical concurrency`);
+  }
 });
 
 test('policy tests run before main CI planning, without dependency installation', () => {

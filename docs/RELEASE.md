@@ -2349,7 +2349,8 @@ gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
 ```
 
 After the draft build succeeds, follow the runtime repository's
-`docs/release-flow.md`: verify the exact seven draft assets, manifest source,
+`docs/release-flow.md`: verify the complete draft asset roster derived from the
+generated manifest (base archives, optional V2 support archives, manifest and checksums), source,
 archive checksums, and payload `VERSION`/`COMMIT_SHA`. Retain the verified draft
 release ID and asset identities. With owner authorization covering this release,
 promote that exact draft without rebuilding:
@@ -2391,6 +2392,8 @@ After publication succeeds, update this repo's `runtime.lock.json`:
 - `opencodeV2`: copy verbatim from the published manifest's `opencodeV2` (the runtime's
   supported OpenCode V2 range and qualified versions). The app derives V2 recognition
   and eligibility only from it.
+- `opencodeV2Delivery`, when present: copy the published platform descriptors verbatim,
+  including archive and manifest hashes. Do not invent descriptors for unqualified platforms.
 
 Then verify the lock points at real uploaded assets:
 
@@ -2413,7 +2416,8 @@ node scripts/stage-runtime.mjs
 Do not create standalone runtime releases in the frontend repository. The source tag is in the
 private `777genius/agent_teams_orchestrator` repository, while the downloadable release is in
 public `777genius/agent_teams_orchestrator_binaries`. The frontend release workflow stages those
-archives into packaged app installers.
+base archives into packaged app installers. Separately pinned V2 support archives
+are downloaded by the installer when needed; they are not embedded in the app.
 
 Local `pnpm dev` downloads the pinned runtime anonymously from the public binary repository. GitHub
 CLI authentication is not required. A local runtime override remains available through

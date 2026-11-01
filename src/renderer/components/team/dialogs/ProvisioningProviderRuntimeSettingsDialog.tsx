@@ -133,11 +133,12 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
       const refreshed = await fetchCliProviderStatus(providerId, {
         silent: false,
         checkReason,
+        ...(providerId === 'opencode' ? { projectPath } : {}),
       });
       onProviderRuntimeChanged?.(providerId);
       return refreshed;
     },
-    [fetchCliProviderStatus, invalidateCliStatus, onProviderRuntimeChanged]
+    [fetchCliProviderStatus, invalidateCliStatus, onProviderRuntimeChanged, projectPath]
   );
 
   const refreshRuntimeAfterTerminal = useCallback(() => {

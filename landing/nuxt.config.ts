@@ -127,11 +127,15 @@ export default defineNuxtConfig({
     }
   },
   i18n: {
-    restructureDir: ".",
+    restructureDir: false,
     locales: [...supportedLocales],
     defaultLocale: "en",
     strategy: "prefix_except_default",
+    lazy: true,
     langDir: "locales",
+    bundle: {
+      optimizeTranslationDirective: false
+    },
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: "i18n_redirected",

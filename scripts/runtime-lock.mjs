@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readOpenCodeV2DeliveryMap } from '../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
@@ -19,6 +20,7 @@ function fail(message) {
 
 const [command, arg] = process.argv.slice(2);
 const runtimeLock = readRuntimeLock();
+const v2Delivery = readOpenCodeV2DeliveryMap(runtimeLock);
 
 switch (command) {
   case 'version':
@@ -56,9 +58,15 @@ switch (command) {
     for (const asset of Object.values(runtimeLock.assets)) {
       process.stdout.write(`${asset.file}\n`);
     }
+    for (const descriptor of Object.values(v2Delivery ?? {}))
+      process.stdout.write(`${descriptor.archive.file}\n`);
+    break;
+  case 'support-asset-list':
+    for (const descriptor of Object.values(v2Delivery ?? {}))
+      process.stdout.write(`${descriptor.archive.file}\n`);
     break;
   default:
     fail(
-      'Usage: node scripts/runtime-lock.mjs <version|source-ref|source-repository|release-repository|release-tag|asset-name <platform>|binary-name <platform>|asset-list>'
+      'Usage: node scripts/runtime-lock.mjs <version|source-ref|source-repository|release-repository|release-tag|asset-name <platform>|binary-name <platform>|asset-list|support-asset-list>'
     );
 }

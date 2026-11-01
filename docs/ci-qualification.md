@@ -14,7 +14,19 @@ Source narrowing is intentionally limited to UI primitives. Root tests remain br
 
 DMG artwork uses a disposable app bundle and never launches the application or an agent runtime. It verifies the installer layout with the pinned electron-builder implementation. Platform packaging still runs for dependency or packaging logic changes.
 
-Title/body-only PR edits after full qualification retain the existing authenticated same-head/base evidence. The edit run still reports `Full qualification` for the head, and it passes only when that earlier full qualification is re-authenticated. A title/body edit without reusable full evidence, for example after a focused qualification, classifies the unchanged diff again and runs the same scoped checks as a push would. Label changes are classified the same way. Base changes and unknown edits run full CI. Legal texts and issue templates under `.github/` run full CI, so their wording is never reformatted to pass the focused check. Scoped evidence reuse is intentionally not introduced. Postmerge reuse still requires complete full-tier evidence; a focused pass cannot qualify unrelated code or a different tree.
+Title/body-only PR edits retain the authenticated CI run for the same head, base and synthetic merge instead of repeating it. The edit run skips the heavy jobs but still reports `Full qualification` for the head. On a ready PR that check passes only after the same-input run has completed full qualification and that result is re-authenticated. If the edit arrives while that run is still queued or running, which is the usual case for bot-written descriptions, the check waits for it: it reads the run status once a minute and repeats the full proof when the run settles or a status read fails, for at most 90 minutes. While the token's core API budget is below a quarter of its limit, the wait pauses until the budget resets instead of polling. The check fails when the awaited run fails, is cancelled without a newer same-input run from `opened`, `synchronize`, `reopened` or `ready_for_review`, the PR head or target branch moves, the proof fails three times in a row, or the deadline passes. A label run is not accepted as such a newer run, so a label change during the wait fails the edit gate while the label run reports its own `Full qualification`. The check never passes or skips early. If it failed because the awaited run failed, re-run all jobs of the newest CI run for the head: a re-run edit run plans again and either re-authenticates a since successful run or runs the checks itself. The edit run relies on the unchanged diff having the awaited run's scope. If only its own classification fails (for example a git timeout) while the awaited run was focused, its check fails; re-running that edit run plans again.
+
+A title/body edit without reusable full evidence, for example after a focused qualification, a failed or cancelled run, or while a scoped run is still running, classifies the unchanged diff again and runs the same scoped checks as a push would. Label changes are classified the same way. Base changes and unknown edits run full CI. Legal texts and issue templates under `.github/` run full CI, so their wording is never reformatted to pass the focused check. Scoped evidence reuse is intentionally not introduced. Postmerge reuse still requires complete full-tier evidence; a focused pass cannot qualify unrelated code or a different tree.
+
+| PR event (same head)                                       | Edit run does                                              | `Full qualification` of the edit run      |
+| ---------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------- |
+| Title/body edit, same-input full run completed green       | Plan only                                                  | Passes after re-authenticating that run   |
+| Title/body edit, same-input full run queued or running     | Plan only                                                  | Waits, then passes or fails with that run |
+| Title/body edit, latest same-input run failed or cancelled | Classifies the diff and runs its checks                    | Result of its own checks                  |
+| Title/body edit, scoped diff, scoped run not reusable      | Runs the scoped checks again                               | Result of its own checks                  |
+| Title/body edit on a draft with an attested same-input run | Plan only                                                  | Fails, as for every draft                 |
+| Base change or unknown edit                                | Full CI                                                    | Result of its own checks                  |
+| Proof cannot be completed (API, identity, ambiguity)       | Plan: classifies the diff and runs its checks. Gate: fails | Never passes without complete evidence    |
 
 ## Small intermediate commits
 
@@ -28,8 +40,9 @@ and packaged E2E, and Anthropic-compatible packaged E2E defer automatic PR jobs
 while the PR is draft. `ready_for_review` runs them for the current diff when
 their path filters match. Converting back to draft cancels superseded PR runs.
 Announcement validation continues on drafts because it validates publishable
-content. All these workflows cancel obsolete runs for the same PR only;
-main, scheduled and manually dispatched runs remain independent.
+content. All these workflows follow [run supersession](#run-supersession):
+a newer revision of the same PR cancels its obsolete runs, while main,
+scheduled and manually dispatched runs remain independent.
 
 Use **Actions → the relevant workflow → Run workflow** for an early smoke or
 packaging check while drafting. Manual runs and scheduled security scans still
@@ -37,3 +50,51 @@ run regardless of draft state. Keep `ci:full` for forcing full change scope on a
 ready PR; it does not turn a draft into a merge-qualified PR. Do not use
 `[skip ci]`: it suppresses the workflow that reports the required merge check.
 There is no line-count-based bypass for small changes to runtime or shared code.
+
+## Run supersession
+
+Workflow concurrency decides which runs a newer run may cancel. Automatic check
+workflows use one canonical expression, defined in
+`test/workflows/runSupersession.mts`. `test/workflows/runSupersession.test.ts`
+evaluates the concurrency of every workflow for simulated events and fails for a
+workflow that has no assigned policy.
+
+| Event                                                   | Group identity                | Cancels older runs in the group                                               |
+| ------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
+| `pull_request`                                          | Workflow, event and PR number | Yes: a newer run for the same PR stops its queued and running checks          |
+| `push` to another branch (not default, not `release/*`) | Workflow, event and ref       | Yes: older runs of the same branch                                            |
+| `push` to the default branch, `release/*` or a tag      | Workflow, event and run ID    | No: every commit keeps its own evidence, such as the announcement range check |
+| `schedule`, `workflow_dispatch`                         | Workflow, event and run ID    | No: manual runs never cancel each other                                       |
+| `merge_group`                                           | Workflow, event and queue ref | No                                                                            |
+
+PR groups use the PR number rather than the head branch, so fork PRs and a fork
+branch named `main` cannot share a group with pushes. Including the event name
+keeps a PR number, branch name and run ID from colliding.
+
+Explicit variants:
+
+- `CI` appends an edit suffix: each `edited` run gets its own group and never
+  cancels code checks, as before. Later edits do not cancel edit runs either:
+  the metadata and postmerge proofs never cross a cancelled run on the same
+  head, so a later edit or the post-merge main run would repeat full CI.
+  Title/body edit runs stay cheap instead (see above).
+- `Electron packaged CI` runs only for PRs and isolates only title/body edits;
+  a base change runs its code checks and supersedes older ones.
+- Landing deployment keeps one cancelling group per ref, so a newer push or
+  dispatch cancels an older deployment that is still queued or running. A
+  manual re-run of an older run deploys its original commit, so do not re-run
+  superseded deployments.
+- Release, signing and draft recovery workflows queue per release tag, ref,
+  release ID or fixed operation group and never cancel running work. GitHub
+  keeps at most one pending run per group, so a third queued operation replaces
+  the pending second one.
+- ReviewRouter, the manual-only Mac updater workflows and reusable workflows
+  declare no workflow-level group. A called workflow sees the caller's `github`
+  context, so the same expression there would join the caller's group and cancel
+  or block the caller.
+
+Cancellation never passes the required check. `Full qualification` keeps its
+static name and runs only `if: always() && !cancelled()`: a cancelled run reports
+it as cancelled, never skipped or successful, and the PR waits for a newer run.
+Job-level `always()` conditions in cancellable workflows must include
+`!cancelled()`, so a cancelled run does not start further jobs.

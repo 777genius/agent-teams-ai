@@ -91,6 +91,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
+import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
 import type { AgentActionMode } from '@shared/types';
@@ -341,9 +342,10 @@ function readConfigForUiSnapshot(
 }
 
 function createUiSnapshotProjectResolver(
-  configReader: TeamConfigReader
+  configReader: TeamConfigReader,
+  canWriteTeamFiles: TeamFileWritePolicy
 ): TeamTranscriptProjectResolver {
-  return new TeamTranscriptProjectResolver({
+  return new TeamTranscriptProjectResolver(canWriteTeamFiles, {
     getConfig: (teamName) => readConfigForUiSnapshot(configReader, teamName),
   });
 }
@@ -424,6 +426,7 @@ interface FileWatchReconcileTrigger {
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
+  private processHealthTickInFlight = false;
   /** Tracks notified task-start transitions to avoid duplicate lead notifications. */
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
@@ -444,6 +447,14 @@ export class TeamDataService {
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
   private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
+  /**
+   * Until wired, no team counts as this profile's, so lead notifications and transcript
+   * lookups write nothing under a team directory and process listings only read. The
+   * team data worker is never wired.
+   */
+  private teamProfileOwnership: (teamName: string) => Promise<boolean> = () =>
+    Promise.resolve(false);
+  private readonly projectResolver: TeamTranscriptProjectResolver;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -465,11 +476,14 @@ export class TeamDataService {
     private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
     private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
     private readonly leadSessionParseCache: LeadSessionParseCache = new LeadSessionParseCache(),
-    private readonly projectResolver: TeamTranscriptProjectResolver = createUiSnapshotProjectResolver(
-      configReader
-    ),
+    projectResolver?: TeamTranscriptProjectResolver,
     private readonly launchStateStore: TeamLaunchStateStore = new TeamLaunchStateStore()
   ) {
+    this.projectResolver =
+      projectResolver ??
+      createUiSnapshotProjectResolver(configReader, (teamName) =>
+        this.isTeamManagedByThisProfile(teamName)
+      );
     const getInboxMessagesWindow =
       typeof this.inboxReader.getMessagesWindow === 'function'
         ? (teamName: string, options: Parameters<TeamInboxReader['getMessagesWindow']>[1]) =>
@@ -669,6 +683,22 @@ export class TeamDataService {
   /** Composition-time backend swap; must run before notification processing starts. */
   setTaskCommentNotificationJournalStore(store: TaskCommentNotificationJournalStore): void {
     this.taskCommentNotificationJournal.setStore(store);
+  }
+
+  /**
+   * ~/.claude/teams is shared with other app profiles and native sessions. Lead
+   * notifications about teammate task starts and comments write the team's
+   * comment journal and lead inbox, so they run only for teams this profile manages.
+   * The same check decides whether transcript lookups may write the team's transcript
+   * index or repair the projectPath in its config.json.
+   */
+  setTeamProfileOwnership(isManagedByThisProfile: (teamName: string) => Promise<boolean>): void {
+    this.teamProfileOwnership = isManagedByThisProfile;
+  }
+
+  /** The wired ownership check; background writers into a team ask it first. */
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean> {
+    return this.teamProfileOwnership(teamName);
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
@@ -1776,17 +1806,31 @@ export class TeamDataService {
   }
 
   private async processHealthTick(): Promise<void> {
-    for (const teamName of this.processHealthTeams) {
-      try {
-        this.getController(teamName).processes.listProcesses();
-      } catch {
-        // best-effort per team
+    // The interval does not wait for a slow tick, so a tick still running skips the next.
+    if (this.processHealthTickInFlight) return;
+    this.processHealthTickInFlight = true;
+    try {
+      for (const teamName of [...this.processHealthTeams]) {
+        try {
+          await this.readProcesses(teamName);
+        } catch {
+          // best-effort per team
+        }
       }
+    } finally {
+      this.processHealthTickInFlight = false;
     }
   }
 
+  /**
+   * Listing settles rows whose pid is gone by writing their stoppedAt back to
+   * processes.json. Only a team this profile manages is written: the teams
+   * directory is shared with other app profiles, and their listing gets the
+   * same rows while the file stays as it is.
+   */
   private async readProcesses(teamName: string): Promise<TeamProcess[]> {
-    return this.getController(teamName).processes.listProcesses() as TeamProcess[];
+    const readOnly = !(await this.isTeamManagedByThisProfile(teamName));
+    return this.getController(teamName).processes.listProcesses({ readOnly }) as TeamProcess[];
   }
 
   /**
@@ -2418,6 +2462,7 @@ export class TeamDataService {
       const last = events[events.length - 1];
       if (last.type !== 'status_changed' || last.to !== 'in_progress') return;
       if (!last.actor || last.actor === 'user') return;
+      if (!(await this.isTeamManagedByThisProfile(teamName))) return;
 
       // Dedup: only notify once per unique transition (keyed by team+task+timestamp).
       const dedupKey = `${teamName}:${taskId}:${last.timestamp}`;
@@ -2651,19 +2696,31 @@ export class TeamDataService {
     return result;
   }
 
+  /**
+   * Writes an app-originated notice into the lead inbox. `system` is not a team
+   * member, so the controller's message_send path rejects it as a sender; the
+   * notice goes straight to the inbox writer like the app's other system notices.
+   * Without a readable config the lead inbox would be a guess, so it throws and
+   * the caller retries instead of writing to `team-lead`.
+   */
   async sendSystemNotificationToLead(args: {
     teamName: string;
     summary: string;
     text: string;
     taskRefs?: TaskRef[];
+    messageId?: string;
   }): Promise<SendMessageResult> {
-    const leadName = await this.resolveLeadName(args.teamName);
-    return this.sendMessage(args.teamName, {
-      member: leadName,
+    const config = await readConfigForUiSnapshot(this.configReader, args.teamName);
+    if (!config) {
+      throw new Error(`Team config of ${args.teamName} is unavailable; lead notice not written`);
+    }
+    return this.sendRuntimeRecipientMessage(args.teamName, {
+      member: this.resolveLeadNameFromConfig(config),
       from: 'system',
       summary: args.summary,
       text: args.text,
       ...(args.taskRefs && args.taskRefs.length > 0 ? { taskRefs: args.taskRefs } : {}),
+      ...(args.messageId ? { messageId: args.messageId } : {}),
       source: TASK_COMMENT_NOTIFICATION_SOURCE,
     });
   }
@@ -3089,6 +3146,8 @@ export class TeamDataService {
     const recoverPending = options?.recoverPending === true;
     const teamContext = options?.teamContext;
     if (teamContext?.deletedAt) return;
+    // Even the first journal read publishes a fallback replica into the team directory.
+    if (!(await this.isTeamManagedByThisProfile(teamName))) return;
 
     let leadName = teamContext?.leadName?.trim() ?? '';
     let leadSessionId = teamContext?.leadSessionId;

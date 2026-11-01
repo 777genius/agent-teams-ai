@@ -93,6 +93,7 @@ it.each(['resolve', 'reject'] as const)(
         return true;
       },
       restoreGenericHoles: () => Promise.resolve(false),
+      isManagedByThisProfile: () => Promise.resolve(true),
     });
     const imports: string[] = [];
     owner.configure(gate, {
@@ -182,6 +183,7 @@ it('rejects dirty JSON backup before the production coordinator publishes config
     restoreLegacy: generic,
     restoreGeneric: generic,
     restoreGenericHoles: generic,
+    isManagedByThisProfile: () => Promise.resolve(true),
   });
   owner.configure(
     gate,
@@ -256,6 +258,7 @@ function createSkipCoordinator(
     },
     restoreGeneric: generic,
     restoreGenericHoles: holes,
+    isManagedByThisProfile: () => Promise.resolve(true),
   });
 }
 

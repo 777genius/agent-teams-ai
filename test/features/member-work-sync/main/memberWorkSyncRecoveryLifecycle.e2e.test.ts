@@ -1,5 +1,6 @@
 import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
+import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
 import os from 'os';
@@ -222,6 +223,7 @@ function createFeature(input: {
     },
   ];
   return createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: input.lifecycleIdentity ?? createTestWorkSyncIdentity(input.incarnation),
     teamsBasePath: input.teamsBasePath,
     ...(input.recoveryAllocation ? { recoveryAllocation: input.recoveryAllocation } : {}),
@@ -552,6 +554,12 @@ describe('member work sync recovery lifecycle e2e', () => {
       if (first.status !== 'identified') {
         throw new Error('expected identified lifecycle marker before backup');
       }
+      // Only teams of this app profile are backed up.
+      await claimTeamForThisProfile({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        reason: 'create',
+      });
       await owned.backup.backupTeam(teamName);
       await writeTeamConfig(getTeamsBasePath(), teamName);
       expect(await owned.identity.adoptLegacy(teamName)).toEqual({

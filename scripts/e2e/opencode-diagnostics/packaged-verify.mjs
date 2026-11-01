@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { isDeepStrictEqual } from 'node:util';
 import { clickControl, correlateReport } from './catalog.mjs';
+import { v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
 import {
   runtimeProvenance,
   packagedEnvironment,
@@ -14,6 +15,39 @@ import {
   packagedSettingsRequestObservation,
   waitForPackagedRefreshPreparation,
 } from './packaged.mjs';
+
+/** Retain phase boundaries plus the latest download sample, within the same 120-row cap. */
+export function observeInstallerProgress(observation, status) {
+  const record = {
+    at: Date.now(),
+    state: String(status.state).slice(0, 64),
+    phase: status.progress?.phase ? String(status.progress.phase).slice(0, 64) : null,
+    detail:
+      typeof status.progress?.detail === 'string' ? status.progress.detail.slice(0, 256) : null,
+  };
+  const previous = observation.records.at(-1);
+  if (
+    record.phase === 'downloading' &&
+    previous?.phase === record.phase &&
+    previous.state === record.state &&
+    previous.coalesced
+  ) {
+    observation.records[observation.records.length - 1] = { ...record, coalesced: true };
+    return;
+  }
+  if (observation.records.length >= 120) {
+    observation.overflow = true;
+    observation.records[119] = record;
+    return;
+  }
+  observation.records.push(
+    record.phase === 'downloading' &&
+      previous?.phase === record.phase &&
+      previous.state === record.state
+      ? { ...record, coalesced: true }
+      : record
+  );
+}
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const refreshControl = `[...document.querySelectorAll('button')].find(b =>
@@ -406,7 +440,10 @@ function settledDirectoryPage(payload, expectation, summary) {
       expectation.modelSources.includes(entry.providerId) &&
       Number.isSafeInteger(entry.modelCount) && entry.modelCount > 0 &&
       entry.metadata?.hasKnownModels === true &&
-      Array.isArray(entry.sources) && entry.sources.includes('inventory'));
+      Array.isArray(entry.sources) &&
+      // The native V2 directory records ready provider/model reads as opencode-provider;
+      // older producers used inventory. Seed/config metadata alone proves neither.
+      (entry.sources.includes('inventory') || entry.sources.includes('opencode-provider')));
 }
 
 export function refreshSettled(observation, current) {
@@ -736,7 +773,9 @@ export async function verifyPackaged({
   preloadScripts,
   scriptMetadata,
 }) {
-  assert(['cold', 'warm-1', 'warm-2'].includes(data.run), 'Use the explicit packaged runner');
+  const v2Repair = data.runtimeSetup === 'app-install-v2-repair';
+  assert(['cold', 'warm-1', 'warm-2', ...(v2Repair ? ['support-repair', 'support-repair-restart'] : [])]
+    .includes(data.run), 'Use the explicit packaged runner');
   const evidence = {
     passed: false,
     mode: 'packaged',
@@ -818,12 +857,19 @@ export async function verifyPackaged({
     );
     await probe('invalidateVersion', 'window.electronAPI.openCodeRuntime.invalidateStatus()');
     let version = await probe('opencodeVersion', 'window.electronAPI.openCodeRuntime.getStatus()');
+    if (v2Repair && data.run === 'cold') {
+      assert(!version.installed && version.source === 'missing', 'Published V2 cold profile must be empty');
+      assert(/^2\.\d+\.\d+$/.test(version.compatibleV2Version ?? ''),
+        'Fresh default installation requires an actually qualified V2 release');
+      evidence.freshDefaultInstall = { requestedGeneration: 'default',
+        qualifiedV2Version: version.compatibleV2Version, observedVersion: null };
+    }
     // Explicit future runner option only. This is the app's registry/integrity installer;
     // the harness never supplies a URL, runtime binary, manifest or credentials.
     if (
       !version.installed &&
       version.source === 'missing' &&
-      data.runtimeSetup === 'app-install' &&
+      ['app-install', 'app-install-v2-repair'].includes(data.runtimeSetup) &&
       data.run === 'cold'
     ) {
       evidence.installerPublication = {
@@ -836,15 +882,12 @@ export async function verifyPackaged({
         try {
           await evaluate(`window.__packagedInstallObservation = {records:[],overflow:false};
             window.__packagedInstallUnsubscribe = window.electronAPI.openCodeRuntime.onProgress((_event, status) => {
-              const o = window.__packagedInstallObservation;
-              if (o.records.length >= 120) { o.overflow = true; return; }
-              o.records.push({at:Date.now(), state:String(status.state).slice(0,64),
-                phase:status.progress?.phase ? String(status.progress.phase).slice(0,64) : null,
-                detail:typeof status.progress?.detail === 'string' ? status.progress.detail.slice(0,256) : null});
+              (${observeInstallerProgress.toString()})(window.__packagedInstallObservation, status);
             }); void 0`);
         } catch {
           evidence.installerPublication.progressSubscriptionFailed = true;
         }
+        // Exercise the same automatic generation policy as a fresh normal install.
         await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
       } finally {
         try {
@@ -865,6 +908,31 @@ export async function verifyPackaged({
         'opencodeInstalledVersion',
         'window.electronAPI.openCodeRuntime.getStatus()'
       );
+    }
+    if (v2Repair && data.run === 'support-repair') {
+      const before = await v2SupportSnapshot(data, 'none');
+      assert.deepEqual(before.native, data.supportRepair?.before?.native,
+        'Native selection changed before support-only repair');
+      assert.deepEqual(before.receipt, data.supportRepair?.before?.receipt,
+        'Support selection changed before support-only repair');
+      await probe('supportRepair',
+        'window.electronAPI.openCodeRuntime.install({generation:"v2",supportOnly:true})', 180000);
+      await probe('invalidateRepairedVersion', 'window.electronAPI.openCodeRuntime.invalidateStatus()');
+      version = await probe('opencodeRepairedVersion', 'window.electronAPI.openCodeRuntime.getStatus()');
+    }
+    if (v2Repair) {
+      assert(version.installed && /^2\.\d+\.\d+$/.test(version.version) && version.v2Support === 'ready',
+        'Published native V2 and support must be ready');
+      evidence.v2Support = data.run.startsWith('support-repair')
+        ? await verifyV2SupportRepair(data, data.run === 'support-repair-restart')
+        : await v2SupportSnapshot(data);
+      if (data.run === 'cold') {
+        assert.equal(version.version, evidence.freshDefaultInstall.qualifiedV2Version,
+          'Fresh default install did not select the actual qualified V2 release');
+        evidence.freshDefaultInstall.observedVersion = version.version;
+      }
+      assert.equal(version.version, evidence.v2Support.native.version);
+      assert.equal(version.binaryPath.toLowerCase(), evidence.v2Support.native.binaryPath.toLowerCase());
     }
     if (version.binaryPath) evidence.opencode = await runtimeProvenance(version, data, 'opencode');
     assert(
@@ -1129,7 +1197,26 @@ export async function verifyPackaged({
         }
         return send(method, params);
       },
-      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`
+      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`,
+      async (readPoint) => {
+        // React may remount/disable the control after the earlier preparation.
+        // Poll only before any mouse event; never retry an emitted click.
+        const clickPreparation = await waitForPackagedRefreshPreparation(async () => {
+          const sample = await evaluate(`(${packagedSettingsPreparationState.toString()})(document,
+            ${packagedRefreshControlState.toString()})`);
+          const requests = await observe('globalThis.__packagedCatalogObservation');
+          const point = await readPoint();
+          return { ...sample, point,
+            control: point ? sample.control : { ...sample.control, present: false },
+            // The observation buffer was explicitly cleared above; zero new requests is settled.
+            requestsSettled: requests.overflow === false && Array.isArray(requests.records) &&
+              requests.records.every(record => record.completedAt && record.response && !record.error && !record.response.error),
+          };
+        }, { phase: 'settings' });
+        evidence.settingsClickPreparation = clickPreparation;
+        assert(clickPreparation.ready, `Settings click unavailable: ${clickPreparation.lastReason}`);
+        return clickPreparation.point;
+      }
     );
     let settingsRendered = false;
     for (let attempt = 0; attempt < 360; attempt++) {

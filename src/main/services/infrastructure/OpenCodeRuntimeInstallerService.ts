@@ -8,8 +8,11 @@ import {
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
 import {
+  downloadOpenCodePackage,
   extractOpenCodePackage,
+  OpenCodeV2SupportInstaller,
   selectOpenCodeInstallPackage,
+  verifyOpenCodeRuntimePackageIntegrity,
 } from '@features/opencode-runtime-installer/main';
 import {
   type OpenCodeBinaryCandidateFailure,
@@ -35,7 +38,7 @@ import {
   getUnsupportedAgentTeamsOpenCodeVersionMessage,
   isAgentTeamsOpenCodeVersionSupported,
 } from '@shared/utils/version';
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import { promises as fsp, readdirSync } from 'fs';
 import path from 'path';
 
@@ -96,12 +99,11 @@ export {
   type PlatformCandidate,
 } from './openCodeRuntimeNativeSelection';
 export { clearOpenCodeRuntimeResolverCache as clearOpenCodeRuntimeBinaryResolverCache } from './openCodeRuntimeResolverCache';
+export { verifyOpenCodeRuntimePackageIntegrity } from '@features/opencode-runtime-installer/main';
 
 const logger = createLogger('OpenCodeRuntimeInstallerService');
 
 const CHANNEL = 'openCodeRuntime:progress';
-const MAX_TARBALL_BYTES = 250 * 1024 * 1024;
-const FETCH_TIMEOUT_MS = 60_000;
 const VERSION_TIMEOUT_MS = 30_000;
 const VERSION_PROBE_SUCCESS_CACHE_TTL_MS = 30_000;
 const VERSION_PROBE_FAILURE_CACHE_TTL_MS = 5_000;
@@ -503,66 +505,6 @@ export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
   return request;
 }
 
-export function verifyOpenCodeRuntimePackageIntegrity(buffer: Buffer, integrity: string): void {
-  const match = /^sha512-([A-Za-z0-9+/=]+)$/.exec(integrity.trim());
-  if (!match) {
-    throw new Error('OpenCode package integrity is missing sha512 metadata');
-  }
-  const actual = createHash('sha512').update(buffer).digest('base64');
-  if (actual !== match[1]) {
-    throw new Error('OpenCode package integrity check failed');
-  }
-}
-
-async function downloadTarball(
-  url: string,
-  onProgress: (progress: OpenCodeRuntimeInstallProgress) => void
-): Promise<Buffer> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok || !response.body) {
-      throw new Error(`Failed to download OpenCode package: HTTP ${response.status}`);
-    }
-    const totalHeader = response.headers.get('content-length');
-    const totalBytes = totalHeader ? Number.parseInt(totalHeader, 10) : undefined;
-    if (totalBytes && totalBytes > MAX_TARBALL_BYTES) {
-      throw new Error('OpenCode package is unexpectedly large');
-    }
-
-    const chunks: Buffer[] = [];
-    let downloadedBytes = 0;
-    const reader = response.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      const chunk = Buffer.from(value);
-      downloadedBytes += chunk.length;
-      if (downloadedBytes > MAX_TARBALL_BYTES) {
-        throw new Error('OpenCode package exceeded the maximum allowed download size');
-      }
-      chunks.push(chunk);
-      onProgress({
-        phase: 'downloading',
-        downloadedBytes,
-        totalBytes,
-        percent: totalBytes
-          ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100))
-          : undefined,
-        detail: totalBytes
-          ? `Downloading OpenCode ${Math.round((downloadedBytes / totalBytes) * 100)}%`
-          : 'Downloading OpenCode...',
-      });
-    }
-    return Buffer.concat(chunks, downloadedBytes);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 export function extractOpenCodeRuntimeBinaryFromTarball(tarball: Buffer): Buffer {
   return extractOpenCodePackage(tarball, getExecutableName()).binary;
 }
@@ -574,11 +516,18 @@ function readCurrentManifest(): Promise<OpenCodeRuntimeManifest | null> {
 export class OpenCodeRuntimeInstallerService {
   private mainWindow: BrowserWindow | null = null;
   private installPromise: Promise<OpenCodeRuntimeStatus> | null = null;
-  private installGeneration: OpenCodeRuntimeInstallOptions['generation'];
+  private installGeneration: string | undefined;
   private latestStatus: OpenCodeRuntimeStatus | null = null;
   private latestStatusAt = 0;
   private statusPromise: Promise<OpenCodeRuntimeStatus> | null = null;
   private statusCacheGeneration = 0;
+
+  constructor(
+    private readonly v2Support: Pick<
+      OpenCodeV2SupportInstaller,
+      'withStatus' | 'install'
+    > = new OpenCodeV2SupportInstaller()
+  ) {}
 
   setMainWindow(win: BrowserWindow | null): void {
     this.mainWindow = win;
@@ -644,10 +593,10 @@ export class OpenCodeRuntimeInstallerService {
       probeOpenCodeBinaryVersionCached,
       () => this.resolveDefaultInstalledStatus()
     );
-    return {
+    return this.v2Support.withStatus({
       ...status,
       compatibleV2Version: getLatestQualifiedOpenCodeV2Version(process.platform, process.arch),
-    };
+    });
   }
 
   private async resolveDefaultInstalledStatus(): Promise<OpenCodeRuntimeStatus> {
@@ -664,12 +613,13 @@ export class OpenCodeRuntimeInstallerService {
 
   async install(options?: OpenCodeRuntimeInstallOptions): Promise<OpenCodeRuntimeStatus> {
     const validated = parseOpenCodeInstallOptions(options);
+    const intent = JSON.stringify(validated);
     if (this.installPromise) {
-      if (validated.generation !== this.installGeneration)
+      if (intent !== this.installGeneration)
         throw new Error('A different OpenCode generation is already being installed');
       return this.installPromise;
     }
-    this.installGeneration = validated.generation;
+    this.installGeneration = intent;
     this.installPromise = this.installInternal(validated).finally(() => {
       this.installPromise = null;
       this.installGeneration = undefined;
@@ -713,6 +663,7 @@ export class OpenCodeRuntimeInstallerService {
       ...(currentStatus?.latestVersion ? { latestVersion: currentStatus.latestVersion } : {}),
       ...(currentStatus?.updateAvailable ? { updateAvailable: true } : {}),
       ...(currentStatus?.ignoredOverride ? { ignoredOverride: currentStatus.ignoredOverride } : {}),
+      ...(currentStatus?.v2Support ? { v2Support: currentStatus.v2Support } : {}),
       source: currentStatus?.source ?? 'missing',
       state: progress.phase,
       progress,
@@ -799,58 +750,38 @@ export class OpenCodeRuntimeInstallerService {
     };
   }
 
-  private async resolveFreshInstalledStatusBeforeInstall(): Promise<OpenCodeRuntimeStatus | null> {
-    const latestStatus = this.latestStatus;
-    if (
-      latestStatus?.installed &&
-      latestStatus.source === 'path' &&
-      isAbsoluteExistingFile(latestStatus.binaryPath)
-    ) {
-      const version = await probeOpenCodeBinaryVersion(latestStatus.binaryPath);
-      if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
-        return {
-          installed: true,
-          binaryPath: latestStatus.binaryPath,
-          version: version.version ?? latestStatus.version,
-          source: 'path',
-          state: 'ready',
-        };
-      }
-    }
-
-    const manifest = await readCurrentManifest();
-    if (!isAbsoluteExistingFile(manifest?.binaryPath)) {
-      return null;
-    }
-    if (!(await matchesNativePackagePolicy(manifest.platformPackage))) return null;
-    const version = await probeOpenCodeBinaryVersion(manifest.binaryPath);
-    if (!version.ok || !isRecognizedOpenCodeRuntimeVersion(version.version)) {
-      return null;
-    }
-    return {
-      installed: true,
-      binaryPath: manifest.binaryPath,
-      version: version.version ?? manifest.version,
-      source: 'app-managed',
-      state: 'ready',
-    };
-  }
-
   private async installInternal(
     options: OpenCodeRuntimeInstallOptions
   ): Promise<OpenCodeRuntimeStatus> {
-    // With an override, install statuses (before, on failure and after success) keep naming
-    // what launch uses, not the managed runtime.
-    const previousStatus = readOpenCodeBinaryOverride(process.env)
-      ? await this.resolveInstalledStatus()
-      : preserveKnownOpenCodeUpdate(
-          await this.resolveFreshInstalledStatusBeforeInstall(),
-          this.latestStatus?.latestVersion
-        );
-    if (previousStatus) {
-      this.rememberStatus(previousStatus);
-    }
+    // Cold PATH discovery and overrides use the same selected native identity as launch.
+    clearOpenCodeRuntimeResolverCache();
+    const selectedBeforeInstall = await this.resolveInstalledStatus();
+    const previousStatus =
+      preserveKnownOpenCodeUpdate(selectedBeforeInstall, this.latestStatus?.latestVersion) ??
+      selectedBeforeInstall;
+    const previousManifest = JSON.stringify(await readCurrentManifest());
+    const previousOverride = JSON.stringify(readOpenCodeBinaryOverride(process.env));
+    this.rememberStatus(previousStatus);
     try {
+      if (
+        options.supportOnly ||
+        (options.generation !== 'v1' &&
+          previousStatus.installed &&
+          previousStatus.v2Support === 'required')
+      ) {
+        if (!previousStatus.installed || !previousStatus.version?.startsWith('2.'))
+          throw new Error('OpenCode V2 support requires a verified selected native V2 CLI');
+        await this.v2Support.install(previousStatus.version, (progress) =>
+          this.publishProgress(progress)
+        );
+        const status = await this.resolveInstalledStatus();
+        this.publish(status);
+        return status;
+      }
+      if (previousStatus.source === 'override' && !previousStatus.installed)
+        throw new Error(
+          previousStatus.error ?? 'The explicit OpenCode selection could not be verified'
+        );
       this.publishProgress({ phase: 'checking', detail: 'Resolving latest OpenCode package...' });
       const compatibleV2Version = getLatestQualifiedOpenCodeV2Version(
         process.platform,
@@ -873,7 +804,7 @@ export class OpenCodeRuntimeInstallerService {
         phase: 'downloading',
         detail: `Downloading ${selected.packageName}@${platformMetadata.version}...`,
       });
-      const tarball = await downloadTarball(platformMetadata.dist!.tarball!, (progress) => {
+      const tarball = await downloadOpenCodePackage(platformMetadata.dist!.tarball!, (progress) => {
         this.publishProgress(progress);
       });
       verifyOpenCodeRuntimePackageIntegrity(tarball, platformMetadata.dist!.integrity!);
@@ -953,7 +884,35 @@ export class OpenCodeRuntimeInstallerService {
         integrity: platformMetadata.dist!.integrity!,
         installedAt: new Date().toISOString(),
       };
-      await atomicWriteAsync(getCurrentManifestPath(), `${JSON.stringify(manifest, null, 2)}\n`);
+      if (generation === 'v2')
+        await this.v2Support.install(manifest.version, (progress) =>
+          this.publishProgress(progress)
+        );
+      const beforeCommit =
+        generation === 'v2'
+          ? async (): Promise<void> => {
+              clearOpenCodeRuntimeResolverCache();
+              const selected = await this.resolveInstalledStatus();
+              if (
+                JSON.stringify(await readCurrentManifest()) !== previousManifest ||
+                JSON.stringify(readOpenCodeBinaryOverride(process.env)) !== previousOverride ||
+                selected.installed !== previousStatus.installed ||
+                selected.binaryPath !== previousStatus.binaryPath ||
+                selected.version !== previousStatus.version
+              )
+                throw new Error(
+                  'OpenCode selection changed during installation; keeping the selected native runtime'
+                );
+            }
+          : undefined;
+      try {
+        await atomicWriteAsync(getCurrentManifestPath(), `${JSON.stringify(manifest, null, 2)}\n`, {
+          beforeCommit,
+        });
+      } catch (error) {
+        // A post-rename sync failure may already have committed this exact selection.
+        if (JSON.stringify(await readCurrentManifest()) !== JSON.stringify(manifest)) throw error;
+      }
       clearOpenCodeRuntimeResolverCache();
 
       const detail = readOpenCodeBinaryOverride(process.env)
@@ -973,15 +932,15 @@ export class OpenCodeRuntimeInstallerService {
             progress,
           };
       status.compatibleV2Version = compatibleV2Version;
-      this.publish(status);
-      return status;
+      const completed = await this.v2Support.withStatus(status);
+      this.publish(completed);
+      return completed;
     } catch (error) {
+      const observedStatus = await this.resolveInstalledStatus().catch(() => previousStatus);
       const status: OpenCodeRuntimeStatus = {
         compatibleV2Version: getLatestQualifiedOpenCodeV2Version(process.platform, process.arch),
-        ...(previousStatus ?? {
-          installed: false,
-          source: 'missing' as const,
-        }),
+        ...(preserveKnownOpenCodeUpdate(observedStatus, previousStatus.latestVersion) ??
+          observedStatus),
         state: 'failed',
         error: getErrorMessage(error),
         progress: {

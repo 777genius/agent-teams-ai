@@ -1,5 +1,6 @@
 import { createLogger } from '@shared/utils/logger';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
+import { createHash } from 'crypto';
 
 import { TeamInboxReader } from '../TeamInboxReader';
 import { TeamInboxWriter } from '../TeamInboxWriter';
@@ -69,6 +70,25 @@ function buildLeadAlertText(alerts: TaskStallAlert[]): string {
     .join('\n');
 }
 
+/**
+ * One id per batch of alert rungs and text, so a lead alert that was written
+ * but not journaled (cancelled scan, failed markAlerted) is not written twice.
+ * The rung count gives each repeat after the cooldown its own id. The text is
+ * part of the key because the inbox writer refuses an explicit id whose text
+ * changed, which would fail the retry on every scan.
+ */
+function buildLeadAlertMessageId(teamName: string, alerts: TaskStallAlert[], text: string): string {
+  const stableKey = JSON.stringify({
+    teamName,
+    rungs: alerts
+      .map((alert) => `${alert.epochKey}@${alert.priorAlertCount ?? 0}`)
+      .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
+    text,
+  });
+  const digest = createHash('sha256').update(stableKey).digest('hex').slice(0, 20);
+  return `task-stall-lead-alert:${digest}`;
+}
+
 function buildOpenCodeOwnerNudgeText(alert: TaskStallAlert): string {
   const taskLabel = formatTaskDisplayLabel({
     id: alert.taskId,
@@ -126,7 +146,10 @@ export class TeamTaskStallNotifier {
   private readonly stallObservation?: TeamTaskStallObservationPort;
 
   constructor(
-    private readonly teamDataService: Pick<TeamDataService, 'sendSystemNotificationToLead'>,
+    private readonly teamDataService: Pick<
+      TeamDataService,
+      'sendSystemNotificationToLead' | 'isTeamManagedByThisProfile'
+    >,
     teamProvisioningService?: OpenCodeTaskStallRelayService,
     inboxReader?: Pick<TeamInboxReader, 'getMessagesFor'>,
     inboxWriter?: Pick<TeamInboxWriter, 'sendMessage'>,
@@ -138,17 +161,37 @@ export class TeamTaskStallNotifier {
     this.stallObservation = stallObservation;
   }
 
-  async notifyLead(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
+  /**
+   * The registry admits only teams of this profile, but a scan runs for a
+   * while and another profile can take the team over meanwhile. Every write
+   * into the team asks again right before it happens.
+   */
+  private async isTeamOfThisProfile(teamName: string, write: string): Promise<boolean> {
+    if (await this.teamDataService.isTeamManagedByThisProfile(teamName)) {
+      return true;
+    }
+    logger.debug(`Skipping task stall ${write} for ${teamName}: another profile manages the team`);
+    return false;
+  }
+
+  /** False when nothing was sent, so the caller does not journal these alerts. */
+  async notifyLead(teamName: string, alerts: TaskStallAlert[]): Promise<boolean> {
     if (alerts.length === 0) {
-      return;
+      return false;
+    }
+    if (!(await this.isTeamOfThisProfile(teamName, 'lead alert'))) {
+      return false;
     }
 
+    const text = buildLeadAlertText(alerts);
     await this.teamDataService.sendSystemNotificationToLead({
       teamName,
       summary: 'Potential stalled tasks detected',
-      text: buildLeadAlertText(alerts),
+      text,
       taskRefs: alerts.map((alert) => alert.taskRef),
+      messageId: buildLeadAlertMessageId(teamName, alerts, text),
     });
+    return true;
   }
 
   dispose(): void {
@@ -164,6 +207,9 @@ export class TeamTaskStallNotifier {
    */
   async recordWorkSyncObservations(teamName: string, alerts: TaskStallAlert[]): Promise<void> {
     if (!isWorkSyncConsumerAttached(this.stallObservation)) {
+      return;
+    }
+    if (!(await this.isTeamOfThisProfile(teamName, 'work-sync observations'))) {
       return;
     }
     const observedAt = new Date().toISOString();
@@ -251,6 +297,9 @@ export class TeamTaskStallNotifier {
       logger.debug(
         `Member work-sync is not attached for ${teamName}; OpenCode owner relay is unavailable (${alerts.length})`
       );
+      return [];
+    }
+    if (!(await this.isTeamOfThisProfile(teamName, 'owner nudges'))) {
       return [];
     }
 

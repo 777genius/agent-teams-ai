@@ -27,6 +27,21 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTasksBasePath: () => hoisted.tasksBase,
 }));
 
+// These fixtures model teams of this app profile; the backup ownership filter
+// itself is covered by TeamBackupServiceProfileOwnership.test.ts.
+vi.mock(
+  '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership')
+    >()),
+    createTeamProfileOwnership: () => ({
+      isManagedByThisProfile: () => Promise.resolve(true),
+      isManagedByThisProfileSync: () => true,
+    }),
+  })
+);
+
 import { TeamPermanentDeletionLock } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionLock';
 import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
 import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';

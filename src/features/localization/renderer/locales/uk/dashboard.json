@@ -194,6 +194,8 @@
       "reinstall": "Перевстановити {{runtime}}"
     },
     "runtimeInstall": {
+      "v2SupportInstall": "Встановити підтримку V2",
+      "v2SupportRepair": "Відновити підтримку V2",
       "checking": "Перевірка",
       "codexTitle": "Встановити Codex CLI у дані застосунку",
       "downloading": "Завантаження",

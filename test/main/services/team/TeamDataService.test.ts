@@ -19,6 +19,7 @@ import { TeamProvisioningService } from '../../../../src/main/services/team/Team
 import { TeamSentMessagesStore } from '../../../../src/main/services/team/TeamSentMessagesStore';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import { snapshotDirectoryTree } from '../../../helpers/directorySnapshot';
 
 import type {
   InboxMessageCursor,
@@ -1202,6 +1203,7 @@ function createTaskCommentForwardingService(options: {
     (() => ({}) as never) as never,
     journal as never
   );
+  service.setTeamProfileOwnership(async () => true);
 
   return { service, inboxWriter, journal };
 }
@@ -4258,6 +4260,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4351,6 +4354,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4432,6 +4436,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
@@ -4544,6 +4549,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -4630,6 +4636,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -4730,6 +4737,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4829,6 +4837,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.initializeTaskCommentNotificationState();
 
@@ -4919,6 +4928,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -5021,6 +5031,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       const second = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
@@ -5141,6 +5152,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       await firstJournalWriteStarted;
@@ -5270,6 +5282,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
       await firstJournalWriteStarted;
@@ -5364,6 +5377,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
@@ -5627,6 +5641,7 @@ describe('TeamDataService', () => {
         (() => ({}) as never) as never,
         journal as never
       );
+      service.setTeamProfileOwnership(async () => true);
 
       const initPromise = service.initializeTaskCommentNotificationState();
       const notifyPromise = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
@@ -7348,6 +7363,7 @@ describe('TeamDataService', () => {
   it('loads durable lead_session messages through the transcript resolver when projectPath is stale', async () => {
     const fixture = await createResolverBackedLeadFixture();
     const service = createResolverBackedService();
+    service.setTeamProfileOwnership(async () => true);
 
     const feed = await service.getMessageFeed(fixture.teamName);
     const persistedConfig = JSON.parse(await fs.readFile(fixture.configPath, 'utf8')) as TeamConfig;
@@ -7360,6 +7376,27 @@ describe('TeamDataService', () => {
       )
     ).toBeTruthy();
     expect(persistedConfig.projectPath).toBe(fixture.actualProjectPath);
+  });
+
+  it('loads lead_session messages of a team this profile does not manage without writing its directory', async () => {
+    const fixture = await createResolverBackedLeadFixture();
+    const teamDir = path.dirname(fixture.configPath);
+    const configBytesBefore = await fs.readFile(fixture.configPath);
+    const teamTreeBefore = await snapshotDirectoryTree(teamDir);
+    const service = createResolverBackedService();
+    service.setTeamProfileOwnership(async () => false);
+
+    const feed = await service.getMessageFeed(fixture.teamName);
+
+    expect(
+      feed.messages.find(
+        (message) =>
+          message.source === 'lead_session' &&
+          message.text.includes('recovered through the transcript resolver')
+      )
+    ).toBeTruthy();
+    expect((await fs.readFile(fixture.configPath)).equals(configBytesBefore)).toBe(true);
+    expect(await snapshotDirectoryTree(teamDir)).toEqual(teamTreeBefore);
   });
 
   it('still returns lead_session messages when projectPath repair persistence fails', async () => {
@@ -7378,6 +7415,7 @@ describe('TeamDataService', () => {
     );
 
     const service = createResolverBackedService();
+    service.setTeamProfileOwnership(async () => true);
     const page = await service.getMessagesPage(fixture.teamName, { limit: 10 });
     const persistedConfig = JSON.parse(await fs.readFile(fixture.configPath, 'utf8')) as TeamConfig;
 

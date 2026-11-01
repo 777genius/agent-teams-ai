@@ -6,12 +6,12 @@ import { configureDesktopMcpEnvironment } from '@features/external-agent-connect
 import { DEFAULT_TEAM_GROUP_CHAT_ID, GROUP_CHAT_CHANNELS } from '@features/team-group-chats/contracts';
 import { createDesktopTeamGroupChats, registerTeamGroupChatsIpc } from '@features/team-group-chats/main';
 import { createGroupChatRuntimePorts, createOpenCodeGroupChatRunGetter, registerTeamGroupChatsHttp } from '@features/team-group-chats/main';
+import * as groupAtomicWrite from '@main/services/team/atomicWrite';
 import { createOpenCodeBridgeHandshakeIdentityHash, type OpenCodeBridgeHandshake } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { buildGroupPlainTextVisibleReplyMessageId, buildPlainTextVisibleReplyMessageId } from '@main/services/team/opencode/delivery/OpenCodeGroupVisibleReply';
 import { createOpenCodePromptDeliveryLedgerStore } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import { OpenCodeVisibleReplyProofService } from '@main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
-import * as groupAtomicWrite from '@main/services/team/atomicWrite';
 import { buildOpenCodeRuntimeMessageText } from '@main/services/team/runtime/OpenCodeRuntimeMessageText';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamInboxReader } from '@main/services/team/TeamInboxReader';
@@ -1362,7 +1362,10 @@ describe('OpenCode group current-run admission', () => {
       const clientIdentity = createOpenCodeBridgeClientIdentity({ appVersion: 'test' });
       let sessionId = 'session-1';
       let runtimePid = process.pid;
-      let highWatermark = 0;
+      let highWatermark = 3;
+      let activeRunId = 'run-1';
+      let capabilitySnapshotId = 'cap-1';
+      let behaviorFingerprint: string | null = null;
       let handshakes = 0;
       let writes = 0;
       let protocol: 1 | undefined = 1;
@@ -1377,7 +1380,7 @@ describe('OpenCode group current-run admission', () => {
           members: { alice: { memberName: 'alice', alive: true, restartable: true, providerId: 'opencode', cwd: '/synthetic',
             laneId: 'primary', pid: runtimePid, runtimePid,
             runtimeSessionId: sessionId, updatedAt: new Date().toISOString() } } }),
-        manifest: { read: async () => ({ activeRunId: 'run-1', capabilitySnapshotId: 'cap-1', highWatermark }) },
+        manifest: { read: async () => ({ activeRunId, capabilitySnapshotId, behaviorFingerprint, highWatermark }) },
         handshake: { handshake: async () => {
           expect(writes, 'full handshake must stay outside the physical inbox write').toBe(0);
           handshakes++;
@@ -1387,7 +1390,7 @@ describe('OpenCode group current-run admission', () => {
             client: clientIdentity, server: { ...clientIdentity, peer: 'agent_teams_orchestrator',
               bridgeProtocol: { ...clientIdentity.bridgeProtocol, groupChatProtocolVersion: protocol },
               runtime: { ...clientIdentity.runtime, activeRunId: 'run-1', capabilitySnapshotId: 'cap-1',
-                runtimeStoreManifestHighWatermark: 0, groupChatRunProof: proof } },
+                runtimeStoreManifestHighWatermark: 100, groupChatRunProof: proof } },
             agreedProtocolVersion: 1, acceptedCommands: ['opencode.sendMessage'],
             serverTime: new Date().toISOString(), identityHash: '' };
           handshake.identityHash = createOpenCodeBridgeHandshakeIdentityHash(handshake);
@@ -1421,7 +1424,14 @@ describe('OpenCode group current-run admission', () => {
       const group = await feature.create({ teamName: 'sandbox', id: randomUUID(), name: 'Proof',
         selectedMemberNames: ['alice', 'bob'], excludedMemberNames: [], autoIncludeNewMembers: false });
       const beforeSend = handshakes;
-      const sent = await feature.send({ teamName: 'sandbox', groupChatId: group.id, messageId: randomUUID(), text: 'Current owner only' });
+      let releaseSend!: () => void;
+      extraGate = new Promise<void>((resolve) => { releaseSend = resolve; });
+      const sending = feature.send({ teamName: 'sandbox', groupChatId: group.id, messageId: randomUUID(), text: 'Current owner only' });
+      await vi.waitFor(() => expect(handshakes).toBe(beforeSend + 1));
+      highWatermark = 4; // A concurrent DM commits while the valid handshake is in flight.
+      releaseSend();
+      const sent = await sending;
+      extraGate = undefined;
       expect(sent.deliverySummary!.recipients.every(recipient => recipient.status === 'queued')).toBe(true);
       expect(handshakes).toBe(beforeSend + 1); // One fresh admission, no per-write probes.
       expect(JSON.parse(await readFile(join(root, 'sandbox', 'inboxes', 'alice.json'), 'utf8'))).toHaveLength(1);
@@ -1435,8 +1445,19 @@ describe('OpenCode group current-run admission', () => {
       expect(await admitted!.isCurrent!()).toBe(false);
       runtimePid = process.pid;
       highWatermark++;
+      expect(await admitted!.isCurrent!()).toBe(true);
+      highWatermark--;
+      expect(await admitted!.isCurrent!()).toBe(false); // Reject rollback after observed progress.
+      highWatermark++;
+      activeRunId = 'replacement-run';
       expect(await admitted!.isCurrent!()).toBe(false);
-      highWatermark = 0;
+      activeRunId = 'run-1';
+      capabilitySnapshotId = 'replacement-capability';
+      expect(await admitted!.isCurrent!()).toBe(false);
+      capabilitySnapshotId = 'cap-1';
+      behaviorFingerprint = 'replacement-behavior';
+      expect(await admitted!.isCurrent!()).toBe(false);
+      behaviorFingerprint = null;
       available = false;
       expect(await admitted!.isCurrent!()).toBe(false);
       available = true;

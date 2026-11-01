@@ -31,7 +31,9 @@ export function canManagedInstallChangeOpenCodeRuntime(
 
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
-    runtimeStatus?.installed === true && isOpenCodeVersionServedByRuntime(runtimeStatus.version)
+    runtimeStatus?.installed === true &&
+    runtimeStatus.v2Support !== 'required' &&
+    isOpenCodeVersionServedByRuntime(runtimeStatus.version)
   );
 }
 

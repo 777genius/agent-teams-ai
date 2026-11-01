@@ -18,9 +18,14 @@ export function parseOpenCodeInstallOptions(value: unknown): OpenCodeRuntimeInst
     throw new Error('Invalid OpenCode install options');
   const record = value as Record<string, unknown>;
   if (
-    Object.keys(record).some((key) => key !== 'generation') ||
+    Object.keys(record).some((key) => key !== 'generation' && key !== 'supportOnly') ||
+    (record.supportOnly !== undefined && typeof record.supportOnly !== 'boolean') ||
+    (record.supportOnly === true && record.generation === 'v1') ||
     (record.generation !== undefined && record.generation !== 'v1' && record.generation !== 'v2')
   )
     throw new Error('Invalid OpenCode install generation');
-  return record.generation === undefined ? {} : { generation: record.generation };
+  return {
+    ...(record.generation === undefined ? {} : { generation: record.generation }),
+    ...(record.supportOnly === undefined ? {} : { supportOnly: record.supportOnly }),
+  };
 }

@@ -77,7 +77,7 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
       .mockResolvedValue({ exitCode: 0, stdout: 'Usage', stderr: '' }),
   } satisfies TeamProvisioningCliHelpOutputProviderRuntime;
   readonly shutdownCoordination = {
-    getShutdownTrackedTeamNames: vi.fn(() => ['alpha']),
+    getShutdownRunningTeamNames: vi.fn(() => ['alpha']),
   };
   readonly readConfigForStrictDecisionMock = vi.fn(async (_teamName: string) => ({
     language: 'ru',
@@ -288,7 +288,7 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
 
     expect(facade.runTracking.getAliveRunId).toHaveBeenCalledWith('alpha');
     expect(facade.runTracking.canDeliverToOpenCodeRuntimeForTeam).toHaveBeenCalledWith('alpha');
-    expect(facade.shutdownCoordination.getShutdownTrackedTeamNames).toHaveBeenCalled();
+    expect(facade.shutdownCoordination.getShutdownRunningTeamNames).toHaveBeenCalled();
     expect(facade.prepareFacadeMock.warmup).toHaveBeenCalled();
     expect(facade.prepareFacadeMock.prepareForProvisioning).toHaveBeenCalledWith('/repo', {
       forceFresh: true,
