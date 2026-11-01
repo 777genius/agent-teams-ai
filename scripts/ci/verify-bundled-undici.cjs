@@ -18,11 +18,14 @@ function assertPatched(label, versions) {
   console.log(`${label}: Node ${versions.node}, undici ${versions.undici} (patched)`);
 }
 
-function verifyRuntime() {
-  assertPatched('CI Node', process.versions);
+function verifyRuntime({
+  ciVersions = process.versions,
+  electronBinary = require('electron'),
+  run = spawnSync,
+} = {}) {
+  assertPatched('CI Node', ciVersions);
 
-  const electronBinary = require('electron');
-  const probe = spawnSync(electronBinary, [
+  const probe = run(electronBinary, [
     '-e',
     'process.stdout.write(JSON.stringify({ node: process.versions.node, undici: process.versions.undici }))',
   ], {
@@ -46,4 +49,4 @@ function verifyRuntime() {
 
 if (require.main === module) verifyRuntime();
 
-module.exports = { isPatchedUndici };
+module.exports = { isPatchedUndici, verifyRuntime };
