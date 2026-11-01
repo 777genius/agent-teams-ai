@@ -1984,15 +1984,17 @@ describe('RuntimeProviderManagementPanelView', () => {
     const render = async (method: 'oauth' | 'api') => {
       await act(async () => {
         root.render(
-          <OpenCodeProviderCompatibilityScope generation="v2">
-            <ProviderSetupFormPanel
-              provider={provider}
-              state={{ ...base, activeFormProviderId: 'xai', setupForm: { ...form, method } }}
-              busy={false}
-              disabled={false}
-              actions={actions}
-            />
-          </OpenCodeProviderCompatibilityScope>
+          React.createElement(
+            OpenCodeProviderCompatibilityScope,
+            { generation: 'v2' },
+            React.createElement(ProviderSetupFormPanel, {
+              provider,
+              state: { ...base, activeFormProviderId: 'xai', setupForm: { ...form, method } },
+              busy: false,
+              disabled: false,
+              actions,
+            })
+          )
         );
       });
     };
@@ -2022,10 +2024,12 @@ describe('RuntimeProviderManagementPanelView', () => {
     const base = createState();
     await act(async () => {
       root.render(
-        <OpenCodeProviderCompatibilityScope generation="v2">
-          <ProviderSetupFormPanel
-            provider={{ providerId: 'xai', displayName: 'SuperGrok' }}
-            state={{
+        React.createElement(
+          OpenCodeProviderCompatibilityScope,
+          { generation: 'v2' },
+          React.createElement(ProviderSetupFormPanel, {
+            provider: { providerId: 'xai', displayName: 'SuperGrok' },
+            state: {
               ...base,
               activeFormProviderId: 'xai',
               savingProviderId: 'xai',
@@ -2056,12 +2060,12 @@ describe('RuntimeProviderManagementPanelView', () => {
                 instructions: 'Enter code',
                 message: 'Waiting for authorization code',
               },
-            }}
-            busy={true}
-            disabled={false}
-            actions={actions}
-          />
-        </OpenCodeProviderCompatibilityScope>
+            },
+            busy: true,
+            disabled: false,
+            actions,
+          })
+        )
       );
     });
     const continueButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
