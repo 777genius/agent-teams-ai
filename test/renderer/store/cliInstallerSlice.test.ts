@@ -2045,51 +2045,64 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliStatusError).toBeNull();
     });
 
-    it('settles a scoped OpenCode timeout without an immediate retry', async () => {
-      const connectedProvider = createReadyOpenCodeCatalogProvider('openrouter/auto');
-      const timedOutProvider = createMultimodelProvider({
-        providerId: 'opencode',
-        displayName: 'OpenCode',
-        supported: false,
-        authenticated: false,
-        authMethod: null,
-        verificationState: 'error',
-        statusCheckOutcome: 'transient_error',
-        statusCheckErrorCode: 'timeout',
-        statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
-        modelCatalogRefreshState: 'error',
-        capabilities: {
-          teamLaunch: false,
-          oneShot: false,
-          extensions: createDefaultCliExtensionCapabilities(),
-        },
-      });
-      useStore.setState({ cliStatus: createMultimodelStatus([connectedProvider]) });
-      vi.mocked(api.cliInstaller.getProviderStatus)
-        .mockResolvedValueOnce(timedOutProvider)
-        .mockResolvedValueOnce(connectedProvider);
+    it.each([
+      { scope: 'global summary', projectPath: undefined, retry: true },
+      { scope: 'project full', projectPath: '/tmp/opencode-timeout', retry: false },
+    ])(
+      'settles an OpenCode $scope timeout with the appropriate retry budget',
+      async ({ projectPath, retry }) => {
+        const connectedProvider = createReadyOpenCodeCatalogProvider('openrouter/auto');
+        const timedOutProvider = createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'timeout',
+          statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+          modelCatalogRefreshState: 'error',
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+        });
+        useStore.setState({ cliStatus: createMultimodelStatus([connectedProvider]) });
+        vi.mocked(api.cliInstaller.getProviderStatus)
+          .mockResolvedValueOnce(timedOutProvider)
+          .mockResolvedValueOnce(connectedProvider);
 
-      await expect(
-        useStore.getState().fetchCliProviderStatus('opencode', {
-          projectPath: '/tmp/opencode-timeout',
-          checkReason: 'launch_preflight',
-        })
-      ).resolves.toBe(false);
+        await expect(
+          useStore.getState().fetchCliProviderStatus('opencode', {
+            projectPath,
+            checkReason: 'launch_preflight',
+          })
+        ).resolves.toBe(retry);
 
-      expect(vi.mocked(api.cliInstaller.getProviderStatus).mock.calls).toEqual([
-        ['opencode', { projectPath: '/tmp/opencode-timeout' }],
-      ]);
-      expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(false);
-      expect(
-        useStore.getState().cliProviderStatusByScope[
-          getCliProviderStatusScopeKey('opencode', '/tmp/opencode-timeout')
-        ]
-      ).toMatchObject({
-        statusCheckOutcome: 'transient_error',
-        modelCatalogRefreshState: 'error',
-        capabilities: { teamLaunch: false },
-      });
-    });
+        expect(vi.mocked(api.cliInstaller.getProviderStatus).mock.calls).toEqual(
+          projectPath ? [['opencode', { projectPath }]] : [['opencode'], ['opencode']]
+        );
+        expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(false);
+        const settledProvider = projectPath
+          ? useStore.getState().cliProviderStatusByScope[
+              getCliProviderStatusScopeKey('opencode', projectPath)
+            ]
+          : useStore
+              .getState()
+              .cliStatus?.providers.find((provider) => provider.providerId === 'opencode');
+        expect(settledProvider).toMatchObject(
+          retry
+            ? { statusCheckOutcome: 'authoritative', modelCatalogRefreshState: 'ready' }
+            : {
+                statusCheckOutcome: 'transient_error',
+                modelCatalogRefreshState: 'error',
+                capabilities: { teamLaunch: false },
+              }
+        );
+      }
+    );
 
     it.each([
       { statusCheckOutcome: 'model_only', statusCheckErrorCode: 'timeout' },

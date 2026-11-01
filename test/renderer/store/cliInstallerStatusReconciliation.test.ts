@@ -126,14 +126,25 @@ describe('cli provider status retry', () => {
     statusCheckErrorCode: 'timeout',
   } as const satisfies Partial<CliProviderStatus>;
 
-  it('does not retry an OpenCode timeout right away', () => {
+  it('does not retry a project-scoped OpenCode full-status timeout right away', () => {
+    expect(
+      shouldRetryCliProviderStatusCheck(
+        'opencode',
+        false,
+        provider({ providerId: 'opencode', ...timedOut }),
+        { projectPath: '/tmp/opencode-full-status' }
+      )
+    ).toBe(false);
+  });
+
+  it('still retries one global OpenCode summary timeout', () => {
     expect(
       shouldRetryCliProviderStatusCheck(
         'opencode',
         false,
         provider({ providerId: 'opencode', ...timedOut })
       )
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it.each(['anthropic', 'codex'] as const)('still retries one %s timeout', (providerId) => {

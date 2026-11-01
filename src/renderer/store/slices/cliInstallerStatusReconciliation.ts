@@ -6,7 +6,12 @@ import {
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
-import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  CliProviderStatusRequestOptions,
+} from '@shared/types';
 
 export function getProviderDisplayName(providerId: CliProviderId): string {
   switch (providerId) {
@@ -147,17 +152,17 @@ export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliP
 export function shouldRetryCliProviderStatusCheck(
   providerId: CliProviderId,
   verifyModels: boolean,
-  provider: CliProviderStatus | null
+  provider: CliProviderStatus | null,
+  options: CliProviderStatusRequestOptions = {}
 ): boolean {
   if (verifyModels || !provider) return false;
   return (
     (providerId === 'opencode' &&
       provider.statusCheckErrorCode === 'partial_response' &&
       provider.statusCheckOutcome !== 'model_only') ||
-    // Do not retry an OpenCode timeout right away. Its full status check already
-    // waits out the runtime's loading budget, so a second try on a busy machine
-    // only doubles the wait.
-    (providerId !== 'opencode' &&
+    // Project-scoped OpenCode reads use the full loading budget. Retry only the
+    // shorter global summary timeouts instead of immediately repeating a full read.
+    ((providerId !== 'opencode' || !options.projectPath?.trim()) &&
       provider.statusCheckOutcome === 'transient_error' &&
       provider.statusCheckErrorCode === 'timeout')
   );
