@@ -142,7 +142,7 @@ async function closeApp(): Promise<boolean> {
   try {
     const socket = await ownedRendererSocket();
     if (socket) {
-      cdp = await Cdp.connect(socket, 'http://127.0.0.1');
+      cdp = await Cdp.connect(socket, 'http://127.0.0.1', rendererOrigin);
       await cdp.inspect('window.electronAPI.windowControls.close()').catch(() => undefined);
     }
     await waitUntil(async () => !!app && !isLive(app), 30_000);
@@ -189,7 +189,7 @@ async function closeBrowser(): Promise<boolean> {
   if (!browserObserved) return false;
   let cdp: Cdp | undefined;
   try {
-    cdp = await Cdp.connect(await ownedBrowserSocket(), 'http://127.0.0.1');
+    cdp = await Cdp.connect(await ownedBrowserSocket(), 'http://127.0.0.1', rendererOrigin);
     await cdp.send('Browser.close').catch(() => undefined);
     await waitUntil(async () => !!browser && !isLive(browser), 15_000);
     return browser.exitCode === 0;
