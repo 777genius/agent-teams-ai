@@ -2133,7 +2133,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     let fakeTimersActive = false;
     let installation: ReturnType<OpenCodeRuntimeInstallerService['install']> | undefined;
     try {
-      const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+      const platformPackage = (await getOpenCodeRuntimePlatformCandidates())[0]!.packageName;
       const tarball = createTarball([{ name: 'package/bin/opencode', data: 'TEST runtime' }]);
       const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
       vi.stubGlobal(
