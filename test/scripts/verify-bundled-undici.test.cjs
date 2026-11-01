@@ -27,7 +27,10 @@ test('verifyRuntime checks the actual Electron subprocess result', () => {
   assert.doesNotThrow(() => verifyRuntime({
     ciVersions,
     electronBinary: '/fixture/electron',
-    run: () => ({ status: 0, stdout: JSON.stringify({ node: '24.22.1', undici: '7.30.1' }), stderr: '' }),
+    run: (_electronBinary, args) => {
+      assert.match(args[1], /process\.versions\.undici/);
+      return { status: 0, stdout: JSON.stringify({ node: '24.22.1', undici: '7.30.1' }), stderr: '' };
+    },
   }));
   assert.throws(
     () => verifyRuntime({ ciVersions: { node: '26.11.1', undici: '8.11.2' }, electronBinary: '/fixture/electron', run: runElectron }),
