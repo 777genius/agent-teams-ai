@@ -1986,7 +1986,7 @@ describe('RuntimeProviderManagementPanelView', () => {
         root.render(
           React.createElement(
             OpenCodeProviderCompatibilityScope,
-            { generation: 'v2' },
+            { generation: 'v2', children: null },
             React.createElement(ProviderSetupFormPanel, {
               provider,
               state: { ...base, activeFormProviderId: 'xai', setupForm: { ...form, method } },
@@ -2026,7 +2026,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       root.render(
         React.createElement(
           OpenCodeProviderCompatibilityScope,
-          { generation: 'v2' },
+          { generation: 'v2', children: null },
           React.createElement(ProviderSetupFormPanel, {
             provider: { providerId: 'xai', displayName: 'SuperGrok' },
             state: {
