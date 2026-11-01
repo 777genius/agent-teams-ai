@@ -35,9 +35,9 @@ describe('OpenCode provider compatibility in advanced settings', () => {
     vi.unstubAllGlobals();
   });
 
-  async function show(runtimeId: 'opencode' | 'codex'): Promise<void> {
+  async function show(): Promise<void> {
     await act(async () => root.render(
-      React.createElement(OpenCodeProviderCompatibilityScope, { runtimeId },
+      React.createElement(OpenCodeProviderCompatibilityScope, {},
         React.createElement(React.Fragment, null,
           React.createElement(OpenCodeProviderCompatibilityStatus, { providerId: 'cursor-acp' }),
           React.createElement(OpenCodeProviderCompatibilityStatus, { providerId: 'openrouter' }),
@@ -47,7 +47,7 @@ describe('OpenCode provider compatibility in advanced settings', () => {
     ));
   }
   it('labels a V2-unadapted CLI and distinguishes unverified API-key providers', async () => {
-    await show('opencode');
+    await show();
     expect(host.querySelector('[data-testid="runtime-provider-compatibility-cursor-acp"]')?.textContent)
       .toContain('requiresV1');
     for (const id of ['openrouter', 'xai']) {
@@ -55,16 +55,14 @@ describe('OpenCode provider compatibility in advanced settings', () => {
         .toContain('v2Unverified');
     }
   });
-  it('does not label Codex or a missing OpenCode install with an inferred generation', async () => {
-    await show('codex');
-    expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(0);
+  it('does not infer an installed generation from an unavailable OpenCode runtime', async () => {
     mocks.version = null;
-    await show('opencode');
+    await show();
     expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(0);
   });
   it('does not show V2 warnings on an installed V1 runtime', async () => {
     mocks.version = '1.19.5';
-    await show('opencode');
+    await show();
     expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(0);
   });
 });

@@ -5,7 +5,6 @@ import { useStore } from '@renderer/store';
 
 import { getOpenCodeGeneration, resolveOpenCodeProviderCompatibility } from '../../core/domain';
 
-import type { RuntimeProviderManagementRuntimeId } from '../../contracts';
 import type { OpenCodeGeneration } from '../../core/domain';
 import type { JSX, ReactNode } from 'react';
 
@@ -13,15 +12,13 @@ const OpenCodeGenerationContext = createContext<OpenCodeGeneration | null>(null)
 
 /** The chosen generation is the selected native runtime, never guessed from a missing status. */
 export function OpenCodeProviderCompatibilityScope({
-  runtimeId,
   children,
 }: {
-  readonly runtimeId: RuntimeProviderManagementRuntimeId;
   readonly children: ReactNode;
 }): JSX.Element {
   const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const generation =
-    runtimeId === 'opencode' && runtimeStatus?.installed && runtimeStatus.version
+    runtimeStatus?.installed && runtimeStatus.version
       ? getOpenCodeGeneration(runtimeStatus.version)
       : null;
   return (

@@ -1,5 +1,4 @@
-import { resolveOpenCodeProviderCompatibility as resolve } from
-  '../../../../src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility';
+import { resolveOpenCodeProviderCompatibility as resolve } from '../../../../src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility';
 import { describe, expect, it } from 'vitest';
 
 describe('OpenCode provider generation compatibility', () => {

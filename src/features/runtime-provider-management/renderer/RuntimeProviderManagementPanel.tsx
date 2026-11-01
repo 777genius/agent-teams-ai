@@ -188,7 +188,7 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <OpenCodeProviderCompatibilityScope runtimeId={runtimeId}>
+    <OpenCodeProviderCompatibilityScope>
       <RuntimeProviderManagementPanelView
         state={state}
         actions={actions}
