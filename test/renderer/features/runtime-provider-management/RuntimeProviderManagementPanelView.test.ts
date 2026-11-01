@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RuntimeProviderManagementPanelView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView';
+import { OpenCodeProviderCompatibilityScope } from '../../../../src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus';
+import { ProviderSetupFormPanel, RuntimeProviderManagementPanelView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView';
 
 import type {
   RuntimeProviderManagementActions,
@@ -1957,6 +1958,121 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.querySelector('input[type="password"]')).not.toBeNull();
     expect(host.textContent).not.toContain('sk-secret-value');
+  });
+
+  it('blocks SuperGrok OAuth on V2 but allows xAI API key in advanced setup', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const base = createState();
+    const form = {
+      runtimeId: 'opencode' as const,
+      providerId: 'xai',
+      displayName: 'xAI',
+      method: 'oauth' as const,
+      supported: true,
+      title: 'Connect xAI',
+      description: null,
+      submitLabel: 'Connect',
+      disabledReason: null,
+      source: 'oauth' as const,
+      secret: null,
+      prompts: [],
+    };
+    const provider = { providerId: 'xai', displayName: 'xAI' };
+    const render = async (method: 'oauth' | 'api') => {
+      await act(async () => {
+        root.render(
+          <OpenCodeProviderCompatibilityScope generation="v2">
+            <ProviderSetupFormPanel
+              provider={provider}
+              state={{ ...base, activeFormProviderId: 'xai', setupForm: { ...form, method } }}
+              busy={false}
+              disabled={false}
+              actions={actions}
+            />
+          </OpenCodeProviderCompatibilityScope>
+        );
+      });
+    };
+    await render('oauth');
+    const submit = host.querySelector<HTMLButtonElement>('button[type="submit"]');
+    expect(submit?.disabled).toBe(true);
+    expect(host.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('requiresV1');
+    await act(async () => {
+      host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(actions.submitConnect).not.toHaveBeenCalled();
+    await render('api');
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
+    expect(host.querySelector('[data-testid="runtime-provider-compatibility-xai"]')).toBeNull();
+    await act(async () => {
+      host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(actions.submitConnect).toHaveBeenCalledWith('xai');
+  });
+
+  it('does not submit a pending xAI OAuth code after the runtime switches to V2', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const base = createState();
+    await act(async () => {
+      root.render(
+        <OpenCodeProviderCompatibilityScope generation="v2">
+          <ProviderSetupFormPanel
+            provider={{ providerId: 'xai', displayName: 'SuperGrok' }}
+            state={{
+              ...base,
+              activeFormProviderId: 'xai',
+              savingProviderId: 'xai',
+              oauthCodeValue: 'CODE123',
+              setupForm: {
+                runtimeId: 'opencode',
+                providerId: 'xai',
+                displayName: 'SuperGrok',
+                method: 'oauth',
+                supported: true,
+                title: 'Connect SuperGrok',
+                description: null,
+                submitLabel: 'Connect',
+                disabledReason: null,
+                source: 'oauth',
+                secret: null,
+                prompts: [],
+              },
+              oauthProgress: {
+                operationId: 'test-oauth',
+                runtimeId: 'opencode',
+                providerId: 'xai',
+                displayName: 'SuperGrok',
+                authOptionId: 'oauth:0',
+                methodIndex: 0,
+                phase: 'waiting-for-code',
+                completionMethod: 'manual',
+                instructions: 'Enter code',
+                message: 'Waiting for authorization code',
+              },
+            }}
+            busy={true}
+            disabled={false}
+            actions={actions}
+          />
+        </OpenCodeProviderCompatibilityScope>
+      );
+    });
+    const continueButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Continue');
+    expect(continueButton?.disabled).toBe(true);
+    await act(async () => {
+      host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(actions.submitOAuthCode).not.toHaveBeenCalled();
+    expect([...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Cancel')?.disabled).toBe(false);
   });
 
   it('allows supported OAuth setup forms that do not require a secret to submit', async () => {

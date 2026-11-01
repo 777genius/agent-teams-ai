@@ -121,7 +121,6 @@ interface ProviderRowProps {
   readonly intendedProjectPath: string | null;
   readonly actions: RuntimeProviderManagementActions;
 }
-
 type OpenCodeSettingsSection = 'models' | 'providers';
 interface DefaultModelSelectionTarget {
   readonly scope: RuntimeProviderDefaultScopeDto;
@@ -136,7 +135,6 @@ function getDirectoryAction(
 ): RuntimeProviderConnectionDto['actions'][number] | null {
   return provider.actions.find((action) => action.id === actionId) ?? null;
 }
-
 function getManagedActionLabel(
   t: SettingsT,
   action: RuntimeProviderConnectionDto['actions'][number],
@@ -156,7 +154,6 @@ function getManagedActionLabel(
   }
   return t('runtimeProvider.actions.reconnect');
 }
-
 function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): string {
   if (provider.state === 'connected' || provider.setupKind === 'connected') {
     return 'Connected';
@@ -558,6 +555,9 @@ export const ProviderSetupFormPanel = ({
             ) : null}
           </div>
 
+          {provider.providerId === 'xai' && selectedMethod === 'oauth' ? (
+            <OpenCodeProviderCompatibilityStatus providerId="xai" authMethod="oauth" />
+          ) : null}
           {form.authOptions && form.authOptions.length > 1 ? (
             <div className="space-y-1.5">
               <Label className="text-xs">Sign-in method</Label>

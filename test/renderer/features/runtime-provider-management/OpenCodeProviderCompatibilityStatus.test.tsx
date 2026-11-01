@@ -14,9 +14,16 @@ vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 
-function ConnectAction({ providerId }: { providerId: string }): React.ReactNode {
-  const blocked = useOpenCodeProviderConnectionBlocked(providerId);
-  return <button type="button" disabled={blocked} data-testid={`connect-action-${providerId}`}>Connect</button>;
+function ConnectAction({
+  providerId,
+  authMethod,
+}: {
+  providerId: string;
+  authMethod?: 'oauth' | 'api';
+}): React.ReactNode {
+  const blocked = useOpenCodeProviderConnectionBlocked(providerId, authMethod);
+  const id = authMethod ? `${providerId}-${authMethod}` : providerId;
+  return <button type="button" disabled={blocked} data-testid={`connect-action-${id}`}>Connect</button>;
 }
 
 describe('OpenCode provider compatibility in advanced settings', () => {
@@ -46,6 +53,8 @@ describe('OpenCode provider compatibility in advanced settings', () => {
         <OpenCodeProviderCompatibilityStatus providerId="xai" />
         <ConnectAction providerId="cursor-acp" />
         <ConnectAction providerId="xai" />
+        <ConnectAction providerId="xai" authMethod="oauth" />
+        <ConnectAction providerId="xai" authMethod="api" />
         <OpenCodeProviderCompatibilityStatus providerId="xai" authMethod="oauth" />
       </OpenCodeProviderCompatibilityScope>
     ));
@@ -60,6 +69,10 @@ describe('OpenCode provider compatibility in advanced settings', () => {
     }
     expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-cursor-acp"]')?.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai"]')?.disabled).toBe(false);
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai-oauth"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai-api"]')?.disabled).toBe(false);
+    const labels = host.querySelectorAll('[data-testid="runtime-provider-compatibility-xai"]');
+    expect(labels[1]?.textContent).toContain('requiresV1');
   });
   it('blocks connection while native status is unavailable without claiming V1', async () => {
     mocks.version = null;
