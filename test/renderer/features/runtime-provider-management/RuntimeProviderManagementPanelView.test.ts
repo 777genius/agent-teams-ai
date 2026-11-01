@@ -2050,7 +2050,7 @@ describe('RuntimeProviderManagementPanelView', () => {
         configuredAuthless: false,
       },
     };
-    const render = async (method: 'oauth' | 'api') => {
+    const render = async (method: 'oauth' | 'api' | 'mixed') => {
       await act(async () => {
         root.render(React.createElement(
           OpenCodeProviderCompatibilityScope,
@@ -2061,8 +2061,18 @@ describe('RuntimeProviderManagementPanelView', () => {
               directoryTotalCount: 1,
               directoryEntries: [{
                 ...base,
-                setupKind: method === 'oauth' ? 'connect-oauth' : 'connect-api-key',
-                authMethods: [method],
+                state: method === 'mixed' ? 'connected' : 'available',
+                setupKind: method === 'mixed' ? 'connected' :
+                  method === 'oauth' ? 'connect-oauth' : 'connect-api-key',
+                connectedAuthHint: method === 'mixed' ? 'oauth' : null,
+                authMethods: method === 'mixed' ? ['oauth', 'api'] : [method],
+                actions: method === 'mixed'
+                  ? [...base.actions, {
+                      id: 'reconnect' as const,
+                      label: 'Reconnect', enabled: true, disabledReason: null,
+                      requiresSecret: false, ownershipScope: 'managed' as const,
+                    }]
+                  : base.actions,
               }],
             }),
             actions,
@@ -2090,6 +2100,16 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(nextConnect?.disabled).toBe(false);
     await act(async () => { nextConnect?.click(); await Promise.resolve(); });
     expect(actions.startConnect).toHaveBeenCalledWith('xai');
+    await render('mixed');
+    const mixedRow = host.querySelector<HTMLElement>('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(mixedRow?.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('Requires OpenCode V1');
+    const actionsOnMixed = [...(mixedRow?.querySelectorAll('button') ?? [])];
+    const freshKeyAction = actionsOnMixed.find((button) => button.textContent?.trim() === 'Connect');
+    const oauthReconnectAction = actionsOnMixed.find((button) =>
+      /reconnect|sign in again/i.test(button.textContent ?? ''));
+    expect(freshKeyAction?.disabled).toBe(false);
+    expect(oauthReconnectAction?.disabled).toBe(true);
   });
 
   it('does not submit a pending xAI OAuth code after the runtime switches to V2', async () => {
@@ -2098,13 +2118,14 @@ describe('RuntimeProviderManagementPanelView', () => {
     const root = trackRenderRoot(createRoot(host));
     const actions = createActions();
     const base = createState();
-    await act(async () => {
-      root.render(
-        React.createElement(
-          OpenCodeProviderCompatibilityScope,
-          { generation: 'v2', children: null },
-          React.createElement(ProviderSetupFormPanel, {
-            provider: { providerId: 'xai', displayName: 'SuperGrok' },
+    const renderWithGeneration = async (generation: 'v1' | 'v2') => {
+      await act(async () => {
+        root.render(
+          React.createElement(
+            OpenCodeProviderCompatibilityScope,
+            { generation, children: null },
+            React.createElement(ProviderSetupFormPanel, {
+              provider: { providerId: 'xai', displayName: 'SuperGrok' },
             state: {
               ...base,
               activeFormProviderId: 'xai',
@@ -2143,7 +2164,13 @@ describe('RuntimeProviderManagementPanelView', () => {
           })
         )
       );
-    });
+      });
+    };
+    await renderWithGeneration('v1');
+    const firstContinue = [...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Continue');
+    expect(firstContinue?.disabled).toBe(false);
+    await renderWithGeneration('v2');
     const continueButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
       .find(button => button.textContent?.trim() === 'Continue');
     expect(continueButton?.disabled).toBe(true);
