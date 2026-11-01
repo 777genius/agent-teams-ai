@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { API_AUTH_REFERENCE_ENV,type ApiAuthority } from '@features/local-http-auth/contracts';
+import { API_AUTH_REFERENCE_ENV, type ApiAuthority } from '@features/local-http-auth/contracts';
 import {
   apiProfileScope,
   checkApiReadiness,
   publishApiAuthority,
   removeApiAuthority,
+  RetainedApiPublicationError,
 } from '@features/local-http-auth/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 
@@ -33,7 +34,10 @@ export function buildTeamControlApiBaseUrl(port: number, host = '127.0.0.1'): st
 }
 
 /** Publish only after authenticated ingress is ready; otherwise revoke discovery. */
-export async function syncTeamControlApiAuthority(baseUrl: string | null, authToken: string | null): Promise<void> {
+export async function syncTeamControlApiAuthority(
+  baseUrl: string | null,
+  authToken: string | null
+): Promise<void> {
   if (!baseUrl || !authToken) {
     await clearTeamControlApiState();
     return;
@@ -68,12 +72,28 @@ export function writeTeamControlApiState(baseUrl: string, authToken: string): Pr
             baseUrl,
             token: authToken,
           };
-    const reference = await publishApiAuthority(root, authority);
+    let reference: string;
+    try {
+      reference = await publishApiAuthority(root, authority);
+    } catch (error) {
+      if (
+        error instanceof RetainedApiPublicationError &&
+        previous?.authority === authority &&
+        previous.root === root &&
+        generation === revision &&
+        getClaudeBasePath() === root
+      ) {
+        process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
+        process.env[TOKEN_ENV] = authToken;
+        process.env[API_AUTH_REFERENCE_ENV] = error.referencePath;
+      }
+      throw error;
+    }
     published = { root, authority };
     if (previous && previous.authority !== authority) {
       await removeApiAuthority(previous.root, previous.authority);
     }
-    if (generation !== revision) return;
+    if (generation !== revision || getClaudeBasePath() !== root) return;
     process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
     process.env[TOKEN_ENV] = authToken;
     process.env[API_AUTH_REFERENCE_ENV] = reference;

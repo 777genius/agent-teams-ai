@@ -7,6 +7,7 @@ export {
   scheduleApiProfileChange,
 } from './application/profileTransition';
 export {
+  RetainedApiPublicationError,
   apiProfileScope,
   publishApiAuthority,
   removeApiAuthority,

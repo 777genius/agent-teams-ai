@@ -1,3 +1,4 @@
+import { RetainedApiPublicationError } from '@features/local-http-auth/main';
 import type { HttpServices } from '@main/http';
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
@@ -3007,7 +3008,8 @@ async function startHttpServer(
     logger.info(`HTTP sidecar server running on port ${port}`);
   } catch (error) {
     if (!wasRunning && httpServer.isRunning()) await httpServer.stop().catch(() => undefined);
-    await clearTeamControlApiState().catch(() => undefined);
+    if (!wasRunning || !(error instanceof RetainedApiPublicationError))
+      await clearTeamControlApiState().catch(() => undefined);
     assertStartupActive(isShutdownStarted);
     logger.error('Failed to start HTTP server:', error);
     throw error;
