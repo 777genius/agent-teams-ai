@@ -2221,16 +2221,17 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
       const url = String(input);
-      if (url.endsWith('/opencode-ai/latest')) {
+      if (url.endsWith('/opencode-ai/1.19.5')) {
         return Response.json({
-          version: '1.18.3',
+          name: 'opencode-ai',
+          version: '1.19.5',
           dist: { tarball: 'https://example.test/root.tgz', integrity },
-          optionalDependencies: { [platformPackage]: '1.18.3' },
+          optionalDependencies: { [platformPackage]: '1.19.5' },
         });
       }
-      if (url.includes(`/${platformPackage}/1.18.3`)) {
+      if (url.includes(`/${platformPackage}/1.19.5`)) {
         return Response.json({
-          version: '1.18.3',
+          version: '1.19.5',
           dist: { tarball: 'https://example.test/platform.tgz', integrity },
         });
       }
@@ -2244,12 +2245,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     vi.stubGlobal('fetch', fetchMock);
     execCliMock.mockRejectedValueOnce(new Error('binary verification failed'));
 
-    await expect(createNativeOnlyInstaller().install({ generation: 'v1' })).resolves.toMatchObject({
+    // A first-time dashboard install supplies no generation and must still fetch V1.
+    await expect(createNativeOnlyInstaller().install()).resolves.toMatchObject({
       installed: false,
       state: 'failed',
       error: 'binary verification failed',
     });
-
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/1.19.5'))).toBe(
+      true
+    );
     const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
     const entries = await readdir(runtimeRoot);
     expect(entries.filter((entry) => entry.startsWith('installing-'))).toEqual([]);

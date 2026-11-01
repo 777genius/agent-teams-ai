@@ -5,6 +5,7 @@ import {
 } from '@features/opencode-compatibility';
 import {
   chooseOpenCodeInstallGeneration,
+  DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
 import {
@@ -794,7 +795,10 @@ export class OpenCodeRuntimeInstallerService {
         generation,
         compatibleV2Version,
         await getOpenCodeRuntimePlatformCandidates(),
-        fetchOpenCodePackageMetadata
+        fetchOpenCodePackageMetadata,
+        generation === 'v1' && !previousStatus.installed && !options.generation
+          ? DEFAULT_OPENCODE_V1_INSTALL_VERSION
+          : undefined
       );
       const platformMetadata = selected.metadata;
 

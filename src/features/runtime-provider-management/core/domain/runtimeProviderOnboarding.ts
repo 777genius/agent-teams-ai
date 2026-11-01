@@ -57,6 +57,17 @@ export function getOpenCodeGeneration(version: string | null | undefined): OpenC
   return isRecognizedOpenCodeV2Version(version) ? 'v2' : 'v1';
 }
 
+/** Current Agent Teams connection paths, not the capabilities of upstream OpenCode plugins. */
+export function getOpenCodeV2PlanLimitation(
+  planId: RuntimeProviderOnboardingPlanId,
+  generation: OpenCodeGeneration
+): 'cli-plugin' | 'subscription-oauth' | null {
+  if (generation !== 'v2') return null;
+  if (planId === 'cursor' || planId === 'kiro') return 'cli-plugin';
+  if (planId === 'supergrok' || planId === 'github-copilot') return 'subscription-oauth';
+  return null;
+}
+
 /** A console domain and the OpenCode V2 integration that serves accounts from it. */
 export interface RuntimeProviderOnboardingRoute {
   readonly host: string;

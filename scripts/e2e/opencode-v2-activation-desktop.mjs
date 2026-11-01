@@ -438,20 +438,29 @@ try {
   );
   assert.equal(initial.installed, false, 'This smoke must start with no selected native runtime');
   assert.equal(initial.compatibleV2Version, expectedVersion);
-  await wait('visible V2 install action', () =>
+  await wait('visible default V1 install action', () =>
     cdp.inspect(`(() => {
       document.querySelector('[role="button"][aria-expanded="false"][aria-label="Expand provider details"]')?.click();
-      return [...document.querySelectorAll('button')].some(button =>
-        button.textContent.trim() === ${JSON.stringify(`Install V2 ${expectedVersion}`)} &&
-        !button.disabled && button.getClientRects().length > 0);
+      const labels = [...document.querySelectorAll('button')]
+        .filter(button => !button.disabled && button.getClientRects().length > 0)
+        .map(button => button.textContent.trim());
+      return labels.includes('Install OpenCode V1') &&
+        !labels.some(label => label.startsWith('Install V2 '));
     })()`)
   );
   await snapshot('before-install');
-  await milestone('missing V2 detected', { source: initial.source, expectedVersion });
+  await milestone('missing V2 detected; default V1 offered', { source: initial.source, expectedVersion });
 
-  // Exercise the visible button's generation binding and the production store/IPC path.
-  phase = 'V2 installation through the visible button';
-  await clickVisibleButtonByText(`Install V2 ${expectedVersion}`);
+  // Explicit V2 request exercises the production IPC path without changing the V1 default.
+  phase = 'explicit V2 installation';
+  await cdp.inspect(`window.__opencodeV2ExplicitInstall = null;
+    window.electronAPI.openCodeRuntime.install({generation:'v2'})
+      .then(value => {
+        window.__opencodeV2ExplicitInstall = { value };
+        window.__agentTeamsDevStore.getState().fetchOpenCodeRuntimeStatus();
+      })
+      .catch(error => { window.__opencodeV2ExplicitInstall = { error: String(error) }; });
+    true`);
   const started = await wait('production installation progress', () =>
     cdp.inspect(`(() => {
       const state = window.__agentTeamsDevStore.getState();
@@ -462,6 +471,12 @@ try {
     })()`)
   );
   await save('installation-started.json', started);
+  const explicitInstall = await wait('explicit V2 install completion',
+    () => cdp.inspect('window.__opencodeV2ExplicitInstall'), 720_000);
+  assert(!explicitInstall.error && explicitInstall.value?.installed === true &&
+    explicitInstall.value.version === expectedVersion &&
+    explicitInstall.value.state === 'ready',
+    'Explicit V2 installation failed: ' + JSON.stringify(explicitInstall));
   assert.equal(started.error, null, JSON.stringify(started));
   assert.notEqual(started.state, 'failed', JSON.stringify(started));
   const activated = await wait(

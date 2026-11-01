@@ -270,6 +270,60 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(onBrowseProviders).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps unsupported V2 subscription routes visible without claiming CLI authentication is model access', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    const onConnectedCountChange = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter'),
+        entry('xai'),
+        entry('github-copilot'),
+        entry('kiro'),
+        entry('cursor-acp'),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: false,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'path',
+            state: 'ready',
+            version: '2.1.4',
+            v2Support: 'ready',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+          onConnectedCountChange,
+        })
+      );
+      await Promise.resolve();
+    });
+    for (const id of ['supergrok', 'github-copilot', 'kiro', 'cursor']) {
+      const card = host.querySelector(`[data-testid="provider-quick-card-${id}"]`);
+      expect(card?.textContent).toMatch(/requiresV1|cliSignedInRequiresV1/);
+      expect(card?.textContent).not.toContain('cliStatus.quickConnect.planConnected');
+      expect(host.querySelector(`[data-testid="provider-quick-action-${id}"]`)).toBeNull();
+    }
+    expect(host.querySelector('[data-testid="provider-quick-card-kiro"]')?.textContent).toContain('cliSignedInRequiresV1');
+    expect(host.querySelector('[data-testid="provider-quick-card-cursor"]')?.textContent).toContain('cliSignedInRequiresV1');
+    expect(host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent).toContain('cliStatus.quickConnect.connected');
+    expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
+    expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
+  });
+
   it('refreshes both the provider directory and project model catalog after local setup', async () => {
     const refresh = vi.fn(async () => undefined);
     mocks.directory = {

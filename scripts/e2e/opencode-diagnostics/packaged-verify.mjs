@@ -860,8 +860,8 @@ export async function verifyPackaged({
     if (v2Repair && data.run === 'cold') {
       assert(!version.installed && version.source === 'missing', 'Published V2 cold profile must be empty');
       assert(/^2\.\d+\.\d+$/.test(version.compatibleV2Version ?? ''),
-        'Fresh default installation requires an actually qualified V2 release');
-      evidence.freshDefaultInstall = { requestedGeneration: 'default',
+        'An explicit V2 support-repair run requires an actually qualified V2 release');
+      evidence.freshDefaultInstall = { requestedGeneration: 'v2',
         qualifiedV2Version: version.compatibleV2Version, observedVersion: null };
     }
     // Explicit future runner option only. This is the app's registry/integrity installer;
@@ -887,8 +887,11 @@ export async function verifyPackaged({
         } catch {
           evidence.installerPublication.progressSubscriptionFailed = true;
         }
-        // Exercise the same automatic generation policy as a fresh normal install.
-        await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
+        // Default install is V1; the separate V2 repair scenario explicitly opts into V2.
+        await probe('runtimeSetup',
+          v2Repair
+            ? 'window.electronAPI.openCodeRuntime.install({generation:"v2"})'
+            : 'window.electronAPI.openCodeRuntime.install()', 180000);
       } finally {
         try {
           const progress = await evaluate(`(() => {
@@ -928,11 +931,15 @@ export async function verifyPackaged({
         : await v2SupportSnapshot(data);
       if (data.run === 'cold') {
         assert.equal(version.version, evidence.freshDefaultInstall.qualifiedV2Version,
-          'Fresh default install did not select the actual qualified V2 release');
+          'Explicit V2 install did not select the actual qualified V2 release');
         evidence.freshDefaultInstall.observedVersion = version.version;
       }
       assert.equal(version.version, evidence.v2Support.native.version);
       assert.equal(version.binaryPath.toLowerCase(), evidence.v2Support.native.binaryPath.toLowerCase());
+    }
+    if (!v2Repair && data.runtimeSetup === 'app-install') {
+      assert(/^1\.\d+\.\d+$/.test(version.version ?? ''),
+        'Default packaged installation must stay on stable OpenCode V1');
     }
     if (version.binaryPath) evidence.opencode = await runtimeProvenance(version, data, 'opencode');
     assert(

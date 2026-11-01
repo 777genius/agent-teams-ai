@@ -28,9 +28,9 @@ export function getRuntimeInstallLabel(
   }
   if (status?.state === 'installing') return t('cliStatus.runtimeInstall.installing');
   if (status?.state === 'checking') return t('cliStatus.runtimeInstall.checking');
-  if (status && !status.installed && 'compatibleV2Version' in status && status.compatibleV2Version)
-    return `${t('cliStatus.runtimeInstall.install')} V2 ${status.compatibleV2Version}`;
   if (status?.state === 'failed') return t('cliStatus.runtimeInstall.retryInstall');
+  if (status && !status.installed && 'compatibleV2Version' in status)
+    return `${t('cliStatus.runtimeInstall.install')} OpenCode V1`;
   if (status?.updateAvailable && status.latestVersion) {
     return status.version
       ? `${t('cliStatus.runtimeInstall.update')} ${formatRuntimeVersionTransition(status.version, status.latestVersion)}`

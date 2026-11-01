@@ -1,6 +1,7 @@
 import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
 import {
   chooseOpenCodeInstallGeneration,
+  DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
 import { selectOpenCodeInstallPackage } from '@features/opencode-runtime-installer/main';
@@ -9,22 +10,24 @@ import { describe, expect, it, vi } from 'vitest';
 // A moving npm tag, an unqualified platform or a malformed IPC input must not
 // authorize an arbitrary V2 package; an update must retain its generation.
 describe('OpenCode installation policy', () => {
-  it('chooses fresh qualified V2 and retains the installed generation', () => {
-    expect(chooseOpenCodeInstallGeneration(undefined, undefined, '2.1.4')).toBe('v2');
+  it('defaults fresh installs to V1 and retains the installed generation', () => {
+    expect(chooseOpenCodeInstallGeneration(undefined, undefined, '2.1.4')).toBe('v1');
     expect(chooseOpenCodeInstallGeneration(undefined, undefined, null)).toBe('v1');
     expect(chooseOpenCodeInstallGeneration(undefined, '1.18.3', '2.1.4')).toBe('v1');
     expect(chooseOpenCodeInstallGeneration(undefined, '2.9.0', '2.1.4')).toBe('v2');
     expect(chooseOpenCodeInstallGeneration('v1', '2.1.4', '2.1.4')).toBe('v1');
+    expect(chooseOpenCodeInstallGeneration('v2', undefined, '2.1.4')).toBe('v2');
     const unshipped = getLatestQualifiedOpenCodeV2Version('linux', 'arm64');
     expect(unshipped).toBeNull();
     expect(chooseOpenCodeInstallGeneration(undefined, undefined, unshipped)).toBe('v1');
     expect(getLatestQualifiedOpenCodeV2Version('unsupported', 'x64')).toBeNull();
   });
 
-  it('uses the actual pinned ARM64 qualification for a fresh default V2 installation', () => {
+  it('keeps V1 as default on qualified ARM64 while allowing an explicit V2 choice', () => {
     const qualified = getLatestQualifiedOpenCodeV2Version('win32', 'arm64');
     expect(qualified).toBe('2.1.4');
-    expect(chooseOpenCodeInstallGeneration(undefined, undefined, qualified)).toBe('v2');
+    expect(chooseOpenCodeInstallGeneration(undefined, undefined, qualified)).toBe('v1');
+    expect(chooseOpenCodeInstallGeneration('v2', undefined, qualified)).toBe('v2');
   });
 
   it.each([
@@ -38,6 +41,20 @@ describe('OpenCode installation policy', () => {
     { generation: 'v2', url: 'https://other.test' },
   ])('rejects invalid install options %j', (input) => {
     expect(() => parseOpenCodeInstallOptions(input)).toThrow();
+  });
+
+  it('pins the first-time V1 package and rejects redirected root metadata', async () => {
+    const fetchMetadata = vi.fn(async (name: string, version?: string) => ({
+      name,
+      version: name === 'opencode-ai' ? '1.19.4' : version,
+      optionalDependencies: { 'opencode-linux-x64': DEFAULT_OPENCODE_V1_INSTALL_VERSION },
+    }));
+    await expect(selectOpenCodeInstallPackage(
+      'v1', '2.1.4', [{ packageName: 'opencode-linux-x64' }],
+      fetchMetadata, DEFAULT_OPENCODE_V1_INSTALL_VERSION
+    )).rejects.toThrow('selected generation');
+    expect(fetchMetadata).toHaveBeenCalledTimes(1);
+    expect(fetchMetadata).toHaveBeenCalledWith('opencode-ai', DEFAULT_OPENCODE_V1_INSTALL_VERSION);
   });
 
   it('refuses V2 on an unqualified platform before contacting npm', async () => {
