@@ -4913,6 +4913,12 @@ describe('CLI status visibility during completed install state', () => {
   it('keeps other provider authority during scoped Re-check and retries the OpenCode catalog independently', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      version: '1.19.4',
+      source: 'app-managed',
+      state: 'ready',
+    };
     const anthropic = {
       ...createApiKeyMisconfiguredProvider('anthropic'),
       authenticated: true,
