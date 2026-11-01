@@ -29,6 +29,13 @@ export function OpenCodeProviderCompatibilityScope({
   );
 }
 
+/** Only the unsupported managed routes block setup actions. Users can still view or forget them. */
+export function useOpenCodeProviderConnectionBlocked(providerId: string): boolean {
+  const generation = useContext(OpenCodeGenerationContext);
+  return generation === 'v2' &&
+    !resolveOpenCodeProviderCompatibility(providerId, generation).canConnect;
+}
+
 /** Neither a saved credential nor a provider listing proves model execution. */
 export function OpenCodeProviderCompatibilityStatus({
   providerId,
