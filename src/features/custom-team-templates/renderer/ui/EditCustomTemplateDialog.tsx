@@ -430,7 +430,7 @@ export const EditCustomTemplateDialog = ({
                             }
                             aria-describedby={
                               mIssues.some((i) => i.field === `members[${index}].name`)
-                                ? `member-${index}-error`
+                                ? `member-${index}-name-error`
                                 : undefined
                             }
                             onChange={(e) => updateMember(index, { name: e.target.value })}
@@ -456,7 +456,7 @@ export const EditCustomTemplateDialog = ({
                             }
                             aria-describedby={
                               mIssues.some((i) => i.field === `members[${index}].role`)
-                                ? `member-${index}-error`
+                                ? `member-${index}-role-error`
                                 : undefined
                             }
                             onChange={(e) => updateMember(index, { role: e.target.value })}
@@ -482,7 +482,7 @@ export const EditCustomTemplateDialog = ({
                             }
                             aria-describedby={
                               mIssues.some((i) => i.field === `members[${index}].workflow`)
-                                ? `member-${index}-error`
+                                ? `member-${index}-workflow-error`
                                 : undefined
                             }
                             onChange={(e) => updateMember(index, { workflow: e.target.value })}
@@ -490,15 +490,21 @@ export const EditCustomTemplateDialog = ({
                         </div>
                       </div>
 
-                      {mIssues.length > 0 ? (
-                        <p
-                          id={`member-${index}-error`}
-                          role="alert"
-                          className="text-xs text-red-300"
-                        >
-                          {mIssues.map(issueMessage).join(' ')}
-                        </p>
-                      ) : null}
+                      {(['name', 'role', 'workflow'] as const).map((field) => {
+                        const fieldIssues = mIssues.filter(
+                          (issue) => issue.field === `members[${index}].${field}`
+                        );
+                        return fieldIssues.length > 0 ? (
+                          <p
+                            key={field}
+                            id={`member-${index}-${field}-error`}
+                            role="alert"
+                            className="text-xs text-red-300"
+                          >
+                            {fieldIssues.map(issueMessage).join(' ')}
+                          </p>
+                        ) : null;
+                      })}
                     </div>
                   );
                 })}

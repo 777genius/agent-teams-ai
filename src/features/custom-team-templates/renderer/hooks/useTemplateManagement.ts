@@ -44,13 +44,14 @@ export function useTemplateManagement({
 }: UseTemplateManagementInput = {}): UseTemplateManagementResult {
   const [busy, setBusy] = useState(false);
   const [activeOperation, setActiveOperation] = useState<TemplateManagementOperation>(null);
-  const requestIdRef = useRef(0);
+  const inFlightRef = useRef(false);
 
   const deleteTemplate = useCallback(
     async (
       target: CustomTeamTemplateV1 | { templateId: string; expectedRevision: number }
     ): Promise<DeleteCustomTeamTemplateResult> => {
-      const requestId = ++requestIdRef.current;
+      if (inFlightRef.current) return { status: 'storageUnavailable' };
+      inFlightRef.current = true;
       setBusy(true);
       setActiveOperation('delete');
 
@@ -62,10 +63,6 @@ export function useTemplateManagement({
           expectedRevision,
         });
 
-        if (requestId !== requestIdRef.current) {
-          return { status: 'storageUnavailable' };
-        }
-
         if (result.status === 'deleted') {
           await onSuccess?.();
         }
@@ -76,10 +73,9 @@ export function useTemplateManagement({
         // dispatched, so it can never prove the delete did not commit.
         return { status: 'unresolvedWriteOutcome', templateId: target.templateId };
       } finally {
-        if (requestId === requestIdRef.current) {
-          setBusy(false);
-          setActiveOperation(null);
-        }
+        inFlightRef.current = false;
+        setBusy(false);
+        setActiveOperation(null);
       }
     },
     [onSuccess]
@@ -87,7 +83,8 @@ export function useTemplateManagement({
 
   const duplicateTemplate = useCallback(
     async (sourceTemplateId: string, name: string): Promise<DuplicateCustomTeamTemplateResult> => {
-      const requestId = ++requestIdRef.current;
+      if (inFlightRef.current) return { status: 'storageUnavailable' };
+      inFlightRef.current = true;
       setBusy(true);
       setActiveOperation('duplicate');
 
@@ -96,10 +93,6 @@ export function useTemplateManagement({
           sourceTemplateId,
           name,
         });
-
-        if (requestId !== requestIdRef.current) {
-          return { status: 'storageUnavailable' };
-        }
 
         if (result.status === 'duplicated') {
           await onSuccess?.();
@@ -112,10 +105,9 @@ export function useTemplateManagement({
         // The outcome stays unknown instead of claiming nothing was written.
         return { status: 'unresolvedWriteOutcome', templateId: '' };
       } finally {
-        if (requestId === requestIdRef.current) {
-          setBusy(false);
-          setActiveOperation(null);
-        }
+        inFlightRef.current = false;
+        setBusy(false);
+        setActiveOperation(null);
       }
     },
     [onSuccess]
@@ -126,7 +118,8 @@ export function useTemplateManagement({
       builtinTemplateId: BuiltinTeamTemplateId,
       name: string
     ): Promise<CopyBuiltinTemplateResult> => {
-      const requestId = ++requestIdRef.current;
+      if (inFlightRef.current) return { status: 'storageUnavailable' };
+      inFlightRef.current = true;
       setBusy(true);
       setActiveOperation('copyBuiltin');
 
@@ -135,10 +128,6 @@ export function useTemplateManagement({
           builtinTemplateId,
           name,
         });
-
-        if (requestId !== requestIdRef.current) {
-          return { status: 'storageUnavailable' };
-        }
 
         if (result.status === 'copied') {
           await onSuccess?.();
@@ -150,10 +139,9 @@ export function useTemplateManagement({
         // failed response cannot prove the copy was not stored.
         return { status: 'unresolvedWriteOutcome', templateId: '' };
       } finally {
-        if (requestId === requestIdRef.current) {
-          setBusy(false);
-          setActiveOperation(null);
-        }
+        inFlightRef.current = false;
+        setBusy(false);
+        setActiveOperation(null);
       }
     },
     [onSuccess]

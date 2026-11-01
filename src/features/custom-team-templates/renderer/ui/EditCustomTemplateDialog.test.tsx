@@ -302,6 +302,29 @@ describe('EditCustomTemplateDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('describes simultaneous member errors separately for each field', async () => {
+    updateTemplate.mockResolvedValue({
+      status: 'validationFailed',
+      issues: [
+        { code: 'memberNameRequired', field: 'members[0].name' },
+        { code: 'memberRoleTooLong', field: 'members[0].role' },
+      ],
+    } satisfies UpdateCustomTeamTemplateResult);
+    await render(twoMembers);
+    await save();
+    const nameId = field('#member-0-name').getAttribute('aria-describedby');
+    const roleId = field('#member-0-role').getAttribute('aria-describedby');
+    expect(nameId).toBeTruthy();
+    expect(roleId).toBeTruthy();
+    expect(nameId).not.toBe(roleId);
+    const nameError = document.getElementById(nameId!);
+    const roleError = document.getElementById(roleId!);
+    expect(nameError?.textContent).toContain('memberNameRequired');
+    expect(nameError?.textContent).not.toContain('memberRoleTooLong');
+    expect(roleError?.textContent).toContain('memberRoleTooLong');
+    expect(roleError?.textContent).not.toContain('memberNameRequired');
+  });
+
   it('marks only the member name input invalid and links it to that member error', async () => {
     updateTemplate.mockResolvedValue({
       status: 'validationFailed',
@@ -313,7 +336,7 @@ describe('EditCustomTemplateDialog', () => {
 
     const name = field('#member-0-name');
     expect(name.getAttribute('aria-invalid')).toBe('true');
-    expect(name.getAttribute('aria-describedby')).toBe('member-0-error');
+    expect(name.getAttribute('aria-describedby')).toBe('member-0-name-error');
     // A name issue never marks the sibling fields of the same member.
     expect(field('#member-0-role').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-0-role').hasAttribute('aria-describedby')).toBe(false);
@@ -323,10 +346,10 @@ describe('EditCustomTemplateDialog', () => {
     expect(field('#member-1-name').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-1-name').hasAttribute('aria-describedby')).toBe(false);
 
-    const error = host.querySelector('#member-0-error');
+    const error = host.querySelector('#member-0-name-error');
     expect(error?.getAttribute('role')).toBe('alert');
     expect(error?.textContent).toContain('customTemplates.errors.issues.memberNameRequired');
-    expect(host.querySelector('#member-1-error')).toBeNull();
+    expect(host.querySelector('#member-1-workflow-error')).toBeNull();
   });
 
   it('marks only the member role input invalid and links it to that member error', async () => {
@@ -340,14 +363,14 @@ describe('EditCustomTemplateDialog', () => {
 
     const role = field('#member-0-role');
     expect(role.getAttribute('aria-invalid')).toBe('true');
-    expect(role.getAttribute('aria-describedby')).toBe('member-0-error');
+    expect(role.getAttribute('aria-describedby')).toBe('member-0-role-error');
     expect(field('#member-0-name').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-0-name').hasAttribute('aria-describedby')).toBe(false);
     expect(field('#member-0-workflow').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-1-role').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-1-role').hasAttribute('aria-describedby')).toBe(false);
 
-    const error = host.querySelector('#member-0-error');
+    const error = host.querySelector('#member-0-role-error');
     expect(error?.getAttribute('role')).toBe('alert');
     expect(error?.textContent).toContain('customTemplates.errors.issues.memberRoleTooLong');
   });
@@ -363,17 +386,17 @@ describe('EditCustomTemplateDialog', () => {
 
     const workflow = field('#member-1-workflow');
     expect(workflow.getAttribute('aria-invalid')).toBe('true');
-    expect(workflow.getAttribute('aria-describedby')).toBe('member-1-error');
+    expect(workflow.getAttribute('aria-describedby')).toBe('member-1-workflow-error');
     expect(field('#member-1-name').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-1-role').hasAttribute('aria-invalid')).toBe(false);
     // The first member is neither marked invalid nor pointed at this error.
     expect(field('#member-0-workflow').hasAttribute('aria-invalid')).toBe(false);
     expect(field('#member-0-workflow').hasAttribute('aria-describedby')).toBe(false);
 
-    const error = host.querySelector('#member-1-error');
+    const error = host.querySelector('#member-1-workflow-error');
     expect(error?.getAttribute('role')).toBe('alert');
     expect(error?.textContent).toContain('customTemplates.errors.issues.memberWorkflowTooLong');
-    expect(host.querySelector('#member-0-error')).toBeNull();
+    expect(host.querySelector('[id^="member-0-"][role="alert"]')).toBeNull();
     expect(document.getElementById(workflow.getAttribute('aria-describedby') ?? '')).toBe(error);
   });
 });

@@ -229,13 +229,14 @@ export const CopyBuiltinTemplateDialog = ({
               {TEAM_TEMPLATES.map((tpl) => {
                 const isSelected = tpl.id === selectedId;
                 return (
-                  <button
+                  <Button
                     key={tpl.id}
                     type="button"
+                    variant="ghost"
                     disabled={busy}
                     aria-pressed={isSelected}
                     data-testid={`builtin-template-${tpl.id}`}
-                    className={`rounded-md border p-3 text-left transition-colors ${
+                    className={`h-auto flex-col items-stretch justify-start whitespace-normal rounded-md border p-3 text-left transition-colors ${
                       isSelected
                         ? 'border-[var(--color-primary)] bg-[var(--color-surface-raised)] ring-1 ring-[var(--color-primary)]'
                         : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-raised)]'
@@ -256,7 +257,7 @@ export const CopyBuiltinTemplateDialog = ({
                         count: tpl.members.length,
                       })}
                     </span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
