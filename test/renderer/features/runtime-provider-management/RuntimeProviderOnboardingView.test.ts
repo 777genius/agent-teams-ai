@@ -212,6 +212,30 @@ describe('RuntimeProviderOnboardingView', () => {
     expect(advanced).toHaveBeenCalledTimes(1);
   });
 
+  it('shows V2 unverified plans separately from V1-only routes', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderOnboardingView, {
+          state: onboardingState({
+            openCodeGeneration: 'v2',
+            selectedPlanIds: ['zai-coding-plan'],
+          }),
+          actions: onboardingActions(),
+          onAdvancedSettings: vi.fn(),
+          onDone: vi.fn(),
+        })
+      );
+    });
+    expect(host.querySelector('[data-testid="opencode-plan-compatibility-supergrok"]')?.textContent)
+      .toContain('requiresV1');
+    expect(host.querySelector('[data-testid="opencode-plan-compatibility-zai-coding-plan"]')?.textContent)
+      .toContain('v2Unverified');
+    const unavailable = host.querySelector('#runtime-provider-wizard-supergrok');
+    expect(unavailable?.getAttribute('aria-disabled')).toBe('true');
+    const supported = host.querySelector('#runtime-provider-wizard-zai-coding-plan');
+    expect(supported?.getAttribute('aria-disabled')).not.toBe('true');
+  });
+
   it('asks before spending quota to verify an already connected plan', async () => {
     const beginVerification = vi.fn();
     const beginConnect = vi.fn();
