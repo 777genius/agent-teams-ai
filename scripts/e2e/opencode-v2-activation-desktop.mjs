@@ -473,7 +473,9 @@ try {
   await save('installation-started.json', started);
   const explicitInstall = await wait('explicit V2 install completion',
     () => cdp.inspect('window.__opencodeV2ExplicitInstall'), 300_000);
-  assert(!explicitInstall.error && explicitInstall.value?.success === true,
+  assert(!explicitInstall.error && explicitInstall.value?.installed === true &&
+    explicitInstall.value.version === expectedVersion &&
+    explicitInstall.value.state === 'ready',
     'Explicit V2 installation failed: ' + JSON.stringify(explicitInstall));
   assert.equal(started.error, null, JSON.stringify(started));
   assert.notEqual(started.state, 'failed', JSON.stringify(started));

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import {
+  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingCredentialUrls,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
@@ -238,6 +239,7 @@ const WizardPlanPicker = ({
       <div className="grid gap-2 sm:grid-cols-2">
         {state.plans.map((plan) => {
           const selected = state.selectedPlanIds.includes(plan.id);
+          const unsupported = getOpenCodeV2PlanLimitation(plan.id, state.openCodeGeneration) !== null;
           const status = state.planStatuses.find((entry) => entry.plan.id === plan.id)?.state;
           return (
             <Label
@@ -252,7 +254,7 @@ const WizardPlanPicker = ({
               <Checkbox
                 id={`runtime-provider-wizard-${plan.id}`}
                 checked={selected}
-                disabled={disabled}
+                disabled={disabled || unsupported}
                 onCheckedChange={() => actions.togglePlan(plan.id)}
               />
               <ProviderBrandIcon
@@ -261,7 +263,11 @@ const WizardPlanPicker = ({
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2 text-xs font-medium text-[var(--color-text)]">
                   <span className="truncate">{plan.displayName}</span>
-                  {status === 'connected' ? (
+                  {unsupported ? (
+                    <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                      Requires OpenCode V1
+                    </span>
+                  ) : status === 'connected' ? (
                     <span className="shrink-0 text-[10px] text-emerald-300">Connected</span>
                   ) : null}
                 </span>

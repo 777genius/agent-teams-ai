@@ -944,6 +944,41 @@ describe('useRuntimeProviderOnboarding', () => {
     );
   });
 
+  it('uses supported defaults when starting the OpenCode V2 wizard', async () => {
+    await act(async () =>
+      root.render(React.createElement(Harness, {
+        mode: 'wizard', providerId: null, openCodeGeneration: 'v2',
+      }))
+    );
+    expect(currentState?.selectedPlanIds).toEqual([
+      'zai-coding-plan', 'minimax-token-plan', 'kimi-code-membership',
+    ]);
+    await act(async () => currentActions?.togglePlan('supergrok'));
+    expect(currentState?.selectedPlanIds).not.toContain('supergrok');
+    await act(async () => currentActions?.startWizard());
+    expect(currentState?.activePlan?.id).toBe('zai-coding-plan');
+    expect(currentState?.progress?.selectedPlanIds).not.toContain('github-copilot');
+    expect(connectProvider).not.toHaveBeenCalled();
+  });
+
+  it('resumes a saved V1 wizard at a supported V2 plan', async () => {
+    savedProgress = createRuntimeProviderOnboardingProgress([
+      'supergrok', 'zai-coding-plan', 'github-copilot', 'minimax-token-plan',
+    ]);
+    await act(async () =>
+      root.render(React.createElement(Harness, {
+        mode: 'wizard', providerId: null, openCodeGeneration: 'v2',
+      }))
+    );
+    expect(currentState?.resumable).toBe(true);
+    expect(currentState?.progress?.selectedPlanIds).toEqual([
+      'zai-coding-plan', 'minimax-token-plan',
+    ]);
+    expect(currentState?.activePlan?.id).toBe('zai-coding-plan');
+    expect(loadSetupForm).not.toHaveBeenCalledWith(expect.objectContaining({ providerId: 'xai' }));
+    expect(connectProvider).not.toHaveBeenCalled();
+  });
+
   it('advances a wizard from a connected verified plan to the next selected plan', async () => {
     await act(async () =>
       root.render(React.createElement(Harness, { mode: 'wizard', providerId: null }))
