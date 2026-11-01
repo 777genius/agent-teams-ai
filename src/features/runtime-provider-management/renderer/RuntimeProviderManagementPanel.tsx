@@ -1,10 +1,10 @@
 import { type JSX, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import {
   loadProjectPathProjects,
   type ProjectPathProject,
 } from '@renderer/components/team/dialogs/projectPathProjects';
-import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 

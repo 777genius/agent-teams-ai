@@ -44,10 +44,10 @@ import {
 } from 'lucide-react';
 
 import {
-  formatProviderState, inferOpenCodeProviderAuthMethod,
-  getProviderAction,
+  formatProviderState, getProviderAction,
   getProviderModelsLabel,
   getRuntimeProviderSetupPresentation,
+  inferOpenCodeProviderAuthMethod,
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { qualifyModelId } from '../../core/domain/openCodeModelIdentity';
