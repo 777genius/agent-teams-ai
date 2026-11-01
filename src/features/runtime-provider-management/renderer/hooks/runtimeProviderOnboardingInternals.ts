@@ -1,5 +1,8 @@
 import {
+  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlanProviderIds,
+  isRuntimeProviderOnboardingPlanRoutable,
+  RUNTIME_PROVIDER_ONBOARDING_PLANS,
   OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED,
   resolveRuntimeProviderOnboardingRouteGeneration,
 } from '../../core/domain';
@@ -9,8 +12,10 @@ import type {
   OpenCodeGeneration,
   RuntimeProviderOnboardingPlan,
   RuntimeProviderOnboardingPlanId,
+  RuntimeProviderOnboardingProgress,
 } from '../../core/domain';
 import type { RuntimeProviderManagementState } from './useRuntimeProviderManagement';
+import type { RuntimeProviderOnboardingPlanStatus } from './useRuntimeProviderOnboarding';
 
 export const DEFAULT_WIZARD_PLAN_IDS: readonly RuntimeProviderOnboardingPlanId[] = [
   'supergrok',
@@ -69,4 +74,32 @@ export function getOnboardingRouteState(
       (id) => findDirectoryEntry(state, id)?.state === 'connected'
     ) ?? null;
   return { routeGeneration, connectedRouteProviderId };
+}
+
+export function getOnboardingV2ConnectionMessage(
+  plan: RuntimeProviderOnboardingPlan | null,
+  generation: OpenCodeGeneration
+): string | null {
+  return plan && getOpenCodeV2PlanLimitation(plan.id, generation)
+    ? `${plan.displayName} cannot be connected through Agent Teams on OpenCode V2 yet. Use OpenCode V1 for this plan; the existing V2 installation is unchanged.`
+    : null;
+}
+
+export function getOnboardingPlanStatuses(
+  activePlan: RuntimeProviderOnboardingPlan | null,
+  progress: RuntimeProviderOnboardingProgress | null,
+  wizardStarted: boolean,
+  generation: OpenCodeGeneration,
+  management: RuntimeProviderManagementState
+): readonly RuntimeProviderOnboardingPlanStatus[] {
+  return RUNTIME_PROVIDER_ONBOARDING_PLANS.map((plan) => {
+    if (progress?.completedPlanIds.includes(plan.id)) return { plan, state: 'ready' };
+    if (activePlan?.id === plan.id && wizardStarted) return { plan, state: 'active' };
+    if (getOpenCodeV2PlanLimitation(plan.id, generation)) return { plan, state: 'pending' };
+    const entry = findDirectoryEntry(management, plan.providerId);
+    return {
+      plan,
+      state: isRuntimeProviderOnboardingPlanRoutable(plan, entry) ? 'connected' : 'pending',
+    };
+  });
 }

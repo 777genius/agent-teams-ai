@@ -32,14 +32,13 @@ import {
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
-import { sortQuickConnectCards } from './quickProviderCards';
+import { OPEN_CODE_GATEWAYS, OPEN_CODE_PLANS, sortQuickConnectCards } from './quickProviderCards';
 import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
 import type {
   RuntimeProviderCompanionActionDto,
   RuntimeProviderDirectoryEntryDto,
 } from '../contracts';
-import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 import type { JSX } from 'react';
 
@@ -61,93 +60,7 @@ interface RuntimeProviderQuickConnectProps {
   onConnectedCountChange?: (count: number) => void;
 }
 
-interface OpenCodePlanDefinition {
-  id: RuntimeProviderOnboardingPlanId;
-  providerId: string;
-  displayName: string;
-  descriptionKey:
-    | 'superGrokDescription'
-    | 'zaiDescription'
-    | 'miniMaxDescription'
-    | 'copilotDescription'
-    | 'kimiDescription'
-    | 'kiroDescription'
-    | 'cursorDescription';
-  requiresOAuthCredential?: boolean;
-  connectionStrategy: ReturnType<typeof getRuntimeProviderOnboardingPlan>['connectionStrategy'];
-}
-
-interface OpenCodeGatewayDefinition {
-  id: 'openrouter' | 'vercel';
-  providerId: 'openrouter' | 'vercel';
-  displayName: string;
-  description: string;
-}
-
 type CompanionPlanId = 'kiro' | 'cursor';
-
-const OPEN_CODE_PLAN_PRESENTATION: readonly Pick<
-  OpenCodePlanDefinition,
-  'id' | 'descriptionKey' | 'requiresOAuthCredential'
->[] = [
-  {
-    id: 'supergrok',
-    descriptionKey: 'superGrokDescription',
-    requiresOAuthCredential: true,
-  },
-  {
-    id: 'zai-coding-plan',
-    descriptionKey: 'zaiDescription',
-  },
-  {
-    id: 'minimax-token-plan',
-    descriptionKey: 'miniMaxDescription',
-  },
-  {
-    id: 'github-copilot',
-    descriptionKey: 'copilotDescription',
-  },
-  {
-    id: 'kimi-code-membership',
-    descriptionKey: 'kimiDescription',
-  },
-  {
-    id: 'kiro',
-    descriptionKey: 'kiroDescription',
-  },
-  {
-    id: 'cursor',
-    descriptionKey: 'cursorDescription',
-  },
-];
-
-const OPEN_CODE_PLANS: readonly OpenCodePlanDefinition[] = OPEN_CODE_PLAN_PRESENTATION.map(
-  (presentation) => {
-    const plan = getRuntimeProviderOnboardingPlan(presentation.id);
-    return {
-      ...presentation,
-      providerId: plan.providerId,
-      displayName: plan.displayName,
-      connectionStrategy: plan.connectionStrategy,
-    };
-  }
-);
-
-const OPEN_CODE_GATEWAYS: readonly OpenCodeGatewayDefinition[] = [
-  {
-    id: 'openrouter',
-    providerId: 'openrouter',
-    displayName: 'OpenRouter',
-    description: 'Use one API key to access models from many providers through OpenRouter.',
-  },
-  {
-    id: 'vercel',
-    providerId: 'vercel',
-    displayName: 'Vercel AI Gateway',
-    description:
-      'Use Vercel AI Gateway to access OpenAI, Anthropic, Google, xAI, and other models.',
-  },
-];
 
 function findDirectoryEntry(
   entries: readonly RuntimeProviderDirectoryEntryDto[],

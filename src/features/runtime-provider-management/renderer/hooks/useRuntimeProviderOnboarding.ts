@@ -12,7 +12,6 @@ import {
   createRuntimeProviderOnboardingProgress,
   findRuntimeProviderOnboardingPlanByProviderId,
   getRuntimeProviderOnboardingCredentialUrls,
-  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlan,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
@@ -29,6 +28,8 @@ import {
   findDirectoryEntry,
   getAutomaticModelProbeLimit,
   getOnboardingRouteState,
+  getOnboardingV2ConnectionMessage,
+  getOnboardingPlanStatuses,
   isCopilotExplicitModelUnsupported,
 } from './runtimeProviderOnboardingInternals';
 import {
@@ -264,10 +265,7 @@ export function useRuntimeProviderOnboarding({
     [basePlan, chosenRouteProviderId, connectedRouteProviderId, routeGeneration]
   );
 
-  const v2ConnectionMessage =
-    activePlan && getOpenCodeV2PlanLimitation(activePlan.id, openCodeGeneration)
-      ? `${activePlan.displayName} cannot be connected through Agent Teams on OpenCode V2 yet. Use OpenCode V1 for this plan; the existing V2 installation is unchanged.`
-      : null;
+  const v2ConnectionMessage = getOnboardingV2ConnectionMessage(activePlan, openCodeGeneration);
 
   const recordOnboardingStep = useCallback(
     (
@@ -621,11 +619,7 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan || activePlan.routeChoices) {
       return;
     }
-    if (v2ConnectionMessage) {
-      setStage('error');
-      setStageError(v2ConnectionMessage);
-      return;
-    }
+    if (v2ConnectionMessage) return;
     setStage('connect');
     setStageError(null);
     setReconnectRequestedPlanId(activePlan.id);
@@ -652,11 +646,7 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan) {
       return;
     }
-    if (v2ConnectionMessage) {
-      setStage('error');
-      setStageError(v2ConnectionMessage);
-      return;
-    }
+    if (v2ConnectionMessage) return;
     setReconnectRequestedPlanId(null);
     setVerificationRequestedPlanId(activePlan.id);
     setStage('verifying');
@@ -669,11 +659,7 @@ export function useRuntimeProviderOnboarding({
     if (!activePlan) {
       return false;
     }
-    if (v2ConnectionMessage) {
-      setStage('error');
-      setStageError(v2ConnectionMessage);
-      return false;
-    }
+    if (v2ConnectionMessage) return false;
     setPendingConnectionPlanId(activePlan.id);
     setAcceptedConnectionProof(null);
     try {
@@ -772,25 +758,8 @@ export function useRuntimeProviderOnboarding({
     setResumable(false);
   }, []);
 
-  const planStatuses = useMemo<readonly RuntimeProviderOnboardingPlanStatus[]>(
-    () =>
-      RUNTIME_PROVIDER_ONBOARDING_PLANS.map((plan) => {
-        if (progress?.completedPlanIds.includes(plan.id)) {
-          return { plan, state: 'ready' as const };
-        }
-        if (activePlan?.id === plan.id && wizardStarted) {
-          return { plan, state: 'active' as const };
-        }
-        if (getOpenCodeV2PlanLimitation(plan.id, openCodeGeneration)) {
-          return { plan, state: 'pending' as const };
-        }
-        const entry = findDirectoryEntry(management, plan.providerId);
-        if (isRuntimeProviderOnboardingPlanRoutable(plan, entry)) {
-          return { plan, state: 'connected' as const };
-        }
-        return { plan, state: 'pending' as const };
-      }),
-    [activePlan?.id, management, openCodeGeneration, progress?.completedPlanIds, wizardStarted]
+  const planStatuses = getOnboardingPlanStatuses(
+    activePlan, progress, wizardStarted, openCodeGeneration, management
   );
 
   return [
