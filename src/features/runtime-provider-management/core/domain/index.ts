@@ -1,4 +1,5 @@
 export * from './openCodeCatalogFailure';
+export * from './openCodeProviderCompatibility';
 export * from './openCodeV2ModelCatalog';
 export * from './providerManagementView';
 export * from './runtimeLocalProvider';

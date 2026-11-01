@@ -1,5 +1,6 @@
 import { type JSX, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import {
   loadProjectPathProjects,
   type ProjectPathProject,
@@ -7,10 +8,13 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
+import { getOpenCodeGeneration, isOpenCodeProviderConnectionBlocked } from '../core/domain';
+
 import {
   type RuntimeProviderChangeKind,
   useRuntimeProviderManagement,
 } from './hooks/useRuntimeProviderManagement';
+import { OpenCodeProviderCompatibilityScope } from './ui/OpenCodeProviderCompatibilityStatus';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
 import { resolveRuntimeProviderProjectContext } from './ui/runtimeProviderProjectContext';
 
@@ -40,6 +44,26 @@ export const RuntimeProviderManagementPanel = ({
   onBlockingOperationChange,
 }: RuntimeProviderManagementPanelProps): JSX.Element => {
   const repositoryGroups = useStore(useShallow((state) => state.repositoryGroups));
+  const nativeOpenCodeStatus = useStore((state) => state.openCodeRuntimeStatus);
+  const fetchOpenCodeRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
+  const invalidateOpenCodeRuntimeStatus = useStore((state) => state.invalidateOpenCodeRuntimeStatus);
+  const openCodeGeneration =
+    nativeOpenCodeStatus?.installed &&
+    nativeOpenCodeStatus.version &&
+    isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
+      ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
+      : null;
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    // A replaced native binary must not reuse the previous generation's cached status.
+    void invalidateOpenCodeRuntimeStatus()
+      .catch(() => undefined)
+      .then(() => {
+        if (active) return fetchOpenCodeRuntimeStatus();
+      });
+    return () => { active = false; };
+  }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus, open]);
   const initialProjectPath = useMemo(() => projectPath?.trim() || null, [projectPath]);
   const [activeProjectPath, setActiveProjectPath] = useState<string | null>(initialProjectPath);
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
@@ -118,13 +142,36 @@ export const RuntimeProviderManagementPanel = ({
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
     projectPath: effectiveProjectPath,
     initialProviderId,
-    initialProviderAction,
+    initialProviderAction:
+      initialProviderId && isOpenCodeProviderConnectionBlocked(initialProviderId, openCodeGeneration)
+        ? null : initialProviderAction,
     onProviderChanged,
   });
   const activeAuthOption = state.setupForm?.authOptions?.find(
     (option) => option.id === state.selectedAuthOptionId
   );
   const activeSetupMethod = activeAuthOption?.method ?? state.setupForm?.method ?? null;
+  const guardedActions = useMemo(() => {
+    const blocked = (providerId: string, method?: string | null): boolean =>
+      isOpenCodeProviderConnectionBlocked(providerId, openCodeGeneration, method);
+    return {
+      ...actions,
+      startConnect: (providerId: string): void => {
+        if (!blocked(providerId)) actions.startConnect(providerId);
+      },
+      startReconnect: (providerId: string): void => {
+        if (!blocked(providerId)) actions.startReconnect(providerId);
+      },
+      submitConnect: (providerId: string) =>
+        blocked(providerId, activeSetupMethod)
+          ? Promise.resolve(null)
+          : actions.submitConnect(providerId),
+      submitOAuthCode: (): Promise<void> =>
+        state.activeFormProviderId && blocked(state.activeFormProviderId, 'oauth')
+          ? Promise.resolve()
+          : actions.submitOAuthCode(),
+    };
+  }, [actions, activeSetupMethod, openCodeGeneration, state.activeFormProviderId]);
   const blockingCredentialWrite = Boolean(
     state.savingProviderId && activeSetupMethod && activeSetupMethod !== 'oauth'
   );
@@ -187,10 +234,10 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <>
+    <OpenCodeProviderCompatibilityScope generation={openCodeGeneration}>
       <RuntimeProviderManagementPanelView
         state={state}
-        actions={actions}
+        actions={guardedActions}
         disabled={disabled || !projectContextResolved}
         projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}
@@ -198,6 +245,6 @@ export const RuntimeProviderManagementPanel = ({
         projectContextError={projectContextError}
         onProjectContextChange={setActiveProjectPath}
       />
-    </>
+    </OpenCodeProviderCompatibilityScope>
   );
 };

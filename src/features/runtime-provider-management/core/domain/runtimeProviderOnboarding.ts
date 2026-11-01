@@ -2,6 +2,7 @@ import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibil
 import { isRecognizedOpenCodeV2Version } from '@shared/utils/version';
 
 import { qualifyModelId } from './openCodeModelIdentity';
+import { resolveOpenCodeProviderCompatibility } from './openCodeProviderCompatibility';
 import { isOAuthCredentialHint } from './runtimeProviderQuickConnect';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
@@ -57,15 +58,13 @@ export function getOpenCodeGeneration(version: string | null | undefined): OpenC
   return isRecognizedOpenCodeV2Version(version) ? 'v2' : 'v1';
 }
 
-/** Current Agent Teams connection paths, not the capabilities of upstream OpenCode plugins. */
+/** Compatibility of Agent Teams' managed route, not of an upstream plugin. */
 export function getOpenCodeV2PlanLimitation(
   planId: RuntimeProviderOnboardingPlanId,
   generation: OpenCodeGeneration
 ): 'cli-plugin' | 'subscription-oauth' | null {
-  if (generation !== 'v2') return null;
-  if (planId === 'cursor' || planId === 'kiro') return 'cli-plugin';
-  if (planId === 'supergrok' || planId === 'github-copilot') return 'subscription-oauth';
-  return null;
+  const compatibility = resolveOpenCodeProviderCompatibility(planId, generation);
+  return compatibility.state === 'incompatible' ? compatibility.reason : null;
 }
 
 /** A console domain and the OpenCode V2 integration that serves accounts from it. */

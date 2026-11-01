@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RuntimeProviderManagementPanelView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView';
+import { OpenCodeProviderCompatibilityScope } from '../../../../src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus';
+import { ProviderSetupFormPanel, RuntimeProviderManagementPanelView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView';
 
 import type {
   RuntimeProviderManagementActions,
@@ -1957,6 +1958,228 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.querySelector('input[type="password"]')).not.toBeNull();
     expect(host.textContent).not.toContain('sk-secret-value');
+  });
+
+  it('blocks SuperGrok OAuth on V2 but allows xAI API key in advanced setup', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const base = createState();
+    const form = {
+      runtimeId: 'opencode' as const,
+      providerId: 'xai',
+      displayName: 'xAI',
+      method: 'oauth' as const,
+      supported: true,
+      title: 'Connect xAI',
+      description: null,
+      submitLabel: 'Connect',
+      disabledReason: null,
+      source: 'oauth' as const,
+      secret: null,
+      prompts: [],
+    };
+    const provider = { providerId: 'xai', displayName: 'xAI' };
+    const render = async (method: 'oauth' | 'api') => {
+      await act(async () => {
+        root.render(
+          React.createElement(
+            OpenCodeProviderCompatibilityScope,
+            { generation: 'v2', children: null },
+            React.createElement(ProviderSetupFormPanel, {
+              provider,
+              state: { ...base, activeFormProviderId: 'xai', setupForm: { ...form, method } },
+              busy: false,
+              disabled: false,
+              actions,
+            })
+          )
+        );
+      });
+    };
+    await render('oauth');
+    const submit = host.querySelector<HTMLButtonElement>('button[type="submit"]');
+    expect(submit?.disabled).toBe(true);
+    expect(host.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('Requires OpenCode V1');
+    await act(async () => {
+      host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(actions.submitConnect).not.toHaveBeenCalled();
+    await render('api');
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false);
+    expect(host.querySelector('[data-testid="runtime-provider-compatibility-xai"]')).toBeNull();
+    await act(async () => {
+      host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(actions.submitConnect).toHaveBeenCalledWith('xai');
+  });
+
+  it('labels and blocks xAI OAuth-only directory rows on V2 but allows an API-key route', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const base = {
+      providerId: 'xai',
+      displayName: 'xAI',
+      state: 'available' as const,
+      setupKind: 'connect-oauth' as const,
+      ownership: [] as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['oauth'] as const,
+      actions: [{
+        id: 'connect' as const,
+        label: 'Connect',
+        enabled: true,
+        disabledReason: null,
+        requiresSecret: false,
+        ownershipScope: 'managed' as const,
+      }],
+      sources: ['inventory'] as const,
+      sourceLabel: 'OpenCode',
+      providerSource: 'inventory',
+      detail: null,
+      metadata: {
+        hasKnownModels: true,
+        requiresManualConfig: false,
+        supportedInlineAuth: true,
+        configuredAuthless: false,
+      },
+    };
+    const render = async (method: 'oauth' | 'api' | 'mixed') => {
+      await act(async () => {
+        root.render(React.createElement(
+          OpenCodeProviderCompatibilityScope,
+          { generation: 'v2', children: null },
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              directoryLoaded: true,
+              directoryTotalCount: 1,
+              directoryEntries: [{
+                ...base,
+                state: method === 'mixed' ? 'connected' : 'available',
+                setupKind: method === 'mixed' ? 'connected' :
+                  method === 'oauth' ? 'connect-oauth' : 'connect-api-key',
+                connectedAuthHint: method === 'mixed' ? 'oauth' : null,
+                authMethods: method === 'mixed' ? ['oauth', 'api'] : [method],
+                actions: method === 'mixed'
+                  ? [...base.actions, {
+                      id: 'reconnect' as const,
+                      label: 'Reconnect', enabled: true, disabledReason: null,
+                      requiresSecret: false, ownershipScope: 'managed' as const,
+                    }]
+                  : base.actions,
+              }],
+            }),
+            actions,
+            disabled: false,
+          })
+        ));
+        await Promise.resolve();
+      });
+    };
+    await render('oauth');
+    const row = host.querySelector<HTMLElement>('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(row?.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('Requires OpenCode V1');
+    const connect = [...(row?.querySelectorAll('button') ?? [])]
+      .find((button) => button.textContent?.trim() === 'Connect');
+    expect(connect?.disabled).toBe(true);
+    await act(async () => { row?.click(); await Promise.resolve(); });
+    expect(actions.startConnect).not.toHaveBeenCalled();
+    await render('api');
+    const nextRow = host.querySelector<HTMLElement>('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(nextRow?.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('V2 model not verified');
+    const nextConnect = [...(nextRow?.querySelectorAll('button') ?? [])]
+      .find((button) => button.textContent?.trim() === 'Connect');
+    expect(nextConnect?.disabled).toBe(false);
+    await act(async () => { nextConnect?.click(); await Promise.resolve(); });
+    expect(actions.startConnect).toHaveBeenCalledWith('xai');
+    await render('mixed');
+    const mixedRow = host.querySelector<HTMLElement>('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(mixedRow?.querySelector('[data-testid="runtime-provider-compatibility-xai"]')?.textContent)
+      .toContain('Requires OpenCode V1');
+    const actionsOnMixed = [...(mixedRow?.querySelectorAll('button') ?? [])];
+    const freshKeyAction = actionsOnMixed.find((button) => button.textContent?.trim() === 'Connect');
+    const oauthReconnectAction = actionsOnMixed.find((button) =>
+      /reconnect|sign in again/i.test(button.textContent ?? ''));
+    expect(freshKeyAction?.disabled).toBe(false);
+    expect(oauthReconnectAction?.disabled).toBe(true);
+  });
+
+  it('does not submit a pending xAI OAuth code after the runtime switches to V2', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = trackRenderRoot(createRoot(host));
+    const actions = createActions();
+    const base = createState();
+    const renderWithGeneration = async (generation: 'v1' | 'v2') => {
+      await act(async () => {
+        root.render(
+          React.createElement(
+            OpenCodeProviderCompatibilityScope,
+            { generation, children: null },
+            React.createElement(ProviderSetupFormPanel, {
+              provider: { providerId: 'xai', displayName: 'SuperGrok' },
+            state: {
+              ...base,
+              activeFormProviderId: 'xai',
+              savingProviderId: 'xai',
+              oauthCodeValue: 'CODE123',
+              setupForm: {
+                runtimeId: 'opencode',
+                providerId: 'xai',
+                displayName: 'SuperGrok',
+                method: 'oauth',
+                supported: true,
+                title: 'Connect SuperGrok',
+                description: null,
+                submitLabel: 'Connect',
+                disabledReason: null,
+                source: 'oauth',
+                secret: null,
+                prompts: [],
+              },
+              oauthProgress: {
+                operationId: 'test-oauth',
+                runtimeId: 'opencode',
+                providerId: 'xai',
+                displayName: 'SuperGrok',
+                authOptionId: 'oauth:0',
+                methodIndex: 0,
+                phase: 'waiting-for-code',
+                completionMethod: 'code',
+                instructions: 'Enter code',
+                message: 'Waiting for authorization code',
+              },
+            },
+            busy: true,
+            disabled: false,
+            actions,
+          })
+        )
+      );
+      });
+    };
+    await renderWithGeneration('v1');
+    const firstContinue = [...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Continue');
+    expect(firstContinue?.disabled).toBe(false);
+    await renderWithGeneration('v2');
+    const continueButton = [...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Continue');
+    expect(continueButton?.disabled).toBe(true);
+    await act(async () => {
+      host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(actions.submitOAuthCode).not.toHaveBeenCalled();
+    expect([...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Cancel')?.disabled).toBe(false);
   });
 
   it('allows supported OAuth setup forms that do not require a secret to submit', async () => {

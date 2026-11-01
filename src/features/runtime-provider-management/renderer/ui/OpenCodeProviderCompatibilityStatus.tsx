@@ -1,0 +1,104 @@
+import { createContext, useContext } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
+
+import {
+  inferOpenCodeProviderAuthMethod,
+  isOpenCodeProviderConnectionBlocked,
+  resolveOpenCodeProviderCompatibility,
+} from '../../core/domain';
+
+import type { OpenCodeGeneration } from '../../core/domain';
+import type { JSX, ReactNode } from 'react';
+
+const OpenCodeGenerationContext = createContext<OpenCodeGeneration | null | undefined>(undefined);
+
+/** The chosen generation is the selected native runtime, never guessed from a missing status. */
+export function OpenCodeProviderCompatibilityScope({
+  children,
+  generation,
+}: {
+  readonly children: ReactNode;
+  readonly generation: OpenCodeGeneration | null;
+}): JSX.Element {
+  return (
+    <OpenCodeGenerationContext.Provider value={generation}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </OpenCodeGenerationContext.Provider>
+  );
+}
+
+/** Only the unsupported managed routes block setup actions. Users can still view or forget them. */
+export function useOpenCodeProviderConnectionBlocked(
+  providerId: string,
+  authMethod?: string | null
+): boolean {
+  const generation = useContext(OpenCodeGenerationContext);
+  return isOpenCodeProviderConnectionBlocked(providerId, generation, authMethod);
+}
+
+/** Keep an existing OAuth identity distinct from newly offered API-key routes. */
+export function useOpenCodeProviderRowCompatibility(provider: {
+  readonly providerId: string;
+  readonly state: string;
+  readonly authMethods: readonly string[];
+  readonly connectedAuthHint?: string | null;
+}): { connectionBlocked: boolean; reconnectBlocked: boolean; connectedAuthMethod: string | null } {
+  const generation = useContext(OpenCodeGenerationContext);
+  const offeredMethod = inferOpenCodeProviderAuthMethod(provider.authMethods);
+  const connectedAuthMethod =
+    provider.state === 'connected' ? provider.connectedAuthHint ?? offeredMethod : offeredMethod;
+  return {
+    connectionBlocked: isOpenCodeProviderConnectionBlocked(provider.providerId, generation, offeredMethod),
+    reconnectBlocked: isOpenCodeProviderConnectionBlocked(provider.providerId, generation, connectedAuthMethod),
+    connectedAuthMethod,
+  };
+}
+
+/** Neither a saved credential nor a provider listing proves model execution. */
+export function OpenCodeProviderCompatibilityStatus({
+  providerId,
+  authMethod,
+}: {
+  readonly providerId: string;
+  readonly authMethod?: string | null;
+}): JSX.Element | null {
+  const generation = useContext(OpenCodeGenerationContext);
+  const { t } = useAppTranslation('dashboard');
+  if (generation === undefined || generation === 'v1') return null;
+  const compatibility = generation === 'v2'
+    ? resolveOpenCodeProviderCompatibility(providerId, generation, authMethod)
+    : null;
+  const incompatible = compatibility?.state === 'incompatible';
+  const reason =
+    generation === null
+      ? t('cliStatus.quickConnect.statusUnavailable')
+      : incompatible && compatibility.reason === 'cli-plugin'
+        ? t('cliStatus.quickConnect.v2CliPluginLimitation')
+        : incompatible
+          ? t('cliStatus.quickConnect.v2OAuthLimitation')
+          : t('cliStatus.quickConnect.v2UnverifiedDetail');
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          data-testid={`runtime-provider-compatibility-${providerId}`}
+          aria-label={reason}
+          onClick={(event) => event.stopPropagation()}
+          className="rounded text-[10px] text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+        >
+          {t(generation === null
+            ? 'cliStatus.quickConnect.statusUnavailable'
+            : incompatible
+              ? 'cliStatus.quickConnect.requiresV1'
+              : 'cliStatus.quickConnect.v2Unverified')}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start" className="max-w-72 text-pretty text-xs">
+        {reason}
+      </TooltipContent>
+    </Tooltip>
+  );
+}

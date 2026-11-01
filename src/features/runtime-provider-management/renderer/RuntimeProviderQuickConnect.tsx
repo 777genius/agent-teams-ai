@@ -16,6 +16,7 @@ import {
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
+  resolveOpenCodeProviderCompatibility,
   resolveOpenCodeQuickConnectGate,
   resolveOpenCodeQuickConnectRuntimeRevision,
   resolveOpenCodeQuickPlanState,
@@ -614,17 +615,31 @@ export const RuntimeProviderQuickConnect = ({
           ? null
           : () => setXiaomiDialogOpen(true),
     });
-    return [...gatewayCards, ...planCards].map((card) =>
-      supportRequired
-        ? {
-            ...card,
-            state: 'unavailable' as const,
-            stateLabel: t('cliStatus.runtimeInstall.v2SupportInstall'),
-            actionLabel: null,
-            onAction: null,
-          }
-        : card
-    );
+    return [...gatewayCards, ...planCards].map((card) => {
+      if (supportRequired) {
+        return {
+          ...card,
+          state: 'unavailable' as const,
+          stateLabel: t('cliStatus.runtimeInstall.v2SupportInstall'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+      const compatibility = resolveOpenCodeProviderCompatibility(card.id, generation);
+      if (gate !== 'ready' || generation !== 'v2' || compatibility.state !== 'unverified') {
+        return card;
+      }
+      return {
+        ...card,
+        description: `${card.description} ${t('cliStatus.quickConnect.v2UnverifiedDetail')}`,
+        stateLabel:
+          card.state === 'connected'
+            ? t('cliStatus.quickConnect.v2ConnectedUnverified')
+            : card.state === 'connectable'
+              ? t('cliStatus.quickConnect.v2Unverified')
+              : card.stateLabel,
+      };
+    });
   }, [
     directory.entries,
     directory.error,

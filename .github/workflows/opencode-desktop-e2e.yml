@@ -9,6 +9,9 @@ on:
       - scripts/e2e/opencode-diagnostics/**
       - test/scripts/opencodeStartupCleanupFixture.test.mjs
       - .github/workflows/opencode-desktop-e2e.yml
+      # Compatibility states change the native runtime user-facing E2E.
+      - src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts
+      - src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
 
 permissions:
   contents: read
