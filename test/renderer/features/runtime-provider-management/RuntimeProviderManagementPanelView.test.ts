@@ -2054,7 +2054,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       await act(async () => {
         root.render(React.createElement(
           OpenCodeProviderCompatibilityScope,
-          { generation: 'v2' },
+          { generation: 'v2', children: null },
           React.createElement(RuntimeProviderManagementPanelView, {
             state: createState({
               directoryLoaded: true,
