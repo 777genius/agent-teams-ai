@@ -181,5 +181,16 @@ export function detectOpenCodeNativeFacts(signal?: AbortSignal): Promise<OpenCod
     pending = acquireNativeFacts();
     acquiredFacts.set(key, pending);
   }
-  return pending.then((facts) => ({ ...facts }));
+  const captured = pending;
+  return captured.then((facts) => {
+    // Linux acquisition only reads kernel files: unresolved ABI evidence can be retried safely.
+    // Rejected owned-command probes remain cached, and an old result cannot evict a newer read.
+    if (
+      facts.platform === 'linux' &&
+      facts.libc === 'unknown' &&
+      acquiredFacts.get(key) === captured
+    )
+      acquiredFacts.delete(key);
+    return { ...facts };
+  });
 }
