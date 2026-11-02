@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getOpenCodeGeneration } from '../../../../src/features/runtime-provider-management/core/domain';
+
 import {
   OpenCodeProviderCompatibilityScope,
   OpenCodeProviderCompatibilityStatus,
@@ -45,8 +47,7 @@ describe('OpenCode provider compatibility in advanced settings', () => {
   async function show(): Promise<void> {
     await act(async () => root.render(
       <OpenCodeProviderCompatibilityScope generation={
-        mocks.version?.startsWith('2.') ? 'v2' :
-          mocks.version?.startsWith('1.') ? 'v1' : null
+        mocks.version === null ? null : getOpenCodeGeneration(mocks.version)
       }>
         <OpenCodeProviderCompatibilityStatus providerId="cursor-acp" />
         <OpenCodeProviderCompatibilityStatus providerId="openrouter" />

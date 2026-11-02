@@ -14,6 +14,10 @@ const mocks = vi.hoisted(() => ({
     disabled?: boolean;
     projectContextLoading?: boolean;
     projectPath?: string | null;
+    actions?: {
+      startConnect: (providerId: string) => void;
+      startReconnect: (providerId: string) => void;
+    };
   }>,
 }));
 
@@ -47,6 +51,10 @@ vi.mock(
       disabled?: boolean;
       projectContextLoading?: boolean;
       projectPath?: string | null;
+      actions?: {
+        startConnect: (providerId: string) => void;
+        startReconnect: (providerId: string) => void;
+      };
     }) => {
       mocks.viewProps.push(props);
       return null;
@@ -123,6 +131,66 @@ describe('RuntimeProviderManagementPanel', () => {
     expect(mocks.generationProps.at(-1)).toBe('v2');
     await render('1.19.5');
     expect(mocks.generationProps.at(-1)).toBe('v1');
+    await act(async () => root.unmount());
+  });
+
+  it('gates direct V2 xAI OAuth startConnect and startReconnect while preserving V1', async () => {
+    const startConnect = vi.fn();
+    const startReconnect = vi.fn();
+    mocks.loadProjectPathProjects.mockResolvedValue([]);
+    mocks.useRuntimeProviderManagement.mockReturnValue([
+      {
+        setupForm: null,
+        selectedAuthOptionId: null,
+        savingProviderId: null,
+        directoryLoaded: true,
+        directorySummary: false,
+        directoryRefreshing: false,
+        providers: [{ providerId: 'xai', connectedAuthHint: 'oauth' }],
+        directoryEntries: [{
+          providerId: 'xai',
+          authMethods: ['oauth'],
+          connectedAuthHint: 'oauth',
+        }],
+      },
+      {
+        cancelConnect: vi.fn(),
+        refreshDirectory: vi.fn(),
+        hydrateDirectory: vi.fn(),
+        startConnect,
+        startReconnect,
+      },
+    ]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (version: string | null) => {
+      mocks.nativeRuntimeStatus = version === null
+        ? null
+        : { installed: true, version, state: 'ready' };
+      await act(async () => {
+        root.render(React.createElement(RuntimeProviderManagementPanel, {
+          runtimeId: 'opencode', open: true,
+        }));
+        await Promise.resolve();
+      });
+      const actions = mocks.viewProps.at(-1)?.actions;
+      expect(actions).toBeDefined();
+      actions?.startConnect('xai');
+      actions?.startReconnect('xai');
+    };
+
+    await render('2.1.4');
+    expect(startConnect).not.toHaveBeenCalled();
+    expect(startReconnect).not.toHaveBeenCalled();
+
+    await render(null);
+    expect(startConnect).not.toHaveBeenCalled();
+    expect(startReconnect).not.toHaveBeenCalled();
+
+    await render('1.19.5');
+    expect(startConnect).toHaveBeenCalledTimes(1);
+    expect(startReconnect).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
   });
 
