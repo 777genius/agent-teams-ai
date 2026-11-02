@@ -21040,7 +21040,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => successfulRuntimeStop(input)),
           } as any,
         ])
       );
@@ -21108,7 +21108,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: vi.fn(async (input: TeamRuntimeStopInput) => successfulRuntimeStop(input)),
           } as any,
         ])
       );

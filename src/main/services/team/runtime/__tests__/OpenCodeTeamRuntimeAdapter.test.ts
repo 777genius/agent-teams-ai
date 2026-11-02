@@ -69,6 +69,10 @@ describe('OpenCodeTeamRuntimeAdapter runtime permission messages', () => {
 
 describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   it('does not dispatch after Stop wins while readiness is pending', async () => {
+    let readinessEntered!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      readinessEntered = resolve;
+    });
     let release!: (value: OpenCodeTeamLaunchReadiness) => void;
     const pending = new Promise<OpenCodeTeamLaunchReadiness>((resolve) => {
       release = resolve;
@@ -76,11 +80,15 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     const launchOpenCodeTeam =
       vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
     const adapter = new OpenCodeTeamRuntimeAdapter({
-      checkOpenCodeTeamLaunchReadiness: vi.fn(() => pending),
+      checkOpenCodeTeamLaunchReadiness: vi.fn(() => {
+        readinessEntered();
+        return pending;
+      }),
       launchOpenCodeTeam,
     });
     let cancelled = false;
     const launching = adapter.launch({ ...launchInput(), mayDispatch: () => !cancelled });
+    await entered;
     cancelled = true;
     release(readiness({ launchAllowed: true, state: 'ready' }));
     const result = await launching;
