@@ -13,6 +13,7 @@
     "generate": "node ../scripts/announcements/generate.mjs && nuxt generate",
     "generate:docs": "vitepress build product-docs --outDir .output/public/docs",
     "generate:all": "node ../scripts/announcements/generate.mjs && nuxt generate && vitepress build product-docs --outDir .output/public/docs",
+    "verify:agent-discovery": "node --experimental-strip-types scripts/verify-agent-discovery.ts",
     "preview": "nuxt preview",
     "docs:dev": "vitepress dev product-docs",
     "docs:build": "vitepress build product-docs",
