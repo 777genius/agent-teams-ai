@@ -1,5 +1,5 @@
-import type { CustomTeamTemplateMemberV1, CustomTeamTemplateV1 } from './template';
 import type { PortableCustomTeamTemplateV1 } from './portableTemplate';
+import type { CustomTeamTemplateMemberV1, CustomTeamTemplateV1 } from './template';
 import type { CustomTeamTemplateWarning } from './warnings';
 
 /**
@@ -286,7 +286,16 @@ export interface ImportCustomTeamTemplateRequest {
 
 export type ImportCustomTeamTemplateResult =
   | { status: 'imported'; template: CustomTeamTemplateV1 }
-  | { status: 'nameConflict'; existingTemplateId: string }
+  | {
+      status: 'nameConflict';
+      existingTemplateId: string;
+      /**
+       * Sanitized portable content that was validated before the conflict was
+       * detected. It lets a rename retry reuse exactly the reviewed content
+       * instead of re-reading or re-parsing an untrusted file.
+       */
+      portable: PortableCustomTeamTemplateV1;
+    }
   | { status: 'templateIdConflict'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
   | { status: 'unsupportedFormat'; format: unknown }

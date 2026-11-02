@@ -6,9 +6,14 @@ import {
 
 import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSerialization';
 import { validateTemplateContent } from '../domain/templateContentPolicy';
-import { validateTemplateDescription } from '../domain/templatePreviewPolicy';
+import {
+  TEMPLATE_MAX_MEMBERS,
+  TEMPLATE_MEMBER_ROLE_MAX_LENGTH,
+  TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH,
+  TEMPLATE_TEAM_PROMPT_MAX_LENGTH,
+} from '../domain/templateLimits';
 import { validateTemplateName } from '../domain/templateNamePolicy';
-import { TEMPLATE_MEMBER_ROLE_MAX_LENGTH } from '../domain/templateLimits';
+import { validateTemplateDescription } from '../domain/templatePreviewPolicy';
 
 import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
 import {
@@ -20,8 +25,8 @@ import { waitForStorageSettlement } from './waitForStorageSettlement';
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
 import type {
   CustomTeamTemplateMemberV1,
-  CustomTeamTemplateV1,
   ImportCustomTeamTemplateResult,
+  PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 
 export interface ImportCustomTeamTemplateUseCaseDeps {
@@ -102,18 +107,13 @@ export class ImportCustomTeamTemplateUseCase {
       return validationFailed(nameValidation.issues);
     }
 
-    // teamPrompt must be string
+    // teamPrompt must be a string. The existing contract has no dedicated
+    // invalid-type code, and the length code is the closest established
+    // outcome for "this field cannot be accepted".
     if (typeof portable.teamPrompt !== 'string') {
-      return validationFailed(
-        [{ code: 'teamPromptTooLong', field: 'teamPrompt' }].map((i) => ({
-          ...i,
-          code: 'teamPromptTooLong',
-        }))
-      );
+      return validationFailed([{ code: 'teamPromptTooLong', field: 'teamPrompt' }]);
     }
-    // reuse proper? There is no invalidType code. We'll keep teamPromptTooLong? Better: add none. Use existing code teamPromptTooLong is misleading.
-    // Instead, reject with a validation issue using memberNameRequired? Not ideal. We'll use teamPromptTooLong as placeholder?
-    const teamPrompt = portable.teamPrompt as string;
+    const teamPrompt = portable.teamPrompt;
 
     // description
     let description: string | undefined;
@@ -133,7 +133,7 @@ export class ImportCustomTeamTemplateUseCase {
     if (!Array.isArray(portable.members)) {
       return validationFailed([{ code: 'tooManyMembers', field: 'members' }]);
     }
-    if (portable.members.length > 100) {
+    if (portable.members.length > TEMPLATE_MAX_MEMBERS) {
       return validationFailed([{ code: 'tooManyMembers', field: 'members' }]);
     }
 
@@ -160,7 +160,7 @@ export class ImportCustomTeamTemplateUseCase {
           return validationFailed([{ code: 'memberRoleTooLong', field: `members[${i}].role` }]);
         }
         const r = (member.role as string).trim();
-        if (r.length > 128) {
+        if (r.length > TEMPLATE_MEMBER_ROLE_MAX_LENGTH) {
           return validationFailed([{ code: 'memberRoleTooLong', field: `members[${i}].role` }]);
         }
         role = r.length > 0 ? r : undefined;
@@ -173,8 +173,9 @@ export class ImportCustomTeamTemplateUseCase {
           ]);
         }
         const w = (member.workflow as string).trim();
-        // workflow length limit 200000; keep as is (no trim? preserve multiline). Use raw length check.
-        if ((member.workflow as string).length > 200000) {
+        // Multiline instructions keep their internal newlines; only the edges
+        // are trimmed to match the established projection convention.
+        if ((member.workflow as string).length > TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH) {
           return validationFailed([
             { code: 'memberWorkflowTooLong', field: `members[${i}].workflow` },
           ]);
@@ -189,7 +190,7 @@ export class ImportCustomTeamTemplateUseCase {
     }
 
     // teamPrompt length check
-    if (teamPrompt.length > 200000) {
+    if (teamPrompt.length > TEMPLATE_TEAM_PROMPT_MAX_LENGTH) {
       return validationFailed([{ code: 'teamPromptTooLong', field: 'teamPrompt' }]);
     }
 
@@ -206,6 +207,19 @@ export class ImportCustomTeamTemplateUseCase {
     if (descIssues.length > 0) {
       return validationFailed(descIssues);
     }
+
+    // Fresh sanitized projection of exactly the validated fields. It is built
+    // field by field so no untrusted object member can reach a result or a
+    // stored record, and it lets a name-conflict retry reuse the reviewed
+    // content without touching the file again.
+    const portableTemplate: PortableCustomTeamTemplateV1 = {
+      format: CUSTOM_TEAM_TEMPLATE_PORTABLE_FORMAT,
+      schemaVersion: CUSTOM_TEAM_TEMPLATE_PORTABLE_SCHEMA_VERSION,
+      name: nameValidation.value,
+      ...(description ? { description } : {}),
+      teamPrompt,
+      members,
+    };
 
     const gateway = this.deps.gateway;
     if (!gateway) {
@@ -282,7 +296,11 @@ export class ImportCustomTeamTemplateUseCase {
           };
         case 'conflict':
           if (result.reason === 'nameTaken') {
-            return { status: 'nameConflict', existingTemplateId: result.existingTemplateId };
+            return {
+              status: 'nameConflict',
+              existingTemplateId: result.existingTemplateId,
+              portable: portableTemplate,
+            };
           }
           if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
             break;

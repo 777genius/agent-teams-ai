@@ -1,3 +1,4 @@
+import type { CustomTeamTemplatesDesktopFileApi } from './desktopFile';
 import type {
   ConfirmCustomTeamTemplateSaveRequest,
   ConfirmCustomTeamTemplateSaveResult,
@@ -52,4 +53,12 @@ export interface CustomTeamTemplatesApi {
   copyBuiltinTemplate(request: CopyBuiltinTemplateRequest): Promise<CopyBuiltinTemplateResult>;
   exportTemplate(request: ExportCustomTeamTemplateRequest): Promise<ExportCustomTeamTemplateResult>;
   importTemplate(request: ImportCustomTeamTemplateRequest): Promise<ImportCustomTeamTemplateResult>;
+  /**
+   * Native file operations, implemented only by the Electron preload bridge.
+   *
+   * The browser HTTP adapter leaves this undefined: browser file selection and
+   * download are transport-specific and are not simulated through HTTP. Callers
+   * must feature-detect before offering file actions.
+   */
+  readonly desktopFile?: CustomTeamTemplatesDesktopFileApi;
 }

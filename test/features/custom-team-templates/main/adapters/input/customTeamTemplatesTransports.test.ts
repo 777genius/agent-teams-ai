@@ -56,9 +56,7 @@ function fakeIpcMain(): FakeIpcMain {
 interface FakeFastify {
   post(
     path: string,
-    optionsOrHandler:
-      | { bodyLimit?: number }
-      | ((request: { body?: unknown }) => unknown),
+    optionsOrHandler: { bodyLimit?: number } | ((request: { body?: unknown }) => unknown),
     handler?: (request: { body?: unknown }) => unknown
   ): void;
   get(path: string, handler: (request: { body?: unknown }) => unknown): void;
@@ -71,8 +69,7 @@ function fakeFastify(): FakeFastify {
   const routes = new Map<string, (request: { body?: unknown }) => unknown>();
   return {
     post: (path, optionsOrHandler, handler) => {
-      const resolvedHandler =
-        typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
+      const resolvedHandler = typeof optionsOrHandler === 'function' ? optionsOrHandler : handler;
       if (!resolvedHandler) throw new Error('missing handler');
       routes.set(`POST ${path}`, resolvedHandler);
     },
@@ -146,7 +143,7 @@ function deterministicFeature(): CustomTeamTemplatesFeature {
 }
 
 describe('custom-team-templates transports', () => {
-  it('registers exactly the eight IPC channels and the eight HTTP routes', () => {
+  it('registers exactly the ten IPC channels and the ten HTTP routes', () => {
     const ipc = fakeIpcMain();
     const http = fakeFastify();
     registerCustomTeamTemplatesIpc(ipc as unknown as IpcMain, deterministicFeature());
@@ -164,6 +161,8 @@ describe('custom-team-templates transports', () => {
         `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.deleteTemplate}`,
         `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate}`,
         `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate}`,
+        `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.exportTemplate}`,
+        `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.importTemplate}`,
       ].sort(byName)
     );
     // No transport is registered by composition itself.
@@ -283,7 +282,7 @@ describe('custom-team-templates transports', () => {
   it('removes exactly the registered IPC channels on shutdown', () => {
     const ipc = fakeIpcMain();
     registerCustomTeamTemplatesIpc(ipc as unknown as IpcMain, deterministicFeature());
-    expect(ipc.channels()).toHaveLength(8);
+    expect(ipc.channels()).toHaveLength(10);
 
     removeCustomTeamTemplatesIpc(ipc as unknown as IpcMain);
     expect(ipc.channels()).toEqual([]);

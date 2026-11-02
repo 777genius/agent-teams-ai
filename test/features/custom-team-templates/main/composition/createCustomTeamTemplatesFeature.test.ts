@@ -217,6 +217,8 @@ describe('createCustomTeamTemplatesFeature', () => {
       'deleteTemplate',
       'dispose',
       'duplicateTemplate',
+      'exportTemplate',
+      'importTemplate',
       'listTemplates',
       'preparePreview',
       'recheckSave',
