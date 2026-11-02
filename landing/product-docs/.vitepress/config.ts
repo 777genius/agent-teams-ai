@@ -636,8 +636,8 @@ export default defineConfig({
     // VitePress uses clean URLs; preserve directory-index slashes on both
     // the standalone docs domain and GitHub Pages' nested /docs/ mirror.
     const path = pageData.relativePath
-      .replace(/(^|\\/)index\\.md$/, "$1")
-      .replace(/\\.md$/, "");
+      .replace(/(^|\/)index\.md$/, "$1")
+      .replace(/\.md$/, "");
     const canonicalUrl = new URL(path, docsUrl).href;
     pageData.frontmatter.head ??= [];
     pageData.frontmatter.head.push(
