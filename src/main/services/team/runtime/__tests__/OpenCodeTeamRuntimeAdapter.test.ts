@@ -152,6 +152,42 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     );
   });
 
+  it('preserves native admission on the capability refresh retry', async () => {
+    const canDispatch = vi.fn(() => true);
+    const launchOpenCodeTeam = vi
+      .fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>()
+      .mockResolvedValueOnce({
+        runId: 'run-launch',
+        teamLaunchState: 'failed',
+        members: {},
+        warnings: [],
+        diagnostics: [
+          {
+            code: 'opencode_launch_failed',
+            severity: 'error',
+            message: 'Bridge server capability snapshot mismatch',
+          },
+        ],
+      })
+      .mockResolvedValueOnce(launchData('created', 'a'.repeat(64)));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({ launchAllowed: true, state: 'ready' })
+      ),
+      launchOpenCodeTeam,
+      getLastOpenCodeRuntimeSnapshot: () =>
+        ({ capabilitySnapshotId: 'capability-1' }) as ReturnType<
+          NonNullable<OpenCodeTeamRuntimeBridgePort['getLastOpenCodeRuntimeSnapshot']>
+        >,
+    });
+    await adapter.launch({ ...launchInput(), mayDispatch: canDispatch });
+    expect(launchOpenCodeTeam).toHaveBeenCalledTimes(2);
+    expect(launchOpenCodeTeam.mock.calls.map((call) => call[1])).toEqual([
+      canDispatch,
+      canDispatch,
+    ]);
+  });
+
   it('refreshes a reusable execution proof before a state-changing launch', async () => {
     const temporarilyUnavailable = readiness({
       launchAllowed: false,

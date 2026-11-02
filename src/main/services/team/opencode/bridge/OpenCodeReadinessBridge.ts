@@ -33,7 +33,10 @@ import {
 import { recoverOpenCodeSendMessageOutcome } from './OpenCodeSendMessageOutcomeRecovery';
 import { OpenCodeShutdownStopTally } from './OpenCodeShutdownStopEnvironment';
 import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
-import { type OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
+import {
+  type OpenCodeStateChangingBridgeCommandService,
+  type OpenCodeStateChangingTeamCommandName,
+} from './OpenCodeStateChangingBridgeCommandService';
 import { isOpenCodePromptNotSubmittedFailure } from './OpenCodeStateChangingBridgePreconditions';
 import {
   ownedOpenCodeStateChangingFailure,
@@ -298,7 +301,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async launchOpenCodeTeam(
-    input: OpenCodeLaunchTeamCommandBody
+    input: OpenCodeLaunchTeamCommandBody,
+    canDispatch?: () => boolean
   ): Promise<OpenCodeLaunchTeamCommandData> {
     // Managed Cursor receives profile HTTP MCP configuration from the runtime.
     // Launch must never register an app endpoint in the user's global Cursor config.
@@ -312,6 +316,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: input.expectedCapabilitySnapshotId,
       cwd: input.projectPath,
       timeoutMs: resolveOpenCodeLaunchTimeoutMs(input, this.options.launchTimeoutMs),
+      ...(canDispatch ? { canDispatch } : {}),
     });
     return result.ok
       ? result.data
@@ -758,6 +763,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: string | null;
       cwd: string;
       timeoutMs: number;
+      canDispatch?: () => boolean;
     }
   ): Promise<OpenCodeBridgeResult<TData>> {
     if (this.options.stateChangingCommands) {
@@ -775,6 +781,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           body,
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
+          ...(input.canDispatch ? { canDispatch: input.canDispatch } : {}),
         });
       } catch (error) {
         return thrownBridgeFailure(command, input.runId, error);
@@ -784,18 +791,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     return this.bridge.execute<TBody, TData>(command, body, {
       cwd: input.cwd,
       timeoutMs: input.timeoutMs,
+      ...(input.canDispatch ? { canDispatch: input.canDispatch } : {}),
     });
   }
 }
-
-type OpenCodeStateChangingTeamCommandName = Extract<
-  OpenCodeBridgeCommandName,
-  | 'opencode.launchTeam'
-  | 'opencode.reconcileTeam'
-  | 'opencode.stopTeam'
-  | 'opencode.sendMessage'
-  | 'opencode.answerPermission'
->;
 
 function formatDiagnosticEvent(event: OpenCodeBridgeDiagnosticEvent): string {
   return `${event.type}: ${event.message}`;

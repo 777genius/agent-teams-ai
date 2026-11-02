@@ -90,7 +90,10 @@ export interface OpenCodeTeamRuntimeBridgePort {
     skipPermissions?: boolean,
     identity?: { effort?: string; freshExecutionProofRequestId?: string }
   ): OpenCodeBridgeRuntimeSnapshot | null;
-  launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
+  launchOpenCodeTeam?(
+    input: OpenCodeLaunchTeamCommandBody,
+    canDispatch?: () => boolean
+  ): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
   ): Promise<OpenCodeReconcileTeamCommandData>;
@@ -498,9 +501,10 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         { preLaunchGate: true, retryable: false }
       );
     }
-    let data = await this.bridge.launchOpenCodeTeam(
-      buildLaunchCommand(runtimeSnapshot, selectedModel)
-    );
+    const launchOpenCodeTeam = this.bridge.launchOpenCodeTeam.bind(this.bridge);
+    const launch = (body: OpenCodeLaunchTeamCommandBody) =>
+      input.mayDispatch ? launchOpenCodeTeam(body, input.mayDispatch) : launchOpenCodeTeam(body);
+    let data = await launch(buildLaunchCommand(runtimeSnapshot, selectedModel));
     let capabilitySnapshotRefreshAttempts = 0;
     while (
       !skipReadinessPreflight &&
@@ -581,7 +585,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             'OpenCode team launch was cancelled during capability refresh.',
           ]);
         }
-        data = await this.bridge.launchOpenCodeTeam(
+        data = await launch(
           buildLaunchCommand(
             runtimeSnapshot,
             selectedModel,
