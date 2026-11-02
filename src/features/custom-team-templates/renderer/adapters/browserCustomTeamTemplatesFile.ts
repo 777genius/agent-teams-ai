@@ -56,7 +56,9 @@ export class DefaultBrowserFileDownload implements BrowserFileDownload {
       anchor.click();
     } finally {
       document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
+      // Revoke after a short delay so the browser has time to consume the
+      // object URL for the download before it is released.
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     }
   }
 }
@@ -117,21 +119,29 @@ export class CustomTeamTemplateBrowserFileService implements CustomTeamTemplates
       return { status: 'invalidJson' };
     }
 
+    let result: ImportCustomTeamTemplateResult;
     try {
-      return await this.importExecutor({ portable: parsed });
+      result = await this.importExecutor({ portable: parsed });
     } catch {
-      return { status: 'storageUnavailable' };
+      // A transport failure (network error, timeout, non-2xx HTTP response)
+      // is distinct from a domain storageUnavailable outcome: the store may be
+      // fine, the request simply never completed. Do not claim the import
+      // definitely failed or that nothing was written.
+      return { status: 'transportFailed' };
     }
+    return result;
   }
 
   async exportToFile(request: {
     templateId: string;
   }): Promise<ExportCustomTeamTemplateToBrowserFileResult> {
-    let exported;
+    let exported: ExportCustomTeamTemplateResult;
     try {
       exported = await this.exportExecutor(request);
     } catch {
-      return { status: 'storageUnavailable' };
+      // A transport failure is distinct from a domain storageUnavailable
+      // outcome. Export is read-only, so it is never an unresolved write.
+      return { status: 'transportFailed' };
     }
 
     if (exported.status !== 'exported') {

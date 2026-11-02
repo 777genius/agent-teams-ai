@@ -6,7 +6,7 @@ import {
   type PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 
-import { CustomTeamTemplateBrowserFileService } from '@features/custom-team-templates/renderer/adapters/browserCustomTeamTemplatesFile';
+import { CustomTeamTemplateBrowserFileService, DefaultBrowserFileDownload } from '@features/custom-team-templates/renderer/adapters/browserCustomTeamTemplatesFile';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -564,5 +564,117 @@ describe('CustomTeamTemplateBrowserFileService export', () => {
 
     expect(result).toEqual({ status: 'notFound', templateId: 'missing' });
     expect(download.download).not.toHaveBeenCalled();
+  });
+
+  it('classifies import executor throw as transportFailed, not storageUnavailable', async () => {
+    const { importTemplate } = executors();
+    importTemplate.mockRejectedValueOnce(new Error('network down'));
+    const service = new CustomTeamTemplateBrowserFileService({
+      importTemplate: importTemplate as unknown as (payload: unknown) => Promise<ImportCustomTeamTemplateResult>,
+      exportTemplate: vi.fn(),
+    });
+
+    const file = makeFile({ contents: JSON.stringify(PORTABLE) });
+    const result = await service.importFromFile(file);
+
+    expect(result).toEqual({ status: 'transportFailed' });
+    expect(importTemplate).toHaveBeenCalledWith({ portable: PORTABLE });
+  });
+
+  it('classifies export executor throw as transportFailed, not storageUnavailable', async () => {
+    const { exportTemplate } = executors(undefined as unknown as ImportCustomTeamTemplateResult, {
+      status: 'exported',
+      portable: PORTABLE,
+    });
+    exportTemplate.mockRejectedValueOnce(new Error('network down'));
+    const { download } = downloadMock();
+    const service = new CustomTeamTemplateBrowserFileService({
+      importTemplate: vi.fn(),
+      exportTemplate: exportTemplate as unknown as (payload: unknown) => Promise<ExportCustomTeamTemplateResult>,
+      download,
+    });
+
+    const result = await service.exportToFile({ templateId: 'tmpl-1' });
+
+    expect(result).toEqual({ status: 'transportFailed' });
+    expect(download.download).not.toHaveBeenCalled();
+  });
+
+  it('keeps domain storageUnavailable distinct from transport failure on import', async () => {
+    const { importTemplate } = executors({ status: 'storageUnavailable' });
+    const service = new CustomTeamTemplateBrowserFileService({
+      importTemplate: importTemplate as unknown as (payload: unknown) => Promise<ImportCustomTeamTemplateResult>,
+      exportTemplate: vi.fn(),
+    });
+
+    const file = makeFile({ contents: JSON.stringify(PORTABLE) });
+    const result = await service.importFromFile(file);
+
+    expect(result).toEqual({ status: 'storageUnavailable' });
+  });
+
+  it('keeps domain storageUnavailable distinct from transport failure on export', async () => {
+    const { exportTemplate } = executors(undefined as unknown as ImportCustomTeamTemplateResult, {
+      status: 'storageUnavailable',
+    });
+    const { download, calls } = downloadMock();
+    const service = new CustomTeamTemplateBrowserFileService({
+      importTemplate: vi.fn(),
+      exportTemplate: exportTemplate as unknown as (payload: unknown) => Promise<ExportCustomTeamTemplateResult>,
+      download,
+    });
+
+    const result = await service.exportToFile({ templateId: 'tmpl-1' });
+
+    expect(result).toEqual({ status: 'storageUnavailable' });
+    expect(calls).toHaveLength(0);
+  });
+
+  describe('DefaultBrowserFileDownload', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('removes the anchor element after dispatching the download', async () => {
+      const download = new DefaultBrowserFileDownload();
+      const appendSpy = vi.spyOn(document.body, 'appendChild');
+      const removeSpy = vi.spyOn(document.body, 'removeChild');
+      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
+      const createSpy = vi.spyOn(URL, 'createObjectURL');
+
+      const blob = new Blob(['{}'], { type: 'application/json' });
+      await download.download(blob, 'test.json');
+
+      expect(createSpy).toHaveBeenCalledWith(blob);
+      expect(appendSpy).toHaveBeenCalled();
+      expect(removeSpy).toHaveBeenCalled();
+
+      // Advance timers to trigger the deferred URL revocation.
+      vi.advanceTimersByTime(100);
+      expect(revokeSpy).toHaveBeenCalled();
+
+      appendSpy.mockRestore();
+      removeSpy.mockRestore();
+      revokeSpy.mockRestore();
+      createSpy.mockRestore();
+    });
+
+    it('does not leak object URLs', async () => {
+      const download = new DefaultBrowserFileDownload();
+      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
+
+      const blob = new Blob(['{}'], { type: 'application/json' });
+      await download.download(blob, 'test.json');
+
+      // URL should be revoked asynchronously after the click
+      vi.advanceTimersByTime(100);
+      expect(revokeSpy).toHaveBeenCalled();
+
+      revokeSpy.mockRestore();
+    });
   });
 });

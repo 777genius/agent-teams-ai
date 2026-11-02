@@ -16,7 +16,8 @@ export type ImportCustomTeamTemplateFromBrowserFileResult =
   | { status: 'invalidJson' }
   | { status: 'invalidEncoding' }
   | { status: 'fileTooLarge'; maxBytes: number }
-  | { status: 'fileReadFailed' };
+  | { status: 'fileReadFailed' }
+  | { status: 'transportFailed' };
 
 /**
  * Outcome of a browser-file export request.
@@ -28,6 +29,7 @@ export type ExportCustomTeamTemplateToBrowserFileResult =
   | { status: 'exported' }
   | { status: 'cancelled' }
   | { status: 'downloadFailed' }
+  | { status: 'transportFailed' }
   | Extract<ExportCustomTeamTemplateResult, { status: 'notFound' }>
   | Extract<ExportCustomTeamTemplateResult, { status: 'unreadableRecord' }>
   | Extract<ExportCustomTeamTemplateResult, { status: 'storageUnavailable' }>;

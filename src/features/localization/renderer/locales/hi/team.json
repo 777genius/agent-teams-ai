@@ -3036,7 +3036,8 @@
       "duplicate": "Duplicate",
       "edit": "Edit",
       "delete": "Delete",
-      "copyToMyTemplates": "Copy to My Templates"
+      "copyToMyTemplates": "Copy to My Templates",
+      "export": "Export"
     },
     "createFromTemplate": {
       "builtinGroup": "Built-in templates",
@@ -3141,7 +3142,8 @@
       "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
       "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
       "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
-      "unresolvedTitle": "Outcome not confirmed"
+      "unresolvedTitle": "Outcome not confirmed",
+      "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported."
     },
     "warnings": {
       "emptyRoster": "The roster was read successfully and is empty. A prompt-only template is valid.",
@@ -3207,6 +3209,46 @@
       "savedBody": "“{{name}}” was updated.",
       "saving": "Saving…",
       "title": "Edit template"
+    },
+    "import": {
+      "title": "Import Template",
+      "description": "Import a portable team template from a JSON file.",
+      "action": "Import Template",
+      "importing": "Importing…",
+      "success": "Import successful",
+      "successBody": "The template has been imported into My Templates.",
+      "selectFileLabel": "Select JSON file",
+      "fileHint": "Choose a .json file exported from Agent Teams.",
+      "platformBrowser": "Browser file import",
+      "platformElectron": "Native file picker",
+      "platformUnavailable": "File import is not available in this environment.",
+      "renameNameFieldLabel": "Template name",
+      "nameConflictTitle": "Template already exists",
+      "nameConflictBody": "A template named “{{name}}” already exists. Choose a different name to import as a new template.",
+      "confirmImport": "Confirm import",
+      "errors": {
+        "invalidJson": "The file is not valid JSON.",
+        "invalidEncoding": "The file is not valid UTF-8.",
+        "fileTooLarge": "The file is too large to import.",
+        "fileReadFailed": "The file could not be read.",
+        "transportFailed": "The import request could not be completed. Try again.",
+        "unsupportedFormat": "The file format is not supported.",
+        "unsupportedVersion": "The template schema version is not supported.",
+        "validationFailed": "The template content failed validation.",
+        "storageUnavailable": "The template library is unavailable. Nothing was imported."
+      }
+    },
+    "export": {
+      "title": "Export Template",
+      "description": "Export “{{name}}” as a portable JSON file.",
+      "action": "Export",
+      "exporting": "Exporting…",
+      "success": "Export successful",
+      "successBody": "“{{name}}” has been exported as a JSON file.",
+      "errors": {
+        "downloadFailed": "The download could not be started. Try again.",
+        "transportFailed": "The export request could not be completed. Try again."
+      }
     }
   }
 }

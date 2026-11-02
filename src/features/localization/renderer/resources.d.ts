@@ -3941,6 +3941,7 @@ export default interface Resources {
         "delete": "Delete",
         "duplicate": "Duplicate",
         "edit": "Edit",
+        "export": "Export",
         "myTemplates": "My Templates",
         "recheck": "Re-check outcome",
         "removeMember": "Remove member",
@@ -4029,6 +4030,7 @@ export default interface Resources {
           "memberWorkflowTooLong": "Member workflow is too long.",
           "previewTokenExpired": "This preview expired. Review the refreshed preview before saving.",
           "previewTokenInvalid": "This preview is no longer valid. Review the refreshed preview before saving.",
+          "teamPromptInvalidType": "The team prompt must be a text value.",
           "teamPromptTooLong": "Team prompt is too long.",
           "templateDescriptionTooLong": "The description is too long.",
           "templateNameInvalidCharacters": "The template name contains unsupported characters.",
@@ -4049,6 +4051,46 @@ export default interface Resources {
         "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
         "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten.",
         "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
+      },
+      "export": {
+        "action": "Export",
+        "description": "Export “{{name}}” as a portable JSON file.",
+        "errors": {
+          "downloadFailed": "The download could not be started. Try again.",
+          "transportFailed": "The export request could not be completed. Try again."
+        },
+        "exporting": "Exporting…",
+        "success": "Export successful",
+        "successBody": "“{{name}}” has been exported as a JSON file.",
+        "title": "Export Template"
+      },
+      "import": {
+        "action": "Import Template",
+        "confirmImport": "Confirm import",
+        "description": "Import a portable team template from a JSON file.",
+        "errors": {
+          "fileReadFailed": "The file could not be read.",
+          "fileTooLarge": "The file is too large to import.",
+          "invalidEncoding": "The file is not valid UTF-8.",
+          "invalidJson": "The file is not valid JSON.",
+          "storageUnavailable": "The template library is unavailable. Nothing was imported.",
+          "transportFailed": "The import request could not be completed. Try again.",
+          "unsupportedFormat": "The file format is not supported.",
+          "unsupportedVersion": "The template schema version is not supported.",
+          "validationFailed": "The template content failed validation."
+        },
+        "fileHint": "Choose a .json file exported from Agent Teams.",
+        "importing": "Importing…",
+        "nameConflictBody": "A template named “{{name}}” already exists. Choose a different name to import as a new template.",
+        "nameConflictTitle": "Template already exists",
+        "platformBrowser": "Browser file import",
+        "platformElectron": "Native file picker",
+        "platformUnavailable": "File import is not available in this environment.",
+        "renameNameFieldLabel": "Template name",
+        "selectFileLabel": "Select JSON file",
+        "success": "Import successful",
+        "successBody": "The template has been imported into My Templates.",
+        "title": "Import Template"
       },
       "library": {
         "builtInDescription": "Ready-made team setups with roles and responsibilities.",
@@ -4104,6 +4146,7 @@ export default interface Resources {
         "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
         "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
         "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+        "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported.",
         "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
         "unresolvedTitle": "Outcome not confirmed"
       },
