@@ -61,6 +61,7 @@ Agent Teams is a free desktop app for orchestrating AI agent teams. You are not 
 
 After creating your first team, explore these guides to go further:
 
+- **External AI-agent connection** - connect local Claude Code or Codex to the running app through MCP: [Connect an external agent](/guide/connect-external-agent)
 - **Runtime setup** - configure Claude, Codex, OpenCode, or multimodel providers: [Configure runtimes](/guide/runtime-setup)
 - **Beginner workflow** - follow the complete first-run path from project to approval: [Start the walkthrough](/guide/beginner-workflow)
 - **Create your first team** - set up lead, builder, reviewer, roles, models, and Worktree: [Create the team](/guide/create-first-team)
