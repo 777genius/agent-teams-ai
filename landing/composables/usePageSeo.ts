@@ -172,7 +172,6 @@ export const usePageSeo = (
         publisher: { '@id': organizationId },
         image: resolvedImageUrl.value,
         screenshot: toSiteUrl('/screenshots/1.png'),
-        softwareVersion: 'latest',
         offers: {
           '@type': 'Offer',
           price: '0',
