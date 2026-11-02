@@ -1,4 +1,5 @@
 import type { CustomTeamTemplateMemberV1, CustomTeamTemplateV1 } from './template';
+import type { PortableCustomTeamTemplateV1 } from './portableTemplate';
 import type { CustomTeamTemplateWarning } from './warnings';
 
 /**
@@ -265,5 +266,30 @@ export type CopyBuiltinTemplateResult =
   | { status: 'nameConflict'; existingTemplateId: string }
   | { status: 'templateIdConflict'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };
+
+export interface ExportCustomTeamTemplateRequest {
+  templateId: string;
+}
+
+export type ExportCustomTeamTemplateResult =
+  | { status: 'exported'; portable: PortableCustomTeamTemplateV1 }
+  | { status: 'notFound'; templateId: string }
+  | { status: 'unreadableRecord'; templateId: string }
+  | { status: 'storageUnavailable' };
+
+export interface ImportCustomTeamTemplateRequest {
+  portable: unknown;
+  name?: string;
+}
+
+export type ImportCustomTeamTemplateResult =
+  | { status: 'imported'; template: CustomTeamTemplateV1 }
+  | { status: 'nameConflict'; existingTemplateId: string }
+  | { status: 'templateIdConflict'; templateId: string }
+  | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
+  | { status: 'unsupportedFormat'; format: unknown }
+  | { status: 'unsupportedVersion'; version: unknown }
   | { status: 'storageUnavailable' }
   | { status: 'unresolvedWriteOutcome'; templateId: string };

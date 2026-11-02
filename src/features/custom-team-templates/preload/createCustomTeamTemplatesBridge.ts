@@ -30,5 +30,9 @@ export function createCustomTeamTemplatesBridge(): CustomTeamTemplatesApi {
       ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.duplicateTemplate, request),
     copyBuiltinTemplate: (request) =>
       ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.copyBuiltinTemplate, request),
+    exportTemplate: (request) =>
+      ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.exportTemplate, request),
+    importTemplate: (request) =>
+      ipcRenderer.invoke(CUSTOM_TEAM_TEMPLATE_CHANNELS.importTemplate, request),
   };
 }

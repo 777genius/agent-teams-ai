@@ -71,4 +71,10 @@ export function registerCustomTeamTemplatesHttp(
   app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, routeOptions, async (request) =>
     feature.copyBuiltinTemplate.execute(request.body)
   );
+  app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.exportTemplate, routeOptions, async (request) =>
+    feature.exportTemplate.execute(request.body)
+  );
+  app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.importTemplate, routeOptions, async (request) =>
+    feature.importTemplate.execute(request.body)
+  );
 }

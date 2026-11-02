@@ -48,5 +48,9 @@ export function createHttpCustomTeamTemplatesApi(baseUrl: string): CustomTeamTem
       request(CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate, 'POST', payload),
     copyBuiltinTemplate: (payload) =>
       request(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, 'POST', payload),
+    exportTemplate: (payload) =>
+      request(CUSTOM_TEAM_TEMPLATE_ROUTES.exportTemplate, 'POST', payload),
+    importTemplate: (payload) =>
+      request(CUSTOM_TEAM_TEMPLATE_ROUTES.importTemplate, 'POST', payload),
   };
 }

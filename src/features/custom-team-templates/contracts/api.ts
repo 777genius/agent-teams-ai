@@ -7,6 +7,10 @@ import type {
   DeleteCustomTeamTemplateResult,
   DuplicateCustomTeamTemplateRequest,
   DuplicateCustomTeamTemplateResult,
+  ExportCustomTeamTemplateRequest,
+  ExportCustomTeamTemplateResult,
+  ImportCustomTeamTemplateRequest,
+  ImportCustomTeamTemplateResult,
   ListCustomTeamTemplatesResult,
   PrepareCustomTeamTemplatePreviewRequest,
   PrepareCustomTeamTemplatePreviewResult,
@@ -46,4 +50,6 @@ export interface CustomTeamTemplatesApi {
     request: DuplicateCustomTeamTemplateRequest
   ): Promise<DuplicateCustomTeamTemplateResult>;
   copyBuiltinTemplate(request: CopyBuiltinTemplateRequest): Promise<CopyBuiltinTemplateResult>;
+  exportTemplate(request: ExportCustomTeamTemplateRequest): Promise<ExportCustomTeamTemplateResult>;
+  importTemplate(request: ImportCustomTeamTemplateRequest): Promise<ImportCustomTeamTemplateResult>;
 }
