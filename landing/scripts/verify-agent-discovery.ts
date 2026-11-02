@@ -61,6 +61,12 @@ for (const file of htmlPaths) {
   const canonical = tags(html, "link").filter((tag) => attr(tag, "rel") === "canonical");
   const ogUrl = tags(html, "meta").filter((tag) => attr(tag, "property") === "og:url");
   assert.equal(canonical.length, 1, `${name}: expected one canonical link`);
+  if (ogUrl.length !== 1) {
+    const headMeta = tags(html, "meta").filter((tag) => /og:|url|description/.test(tag));
+    console.error(`${name}: candidate metadata: ${JSON.stringify(headMeta.slice(0, 12))}`);
+    console.error(`${name}: raw og:url present: ${html.includes("og:url")}`);
+    console.error(`${name}: canonical: ${JSON.stringify(canonical)}`);
+  }
   assert.equal(ogUrl.length, 1, `${name}: expected one og:url`);
   assert.equal(attr(canonical[0], "href"), expected, `${name}: wrong canonical`);
   assert.equal(attr(ogUrl[0], "content"), expected, `${name}: wrong og:url`);
