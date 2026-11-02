@@ -192,6 +192,7 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
         diagnostics: ['preflight unavailable'],
         preLaunchGate: { blocked: true, reason: 'unknown_error', retryable: true },
       });
+      const clear = vi.fn(async () => true);
       const stop = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['stop']>[0]) => ({
         runId: input.runId,
         teamName: input.teamName,
@@ -215,7 +216,6 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
       let registered:
         | import('../TeamProvisioningSecondaryRuntimeRuns').SecondaryRuntimeRunEntry
         | undefined;
-      const clear = vi.fn(async () => true);
       const ports = createPorts({
         getOpenCodeRuntimeAdapter: () => adapter,
         setSecondaryRuntimeRun: (input) => {
@@ -245,11 +245,19 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
         isRuntimeProcessAlive: () => false,
       } as unknown as OpenCodeRuntimeStopFlowPorts;
       const stopping = stopMixedSecondaryRuntimeLanes(run.teamName, stopPorts);
-      await Promise.resolve();
-      expect(clear).not.toHaveBeenCalled();
-      expect(stop).not.toHaveBeenCalled();
-      release();
-      await Promise.all([launching, stopping]);
+      try {
+        if (outcome === 'dispatched' || outcome === 'unknown') {
+          await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(1));
+          expect(lane.launchAttempt?.mayDispatch()).toBe(false);
+        } else {
+          await Promise.resolve();
+          expect(clear).not.toHaveBeenCalled();
+          expect(stop).not.toHaveBeenCalled();
+        }
+      } finally {
+        release();
+        await Promise.all([launching, stopping]);
+      }
       expect(stop).toHaveBeenCalledTimes(outcome === 'unknown' || outcome === 'dispatched' ? 1 : 0);
       if (outcome === 'unknown' || outcome === 'dispatched') expect(clear).toHaveBeenCalledTimes(1);
       expect(clear).toHaveBeenCalledWith(expect.objectContaining({ expectedRunId: 'lane-run-id' }));

@@ -49,7 +49,7 @@ export function createOpenCodeSecondaryLaneLaunchAttempt(
     },
     cancelAndJoin() {
       stopRequested = true;
-      return settled;
+      return dispatchEntered ? Promise.resolve(false) : settled;
     },
   };
 }
