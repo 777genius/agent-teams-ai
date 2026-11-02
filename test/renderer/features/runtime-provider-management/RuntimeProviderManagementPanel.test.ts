@@ -134,11 +134,20 @@ describe('RuntimeProviderManagementPanel', () => {
     await act(async () => root.unmount());
   });
 
-  it('gates direct V2 xAI OAuth startConnect and startReconnect while preserving V1', async () => {
+  it('gates V2 xAI OAuth and preserves API-key connect/reconnect plus V1', async () => {
     const startConnect = vi.fn();
     const startReconnect = vi.fn();
+    let authMethods: readonly string[] = ['oauth'];
+    let connectedAuthHint: string | null = 'oauth';
+    const actions = {
+      cancelConnect: vi.fn(),
+      refreshDirectory: vi.fn(),
+      hydrateDirectory: vi.fn(),
+      startConnect,
+      startReconnect,
+    };
     mocks.loadProjectPathProjects.mockResolvedValue([]);
-    mocks.useRuntimeProviderManagement.mockReturnValue([
+    mocks.useRuntimeProviderManagement.mockImplementation(() => [
       {
         setupForm: null,
         selectedAuthOptionId: null,
@@ -146,20 +155,14 @@ describe('RuntimeProviderManagementPanel', () => {
         directoryLoaded: true,
         directorySummary: false,
         directoryRefreshing: false,
-        providers: [{ providerId: 'xai', connectedAuthHint: 'oauth' }],
+        providers: [{ providerId: 'xai', connectedAuthHint }],
         directoryEntries: [{
           providerId: 'xai',
-          authMethods: ['oauth'],
-          connectedAuthHint: 'oauth',
+          authMethods,
+          connectedAuthHint,
         }],
       },
-      {
-        cancelConnect: vi.fn(),
-        refreshDirectory: vi.fn(),
-        hydrateDirectory: vi.fn(),
-        startConnect,
-        startReconnect,
-      },
+      actions,
     ]);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -191,6 +194,21 @@ describe('RuntimeProviderManagementPanel', () => {
     await render('1.19.5');
     expect(startConnect).toHaveBeenCalledTimes(1);
     expect(startReconnect).toHaveBeenCalledTimes(1);
+
+    // V2 API-key routes must not be blocked just because OAuth is unavailable.
+    authMethods = ['api'];
+    connectedAuthHint = null;
+    await render('2.1.4');
+    expect(startConnect).toHaveBeenCalledTimes(2);
+    expect(startReconnect).toHaveBeenCalledTimes(2);
+
+    // A fresh API-key Connect stays selectable with both offered methods,
+    // but an existing OAuth credential cannot be reconnected on V2.
+    authMethods = ['oauth', 'api'];
+    connectedAuthHint = 'oauth';
+    await render('2.1.4');
+    expect(startConnect).toHaveBeenCalledTimes(3);
+    expect(startReconnect).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());
   });
 
