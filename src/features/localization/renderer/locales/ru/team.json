@@ -3327,6 +3327,7 @@
         "memberNameRequired": "Укажите имя участника.",
         "memberRoleTooLong": "Роль участника слишком длинная.",
         "memberWorkflowTooLong": "Процесс участника слишком длинный.",
+        "teamPromptInvalidType": "Промпт команды должен быть текстовым.",
         "teamPromptTooLong": "Промпт команды слишком длинный.",
         "tooManyMembers": "Слишком много участников."
       },

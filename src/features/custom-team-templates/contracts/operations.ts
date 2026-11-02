@@ -11,6 +11,7 @@ export type CustomTeamTemplateValidationIssueCode =
   | 'templateNameTooLong'
   | 'templateNameInvalidCharacters'
   | 'templateDescriptionTooLong'
+  | 'teamPromptInvalidType'
   | 'teamPromptTooLong'
   | 'tooManyMembers'
   | 'memberNameRequired'

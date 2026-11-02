@@ -107,11 +107,10 @@ export class ImportCustomTeamTemplateUseCase {
       return validationFailed(nameValidation.issues);
     }
 
-    // teamPrompt must be a string. The existing contract has no dedicated
-    // invalid-type code, and the length code is the closest established
-    // outcome for "this field cannot be accepted".
+    // teamPrompt must be a string. A non-string teamPrompt is an invalid type,
+    // not an excessive length, so it uses its own dedicated issue code.
     if (typeof portable.teamPrompt !== 'string') {
-      return validationFailed([{ code: 'teamPromptTooLong', field: 'teamPrompt' }]);
+      return validationFailed([{ code: 'teamPromptInvalidType', field: 'teamPrompt' }]);
     }
     const teamPrompt = portable.teamPrompt;
 

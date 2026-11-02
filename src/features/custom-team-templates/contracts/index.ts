@@ -1,4 +1,5 @@
 export type * from './api';
+export type * from './browserFile';
 export * from './channels';
 export * from './desktopFile';
 export type * from './operations';

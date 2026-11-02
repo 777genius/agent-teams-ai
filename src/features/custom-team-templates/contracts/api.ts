@@ -1,3 +1,4 @@
+import type { CustomTeamTemplatesBrowserFileApi } from './browserFile';
 import type { CustomTeamTemplatesDesktopFileApi } from './desktopFile';
 import type {
   ConfirmCustomTeamTemplateSaveRequest,
@@ -61,4 +62,14 @@ export interface CustomTeamTemplatesApi {
    * must feature-detect before offering file actions.
    */
   readonly desktopFile?: CustomTeamTemplatesDesktopFileApi;
+
+  /**
+   * Browser-specific file import/export operations, implemented only by the
+   * browser HTTP adapter.
+   *
+   * The Electron preload bridge leaves this undefined: native file dialogs and
+   * filesystem access are not available through the browser API. Callers must
+   * feature-detect before offering file actions.
+   */
+  readonly browserFile?: CustomTeamTemplatesBrowserFileApi;
 }

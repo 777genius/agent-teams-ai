@@ -3,7 +3,7 @@ import { CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES } from '@features/custom-tea
 import {
   buildCustomTeamTemplateFileName,
   serializeCustomTeamTemplatePortableFile,
-} from '../adapters/output/portableTemplateFile';
+} from '../../core/domain/portableTemplateFile';
 
 import type { CustomTeamTemplateFileGateway } from '../adapters/output/CustomTeamTemplateFileGateway';
 import type {

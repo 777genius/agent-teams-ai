@@ -1,7 +1,7 @@
 import {
   buildCustomTeamTemplateFileName,
   serializeCustomTeamTemplatePortableFile,
-} from '@features/custom-team-templates/main/adapters/output/portableTemplateFile';
+} from '@features/custom-team-templates/core/domain/portableTemplateFile';
 import { describe, expect, it } from 'vitest';
 
 import type { PortableCustomTeamTemplateV1 } from '@features/custom-team-templates/contracts';

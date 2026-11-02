@@ -1,6 +1,12 @@
 import { CUSTOM_TEAM_TEMPLATE_ROUTES } from '../../contracts';
 
-import type { CustomTeamTemplatesApi } from '../../contracts';
+import { CustomTeamTemplateBrowserFileService } from './browserCustomTeamTemplatesFile';
+
+import type {
+  CustomTeamTemplatesApi,
+  ExportCustomTeamTemplateResult,
+  ImportCustomTeamTemplateResult,
+} from '../../contracts';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -34,6 +40,16 @@ export function createHttpCustomTeamTemplatesApi(baseUrl: string): CustomTeamTem
     }
   };
 
+  const importTemplate = async (payload: unknown): Promise<ImportCustomTeamTemplateResult> =>
+    request(CUSTOM_TEAM_TEMPLATE_ROUTES.importTemplate, 'POST', payload);
+  const exportTemplate = async (payload: unknown): Promise<ExportCustomTeamTemplateResult> =>
+    request(CUSTOM_TEAM_TEMPLATE_ROUTES.exportTemplate, 'POST', payload);
+
+  const browserFile = new CustomTeamTemplateBrowserFileService({
+    importTemplate,
+    exportTemplate,
+  });
+
   return {
     preparePreview: (payload) =>
       request(CUSTOM_TEAM_TEMPLATE_ROUTES.preparePreview, 'POST', payload),
@@ -48,9 +64,8 @@ export function createHttpCustomTeamTemplatesApi(baseUrl: string): CustomTeamTem
       request(CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate, 'POST', payload),
     copyBuiltinTemplate: (payload) =>
       request(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, 'POST', payload),
-    exportTemplate: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.exportTemplate, 'POST', payload),
-    importTemplate: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.importTemplate, 'POST', payload),
+    exportTemplate: (payload) => exportTemplate(payload),
+    importTemplate: (payload) => importTemplate(payload),
+    browserFile,
   };
 }

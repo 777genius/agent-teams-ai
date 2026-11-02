@@ -3385,6 +3385,7 @@
         "memberNameRequired": "Member name is required.",
         "memberRoleTooLong": "Member role is too long.",
         "memberWorkflowTooLong": "Member workflow is too long.",
+        "teamPromptInvalidType": "The team prompt must be a text value.",
         "teamPromptTooLong": "Team prompt is too long.",
         "tooManyMembers": "Too many members."
       },
