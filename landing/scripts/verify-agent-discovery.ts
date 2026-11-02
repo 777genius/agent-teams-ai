@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 // Inspect the actual static output, not source-only helpers. The same generated
 // docs are served on the standalone docs host and the GitHub Pages /docs/ mirror.
 const outDir = resolve(process.cwd(), ".output/public");
 const docsDir = join(outDir, "docs");
+const docsSourceDir = resolve(process.cwd(), "product-docs");
 const landingUrl = (
   process.env.NUXT_PUBLIC_LANDING_SITE_URL ||
   process.env.NUXT_PUBLIC_SITE_URL ||
@@ -22,11 +23,12 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-function htmlFiles(dir: string): string[] {
+// Verify pages produced from Markdown, never copied legacy /docs redirect files.
+function markdownFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const filename = join(dir, entry.name);
-    if (entry.isDirectory()) return htmlFiles(filename);
-    return entry.isFile() && entry.name.endsWith(".html") ? [filename] : [];
+    if (entry.isDirectory()) return entry.name.startsWith(".") ? [] : markdownFiles(filename);
+    return entry.isFile() && entry.name.endsWith(".md") ? [filename] : [];
   });
 }
 
@@ -49,13 +51,16 @@ for (const host of ["https://docs.agentteams.live/", "https://example.github.io/
   assert.equal(new URL(docsRouteFromHtml("ru/guide/quickstart.html"), host).href, `${host}ru/guide/quickstart`);
 }
 
-const htmlPaths = htmlFiles(docsDir);
-assert(htmlPaths.length > 5, "Expected a nonempty VitePress docs build");
+const sourcePaths = markdownFiles(docsSourceDir);
+assert(sourcePaths.length > 5, "Expected nonempty VitePress docs Markdown source");
+const generatedPages = new Set<string>();
 
 let checked = 0;
-for (const file of htmlPaths) {
-  const name = relative(docsDir, file).replaceAll("\\", "/");
-  if (name === "404.html") continue;
+for (const source of sourcePaths) {
+  const name = relative(docsSourceDir, source).replaceAll("\\", "/").replace(/\.md$/, ".html");
+  const file = join(docsDir, name);
+  assert(existsSync(file), `Missing generated VitePress page: ${name}`);
+  generatedPages.add(name);
   const expected = new URL(docsRouteFromHtml(name), docsUrl).href;
   const html = read(file);
   const canonical = tags(html, "link").filter((tag) => attr(tag, "rel") === "canonical");
@@ -81,7 +86,7 @@ for (const page of [
   "guide/connect-external-agent.html",
   "ru/guide/installation.html",
 ]) {
-  assert(htmlPaths.some((file) => relative(docsDir, file).replaceAll("\\", "/") === page), `Missing docs page: ${page}`);
+  assert(generatedPages.has(page), `Missing authored docs page: ${page}`);
 }
 
 const guide = read(join(docsDir, "guide/connect-external-agent.html"));
