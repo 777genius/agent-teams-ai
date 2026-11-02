@@ -52,13 +52,20 @@ export function getRuntimeInstallLabel(
   status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null,
   t: ReturnType<typeof useAppTranslation>['t']
 ): string {
+  const supportPrefix = status?.progress?.detail?.includes('OpenCode V2 support')
+    ? `${t('cliStatus.runtimeInstall.v2SupportFiles')}: `
+    : '';
   if (status?.state === 'downloading') {
     const percent = status.progress?.percent;
-    return typeof percent === 'number'
-      ? t('cliStatus.runtimeInstall.downloadingPercent', { percent })
-      : t('cliStatus.runtimeInstall.downloading');
+    return (
+      supportPrefix +
+      (typeof percent === 'number'
+        ? t('cliStatus.runtimeInstall.downloadingPercent', { percent })
+        : t('cliStatus.runtimeInstall.downloading'))
+    );
   }
-  if (status?.state === 'installing') return t('cliStatus.runtimeInstall.installing');
+  if (status?.state === 'installing')
+    return supportPrefix + t('cliStatus.runtimeInstall.installing');
   if (status?.state === 'checking') return t('cliStatus.runtimeInstall.checking');
   if (status?.state === 'failed') return t('cliStatus.runtimeInstall.retryInstall');
   if (status && !status.installed && 'compatibleV2Version' in status)

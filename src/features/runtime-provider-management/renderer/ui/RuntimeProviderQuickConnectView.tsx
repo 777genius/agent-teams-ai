@@ -261,7 +261,7 @@ const OpenCodePrerequisite = ({
         <div className="min-w-0">
           <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
             {supportRequired
-              ? t('cliStatus.runtimeInstall.v2SupportInstall')
+              ? `${t('cliStatus.runtimeInstall.v2SupportInstall')} (${runtimeStatus?.version})`
               : isError
                 ? t('cliStatus.quickConnect.openCodeErrorTitle')
                 : t('cliStatus.quickConnect.openCodeTitle')}
@@ -271,6 +271,9 @@ const OpenCodePrerequisite = ({
             style={{ color: 'var(--color-text-muted)' }}
           >
             {detail}
+            {supportRequired && runtimeStatus?.source === 'override'
+              ? ` ${t('cliStatus.runtimeInstall.overrideSelection')}`
+              : null}
           </p>
         </div>
       </div>

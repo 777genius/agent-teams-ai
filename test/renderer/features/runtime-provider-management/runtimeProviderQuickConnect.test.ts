@@ -331,7 +331,9 @@ describe('RuntimeProviderQuickConnect', () => {
     ).toContain('cliStatus.quickConnect.v2ConnectedUnverified');
     // Help is accessible through the card's description tooltip, not rendered inline.
     expect(
-      host.querySelector('[data-testid="provider-quick-card-openrouter"] [aria-label*="v2UnverifiedDetail"]')
+      host.querySelector(
+        '[data-testid="provider-quick-card-openrouter"] [aria-label*="v2UnverifiedDetail"]'
+      )
     ).not.toBeNull();
     expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
     expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
@@ -707,6 +709,51 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xiaomi-token-plan-sgp', 'reconnect');
   });
 
+  it.each(['native', 'support'] as const)(
+    'names the actual V2 %s installation target',
+    async (target) => {
+      await act(async () =>
+        root.render(
+          React.createElement(RuntimeProviderQuickConnect, {
+            enabled: true,
+            cliStatusLoading: false,
+            providers: [],
+            openCodeRuntimeStatus: {
+              installed: true,
+              source: 'override',
+              version: '2.1.4',
+              state: 'downloading',
+              v2Support: target === 'support' ? 'required' : 'ready',
+              progress: {
+                phase: 'downloading',
+                percent: 42,
+                detail:
+                  target === 'support'
+                    ? 'Downloading OpenCode V2 support...'
+                    : 'Downloading native OpenCode...',
+              },
+            },
+            openCodeRuntimeStatusLoading: true,
+            onInstallOpenCode: vi.fn(),
+            onRefreshOpenCode: vi.fn(),
+            onOpenCodeProviderAction: vi.fn(),
+            onBrowseProviders: vi.fn(),
+          })
+        )
+      );
+      const label =
+        target === 'support'
+          ? 'cliStatus.runtimeInstall.v2SupportFiles: cliStatus.runtimeInstall.installing'
+          : 'cliStatus.quickConnect.installingOpenCode';
+      for (const id of ['supergrok', 'xiaomi-mimo-token-plan']) {
+        const card = host.querySelector(`[data-testid="provider-quick-card-${id}"]`);
+        expect(card?.textContent).toContain(label);
+        expect(card?.textContent).not.toContain('cliStatus.quickConnect.checkingPlan');
+      }
+      expect(host.querySelector('[data-testid="provider-quick-action-supergrok"]')).toBeNull();
+    }
+  );
+
   it.each(['unknown', 'support required', 'support failed'] as const)(
     'does not warm provider reads while native readiness is %s',
     async (reason) => {
@@ -731,7 +778,7 @@ describe('RuntimeProviderQuickConnect', () => {
                 ? null
                 : {
                     installed: true,
-                    source: 'path',
+                    source: 'override',
                     state: reason === 'support failed' ? 'failed' : 'idle',
                     version: '2.1.4',
                     v2Support: 'required',
@@ -771,6 +818,9 @@ describe('RuntimeProviderQuickConnect', () => {
         expect(host.textContent).not.toContain('cliStatus.quickConnect.installOpenCode');
         expect(host.textContent).not.toContain('cliStatus.quickConnect.retryOpenCode');
         expect(host.textContent).not.toContain('ENOENT');
+        const notice = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+        expect(notice?.textContent).toContain('2.1.4');
+        expect(notice?.textContent).toContain('cliStatus.runtimeInstall.overrideSelection');
         if (reason === 'support failed') {
           expect(host.querySelector('[role="alert"]')?.textContent).toContain(
             'V2 support download failed: network unavailable'

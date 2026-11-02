@@ -1552,7 +1552,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it.each(['V1', 'V2 support'] as const)(
+  it.each(['V1', 'V2 native', 'V2 support'] as const)(
     'shows OpenCode %s install progress on the dashboard provider card',
     async (generation) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -1561,11 +1561,11 @@ describe('CLI status visibility during completed install state', () => {
         installed: false,
         source: 'missing',
         state: 'downloading',
-        ...(generation === 'V2 support' && {
+        ...(generation !== 'V1' && {
           installed: true,
           source: 'override' as const,
           version: '2.1.4',
-          v2Support: 'required' as const,
+          v2Support: generation === 'V2 support' ? ('required' as const) : ('ready' as const),
           compatibleV2Version: '2.2.0',
         }),
         progress: {
@@ -1573,7 +1573,10 @@ describe('CLI status visibility during completed install state', () => {
           downloadedBytes: 42,
           totalBytes: 100,
           percent: 42,
-          detail: 'Downloading OpenCode 42%',
+          detail:
+            generation === 'V2 support'
+              ? 'Downloading OpenCode V2 support...'
+              : 'Downloading OpenCode 42%',
         },
       };
       storeState.openCodeRuntimeStatusLoading = true;
@@ -1613,9 +1616,13 @@ describe('CLI status visibility during completed install state', () => {
         await Promise.resolve();
       });
 
-      expect(host.textContent).toContain('Downloading 42%');
+      const progressLabel =
+        generation === 'V2 support'
+          ? 'OpenCode V2 support files: Downloading 42%'
+          : 'Downloading 42%';
+      expect(host.textContent).toContain(progressLabel);
       const progressButton = Array.from(host.querySelectorAll('button')).find(
-        (button) => button.textContent?.trim() === 'Downloading 42%'
+        (button) => button.textContent?.trim() === progressLabel
       );
       expect(progressButton).not.toBeUndefined();
       expect(progressButton).toHaveProperty('disabled', true);

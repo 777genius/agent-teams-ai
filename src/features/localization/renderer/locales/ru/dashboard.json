@@ -209,6 +209,7 @@
       "reinstall": "Переустановить {{runtime}}"
     },
     "runtimeInstall": {
+      "v2SupportFiles": "Файлы поддержки OpenCode V2",
       "v2SupportInstall": "Завершить настройку OpenCode V2",
       "v2SupportRequiredDetail": "OpenCode V2 установлен. Добавьте файлы поддержки для загрузки провайдеров и моделей.",
       "v2SupportRepair": "Восстановить поддержку V2",
