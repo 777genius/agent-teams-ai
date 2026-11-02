@@ -36,6 +36,12 @@ export default defineEventHandler((event) => {
 - Download: ${toSiteUrl("/download")}
 - Documentation: ${docsSiteUrl}
 - Documentation llms.txt: ${docsSiteUrl}llms.txt
+- Install Agent Teams: ${docsSiteUrl}guide/installation
+- Quickstart: ${docsSiteUrl}guide/quickstart
+- Connect an external local AI agent: ${docsSiteUrl}guide/connect-external-agent
+- Built-in and third-party MCP integration: ${docsSiteUrl}guide/mcp-integration
+- Privacy and local data: ${docsSiteUrl}reference/privacy-local-data
+- Authentication and accounts: ${toSiteUrl("/auth.md")}
 - GitHub repository: ${githubUrl}
 - Releases: ${releasesUrl}
 - Sitemap: ${toSiteUrl("/sitemap.xml")}
@@ -46,7 +52,9 @@ ${localizedPages}
 
 ## Useful context
 
-- The app itself is free and open source.
+- The app itself is free and open source; no Agent Teams account or checkout is required.
+- This is a local desktop app, not a public hosted REST API or remotely accessible MCP endpoint.
+- External agents can connect to the MCP endpoint of a running local desktop app after native client registration and live identity verification. Cloud-only clients need a local executor.
 - Provider/runtime access is supplied by the user through supported local runtimes or provider accounts.
 - The product is local-first: coordination state and project workflows are designed to run on the user's machine.
 - Key workflows: create an agent team, assign or let agents create tasks, watch progress on a kanban board, inspect task logs, and review code changes.

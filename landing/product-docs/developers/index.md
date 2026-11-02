@@ -62,6 +62,7 @@ Agent Teams uses a built-in MCP server named `agent-teams` for board operations.
 
 ## Related docs
 
+- [Connect an external AI agent](/guide/connect-external-agent) — local Claude Code/Codex clients using the running desktop app's MCP
 - [Contributor architecture](/reference/contributor-architecture)
 - [Runtime setup](/guide/runtime-setup)
 - [MCP integration](/guide/mcp-integration)

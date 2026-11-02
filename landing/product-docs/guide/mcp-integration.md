@@ -5,6 +5,8 @@ description: Configure MCP in Agent Teams for board operations, teammate coordin
 
 # MCP Integration
 
+**Want an external Claude Code or Codex process to manage teams in the running desktop app?** See [Connect an external AI agent](/guide/connect-external-agent). The guide below primarily covers the **built-in board tools used by team members** and optional tools installed for runtimes.
+
 Agent Teams uses MCP in two practical layers:
 
 | Layer | What it does | Who uses it |

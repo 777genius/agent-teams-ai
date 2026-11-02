@@ -7,7 +7,7 @@ import {
 import { fileURLToPath } from "node:url";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import llmstxt, { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
-import { normalizeBase, rewriteDownloadLinks, trimTrailingSlash, withTrailingSlash } from "./url";
+import { buildPageSeoHead, normalizeBase, rewriteDownloadLinks, trimTrailingSlash, withTrailingSlash } from "./url";
 
 const REPO = "777genius/agent-teams-ai";
 const SITE_TITLE = "Agent Teams Docs";
@@ -54,6 +54,7 @@ const rootGuide: DefaultTheme.SidebarItem[] = [
       { text: "Agent workflow", link: "/guide/agent-workflow" },
       { text: "Code review", link: "/guide/code-review" },
       { text: "MCP integration", link: "/guide/mcp-integration" },
+      { text: "Connect an external AI agent", link: "/guide/connect-external-agent" },
       { text: "Team brief examples", link: "/guide/team-brief-examples" }
     ]
   },
@@ -631,6 +632,7 @@ export default defineConfig({
   description: SITE_DESCRIPTION,
   base,
   cleanUrls: true,
+  transformHead: ({ page }) => buildPageSeoHead(page, docsUrl),
   ignoreDeadLinks: [/\/download/],
   transformHtml: (html) => rewriteDownloadLinks(html, publicBaseUrl),
   lastUpdated: true,
@@ -640,7 +642,6 @@ export default defineConfig({
   },
   head: [
     ["link", { rel: "icon", type: "image/png", href: `${base}logo-192.png` }],
-    ["link", { rel: "canonical", href: docsUrl }],
     ["meta", { name: "robots", content: "index, follow" }],
     ["meta", { name: "author", content: "777genius" }],
     ["meta", { name: "generator", content: "VitePress" }],
@@ -650,7 +651,6 @@ export default defineConfig({
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:title", content: SITE_TITLE }],
     ["meta", { property: "og:description", content: SITE_DESCRIPTION }],
-    ["meta", { property: "og:url", content: docsUrl }],
     ["meta", { property: "og:image", content: ogImageUrl }],
     ["meta", { property: "og:image:width", content: "1200" }],
     ["meta", { property: "og:image:height", content: "630" }],
