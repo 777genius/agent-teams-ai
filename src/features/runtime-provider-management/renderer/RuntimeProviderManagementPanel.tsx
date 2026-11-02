@@ -8,7 +8,11 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
-import { getOpenCodeGeneration, isOpenCodeProviderConnectionBlocked } from '../core/domain';
+import {
+  getOpenCodeGeneration,
+  inferOpenCodeProviderAuthMethod,
+  isOpenCodeProviderConnectionBlocked,
+} from '../core/domain';
 
 import {
   type RuntimeProviderChangeKind,
@@ -46,7 +50,9 @@ export const RuntimeProviderManagementPanel = ({
   const repositoryGroups = useStore(useShallow((state) => state.repositoryGroups));
   const nativeOpenCodeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const fetchOpenCodeRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
-  const invalidateOpenCodeRuntimeStatus = useStore((state) => state.invalidateOpenCodeRuntimeStatus);
+  const invalidateOpenCodeRuntimeStatus = useStore(
+    (state) => state.invalidateOpenCodeRuntimeStatus
+  );
   const openCodeGeneration =
     nativeOpenCodeStatus?.installed &&
     nativeOpenCodeStatus.version &&
@@ -62,7 +68,9 @@ export const RuntimeProviderManagementPanel = ({
       .then(() => {
         if (active) return fetchOpenCodeRuntimeStatus();
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus, open]);
   const initialProjectPath = useMemo(() => projectPath?.trim() || null, [projectPath]);
   const [activeProjectPath, setActiveProjectPath] = useState<string | null>(initialProjectPath);
@@ -143,8 +151,10 @@ export const RuntimeProviderManagementPanel = ({
     projectPath: effectiveProjectPath,
     initialProviderId,
     initialProviderAction:
-      initialProviderId && isOpenCodeProviderConnectionBlocked(initialProviderId, openCodeGeneration)
-        ? null : initialProviderAction,
+      initialProviderId &&
+      isOpenCodeProviderConnectionBlocked(initialProviderId, openCodeGeneration)
+        ? null
+        : initialProviderAction,
     onProviderChanged,
   });
   const activeAuthOption = state.setupForm?.authOptions?.find(
@@ -154,13 +164,24 @@ export const RuntimeProviderManagementPanel = ({
   const guardedActions = useMemo(() => {
     const blocked = (providerId: string, method?: string | null): boolean =>
       isOpenCodeProviderConnectionBlocked(providerId, openCodeGeneration, method);
+    const authMethodsFor = (providerId: string): readonly string[] =>
+      state.directoryEntries?.find((provider) => provider.providerId === providerId)?.authMethods ??
+      [];
+    const offeredMethodFor = (providerId: string): string | null =>
+      inferOpenCodeProviderAuthMethod(authMethodsFor(providerId));
+    const connectedMethodFor = (providerId: string): string | null =>
+      state.providers?.find((provider) => provider.providerId === providerId)?.connectedAuthHint ??
+      state.directoryEntries?.find((provider) => provider.providerId === providerId)
+        ?.connectedAuthHint ??
+      offeredMethodFor(providerId);
     return {
       ...actions,
       startConnect: (providerId: string): void => {
-        if (!blocked(providerId)) actions.startConnect(providerId);
+        if (!blocked(providerId, offeredMethodFor(providerId))) actions.startConnect(providerId);
       },
       startReconnect: (providerId: string): void => {
-        if (!blocked(providerId)) actions.startReconnect(providerId);
+        if (!blocked(providerId, connectedMethodFor(providerId)))
+          actions.startReconnect(providerId);
       },
       submitConnect: (providerId: string) =>
         blocked(providerId, activeSetupMethod)
@@ -171,7 +192,14 @@ export const RuntimeProviderManagementPanel = ({
           ? Promise.resolve()
           : actions.submitOAuthCode(),
     };
-  }, [actions, activeSetupMethod, openCodeGeneration, state.activeFormProviderId]);
+  }, [
+    actions,
+    activeSetupMethod,
+    openCodeGeneration,
+    state.activeFormProviderId,
+    state.directoryEntries,
+    state.providers,
+  ]);
   const blockingCredentialWrite = Boolean(
     state.savingProviderId && activeSetupMethod && activeSetupMethod !== 'oauth'
   );
