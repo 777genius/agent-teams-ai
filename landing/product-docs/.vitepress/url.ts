@@ -1,4 +1,4 @@
-import type { PageData } from "vitepress";
+import type { HeadConfig } from "vitepress";
 
 export const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
@@ -15,15 +15,12 @@ export const rewriteDownloadLinks = (html: string, publicBaseUrl: string) =>
     `href="${publicBaseUrl}${locale ? `${locale}/` : ""}download/"`
   );
 
-/** Apply per-page canonical metadata for clean routes and directory indexes. */
-export function addPageSeoMetadata(pageData: PageData, docsUrl: string): void {
-  const path = pageData.relativePath
-    .replace(/(^|\/)index\.md$/, "$1")
-    .replace(/\.md$/, "");
+/** Emit canonical tags for the real static URL (not the site-wide docs home). */
+export function buildPageSeoHead(page: string, docsUrl: string): HeadConfig[] {
+  const path = page.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "");
   const canonicalUrl = new URL(path, docsUrl).href;
-  pageData.frontmatter.head ??= [];
-  pageData.frontmatter.head.push(
+  return [
     ["link", { rel: "canonical", href: canonicalUrl }],
     ["meta", { property: "og:url", content: canonicalUrl }]
-  );
+  ];
 }
