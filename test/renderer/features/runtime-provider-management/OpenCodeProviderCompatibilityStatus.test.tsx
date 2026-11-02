@@ -81,6 +81,39 @@ describe('OpenCode provider compatibility in advanced settings', () => {
     expect(host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai"]')?.disabled).toBe(true);
     expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(4);
   });
+  it('restores V1 managed connection actions after V1 → V2 → unknown → V1', async () => {
+    const cursor = () => host.querySelector<HTMLButtonElement>('[data-testid="connect-action-cursor-acp"]');
+    const xaiOAuth = () => host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai-oauth"]');
+    const xaiKey = () => host.querySelector<HTMLButtonElement>('[data-testid="connect-action-xai-api"]');
+
+    // Re-render the same mounted tree: no saved credentials, route mutation or
+    // fallback may be inferred from the previous generation's rendered state.
+    mocks.version = '1.19.5';
+    await show();
+    expect(cursor()?.disabled).toBe(false);
+    expect(xaiOAuth()?.disabled).toBe(false);
+    expect(xaiKey()?.disabled).toBe(false);
+
+    mocks.version = '2.1.4';
+    await show();
+    expect(cursor()?.disabled).toBe(true);
+    expect(xaiOAuth()?.disabled).toBe(true);
+    expect(xaiKey()?.disabled).toBe(false);
+
+    mocks.version = null;
+    await show();
+    expect(cursor()?.disabled).toBe(true);
+    expect(xaiOAuth()?.disabled).toBe(true);
+    expect(xaiKey()?.disabled).toBe(true);
+
+    mocks.version = '1.19.5';
+    await show();
+    expect(cursor()?.disabled).toBe(false);
+    expect(xaiOAuth()?.disabled).toBe(false);
+    expect(xaiKey()?.disabled).toBe(false);
+    expect(host.querySelectorAll('[data-testid^="runtime-provider-compatibility-"]')).toHaveLength(0);
+  });
+
   it('does not show V2 warnings on an installed V1 runtime', async () => {
     mocks.version = '1.19.5';
     await show();
