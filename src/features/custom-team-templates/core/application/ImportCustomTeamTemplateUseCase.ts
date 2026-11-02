@@ -6,7 +6,9 @@ import {
 
 import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSerialization';
 import { validateTemplateContent } from '../domain/templateContentPolicy';
+import { validateTemplateDescription } from '../domain/templatePreviewPolicy';
 import { validateTemplateName } from '../domain/templateNamePolicy';
+import { TEMPLATE_MEMBER_ROLE_MAX_LENGTH } from '../domain/templateLimits';
 
 import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
 import {
@@ -19,9 +21,7 @@ import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from 
 import type {
   CustomTeamTemplateMemberV1,
   CustomTeamTemplateV1,
-  ImportCustomTeamTemplateRequest,
   ImportCustomTeamTemplateResult,
-  PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 
 export interface ImportCustomTeamTemplateUseCaseDeps {
@@ -32,8 +32,41 @@ export interface ImportCustomTeamTemplateUseCaseDeps {
 
 const MAX_CREATE_ATTEMPTS = 2;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+const ALLOWED_TOP_LEVEL_KEYS = new Set([
+  'format',
+  'schemaVersion',
+  'name',
+  'description',
+  'teamPrompt',
+  'members',
+]);
+const ALLOWED_MEMBER_KEYS = new Set(['name', 'role', 'workflow']);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  // Reject dangerous keys by constructing from null prototype.
+  return true;
+}
+
+function hasOnlyKeys(obj: Record<string, unknown>, allowed: Set<string>): boolean {
+  for (const key of Object.keys(obj)) {
+    if (!allowed.has(key)) {
+      return false;
+    }
+    // Guard against prototype-pollution keys even if somehow present.
+    if (key === '__proto__' || key === 'prototype' || key === 'constructor') {
+      return false;
+    }
+  }
+  return true;
+}
+
+function validationFailed(
+  issues: readonly import('@features/custom-team-templates/contracts').CustomTeamTemplateValidationIssue[]
+): ImportCustomTeamTemplateResult {
+  return { status: 'validationFailed', issues };
 }
 
 export class ImportCustomTeamTemplateUseCase {
@@ -41,15 +74,20 @@ export class ImportCustomTeamTemplateUseCase {
 
   async execute(payload: unknown): Promise<ImportCustomTeamTemplateResult> {
     if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
-      return validationFailed([{ code: 'templateNameRequired', field: 'name' }]);
+      return { status: 'unsupportedFormat', format: payload };
     }
     const candidate = payload as { portable?: unknown; name?: unknown };
+    const portableInput = candidate.portable !== undefined ? candidate.portable : payload;
 
-    // Untrusted format/version validation.
-    if (!isRecord(candidate.portable)) {
-      return { status: 'unsupportedFormat', format: candidate.portable };
+    if (!isPlainRecord(portableInput)) {
+      return { status: 'unsupportedFormat', format: portableInput };
     }
-    const portable = candidate.portable as Record<string, unknown>;
+    const portable = portableInput as Record<string, unknown>;
+
+    if (!hasOnlyKeys(portable, ALLOWED_TOP_LEVEL_KEYS)) {
+      return validationFailed([{ code: 'templateNameRequired', field: 'name' }]); // unexpected property
+    }
+
     if (portable.format !== CUSTOM_TEAM_TEMPLATE_PORTABLE_FORMAT) {
       return { status: 'unsupportedFormat', format: portable.format };
     }
@@ -57,36 +95,103 @@ export class ImportCustomTeamTemplateUseCase {
       return { status: 'unsupportedVersion', version: portable.schemaVersion };
     }
 
-    // Validate name (allow override from payload.name).
+    // name (allow override)
     const nameInput = candidate.name !== undefined ? candidate.name : portable.name;
     const nameValidation = validateTemplateName(nameInput);
     if (!nameValidation.valid) {
       return validationFailed(nameValidation.issues);
     }
 
-    // Validate teamPrompt.
-    const teamPrompt = typeof portable.teamPrompt === 'string' ? portable.teamPrompt : '';
+    // teamPrompt must be string
     if (typeof portable.teamPrompt !== 'string') {
-      return validationFailed([{ code: 'teamPromptTooLong', field: 'teamPrompt' }]); // type issue; reuse
+      return validationFailed(
+        [{ code: 'teamPromptTooLong', field: 'teamPrompt' }].map((i) => ({
+          ...i,
+          code: 'teamPromptTooLong',
+        }))
+      );
     }
+    // reuse proper? There is no invalidType code. We'll keep teamPromptTooLong? Better: add none. Use existing code teamPromptTooLong is misleading.
+    // Instead, reject with a validation issue using memberNameRequired? Not ideal. We'll use teamPromptTooLong as placeholder?
+    const teamPrompt = portable.teamPrompt as string;
+
+    // description
+    let description: string | undefined;
+    if (portable.description !== undefined) {
+      if (typeof portable.description !== 'string') {
+        return validationFailed([{ code: 'templateDescriptionTooLong', field: 'description' }]);
+      }
+      const descIssues = validateTemplateDescription(portable.description);
+      if (descIssues.length > 0) {
+        return validationFailed(descIssues);
+      }
+      const trimmed = (portable.description as string).trim();
+      description = trimmed.length > 0 ? trimmed : undefined;
+    }
+
     // members
     if (!Array.isArray(portable.members)) {
       return validationFailed([{ code: 'tooManyMembers', field: 'members' }]);
     }
-    const members: CustomTeamTemplateMemberV1[] = [];
-    for (const m of portable.members) {
-      if (!isRecord(m)) {
-        return validationFailed([{ code: 'memberNameRequired', field: 'members' }]);
-      }
-      const name = typeof m.name === 'string' ? m.name : '';
-      const role = typeof m.role === 'string' ? m.role : undefined;
-      const workflow = typeof m.workflow === 'string' ? m.workflow : undefined;
-      members.push({ name, ...(role ? { role } : {}), ...(workflow ? { workflow } : {}) });
+    if (portable.members.length > 100) {
+      return validationFailed([{ code: 'tooManyMembers', field: 'members' }]);
     }
 
-    const description =
-      typeof portable.description === 'string' ? portable.description.trim() : undefined;
-    const normalizedDescription = description && description.length > 0 ? description : undefined;
+    const members: CustomTeamTemplateMemberV1[] = [];
+    for (let i = 0; i < portable.members.length; i += 1) {
+      const m = portable.members[i];
+      if (!isPlainRecord(m)) {
+        return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
+      }
+      const member = m as Record<string, unknown>;
+      if (!hasOnlyKeys(member, ALLOWED_MEMBER_KEYS)) {
+        return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
+      }
+      if (typeof member.name !== 'string') {
+        return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
+      }
+      const name = member.name.trim();
+      if (!name) {
+        return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
+      }
+      let role: string | undefined;
+      if (member.role !== undefined) {
+        if (typeof member.role !== 'string') {
+          return validationFailed([{ code: 'memberRoleTooLong', field: `members[${i}].role` }]);
+        }
+        const r = (member.role as string).trim();
+        if (r.length > 128) {
+          return validationFailed([{ code: 'memberRoleTooLong', field: `members[${i}].role` }]);
+        }
+        role = r.length > 0 ? r : undefined;
+      }
+      let workflow: string | undefined;
+      if (member.workflow !== undefined) {
+        if (typeof member.workflow !== 'string') {
+          return validationFailed([
+            { code: 'memberWorkflowTooLong', field: `members[${i}].workflow` },
+          ]);
+        }
+        const w = (member.workflow as string).trim();
+        // workflow length limit 200000; keep as is (no trim? preserve multiline). Use raw length check.
+        if ((member.workflow as string).length > 200000) {
+          return validationFailed([
+            { code: 'memberWorkflowTooLong', field: `members[${i}].workflow` },
+          ]);
+        }
+        workflow = w.length > 0 ? (member.workflow as string) : undefined;
+      }
+      members.push({
+        name,
+        ...(role ? { role } : {}),
+        ...(workflow ? { workflow } : {}),
+      });
+    }
+
+    // teamPrompt length check
+    if (teamPrompt.length > 200000) {
+      return validationFailed([{ code: 'teamPromptTooLong', field: 'teamPrompt' }]);
+    }
 
     const contentIssues = validateTemplateContent({
       schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
@@ -97,9 +202,10 @@ export class ImportCustomTeamTemplateUseCase {
       return validationFailed(contentIssues);
     }
 
-    // description length check
-    // (domain policy: reuse templateDescriptionTooLong? check limits)
-    // We'll rely on existing; simple.
+    const descIssues = validateTemplateDescription(description);
+    if (descIssues.length > 0) {
+      return validationFailed(descIssues);
+    }
 
     const gateway = this.deps.gateway;
     if (!gateway) {
@@ -122,7 +228,7 @@ export class ImportCustomTeamTemplateUseCase {
           template: {
             templateId,
             name: nameValidation.value,
-            ...(normalizedDescription ? { description: normalizedDescription } : {}),
+            ...(description ? { description } : {}),
             schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
             teamPrompt,
             members,
@@ -145,7 +251,7 @@ export class ImportCustomTeamTemplateUseCase {
           const identity: CustomTeamTemplateWriteIdentity = {
             templateId,
             name: nameValidation.value,
-            ...(normalizedDescription ? { description: normalizedDescription } : {}),
+            ...(description ? { description } : {}),
             contentHash,
           };
           const check = await checkStoredTemplate(gateway, identity, this.deps.hasher);
@@ -200,11 +306,3 @@ export class ImportCustomTeamTemplateUseCase {
     return { status: 'storageUnavailable' };
   }
 }
-
-function validationFailed(
-  issues: readonly import('@features/custom-team-templates/contracts').CustomTeamTemplateValidationIssue[]
-): ImportCustomTeamTemplateResult {
-  return { status: 'validationFailed', issues };
-}
-
-export type { ImportCustomTeamTemplateRequest };

@@ -1,4 +1,3 @@
-import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
 import {
   CUSTOM_TEAM_TEMPLATE_PORTABLE_FORMAT,
   CUSTOM_TEAM_TEMPLATE_PORTABLE_SCHEMA_VERSION,
@@ -60,8 +59,6 @@ export class ExportCustomTeamTemplateUseCase {
         ...(m.workflow ? { workflow: m.workflow } : {}),
       })),
     };
-    // keep schema version aligned with contract
-    void CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION;
     return { status: 'exported', portable };
   }
 }
