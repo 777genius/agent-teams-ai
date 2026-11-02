@@ -139,6 +139,7 @@ describe('RuntimeProviderManagementPanel', () => {
     const startReconnect = vi.fn();
     let authMethods: readonly string[] = ['oauth'];
     let connectedAuthHint: string | null = 'oauth';
+    let providerAuthHint: string | null = 'oauth';
     const actions = {
       cancelConnect: vi.fn(),
       refreshDirectory: vi.fn(),
@@ -155,7 +156,7 @@ describe('RuntimeProviderManagementPanel', () => {
         directoryLoaded: true,
         directorySummary: false,
         directoryRefreshing: false,
-        providers: [{ providerId: 'xai', connectedAuthHint }],
+        providers: [{ providerId: 'xai', connectedAuthHint: providerAuthHint }],
         directoryEntries: [{
           providerId: 'xai',
           authMethods,
@@ -198,6 +199,7 @@ describe('RuntimeProviderManagementPanel', () => {
     // V2 API-key routes must not be blocked just because OAuth is unavailable.
     authMethods = ['api'];
     connectedAuthHint = null;
+    providerAuthHint = null;
     await render('2.1.4');
     expect(startConnect).toHaveBeenCalledTimes(2);
     expect(startReconnect).toHaveBeenCalledTimes(2);
@@ -206,8 +208,23 @@ describe('RuntimeProviderManagementPanel', () => {
     // but an existing OAuth credential cannot be reconnected on V2.
     authMethods = ['oauth', 'api'];
     connectedAuthHint = 'oauth';
+    providerAuthHint = 'oauth';
     await render('2.1.4');
     expect(startConnect).toHaveBeenCalledTimes(3);
+    expect(startReconnect).toHaveBeenCalledTimes(2);
+
+    // The saved connection's auth method has precedence over the directory hint.
+    connectedAuthHint = 'api';
+    await render('2.1.4');
+    expect(startConnect).toHaveBeenCalledTimes(4);
+    expect(startReconnect).toHaveBeenCalledTimes(2);
+
+    // When the provider's saved hint is missing, the directory OAuth hint still
+    // prevents reconnecting an unsupported V2 subscription route.
+    connectedAuthHint = 'oauth';
+    providerAuthHint = null;
+    await render('2.1.4');
+    expect(startConnect).toHaveBeenCalledTimes(5);
     expect(startReconnect).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());
   });
