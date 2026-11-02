@@ -3237,7 +3237,9 @@
         "unsupportedFormat": "The file format is not supported.",
         "unsupportedVersion": "The template schema version is not supported.",
         "validationFailed": "The template content failed validation.",
-        "storageUnavailable": "The template library is unavailable. Nothing was imported."
+        "storageUnavailable": "The template library is unavailable. Nothing was imported.",
+        "filePickerFailed": "The file picker could not be opened.",
+        "fileChanged": "The file changed while it was being read."
       }
     },
     "export": {
@@ -3249,7 +3251,10 @@
       "successBody": "“{{name}}” has been exported as a JSON file.",
       "errors": {
         "downloadFailed": "The download could not be started. Try again.",
-        "transportFailed": "The export request could not be completed. Try again."
+        "transportFailed": "The export request could not be completed. Try again.",
+        "filePickerFailed": "The file picker could not be opened.",
+        "fileWriteFailed": "The file could not be written. Try again.",
+        "invalidRequest": "The export request was invalid."
       }
     }
   }

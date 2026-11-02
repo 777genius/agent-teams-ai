@@ -4057,7 +4057,10 @@ export default interface Resources {
         "description": "Export “{{name}}” as a portable JSON file.",
         "errors": {
           "downloadFailed": "The download could not be started. Try again.",
-          "transportFailed": "The export request could not be completed. Try again."
+          "transportFailed": "The export request could not be completed. Try again.",
+          "filePickerFailed": "The file picker could not be opened.",
+          "fileWriteFailed": "The file could not be written. Try again.",
+          "invalidRequest": "The export request was invalid."
         },
         "exporting": "Exporting…",
         "success": "Export successful",
@@ -4069,6 +4072,8 @@ export default interface Resources {
         "confirmImport": "Confirm import",
         "description": "Import a portable team template from a JSON file.",
         "errors": {
+          "fileChanged": "The file changed while it was being read.",
+          "filePickerFailed": "The file picker could not be opened.",
           "fileReadFailed": "The file could not be read.",
           "fileTooLarge": "The file is too large to import.",
           "invalidEncoding": "The file is not valid UTF-8.",

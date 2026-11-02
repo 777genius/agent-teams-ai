@@ -40,6 +40,9 @@ export const ExportCustomTeamTemplateDialog = ({
     | 'storageUnavailable'
     | 'downloadFailed'
     | 'transportFailed'
+    | 'filePickerFailed'
+    | 'fileWriteFailed'
+    | 'invalidRequest'
     | null
   >(null);
   const [busy, setBusy] = useState(false);
@@ -60,33 +63,47 @@ export const ExportCustomTeamTemplateDialog = ({
 
     let result: ExportCustomTeamTemplateToBrowserFileResult;
 
-    if (platform === 'electron' && desktopFile) {
-      const desktopResult = await desktopFile.exportToFile({ templateId });
-      // Map desktop-specific file outcomes to browser-facing outcomes.
-      switch (desktopResult.status) {
-        case 'exported':
-          result = { status: 'exported' };
-          break;
-        case 'notFound':
-          result = { status: 'notFound', templateId: desktopResult.templateId };
-          break;
-        case 'unreadableRecord':
-          result = { status: 'unreadableRecord', templateId: desktopResult.templateId };
-          break;
-        case 'storageUnavailable':
-          result = { status: 'storageUnavailable' };
-          break;
-        case 'cancelled':
-        case 'invalidRequest':
-        case 'filePickerFailed':
-        case 'fileWriteFailed':
-        default:
-          result = { status: 'cancelled' };
-          break;
+    try {
+      if (platform === 'electron' && desktopFile) {
+        const desktopResult = await desktopFile.exportToFile({ templateId });
+        switch (desktopResult.status) {
+          case 'exported':
+            result = { status: 'exported' };
+            break;
+          case 'notFound':
+            result = { status: 'notFound', templateId: desktopResult.templateId };
+            break;
+          case 'unreadableRecord':
+            result = { status: 'unreadableRecord', templateId: desktopResult.templateId };
+            break;
+          case 'storageUnavailable':
+            result = { status: 'storageUnavailable' };
+            break;
+          case 'cancelled':
+            result = { status: 'cancelled' };
+            break;
+          case 'filePickerFailed':
+            result = { status: 'filePickerFailed' };
+            break;
+          case 'fileWriteFailed':
+            result = { status: 'fileWriteFailed' };
+            break;
+          case 'invalidRequest':
+            result = { status: 'invalidRequest' };
+            break;
+          default:
+            result = { status: 'cancelled' };
+            break;
+        }
+      } else if (platform === 'browser' && browserFile) {
+        result = await browserFile.exportToFile({ templateId });
+      } else {
+        setBusy(false);
+        setExportStage('idle');
+        return;
       }
-    } else if (platform === 'browser' && browserFile) {
-      result = await browserFile.exportToFile({ templateId });
-    } else {
+    } catch {
+      setErrorState('transportFailed');
       setBusy(false);
       setExportStage('idle');
       return;
@@ -119,6 +136,21 @@ export const ExportCustomTeamTemplateDialog = ({
         break;
       case 'transportFailed':
         setErrorState('transportFailed');
+        setBusy(false);
+        setExportStage('idle');
+        break;
+      case 'filePickerFailed':
+        setErrorState('filePickerFailed');
+        setBusy(false);
+        setExportStage('idle');
+        break;
+      case 'fileWriteFailed':
+        setErrorState('fileWriteFailed');
+        setBusy(false);
+        setExportStage('idle');
+        break;
+      case 'invalidRequest':
+        setErrorState('invalidRequest');
         setBusy(false);
         setExportStage('idle');
         break;
@@ -216,6 +248,39 @@ export const ExportCustomTeamTemplateDialog = ({
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>{t('customTemplates.export.errors.transportFailed')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'filePickerFailed' ? (
+            <div
+              role="alert"
+              data-testid="export-template-file-picker-failed"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.export.errors.filePickerFailed')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'fileWriteFailed' ? (
+            <div
+              role="alert"
+              data-testid="export-template-file-write-failed"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.export.errors.fileWriteFailed')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'invalidRequest' ? (
+            <div
+              role="alert"
+              data-testid="export-template-invalid-request"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.export.errors.invalidRequest')}</p>
             </div>
           ) : null}
 

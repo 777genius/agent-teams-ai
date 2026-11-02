@@ -20,6 +20,7 @@ import { useTemplateImport } from '../hooks/useTemplateImport';
 import type {
   CustomTeamTemplateValidationIssue,
   ImportCustomTeamTemplateFromBrowserFileResult,
+  ImportCustomTeamTemplateFromFileResult,
   ImportCustomTeamTemplateResult,
   PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
@@ -46,6 +47,8 @@ export const ImportCustomTeamTemplateDialog = ({
     | 'invalidEncoding'
     | 'fileTooLarge'
     | 'fileReadFailed'
+    | 'filePickerFailed'
+    | 'fileChanged'
     | 'transportFailed'
     | 'unsupportedFormat'
     | 'unsupportedVersion'
@@ -179,15 +182,22 @@ export const ImportCustomTeamTemplateDialog = ({
 
       let result: ImportCustomTeamTemplateFromBrowserFileResult;
 
-      if (platform === 'browser' && browserFile) {
-        result = await browserFile.importFromFile(file);
-      } else {
+      try {
+        if (platform === 'browser' && browserFile) {
+          result = await browserFile.importFromFile(file);
+        } else {
+          setImportStage('idle');
+          return;
+        }
+      } catch {
         setImportStage('idle');
+        setErrorState('transportFailed');
         return;
+      } finally {
+        resetFileInput();
       }
 
       handleImportResult(result);
-      resetFileInput();
     },
     [platform, browserFile, handleImportResult, resetFileInput]
   );
@@ -199,7 +209,15 @@ export const ImportCustomTeamTemplateDialog = ({
     setErrorState(null);
     setIssues([]);
 
-    const result = await desktopFile.importFromFile();
+    let result: ImportCustomTeamTemplateFromFileResult;
+
+    try {
+      result = await desktopFile.importFromFile();
+    } catch {
+      setImportStage('idle');
+      setErrorState('transportFailed');
+      return;
+    }
 
     switch (result.status) {
       case 'imported':
@@ -239,9 +257,13 @@ export const ImportCustomTeamTemplateDialog = ({
       case 'fileReadFailed':
         setErrorState('fileReadFailed');
         break;
-      case 'cancelled':
       case 'filePickerFailed':
+        setErrorState('filePickerFailed');
+        break;
       case 'fileChanged':
+        setErrorState('fileChanged');
+        break;
+      case 'cancelled':
       default:
         setImportStage('idle');
         break;
@@ -282,6 +304,7 @@ export const ImportCustomTeamTemplateDialog = ({
         setRenameBusy(false);
         break;
       case 'validationFailed':
+        setRenameIssues(result.issues);
         setRenameBusy(false);
         break;
       case 'storageUnavailable':
@@ -389,6 +412,28 @@ export const ImportCustomTeamTemplateDialog = ({
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>{t('customTemplates.import.errors.fileReadFailed')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'filePickerFailed' ? (
+            <div
+              role="alert"
+              data-testid="import-template-file-picker-failed"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.import.errors.filePickerFailed')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'fileChanged' ? (
+            <div
+              role="alert"
+              data-testid="import-template-file-changed"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.import.errors.fileChanged')}</p>
             </div>
           ) : null}
 

@@ -30,6 +30,9 @@ export type ExportCustomTeamTemplateToBrowserFileResult =
   | { status: 'cancelled' }
   | { status: 'downloadFailed' }
   | { status: 'transportFailed' }
+  | { status: 'filePickerFailed' }
+  | { status: 'fileWriteFailed' }
+  | { status: 'invalidRequest' }
   | Extract<ExportCustomTeamTemplateResult, { status: 'notFound' }>
   | Extract<ExportCustomTeamTemplateResult, { status: 'unreadableRecord' }>
   | Extract<ExportCustomTeamTemplateResult, { status: 'storageUnavailable' }>;
