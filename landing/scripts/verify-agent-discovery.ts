@@ -10,13 +10,13 @@ const landingUrl = (
   process.env.NUXT_PUBLIC_LANDING_SITE_URL ||
   process.env.NUXT_PUBLIC_SITE_URL ||
   "https://agentteams.live"
-).replace(/\\/+$/, "");
+).replace(/\/+$/, "");
 const docsUrl = (
   process.env.VITEPRESS_SITE_URL ||
   process.env.AGENT_TEAMS_DOCS_SITE_URL ||
   process.env.NUXT_PUBLIC_DOCS_SITE_URL ||
   `${landingUrl}/docs/`
-).replace(/\\/*$/, "/");
+).replace(/\/?$/, "/");
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
@@ -39,7 +39,7 @@ function tags(html: string, tagName: string): string[] {
 }
 
 function docsRouteFromHtml(filename: string): string {
-  return filename.replace(/(^|\\/)index\\.html$/, "$1").replace(/\\.html$/, "");
+  return filename.replace(/(^|\/)index\.html$/, "$1").replace(/\.html$/, "");
 }
 
 // Verify the URL algorithm independently for both production deployment shapes.
@@ -91,7 +91,7 @@ assert(auth.includes("No Agent Teams account"), "Auth guidance must explain acco
 assert(auth.includes("local"), "Auth guidance must describe the local integration");
 
 const home = read(join(outDir, "index.html"));
-const jsonLd = [...home.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
+const jsonLd = [...home.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
   .filter((match) => attr(match[1], "type") === "application/ld+json")
   .map((match) => JSON.parse(match[2]));
 const schemaEntries = jsonLd.flatMap((value) => (Array.isArray(value) ? value : [value]));
