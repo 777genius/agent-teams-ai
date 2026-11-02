@@ -7,7 +7,7 @@ import {
 import { fileURLToPath } from "node:url";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import llmstxt, { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
-import { normalizeBase, rewriteDownloadLinks, trimTrailingSlash, withTrailingSlash } from "./url";
+import { addPageSeoMetadata, normalizeBase, rewriteDownloadLinks, trimTrailingSlash, withTrailingSlash } from "./url";
 
 const REPO = "777genius/agent-teams-ai";
 const SITE_TITLE = "Agent Teams Docs";
@@ -632,19 +632,7 @@ export default defineConfig({
   description: SITE_DESCRIPTION,
   base,
   cleanUrls: true,
-  transformPageData(pageData) {
-    // VitePress uses clean URLs; preserve directory-index slashes on both
-    // the standalone docs domain and GitHub Pages' nested /docs/ mirror.
-    const path = pageData.relativePath
-      .replace(/(^|\/)index\.md$/, "$1")
-      .replace(/\.md$/, "");
-    const canonicalUrl = new URL(path, docsUrl).href;
-    pageData.frontmatter.head ??= [];
-    pageData.frontmatter.head.push(
-      ["link", { rel: "canonical", href: canonicalUrl }],
-      ["meta", { property: "og:url", content: canonicalUrl }]
-    );
-  },
+  transformPageData: (pageData) => addPageSeoMetadata(pageData, docsUrl),
   ignoreDeadLinks: [/\/download/],
   transformHtml: (html) => rewriteDownloadLinks(html, publicBaseUrl),
   lastUpdated: true,
