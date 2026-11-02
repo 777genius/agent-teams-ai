@@ -244,6 +244,7 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
       laneId: 'secondary:opencode:bob',
       memberName: 'Bob',
       cwd: '/repo/member',
+      launchAttempt: lane.launchAttempt,
     });
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, lane);
     expect(ports.readLaunchState).toHaveBeenCalledWith('team-a');

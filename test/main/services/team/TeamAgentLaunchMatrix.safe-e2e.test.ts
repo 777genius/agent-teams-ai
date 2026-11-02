@@ -20101,7 +20101,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
 
       expect(adapter.pendingLaunchInputs).toHaveLength(1);
-      expect(adapter.launchInputs).toHaveLength(0);
+      expect(adapter.launchInputs).toHaveLength(1);
       expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
         'launching',
         'queued',
@@ -20153,7 +20153,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
 
       expect(adapter.pendingLaunchInputs).toHaveLength(1);
-      expect(adapter.launchInputs).toHaveLength(0);
+      expect(adapter.launchInputs).toHaveLength(1);
       expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
         'launching',
         'queued',
@@ -22481,6 +22481,18 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   }
 
   async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    if (input.mayDispatch?.() === false) {
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {},
+        warnings: [],
+        diagnostics: ['Fake OpenCode launch cancelled before native handoff'],
+        preLaunchGate: { blocked: true, reason: 'opencode_launch_cancelled', retryable: false },
+      };
+    }
     this.launchInputs.push(input);
     if (input.laneId === 'primary' && this.nextPrimaryLaunchGate) {
       const gate = this.nextPrimaryLaunchGate;
@@ -22891,9 +22903,11 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   });
 
   override async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    const result = await super.launch(input);
+    if (result.preLaunchGate?.blocked) return result;
     this.pendingLaunchInputs.push(input);
     await this.gate;
-    return super.launch(input);
+    return result;
   }
 
   releaseLaunches(): void {
@@ -23022,6 +23036,8 @@ class RejectingBlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter
   }
 
   override async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    const result = await super.launch(input);
+    if (result.preLaunchGate?.blocked) return result;
     this.pendingLaunchInputs.push(input);
     await this.gate;
     this.rejectedLaunchCount += 1;

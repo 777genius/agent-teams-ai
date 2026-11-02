@@ -171,7 +171,9 @@ describe('OpenCode installation without restarting the renderer', () => {
     expect(await store.getState().fetchCliProviderStatus('opencode')).toBe(true);
     await store.getState().invalidateCliStatus();
     expect(
-      await store.getState().fetchCliProviderStatus('opencode', { projectPath: '/TEST/old-project' })
+      await store
+        .getState()
+        .fetchCliProviderStatus('opencode', { projectPath: '/TEST/old-project' })
     ).toBe(true);
     old.resolve(verifiedOpenCodeProvider());
     expect(await models).toBe(false);
@@ -411,6 +413,122 @@ describe('OpenCode installation without restarting the renderer', () => {
     });
   });
 
+  it.each(['failed', 'idle', 'ready'] as const)(
+    'does not refresh providers after an incomplete V2 support installation in state %s',
+    async (state) => {
+      const status: OpenCodeRuntimeStatus = { ...required, state };
+      const { store, runtime } = setup({ install: async () => status });
+      const getProviderStatus = vi.fn(async () => verifiedOpenCodeProvider());
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: { ...window.electronAPI, cliInstaller: { getProviderStatus } },
+      });
+      store.setState({ openCodeRuntimeStatus: required });
+      await store.getState().installOpenCodeRuntime({ generation: 'v2', supportOnly: true });
+      expect(runtime.invalidateStatus).not.toHaveBeenCalled();
+      expect(getProviderStatus).not.toHaveBeenCalled();
+      expect(store.getState().openCodeRuntimeStatus).toEqual(status);
+      expect(store.getState().openCodeRuntimeStatusLoading).toBe(false);
+    }
+  );
+
+  it('releases a failed support operation before enabling an immediate retry', async () => {
+    const firstResult = deferred<OpenCodeRuntimeStatus>();
+    const retryResult = deferred<OpenCodeRuntimeStatus>();
+    const failed: OpenCodeRuntimeStatus = {
+      ...required,
+      state: 'failed',
+      error: 'TEST support download failed',
+    };
+    const install = vi
+      .fn()
+      .mockReturnValueOnce(firstResult.promise)
+      .mockReturnValueOnce(retryResult.promise);
+    const invalidateStatus = vi.fn(async () => undefined);
+    const { store } = setup({ install, invalidateStatus });
+    store.setState({ openCodeRuntimeStatus: required });
+    let retry: Promise<void> | undefined;
+    let retryRequested = false;
+    const unsubscribe = store.subscribe((state) => {
+      if (
+        state.openCodeRuntimeStatus?.state === 'failed' &&
+        !state.openCodeRuntimeStatusLoading &&
+        !retryRequested
+      ) {
+        retryRequested = true;
+        retry = state.installOpenCodeRuntime({ generation: 'v2', supportOnly: true });
+      }
+    });
+    const first = store.getState().installOpenCodeRuntime({ generation: 'v2', supportOnly: true });
+    await Promise.resolve();
+    const checkingDetail = store.getState().openCodeRuntimeStatus?.progress?.detail;
+    store.getState().applyOpenCodeRuntimeProgress(failed);
+    const busyUntilReleased = store.getState().openCodeRuntimeStatusLoading;
+    firstResult.resolve(failed);
+    await first;
+    await Promise.resolve();
+    const callsBeforeRetrySettles = install.mock.calls.length;
+    const refreshBeforeRetrySettles = invalidateStatus.mock.calls.length;
+    unsubscribe();
+    retryResult.resolve(ready);
+    await retry;
+    expect({ busyUntilReleased, callsBeforeRetrySettles, refreshBeforeRetrySettles }).toEqual({
+      busyUntilReleased: true,
+      callsBeforeRetrySettles: 2,
+      refreshBeforeRetrySettles: 0,
+    });
+    expect(checkingDetail).toContain('OpenCode V2 support');
+    expect(store.getState().openCodeRuntimeStatus).toEqual(ready);
+  });
+
+  it.each(['1.19.5', '2.1.4'])(
+    'requalifies the retained usable native %s through a fresh provider read after a failed update',
+    async (version) => {
+      const result = deferred<OpenCodeRuntimeStatus>();
+      const { store, runtime } = setup({ install: () => result.promise });
+      const old = verifiedOpenCodeProvider('opencode/before-update');
+      const fresh = verifiedOpenCodeProvider('opencode/requalified-native');
+      const getProviderStatus = vi.fn(async () => fresh);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...window.electronAPI,
+          cliInstaller: { invalidateStatus: vi.fn(async () => undefined), getProviderStatus },
+        },
+      });
+      const native: OpenCodeRuntimeStatus = {
+        installed: true,
+        source: 'app-managed',
+        binaryPath: '/TEST/retained-native',
+        version,
+        state: 'ready',
+        ...(version.startsWith('2.') && { v2Support: 'ready' as const }),
+      };
+      store.setState({
+        openCodeRuntimeStatus: native,
+        cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [old] },
+      });
+      const install = store.getState().installOpenCodeRuntime();
+      const during = store.getState().cliStatus!.providers[0];
+      expect(hasEffectiveProviderLaunchAuthority(during)).toBe(false);
+      expect(getProviderStatus).not.toHaveBeenCalled();
+      const failed: OpenCodeRuntimeStatus = {
+        ...native,
+        state: 'failed',
+        error: 'TEST native update download failed',
+      };
+      result.resolve(failed);
+      await install;
+      expect(runtime.invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(getProviderStatus).toHaveBeenCalledTimes(1);
+      const current = store.getState().cliStatus!.providers[0];
+      expect(hasEffectiveProviderLaunchAuthority(current)).toBe(true);
+      expect(current.models).toEqual(fresh.models);
+      expect(store.getState().openCodeRuntimeStatus).toEqual(failed);
+      expect(store.getState().openCodeRuntimeStatusLoading).toBe(false);
+    }
+  );
+
   it('preserves missing support when a readiness refresh fails', async () => {
     const { store } = setup({
       getStatus: async () => {
@@ -481,6 +599,7 @@ describe('OpenCode installation without restarting the renderer', () => {
     const { store } = setup({ install });
     const first = store.getState().installOpenCodeRuntime({ generation: 'v2' });
     const second = store.getState().installOpenCodeRuntime({ generation: 'v2' });
+    await Promise.resolve();
     expect(install).toHaveBeenCalledTimes(1);
     result.resolve(ready);
     await Promise.all([first, second]);

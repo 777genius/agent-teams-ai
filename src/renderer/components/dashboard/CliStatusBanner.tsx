@@ -125,6 +125,7 @@ import {
   getRuntimeInstallLabel,
   isRuntimeInstalling,
   shouldShowOpenCodeInstallAction,
+  shouldShowOpenCodeRuntimeError,
 } from './runtimeInstallActionUi';
 import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 import {
@@ -1059,11 +1060,11 @@ const InstalledBanner = ({
       )}
       {cliStatus.flavor === 'agent_teams_orchestrator' ? (
         <div className={showExpandedContent ? undefined : 'hidden'}>
-          {openCodeRuntimeStatus?.diagnostics ? (
+          {shouldShowOpenCodeRuntimeError(openCodeRuntimeStatus) ? (
             <RuntimeProviderErrorAlert
               compact
-              message={openCodeRuntimeStatus.error ?? ''}
-              diagnostics={openCodeRuntimeStatus.diagnostics}
+              message={openCodeRuntimeStatus?.error ?? ''}
+              diagnostics={openCodeRuntimeStatus?.diagnostics}
               testId="opencode-version-diagnostics"
             />
           ) : null}

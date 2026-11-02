@@ -1,3 +1,4 @@
+import { isOpenCodeRuntimeUsable } from '@features/runtime-provider-management';
 import {
   classifyAnalyticsError,
   elapsedMsSince,
@@ -85,7 +86,7 @@ export function createOpenCodeRuntimeActions(
     set({
       openCodeRuntimeStatus: status,
       openCodeRuntimeError: status.error ?? null,
-      openCodeRuntimeStatusLoading: isInstalling(status),
+      openCodeRuntimeStatusLoading: isInstalling(status) || installInFlight !== null,
     });
   };
   return {
@@ -147,44 +148,52 @@ export function createOpenCodeRuntimeActions(
         source: previous?.source ?? 'missing',
         state: 'checking',
         error: undefined,
-        progress: { phase: 'checking', detail: 'Resolving latest OpenCode package...' },
+        progress: {
+          phase: 'checking',
+          detail: options?.supportOnly
+            ? 'Checking OpenCode V2 support files...'
+            : 'Resolving latest OpenCode package...',
+        },
       });
-      const request = (async () => {
-        let status: OpenCodeRuntimeStatus;
-        try {
-          status = await api.openCodeRuntime.install(options);
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
-          logger.error('Failed to install OpenCode runtime:', error);
-          status = failedStatus(get().openCodeRuntimeStatus, message);
-        }
-        applyProgress(status);
-        const success = status.installed && status.state === 'ready';
-        recordRuntimeInstallEnd({
-          runtime: 'opencode',
-          success,
-          source: status.source,
-          errorClass: success ? 'none' : classifyAnalyticsError(status.error),
-          durationMs: elapsedMsSince(startedAt),
-        });
-        if (status.installed) {
+      const request = Promise.resolve()
+        .then(async () => {
+          let status: OpenCodeRuntimeStatus;
           try {
-            await api.openCodeRuntime.invalidateStatus();
-            await refreshProviderStatus();
+            status = await api.openCodeRuntime.install(options);
           } catch (error) {
-            // A catalog refresh cannot turn a completed native installation into a failure.
-            logger.warn('OpenCode provider refresh after installation failed:', error);
+            const message =
+              error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
+            logger.error('Failed to install OpenCode runtime:', error);
+            status = failedStatus(get().openCodeRuntimeStatus, message);
           }
-        }
-      })().finally(() => {
-        if (installInFlight === request) installInFlight = null;
-        finishReplacement();
-        // Notify once after the bounded follow-up settles, including failure,
-        // so selected projects read the installed runtime after all retries.
-        invalidateProjectScopes(true);
-        set({ openCodeRuntimeStatusLoading: isInstalling(get().openCodeRuntimeStatus) });
-      });
+          applyProgress(status);
+          const success =
+            status.installed && status.state === 'ready' && status.v2Support !== 'required';
+          recordRuntimeInstallEnd({
+            runtime: 'opencode',
+            success,
+            source: status.source,
+            errorClass: success ? 'none' : classifyAnalyticsError(status.error),
+            durationMs: elapsedMsSince(startedAt),
+          });
+          if (isOpenCodeRuntimeUsable(status)) {
+            try {
+              await api.openCodeRuntime.invalidateStatus();
+              await refreshProviderStatus();
+            } catch (error) {
+              // A catalog refresh cannot turn a completed native installation into a failure.
+              logger.warn('OpenCode provider refresh after installation failed:', error);
+            }
+          }
+        })
+        .finally(() => {
+          if (installInFlight === request) installInFlight = null;
+          finishReplacement();
+          // Notify once after the bounded follow-up settles, including failure,
+          // so selected projects read the installed runtime after all retries.
+          invalidateProjectScopes(true);
+          set({ openCodeRuntimeStatusLoading: isInstalling(get().openCodeRuntimeStatus) });
+        });
       installInFlight = request;
       return request;
     },

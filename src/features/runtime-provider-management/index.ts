@@ -9,5 +9,6 @@ export {
   findOpenCodeModelsBlockedOnV2,
   getOpenCodeGeneration,
   isLoadedOpenCodeV2Catalog,
+  isOpenCodeRuntimeUsable,
   OPENCODE_MODEL_NOT_IN_V2_CATALOG_CODE,
 } from './core/domain';

@@ -3,6 +3,7 @@ import {
   canManagedInstallChangeOpenCodeRuntime,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
+  isOpenCodeSupportInstallProgress,
 } from '@features/runtime-provider-management/renderer';
 import {
   formatRuntimeVersionTransition,
@@ -19,7 +20,11 @@ export function shouldShowOpenCodeInstallAction(
   nativeLoading: boolean
 ): boolean {
   if (provider.providerId !== 'opencode' || !status) return false;
-  if (['downloading', 'installing'].includes(status.state)) return true;
+  if (
+    ['downloading', 'installing'].includes(status.state) ||
+    (status.state === 'checking' && isOpenCodeSupportInstallProgress(status))
+  )
+    return true;
   if (nativeLoading || status.state === 'checking' || status.v2Support === 'required') return false;
   const providerReady =
     provider.supported &&
@@ -52,14 +57,21 @@ export function getRuntimeInstallLabel(
   status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null,
   t: ReturnType<typeof useAppTranslation>['t']
 ): string {
+  const supportPrefix = isOpenCodeSupportInstallProgress(status)
+    ? `${t('cliStatus.runtimeInstall.v2SupportFiles')}: `
+    : '';
   if (status?.state === 'downloading') {
     const percent = status.progress?.percent;
-    return typeof percent === 'number'
-      ? t('cliStatus.runtimeInstall.downloadingPercent', { percent })
-      : t('cliStatus.runtimeInstall.downloading');
+    return (
+      supportPrefix +
+      (typeof percent === 'number'
+        ? t('cliStatus.runtimeInstall.downloadingPercent', { percent })
+        : t('cliStatus.runtimeInstall.downloading'))
+    );
   }
-  if (status?.state === 'installing') return t('cliStatus.runtimeInstall.installing');
-  if (status?.state === 'checking') return t('cliStatus.runtimeInstall.checking');
+  if (status?.state === 'installing')
+    return supportPrefix + t('cliStatus.runtimeInstall.installing');
+  if (status?.state === 'checking') return supportPrefix + t('cliStatus.runtimeInstall.checking');
   if (status?.state === 'failed') return t('cliStatus.runtimeInstall.retryInstall');
   if (status && !status.installed && 'compatibleV2Version' in status)
     return `${t('cliStatus.runtimeInstall.install')} OpenCode V1`;
@@ -70,5 +82,12 @@ export function getRuntimeInstallLabel(
   }
   return t(
     status?.installed ? 'cliStatus.runtimeInstall.update' : 'cliStatus.runtimeInstall.install'
+  );
+}
+
+export function shouldShowOpenCodeRuntimeError(status: OpenCodeRuntimeStatus | null): boolean {
+  return Boolean(
+    status?.diagnostics ||
+    (status?.state === 'failed' && status.error && isOpenCodeRuntimeUsable(status))
   );
 }

@@ -1552,7 +1552,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it.each(['V1', 'V2 support'] as const)(
+  it.each(['V1', 'V2 native', 'V2 support', 'V2 support checking'] as const)(
     'shows OpenCode %s install progress on the dashboard provider card',
     async (generation) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -1560,20 +1560,27 @@ describe('CLI status visibility during completed install state', () => {
       storeState.openCodeRuntimeStatus = {
         installed: false,
         source: 'missing',
-        state: 'downloading',
-        ...(generation === 'V2 support' && {
+        state: generation === 'V2 support checking' ? 'checking' : 'downloading',
+        ...(generation !== 'V1' && {
           installed: true,
           source: 'override' as const,
           version: '2.1.4',
-          v2Support: 'required' as const,
+          v2Support: generation.startsWith('V2 support')
+            ? ('required' as const)
+            : ('ready' as const),
           compatibleV2Version: '2.2.0',
         }),
         progress: {
-          phase: 'downloading',
+          phase: generation === 'V2 support checking' ? 'checking' : 'downloading',
           downloadedBytes: 42,
           totalBytes: 100,
           percent: 42,
-          detail: 'Downloading OpenCode 42%',
+          detail:
+            generation === 'V2 support checking'
+              ? 'Checking OpenCode V2 support files...'
+              : generation === 'V2 support'
+                ? 'Downloading OpenCode V2 support...'
+                : 'Downloading OpenCode 42%',
         },
       };
       storeState.openCodeRuntimeStatusLoading = true;
@@ -1613,9 +1620,15 @@ describe('CLI status visibility during completed install state', () => {
         await Promise.resolve();
       });
 
-      expect(host.textContent).toContain('Downloading 42%');
+      const progressLabel =
+        generation === 'V2 support checking'
+          ? 'OpenCode V2 support files: Checking'
+          : generation === 'V2 support'
+            ? 'OpenCode V2 support files: Downloading 42%'
+            : 'Downloading 42%';
+      expect(host.textContent).toContain(progressLabel);
       const progressButton = Array.from(host.querySelectorAll('button')).find(
-        (button) => button.textContent?.trim() === 'Downloading 42%'
+        (button) => button.textContent?.trim() === progressLabel
       );
       expect(progressButton).not.toBeUndefined();
       expect(progressButton).toHaveProperty('disabled', true);
@@ -2290,64 +2303,86 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('removes the OpenCode update action after the installed version reaches latest', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    storeState.cliInstallerState = 'idle';
-    storeState.openCodeRuntimeStatus = {
-      installed: true,
-      binaryPath: '/app-data/runtimes/opencode/opencode',
-      version: '1.17.18',
-      latestVersion: '1.18.32',
-      updateAvailable: true,
-      source: 'app-managed',
-      state: 'ready',
-    };
-    storeState.cliStatus = createInstalledCliStatus({
-      flavor: 'agent_teams_orchestrator',
-      supportsSelfUpdate: false,
-      showVersionDetails: false,
-      providers: [
-        {
-          providerId: 'opencode',
-          displayName: 'OpenCode',
-          supported: true,
-          authenticated: true,
-          authMethod: 'opencode_managed',
-          verificationState: 'verified',
-          models: ['opencode/big-pickle'],
-          capabilities: { teamLaunch: true, oneShot: true },
-          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
-        },
-      ],
-    });
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    try {
-      act(() => root.render(React.createElement(CliStatusBanner)));
-      expect(host.textContent).toContain('v1.17.18 → v1.18.32');
-
-      storeState.openCodeRuntimeStatus = { ...storeState.openCodeRuntimeStatus, state: 'failed' };
-      act(() => root.render(React.createElement(CliStatusBanner)));
-      expect(host.textContent).toContain('Retry install');
-
+  it.each([
+    ['1.17.18', '1.18.32'],
+    ['2.1.3', '2.1.4'],
+  ])(
+    'retains usable OpenCode %s and shows a failed native update before retrying %s',
+    async (version, latestVersion) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.cliInstallerState = 'idle';
       storeState.openCodeRuntimeStatus = {
-        ...storeState.openCodeRuntimeStatus,
-        version: '1.18.32',
-        updateAvailable: false,
+        installed: true,
+        binaryPath: '/app-data/runtimes/opencode/opencode',
+        version,
+        latestVersion,
+        ...(version.startsWith('2.') && { v2Support: 'ready' as const }),
+        updateAvailable: true,
+        source: 'app-managed',
         state: 'ready',
       };
-      act(() => root.render(React.createElement(CliStatusBanner)));
-      expect(host.textContent).not.toContain('v1.17.18 → v1.18.32');
-      expect(
-        Array.from(host.querySelectorAll('button')).some((button) =>
-          button.textContent?.includes('Update')
-        )
-      ).toBe(false);
-    } finally {
-      act(() => root.unmount());
+      storeState.cliStatus = createInstalledCliStatus({
+        flavor: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        providers: [
+          {
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            supported: true,
+            authenticated: true,
+            authMethod: 'opencode_managed',
+            verificationState: 'verified',
+            models: ['opencode/big-pickle'],
+            capabilities: { teamLaunch: true, oneShot: true },
+            backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          },
+        ],
+      });
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        act(() => root.render(React.createElement(CliStatusBanner)));
+        expect(host.textContent).toContain(`v${version} → v${latestVersion}`);
+
+        storeState.openCodeRuntimeStatus = {
+          ...storeState.openCodeRuntimeStatus,
+          state: 'failed',
+          error: 'TEST native download failed',
+        };
+        act(() => root.render(React.createElement(CliStatusBanner)));
+        expect(host.textContent).toContain('Retry install');
+        expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+          'TEST native download failed'
+        );
+        expect(storeState.openCodeRuntimeStatus.version).toBe(version);
+        expect(host.textContent).toContain('Connected');
+        const retry = Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === 'Retry install'
+        );
+        expect(retry?.disabled).toBe(false);
+        act(() => retry?.click());
+        expect(storeState.installOpenCodeRuntime).toHaveBeenCalledTimes(1);
+
+        storeState.openCodeRuntimeStatus = {
+          ...storeState.openCodeRuntimeStatus,
+          version: latestVersion,
+          updateAvailable: false,
+          state: 'ready',
+        };
+        act(() => root.render(React.createElement(CliStatusBanner)));
+        expect(host.textContent).not.toContain(`v${version} → v${latestVersion}`);
+        expect(
+          Array.from(host.querySelectorAll('button')).some((button) =>
+            button.textContent?.includes('Update')
+          )
+        ).toBe(false);
+      } finally {
+        act(() => root.unmount());
+      }
     }
-  });
+  );
 
   it('keeps loaded models visible while refreshing and replaces them with the refreshed list', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

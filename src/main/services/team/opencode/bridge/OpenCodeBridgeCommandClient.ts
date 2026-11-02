@@ -413,7 +413,9 @@ export class OpenCodeBridgeCommandClient {
           return this.contractFailure(
             envelope,
             'invalid_input',
-            'Startup cleanup admission closed before dispatch',
+            command === 'opencode.cleanupStartupHosts'
+              ? 'Startup cleanup admission closed before dispatch'
+              : 'OpenCode command admission closed before dispatch',
             false,
             {}
           );

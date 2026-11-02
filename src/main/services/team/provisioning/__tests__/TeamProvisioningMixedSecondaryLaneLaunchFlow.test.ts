@@ -5,6 +5,10 @@ import {
   type MixedSecondaryLaneLaunchFlowPorts,
   type MixedSecondaryLaneLaunchFlowRun,
 } from '../TeamProvisioningMixedSecondaryLaneLaunchFlow';
+import {
+  type OpenCodeRuntimeStopFlowPorts,
+  stopMixedSecondaryRuntimeLanes,
+} from '../TeamProvisioningOpenCodeRuntimeStopFlow';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -168,6 +172,309 @@ function createPorts(
 }
 
 describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
+  it.each(['blocked', 'cancelled', 'dispatched', 'unknown'] as const)(
+    'joins an exact %s attempt before deciding whether native Stop is needed',
+    async (outcome) => {
+      let entered!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const lane = createLane();
+      const run = createRun();
+      const failure = createLaunchResult({
+        teamLaunchState: 'partial_failure',
+        members: {},
+        warnings: [],
+        diagnostics: ['preflight unavailable'],
+        preLaunchGate: { blocked: true, reason: 'unknown_error', retryable: true },
+      });
+      const clear = vi.fn(async () => true);
+      const stop = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['stop']>[0]) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
+      const adapter = createAdapter(
+        vi.fn(async (input) => {
+          if (outcome === 'unknown' || outcome === 'dispatched')
+            expect(input.mayDispatch?.()).toBe(true);
+          entered();
+          await pending;
+          if (outcome === 'unknown') throw new Error('native bridge outcome unknown');
+          if (outcome === 'cancelled') expect(input.mayDispatch?.()).toBe(false);
+          return outcome === 'dispatched' ? createLaunchResult() : failure;
+        })
+      );
+      adapter.stop = stop;
+      let registered:
+        | import('../TeamProvisioningSecondaryRuntimeRuns').SecondaryRuntimeRunEntry
+        | undefined;
+      const ports = createPorts({
+        getOpenCodeRuntimeAdapter: () => adapter,
+        setSecondaryRuntimeRun: (input) => {
+          registered = input;
+        },
+        clearOpenCodeRuntimeLaneStorage: clear,
+        deleteSecondaryRuntimeRunIfOwned: (_team, _lane, id) => {
+          if (registered?.runId !== id) return false;
+          registered = undefined;
+          return true;
+        },
+      });
+      const launching = launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+      await started;
+      const stopPorts = {
+        teamsBasePath: '/teams',
+        getSecondaryRuntimeRuns: () => (registered ? [registered] : []),
+        stoppingSecondaryRuntimeTeams: new Set<string>(),
+        getOpenCodeRuntimeAdapter: () => adapter,
+        readLaunchState: async () => null,
+        readPersistedTeamProjectPath: () => '/repo/root',
+        clearOpenCodeRuntimeLaneStorage: clear,
+        deleteSecondaryRuntimeRun: vi.fn(() => {
+          registered = undefined;
+        }),
+        logger: { warn: vi.fn(), info: vi.fn() },
+        isRuntimeProcessAlive: () => false,
+      } as unknown as OpenCodeRuntimeStopFlowPorts;
+      const stopping = stopMixedSecondaryRuntimeLanes(run.teamName, stopPorts);
+      try {
+        if (outcome === 'dispatched' || outcome === 'unknown') {
+          await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(1));
+          expect(lane.launchAttempt?.mayDispatch()).toBe(false);
+        } else {
+          await Promise.resolve();
+          expect(clear).not.toHaveBeenCalled();
+          expect(stop).not.toHaveBeenCalled();
+        }
+      } finally {
+        release();
+        await Promise.all([launching, stopping]);
+      }
+      expect(stop).toHaveBeenCalledTimes(outcome === 'unknown' || outcome === 'dispatched' ? 1 : 0);
+      if (outcome === 'unknown' || outcome === 'dispatched') expect(clear).toHaveBeenCalledTimes(1);
+      expect(clear).toHaveBeenCalledWith(expect.objectContaining({ expectedRunId: 'lane-run-id' }));
+      expect(registered).toBeUndefined();
+    }
+  );
+
+  it('retires only the exact reservation after a definite pre-launch failure', async () => {
+    const lane = createLane();
+    const failure = createLaunchResult({
+      teamLaunchState: 'partial_failure',
+      members: {},
+      preLaunchGate: { blocked: true, reason: 'not_authenticated', retryable: false },
+    });
+    const adapter = createAdapter(async () => failure);
+    const ports = createPorts({ getOpenCodeRuntimeAdapter: () => adapter });
+    await launchSingleMixedSecondaryLaneWithPorts(createRun(), lane, ports);
+    expect(adapter.stop).not.toHaveBeenCalled();
+    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+      teamsBasePath: '/teams',
+      teamName: 'team-a',
+      laneId: lane.laneId,
+      expectedRunId: 'lane-run-id',
+    });
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+      'team-a',
+      lane.laneId,
+      'lane-run-id'
+    );
+    expect(lane.result?.diagnostics).toContain('launch diagnostic');
+  });
+
+  it.each([false, true])(
+    'retains the primary blocked result when reservation cleanup fails (cancel before result: %s)',
+    async (cancelBeforeResult) => {
+      const lane = createLane({ diagnostics: ['requested diagnostic'] });
+      const run = createRun();
+      const failure = createLaunchResult({
+        teamLaunchState: 'partial_failure',
+        preLaunchGate: { blocked: true, reason: 'not_authenticated', retryable: false },
+        members: {
+          Bob: {
+            memberName: 'Bob',
+            providerId: 'opencode',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'TEST primary provider authentication failure',
+            runtimeDiagnostic: 'TEST primary readiness diagnostic',
+            diagnostics: ['TEST primary member diagnostic'],
+          },
+        },
+        warnings: ['TEST primary warning'],
+        diagnostics: ['TEST primary launch diagnostic'],
+      });
+      const launch = vi.fn(async () => {
+        if (cancelBeforeResult) run.cancelRequested = true;
+        return failure;
+      });
+      const adapter = createAdapter(launch);
+      let registered:
+        | import('../TeamProvisioningSecondaryRuntimeRuns').SecondaryRuntimeRunEntry
+        | undefined;
+      const clear = vi.fn(async () => {
+        throw new Error('TEST reservation cleanup failed');
+      });
+      const remove = vi.fn(() => {
+        registered = undefined;
+        return true;
+      });
+      const ports = createPorts({
+        getOpenCodeRuntimeAdapter: () => adapter,
+        setSecondaryRuntimeRun: (input) => {
+          registered = input;
+        },
+        clearOpenCodeRuntimeLaneStorage: clear,
+        deleteSecondaryRuntimeRunIfOwned: remove,
+      });
+      await launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+      const cleanup =
+        'OpenCode secondary lane reservation cleanup failed: TEST reservation cleanup failed';
+      expect(lane.result).toMatchObject({
+        runId: 'lane-run-id',
+        teamLaunchState: 'partial_failure',
+        preLaunchGate: failure.preLaunchGate,
+        warnings: failure.warnings,
+        members: {
+          Bob: {
+            hardFailureReason: 'TEST primary provider authentication failure',
+            runtimeDiagnostic: 'TEST primary readiness diagnostic',
+          },
+        },
+      });
+      expect(lane.result?.diagnostics).toEqual(
+        expect.arrayContaining(['TEST primary launch diagnostic', cleanup])
+      );
+      expect(lane.result?.members.Bob.diagnostics).toEqual(
+        expect.arrayContaining(['TEST primary member diagnostic', cleanup])
+      );
+      expect(lane.diagnostics).toEqual(
+        expect.arrayContaining(['requested diagnostic', 'TEST primary member diagnostic', cleanup])
+      );
+      expect(ports.upsertOpenCodeRuntimeLaneIndexEntry).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          state: 'degraded',
+          diagnostics: expect.arrayContaining(['TEST primary launch diagnostic', cleanup]),
+        })
+      );
+      expect(clear).toHaveBeenCalledTimes(1);
+      expect(clear).toHaveBeenCalledWith(expect.objectContaining({ expectedRunId: 'lane-run-id' }));
+      expect(remove).not.toHaveBeenCalled();
+      expect(registered).toMatchObject({ runId: 'lane-run-id' });
+      expect(adapter.stop).not.toHaveBeenCalled();
+      expect(launch).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['generation', 'tracked run', 'catch cleanup'] as const)(
+    'keeps replacement lane state when reservation cleanup changes the %s and throws',
+    async (change) => {
+      const lane = createLane();
+      const run = createRun();
+      let current = true;
+      const replacementId = change === 'tracked run' ? 'lane-run-id' : 'replacement';
+      const replacement = createLaunchResult({ runId: replacementId });
+      const warnings = ['replacement warning'];
+      const diagnostics = ['replacement diagnostic'];
+      const upsert = vi.fn(async () => undefined);
+      const publish = vi.fn(async () => undefined);
+      let callsBeforeReplacement = 0;
+      let publicationsBeforeReplacement = 0;
+      let registered:
+        | import('../TeamProvisioningSecondaryRuntimeRuns').SecondaryRuntimeRunEntry
+        | undefined;
+      const clear = vi.fn(async () => {
+        callsBeforeReplacement = upsert.mock.calls.length;
+        publicationsBeforeReplacement = publish.mock.calls.length;
+        lane.runId = replacementId;
+        lane.result = replacement;
+        lane.state = 'queued';
+        lane.warnings = warnings;
+        lane.diagnostics = diagnostics;
+        if (change === 'tracked run') current = false;
+        if (!registered) throw new Error('TEST expected exact owned registration');
+        registered = { ...registered, runId: replacementId };
+        throw new Error('TEST stale cleanup failed');
+      });
+      const remove = vi.fn(() => {
+        registered = undefined;
+        return true;
+      });
+      const adapter = createAdapter(async () =>
+        createLaunchResult({
+          teamLaunchState: 'partial_failure',
+          members: {},
+          preLaunchGate: { blocked: true, reason: 'not_authenticated', retryable: false },
+        })
+      );
+      const ports = createPorts({
+        isCurrentTrackedRun: () => current,
+        getOpenCodeRuntimeAdapter: () => adapter,
+        setSecondaryRuntimeRun: (input) => {
+          registered = input;
+        },
+        clearOpenCodeRuntimeLaneStorage: clear,
+        deleteSecondaryRuntimeRunIfOwned: remove,
+        upsertOpenCodeRuntimeLaneIndexEntry: upsert,
+        publishMixedSecondaryLaneStatusChange: publish,
+        ...(change === 'catch cleanup' && {
+          prepareOpenCodeRuntimeLaneForLaunchGeneration: async () => {
+            run.cancelRequested = true;
+            throw new Error('TEST generation preparation failed');
+          },
+        }),
+      });
+      await launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+      expect(lane.runId).toBe(replacementId);
+      expect(lane.result).toBe(replacement);
+      expect(lane.state).toBe('queued');
+      expect(lane.warnings).toBe(warnings);
+      expect(lane.diagnostics).toBe(diagnostics);
+      expect(upsert).toHaveBeenCalledTimes(callsBeforeReplacement);
+      expect(clear).toHaveBeenCalledTimes(1);
+      expect(remove).not.toHaveBeenCalled();
+      expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+      expect(registered).toMatchObject({ runId: replacementId });
+      expect(adapter.stop).not.toHaveBeenCalled();
+      expect(publish).toHaveBeenCalledTimes(publicationsBeforeReplacement);
+    }
+  );
+
+  it('clears a definite pre-launch failure without losing a replacement generation', async () => {
+    const lane = createLane();
+    const run = createRun();
+    const failure = createLaunchResult({
+      teamLaunchState: 'partial_failure',
+      members: {},
+      preLaunchGate: { blocked: true, reason: 'not_authenticated', retryable: false },
+    });
+    const clear = vi.fn(async () => {
+      lane.runId = 'replacement';
+      return false;
+    });
+    const remove = vi.fn(() => false);
+    const ports = createPorts({
+      getOpenCodeRuntimeAdapter: () => createAdapter(async () => failure),
+      clearOpenCodeRuntimeLaneStorage: clear,
+      deleteSecondaryRuntimeRunIfOwned: remove,
+    });
+    await launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+    expect(clear).toHaveBeenCalledWith(expect.objectContaining({ expectedRunId: 'lane-run-id' }));
+    expect(remove).not.toHaveBeenCalled();
+    expect(lane.runId).toBe('replacement');
+  });
+
   it.each(['setup', 'generation', 'prompt'] as const)(
     'does not launch when the tracked run changes as %s preparation resolves',
     async (stage) => {
@@ -205,17 +512,23 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
 
       expect(run).toMatchObject({ cancelRequested: false, processKilled: false });
       expect(adapter.launch).not.toHaveBeenCalled();
-      expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
-        teamsBasePath: '/teams',
-        teamName: run.teamName,
-        laneId: lane.laneId,
-        expectedRunId: 'superseded-lane-run',
-      });
-      expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
-        run.teamName,
-        lane.laneId,
-        'superseded-lane-run'
-      );
+      if (stage === 'setup') {
+        // Cancellation preceded registration and manifest acquisition.
+        expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+        expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
+      } else {
+        expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+          teamsBasePath: '/teams',
+          teamName: run.teamName,
+          laneId: lane.laneId,
+          expectedRunId: 'superseded-lane-run',
+        });
+        expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+          run.teamName,
+          lane.laneId,
+          'superseded-lane-run'
+        );
+      }
       expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
       expect(lane).toMatchObject({ state: 'finished', result: null });
     }
@@ -292,7 +605,7 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
     expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
   });
 
-  it('marks definitive partial failures degraded and deletes the secondary runtime run', async () => {
+  it('keeps a partial failure without a pre-launch gate registered for native Stop', async () => {
     const partialFailure = createLaunchResult({
       teamLaunchState: 'partial_failure',
       members: {
@@ -329,10 +642,7 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
       state: 'degraded',
       diagnostics: expect.arrayContaining(['provider auth failed', 'timing diagnostic']),
     });
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith(
-      'team-a',
-      'secondary:opencode:bob'
-    );
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(lane.result?.teamLaunchState).toBe('partial_failure');
     expect(lane.diagnostics).toEqual(
       expect.arrayContaining([

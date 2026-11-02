@@ -981,7 +981,7 @@ describe('cliInstallerSlice', () => {
       vi.mocked(api.openCodeRuntime.install).mockResolvedValue({
         installed: true,
         binaryPath: '/Users/tester/App Support/runtimes/opencode/current/opencode',
-        version: '1.14.48',
+        version: '1.16.0',
         source: 'app-managed',
         state: 'ready',
       });
@@ -1084,7 +1084,7 @@ describe('cliInstallerSlice', () => {
       vi.mocked(api.openCodeRuntime.install).mockResolvedValue({
         installed: true,
         binaryPath: '/Users/tester/App Support/runtimes/opencode/current/opencode',
-        version: '1.14.48',
+        version: '1.16.0',
         source: 'app-managed',
         state: 'ready',
       });

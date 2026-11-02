@@ -30,6 +30,7 @@ export {
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
+export { isOpenCodeSupportInstallProgress } from './openCodeInstallLabels';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { OpenCodeLocalModelLimitsCard } from './OpenCodeLocalModelLimitsCard';
