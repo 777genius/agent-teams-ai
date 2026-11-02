@@ -79,6 +79,8 @@ async function clearQueuedMixedSecondaryLaneStorage<TRun extends MixedSecondaryL
   laneRunId: string,
   ports: MixedSecondaryLaunchQueuePorts<TRun>
 ): Promise<void> {
+  if (lane.launchAttempt?.runId === laneRunId && !lane.launchAttempt.wasBlockedBeforeLaunch())
+    return; // A dispatched or unknown attempt still owns native Stop custody.
   await ports
     .clearOpenCodeRuntimeLaneStorage({
       teamsBasePath: ports.teamsBasePath(),

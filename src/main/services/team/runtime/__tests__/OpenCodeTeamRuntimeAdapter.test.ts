@@ -68,6 +68,82 @@ describe('OpenCodeTeamRuntimeAdapter runtime permission messages', () => {
 });
 
 describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
+  it('does not dispatch after Stop wins while readiness is pending', async () => {
+    let release!: (value: OpenCodeTeamLaunchReadiness) => void;
+    const pending = new Promise<OpenCodeTeamLaunchReadiness>((resolve) => {
+      release = resolve;
+    });
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(() => pending),
+      launchOpenCodeTeam,
+    });
+    let cancelled = false;
+    const launching = adapter.launch({ ...launchInput(), mayDispatch: () => !cancelled });
+    cancelled = true;
+    release(readiness({ launchAllowed: true, state: 'ready' }));
+    const result = await launching;
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result.preLaunchGate).toMatchObject({
+      blocked: true,
+      reason: 'opencode_launch_cancelled',
+    });
+  });
+
+  it('does not redispatch after Stop wins during capability refresh', async () => {
+    let refreshEntered!: () => void;
+    let release!: (value: OpenCodeTeamLaunchReadiness) => void;
+    const entered = new Promise<void>((resolve) => {
+      refreshEntered = resolve;
+    });
+    const pending = new Promise<OpenCodeTeamLaunchReadiness>((resolve) => {
+      release = resolve;
+    });
+    const ready = readiness({ launchAllowed: true, state: 'ready' });
+    const check = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(ready)
+      .mockImplementationOnce(() => {
+        refreshEntered();
+        return pending;
+      });
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(async () => ({
+      runId: 'run-launch',
+      teamLaunchState: 'failed',
+      members: {},
+      warnings: [],
+      diagnostics: [
+        {
+          code: 'opencode_launch_failed',
+          severity: 'error',
+          message: 'Bridge server capability snapshot mismatch',
+        },
+      ],
+    }));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: check,
+      launchOpenCodeTeam,
+      getLastOpenCodeRuntimeSnapshot: () =>
+        ({ capabilitySnapshotId: 'capability-1' }) as ReturnType<
+          NonNullable<OpenCodeTeamRuntimeBridgePort['getLastOpenCodeRuntimeSnapshot']>
+        >,
+    });
+    let cancelled = false;
+    const launching = adapter.launch({ ...launchInput(), mayDispatch: () => !cancelled });
+    await entered;
+    cancelled = true;
+    release(ready);
+    const result = await launching;
+    expect(launchOpenCodeTeam).toHaveBeenCalledTimes(1);
+    expect(result.preLaunchGate).toBeUndefined();
+    expect(result.diagnostics).toContain(
+      'OpenCode team launch was cancelled during capability refresh.'
+    );
+  });
+
   it('refreshes a reusable execution proof before a state-changing launch', async () => {
     const temporarilyUnavailable = readiness({
       launchAllowed: false,
@@ -262,7 +338,8 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
       expect(prompt).toContain(protocols.buildChatVisualizationRefreshInstruction());
       expect(prompt).toContain('if the complete display library specification is missing');
       expect(prompt).toContain(groupChatId ? 'group_chat_send' : 'agent-teams_message_send');
-      if (groupChatId) expect(prompt).toContain('Never substitute message_send or a private user reply');
+      if (groupChatId)
+        expect(prompt).toContain('Never substitute message_send or a private user reply');
     }
   );
 

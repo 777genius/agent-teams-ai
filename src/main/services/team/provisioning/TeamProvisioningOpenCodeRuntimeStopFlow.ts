@@ -162,30 +162,34 @@ export async function stopSingleMixedSecondaryRuntimeLane(
     if (!isAuthorized()) throw new Error(`OpenCode lane ${lane.laneId} stop ownership changed`);
     operation = beginSecondaryStopProgress(run, pendingStopProgress);
     run.onProgress?.(pendingStopProgress);
+    const attempt = lane.launchAttempt;
+    const storageOnly = attempt?.runId === targetRunId && (await attempt.cancelAndJoin());
     const previousLaunchState = await ports.readLaunchState(run.teamName);
 
     const targetSessionIdentity = await readOpenCodeStopSessionIdentity(
       getOpenCodeRuntimeManifestPath(ports.teamsBasePath, run.teamName, lane.laneId)
     );
     if (!isAuthorized()) throw new Error(`OpenCode lane ${lane.laneId} stop ownership changed`);
-    const result = await adapter.stop({
-      runId: targetRunId,
-      laneId: lane.laneId,
-      teamName: run.teamName,
-      cwd: targetCwd,
-      providerId: 'opencode',
-      reason,
-      previousLaunchState,
-      force: true,
-    });
-    assertOpenCodeRuntimeStopEffective({
-      result,
-      laneId: lane.laneId,
-      previousLaunchState,
-      message: `OpenCode lane ${lane.laneId} did not confirm stop`,
-      logWarning: (message) => ports.logger.warn(`[${run.teamName}] ${message}`),
-      isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
-    });
+    if (!storageOnly) {
+      const result = await adapter.stop({
+        runId: targetRunId,
+        laneId: lane.laneId,
+        teamName: run.teamName,
+        cwd: targetCwd,
+        providerId: 'opencode',
+        reason,
+        previousLaunchState,
+        force: true,
+      });
+      assertOpenCodeRuntimeStopEffective({
+        result,
+        laneId: lane.laneId,
+        previousLaunchState,
+        message: `OpenCode lane ${lane.laneId} did not confirm stop`,
+        logWarning: (message) => ports.logger.warn(`[${run.teamName}] ${message}`),
+        isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
+      });
+    }
     keepStopFence = true;
     const cleared = await ports.clearOpenCodeRuntimeLaneStorage({
       teamsBasePath: ports.teamsBasePath,
@@ -255,6 +259,15 @@ export async function stopMixedSecondaryRuntimeLanes(
     return;
   }
   ports.stoppingSecondaryRuntimeTeams.add(teamName);
+  // Latch every exact attempt before any await; a temporary team set is not a cancellation token.
+  const neverDispatched = new Map(
+    secondaryRuns.map((target) => [
+      target,
+      target.launchAttempt?.runId === target.runId
+        ? target.launchAttempt.cancelAndJoin()
+        : Promise.resolve(false),
+    ])
+  );
   try {
     const adapter = ports.getOpenCodeRuntimeAdapter();
     const previousLaunchState = await ports.readLaunchState(teamName);
@@ -274,27 +287,30 @@ export async function stopMixedSecondaryRuntimeLanes(
       const laneStartedAtMs = Date.now();
       let targetSessionIdentity: string;
       try {
+        const storageOnly = await neverDispatched.get(secondaryRun);
         targetSessionIdentity = await readOpenCodeStopSessionIdentity(
           getOpenCodeRuntimeManifestPath(ports.teamsBasePath, teamName, secondaryRun.laneId)
         );
-        const result = await adapter.stop({
-          runId: secondaryRun.runId,
-          laneId: secondaryRun.laneId,
-          teamName,
-          cwd: secondaryRun.cwd ?? ports.readPersistedTeamProjectPath(teamName) ?? undefined,
-          providerId: 'opencode',
-          reason: 'user_requested',
-          previousLaunchState,
-          force: true,
-        });
-        assertOpenCodeRuntimeStopEffective({
-          result,
-          laneId: secondaryRun.laneId,
-          previousLaunchState,
-          message: `OpenCode secondary lane ${secondaryRun.laneId} did not confirm stop`,
-          logWarning: (message) => ports.logger.warn(`[${teamName}] ${message}`),
-          isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
-        });
+        if (!storageOnly) {
+          const result = await adapter.stop({
+            runId: secondaryRun.runId,
+            laneId: secondaryRun.laneId,
+            teamName,
+            cwd: secondaryRun.cwd ?? ports.readPersistedTeamProjectPath(teamName) ?? undefined,
+            providerId: 'opencode',
+            reason: 'user_requested',
+            previousLaunchState,
+            force: true,
+          });
+          assertOpenCodeRuntimeStopEffective({
+            result,
+            laneId: secondaryRun.laneId,
+            previousLaunchState,
+            message: `OpenCode secondary lane ${secondaryRun.laneId} did not confirm stop`,
+            logWarning: (message) => ports.logger.warn(`[${teamName}] ${message}`),
+            isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
+          });
+        }
       } catch (error) {
         const stopError = asError(error);
         stopFailures.push(stopError);

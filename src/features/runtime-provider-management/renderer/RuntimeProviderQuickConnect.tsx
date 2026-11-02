@@ -33,6 +33,7 @@ import {
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
+import { getOpenCodeInstallLabels } from './openCodeInstallLabels';
 import { OPEN_CODE_GATEWAYS, OPEN_CODE_PLANS, sortQuickConnectCards } from './quickProviderCards';
 import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
@@ -133,11 +134,7 @@ export const RuntimeProviderQuickConnect = ({
   const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
   const generation = getOpenCodeGeneration(openCodeRuntimeStatus?.version);
-  const installingOpenCodeLabel = openCodeRuntimeStatus?.progress?.detail?.includes(
-    'OpenCode V2 support'
-  )
-    ? `${t('cliStatus.runtimeInstall.v2SupportFiles')}: ${t('cliStatus.runtimeInstall.installing')}`
-    : t('cliStatus.quickConnect.installingOpenCode');
+  const { checking, installing } = getOpenCodeInstallLabels(openCodeRuntimeStatus, t);
   const supportRequired =
     (gate === 'support-required' || gate === 'error') &&
     openCodeRuntimeStatus?.installed === true &&
@@ -230,8 +227,8 @@ export const RuntimeProviderQuickConnect = ({
           state: busy ? 'checking' : 'unavailable',
           stateLabel: busy
             ? gate === 'installing'
-              ? installingOpenCodeLabel
-              : t('cliStatus.quickConnect.checkingOpenCode')
+              ? installing
+              : checking
             : t('cliStatus.quickConnect.requiresOpenCode'),
           actionLabel: null,
           onAction: null,
@@ -345,8 +342,8 @@ export const RuntimeProviderQuickConnect = ({
           state: busy ? 'checking' : 'unavailable',
           stateLabel: busy
             ? gate === 'installing'
-              ? installingOpenCodeLabel
-              : t('cliStatus.quickConnect.checkingOpenCode')
+              ? installing
+              : checking
             : t('cliStatus.quickConnect.requiresOpenCode'),
           actionLabel: null,
           onAction: null,
@@ -599,8 +596,10 @@ export const RuntimeProviderQuickConnect = ({
             : 'connectable',
       stateLabel: xiaomiLoading
         ? gate === 'installing'
-          ? installingOpenCodeLabel
-          : t('cliStatus.quickConnect.checkingPlan')
+          ? installing
+          : gate === 'checking'
+            ? checking
+            : t('cliStatus.quickConnect.checkingPlan')
         : xiaomiConnected
           ? t('cliStatus.quickConnect.planConnected')
           : gate !== 'ready'
@@ -656,7 +655,8 @@ export const RuntimeProviderQuickConnect = ({
     connectedXiaomiEntry,
     gate,
     supportRequired,
-    installingOpenCodeLabel,
+    checking,
+    installing,
     getCompanionState,
     handleCompanionCardAction,
     oauthBridgeOutdated,

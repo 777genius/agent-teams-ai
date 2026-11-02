@@ -73,6 +73,7 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
   }
   const {
     adapter,
+    launchAttempt,
     finishCancelledLane,
     laneCwd,
     laneRunId,
@@ -119,23 +120,26 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
       },
     ];
     const launchOpenCodeLane = () =>
-      adapter.launch({
-        runId: laneRunId,
-        laneId: lane.laneId,
-        teamName: run.teamName,
-        cwd: laneCwd,
-        prompt: appManagedLaunchPrompt,
-        providerId: 'opencode',
-        model: lane.member.model,
-        effort: lane.member.effort,
-        runtimeOnly: true,
-        skipPermissions: run.request.skipPermissions !== false,
-        ...(run.request.allowExperimentalLocalModels === true
-          ? { allowExperimentalLocalModels: true }
-          : {}),
-        expectedMembers: laneExpectedMembers,
-        previousLaunchState,
-      });
+      launchAttempt.launch(() =>
+        adapter.launch({
+          runId: laneRunId,
+          laneId: lane.laneId,
+          teamName: run.teamName,
+          cwd: laneCwd,
+          prompt: appManagedLaunchPrompt,
+          providerId: 'opencode',
+          model: lane.member.model,
+          effort: lane.member.effort,
+          runtimeOnly: true,
+          skipPermissions: run.request.skipPermissions !== false,
+          ...(run.request.allowExperimentalLocalModels === true
+            ? { allowExperimentalLocalModels: true }
+            : {}),
+          expectedMembers: laneExpectedMembers,
+          previousLaunchState,
+          mayDispatch: () => launchAttempt.mayDispatch(),
+        })
+      );
     let rawResult: TeamRuntimeLaunchResult;
     try {
       rawResult = await launchOpenCodeLane();
@@ -275,7 +279,10 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
           diagnostics,
         })
         .catch(() => undefined);
-      ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+      if (launchAttempt.wasBlockedBeforeLaunch()) {
+        lane.blockedBeforeLaunch = true;
+        await finishCancelledLane();
+      }
     }
   } catch (error) {
     if (shouldAbortLaunch()) {
@@ -320,7 +327,8 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
         diagnostics: appendDiagnosticOnce([message], timingDiagnostic),
       })
       .catch(() => undefined);
-    ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+  } finally {
+    launchAttempt.finish();
   }
 
   lane.state = 'finished';

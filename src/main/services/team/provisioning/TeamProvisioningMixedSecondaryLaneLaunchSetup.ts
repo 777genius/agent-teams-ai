@@ -1,10 +1,12 @@
 import { readAttributedCursorAgentProcesses } from '../opencode/bridge/CursorAgentAttributionRecords';
 
+import { createOpenCodeSecondaryLaneLaunchAttempt } from './OpenCodeSecondaryLaneLaunchAttempt';
 import { publishMixedSecondaryLaneStatusInBackground } from './TeamProvisioningMixedSecondaryLaneStatusPublish';
 import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { stopLeftoverOpenCodeSecondaryLaneRuns } from './TeamProvisioningOpenCodeStoppedLaneStopTargets';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime/TeamRuntimeAdapter';
+import type { OpenCodeSecondaryLaneLaunchAttempt } from './OpenCodeSecondaryLaneLaunchAttempt';
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
 
@@ -60,6 +62,7 @@ export interface MixedSecondaryLaneLaunchSetupPorts<TRun extends MixedSecondaryL
     laneId: string;
     memberName: string;
     cwd: string;
+    launchAttempt?: OpenCodeSecondaryLaneLaunchAttempt;
   }): void;
   logger: {
     warn(message: string): void;
@@ -67,6 +70,7 @@ export interface MixedSecondaryLaneLaunchSetupPorts<TRun extends MixedSecondaryL
 }
 
 export interface MixedSecondaryLaneLaunchSetupBaseResult {
+  launchAttempt: OpenCodeSecondaryLaneLaunchAttempt;
   requestedDiagnostics: string[];
   shouldAbortLaunch(): boolean;
   finishCancelledLane(): Promise<void>;
@@ -94,120 +98,147 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
   const requestedDiagnostics = [...lane.diagnostics];
   const laneRunId = (lane.runId ??= ports.randomUuid());
   const shouldAbortLaunch = (): boolean =>
+    launchAttempt.stopRequested ||
+    lane.runId !== laneRunId ||
     run.cancelRequested ||
     run.processKilled ||
     !ports.isCurrentTrackedRun(run) ||
     ports.isStoppingSecondaryRuntimeTeam(run.teamName);
+  const launchAttempt = createOpenCodeSecondaryLaneLaunchAttempt(
+    laneRunId,
+    () => !shouldAbortLaunch()
+  );
+  lane.launchAttempt = launchAttempt;
+  delete lane.blockedBeforeLaunch;
   const finishCancelledLane = async (): Promise<void> => {
-    await ports
-      .clearOpenCodeRuntimeLaneStorage({
-        teamsBasePath: ports.teamsBasePath(),
-        teamName: run.teamName,
-        laneId: lane.laneId,
-        expectedRunId: laneRunId,
-      })
-      .catch(() => undefined);
+    if (lane.runId !== laneRunId) return;
+    if (!launchAttempt.wasBlockedBeforeLaunch()) {
+      if (lane.runId === laneRunId) lane.state = 'finished';
+      return;
+    }
+    const cleared = await ports.clearOpenCodeRuntimeLaneStorage({
+      teamsBasePath: ports.teamsBasePath(),
+      teamName: run.teamName,
+      laneId: lane.laneId,
+      expectedRunId: laneRunId,
+    });
+    if (cleared === false) {
+      if (lane.runId !== laneRunId) return;
+      throw new Error(`OpenCode lane ${lane.laneId} reservation cleanup is still pending`);
+    }
     ports.deleteSecondaryRuntimeRunIfOwned(run.teamName, lane.laneId, laneRunId);
     if (lane.runId === laneRunId) lane.state = 'finished';
   };
   const baseResult = {
+    launchAttempt,
     requestedDiagnostics,
     shouldAbortLaunch,
     finishCancelledLane,
   };
-  if (shouldAbortLaunch()) {
-    if (lane.runId === laneRunId) lane.state = 'finished';
-    return { ...baseResult, outcome: 'cancelled' };
-  }
-  const adapter = ports.getOpenCodeRuntimeAdapter();
-  if (!adapter) {
-    const message = 'OpenCode runtime adapter is not registered for mixed team launch.';
-    lane.runId = lane.runId ?? ports.randomUuid();
-    lane.launchFinishedAtMs = ports.nowMs();
-    const timingDiagnostic = ports.buildOpenCodeSecondaryLaneTimingDiagnostic(lane);
-    lane.state = 'finished';
-    lane.result = {
-      runId: lane.runId,
-      teamName: run.teamName,
-      launchPhase: 'finished',
-      teamLaunchState: 'partial_failure',
-      members: {
-        [lane.member.name]: {
-          memberName: lane.member.name,
-          providerId: 'opencode',
-          launchState: 'failed_to_start',
-          agentToolAccepted: false,
-          runtimeAlive: false,
-          bootstrapConfirmed: false,
-          hardFailure: true,
-          hardFailureReason: 'opencode_runtime_adapter_missing',
-          diagnostics: appendDiagnosticOnce([message], timingDiagnostic),
+  let handedToLaunch = false;
+  try {
+    if (shouldAbortLaunch()) {
+      if (lane.runId === laneRunId) lane.state = 'finished';
+      return { ...baseResult, outcome: 'cancelled' };
+    }
+    const adapter = ports.getOpenCodeRuntimeAdapter();
+    if (!adapter) {
+      const message = 'OpenCode runtime adapter is not registered for mixed team launch.';
+      lane.runId = lane.runId ?? ports.randomUuid();
+      lane.launchFinishedAtMs = ports.nowMs();
+      const timingDiagnostic = ports.buildOpenCodeSecondaryLaneTimingDiagnostic(lane);
+      lane.state = 'finished';
+      lane.result = {
+        runId: lane.runId,
+        teamName: run.teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {
+          [lane.member.name]: {
+            memberName: lane.member.name,
+            providerId: 'opencode',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'opencode_runtime_adapter_missing',
+            diagnostics: appendDiagnosticOnce([message], timingDiagnostic),
+          },
         },
-      },
-      warnings: [],
-      diagnostics: appendDiagnosticOnce([...requestedDiagnostics, message], timingDiagnostic),
-    };
+        warnings: [],
+        diagnostics: appendDiagnosticOnce([...requestedDiagnostics, message], timingDiagnostic),
+      };
+      lane.warnings = [];
+      lane.diagnostics = appendDiagnosticOnce([...requestedDiagnostics, message], timingDiagnostic);
+      publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'adapter-missing');
+      lane.state = 'finished';
+      return { ...baseResult, outcome: 'handled' };
+    }
+
+    const migration = await ports.migrateLegacyOpenCodeRuntimeState({
+      teamsBasePath: ports.teamsBasePath(),
+      teamName: run.teamName,
+      laneId: lane.laneId,
+    });
+    if (shouldAbortLaunch()) {
+      if (lane.runId === laneRunId) lane.state = 'finished';
+      return { ...baseResult, outcome: 'cancelled' };
+    }
+    await ports.upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: ports.teamsBasePath(),
+      teamName: run.teamName,
+      laneId: lane.laneId,
+      state: migration.degraded ? 'degraded' : 'active',
+      diagnostics: migration.diagnostics,
+    });
+    if (shouldAbortLaunch()) {
+      // No manifest generation has been acquired yet. Keep provisional metadata
+      // for the next prepare rather than risk clearing a replacement run.
+      if (lane.runId === laneRunId) lane.state = 'finished';
+      return { ...baseResult, outcome: 'cancelled' };
+    }
+
+    lane.state = 'launching';
     lane.warnings = [];
-    lane.diagnostics = appendDiagnosticOnce([...requestedDiagnostics, message], timingDiagnostic);
-    publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'adapter-missing');
-    lane.state = 'finished';
-    return { ...baseResult, outcome: 'handled' };
-  }
+    lane.diagnostics = [...requestedDiagnostics, ...migration.diagnostics];
+    const laneCwd = lane.member.cwd?.trim() || run.request.cwd;
+    const previousLaunchState = await ports.readLaunchState(run.teamName);
+    await stopLeftoverOpenCodeSecondaryLaneRuns({
+      adapter,
+      teamName: run.teamName,
+      laneId: lane.laneId,
+      nextRunId: laneRunId,
+      cwd: laneCwd,
+      previousLaunchState,
+      attributed: await readAttributedCursorAgentProcesses().catch(() => []),
+    });
+    if (shouldAbortLaunch()) {
+      if (lane.runId === laneRunId) lane.state = 'finished';
+      return { ...baseResult, outcome: 'cancelled' };
+    }
+    ports.setSecondaryRuntimeRun({
+      teamName: run.teamName,
+      runId: laneRunId,
+      providerId: 'opencode',
+      laneId: lane.laneId,
+      memberName: lane.member.name,
+      cwd: laneCwd,
+      launchAttempt,
+    });
+    publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'setup');
 
-  const migration = await ports.migrateLegacyOpenCodeRuntimeState({
-    teamsBasePath: ports.teamsBasePath(),
-    teamName: run.teamName,
-    laneId: lane.laneId,
-  });
-  if (shouldAbortLaunch()) {
-    if (lane.runId === laneRunId) lane.state = 'finished';
-    return { ...baseResult, outcome: 'cancelled' };
+    handedToLaunch = true;
+    return {
+      ...baseResult,
+      outcome: 'ready',
+      adapter,
+      migration,
+      laneRunId,
+      laneCwd,
+      previousLaunchState,
+    };
+  } finally {
+    if (!handedToLaunch) launchAttempt.finish();
   }
-  await ports.upsertOpenCodeRuntimeLaneIndexEntry({
-    teamsBasePath: ports.teamsBasePath(),
-    teamName: run.teamName,
-    laneId: lane.laneId,
-    state: migration.degraded ? 'degraded' : 'active',
-    diagnostics: migration.diagnostics,
-  });
-  if (shouldAbortLaunch()) {
-    // No manifest generation has been acquired yet. Keep provisional metadata
-    // for the next prepare rather than risk clearing a replacement run.
-    if (lane.runId === laneRunId) lane.state = 'finished';
-    return { ...baseResult, outcome: 'cancelled' };
-  }
-
-  lane.state = 'launching';
-  lane.warnings = [];
-  lane.diagnostics = [...requestedDiagnostics, ...migration.diagnostics];
-  const laneCwd = lane.member.cwd?.trim() || run.request.cwd;
-  const previousLaunchState = await ports.readLaunchState(run.teamName);
-  await stopLeftoverOpenCodeSecondaryLaneRuns({
-    adapter,
-    teamName: run.teamName,
-    laneId: lane.laneId,
-    nextRunId: laneRunId,
-    cwd: laneCwd,
-    previousLaunchState,
-    attributed: await readAttributedCursorAgentProcesses().catch(() => []),
-  });
-  ports.setSecondaryRuntimeRun({
-    teamName: run.teamName,
-    runId: laneRunId,
-    providerId: 'opencode',
-    laneId: lane.laneId,
-    memberName: lane.member.name,
-    cwd: laneCwd,
-  });
-  publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'setup');
-
-  return {
-    ...baseResult,
-    outcome: 'ready',
-    adapter,
-    migration,
-    laneRunId,
-    laneCwd,
-    previousLaunchState,
-  };
 }

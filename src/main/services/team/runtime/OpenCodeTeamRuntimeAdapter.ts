@@ -489,6 +489,15 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       ...(recoveryAttemptId ? { capabilitySnapshotRecoveryAttemptId: recoveryAttemptId } : {}),
     });
 
+    if (input.mayDispatch?.() === false) {
+      return blockedLaunchResult(
+        input,
+        'opencode_launch_cancelled',
+        ['OpenCode team launch was cancelled before native dispatch.'],
+        [],
+        { preLaunchGate: true, retryable: false }
+      );
+    }
     let data = await this.bridge.launchOpenCodeTeam(
       buildLaunchCommand(runtimeSnapshot, selectedModel)
     );
@@ -566,6 +575,12 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         // structured bridge failure details: expectedCapabilitySnapshotId,
         // actualCapabilitySnapshotId, preconditionStage, and safeToRetryWithFreshCommand.
         // Keep this app-side attempt id until packaged runtimes all expose that protocol.
+        if (input.mayDispatch?.() === false) {
+          // An earlier handoff entered the bridge; retain its exact stop authority.
+          return blockedLaunchResult(input, 'opencode_launch_cancelled', [
+            'OpenCode team launch was cancelled during capability refresh.',
+          ]);
+        }
         data = await this.bridge.launchOpenCodeTeam(
           buildLaunchCommand(
             runtimeSnapshot,
