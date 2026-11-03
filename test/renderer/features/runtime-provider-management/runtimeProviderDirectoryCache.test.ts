@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  invalidateRuntimeProviderDirectoryCache,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
@@ -67,6 +68,37 @@ describe('runtimeProviderDirectoryCache', () => {
 
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toMatchObject({
       authoritative: true,
+      entries: [{ providerId: 'openrouter' }],
+    });
+  });
+
+  it('does not downgrade a populated full catalog to a later curated summary', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [providerEntry, { ...providerEntry, providerId: 'full-only' }],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+    });
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      authoritative: true,
+      entries: [{ providerId: 'openrouter' }, { providerId: 'full-only' }],
+    });
+
+    invalidateRuntimeProviderDirectoryCache();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      authoritative: false,
       entries: [{ providerId: 'openrouter' }],
     });
   });
