@@ -190,6 +190,8 @@ export const ImportCustomTeamTemplateDialog = ({
         return t('customTemplates.errors.issues.templateNameTooLong');
       case 'templateNameInvalidCharacters':
         return t('customTemplates.errors.issues.templateNameInvalidCharacters');
+      case 'templateDescriptionTooLong':
+        return t('customTemplates.errors.issues.templateDescriptionTooLong');
       case 'teamPromptInvalidType':
         return t('customTemplates.errors.issues.teamPromptInvalidType');
       case 'teamPromptTooLong':
