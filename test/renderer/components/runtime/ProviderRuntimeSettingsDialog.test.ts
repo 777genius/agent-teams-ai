@@ -3074,7 +3074,8 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(panel?.getAttribute('data-open')).toBe('true');
     expect(panel?.getAttribute('data-project-path')).toBe('/tmp/project-a');
     expect(host.textContent).toContain('Runtime provider management: opencode');
-    expect(host.textContent).toContain('version 1.4.0 - live resolved-fin');
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).toBeNull();
+    expect(host.textContent).not.toContain('version 1.4.0 - live resolved-fin');
     expect(host.textContent).not.toContain('managed teammate agent');
     expect(host.textContent).not.toContain('behavior abc123');
     expect(host.textContent).not.toContain('Desktop currently exposes status only.');
@@ -3092,7 +3093,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).toHaveBeenNthCalledWith(2, 'opencode', 'provider_change');
   });
 
-  it('summarizes OpenCode readiness without dumping duplicate provider ids', async () => {
+  it('hides the non-actionable OpenCode healthy and passive summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -3114,19 +3115,86 @@ describe('ProviderRuntimeSettingsDialog', () => {
       );
     });
 
-    expect(host.textContent).toContain('OpenCode 1.17.18');
-    expect(host.textContent).not.toContain('Using opencode managed');
-    expect(host.textContent).not.toContain('is ready');
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).toBeNull();
+    expect(host.textContent).not.toContain('OpenCode 1.17.18');
     expect(host.textContent).not.toContain('z.ai-coding-plan');
-    expect(host.querySelector('[data-testid="provider-runtime-summary"]')?.className).toContain(
-      'px-1'
-    );
-    expect(host.querySelector('[data-testid="provider-runtime-summary"]')?.className).not.toContain(
-      'rounded-lg'
-    );
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [{
+            ...provider,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'unknown',
+            statusMessage: 'OpenCode detected (passive)',
+            detailMessage: 'Passive summary does not verify authentication or launch readiness.',
+          }],
+          initialProviderId: 'opencode',
+          onSelectBackend: vi.fn(),
+        })
+      );
+    });
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).toBeNull();
+    expect(host.textContent).not.toContain('OpenCode detected (passive)');
+    expect(host.textContent).not.toContain('Passive summary does not verify');
   });
 
-  it('shows OpenCode inventory fallback as models available instead of disconnected', async () => {
+  it('shows real OpenCode failures, sanitized diagnostics and failures without details', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider: CliProviderStatus = {
+      ...createOpenCodeProvider(),
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      statusMessage: null,
+      detailMessage: null,
+      externalRuntimeDiagnostics: [{
+        id: 'opencode-binary-check',
+        label: 'OpenCode binary',
+        detected: false,
+        statusMessage: 'Could not verify token=verysecretvalue',
+        detailMessage: 'at https://alice:password@opencode.example/path',
+      }],
+    };
+
+    await act(async () => {
+      root.render(React.createElement(ProviderRuntimeSettingsDialog, {
+        open: true,
+        onOpenChange: vi.fn(),
+        providers: [provider],
+        initialProviderId: 'opencode',
+        onSelectBackend: vi.fn(),
+      }));
+    });
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).not.toBeNull();
+    expect(host.textContent).toContain('Unable to verify');
+    expect(host.textContent).toContain('OpenCode binary');
+    expect(host.textContent).toContain('[redacted]');
+    expect(host.textContent).not.toContain('verysecretvalue');
+    expect(host.textContent).not.toContain('alice:password');
+
+    await act(async () => {
+      root.render(React.createElement(ProviderRuntimeSettingsDialog, {
+        open: true,
+        onOpenChange: vi.fn(),
+        providers: [{ ...provider, externalRuntimeDiagnostics: [], verificationState: 'offline' }],
+        initialProviderId: 'opencode',
+        onSelectBackend: vi.fn(),
+      }));
+    });
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).not.toBeNull();
+    expect(host.textContent).toContain('Unable to verify');
+  });
+
+  it('shows OpenCode inventory fallback without a misleading connection summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -3159,7 +3227,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Models available');
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).toBeNull();
     expect(host.textContent).not.toContain('Not connected');
   });
 });
