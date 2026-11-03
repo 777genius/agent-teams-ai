@@ -41,6 +41,7 @@ export function useRuntimeProviderQuickConnect({
 }: UseRuntimeProviderQuickConnectOptions): RuntimeProviderQuickConnectDirectoryState {
   const currentProjectScope = projectPath?.trim() ?? '';
   const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
+  const cacheSeenOnMount = useRef(initialDirectoryCache);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
   const previousRefreshRequestSequence = useRef(0);
@@ -79,12 +80,17 @@ export function useRuntimeProviderQuickConnect({
   useEffect(() => {
     if (runtimeRevision !== null) {
       observeRuntimeProviderDirectoryRevision(runtimeRevision);
-      if (previousRuntimeRevision.current !== null &&
-          runtimeRevision !== previousRuntimeRevision.current) {
+      if (
+        (previousRuntimeRevision.current !== null &&
+          runtimeRevision !== previousRuntimeRevision.current) ||
+        (cacheSeenOnMount.current &&
+          cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)
+      ) {
         setEntries([]);
         setLoaded(false);
         setAuthoritativeLoaded(false);
       }
+      cacheSeenOnMount.current = null;
       previousRuntimeRevision.current = runtimeRevision;
     }
   }, [runtimeRevision]);
@@ -110,6 +116,7 @@ export function useRuntimeProviderQuickConnect({
         projectPath,
         requestRuntimeRevision
       );
+      cacheSeenOnMount.current = cachedDirectory;
       setDirectoryProjectScope(projectScope);
       setEntries(cachedDirectory?.entries ?? []);
       setLoaded(Boolean(cachedDirectory));
