@@ -1115,11 +1115,7 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual([
       'new-runtime-provider',
     ]);
-    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
-      runtimeRevision: 'runtime-v2',
-      authoritative: false,
-      entries: [{ providerId: 'new-runtime-provider' }],
-    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toBeNull();
     await act(async () => root.unmount());
   });
 
