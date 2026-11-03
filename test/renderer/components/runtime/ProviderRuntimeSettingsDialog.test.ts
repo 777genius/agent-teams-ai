@@ -3221,6 +3221,8 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.querySelector('[data-testid="provider-runtime-summary"]')).not.toBeNull();
     expect(host.textContent).toContain('OpenCode binary');
     expect(host.textContent).toContain('Could not verify the binary');
+    expect(host.textContent).not.toContain('Managed runtime verified');
+    expect(host.textContent).not.toContain('version 1.4.0');
   });
 
   it('shows OpenCode inventory fallback without a misleading connection summary', async () => {
