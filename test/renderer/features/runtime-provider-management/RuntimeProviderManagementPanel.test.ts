@@ -109,6 +109,88 @@ describe('RuntimeProviderManagementPanel', () => {
     vi.unstubAllGlobals();
   });
 
+  it('loads global provider rows before project discovery settles', async () => {
+    let resolveProjects: ((projects: unknown[]) => void) | undefined;
+    mocks.loadProjectPathProjects.mockReturnValue(
+      new Promise<unknown[]>((resolve) => {
+        resolveProjects = resolve;
+      })
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(RuntimeProviderManagementPanel, {
+        runtimeId: 'opencode',
+        open: true,
+        projectPath: null,
+      }));
+      await Promise.resolve();
+    });
+
+    expect(mocks.loadProjectPathProjects).toHaveBeenCalledTimes(1);
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]).toMatchObject({
+      enabled: true,
+      projectPath: null,
+      preserveViewRequestOnDisable: false,
+    });
+    expect(mocks.viewProps.at(-1)?.disabled).toBe(false);
+    expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(true);
+
+    await act(async () => {
+      resolveProjects?.([]);
+      await Promise.resolve();
+    });
+    expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(false);
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]?.enabled).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it('defers an explicit project directory until its canonical scope is known', async () => {
+    let resolveProjects: ((projects: unknown[]) => void) | undefined;
+    mocks.loadProjectPathProjects.mockReturnValue(
+      new Promise<unknown[]>((resolve) => {
+        resolveProjects = resolve;
+      })
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(RuntimeProviderManagementPanel, {
+        runtimeId: 'opencode',
+        open: true,
+        projectPath: '/tmp/project-a',
+      }));
+      await Promise.resolve();
+    });
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]).toMatchObject({
+      enabled: false,
+      projectPath: null,
+    });
+    expect(mocks.viewProps.at(-1)?.disabled).toBe(true);
+
+    await act(async () => {
+      resolveProjects?.([{
+        id: 'project-a',
+        path: '/tmp/project-a',
+        name: 'Project A',
+        sessions: [],
+        totalSessions: 0,
+        createdAt: 0,
+      }]);
+      await Promise.resolve();
+    });
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]).toMatchObject({
+      enabled: true,
+      projectPath: '/tmp/project-a',
+    });
+    expect(mocks.viewProps.at(-1)?.disabled).toBe(false);
+    await act(async () => root.unmount());
+  });
+
   it('rejects unknown installed generations and always refreshes cached status on open', async () => {
     mocks.loadProjectPathProjects.mockResolvedValue([]);
     const host = document.createElement('div');
