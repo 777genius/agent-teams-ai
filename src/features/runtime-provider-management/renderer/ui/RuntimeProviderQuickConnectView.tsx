@@ -54,6 +54,7 @@ interface RuntimeProviderQuickConnectViewProps {
   cards: readonly RuntimeProviderQuickCardViewModel[];
   gate: RuntimeProviderQuickConnectGate;
   runtimeStatus: OpenCodeRuntimeStatus | null;
+  runtimeStatusLoading?: boolean;
   directoryError: string | null;
   onInstallOpenCode: (options?: OpenCodeRuntimeInstallOptions) => void;
   onRefreshOpenCode: () => void;
@@ -210,31 +211,41 @@ const QuickProviderCard = ({
 const OpenCodePrerequisite = ({
   gate,
   runtimeStatus,
+  runtimeStatusLoading,
   onInstall,
   onRefresh,
 }: {
   gate: RuntimeProviderQuickConnectGate;
   runtimeStatus: OpenCodeRuntimeStatus | null;
+  runtimeStatusLoading: boolean;
   onInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
   onRefresh: () => void;
 }): JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
+  const supportProgress = isOpenCodeSupportInstallProgress(runtimeStatus);
+  const supportFailed = supportProgress && runtimeStatus?.state === 'failed';
   const supportInstalling =
-    isOpenCodeSupportInstallProgress(runtimeStatus) &&
+    supportProgress &&
     (runtimeStatus?.state === 'checking' ||
       runtimeStatus?.state === 'downloading' ||
       runtimeStatus?.state === 'installing');
-  if (gate === 'ready' || ((gate === 'checking' || gate === 'installing') && !supportInstalling)) {
+  const supportBusy = supportInstalling || (supportFailed && runtimeStatusLoading);
+  if (
+    (gate === 'ready' && !supportFailed) ||
+    ((gate === 'checking' || gate === 'installing') && !supportInstalling)
+  ) {
     return null;
   }
 
-  const isError = gate === 'error';
+  const isError = gate === 'error' || supportFailed;
   const supportRequired =
     runtimeStatus?.installed === true &&
     runtimeStatus.v2Support === 'required' &&
     getOpenCodeGeneration(runtimeStatus.version) === 'v2';
   // Support files are separate from the selected native binary, including overrides.
-  const supportSetup = supportRequired || isOpenCodeSupportInstallProgress(runtimeStatus);
+  const selectedV2 =
+    runtimeStatus?.installed === true && runtimeStatus.version?.startsWith('2.') === true;
+  const supportSetup = supportRequired || (supportProgress && (!supportFailed || selectedV2));
   const canInstall = supportSetup
     ? Boolean(runtimeStatus?.compatibleV2Version)
     : canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
@@ -269,7 +280,7 @@ const OpenCodePrerequisite = ({
   return (
     <div
       data-testid="provider-quick-opencode-prerequisite"
-      aria-busy={supportInstalling || undefined}
+      aria-busy={supportBusy || undefined}
       className="relative mb-3 flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-lg border px-3 py-2.5"
       style={{
         borderColor: isError ? 'rgba(248, 113, 113, 0.32)' : 'rgba(56, 189, 248, 0.25)',
@@ -314,10 +325,11 @@ const OpenCodePrerequisite = ({
             variant="outline"
             size="sm"
             className="h-7"
-            disabled={supportInstalling}
+            disabled={supportBusy}
             onClick={() => {
-              if (supportInstalling) return;
+              if (supportBusy) return;
               if (supportSetup) onInstall({ generation: 'v2', supportOnly: true });
+              else if (supportFailed) onInstall({ generation: 'v2' });
               else onInstall();
             }}
           >
@@ -417,6 +429,7 @@ export const RuntimeProviderQuickConnectView = ({
   cards,
   gate,
   runtimeStatus,
+  runtimeStatusLoading = false,
   directoryError,
   onInstallOpenCode,
   onRefreshOpenCode,
@@ -479,6 +492,7 @@ export const RuntimeProviderQuickConnectView = ({
       <OpenCodePrerequisite
         gate={gate}
         runtimeStatus={runtimeStatus}
+        runtimeStatusLoading={runtimeStatusLoading}
         onInstall={onInstallOpenCode}
         onRefresh={onRefreshOpenCode}
       />

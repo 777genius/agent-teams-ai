@@ -42,14 +42,18 @@ function isInstalling(status: OpenCodeRuntimeStatus | null): boolean {
 
 function failedStatus(
   previous: OpenCodeRuntimeStatus | null,
-  message: string
+  message: string,
+  supportOnly = false
 ): OpenCodeRuntimeStatus {
   return {
     ...previous,
     installed: previous?.installed ?? false,
     source: previous?.source ?? 'missing',
     state: 'failed',
-    progress: { phase: 'failed', detail: message },
+    progress: {
+      phase: 'failed',
+      detail: supportOnly ? `OpenCode V2 support: ${message}` : message,
+    },
     error: message,
   };
 }
@@ -164,7 +168,7 @@ export function createOpenCodeRuntimeActions(
             const message =
               error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
             logger.error('Failed to install OpenCode runtime:', error);
-            status = failedStatus(get().openCodeRuntimeStatus, message);
+            status = failedStatus(get().openCodeRuntimeStatus, message, options?.supportOnly);
           }
           applyProgress(status);
           const success =

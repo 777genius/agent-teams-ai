@@ -268,6 +268,40 @@ describe('RuntimeProviderManagementPanel', () => {
     await act(async () => root.unmount());
   });
 
+  it.each(['/tmp/project-a', null])(
+    'preserves the requested scope %s when project discovery fails',
+    async (projectPath) => {
+      mocks.loadProjectPathProjects.mockRejectedValue(new Error('Project discovery unavailable'));
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanel, {
+            runtimeId: 'opencode',
+            open: true,
+            projectPath,
+          })
+        );
+      });
+
+      expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]).toMatchObject({
+        enabled: true,
+        projectPath,
+      });
+      expect(
+        mocks.useRuntimeProviderManagement.mock.calls
+          .filter(([options]) => options.enabled)
+          .every(([options]) => options.projectPath === projectPath)
+      ).toBe(true);
+      expect(mocks.viewProps.at(-1)?.projectPath).toBe(projectPath);
+      expect(mocks.viewProps.at(-1)?.disabled).toBe(false);
+      expect(mocks.viewProps.at(-1)?.projectContextLoading).toBe(false);
+      await act(async () => root.unmount());
+    }
+  );
+
   it('rejects unknown installed generations and always refreshes cached status on open', async () => {
     mocks.loadProjectPathProjects.mockResolvedValue([]);
     const host = document.createElement('div');
