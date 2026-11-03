@@ -196,8 +196,8 @@ export function publishRuntimeProviderDirectoryCache({
 
   if (
     current &&
-    (nextFetchedAt < currentFetchedAt ||
-      (nextFetchedAt === currentFetchedAt && current.authoritative && !authoritative))
+    ((current.authoritative && !authoritative) ||
+      nextFetchedAt < currentFetchedAt)
   ) {
     return;
   }
@@ -255,7 +255,8 @@ export function useRuntimeProviderDirectoryCacheWithGlobalFallback(
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-export function resetRuntimeProviderDirectoryCacheForTests(): void {
+/** Drop provider inventory when the installed OpenCode runtime identity changes. */
+export function invalidateRuntimeProviderDirectoryCache(): void {
   snapshotsByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;
@@ -265,4 +266,8 @@ export function resetRuntimeProviderDirectoryCacheForTests(): void {
       listener();
     }
   }
+}
+
+export function resetRuntimeProviderDirectoryCacheForTests(): void {
+  invalidateRuntimeProviderDirectoryCache();
 }
