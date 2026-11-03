@@ -1190,6 +1190,63 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it('recovers directory support when a newer OpenCode runtime replaces an unsupported one', async () => {
+    const pending: Array<
+      (response: RuntimeProviderManagementDirectoryResponse) => void
+    > = [];
+    const loadProviderDirectory = vi.fn(
+      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+        pending.push(resolve);
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    const renderRevision = async (runtimeRevision: string) => {
+      await act(async () => {
+        root.render(React.createElement(ConfigurableHarness, {
+          enabled: true,
+          runtimeRevision,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+        }));
+        await Promise.resolve();
+      });
+    };
+    await renderRevision('runtime-old');
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    await act(async () => {
+      pending[0]?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'unsupported-action',
+          message: 'Unknown command',
+          recoverable: true,
+        },
+      });
+      await Promise.resolve();
+    });
+    expect(state?.directorySupported).toBe(false);
+
+    await renderRevision('runtime-new');
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(2));
+    });
+    await act(async () => {
+      pending[1]?.(createEmptyDirectoryResponse());
+      await Promise.resolve();
+    });
+    expect(state?.directorySupported).toBe(true);
+    expect(state?.directoryError).toBeNull();
+    expect(state?.directoryLoaded).toBe(true);
+    await act(async () => root.unmount());
+  });
+
   it('masks cached rows and ignores pending responses when the OpenCode binary changes', async () => {
     observeRuntimeProviderDirectoryRevision('runtime-v1');
     const previousEntry = {

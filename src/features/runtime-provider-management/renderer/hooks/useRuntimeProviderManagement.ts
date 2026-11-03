@@ -414,6 +414,7 @@ export function useRuntimeProviderManagement(
     setDirectorySelectedProviderId(null);
     appliedInitialProviderRef.current = null;
     setDirectoryLoaded(false);
+    setDirectorySupported(true);
     setDirectorySummary(options.directorySummaryOnEnable === true);
     setSetupForm(null);
     setSetupFormLoading(false);
@@ -548,7 +549,6 @@ export function useRuntimeProviderManagement(
       }
       setDirectoryError(null);
       setDirectoryErrorDiagnostics(null);
-
       try {
         const response = await api.runtimeProviderManagement.loadProviderDirectory({
           runtimeId: options.runtimeId,
