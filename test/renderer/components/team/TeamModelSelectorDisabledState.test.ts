@@ -1609,7 +1609,32 @@ describe('TeamModelSelector disabled Codex models', () => {
     const loadModels = vi.fn(
       () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
     );
-    installLoadModelsApi(loadModels);
+    installLoadModelsApi(loadModels, async (input) => ({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      scope: input.scope,
+      providers: [
+        {
+          preset: {
+            id: 'ollama',
+            providerId: 'ollama',
+            displayName: 'Ollama',
+            defaultBaseUrl: 'http://127.0.0.1:11434',
+            description: 'Test local provider',
+            scannable: true,
+          },
+          providerId: 'ollama',
+          baseUrl: 'http://127.0.0.1:11434',
+          configuredModelIds: ['local-a', 'local-b', 'local-c', 'local-d'],
+          defaultModelId: 'local-a',
+          isDefault: false,
+          state: 'available',
+          liveModels: [],
+          latencyMs: 1,
+          message: 'Connected',
+        },
+      ],
+    }));
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -1657,12 +1682,31 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
+    const zenTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-opencode"]'
+    );
+    await act(async () => {
+      zenTab?.click();
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
+        ?.textContent
+    ).toContain('4 configured');
+    const search = host.querySelector<HTMLInputElement>(
+      '[data-testid="team-model-selector-model-search"]'
+    );
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+        search,
+        'no-matching-local-model'
+      );
+      search?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-loading-skeleton"]')
     ).not.toBeNull();
-    expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
-    ).not.toBeNull();
+
     expect(host.textContent).toContain('Loading OpenCode models...');
     expect(host.textContent).toContain('Checking connected providers');
     expect(host.textContent).toContain('Models will appear automatically.');

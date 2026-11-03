@@ -2024,7 +2024,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       setSelectedOpenCodeRouteTags(new Set(['local']));
       return;
     }
-
     const selectedSourceId = selectedMetadata.sourceInfo?.id ?? null;
     if (
       !selectedSourceId ||
@@ -2032,33 +2031,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     ) {
       return;
     }
-
     lastAutoFocusedOpenCodeModelRef.current = selectedModel;
     autoFocusedOpenCodeSourceRef.current = selectedSourceId;
     setSelectedOpenCodeSourceIds(new Set([selectedSourceId]));
     setSelectedOpenCodeRouteTags(new Set());
   }, [effectiveProviderId, normalizedValue, openCodeModelMetadataByValue, openCodeProviderTabs]);
-
   useEffect(() => {
     if (previousSelectedProviderIdRef.current === selectedProviderId) {
       return;
     }
     previousSelectedProviderIdRef.current = selectedProviderId;
+    if (selectedProviderId !== 'opencode') {
+      setSelectedOpenCodeSourceIds(new Set());
+      setSelectedOpenCodeRouteTags(new Set());
+    }
     setInspectedProviderId(null);
   }, [selectedProviderId]);
-
   useEffect(() => {
     if (recommendedOnly && (effectiveProviderId !== 'opencode' || !hasRecommendedOpenCodeModels)) {
       setRecommendedOnly(false);
     }
   }, [effectiveProviderId, hasRecommendedOpenCodeModels, recommendedOnly]);
-
   useEffect(() => {
     if (freeOnly && (effectiveProviderId !== 'opencode' || !hasFreeOpenCodeModels)) {
       setFreeOnly(false);
     }
   }, [effectiveProviderId, freeOnly, hasFreeOpenCodeModels]);
-
   useEffect(() => {
     if (newOnly && (effectiveProviderId !== 'opencode' || !hasNewOpenCodeModels)) {
       setNewOnly(false);
@@ -2542,9 +2540,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     );
   };
   const shouldShowOpenCodeCatalogLoading =
-    openCodeCatalogLoading &&
-    openCodeLocalModelOverlay.options.length === 0 &&
-    concreteModelOptionCount === 0;
+    openCodeCatalogLoading && visibleConcreteModelOptionCount === 0;
   const shouldShowOpenCodeSourceSkeleton =
     openCodeCatalogLoading &&
     openCodeProviderTabs.length === 0 &&
