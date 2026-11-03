@@ -118,7 +118,7 @@ describe('runtimeProviderDirectoryCache', () => {
     });
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
-      entries: [{ ...providerEntry, state: 'needs-auth', connectedAuthHint: null }],
+      entries: [{ ...providerEntry, state: 'not-connected', connectedAuthHint: null }],
       fetchedAt: '2026-07-20T10:01:00.000Z',
       authoritative: false,
     });
@@ -129,7 +129,7 @@ describe('runtimeProviderDirectoryCache', () => {
       totalCount: 42,
       nextCursor: 'next-page',
       entries: [
-        { providerId: 'openrouter', state: 'needs-auth', connectedAuthHint: null },
+        { providerId: 'openrouter', state: 'not-connected', connectedAuthHint: null },
         { providerId: 'full-only', state: 'connected' },
       ],
     });
@@ -140,7 +140,7 @@ describe('runtimeProviderDirectoryCache', () => {
       fetchedAt: '2026-07-20T10:00:30.000Z',
       authoritative: false,
     });
-    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.entries[0]?.state).toBe('needs-auth');
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.entries[0]?.state).toBe('not-connected');
     // A newer complete directory supersedes the temporary summary state.
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
