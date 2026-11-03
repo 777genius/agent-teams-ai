@@ -4,7 +4,7 @@ import { api } from '@renderer/api';
 
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
-  invalidateRuntimeProviderDirectoryCache,
+  observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
 
@@ -40,7 +40,7 @@ export function useRuntimeProviderQuickConnect({
   runtimeRevision,
 }: UseRuntimeProviderQuickConnectOptions): RuntimeProviderQuickConnectDirectoryState {
   const currentProjectScope = projectPath?.trim() ?? '';
-  const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath);
+  const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
   const previousRefreshRequestSequence = useRef(0);
@@ -77,17 +77,16 @@ export function useRuntimeProviderQuickConnect({
   }, []);
 
   useEffect(() => {
-    if (
-      runtimeRevision !== null &&
-      previousRuntimeRevision.current !== null &&
-      runtimeRevision !== previousRuntimeRevision.current
-    ) {
-      invalidateRuntimeProviderDirectoryCache();
-      setEntries([]);
-      setLoaded(false);
-      setAuthoritativeLoaded(false);
+    if (runtimeRevision !== null) {
+      observeRuntimeProviderDirectoryRevision(runtimeRevision);
+      if (previousRuntimeRevision.current !== null &&
+          runtimeRevision !== previousRuntimeRevision.current) {
+        setEntries([]);
+        setLoaded(false);
+        setAuthoritativeLoaded(false);
+      }
+      previousRuntimeRevision.current = runtimeRevision;
     }
-    if (runtimeRevision !== null) previousRuntimeRevision.current = runtimeRevision;
   }, [runtimeRevision]);
 
   useEffect(() => {
@@ -106,7 +105,7 @@ export function useRuntimeProviderQuickConnect({
     const projectScopeChanged = previousProjectScope.current !== projectScope;
     previousProjectScope.current = projectScope;
     if (projectScopeChanged) {
-      const cachedDirectory = getRuntimeProviderDirectoryCacheSnapshot(projectPath);
+      const cachedDirectory = getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
       setDirectoryProjectScope(projectScope);
       setEntries(cachedDirectory?.entries ?? []);
       setLoaded(Boolean(cachedDirectory));
@@ -147,6 +146,7 @@ export function useRuntimeProviderQuickConnect({
           entries: response.directory.entries,
           fetchedAt: response.directory.fetchedAt,
           authoritative: false,
+          runtimeRevision,
         });
         setError(null);
         setLoaded(true);
@@ -190,7 +190,7 @@ export function useRuntimeProviderQuickConnect({
   const transitionDirectoryCache =
     directoryProjectScope === currentProjectScope
       ? null
-      : getRuntimeProviderDirectoryCacheSnapshot(projectPath);
+      : getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
   const isProjectScopeTransition = directoryProjectScope !== currentProjectScope;
 
   return {
