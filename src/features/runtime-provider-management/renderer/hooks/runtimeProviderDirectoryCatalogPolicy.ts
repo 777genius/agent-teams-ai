@@ -23,11 +23,10 @@ export function shouldKeepVisibleDirectoryRows(input: {
   if (input.append) {
     return false;
   }
-  const replacingSummary = input.directorySummary && input.requestedSummary === false;
+  // Revalidating a cached summary must keep its already useful rows visible.
   return (
-    replacingSummary ||
-    input.refreshDirectoryData ||
-    (input.requestedSummary === false && input.visibleEntryCount > 0)
+    input.visibleEntryCount > 0 &&
+    (input.directorySummary || input.refreshDirectoryData || input.requestedSummary === false)
   );
 }
 
