@@ -97,6 +97,7 @@ export function useRuntimeProviderQuickConnect({
 
     const requestId = requestSequence.current + 1;
     requestSequence.current = requestId;
+    const requestRuntimeRevision = previousRuntimeRevision.current;
     const refreshRequested =
       refreshRequestSequence !== previousRefreshRequestSequence.current ||
       refreshKey !== previousRefreshKey.current;
@@ -107,7 +108,7 @@ export function useRuntimeProviderQuickConnect({
     if (projectScopeChanged) {
       const cachedDirectory = getRuntimeProviderDirectoryCacheSnapshot(
         projectPath,
-        previousRuntimeRevision.current
+        requestRuntimeRevision
       );
       setDirectoryProjectScope(projectScope);
       setEntries(cachedDirectory?.entries ?? []);
@@ -149,7 +150,7 @@ export function useRuntimeProviderQuickConnect({
           entries: response.directory.entries,
           fetchedAt: response.directory.fetchedAt,
           authoritative: false,
-          runtimeRevision: previousRuntimeRevision.current,
+          runtimeRevision: requestRuntimeRevision,
         });
         setError(null);
         setLoaded(true);
