@@ -58,6 +58,7 @@ import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery
 import {
   getActionableOpenCodeDiagnostics,
   hasActionableOpenCodeStatusIssue,
+  hasTopLevelOpenCodeFailure,
   sanitizeOpenCodeStatusText,
 } from './openCodeStatusPresentation';
 import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
@@ -1187,11 +1188,12 @@ export const ProviderRuntimeSettingsDialog = ({
     Boolean(selectedProvider) &&
     !connectionManagedRuntime &&
     (!showRuntimeProviderManagement || openCodeStatusIssue);
+  const openCodeTopLevelFailure = selectedProvider && hasTopLevelOpenCodeFailure(selectedProvider);
   const selectedProviderSummaryLabel = maskCodexNegativeBootstrapState
     ? t('providerRuntime.connectionUi.status.checking')
     : openCodeStatusIssue
       ? sanitizeOpenCodeStatusText(
-          selectedProvider?.statusMessage && !/passive/i.test(selectedProvider.statusMessage)
+          openCodeTopLevelFailure && selectedProvider?.statusMessage && !/passive/i.test(selectedProvider.statusMessage)
             ? selectedProvider.statusMessage
             : t('providerRuntime.connectionUi.status.unableToVerify')
         )
@@ -1201,7 +1203,7 @@ export const ProviderRuntimeSettingsDialog = ({
   const selectedProviderDetailMessage = maskCodexNegativeBootstrapState
     ? null
     : selectedProvider?.providerId === 'opencode'
-      ? openCodeStatusIssue && selectedProvider.detailMessage
+      ? openCodeTopLevelFailure && selectedProvider.detailMessage
         ? sanitizeOpenCodeStatusText(selectedProvider.detailMessage)
         : null
       : (selectedProvider?.detailMessage ?? null);
