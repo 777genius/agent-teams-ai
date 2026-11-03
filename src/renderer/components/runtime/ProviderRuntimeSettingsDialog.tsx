@@ -54,12 +54,12 @@ import {
   shouldOfferCodexRuntimeInstall,
 } from './codexRuntimeInstallAction';
 import { ConnectionMethodCards } from './ConnectionMethodCards';
+import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery';
 import {
   getActionableOpenCodeDiagnostics,
   hasActionableOpenCodeStatusIssue,
   sanitizeOpenCodeStatusText,
 } from './openCodeStatusPresentation';
-import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery';
 import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
 import {
   getConnectionMethodCardOptions,
