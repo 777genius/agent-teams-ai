@@ -1,8 +1,17 @@
 import { CUSTOM_TEAM_TEMPLATE_ROUTES } from '../../contracts';
 
-import type { CustomTeamTemplatesApi } from '../../contracts';
+import { CustomTeamTemplateBrowserFileService } from './browserCustomTeamTemplatesFile';
+
+import type {
+  CustomTeamTemplatesApi,
+  ExportCustomTeamTemplateResult,
+  ImportCustomTeamTemplateResult,
+} from '../../contracts';
 
 const REQUEST_TIMEOUT_MS = 10_000;
+// Portable files can reach 128 MiB; uploading/downloading them needs more time
+// than a metadata request, while a stalled transfer must still settle.
+const FILE_TRANSFER_TIMEOUT_MS = 120_000;
 
 /**
  * Browser-mode counterpart of the preload bridge.
@@ -14,15 +23,18 @@ const REQUEST_TIMEOUT_MS = 10_000;
  * error here can never be mistaken for an empty library or a completed save.
  */
 export function createHttpCustomTeamTemplatesApi(baseUrl: string): CustomTeamTemplatesApi {
-  const request = async <T>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> => {
+  const request = async <T>(
+    path: string,
+    method: 'GET' | 'POST',
+    body?: string,
+    timeoutMs = REQUEST_TIMEOUT_MS
+  ): Promise<T> => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(`${baseUrl}${path}`, {
         method,
-        ...(body === undefined
-          ? {}
-          : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+        ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body }),
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -34,19 +46,50 @@ export function createHttpCustomTeamTemplatesApi(baseUrl: string): CustomTeamTem
     }
   };
 
+  const post = async <T>(path: string, payload: unknown): Promise<T> =>
+    request(path, 'POST', JSON.stringify(payload));
+
+  const importTemplate = async (payload: unknown): Promise<ImportCustomTeamTemplateResult> => {
+    let body: string | undefined;
+    try {
+      body = JSON.stringify(payload);
+    } catch {
+      // Deep JSON can parse successfully but fail to serialize. No request has
+      // been sent, so this is a definitive input failure, never a possible write.
+      return { status: 'unsupportedFormat' };
+    }
+    return request(
+      CUSTOM_TEAM_TEMPLATE_ROUTES.importTemplate,
+      'POST',
+      body,
+      FILE_TRANSFER_TIMEOUT_MS
+    );
+  };
+  const exportTemplate = async (payload: unknown): Promise<ExportCustomTeamTemplateResult> =>
+    request(
+      CUSTOM_TEAM_TEMPLATE_ROUTES.exportTemplate,
+      'POST',
+      JSON.stringify(payload),
+      FILE_TRANSFER_TIMEOUT_MS
+    );
+
+  const browserFile = new CustomTeamTemplateBrowserFileService({
+    importTemplate,
+    exportTemplate,
+  });
+
   return {
-    preparePreview: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.preparePreview, 'POST', payload),
-    saveTemplate: (payload) => request(CUSTOM_TEAM_TEMPLATE_ROUTES.saveTemplate, 'POST', payload),
-    recheckSave: (payload) => request(CUSTOM_TEAM_TEMPLATE_ROUTES.recheckSave, 'POST', payload),
+    preparePreview: (payload) => post(CUSTOM_TEAM_TEMPLATE_ROUTES.preparePreview, payload),
+    saveTemplate: (payload) => post(CUSTOM_TEAM_TEMPLATE_ROUTES.saveTemplate, payload),
+    recheckSave: (payload) => post(CUSTOM_TEAM_TEMPLATE_ROUTES.recheckSave, payload),
     listTemplates: () => request(CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates, 'GET'),
-    updateTemplate: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate, 'POST', payload),
-    deleteTemplate: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.deleteTemplate, 'POST', payload),
-    duplicateTemplate: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate, 'POST', payload),
+    updateTemplate: (payload) => post(CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate, payload),
+    deleteTemplate: (payload) => post(CUSTOM_TEAM_TEMPLATE_ROUTES.deleteTemplate, payload),
+    duplicateTemplate: (payload) => post(CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate, payload),
     copyBuiltinTemplate: (payload) =>
-      request(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, 'POST', payload),
+      post(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, payload),
+    exportTemplate: (payload) => exportTemplate(payload),
+    importTemplate: (payload) => importTemplate(payload),
+    browserFile,
   };
 }

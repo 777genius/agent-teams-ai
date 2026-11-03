@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { AlertTriangle, Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Copy, Download, Pencil, RefreshCw, Trash2, Upload } from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
 import { useTemplateManagement } from '../hooks/useTemplateManagement';
@@ -21,6 +21,8 @@ import { CopyBuiltinTemplateDialog } from './CopyBuiltinTemplateDialog';
 import { DeleteCustomTemplateDialog } from './DeleteCustomTemplateDialog';
 import { DuplicateCustomTemplateDialog } from './DuplicateCustomTemplateDialog';
 import { EditCustomTemplateDialog } from './EditCustomTemplateDialog';
+import { ExportCustomTeamTemplateDialog } from './ExportCustomTeamTemplateDialog';
+import { ImportCustomTeamTemplateDialog } from './ImportCustomTeamTemplateDialog';
 
 import type {
   BuiltinTeamTemplateId,
@@ -51,29 +53,35 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   const [editingTemplate, setEditingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [duplicatingTemplate, setDuplicatingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
+  const [exportingTemplate, setExportingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
   const [copyBuiltinOpen, setCopyBuiltinOpen] = useState(false);
   const [copyBuiltinId, setCopyBuiltinId] = useState<BuiltinTeamTemplateId | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const failed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
 
-  const handleEditSaved = (_updated: CustomTeamTemplateV1) => {
+  const handleEditSaved = (_updated: CustomTeamTemplateV1): void => {
     setEditingTemplate(null);
     void reload();
   };
 
-  const handleDuplicated = () => {
+  const handleDuplicated = (): void => {
     setDuplicatingTemplate(null);
     void reload();
   };
 
-  const handleDeleted = () => {
+  const handleDeleted = (): void => {
     setDeletingTemplate(null);
     void reload();
   };
 
-  const handleCopied = () => {
+  const handleCopied = (): void => {
     setCopyBuiltinOpen(false);
     void reload();
+  };
+
+  const handleExport = (template: CustomTeamTemplateV1): void => {
+    setExportingTemplate(template);
   };
 
   return (
@@ -111,85 +119,118 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                 </div>
               ) : null}
 
-              {state.status === 'ready' || state.status === 'partial' ? (
-                <ul className="space-y-2" data-testid="custom-template-library">
-                  {state.templates.map((template) => {
-                    const createdAt = formatCreatedAt(template.createdAt);
-                    return (
-                      <li
-                        key={template.templateId}
-                        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3"
-                      >
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <span className="text-sm font-semibold text-[var(--color-text)]">
-                            {template.name}
-                          </span>
-                          {createdAt ? (
-                            <span className="text-xs text-[var(--color-text-muted)]">
-                              {t('customTemplates.library.createdAt', { date: createdAt })}
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {template.description?.trim()
-                            ? template.description
-                            : t('customTemplates.library.noDescription')}
-                        </p>
-                        <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-                          {template.members.length > 0
-                            ? t('customTemplates.library.memberNames', {
-                                names: template.members.map((member) => member.name).join(', '),
-                              })
-                            : t('customTemplates.library.noMembers')}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            data-testid={`edit-template-${template.templateId}`}
-                            disabled={management.busy}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTemplate(template);
-                            }}
+              {state.status === 'ready' ||
+              state.status === 'partial' ||
+              state.status === 'empty' ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="import-template-button"
+                      disabled={management.busy || importOpen}
+                      onClick={() => setImportOpen(true)}
+                    >
+                      <Upload className="mr-1.5 size-3.5" />
+                      {t('customTemplates.import.action')}
+                    </Button>
+                  </div>
+                  {(state.status === 'ready' || state.status === 'partial') && (
+                    <ul className="mt-3 space-y-2" data-testid="custom-template-library">
+                      {state.templates.map((template) => {
+                        const createdAt = formatCreatedAt(template.createdAt);
+                        return (
+                          <li
+                            key={template.templateId}
+                            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3"
                           >
-                            <Pencil className="size-3.5" />
-                            {t('customTemplates.actions.edit')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            data-testid={`duplicate-template-${template.templateId}`}
-                            disabled={management.busy}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDuplicatingTemplate(template);
-                            }}
-                          >
-                            <Copy className="size-3.5" />
-                            {t('customTemplates.actions.duplicate')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            data-testid={`delete-template-${template.templateId}`}
-                            disabled={management.busy}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingTemplate(template);
-                            }}
-                          >
-                            <Trash2 className="size-3.5" />
-                            {t('customTemplates.actions.delete')}
-                          </Button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <span className="text-sm font-semibold text-[var(--color-text)]">
+                                {template.name}
+                              </span>
+                              {createdAt ? (
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                  {t('customTemplates.library.createdAt', { date: createdAt })}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                              {template.description?.trim()
+                                ? template.description
+                                : t('customTemplates.library.noDescription')}
+                            </p>
+                            <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+                              {template.members.length > 0
+                                ? t('customTemplates.library.memberNames', {
+                                    names: template.members.map((member) => member.name).join(', '),
+                                  })
+                                : t('customTemplates.library.noMembers')}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                data-testid={`edit-template-${template.templateId}`}
+                                disabled={management.busy}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTemplate(template);
+                                }}
+                              >
+                                <Pencil className="size-3.5" />
+                                {t('customTemplates.actions.edit')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                data-testid={`duplicate-template-${template.templateId}`}
+                                disabled={management.busy}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDuplicatingTemplate(template);
+                                }}
+                              >
+                                <Copy className="size-3.5" />
+                                {t('customTemplates.actions.duplicate')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                data-testid={`delete-template-${template.templateId}`}
+                                disabled={management.busy}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingTemplate(template);
+                                }}
+                              >
+                                <Trash2 className="size-3.5" />
+                                {t('customTemplates.actions.delete')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                data-testid={`export-template-${template.templateId}`}
+                                disabled={management.busy || exportingTemplate !== null}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleExport(template);
+                                }}
+                              >
+                                <Download className="size-3.5" />
+                                {t('customTemplates.actions.export')}
+                              </Button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </>
               ) : null}
 
               {state.status === 'partial' ? (
@@ -286,6 +327,21 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           onCopied={handleCopied}
           initialBuiltinId={copyBuiltinId ?? undefined}
         />
+        <ImportCustomTeamTemplateDialog
+          open={importOpen}
+          onClose={() => {
+            setImportOpen(false);
+            void reload();
+          }}
+        />
+        {exportingTemplate && (
+          <ExportCustomTeamTemplateDialog
+            open={true}
+            templateId={exportingTemplate.templateId}
+            templateName={exportingTemplate.name}
+            onClose={() => setExportingTemplate(null)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

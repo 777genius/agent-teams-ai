@@ -17,6 +17,8 @@ export const CUSTOM_TEAM_TEMPLATE_CHANNELS = {
   deleteTemplate: 'custom-team-templates:delete',
   duplicateTemplate: 'custom-team-templates:duplicate',
   copyBuiltinTemplate: 'custom-team-templates:copy-builtin',
+  exportTemplate: 'custom-team-templates:export',
+  importTemplate: 'custom-team-templates:import',
 } as const;
 
 export const CUSTOM_TEAM_TEMPLATE_ROUTES = {
@@ -28,6 +30,8 @@ export const CUSTOM_TEAM_TEMPLATE_ROUTES = {
   deleteTemplate: '/api/custom-team-templates/delete',
   duplicateTemplate: '/api/custom-team-templates/duplicate',
   copyBuiltinTemplate: '/api/custom-team-templates/copy-builtin',
+  exportTemplate: '/api/custom-team-templates/export',
+  importTemplate: '/api/custom-team-templates/import',
 } as const;
 
 export type CustomTeamTemplateOperation = keyof typeof CUSTOM_TEAM_TEMPLATE_CHANNELS;

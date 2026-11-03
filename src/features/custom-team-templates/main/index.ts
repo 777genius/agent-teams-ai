@@ -11,11 +11,18 @@
  */
 export { registerCustomTeamTemplatesHttp } from './adapters/input/http/registerCustomTeamTemplatesHttp';
 export {
+  registerCustomTeamTemplatesFileIpc,
+  removeCustomTeamTemplatesFileIpc,
+} from './adapters/input/ipc/registerCustomTeamTemplatesFileIpc';
+export {
   registerCustomTeamTemplatesIpc,
   removeCustomTeamTemplatesIpc,
 } from './adapters/input/ipc/registerCustomTeamTemplatesIpc';
+export { ElectronCustomTeamTemplateFileGateway } from './adapters/output/ElectronCustomTeamTemplateFileGateway';
 export type {
   CustomTeamTemplatesFeature,
   CustomTeamTemplatesFeatureDeps,
 } from './composition/createCustomTeamTemplatesFeature';
 export { createCustomTeamTemplatesFeature } from './composition/createCustomTeamTemplatesFeature';
+export type { CustomTeamTemplateDesktopFileServiceDeps } from './services/CustomTeamTemplateDesktopFileService';
+export { CustomTeamTemplateDesktopFileService } from './services/CustomTeamTemplateDesktopFileService';

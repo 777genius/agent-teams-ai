@@ -7,10 +7,21 @@ const preparePreview = vi.hoisted(() => vi.fn());
 const saveTemplate = vi.hoisted(() => vi.fn());
 const recheckSave = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
+const importTemplate = vi.hoisted(() => vi.fn());
+const browserFile = vi.hoisted(() => ({ importFromFile: vi.fn(), exportToFile: vi.fn() }));
+const desktopFile = vi.hoisted(() => ({ importFromFile: vi.fn(), exportToFile: vi.fn() }));
 
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
-  api: { customTeamTemplates: { preparePreview, saveTemplate, recheckSave, listTemplates } },
+  api: {
+    customTeamTemplates: {
+      preparePreview,
+      saveTemplate,
+      recheckSave,
+      listTemplates,
+      importTemplate,
+    },
+  },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -57,6 +68,16 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     React.createElement('header', null, children),
   DialogTitle: ({ children }: { children: React.ReactNode }) =>
     React.createElement('h2', null, children),
+}));
+vi.mock('../hooks/useTemplateFileOperations', () => ({
+  useTemplateFileOperations: vi.fn(() => ({
+    platform: 'browser',
+    desktopFile: undefined,
+    browserFile,
+  })),
+}));
+vi.mock('../hooks/useTemplateImport', () => ({
+  useTemplateImport: vi.fn(() => ({ importTemplate })),
 }));
 
 import { TEAM_TEMPLATES } from '@features/team-templates';
@@ -114,7 +135,6 @@ function tabTrigger(label: string): HTMLElement {
 }
 
 async function selectTab(label: string): Promise<void> {
-  // Radix Tabs activates on mousedown (see RuntimeProviderManagementPanelView tests).
   await act(async () => {
     tabTrigger(label).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     await Promise.resolve();
@@ -132,6 +152,11 @@ beforeEach(() => {
   saveTemplate.mockReset();
   recheckSave.mockReset();
   listTemplates.mockReset();
+  importTemplate.mockReset();
+  browserFile.importFromFile.mockReset();
+  browserFile.exportToFile.mockReset();
+  desktopFile.importFromFile.mockReset();
+  desktopFile.exportToFile.mockReset();
   listTemplates.mockResolvedValue({ status: 'ready', templates });
   onClose = vi.fn();
   host = document.createElement('div');
@@ -379,5 +404,181 @@ describe('MyTemplatesDialog', () => {
     });
     // Selection state is always exposed, even if jsdom does not move Radix focus.
     expect(host.querySelector('[role="tab"][aria-selected="true"]')).not.toBeNull();
+  });
+
+  describe('Import action availability', () => {
+    it('shows Import action in empty library state', async () => {
+      listTemplates.mockResolvedValue({ status: 'empty' });
+      await render();
+      expect(host.querySelector('[data-testid="import-template-button"]')).not.toBeNull();
+    });
+
+    it('shows Import action in ready library state', async () => {
+      listTemplates.mockResolvedValue({ status: 'ready', templates });
+      await render();
+      expect(host.querySelector('[data-testid="import-template-button"]')).not.toBeNull();
+    });
+
+    it('shows Import action in partial library state', async () => {
+      listTemplates.mockResolvedValue({
+        status: 'hasUnreadableRecords',
+        templates,
+        unreadableRecords: [{ templateId: 'template-x', reason: 'unreadableRecord' }],
+      });
+      await render();
+      expect(host.querySelector('[data-testid="import-template-button"]')).not.toBeNull();
+    });
+
+    it('does not place Import action in the Built-in tab', async () => {
+      await render();
+      await selectTab('customTemplates.library.tabs.builtIn');
+      expect(host.querySelector('[data-testid="import-template-button"]')).toBeNull();
+    });
+
+    it('clicking Import opens the import dialog', async () => {
+      listTemplates.mockResolvedValue({ status: 'empty' });
+      await render();
+      const importButton = host.querySelector<HTMLButtonElement>(
+        '[data-testid="import-template-button"]'
+      )!;
+      expect(importButton).not.toBeNull();
+      await act(async () => {
+        importButton.click();
+      });
+      // Import dialog renders when importOpen is set
+      expect(host.querySelector('[data-testid="import-template-done"]')).toBeNull();
+      expect(host.textContent).toContain('customTemplates.import.title');
+    });
+
+    it('closing after successful import reloads the library', async () => {
+      listTemplates.mockResolvedValue({ status: 'empty' });
+      browserFile.importFromFile.mockResolvedValue({
+        status: 'imported',
+        template: {
+          templateId: 'tmpl-new',
+          name: 'New Template',
+          schemaVersion: 1,
+          teamPrompt: '',
+          members: [],
+          revision: 1,
+        },
+      });
+
+      await render();
+      const importButton = host.querySelector<HTMLButtonElement>(
+        '[data-testid="import-template-button"]'
+      )!;
+      await act(async () => {
+        importButton.click();
+      });
+
+      // Simulate import completion: the parent sets importOpen=false and calls reload
+      // The import dialog's close button triggers onClose which calls reload
+      const closeButtons = Array.from(host.querySelectorAll('button')).filter((b) =>
+        b.textContent?.includes('actions.close')
+      );
+      expect(closeButtons.length).toBeGreaterThan(0);
+      await act(async () => {
+        closeButtons[closeButtons.length - 1].click();
+      });
+      expect(listTemplates).toHaveBeenCalledTimes(2); // initial + reload
+    });
+
+    it('shows the imported template after the first import into an empty library', async () => {
+      const portableDocument = {
+        format: 'agent-teams-custom-template',
+        schemaVersion: 1,
+        name: 'First Template',
+        description: 'Imported from a file.',
+        teamPrompt: 'Coordinate the work.',
+        members: [{ name: 'ann', role: 'Developer' }],
+      };
+      listTemplates.mockResolvedValueOnce({ status: 'empty' }).mockResolvedValueOnce({
+        status: 'ready',
+        templates: [
+          {
+            templateId: 'tmpl-new',
+            name: 'First Template',
+            description: 'Imported from a file.',
+            schemaVersion: 1,
+            teamPrompt: 'Coordinate the work.',
+            members: [{ name: 'ann', role: 'Developer' }],
+            revision: 1,
+          },
+        ],
+      });
+      browserFile.importFromFile.mockResolvedValue({
+        status: 'imported',
+        template: {
+          templateId: 'tmpl-new',
+          name: 'First Template',
+          description: 'Imported from a file.',
+          schemaVersion: 1,
+          teamPrompt: 'Coordinate the work.',
+          members: [{ name: 'ann', role: 'Developer' }],
+          revision: 1,
+        },
+      });
+
+      await render();
+      // The library starts empty and offers the import action.
+      expect(host.textContent).toContain('customTemplates.library.empty');
+      expect(host.textContent).not.toContain('First Template');
+
+      await act(async () => {
+        button('customTemplates.import.action').click();
+      });
+      const fileInput = host.querySelector<HTMLInputElement>('#import-file-input');
+      expect(fileInput).not.toBeNull();
+      Object.defineProperty(fileInput, 'files', {
+        value: [
+          new File([JSON.stringify(portableDocument)], 'template.json', {
+            type: 'application/json',
+          }),
+        ],
+        configurable: true,
+      });
+      await act(async () => {
+        fileInput?.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[data-testid="import-template-done"]')).not.toBeNull();
+
+      // Closing the import dialog makes the parent reload the library.
+      const closeButtons = Array.from(host.querySelectorAll('button')).filter((candidate) =>
+        candidate.textContent?.includes('actions.close')
+      );
+      expect(closeButtons.length).toBeGreaterThan(0);
+      await act(async () => {
+        closeButtons[closeButtons.length - 1].click();
+      });
+
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+      // The imported template is the visible library content, not just a refetch.
+      const library = host.querySelector('[data-testid="custom-template-library"]');
+      expect(library).not.toBeNull();
+      expect(library?.textContent).toContain('First Template');
+      expect(library?.textContent).toContain('Imported from a file.');
+      expect(host.textContent).not.toContain('customTemplates.library.empty');
+    });
+  });
+
+  describe('Export action availability', () => {
+    it('does not add Export action to Built-in tab records', async () => {
+      await render();
+      await selectTab('customTemplates.library.tabs.builtIn');
+      const exportButtons = Array.from(host.querySelectorAll('button')).filter((b) =>
+        b.textContent?.includes('customTemplates.actions.export')
+      );
+      expect(exportButtons).toHaveLength(0);
+    });
+
+    it('keeps Copy Built-in workflow working', async () => {
+      await render();
+      await selectTab('customTemplates.library.tabs.builtIn');
+      const copyButton = host.querySelector('[data-testid="copy-builtin-open"]');
+      expect(copyButton).not.toBeNull();
+    });
   });
 });

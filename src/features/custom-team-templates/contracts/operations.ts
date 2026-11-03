@@ -1,3 +1,4 @@
+import type { PortableCustomTeamTemplateV1 } from './portableTemplate';
 import type { CustomTeamTemplateMemberV1, CustomTeamTemplateV1 } from './template';
 import type { CustomTeamTemplateWarning } from './warnings';
 
@@ -10,6 +11,7 @@ export type CustomTeamTemplateValidationIssueCode =
   | 'templateNameTooLong'
   | 'templateNameInvalidCharacters'
   | 'templateDescriptionTooLong'
+  | 'teamPromptInvalidType'
   | 'teamPromptTooLong'
   | 'tooManyMembers'
   | 'memberNameRequired'
@@ -17,6 +19,12 @@ export type CustomTeamTemplateValidationIssueCode =
   | 'duplicateMemberName'
   | 'memberRoleTooLong'
   | 'memberWorkflowTooLong'
+  /**
+   * The imported document carries an own property outside the portable
+   * allowlist. `field` is the offending path (`templateId`,
+   * `members[2].provider`) and `parameter` is the bare property name.
+   */
+  | 'unexpectedProperty'
   /** The requested source team identity is missing or not a valid team identity. */
   | 'sourceTeamNameInvalid'
   /** Confirm-save arrived without a usable preview token. */
@@ -30,6 +38,14 @@ export interface CustomTeamTemplateValidationIssue {
   code: CustomTeamTemplateValidationIssueCode;
   /** Stable field path, e.g. `name`, `description`, `teamPrompt`, `members[0].role`. */
   field: string;
+  /**
+   * Optional interpolation value for codes whose message names the offending
+   * input, e.g. the bare property name for `unexpectedProperty`.
+   *
+   * Renderers must interpolate it as text through the localization layer; it is
+   * untrusted file content and must never be treated as markup or as a path.
+   */
+  parameter?: string;
 }
 
 /**
@@ -265,5 +281,41 @@ export type CopyBuiltinTemplateResult =
   | { status: 'nameConflict'; existingTemplateId: string }
   | { status: 'templateIdConflict'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };
+
+export interface ExportCustomTeamTemplateRequest {
+  templateId: string;
+}
+
+export type ExportCustomTeamTemplateResult =
+  | { status: 'exported'; portable: PortableCustomTeamTemplateV1 }
+  | { status: 'notFound'; templateId: string }
+  | { status: 'unreadableRecord'; templateId: string }
+  | { status: 'storageUnavailable' };
+
+export interface ImportCustomTeamTemplateRequest {
+  portable: unknown;
+  name?: string;
+}
+
+export type ImportCustomTeamTemplateResult =
+  | { status: 'imported'; template: CustomTeamTemplateV1 }
+  | {
+      status: 'nameConflict';
+      existingTemplateId: string;
+      /**
+       * Sanitized portable content that was validated before the conflict was
+       * detected. It lets a rename retry reuse exactly the reviewed content
+       * instead of re-reading or re-parsing an untrusted file.
+       */
+      portable: PortableCustomTeamTemplateV1;
+    }
+  | { status: 'templateIdConflict'; templateId: string }
+  | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
+  // Status-only: the rejected format/version is untrusted file content and must
+  // never be echoed back through IPC or HTTP responses.
+  | { status: 'unsupportedFormat' }
+  | { status: 'unsupportedVersion' }
   | { status: 'storageUnavailable' }
   | { status: 'unresolvedWriteOutcome'; templateId: string };

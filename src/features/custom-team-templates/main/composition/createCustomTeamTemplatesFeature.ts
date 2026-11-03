@@ -5,6 +5,8 @@ import { TEAM_TEMPLATES } from '@features/team-templates';
 import { CopyBuiltinTemplateUseCase } from '../../core/application/CopyBuiltinTemplateUseCase';
 import { DeleteCustomTeamTemplateUseCase } from '../../core/application/DeleteCustomTeamTemplateUseCase';
 import { DuplicateCustomTeamTemplateUseCase } from '../../core/application/DuplicateCustomTeamTemplateUseCase';
+import { ExportCustomTeamTemplateUseCase } from '../../core/application/ExportCustomTeamTemplateUseCase';
+import { ImportCustomTeamTemplateUseCase } from '../../core/application/ImportCustomTeamTemplateUseCase';
 import { InMemoryCustomTeamTemplatePreviewStore } from '../../core/application/InMemoryCustomTeamTemplatePreviewStore';
 import { ListCustomTeamTemplatesUseCase } from '../../core/application/ListCustomTeamTemplatesUseCase';
 import { PrepareCustomTemplatePreviewUseCase } from '../../core/application/PrepareCustomTemplatePreviewUseCase';
@@ -67,6 +69,8 @@ export interface CustomTeamTemplatesFeature {
   deleteTemplate: DeleteCustomTeamTemplateUseCase;
   duplicateTemplate: DuplicateCustomTeamTemplateUseCase;
   copyBuiltinTemplate: CopyBuiltinTemplateUseCase;
+  exportTemplate: ExportCustomTeamTemplateUseCase;
+  importTemplate: ImportCustomTeamTemplateUseCase;
   /**
    * Drops every retained preview and confirmed operation.
    *
@@ -126,6 +130,12 @@ export function createCustomTeamTemplatesFeature(
       gateway,
       hasher,
       resolveBuiltin: deps.resolveBuiltinTemplate ?? resolveBuiltinTemplateContent,
+      createTemplateId: deps.createTemplateId ?? (() => `tmpl-${randomUUID()}`),
+    }),
+    exportTemplate: new ExportCustomTeamTemplateUseCase({ gateway }),
+    importTemplate: new ImportCustomTeamTemplateUseCase({
+      gateway,
+      hasher,
       createTemplateId: deps.createTemplateId ?? (() => `tmpl-${randomUUID()}`),
     }),
     dispose: () => previewStore.clear(),

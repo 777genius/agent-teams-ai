@@ -40,6 +40,12 @@ export function registerCustomTeamTemplatesIpc(
   ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.copyBuiltinTemplate, (_event, request: unknown) =>
     feature.copyBuiltinTemplate.execute(request)
   );
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.exportTemplate, (_event, request: unknown) =>
+    feature.exportTemplate.execute(request)
+  );
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.importTemplate, (_event, request: unknown) =>
+    feature.importTemplate.execute(request)
+  );
 }
 
 /** Removes every custom-team-templates IPC handler on shutdown. */
