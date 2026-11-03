@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { runtimeProviderDirectoryInteraction } from '../../../../src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction';
+
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  invalidateRuntimeProviderDirectoryCache,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
+  observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
@@ -68,6 +72,187 @@ describe('runtimeProviderDirectoryCache', () => {
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toMatchObject({
       authoritative: true,
       entries: [{ providerId: 'openrouter' }],
+    });
+  });
+
+  it('does not downgrade a populated full catalog to a later curated summary', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [providerEntry, { ...providerEntry, providerId: 'full-only' }],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+    });
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      authoritative: true,
+      entries: [{ providerId: 'openrouter' }, { providerId: 'full-only' }],
+    });
+
+    invalidateRuntimeProviderDirectoryCache();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      authoritative: false,
+      entries: [{ providerId: 'openrouter' }],
+    });
+  });
+
+  it('overlays newer summary connection state without shrinking full inventory or metadata', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [
+        providerEntry,
+        { ...providerEntry, providerId: 'full-only', ownership: ['managed'] },
+      ],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      totalCount: 42,
+      nextCursor: 'next-page',
+    });
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{
+        ...providerEntry,
+        state: 'not-connected',
+        connectedAuthHint: null,
+        setupKind: 'connect-api-key',
+        ownership: [],
+      }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      lastSummaryFetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      totalCount: 42,
+      nextCursor: 'next-page',
+      entries: [
+        { providerId: 'openrouter', state: 'not-connected', setupKind: 'connect-api-key', ownership: [], connectedAuthHint: null },
+        { providerId: 'full-only', state: 'connected' },
+      ],
+    });
+    // A delayed summary cannot put the credential back after logout.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...providerEntry, state: 'connected' }],
+      fetchedAt: '2026-07-20T10:00:30.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.entries[0]?.state).toBe('not-connected');
+    // A newer complete directory supersedes the temporary summary state.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...providerEntry, state: 'connected' }],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      authoritative: true,
+      entries: [{ providerId: 'openrouter', state: 'connected' }],
+      totalCount: 1,
+    });
+  });
+
+  it('replaces stale connected actions when a newer summary reports logout', () => {
+    const fullActions = [
+      {
+        id: 'test' as const, label: 'Test', enabled: true, disabledReason: null,
+        requiresSecret: false, ownershipScope: 'runtime' as const,
+      },
+      {
+        id: 'forget' as const, label: 'Remove managed credential', enabled: true,
+        disabledReason: null, requiresSecret: false, ownershipScope: 'managed' as const,
+      },
+    ];
+    const connectedEntry = { ...providerEntry, ownership: ['managed'] as const, actions: fullActions };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [connectedEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+    });
+    // The passive summary cannot expose the live Forget capability. An
+    // unchanged connection must retain it along with the full model inventory.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...connectedEntry, actions: [fullActions[0]] }],
+      fetchedAt: '2026-07-20T10:00:30.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.entries[0]?.actions).toEqual(fullActions);
+    const connectAction = {
+      id: 'connect' as const, label: 'Connect', enabled: true, disabledReason: null,
+      requiresSecret: true, ownershipScope: 'managed' as const,
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{
+        ...providerEntry,
+        state: 'not-connected',
+        connectedAuthHint: null,
+        setupKind: 'connect-api-key',
+        ownership: [],
+        actions: [connectAction],
+      }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+    });
+
+    const cached = getRuntimeProviderDirectoryCacheSnapshot(null);
+    expect(cached?.authoritative).toBe(true);
+    expect(cached?.entries[0]?.modelCount).toBe(providerEntry.modelCount);
+    expect(runtimeProviderDirectoryInteraction(cached?.entries[0])).toEqual({
+      canOpenConnect: true,
+      canSelectModels: false,
+    });
+    expect(cached?.entries[0]?.actions).toEqual([connectAction]);
+  });
+
+  it('rejects cached snapshots from another settled binary revision', () => {
+    observeRuntimeProviderDirectoryRevision('runtime-v1');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-v1',
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a', 'runtime-v1')?.entries)
+      .toHaveLength(1);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a', 'runtime-v2')).toBeNull();
+    observeRuntimeProviderDirectoryRevision('runtime-v2');
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    // In-flight old runtime results cannot contaminate the new runtime cache.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-v1',
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: false,
+      runtimeRevision: 'runtime-v2',
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toMatchObject({
+      runtimeRevision: 'runtime-v2',
+      authoritative: false,
     });
   });
 

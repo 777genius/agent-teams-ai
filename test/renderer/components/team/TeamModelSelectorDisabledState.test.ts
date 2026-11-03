@@ -1604,7 +1604,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('shows an OpenCode catalog loading skeleton instead of the transient big-pickle placeholder', async () => {
+  it('keeps search and filters usable while an empty filtered OpenCode catalog is loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const loadModels = vi.fn(
       () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
@@ -1711,10 +1711,28 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('Checking connected providers');
     expect(host.textContent).toContain('Models will appear automatically.');
     expect(host.textContent).not.toContain('big-pickle');
-    expect(host.textContent).not.toContain('Recommended only');
+    expect(host.textContent).toContain('Recommended only');
     expect(loadModels).toHaveBeenCalledWith(
       expect.objectContaining({ runtimeId: 'opencode', providerId: 'opencode' })
     );
+
+    const pendingSearch = host.querySelector<HTMLInputElement>(
+      '[data-testid="team-model-selector-model-search"]'
+    );
+    expect(pendingSearch).not.toBeNull();
+    expect(pendingSearch?.value).toBe('no-matching-local-model');
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-model-search-clear"]'
+      )?.click();
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-provider-nav-local-models"]'
+      )?.click();
+    });
+    expect(host.textContent).toContain('local-a');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-loading-skeleton"]')
+    ).toBeNull();
 
     await act(async () => {
       root.unmount();

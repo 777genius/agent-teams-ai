@@ -1282,7 +1282,9 @@ describe('CLI status visibility during completed install state', () => {
           )
         ).toBe(false);
         if (supportRequired) {
-          expect(row!.textContent).toContain('OpenCode V2 is installed.');
+          expect(row!.textContent).toContain(
+            'Download the remaining files once to connect providers and use models.'
+          );
           expect(row!.textContent).not.toContain('Loading models...');
           expect(row!.textContent).not.toContain('Checking...');
           expect(row!.querySelector('.animate-spin')).toBeNull();
@@ -1622,9 +1624,9 @@ describe('CLI status visibility during completed install state', () => {
 
       const progressLabel =
         generation === 'V2 support checking'
-          ? 'OpenCode V2 support files: Checking'
+          ? 'OpenCode V2 setup: Checking'
           : generation === 'V2 support'
-            ? 'OpenCode V2 support files: Downloading 42%'
+            ? 'OpenCode V2 setup: Downloading 42%'
             : 'Downloading 42%';
       expect(host.textContent).toContain(progressLabel);
       const progressButton = Array.from(host.querySelectorAll('button')).find(

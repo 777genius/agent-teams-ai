@@ -2553,10 +2553,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const shouldShowOpenCodeFilterSkeleton =
     openCodeCatalogLoading && !shouldShowOpenCodeCatalogLoading;
   const shouldShowModelSearch =
-    !shouldShowOpenCodeCatalogLoading &&
+    (!shouldShowOpenCodeCatalogLoading || concreteModelOptionCount > 0 || Boolean(modelQuery)) &&
     (effectiveProviderId === 'opencode' || concreteModelOptionCount > 8);
   const shouldShowOpenCodeFilters =
-    !shouldShowOpenCodeCatalogLoading &&
+    (!shouldShowOpenCodeCatalogLoading || concreteModelOptionCount > 0) &&
     ((effectiveProviderId === 'opencode' &&
       openCodeSourceOptions.length > 1 &&
       !selectedOpenCodeSourceTab) ||

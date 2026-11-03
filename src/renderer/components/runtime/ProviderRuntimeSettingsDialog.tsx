@@ -55,6 +55,12 @@ import {
 } from './codexRuntimeInstallAction';
 import { ConnectionMethodCards } from './ConnectionMethodCards';
 import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery';
+import {
+  getActionableOpenCodeDiagnostics,
+  hasActionableOpenCodeStatusIssue,
+  hasTopLevelOpenCodeFailure,
+  sanitizeOpenCodeStatusText,
+} from './openCodeStatusPresentation';
 import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
 import {
   getConnectionMethodCardOptions,
@@ -460,29 +466,6 @@ function getProviderUsageLabel(
         ),
       })
     : formatProviderStatusText(provider, t);
-}
-
-function getCompactOpenCodeProviderDetailMessage(detailMessage?: string | null): string | null {
-  const trimmed = detailMessage?.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const firstInternalDetailIndex = [' - auth ', ' - behavior ', ' - managed ']
-    .map((marker) => trimmed.indexOf(marker))
-    .filter((index) => index >= 0)
-    .sort((left, right) => left - right)[0];
-
-  const compact =
-    typeof firstInternalDetailIndex === 'number'
-      ? trimmed.slice(0, firstInternalDetailIndex).trim()
-      : trimmed;
-  return compact || null;
-}
-
-function getOpenCodeVersionLabel(detailMessage?: string | null): string | null {
-  const version = /^version\s+([^\s]+)\s+-\s+connected\b/i.exec(detailMessage?.trim() ?? '')?.[1];
-  return version ? `OpenCode ${version}` : null;
 }
 
 function getCodexAccountPanelHint(
@@ -1197,27 +1180,37 @@ export const ProviderRuntimeSettingsDialog = ({
       connectionStatusLabel = getProviderUsageLabel(selectedProvider, t);
     }
   }
-  const showSelectedProviderSummary = Boolean(selectedProvider) && !connectionManagedRuntime;
-  const selectedOpenCodeVersionLabel =
-    selectedProvider?.providerId === 'opencode'
-      ? getOpenCodeVersionLabel(selectedProvider.detailMessage)
-      : null;
+  const openCodeStatusIssue =
+    showRuntimeProviderManagement &&
+    selectedProvider != null &&
+    hasActionableOpenCodeStatusIssue(selectedProvider);
+  const showSelectedProviderSummary =
+    Boolean(selectedProvider) &&
+    !connectionManagedRuntime &&
+    (!showRuntimeProviderManagement || openCodeStatusIssue);
+  const openCodeTopLevelFailure = selectedProvider && hasTopLevelOpenCodeFailure(selectedProvider);
   const selectedProviderSummaryLabel = maskCodexNegativeBootstrapState
     ? t('providerRuntime.connectionUi.status.checking')
-    : selectedProvider
-      ? (selectedOpenCodeVersionLabel ?? getProviderUsageLabel(selectedProvider, t))
-      : null;
+    : openCodeStatusIssue
+      ? sanitizeOpenCodeStatusText(
+          openCodeTopLevelFailure && selectedProvider?.statusMessage && !/passive/i.test(selectedProvider.statusMessage)
+            ? selectedProvider.statusMessage
+            : t('providerRuntime.connectionUi.status.unableToVerify')
+        )
+      : selectedProvider
+        ? getProviderUsageLabel(selectedProvider, t)
+        : null;
   const selectedProviderDetailMessage = maskCodexNegativeBootstrapState
     ? null
     : selectedProvider?.providerId === 'opencode'
-      ? selectedOpenCodeVersionLabel
-        ? null
-        : getCompactOpenCodeProviderDetailMessage(selectedProvider.detailMessage)
+      ? openCodeTopLevelFailure && selectedProvider.detailMessage
+        ? sanitizeOpenCodeStatusText(selectedProvider.detailMessage)
+        : null
       : (selectedProvider?.detailMessage ?? null);
   const selectedProviderDiagnostics = maskCodexNegativeBootstrapState
     ? []
     : selectedProvider?.providerId === 'opencode'
-      ? []
+      ? getActionableOpenCodeDiagnostics(selectedProvider)
       : (selectedProvider?.externalRuntimeDiagnostics ?? []);
 
   const connectionProgressMessage = useMemo(() => {
@@ -1808,17 +1801,11 @@ export const ProviderRuntimeSettingsDialog = ({
           {showSelectedProviderSummary && selectedProvider ? (
             <div
               data-testid="provider-runtime-summary"
-              className={
-                selectedOpenCodeVersionLabel ? 'px-1 py-0.5' : 'rounded-lg border px-3 py-2.5'
-              }
-              style={
-                selectedOpenCodeVersionLabel
-                  ? undefined
-                  : {
-                      borderColor: 'var(--color-border-subtle)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.025)',
-                    }
-              }
+              className="rounded-lg border px-3 py-2.5"
+              style={{
+                borderColor: 'var(--color-border-subtle)',
+                backgroundColor: 'rgba(255, 255, 255, 0.025)',
+              }}
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {!showRuntimeProviderManagement ? (
@@ -1829,10 +1816,12 @@ export const ProviderRuntimeSettingsDialog = ({
                 <span
                   className="text-xs"
                   style={{
-                    color: getProviderStatusColor(
-                      getProviderUsageLabel(selectedProvider, t),
-                      selectedProvider.authenticated
-                    ),
+                    color: openCodeStatusIssue
+                      ? 'var(--color-error)'
+                      : getProviderStatusColor(
+                          getProviderUsageLabel(selectedProvider, t),
+                          selectedProvider.authenticated
+                        ),
                   }}
                 >
                   {selectedProviderSummaryLabel}
