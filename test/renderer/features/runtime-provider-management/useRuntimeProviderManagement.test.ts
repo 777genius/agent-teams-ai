@@ -689,6 +689,51 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it('reloads a requested Models view when native runtime identity settles', async () => {
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: createRuntimeView(),
+      })
+    );
+    const loadProviderDirectory = vi.fn(() =>
+      Promise.resolve(createEmptyDirectoryResponse())
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadView, loadProviderDirectory },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    const render = async (runtimeRevision: string | null) => {
+      await act(async () => {
+        root.render(React.createElement(ConfigurableHarness, {
+          enabled: true,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          runtimeRevision,
+        }));
+        await Promise.resolve();
+      });
+    };
+    await render(null);
+    expect(loadView).not.toHaveBeenCalled();
+    await act(async () => {
+      await actions?.refresh();
+    });
+    expect(loadView).toHaveBeenCalledTimes(1);
+    expect(state?.view).not.toBeNull();
+
+    await render('["ready","1.19.4","/opencode"]');
+    await act(async () => {
+      await vi.waitFor(() => expect(loadView).toHaveBeenCalledTimes(2));
+    });
+    expect(state?.view?.title).toBe('OpenCode');
+    await act(async () => root.unmount());
+  });
+
   it('reopens a pending deep-linked Connect when native runtime identity settles', async () => {
     const entry: RuntimeProviderDirectoryEntryDto = {
       ...createOpenAiLocalDirectoryEntry(),
