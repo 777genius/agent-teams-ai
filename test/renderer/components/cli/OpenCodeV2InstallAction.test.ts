@@ -1,4 +1,5 @@
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { OpenCodeV2InstallAction } from '@features/opencode-runtime-installer/renderer';
@@ -51,6 +52,55 @@ describe('OpenCode V2 installation offer', () => {
       ).toBe('');
     }
   );
+
+  it('explains optional maintenance and requires confirmation before support-only repair', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const onInstall = vi.fn();
+    try {
+      await act(async () =>
+        root.render(
+          createElement(OpenCodeV2InstallAction, {
+            status: {
+              installed: true,
+              version: '2.1.4',
+              source: 'override',
+              state: 'ready',
+              v2Support: 'ready',
+              compatibleV2Version: '2.1.4',
+            },
+            busy: false,
+            onInstall,
+          })
+        )
+      );
+      await act(async () => host.querySelector<HTMLButtonElement>('button')?.click());
+      const dialog = document.querySelector('[data-testid="opencode-v2-reinstall-dialog"]');
+      expect(dialog?.textContent).toContain('cliStatus.runtimeInstall.v2ReinstallDescription');
+      expect(dialog?.textContent).toContain('cliStatus.runtimeInstall.v2ReinstallEffect');
+      expect(onInstall).not.toHaveBeenCalled();
+      const cancel = Array.from(dialog!.querySelectorAll('button')).find(
+        (button) => button.textContent === 'cliStatus.runtimeInstall.v2ReinstallCancel'
+      );
+      await act(async () => cancel?.click());
+      expect(document.querySelector('[data-testid="opencode-v2-reinstall-dialog"]')).toBeNull();
+      expect(onInstall).not.toHaveBeenCalled();
+      await act(async () => host.querySelector<HTMLButtonElement>('button')?.click());
+      await act(async () =>
+        document
+          .querySelector<HTMLButtonElement>('[data-testid="opencode-v2-reinstall-confirm"]')
+          ?.click()
+      );
+      expect(onInstall).toHaveBeenCalledExactlyOnceWith({ generation: 'v2', supportOnly: true });
+      expect(document.querySelector('[data-testid="opencode-v2-reinstall-dialog"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
 
   it('leaves a fresh V2 installation to the primary install action', () => {
     expect(

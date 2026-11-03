@@ -103,6 +103,8 @@
       "verifiedTitle": "OpenCode routes with a successful execution proof."
     },
     "quickConnect": {
+      "v1CheckedUsingV2Detail": "This connection is supported on OpenCode V1. You are using V2; test your chosen model before using it.",
+      "v1CheckedUsingV2": "Confirmed for OpenCode V1 (you are using V2)",
       "alsoConnectOpenCode": "Also connect through OpenCode",
       "browseAll": "Browse all providers",
       "setupModelEndpoint": "Local model or endpoint",
@@ -209,10 +211,14 @@
       "reinstall": "Reinstall {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportFiles": "OpenCode V2 support files",
+      "v2ReinstallCancel": "Cancel",
+      "v2ReinstallConfirm": "Check and restore",
+      "v2ReinstallEffect": "We will check the files and download a new copy only if needed. Your installed OpenCode and provider connections will stay unchanged.",
+      "v2ReinstallDescription": "These files let Agent Teams work with OpenCode V2. This is optional if everything is working normally.",
+      "v2SupportFiles": "OpenCode V2 setup",
       "v2SupportInstall": "Finish OpenCode V2 setup",
-      "v2SupportRequiredDetail": "OpenCode V2 is installed. Add its support files to load providers and models.",
-      "v2SupportRepair": "Repair V2 support",
+      "v2SupportRequiredDetail": "Download the remaining files once to connect providers and use models.",
+      "v2SupportRepair": "Reinstall V2 support",
       "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
       "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available.",
 

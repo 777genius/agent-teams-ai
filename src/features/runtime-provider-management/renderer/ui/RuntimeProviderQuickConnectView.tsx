@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { canManagedInstallChangeOpenCodeRuntime, getOpenCodeGeneration } from '../../core/domain';
+import { isOpenCodeSupportInstallProgress } from '../openCodeInstallLabels';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
 
@@ -31,7 +32,7 @@ import type {
   RuntimeProviderQuickConnectGate,
   RuntimeProviderQuickPlanState,
 } from '../../core/domain';
-import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { OpenCodeRuntimeInstallOptions, OpenCodeRuntimeStatus } from '@shared/types';
 import type { JSX, ReactNode } from 'react';
 
 export interface RuntimeProviderQuickCardViewModel {
@@ -54,7 +55,7 @@ interface RuntimeProviderQuickConnectViewProps {
   gate: RuntimeProviderQuickConnectGate;
   runtimeStatus: OpenCodeRuntimeStatus | null;
   directoryError: string | null;
-  onInstallOpenCode: () => void;
+  onInstallOpenCode: (options?: OpenCodeRuntimeInstallOptions) => void;
   onRefreshOpenCode: () => void;
   onRetryDirectory: () => void;
   onSetupLocalModel: () => void;
@@ -99,6 +100,7 @@ const QuickProviderCard = ({
   isLastDesktopRow: boolean;
   disabled: boolean;
 }): JSX.Element => {
+  const { t } = useAppTranslation('dashboard');
   return (
     <article
       data-testid={`provider-quick-card-${card.id}`}
@@ -146,6 +148,11 @@ const QuickProviderCard = ({
         <p className="truncate text-xs font-medium" style={{ color: 'var(--color-text)' }}>
           {card.displayName}
         </p>
+        {card.providerId === 'openrouter' ? (
+          <span className="shrink-0 rounded bg-emerald-400/15 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-emerald-300">
+            {t('cliStatus.provider.freeModels')}
+          </span>
+        ) : null}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -208,11 +215,16 @@ const OpenCodePrerequisite = ({
 }: {
   gate: RuntimeProviderQuickConnectGate;
   runtimeStatus: OpenCodeRuntimeStatus | null;
-  onInstall: () => void;
+  onInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
   onRefresh: () => void;
 }): JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
-  if (gate === 'ready' || gate === 'checking' || gate === 'installing') {
+  const supportInstalling =
+    isOpenCodeSupportInstallProgress(runtimeStatus) &&
+    (runtimeStatus?.state === 'checking' ||
+      runtimeStatus?.state === 'downloading' ||
+      runtimeStatus?.state === 'installing');
+  if (gate === 'ready' || ((gate === 'checking' || gate === 'installing') && !supportInstalling)) {
     return null;
   }
 
@@ -221,26 +233,43 @@ const OpenCodePrerequisite = ({
     runtimeStatus?.installed === true &&
     runtimeStatus.v2Support === 'required' &&
     getOpenCodeGeneration(runtimeStatus.version) === 'v2';
-  // An override decides what launches; installing the managed runtime would not change it.
-  const canInstall = !supportRequired && canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
+  // Support files are separate from the selected native binary, including overrides.
+  const supportSetup = supportRequired || isOpenCodeSupportInstallProgress(runtimeStatus);
+  const canInstall = supportSetup
+    ? Boolean(runtimeStatus?.compatibleV2Version)
+    : canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
   const isOutdated =
     Boolean(runtimeStatus?.version) &&
     !isAgentTeamsOpenCodeVersionSupported(runtimeStatus?.version);
-  const detail =
-    isError && runtimeStatus?.error
+  const progress = runtimeStatus?.progress;
+  const percent = progress?.percent;
+  const phaseLabel =
+    runtimeStatus?.state === 'downloading'
+      ? typeof percent === 'number' && Number.isFinite(percent)
+        ? t('cliStatus.runtimeInstall.downloadingPercent', { percent: Math.round(percent) })
+        : t('cliStatus.runtimeInstall.downloading')
+      : runtimeStatus?.state === 'installing'
+        ? `${t('cliStatus.runtimeInstall.installing')}${typeof percent === 'number' && Number.isFinite(percent) ? ` ${Math.round(percent)}%` : ''}`
+        : `${t('cliStatus.runtimeInstall.checking')}${typeof percent === 'number' && Number.isFinite(percent) ? ` ${Math.round(percent)}%` : ''}`;
+  const detail = supportInstalling
+    ? phaseLabel
+    : isError && runtimeStatus?.error
       ? runtimeStatus.error
-      : supportRequired
-        ? t('cliStatus.runtimeInstall.v2SupportRequiredDetail')
-        : isOutdated
-          ? (runtimeStatus?.error ??
-            getUnsupportedAgentTeamsOpenCodeVersionMessage(runtimeStatus?.version))
-          : gate === 'missing'
-            ? t('cliStatus.quickConnect.openCodeRequired')
-            : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
+      : supportSetup && !canInstall
+        ? t('cliStatus.runtimeInstall.v2Unavailable')
+        : supportRequired
+          ? t('cliStatus.runtimeInstall.v2SupportRequiredDetail')
+          : isOutdated
+            ? (runtimeStatus?.error ??
+              getUnsupportedAgentTeamsOpenCodeVersionMessage(runtimeStatus?.version))
+            : gate === 'missing'
+              ? t('cliStatus.quickConnect.openCodeRequired')
+              : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
 
   return (
     <div
       data-testid="provider-quick-opencode-prerequisite"
+      aria-busy={supportInstalling || undefined}
       className="relative mb-3 flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-lg border px-3 py-2.5"
       style={{
         borderColor: isError ? 'rgba(248, 113, 113, 0.32)' : 'rgba(56, 189, 248, 0.25)',
@@ -253,42 +282,56 @@ const OpenCodePrerequisite = ({
         aria-live={isError ? 'assertive' : 'polite'}
         aria-atomic="true"
       >
-        {isError ? (
+        {supportInstalling ? (
+          <Loader2 className="size-4 shrink-0 animate-spin text-sky-300" />
+        ) : isError ? (
           <AlertTriangle className="size-4 shrink-0 text-red-300" />
         ) : (
           <Download className="size-4 shrink-0 text-sky-300" />
         )}
         <div className="min-w-0">
           <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
-            {supportRequired
-              ? `${t('cliStatus.runtimeInstall.v2SupportInstall')} (${runtimeStatus?.version})`
-              : isError
-                ? t('cliStatus.quickConnect.openCodeErrorTitle')
-                : t('cliStatus.quickConnect.openCodeTitle')}
+            {supportInstalling
+              ? t('cliStatus.runtimeInstall.v2SupportFiles')
+              : supportSetup
+                ? t('cliStatus.runtimeInstall.v2SupportInstall')
+                : isError
+                  ? t('cliStatus.quickConnect.openCodeErrorTitle')
+                  : t('cliStatus.quickConnect.openCodeTitle')}
           </p>
           <p
             className="text-pretty text-[10.5px] leading-4"
             style={{ color: 'var(--color-text-muted)' }}
           >
             {detail}
-            {supportRequired && runtimeStatus?.source === 'override'
-              ? ` ${t('cliStatus.runtimeInstall.overrideSelection')}`
-              : null}
           </p>
         </div>
       </div>
       <div className="flex items-center gap-1.5">
         {canInstall ? (
-          <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7"
+            disabled={supportInstalling}
+            onClick={() => {
+              if (supportInstalling) return;
+              if (supportSetup) onInstall({ generation: 'v2', supportOnly: true });
+              else onInstall();
+            }}
+          >
             <Download className="mr-1.5 size-3.5" />
-            {isOutdated
-              ? t('cliStatus.quickConnect.updateOpenCode')
-              : isError
-                ? t('cliStatus.quickConnect.retryOpenCode')
-                : t('cliStatus.quickConnect.installOpenCode')}
+            {supportSetup
+              ? t('cliStatus.runtimeInstall.v2SupportInstall')
+              : isOutdated
+                ? t('cliStatus.quickConnect.updateOpenCode')
+                : isError
+                  ? t('cliStatus.quickConnect.retryOpenCode')
+                  : t('cliStatus.quickConnect.installOpenCode')}
           </Button>
         ) : null}
-        {(isError || !canInstall) && !supportRequired ? (
+        {(isError || !canInstall) && (!supportSetup || !canInstall) && !supportInstalling ? (
           <Button
             type="button"
             data-testid="provider-quick-opencode-refresh"
