@@ -146,6 +146,8 @@ export function getCachedDirectoryForInitialPaint(input: {
 }): RuntimeProviderDirectoryCacheSnapshot | null {
   if (input.reuseCachedFullDirectory !== true || input.directoryQuery.trim()) return null;
   const cached = getRuntimeProviderDirectoryCacheSnapshot(input.projectPath, input.runtimeRevision);
+  // A cached versioned directory is not safe to display while native identity is unknown.
+  if (!input.runtimeRevision && cached?.runtimeRevision) return null;
   return cached?.entries.length ? cached : null;
 }
 
