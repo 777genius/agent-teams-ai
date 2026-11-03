@@ -221,7 +221,13 @@ export function publishRuntimeProviderDirectoryCache({
     ? (current?.entries ?? []).map((entry) => {
         const latest = summaryByProvider.get(entry.providerId);
         return latest
-          ? { ...entry, state: latest.state, connectedAuthHint: latest.connectedAuthHint }
+          ? {
+              ...entry,
+              state: latest.state,
+              setupKind: latest.setupKind,
+              connectedAuthHint: latest.connectedAuthHint,
+              ownership: latest.ownership,
+            }
           : entry;
       })
     : entries;
