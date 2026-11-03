@@ -16,6 +16,7 @@ on:
       # proof on Windows and Linux, not only a renderer unit test.
       - src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx
       - src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts
+      - src/features/runtime-provider-management/renderer/hooks/maskRuntimeProviderStateForScope.ts
       - src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy.ts
       - src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts
       - src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts
