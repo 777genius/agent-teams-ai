@@ -135,6 +135,16 @@ export function commitDirectoryPageLoad(input: {
   };
 }
 
+export function getCachedDirectoryForInitialPaint(input: {
+  reuseCachedFullDirectory?: boolean;
+  directoryQuery: string;
+  projectPath: string | null;
+}): RuntimeProviderDirectoryCacheSnapshot | null {
+  if (input.reuseCachedFullDirectory !== true || input.directoryQuery.trim()) return null;
+  const cached = getRuntimeProviderDirectoryCacheSnapshot(input.projectPath);
+  return cached?.entries.length ? cached : null;
+}
+
 export function getAuthoritativeCachedFullDirectory(input: {
   reuseCachedFullDirectory?: boolean;
   directoryQuery: string;
