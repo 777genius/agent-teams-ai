@@ -23,6 +23,7 @@ import {
 } from '../view-models/openCodeDefaultModelInheritance';
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
+import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import {
   getProviderConnectErrorDiagnostics,
   normalizeGitHubDeviceAuthorizationUrl,
@@ -65,7 +66,6 @@ import {
   refreshAfterModelTest,
   startModelTest,
 } from './runtimeProviderModelTestState';
-import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
 import { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectContext';
 
