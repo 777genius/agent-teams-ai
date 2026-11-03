@@ -2515,7 +2515,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodePassiveCatalogState = getOpenCodePassiveCatalogState(
     openCodePassiveStatusReadyForCatalog,
     openCodeRuntimeStatusUiState,
-    openCodeProviderStatus
+    openCodeProviderStatus,
+    openCodeScopedCatalog.status
   );
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
@@ -2934,9 +2935,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           shouldShowOpenCodeNeedsTestBadge(
             openCodeProofState,
             openCodeMetadata?.sourceInfo?.id,
-            openCodeRouteKind
+            openCodeRouteKind,
+            opt.value
           ) ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-amber-600/30 bg-amber-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200">
+            <span className="inline-flex items-center justify-center rounded-full border border-amber-600/30 bg-amber-500/10 px-1.5 py-0 text-[9px] font-semibold lowercase text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200">
               {t('modelSelector.badges.needsTest')}
             </span>
           ) : null}

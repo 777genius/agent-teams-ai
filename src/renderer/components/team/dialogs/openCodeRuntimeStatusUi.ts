@@ -303,9 +303,14 @@ export type OpenCodePassiveCatalogState = 'pending' | 'unavailable' | 'settled';
 export function getOpenCodePassiveCatalogState(
   readyForCatalog: boolean,
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
-  providerStatus?: CliProviderStatus | null
+  providerStatus?: CliProviderStatus | null,
+  scopedCatalogStatus?: 'idle' | 'loading' | 'ready' | 'error'
 ): OpenCodePassiveCatalogState {
   if (isOpenCodeProjectFolderMissing(providerStatus)) return 'unavailable';
+  // The scoped read can finish before the passive launch-status check settles.
+  if (scopedCatalogStatus === 'error') return 'unavailable';
+  if (scopedCatalogStatus === 'loading') return 'pending';
+  if (readyForCatalog && scopedCatalogStatus === 'ready') return 'settled';
   // A finished scoped catalog is display evidence even while launch checks remain pending.
   if (
     readyForCatalog &&

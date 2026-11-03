@@ -979,7 +979,7 @@
       "failed": "Failed",
       "free": "Free",
       "local": "Local",
-      "needsTest": "Needs test",
+      "needsTest": "need test",
       "verified": "Verified",
       "unavailable": "Unavailable",
       "issue": "Issue"
