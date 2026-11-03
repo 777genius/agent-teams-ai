@@ -3194,6 +3194,35 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain('Unable to verify');
   });
 
+  it('renders a diagnostic-only OpenCode failure without top-level error fields', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider: CliProviderStatus = {
+      ...createOpenCodeProvider(),
+      statusMessage: 'Managed runtime verified',
+      externalRuntimeDiagnostics: [{
+        id: 'opencode-binary-check',
+        label: 'OpenCode binary',
+        detected: false,
+        statusMessage: 'Could not verify the binary',
+        detailMessage: null,
+      }],
+    };
+    await act(async () => {
+      root.render(React.createElement(ProviderRuntimeSettingsDialog, {
+        open: true,
+        onOpenChange: vi.fn(),
+        providers: [provider],
+        initialProviderId: 'opencode',
+        onSelectBackend: vi.fn(),
+      }));
+    });
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')).not.toBeNull();
+    expect(host.textContent).toContain('OpenCode binary');
+    expect(host.textContent).toContain('Could not verify the binary');
+  });
+
   it('shows OpenCode inventory fallback without a misleading connection summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
