@@ -205,17 +205,20 @@ export function publishRuntimeProviderDirectoryCache({
   const current = snapshotsByScope.get(scopeKey);
   const nextFetchedAt = getFetchedAtTimestamp(fetchedAt);
   const currentFetchedAt = current ? getFetchedAtTimestamp(current.fetchedAt) : 0;
-  if (current && nextFetchedAt < Math.max(
-    currentFetchedAt, getFetchedAtTimestamp(current.lastSummaryFetchedAt ?? '')
-  )) return;
-
-  const matchingRevision = !current || current.runtimeRevision === (runtimeRevision ?? observedRuntimeRevision);
+  const matchingRevision =
+    !current || current.runtimeRevision === (runtimeRevision ?? observedRuntimeRevision);
+  if (
+    current &&
+    matchingRevision &&
+    nextFetchedAt <
+      Math.max(currentFetchedAt, getFetchedAtTimestamp(current.lastSummaryFetchedAt ?? ''))
+  ) return;
   const retainFullDirectory = matchingRevision && current?.authoritative && !authoritative;
   const summaryByProvider = retainFullDirectory
     ? new Map(entries.map((entry) => [entry.providerId, entry] as const))
     : null;
   const nextEntries = summaryByProvider
-    ? current.entries.map((entry) => {
+    ? (current?.entries ?? []).map((entry) => {
         const latest = summaryByProvider.get(entry.providerId);
         return latest
           ? { ...entry, state: latest.state, connectedAuthHint: latest.connectedAuthHint }
@@ -224,12 +227,16 @@ export function publishRuntimeProviderDirectoryCache({
     : entries;
   const nextSnapshot: RuntimeProviderDirectoryCacheSnapshot = {
     entries: nextEntries,
-    fetchedAt: retainFullDirectory ? current.fetchedAt : fetchedAt,
+    fetchedAt: retainFullDirectory ? (current?.fetchedAt ?? fetchedAt) : fetchedAt,
     authoritative: retainFullDirectory ? true : authoritative,
     runtimeRevision: runtimeRevision ?? observedRuntimeRevision,
     ...(retainFullDirectory ? { lastSummaryFetchedAt: fetchedAt } : {}),
-    ...(totalCount !== undefined ? { totalCount } : {}),
-    ...(nextCursor !== undefined ? { nextCursor } : {}),
+    ...(retainFullDirectory
+      ? { totalCount: current?.totalCount, nextCursor: current?.nextCursor }
+      : {
+          ...(totalCount !== undefined ? { totalCount } : {}),
+          ...(nextCursor !== undefined ? { nextCursor } : {}),
+        }),
   };
   if (scopeKey === GLOBAL_SCOPE_KEY) {
     mergedFallbackByScope.clear();
