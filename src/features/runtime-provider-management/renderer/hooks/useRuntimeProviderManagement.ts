@@ -17,11 +17,11 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
+import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
 } from '../view-models/openCodeDefaultModelInheritance';
-import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
 import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
