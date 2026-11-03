@@ -1,8 +1,8 @@
-import { ImportCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/ImportCustomTeamTemplateUseCase';
+import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
 import { CustomTeamTemplateStorageInterruptedError } from '@features/custom-team-templates/core/application/CustomTeamTemplateStorageInterruptedError';
+import { ImportCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/ImportCustomTeamTemplateUseCase';
 import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { NodeCustomTeamTemplateHasher } from '@features/custom-team-templates/main/adapters/output/NodeCustomTeamTemplateHasher';
-import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -319,7 +319,14 @@ describe('ImportCustomTeamTemplateUseCase', () => {
       return new ImportCustomTeamTemplateUseCase({
         gateway: gatewayWith(() => ({
           status: 'created',
-          template: { templateId: 'x', name: 'x', schemaVersion: 1, teamPrompt: '', members: [], revision: 1 },
+          template: {
+            templateId: 'x',
+            name: 'x',
+            schemaVersion: 1,
+            teamPrompt: '',
+            members: [],
+            revision: 1,
+          },
         })),
         hasher,
         createTemplateId: () => 'tmpl-new',
@@ -379,7 +386,7 @@ describe('ImportCustomTeamTemplateUseCase', () => {
     });
   });
 
-  describe('teamPrompt normalization', () => {
+  describe('content normalization', () => {
     function capturingUseCase(): {
       uc: ImportCustomTeamTemplateUseCase;
       requests: CreateCustomTeamTemplateRecordRequest[];
@@ -447,6 +454,39 @@ describe('ImportCustomTeamTemplateUseCase', () => {
       );
       expect(requests[0].template.teamPrompt).toBe('Build\nTest');
       expect(requests[0].contentHash).toBe(updateHash);
+    });
+
+    it('normalizes workflow edges before hashing and persistence, like Save As and update', async () => {
+      const { uc, requests } = capturingUseCase();
+      const members = [{ name: 'builder', workflow: 'Plan\n\t実装 ✓' }];
+      const res = await uc.execute({
+        portable: validPortable({
+          members: [{ name: 'builder', workflow: '  Plan\n\t実装 ✓\n  ' }],
+        }),
+      });
+
+      expect(res.status).toBe('imported');
+      expect(requests[0].template.members).toEqual(members);
+      expect(requests[0].contentHash).toBe(
+        hasher.hashCanonicalContent(
+          serializeCanonicalTemplateContent({
+            schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+            teamPrompt: '',
+            members,
+          })
+        )
+      );
+    });
+
+    it('applies the workflow limit to normalized content', async () => {
+      const { uc, requests } = capturingUseCase();
+      const workflow = 'x'.repeat(200_000);
+      const res = await uc.execute({
+        portable: validPortable({ members: [{ name: 'builder', workflow: ` ${workflow} ` }] }),
+      });
+
+      expect(res.status).toBe('imported');
+      expect(requests[0].template.members[0].workflow).toBe(workflow);
     });
   });
 
@@ -544,7 +584,9 @@ describe('ImportCustomTeamTemplateUseCase', () => {
       });
       // Reconciliation proves the first write is absent, so the use case retries
       // before it observes the definitive conflict.
-      gateway.customTeamTemplateGetById = vi.fn(() => Promise.resolve({ status: 'notFound' as const }));
+      gateway.customTeamTemplateGetById = vi.fn(() =>
+        Promise.resolve({ status: 'notFound' as const })
+      );
 
       const uc = new ImportCustomTeamTemplateUseCase({
         gateway,

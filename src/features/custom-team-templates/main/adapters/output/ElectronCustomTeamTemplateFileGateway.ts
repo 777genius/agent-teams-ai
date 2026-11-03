@@ -3,8 +3,6 @@ import { open, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { TextDecoder } from 'node:util';
 
-import { BrowserWindow, dialog } from 'electron';
-
 import type {
   CustomTeamTemplateFileGateway,
   CustomTeamTemplateFileReadResult,
@@ -175,6 +173,8 @@ export class ElectronCustomTeamTemplateFileGateway implements CustomTeamTemplate
    * the trusted main-process caller and is never sent to the renderer.
    */
   async pickImportFile(): Promise<string | null> {
+    // The feature's main entrypoint is also loaded by the standalone server.
+    const { BrowserWindow, dialog } = await import('electron');
     const options: Electron.OpenDialogOptions = {
       title: IMPORT_DIALOG_TITLE,
       buttonLabel: 'Import',
@@ -219,6 +219,7 @@ export class ElectronCustomTeamTemplateFileGateway implements CustomTeamTemplate
    * used immediately by this process and is never echoed to the renderer.
    */
   async pickExportDestination(suggestedFileName: string): Promise<string | null> {
+    const { BrowserWindow, dialog } = await import('electron');
     const options: Electron.SaveDialogOptions = {
       title: EXPORT_DIALOG_TITLE,
       buttonLabel: 'Export',
@@ -245,7 +246,7 @@ export class ElectronCustomTeamTemplateFileGateway implements CustomTeamTemplate
    */
   async writeFileAtomically(filePath: string, contents: string): Promise<void> {
     const directory = path.dirname(filePath);
-    const temporaryPath = path.join(directory, `.${path.basename(filePath)}.${randomUUID()}.tmp`);
+    const temporaryPath = path.join(directory, `.team-template-${randomUUID()}.tmp`);
     let handle: FileHandle | undefined;
     try {
       handle = await open(temporaryPath, 'wx', 0o600);

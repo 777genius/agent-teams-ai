@@ -3,6 +3,8 @@ import {
   CUSTOM_TEAM_TEMPLATE_PORTABLE_SCHEMA_VERSION,
 } from '@features/custom-team-templates/contracts';
 
+import { TEMPLATE_ID_MAX_LENGTH } from '../domain/templateLimits';
+
 import type { CustomTeamTemplateStorageGateway } from './ports';
 import type {
   CustomTeamTemplateV1,
@@ -37,9 +39,9 @@ export class ExportCustomTeamTemplateUseCase {
       return { status: 'notFound', templateId: '' };
     }
     const candidate = payload as { templateId?: unknown };
-    const templateId = typeof candidate.templateId === 'string' ? candidate.templateId : '';
-    if (!templateId.trim()) {
-      return { status: 'notFound', templateId };
+    const templateId = typeof candidate.templateId === 'string' ? candidate.templateId.trim() : '';
+    if (!templateId || templateId.length > TEMPLATE_ID_MAX_LENGTH) {
+      return { status: 'notFound', templateId: '' };
     }
 
     const gateway = this.deps.gateway;

@@ -273,9 +273,9 @@ export const ImportCustomTeamTemplateDialog = ({
     try {
       handleImportResult(await desktopFile.importFromFile());
     } catch {
-      // The IPC channel rejected instead of answering with a typed outcome, so
-      // the read never completed and the dialog must leave the busy stage.
-      handleImportResult({ status: 'transportFailed' });
+      // This IPC call also writes the template. A rejected reply cannot prove
+      // the write did not commit; picker/read failures already have typed results.
+      handleImportResult({ status: 'unresolvedWriteOutcome', templateId: '' });
     }
   }, [desktopFile, handleImportResult, errorState]);
 

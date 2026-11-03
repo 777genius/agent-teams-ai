@@ -223,12 +223,12 @@ export class ImportCustomTeamTemplateUseCase {
         const w = member.workflow.trim();
         // Multiline instructions keep their internal newlines; only the edges
         // are trimmed to match the established projection convention.
-        if (member.workflow.length > TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH) {
+        if (w.length > TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH) {
           return validationFailed([
             { code: 'memberWorkflowTooLong', field: `members[${i}].workflow` },
           ]);
         }
-        workflow = w.length > 0 ? member.workflow : undefined;
+        workflow = w.length > 0 ? w : undefined;
       }
       members.push({
         name,

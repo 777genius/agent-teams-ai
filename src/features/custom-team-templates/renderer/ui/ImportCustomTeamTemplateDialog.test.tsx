@@ -897,6 +897,25 @@ describe('ImportCustomTeamTemplateDialog', () => {
       expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
     });
 
+    it('blocks another desktop import when the IPC reply is lost', async () => {
+      desktopFile.importFromFile.mockRejectedValue(new Error('IPC reply lost after dispatch'));
+
+      await render();
+      await act(async () => {
+        importButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      expect(importButton().disabled).toBe(true);
+      expect(closeButton().disabled).toBe(false);
+
+      await act(async () => {
+        importButton().click();
+      });
+
+      expect(desktopFile.importFromFile).toHaveBeenCalledTimes(1);
+    });
+
     it('reaches done after a successful desktop import', async () => {
       desktopFile.importFromFile.mockResolvedValue(importedResult());
 

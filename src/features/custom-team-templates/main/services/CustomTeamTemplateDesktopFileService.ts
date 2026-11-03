@@ -4,6 +4,7 @@ import {
   buildCustomTeamTemplateFileName,
   serializeCustomTeamTemplatePortableFile,
 } from '../../core/domain/portableTemplateFile';
+import { TEMPLATE_ID_MAX_LENGTH } from '../../core/domain/templateLimits';
 
 import type { CustomTeamTemplateFileGateway } from '../adapters/output/CustomTeamTemplateFileGateway';
 import type {
@@ -12,8 +13,6 @@ import type {
   ImportCustomTeamTemplateFromFileResult,
   ImportCustomTeamTemplateResult,
 } from '@features/custom-team-templates/contracts';
-
-const MAX_TEMPLATE_ID_LENGTH = 200;
 
 /**
  * Minimal execute-shaped port for the two existing application use cases.
@@ -48,7 +47,7 @@ function readTemplateId(payload: unknown): string | null {
     return null;
   }
   const trimmed = templateId.trim();
-  if (!trimmed || trimmed.length > MAX_TEMPLATE_ID_LENGTH) {
+  if (!trimmed || trimmed.length > TEMPLATE_ID_MAX_LENGTH) {
     return null;
   }
   return trimmed;

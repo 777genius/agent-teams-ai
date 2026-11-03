@@ -9,6 +9,7 @@ vi.mock('electron', () => ({
   dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() },
 }));
 
+import { buildCustomTeamTemplateFileName } from '@features/custom-team-templates/core/domain/portableTemplateFile';
 import {
   ElectronCustomTeamTemplateFileGateway,
   readBoundedUtf8FromFileHandle,
@@ -392,6 +393,16 @@ describe('ElectronCustomTeamTemplateFileGateway', () => {
     expect(await readFile(filePath, 'utf8')).toBe('{"ok":true}\n');
     const entries = await readdir(workDir);
     expect(entries).toEqual(['out.json']);
+  });
+
+  it('exports a long Unicode filename without exceeding the temporary filename limit', async () => {
+    const fileName = buildCustomTeamTemplateFileName('界'.repeat(80));
+    const filePath = path.join(workDir, fileName);
+
+    await gateway.writeFileAtomically(filePath, '{"name":"界"}\n');
+
+    expect(await readFile(filePath, 'utf8')).toBe('{"name":"界"}\n');
+    expect(await readdir(workDir)).toEqual([fileName]);
   });
 
   it('leaves no partial final file and no temporary file when the rename fails', async () => {

@@ -13,6 +13,7 @@
  * below are explicit Phase 1 decisions; they stay well inside the 256 KiB team
  * metadata read ceiling and can be revised without changing the contracts.
  */
+export const TEMPLATE_ID_MAX_LENGTH = 200;
 export const TEMPLATE_NAME_MAX_LENGTH = 128;
 export const TEMPLATE_DESCRIPTION_MAX_LENGTH = 2_000;
 export const TEMPLATE_TEAM_PROMPT_MAX_LENGTH = 200_000;
