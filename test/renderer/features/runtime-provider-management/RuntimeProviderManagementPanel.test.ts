@@ -188,6 +188,42 @@ describe('RuntimeProviderManagementPanel', () => {
     await act(async () => root.unmount());
   });
 
+  it('fences the first render after the requested project changes', async () => {
+    mocks.loadProjectPathProjects.mockResolvedValue([]);
+    mocks.useRuntimeProviderManagement.mockReturnValue([
+      {
+        view: { projectPath: '/tmp/project-a' },
+        providers: [{ providerId: 'project-a-only' }],
+        directoryEntries: [{ providerId: 'project-a-only' }],
+        directoryLoaded: true,
+        directorySummary: false,
+        selectedProviderId: 'project-a-only',
+      },
+      { cancelConnect: vi.fn(), refreshDirectory: vi.fn(), hydrateDirectory: vi.fn() },
+    ]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = (projectPath: string) =>
+      root.render(React.createElement(RuntimeProviderManagementPanel, {
+        runtimeId: 'opencode', open: true, projectPath,
+      }));
+    await act(async () => render('/tmp/project-a'));
+    expect(mocks.viewProps.at(-1)?.projectPath).toBe('/tmp/project-a');
+
+    mocks.loadProjectPathProjects.mockReturnValue(new Promise(() => undefined));
+    mocks.viewProps.length = 0;
+    mocks.useRuntimeProviderManagement.mockClear();
+    await act(async () => render('/tmp/project-b'));
+
+    expect(mocks.viewProps.length).toBeGreaterThan(0);
+    expect(mocks.viewProps.every((props) => props.disabled && props.projectPath === null)).toBe(true);
+    expect(mocks.useRuntimeProviderManagement.mock.calls.every(
+      ([options]) => !options.enabled && options.projectPath === null
+    )).toBe(true);
+    await act(async () => root.unmount());
+  });
+
   it('defers an explicit project directory until its canonical scope is known', async () => {
     let resolveProjects: ((projects: unknown[]) => void) | undefined;
     mocks.loadProjectPathProjects.mockReturnValue(

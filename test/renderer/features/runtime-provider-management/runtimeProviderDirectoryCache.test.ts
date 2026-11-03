@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { runtimeProviderDirectoryInteraction } from '../../../../src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction';
+
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
   invalidateRuntimeProviderDirectoryCache,
@@ -161,6 +163,61 @@ describe('runtimeProviderDirectoryCache', () => {
       entries: [{ providerId: 'openrouter', state: 'connected' }],
       totalCount: 1,
     });
+  });
+
+  it('replaces stale connected actions when a newer summary reports logout', () => {
+    const fullActions = [
+      {
+        id: 'test' as const, label: 'Test', enabled: true, disabledReason: null,
+        requiresSecret: false, ownershipScope: 'runtime' as const,
+      },
+      {
+        id: 'forget' as const, label: 'Remove managed credential', enabled: true,
+        disabledReason: null, requiresSecret: false, ownershipScope: 'managed' as const,
+      },
+    ];
+    const connectedEntry = { ...providerEntry, ownership: ['managed'] as const, actions: fullActions };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [connectedEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+    });
+    // The passive summary cannot expose the live Forget capability. An
+    // unchanged connection must retain it along with the full model inventory.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...connectedEntry, actions: [fullActions[0]] }],
+      fetchedAt: '2026-07-20T10:00:30.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.entries[0]?.actions).toEqual(fullActions);
+    const connectAction = {
+      id: 'connect' as const, label: 'Connect', enabled: true, disabledReason: null,
+      requiresSecret: true, ownershipScope: 'managed' as const,
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{
+        ...providerEntry,
+        state: 'not-connected',
+        connectedAuthHint: null,
+        setupKind: 'connect-api-key',
+        ownership: [],
+        actions: [connectAction],
+      }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+    });
+
+    const cached = getRuntimeProviderDirectoryCacheSnapshot(null);
+    expect(cached?.authoritative).toBe(true);
+    expect(cached?.entries[0]?.modelCount).toBe(providerEntry.modelCount);
+    expect(runtimeProviderDirectoryInteraction(cached?.entries[0])).toEqual({
+      canOpenConnect: true,
+      canSelectModels: false,
+    });
+    expect(cached?.entries[0]?.actions).toEqual([connectAction]);
   });
 
   it('rejects cached snapshots from another settled binary revision', () => {

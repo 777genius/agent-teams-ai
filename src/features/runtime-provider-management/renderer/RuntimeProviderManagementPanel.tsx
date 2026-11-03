@@ -90,6 +90,7 @@ export const RuntimeProviderManagementPanel = ({
   const projectContextRequestKey = activeProjectPath ?? initialProjectPath ?? '';
   const [resolvedProjectContext, setResolvedProjectContext] = useState<{
     readonly requestKey: string;
+    readonly initialProjectPath: string | null;
     readonly repositoryGroups: typeof repositoryGroups;
   } | null>(null);
   const backgroundHydrationKeyRef = useRef<string | null>(null);
@@ -97,6 +98,7 @@ export const RuntimeProviderManagementPanel = ({
     initialProviderId === 'openrouter' || initialProviderId === 'vercel';
   const projectContextResolved =
     resolvedProjectContext?.requestKey === projectContextRequestKey &&
+    resolvedProjectContext.initialProjectPath === initialProjectPath &&
     resolvedProjectContext.repositoryGroups === repositoryGroups;
   // A global directory read has no project credentials and must not wait for discovery.
   const providerContextReady =
@@ -140,7 +142,11 @@ export const RuntimeProviderManagementPanel = ({
       })
       .finally(() => {
         if (!cancelled) {
-          setResolvedProjectContext({ requestKey: projectContextRequestKey, repositoryGroups });
+          setResolvedProjectContext({
+            requestKey: projectContextRequestKey,
+            initialProjectPath,
+            repositoryGroups,
+          });
           setProjectContextLoading(false);
         }
       });
