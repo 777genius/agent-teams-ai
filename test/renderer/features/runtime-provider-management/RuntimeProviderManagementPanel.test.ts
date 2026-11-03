@@ -467,6 +467,27 @@ describe('RuntimeProviderManagementPanel', () => {
     expect(latestManagementOptions?.searchDirectoryOnQueryChange).toBe(false);
     expect(refreshDirectory).not.toHaveBeenCalled();
 
+    // Native identity can settle after the first summary has hydrated. A new
+    // runtime must be allowed a new full-catalog hydration in the same panel.
+    mocks.nativeRuntimeStatus = { installed: true, version: '1.19.4', state: 'ready' };
+    await act(async () => {
+      root.render(
+        React.createElement(
+          React.StrictMode,
+          null,
+          React.createElement(RuntimeProviderManagementPanel, {
+            runtimeId: 'opencode',
+            open: true,
+          })
+        )
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(hydrateDirectory).toHaveBeenCalledTimes(2));
+    });
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0]?.runtimeRevision)
+      .toContain('1.19.4');
     await act(async () => root.unmount());
   });
 
