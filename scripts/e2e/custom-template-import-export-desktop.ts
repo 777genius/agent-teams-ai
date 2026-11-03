@@ -1,6 +1,6 @@
 /**
  * Disposable Linux desktop E2E for custom-template JSON import/export.
- * Run with a test DISPLAY: pnpm exec tsx scripts/e2e/custom-template-import-export-desktop.ts
+ * Run with a test DISPLAY: pnpm test:e2e:custom-template-import-export
  * Native dialog selections are fixtures. UI, preload IPC, validation, SQLite,
  * file reads and atomic exports are real; no provider or user project is used.
  */

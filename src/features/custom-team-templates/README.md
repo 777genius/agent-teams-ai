@@ -50,6 +50,8 @@ The JSON file contains `format: "agent-teams-custom-template"`, `schemaVersion: 
 
 Focused coverage lives in `test/features/custom-team-templates/` and beside the renderer adapters and dialogs. It covers file validation, portable projection, name conflicts, write uncertainty, native file operations and standalone entrypoint loading.
 
+On Linux with a test display, run `pnpm test:e2e:custom-template-import-export` for the visual `dev:mcp` flow. The harness uses disposable app data and fixtures only for native file-dialog selections; the renderer, IPC, SQLite storage and file operations are real. Set `CUSTOM_TEMPLATE_E2E_OUTPUT_DIR` to retain the receipt, screenshots and app log in a chosen directory.
+
 ## Localization
 
 Strings live in the `customTemplates` group of `team.json`. Import/export messages are present in all 29 locale catalogs; missing messages use the existing English fallback (`fallbackLng`). Regenerate `resources.d.ts` with `pnpm i18n:types`.
