@@ -5211,6 +5211,7 @@ export default interface Resources {
         "minimum": "Select at least two agents.",
         "name": "Chat name",
         "recipient": "To {{name}}",
+        "deliveryUnconfirmed": "Delivery not confirmed for {{names}}",
         "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
         "restartHint": "All participants must be running a compatible runtime before sending.",
         "restore": "Restore chat",

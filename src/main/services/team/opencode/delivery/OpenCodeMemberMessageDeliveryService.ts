@@ -909,6 +909,29 @@ export class OpenCodeMemberMessageDeliveryService {
           return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
         }
         const stillUnknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
+        if (
+          stillUnknownHandoff &&
+          !observed.ok &&
+          turnActivityAgeMs !== null &&
+          turnActivityAgeMs >= 60_000 &&
+          observed.diagnostics.some((diagnostic) => /\boriginal_input_unknown\b/.test(diagnostic))
+        ) {
+          const settled = await ledger.markFailedTerminal({
+            id: ledgerRecord.id,
+            reason: 'group_delivery_unconfirmed',
+            diagnostics: observed.diagnostics,
+            failedAt: nowIso(),
+          });
+          await checkpoint();
+          notifyActivity('idle');
+          return {
+            ...stillUnknownHandoff,
+            responsePending: false,
+            ledgerStatus: settled.status,
+            reason: 'group_delivery_unconfirmed',
+            diagnostics: settled.diagnostics,
+          };
+        }
         if (stillUnknownHandoff) {
           ledgerRecord = await deferOpenCodePromptDeliveryAttempt({
             ledger,

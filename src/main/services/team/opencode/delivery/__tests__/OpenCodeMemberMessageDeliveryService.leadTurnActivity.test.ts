@@ -268,9 +268,13 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
     });
   });
 
-  it.each([true, false])(
-    'observes an uncertain group handoff without sending it twice (proof=%s)',
-    async (found) => {
+  it.each([
+    [true, false],
+    [false, false],
+    [false, true],
+  ])(
+    'observes an uncertain group handoff without sending it twice (proof=%s, expired=%s)',
+    async (found, expired) => {
       const send = vi.fn(async () => ({
         ok: false,
         providerId: 'opencode' as const,
@@ -286,10 +290,12 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
         notify: vi.fn(),
       });
       const observe = vi.fn(async () => ({
-        ok: true,
+        ok: !expired,
         providerId: 'opencode' as const,
         memberName: 'team-lead',
-        diagnostics: [],
+        diagnostics: expired
+          ? ['OpenCode message delivery observe bridge failed: original_input_unknown']
+          : [],
         responseObservation: {
           state: found ? ('responded_visible_message' as const) : ('not_observed' as const),
           deliveredUserMessageId: found ? 'accepted-prompt' : null,
@@ -316,10 +322,32 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
         diagnostics: [],
         markedAt: new Date().toISOString(),
       });
-      const result = await service.deliver('team-a', message);
+      const clock = expired
+        ? vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 120_000)
+        : undefined;
+      let result;
+      try {
+        result = await service.deliver('team-a', message);
+      } finally {
+        clock?.mockRestore();
+      }
       expect(observe).toHaveBeenCalledTimes(1);
       expect(send).toHaveBeenCalledTimes(1);
-      expect(result.responsePending).toBe(!found);
+      expect(result.responsePending).toBe(!found && !expired);
+      if (expired) {
+        expect(result).toMatchObject({
+          acceptanceUnknown: true,
+          reason: 'group_delivery_unconfirmed',
+          ledgerStatus: 'failed_terminal',
+        });
+        expect(await ledger.list()).toEqual([
+          expect.objectContaining({ status: 'failed_terminal', nextAttemptAt: null }),
+        ]);
+        await service.deliver('team-a', message);
+        expect(observe).toHaveBeenCalledOnce();
+        expect(send).toHaveBeenCalledOnce();
+        return;
+      }
       if (!found) {
         expect(result.acceptanceUnknown).toBe(true);
         const [deferred] = await ledger.list();
