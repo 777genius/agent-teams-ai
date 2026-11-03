@@ -112,7 +112,8 @@
       "testCancelUnsupported": "Этот runtime не поддерживает остановку тестов.",
       "paidRetryNotice": "При исчерпанном суточном лимите бесплатных моделей проверка автоматически повторится один раз на gpt-oss-20b. Этот запрос оплачивается с баланса OpenRouter.",
       "paidRetryRunning": "Лимит бесплатных моделей исчерпан. Проверяем gpt-oss-20b за счёт баланса OpenRouter…",
-      "paidRetryResult": "Платный повтор на gpt-oss-20b"
+      "paidRetryResult": "Платный повтор на gpt-oss-20b",
+      "freeQuotaReached": "Суточный лимит бесплатных моделей OpenRouter исчерпан."
     },
     "providers": {
       "catalog": "OpenCode provider catalog",

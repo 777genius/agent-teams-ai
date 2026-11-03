@@ -298,7 +298,14 @@ export const ModelRow = ({
           {t('runtimeProvider.models.testCancelled')}
         </div>
       ) : (
-        <RuntimeProviderModelTestResult result={result} formatMessage={formatMessage} />
+        <RuntimeProviderModelTestResult
+          result={
+            result && canRetryPaid && result.diagnostics.includes('provider_free_quota_exhausted')
+              ? { ...result, message: t('runtimeProvider.models.freeQuotaReached') }
+              : result
+          }
+          formatMessage={formatMessage}
+        />
       )}
     </div>
   );
