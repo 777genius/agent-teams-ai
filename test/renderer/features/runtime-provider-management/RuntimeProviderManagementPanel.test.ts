@@ -147,6 +147,47 @@ describe('RuntimeProviderManagementPanel', () => {
     await act(async () => root.unmount());
   });
 
+  it('does not paint old credentials while a new project is still resolving', async () => {
+    mocks.loadProjectPathProjects.mockReturnValue(new Promise(() => undefined));
+    mocks.useRuntimeProviderManagement.mockReturnValue([
+      {
+        view: { projectPath: '/tmp/previous-project' },
+        providers: [{ providerId: 'previous-project-only' }],
+        directoryEntries: [{ providerId: 'previous-project-only' }],
+        directoryLoaded: true,
+        selectedProviderId: 'previous-project-only',
+        apiKeyValue: 'unused-credential-state',
+      },
+      { cancelConnect: vi.fn(), refreshDirectory: vi.fn(), hydrateDirectory: vi.fn() },
+    ]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(RuntimeProviderManagementPanel, {
+        runtimeId: 'opencode',
+        open: true,
+        projectPath: '/tmp/project-b',
+      }));
+      await Promise.resolve();
+    });
+    const snapshot = (mocks.viewProps.at(-1) as unknown as {
+      state: {
+        view: unknown;
+        providers: unknown[];
+        directoryEntries: unknown[];
+        selectedProviderId: string | null;
+        apiKeyValue: string;
+      };
+    }).state;
+    expect(snapshot.view).toBeNull();
+    expect(snapshot.providers).toEqual([]);
+    expect(snapshot.directoryEntries).toEqual([]);
+    expect(snapshot.selectedProviderId).toBeNull();
+    expect(snapshot.apiKeyValue).toBe('');
+    await act(async () => root.unmount());
+  });
+
   it('defers an explicit project directory until its canonical scope is known', async () => {
     let resolveProjects: ((projects: unknown[]) => void) | undefined;
     mocks.loadProjectPathProjects.mockReturnValue(
