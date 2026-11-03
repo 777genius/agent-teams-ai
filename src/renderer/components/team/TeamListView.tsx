@@ -74,6 +74,7 @@ import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
+import { TeamListSkeleton } from './TeamListSkeleton';
 import { TeamManagementNotice } from './TeamManagementNotice';
 import {
   findTeamProjectSelectionTarget,
@@ -1266,11 +1267,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
   const renderContent = (): React.JSX.Element => {
     if (teamsLoading) {
-      return (
-        <div className="flex size-full items-center justify-center text-sm text-[var(--color-text-muted)]">
-          {t('list.loading')}
-        </div>
-      );
+      return <TeamListSkeleton label={t('list.loading')} />;
     }
 
     if (teamsError) {
