@@ -23,11 +23,10 @@ export function shouldKeepVisibleDirectoryRows(input: {
   if (input.append) {
     return false;
   }
-  const replacingSummary = input.directorySummary && input.requestedSummary === false;
+  // Revalidating a cached summary must keep its already useful rows visible.
   return (
-    replacingSummary ||
-    input.refreshDirectoryData ||
-    (input.requestedSummary === false && input.visibleEntryCount > 0)
+    input.visibleEntryCount > 0 &&
+    (input.directorySummary || input.refreshDirectoryData || input.requestedSummary === false)
   );
 }
 
@@ -66,6 +65,7 @@ export function publishDefaultFullCatalogPage(input: {
   fetchedAt: string;
   totalCount: number | null;
   nextCursor: string | null;
+  runtimeRevision?: string | null;
 }): void {
   if (input.entries.length === 0 || !isDefaultFullCatalogPage(input)) {
     return;
@@ -77,6 +77,7 @@ export function publishDefaultFullCatalogPage(input: {
     authoritative: true,
     totalCount: input.totalCount,
     nextCursor: input.nextCursor,
+    runtimeRevision: input.runtimeRevision,
   });
 }
 
@@ -95,6 +96,7 @@ export function commitDirectoryPageLoad(input: {
     fetchedAt: string;
   };
   presentEntry: (entry: RuntimeProviderDirectoryEntryDto) => RuntimeProviderDirectoryEntryDto;
+  runtimeRevision?: string | null;
 }):
   | { action: 'retain' }
   | {
@@ -125,6 +127,7 @@ export function commitDirectoryPageLoad(input: {
     fetchedAt: input.directory.fetchedAt,
     totalCount: input.directory.totalCount,
     nextCursor: input.directory.nextCursor,
+    runtimeRevision: input.runtimeRevision,
   });
   return {
     action: 'replace',
@@ -133,6 +136,19 @@ export function commitDirectoryPageLoad(input: {
     nextCursor: input.directory.nextCursor,
     nextEntries,
   };
+}
+
+export function getCachedDirectoryForInitialPaint(input: {
+  reuseCachedFullDirectory?: boolean;
+  directoryQuery: string;
+  projectPath: string | null;
+  runtimeRevision?: string | null;
+}): RuntimeProviderDirectoryCacheSnapshot | null {
+  if (input.reuseCachedFullDirectory !== true || input.directoryQuery.trim()) return null;
+  const cached = getRuntimeProviderDirectoryCacheSnapshot(input.projectPath, input.runtimeRevision);
+  // A cached versioned directory is not safe to display while native identity is unknown.
+  if (!input.runtimeRevision && cached?.runtimeRevision) return null;
+  return cached?.entries.length ? cached : null;
 }
 
 export function getAuthoritativeCachedFullDirectory(input: {

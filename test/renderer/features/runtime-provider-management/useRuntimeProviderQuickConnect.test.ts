@@ -9,6 +9,8 @@ import {
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  observeRuntimeProviderDirectoryRevision,
+  publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 
@@ -118,6 +120,61 @@ describe('useRuntimeProviderQuickConnect', () => {
     vi.useRealTimers();
     resetRuntimeProviderDirectoryCacheForTests();
     current = null;
+  });
+
+  it('drops a warm cache when an initially unknown binary resolves to a different version', async () => {
+    observeRuntimeProviderDirectoryRevision('runtime-old');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/test-project',
+      entries: directoryResponse('old-provider').directory!.entries,
+      fetchedAt: '2026-11-03T16:00:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-old',
+    });
+    await renderHarness({ enabled: false, runtimeRevision: null });
+    // The hook mounted during a CLI version check and has no settled identity yet.
+    loadProviderDirectory.mockResolvedValue(directoryResponse('new-provider'));
+    await act(async () => {
+      root.render(React.createElement(Harness, {
+        enabled: true,
+        runtimeRevision: 'runtime-new',
+      }));
+    });
+    expect(current?.entries).toEqual([]);
+    expect(current?.authoritativeLoaded).toBe(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(current?.entries.map((entry) => entry.providerId)).toEqual(['new-provider']);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')?.runtimeRevision)
+      .toBe('runtime-new');
+  });
+
+  it('does not seed a new runtime with an old unmounted dashboard snapshot', async () => {
+    observeRuntimeProviderDirectoryRevision('runtime-before-unmount');
+    const oldEntry = directoryResponse('old-runtime-provider').directory!.entries[0]!;
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/test-project',
+      entries: [oldEntry],
+      fetchedAt: '2026-11-03T16:00:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-before-unmount',
+    });
+    loadProviderDirectory.mockResolvedValue(directoryResponse('new-runtime-provider'));
+    await act(async () => {
+      root.render(React.createElement(Harness, { runtimeRevision: 'runtime-after-reopen' }));
+    });
+    expect(current?.entries).toEqual([]);
+    expect(current?.authoritativeLoaded).toBe(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(current?.entries.map((entry) => entry.providerId)).toEqual(['new-runtime-provider']);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')).toMatchObject({
+      runtimeRevision: 'runtime-after-reopen',
+      authoritative: false,
+      entries: [{ providerId: 'new-runtime-provider' }],
+    });
   });
 
   it('keeps the automatic dashboard directory on the passive summary route', async () => {
