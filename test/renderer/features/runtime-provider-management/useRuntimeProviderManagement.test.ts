@@ -941,6 +941,50 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it('never emits a previous-project provider in the transition render', async () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...createOpenAiLocalDirectoryEntry(), providerId: 'project-a-only' }],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: false,
+    });
+    const loadProviderDirectory = vi.fn(
+      () => new Promise<RuntimeProviderManagementDirectoryResponse>(() => undefined)
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+    const seen: string[][] = [];
+    const ScopeHarness = ({ projectPath }: { projectPath: string }) => {
+      const [snapshot] = useRuntimeProviderManagement({
+        runtimeId: 'opencode',
+        enabled: true,
+        projectPath,
+        loadViewOnEnable: false,
+        reuseCachedFullDirectory: true,
+        directorySummaryOnEnable: true,
+      });
+      seen.push(snapshot.directoryEntries.map((entry) => entry.providerId));
+      return React.createElement('div');
+    };
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(ScopeHarness, { projectPath: '/tmp/project-a' }));
+      await Promise.resolve();
+    });
+    expect(seen.some((rows) => rows.includes('project-a-only'))).toBe(true);
+
+    seen.length = 0;
+    await act(async () => {
+      root.render(React.createElement(ScopeHarness, { projectPath: '/tmp/project-b' }));
+      await Promise.resolve();
+    });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((rows) => !rows.includes('project-a-only'))).toBe(true);
+    await act(async () => root.unmount());
+  });
+
   it('does not project cached summary credentials into another project or global scope', async () => {
     const entry = { ...createOpenAiLocalDirectoryEntry(), providerId: 'project-a-only' };
     publishRuntimeProviderDirectoryCache({
