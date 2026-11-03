@@ -65,6 +65,7 @@ import {
   refreshAfterModelTest,
   startModelTest,
 } from './runtimeProviderModelTestState';
+import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import { useModelTestStop, withoutModelTestStart } from './useModelTestStop';
 import { useRuntimeProviderProjectContext } from './useRuntimeProviderProjectContext';
 
@@ -326,6 +327,7 @@ export function useRuntimeProviderManagement(
       .catch(() => undefined);
   }, []);
   const currentProjectPath = normalizeProjectContextPath(options.projectPath);
+  const [renderedProjectPath, setRenderedProjectPath] = useState(currentProjectPath);
   const cancelModelTestBestEffort = useCallback((): void => {
     const requestGroupIds = [...activeModelTestRequestGroupsRef.current.entries()];
     if (requestGroupIds.length === 0) return;
@@ -389,6 +391,7 @@ export function useRuntimeProviderManagement(
   }, [cancelModelTestBestEffort]);
 
   useEffect(() => {
+    setRenderedProjectPath(currentProjectPath);
     cancelModelTestBestEffort();
     directoryRequestSeq.current += 1;
     setupFormRequestSeq.current += 1;
@@ -1889,7 +1892,6 @@ export function useRuntimeProviderManagement(
     startConnection,
     updateProviderQuery,
   ]);
-
   const state = useMemo<RuntimeProviderManagementState>(
     () => ({
       view,
@@ -1997,7 +1999,6 @@ export function useRuntimeProviderManagement(
       view,
     ]
   );
-
   const actions = useMemo<RuntimeProviderManagementActions>(
     () => ({
       refresh,
@@ -2063,5 +2064,5 @@ export function useRuntimeProviderManagement(
     ]
   );
 
-  return [state, actions];
+  return [renderedProjectPath === currentProjectPath ? state : maskRuntimeProviderStateForScope(state), actions];
 }
