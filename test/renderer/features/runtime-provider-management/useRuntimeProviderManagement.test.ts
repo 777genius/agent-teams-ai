@@ -689,6 +689,91 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => root.unmount());
   });
 
+  it('reopens a pending deep-linked Connect when native runtime identity settles', async () => {
+    const entry: RuntimeProviderDirectoryEntryDto = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'xai',
+      displayName: 'xAI',
+      state: 'available',
+      setupKind: 'connect-oauth',
+      ownership: [],
+      authMethods: ['oauth'],
+    };
+    const loadProviderDirectory = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        directory: {
+          runtimeId: 'opencode' as const,
+          totalCount: 1,
+          returnedCount: 1,
+          query: null,
+          filter: 'all' as const,
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [entry],
+          diagnostics: [],
+          fetchedAt: '2026-07-20T10:00:00.000Z',
+        },
+      })
+    );
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        setupForm: {
+          runtimeId: 'opencode' as const,
+          providerId: 'xai',
+          displayName: 'xAI',
+          method: 'oauth' as const,
+          supported: true,
+          title: 'Connect xAI',
+          description: 'Sign in',
+          submitLabel: 'Continue',
+          disabledReason: null,
+          source: 'oauth' as const,
+          secret: null,
+          prompts: [],
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadProviderDirectory, loadSetupForm },
+      } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    const render = async (runtimeRevision: string | null) => {
+      await act(async () => {
+        root.render(React.createElement(ConfigurableHarness, {
+          enabled: true,
+          directorySummaryOnEnable: true,
+          searchDirectoryOnQueryChange: false,
+          loadViewOnEnable: false,
+          initialProviderId: 'xai',
+          initialProviderAction: 'connect',
+          runtimeRevision,
+        }));
+        await Promise.resolve();
+      });
+    };
+    await render(null);
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalledTimes(1));
+    });
+    expect(state?.activeFormProviderId).toBe('xai');
+
+    await render('["ready","1.19.4","/opencode"]');
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalledTimes(2));
+    });
+    expect(state?.activeFormProviderId).toBe('xai');
+    expect(state?.setupForm?.providerId).toBe('xai');
+    await act(async () => root.unmount());
+  });
+
   it('hydrates the full provider directory without a catalog refresh', async () => {
     const summaryEntry = {
       ...createOpenAiLocalDirectoryEntry(),
