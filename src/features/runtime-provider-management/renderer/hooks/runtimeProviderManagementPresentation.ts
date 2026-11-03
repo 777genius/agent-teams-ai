@@ -55,7 +55,8 @@ export function presentSetupForm(
     title: replaceProviderNameInText(form.title, form.displayName, displayName) ?? form.title,
     description: replaceProviderNameInText(form.description, form.displayName, displayName),
     submitLabel:
-      replaceProviderNameInText(form.submitLabel, form.displayName, displayName) ?? form.submitLabel,
+      replaceProviderNameInText(form.submitLabel, form.displayName, displayName) ??
+      form.submitLabel,
   };
 }
 
@@ -109,6 +110,10 @@ export function formatProviderConnectError(
   error: RuntimeProviderManagementErrorDto
 ): string {
   const normalizedMessage = error.message.toLowerCase();
+  if (error.message.includes('V2 connection cannot replace an existing OpenCode credential.')) {
+    return `${displayName} already has a saved API key. Use the existing connection. Replacing this key would also change your OpenCode V1 connection.`;
+  }
+
   const invalidApiKey =
     /\binvalid[\s_-]+api[\s_-]*key\b/.test(normalizedMessage) ||
     /\bapi[\s_-]*key\s+(?:is\s+)?(?:invalid|expired|revoked)\b/.test(normalizedMessage);

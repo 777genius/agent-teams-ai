@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -21,6 +21,8 @@ import type {
   RuntimeProviderModelTestResultDto,
 } from '@features/runtime-provider-management/contracts';
 import type { JSX, ReactNode } from 'react';
+
+const OPENROUTER_PAID_RETRY_MODEL = 'openrouter/openai/gpt-oss-20b';
 
 export const ModelRow = ({
   provider,
@@ -67,6 +69,60 @@ export const ModelRow = ({
   const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
   const modelTarget = model.displayName || model.modelId;
   const [stopping, setStopping] = useState(false);
+  const canRetryPaid =
+    provider.providerId === 'openrouter' &&
+    (model.free || model.modelId.endsWith(':free') || model.modelId === OPENROUTER_FREE_MODEL_ID);
+  const [paidRetry, setPaidRetry] = useState<{
+    testing: boolean;
+    result?: RuntimeProviderModelTestResultDto;
+  } | null>(null);
+  const retryScope = useRef({
+    active: true,
+    busy: false,
+    attempt: null as { cancelRequested: boolean; stopConfirmed: boolean } | null,
+  });
+  useEffect(() => {
+    const scope = {
+      active: true,
+      busy: false,
+      attempt: null as { cancelRequested: boolean; stopConfirmed: boolean } | null,
+    };
+    retryScope.current = scope;
+    setPaidRetry(null);
+    return () => {
+      scope.active = false;
+    };
+  }, [provider.providerId, model.modelId, intendedProjectPath]);
+  useEffect(() => {
+    if (cancelled && retryScope.current.attempt) retryScope.current.attempt.cancelRequested = true;
+  }, [cancelled]);
+  const testSelectedModel = async (): Promise<void> => {
+    const scope = retryScope.current;
+    if (scope.busy || !scope.active) return;
+    scope.busy = true;
+    const attempt = { cancelRequested: false, stopConfirmed: false };
+    scope.attempt = attempt;
+    setPaidRetry(null);
+    try {
+      const tested = await actions.testModel(provider.providerId, model.modelId);
+      if (
+        !canRetryPaid ||
+        !scope.active ||
+        attempt.cancelRequested ||
+        tested.ok ||
+        !tested.diagnostics.includes('provider_free_quota_exhausted')
+      )
+        return;
+      setPaidRetry({ testing: true });
+      const retried = await actions.testModel(provider.providerId, OPENROUTER_PAID_RETRY_MODEL);
+      if (scope.active && !attempt.stopConfirmed) setPaidRetry({ testing: false, result: retried });
+    } finally {
+      scope.busy = false;
+      if (scope.active)
+        setPaidRetry((current) => (current ? { ...current, testing: false } : null));
+    }
+  };
+
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   useEffect(() => {
     const startedAt = testStartedAt ?? Date.now();
@@ -116,10 +172,10 @@ export const ModelRow = ({
           <RuntimeProviderModelTestButton
             modelId={model.modelId}
             modelTarget={modelTarget}
-            disabled={disabled}
-            testing={testing}
+            disabled={disabled || paidRetry?.testing === true}
+            testing={testing || paidRetry?.testing === true}
             onTest={() => {
-              void actions.testModel(provider.providerId, model.modelId);
+              void testSelectedModel().catch(() => undefined);
             }}
           />
           {defaultTarget ? (
@@ -155,6 +211,59 @@ export const ModelRow = ({
           ) : null}
         </div>
       </div>
+      {canRetryPaid ? (
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+          {t('runtimeProvider.models.paidRetryNotice')}
+        </p>
+      ) : null}
+      {paidRetry ? (
+        <div className="mt-2" role="status">
+          <p className="text-xs text-[var(--color-text-muted)]">
+            {t(
+              paidRetry.testing
+                ? 'runtimeProvider.models.paidRetryRunning'
+                : 'runtimeProvider.models.paidRetryResult'
+            )}
+          </p>
+          <RuntimeProviderModelTestResult result={paidRetry.result} formatMessage={formatMessage} />
+          {paidRetry.testing && actions.stopModelTest ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-1 h-7"
+              disabled={stopping}
+              onClick={() => {
+                const scope = retryScope.current;
+                const attempt = scope.attempt;
+                if (attempt) attempt.cancelRequested = true;
+                setStopping(true);
+                void actions
+                  .stopModelTest?.(provider.providerId, OPENROUTER_PAID_RETRY_MODEL)
+                  .then((stopped) => {
+                    if (!stopped || !scope.active || !attempt) return;
+                    attempt.stopConfirmed = true;
+                    setPaidRetry({
+                      testing: false,
+                      result: {
+                        providerId: provider.providerId,
+                        modelId: OPENROUTER_PAID_RETRY_MODEL,
+                        ok: false,
+                        availability: 'unknown',
+                        message: t('runtimeProvider.models.testCancelled'),
+                        diagnostics: [],
+                      },
+                    });
+                  })
+                  .catch(() => undefined)
+                  .finally(() => setStopping(false));
+              }}
+            >
+              {t('runtimeProvider.models.stopTest')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {unavailableTitle ? (
         <div className="mt-2 text-xs text-amber-200">{unavailableTitle}</div>
       ) : null}
@@ -170,6 +279,7 @@ export const ModelRow = ({
               disabled={stopping}
               onClick={(event) => {
                 event.stopPropagation();
+                if (retryScope.current.attempt) retryScope.current.attempt.cancelRequested = true;
                 setStopping(true);
                 void actions
                   .stopModelTest?.(provider.providerId, model.modelId)
