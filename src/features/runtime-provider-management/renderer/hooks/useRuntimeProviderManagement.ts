@@ -707,8 +707,8 @@ export function useRuntimeProviderManagement(
       projectPath: currentProjectPath,
     });
     if (cached) {
-      directoryEntriesRef.current = cached.entries;
-      setDirectoryEntries(cached.entries);
+      directoryEntriesRef.current = cached.entries.map(presentDirectoryEntry);
+      setDirectoryEntries(directoryEntriesRef.current);
       setDirectoryLoaded(true);
       setDirectorySummary(!cached.authoritative);
       setDirectoryTotalCount(cached.totalCount ?? cached.entries.length);
