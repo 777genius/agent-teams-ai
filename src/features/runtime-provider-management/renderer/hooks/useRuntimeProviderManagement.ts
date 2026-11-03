@@ -694,8 +694,8 @@ export function useRuntimeProviderManagement(
     options.loadViewOnEnable,
     options.preserveViewRequestOnDisable,
     refresh,
+    settledRuntimeRevision,
   ]);
-
   useEffect(() => {
     if (!options.enabled) return;
     return api.runtimeProviderManagement.onOAuthProgress?.((event) => {
