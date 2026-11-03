@@ -292,7 +292,7 @@ export const ImportCustomTeamTemplateDialog = ({
     try {
       result = await importTemplate(renamed);
     } catch {
-      setErrorState('transportFailed');
+      setErrorState('unresolvedWriteOutcome');
       setRenameBusy(false);
       return;
     }

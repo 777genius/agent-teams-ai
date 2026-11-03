@@ -925,6 +925,35 @@ describe('ImportCustomTeamTemplateDialog', () => {
       expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
     });
 
+    it('maps a rejected rename import to unresolvedWriteOutcome and blocks retries', async () => {
+      importTemplate.mockRejectedValue(new Error('transport rejected after dispatch'));
+
+      await startConflict();
+      await act(async () => {
+        confirmButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      expect(host.querySelector('[data-testid="import-template-done"]')).toBeNull();
+      expect(host.querySelector('[data-testid="import-template-transport-failed"]')).toBeNull();
+      expect(confirmButton().disabled).toBe(true);
+
+      // Retry must not dispatch another write.
+      await act(async () => {
+        confirmButton().click();
+      });
+      expect(importTemplate).toHaveBeenCalledTimes(1);
+
+      // Changing the rename input cannot bypass the guard.
+      await typeRenameName('Another Name');
+      await act(async () => {
+        confirmButton().click();
+      });
+      expect(importTemplate).toHaveBeenCalledTimes(1);
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+    });
+
     it('keeps repeated name conflicts resolvable', async () => {
       importTemplate
         .mockResolvedValueOnce({
