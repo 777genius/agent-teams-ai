@@ -928,8 +928,9 @@ describe('useRuntimeProviderManagement', () => {
         schemaVersion: 1,
         runtimeId: 'opencode',
         error: {
-          code: 'runtime-unavailable',
+          code: 'runtime-unhealthy',
           message: 'OpenCode binary verification failed',
+          recoverable: true,
         },
       });
       await Promise.resolve();
