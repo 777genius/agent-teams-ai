@@ -2317,6 +2317,69 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     ]);
   });
 
+  it.each(['v1', 'missing'] as const)(
+    'requires a full V2 retry after support failure preserves a %s selection',
+    async (selected) => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const binaryPath = path.join(
+        tempRoot!,
+        'TEST-selected-v1',
+        getTestNativeOpenCodeBinaryName()
+      );
+      await mkdir(path.dirname(binaryPath), { recursive: true });
+      await writeFile(binaryPath, 'TEST selected V1 bytes', { mode: 0o755 });
+      process.env.PATH = selected === 'v1' ? path.dirname(binaryPath) : '';
+      const { version } = await mockV2Download();
+      execCliMock.mockImplementation(async (candidate: string) => ({
+        stdout: `${candidate === binaryPath ? '1.18.3' : version}\n`,
+        stderr: '',
+      }));
+      const message = 'OpenCode V2 support archive checksum mismatch';
+      const support = {
+        withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) =>
+          status.version?.startsWith('2.') ? { ...status, v2Support: 'ready' as const } : status
+        ),
+        install: vi.fn().mockRejectedValueOnce(new Error(message)).mockResolvedValue(undefined),
+      };
+      const service = new OpenCodeRuntimeInstallerService(support);
+      const failed = await service.install({ generation: 'v2' });
+      expect(failed).toMatchObject({
+        ...(selected === 'v1'
+          ? { installed: true, binaryPath, version: '1.18.3', source: 'path' }
+          : { installed: false, source: 'missing' }),
+        state: 'failed',
+        error: message,
+        progress: { phase: 'failed', detail: message },
+      });
+      expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+      const invalidRetry = await service.install({ generation: 'v2', supportOnly: true });
+      expect(invalidRetry).toMatchObject({
+        ...(selected === 'v1' ? { binaryPath, version: '1.18.3' } : { installed: false }),
+        state: 'failed',
+        error: 'OpenCode V2 support requires a verified selected native V2 CLI',
+      });
+      expect(support.install).toHaveBeenCalledTimes(1);
+      const completed = await service.install({ generation: 'v2' });
+      expect(completed).toMatchObject({
+        installed: true,
+        source: 'app-managed',
+        state: 'ready',
+        version,
+      });
+      expect(support.install).toHaveBeenCalledTimes(2);
+      expect(await readFile(binaryPath, 'utf8')).toBe('TEST selected V1 bytes');
+      expect(consoleError.mock.calls).toEqual([
+        ['[OpenCodeRuntimeInstallerService]', 'Failed to install OpenCode runtime:', message],
+        [
+          '[OpenCodeRuntimeInstallerService]',
+          'Failed to install OpenCode runtime:',
+          'OpenCode V2 support requires a verified selected native V2 CLI',
+        ],
+      ]);
+      consoleError.mockClear();
+    }
+  );
+
   it('refuses native activation when a new explicit selection appears during support acquisition', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await mockV2Download();

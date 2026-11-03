@@ -243,7 +243,9 @@ const OpenCodePrerequisite = ({
     runtimeStatus.v2Support === 'required' &&
     getOpenCodeGeneration(runtimeStatus.version) === 'v2';
   // Support files are separate from the selected native binary, including overrides.
-  const supportSetup = supportRequired || supportProgress;
+  const selectedV2 =
+    runtimeStatus?.installed === true && runtimeStatus.version?.startsWith('2.') === true;
+  const supportSetup = supportRequired || (supportProgress && (!supportFailed || selectedV2));
   const canInstall = supportSetup
     ? Boolean(runtimeStatus?.compatibleV2Version)
     : canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
@@ -327,6 +329,7 @@ const OpenCodePrerequisite = ({
             onClick={() => {
               if (supportBusy) return;
               if (supportSetup) onInstall({ generation: 'v2', supportOnly: true });
+              else if (supportFailed) onInstall({ generation: 'v2' });
               else onInstall();
             }}
           >

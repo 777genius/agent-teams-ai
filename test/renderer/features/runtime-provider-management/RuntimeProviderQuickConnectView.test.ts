@@ -562,6 +562,115 @@ describe('RuntimeProviderQuickConnectView', () => {
     }
   );
 
+  it.each(['v1', 'missing'] as const)(
+    'retries the full V2 install when support failure preserves a %s selection',
+    async (selected) => {
+      vi.spyOn(companion, 'useRuntimeProviderCompanion').mockReturnValue({
+        status: null,
+        loading: false,
+        runInstallAndConnect: vi.fn(),
+        runConnect: vi.fn(),
+        runAction: vi.fn(),
+        refresh: vi.fn(),
+      });
+      vi.spyOn(quickConnectDirectory, 'useRuntimeProviderQuickConnect').mockReturnValue({
+        entries: [],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: null,
+        refresh: vi.fn(),
+      });
+      const previousApi = window.electronAPI;
+      const initial: OpenCodeRuntimeStatus =
+        selected === 'v1'
+          ? {
+              installed: true,
+              version: '1.18.3',
+              binaryPath: '/TEST/selected-v1',
+              source: 'path',
+              state: 'ready',
+              compatibleV2Version: '2.2.0',
+            }
+          : {
+              installed: false,
+              source: 'missing',
+              state: 'idle',
+              compatibleV2Version: '2.2.0',
+            };
+      const message = 'OpenCode V2 support archive checksum mismatch';
+      // The installer preserves the native selection until both V2 parts verify.
+      const failed: OpenCodeRuntimeStatus = {
+        ...initial,
+        state: 'failed',
+        error: message,
+        progress: { phase: 'failed', detail: message },
+      };
+      const install = vi
+        .fn()
+        .mockResolvedValueOnce(failed)
+        .mockResolvedValueOnce({
+          ...initial,
+          installed: true,
+          state: 'ready',
+          version: '2.2.0',
+          source: 'app-managed',
+          v2Support: 'ready',
+        });
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...previousApi,
+          cliInstaller: undefined,
+          openCodeRuntime: { install, invalidateStatus: vi.fn().mockResolvedValue(undefined) },
+        },
+      });
+      try {
+        const store = createStore<CliInstallerSlice>()(
+          createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+        );
+        store.setState({ openCodeRuntimeStatus: initial });
+        await store.getState().installOpenCodeRuntime({ generation: 'v2' });
+        expect(store.getState().openCodeRuntimeStatus).toEqual(failed);
+        let retry: Promise<void> | undefined;
+        await act(async () =>
+          root.render(
+            React.createElement(RuntimeProviderQuickConnect, {
+              enabled: true,
+              cliStatusLoading: false,
+              providers: [],
+              openCodeRuntimeStatus: store.getState().openCodeRuntimeStatus,
+              openCodeRuntimeStatusLoading: store.getState().openCodeRuntimeStatusLoading,
+              onInstallOpenCode: (options) => {
+                retry = store.getState().installOpenCodeRuntime(options);
+              },
+              onRefreshOpenCode: vi.fn(),
+              onOpenCodeProviderAction: vi.fn(),
+              onBrowseProviders: vi.fn(),
+            })
+          )
+        );
+        const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+        expect(banner?.textContent).toContain(message);
+        expect(banner?.textContent).not.toContain('Finish OpenCode V2 setup');
+        const button = banner?.querySelector<HTMLButtonElement>('button');
+        expect(button?.disabled).toBe(false);
+        await act(async () => {
+          button?.click();
+          await retry;
+        });
+        expect(install).toHaveBeenNthCalledWith(2, { generation: 'v2' });
+        expect(store.getState().openCodeRuntimeStatus).toMatchObject({
+          version: '2.2.0',
+          state: 'ready',
+        });
+      } finally {
+        Object.defineProperty(window, 'electronAPI', { configurable: true, value: previousApi });
+      }
+    }
+  );
+
   it('keeps the prerequisite notice hidden while OpenCode availability is checked', async () => {
     await act(async () => {
       root.render(
