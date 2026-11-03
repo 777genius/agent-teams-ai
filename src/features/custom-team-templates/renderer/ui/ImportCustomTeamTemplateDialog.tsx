@@ -158,6 +158,10 @@ export const ImportCustomTeamTemplateDialog = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isBusy = importStage === 'importing' || renameBusy;
+  // A dispatched import whose outcome is unknown may already have committed, so
+  // every entry point that could send another write stays blocked until the user
+  // closes the dialog and starts a fresh import.
+  const isUnresolved = errorState === 'unresolvedWriteOutcome';
 
   const resetFileInput = useCallback(() => {
     if (fileInputRef.current) {
@@ -231,6 +235,7 @@ export const ImportCustomTeamTemplateDialog = ({
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
+      if (errorState === 'unresolvedWriteOutcome') return;
 
       setImportStage('importing');
       setErrorState(null);
@@ -250,11 +255,12 @@ export const ImportCustomTeamTemplateDialog = ({
         resetFileInput();
       }
     },
-    [platform, browserFile, handleImportResult, resetFileInput]
+    [platform, browserFile, handleImportResult, resetFileInput, errorState]
   );
 
   const handleDesktopImport = useCallback(async () => {
     if (!desktopFile) return;
+    if (errorState === 'unresolvedWriteOutcome') return;
 
     setImportStage('importing');
     setErrorState(null);
@@ -267,7 +273,7 @@ export const ImportCustomTeamTemplateDialog = ({
       // the read never completed and the dialog must leave the busy stage.
       handleImportResult({ status: 'transportFailed' });
     }
-  }, [desktopFile, handleImportResult]);
+  }, [desktopFile, handleImportResult, errorState]);
 
   const handleRenameConfirm = useCallback(async () => {
     if (!conflictPortable || !conflictExistingId) return;
@@ -551,7 +557,7 @@ export const ImportCustomTeamTemplateDialog = ({
                     id="import-file-input"
                     type="file"
                     accept=".json"
-                    disabled={isBusy}
+                    disabled={isBusy || isUnresolved}
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                     className="block w-full text-sm text-[var(--color-text)] text-[var(--color-text-muted)] file:mr-4 file:rounded-md file:border-0 file:py-2 file:text-sm file:font-semibold hover:file:bg-[var(--color-surface-raised)]"
@@ -618,7 +624,7 @@ export const ImportCustomTeamTemplateDialog = ({
           ) : importStage === 'done' ? null : (
             <Button
               variant="outline"
-              disabled={closeDisabled || platform === 'none'}
+              disabled={closeDisabled || platform === 'none' || isUnresolved}
               onClick={
                 platform === 'electron'
                   ? handleDesktopImport

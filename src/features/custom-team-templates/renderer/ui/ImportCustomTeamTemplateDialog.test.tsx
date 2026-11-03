@@ -633,12 +633,12 @@ describe('ImportCustomTeamTemplateDialog', () => {
       },
       {
         label: 'unsupportedFormat',
-        result: { status: 'unsupportedFormat', format: 'wrong' },
+        result: { status: 'unsupportedFormat' },
         testId: 'import-template-unsupported-format',
       },
       {
         label: 'unsupportedVersion',
-        result: { status: 'unsupportedVersion', version: 2 },
+        result: { status: 'unsupportedVersion' },
         testId: 'import-template-unsupported-version',
       },
       {
@@ -650,11 +650,6 @@ describe('ImportCustomTeamTemplateDialog', () => {
         label: 'templateIdConflict',
         result: { status: 'templateIdConflict', templateId: 'tmpl-1' },
         testId: 'import-template-id-conflict',
-      },
-      {
-        label: 'unresolvedWriteOutcome',
-        result: { status: 'unresolvedWriteOutcome', templateId: 'tmpl-1' },
-        testId: 'import-template-unresolved',
       },
     ];
 
@@ -692,6 +687,60 @@ describe('ImportCustomTeamTemplateDialog', () => {
       await render();
       await selectPortableFile();
       expect(host.querySelector('[data-testid="import-template-invalid-json"]')).not.toBeNull();
+
+      await selectPortableFile();
+
+      expect(browserFile.importFromFile).toHaveBeenCalledTimes(2);
+      expect(host.querySelector('[data-testid="import-template-done"]')).not.toBeNull();
+    });
+
+    it('blocks another browser import after an unresolved write', async () => {
+      browserFile.importFromFile.mockResolvedValue({
+        status: 'unresolvedWriteOutcome',
+        templateId: '',
+      });
+
+      await render();
+      await selectPortableFile();
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      expect(host.querySelector('[data-testid="import-template-transport-failed"]')).toBeNull();
+      expect(fileInput().disabled).toBe(true);
+      expect(importButton().disabled).toBe(true);
+      expect(closeButton().disabled).toBe(false);
+      expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+
+      // The file input is disabled, so selecting another file cannot dispatch a
+      // second import from the same uncertain dialog flow.
+      const input = fileInput();
+      Object.defineProperty(input, 'files', {
+        value: [
+          new File([JSON.stringify(portable)], 'template.json', { type: 'application/json' }),
+        ],
+        configurable: true,
+      });
+      await act(async () => {
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+    });
+
+    it('allows a retry after a definitive validation failure', async () => {
+      browserFile.importFromFile
+        .mockResolvedValueOnce({
+          status: 'validationFailed',
+          issues: [{ code: 'templateNameRequired', field: 'name' }],
+        })
+        .mockResolvedValueOnce(importedResult());
+
+      await render();
+      await selectPortableFile();
+      expect(
+        host.querySelector('[data-testid="import-template-validation-failed"]')
+      ).not.toBeNull();
+      expectInteractiveAfterFailure();
 
       await selectPortableFile();
 
@@ -760,23 +809,18 @@ describe('ImportCustomTeamTemplateDialog', () => {
       },
       {
         label: 'unsupportedFormat',
-        result: { status: 'unsupportedFormat', format: 'wrong' },
+        result: { status: 'unsupportedFormat' },
         testId: 'import-template-unsupported-format',
       },
       {
         label: 'unsupportedVersion',
-        result: { status: 'unsupportedVersion', version: 2 },
+        result: { status: 'unsupportedVersion' },
         testId: 'import-template-unsupported-version',
       },
       {
         label: 'storageUnavailable',
         result: { status: 'storageUnavailable' },
         testId: 'import-template-storage-unavailable',
-      },
-      {
-        label: 'unresolvedWriteOutcome',
-        result: { status: 'unresolvedWriteOutcome', templateId: 'tmpl-1' },
-        testId: 'import-template-unresolved',
       },
       {
         label: 'validationFailed',
@@ -827,6 +871,30 @@ describe('ImportCustomTeamTemplateDialog', () => {
 
       expect(desktopFile.importFromFile).toHaveBeenCalledTimes(2);
       expect(host.querySelector('[data-testid="import-template-done"]')).not.toBeNull();
+    });
+
+    it('blocks another desktop import after an unresolved write', async () => {
+      desktopFile.importFromFile.mockResolvedValue({
+        status: 'unresolvedWriteOutcome',
+        templateId: '',
+      });
+
+      await render();
+      await act(async () => {
+        importButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      expect(importButton().disabled).toBe(true);
+      expect(closeButton().disabled).toBe(false);
+      expect(desktopFile.importFromFile).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        importButton().click();
+      });
+
+      expect(desktopFile.importFromFile).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
     });
 
     it('reaches done after a successful desktop import', async () => {

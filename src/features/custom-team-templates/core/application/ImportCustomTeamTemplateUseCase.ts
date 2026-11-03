@@ -119,13 +119,13 @@ export class ImportCustomTeamTemplateUseCase {
    */
   async execute(payload: unknown): Promise<ImportCustomTeamTemplateResult> {
     if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
-      return { status: 'unsupportedFormat', format: payload };
+      return { status: 'unsupportedFormat' };
     }
     const candidate = payload as { portable?: unknown; name?: unknown };
     const portableInput = candidate.portable !== undefined ? candidate.portable : payload;
 
     if (!isPlainRecord(portableInput)) {
-      return { status: 'unsupportedFormat', format: portableInput };
+      return { status: 'unsupportedFormat' };
     }
     const portable = portableInput;
 
@@ -137,10 +137,10 @@ export class ImportCustomTeamTemplateUseCase {
     }
 
     if (portable.format !== CUSTOM_TEAM_TEMPLATE_PORTABLE_FORMAT) {
-      return { status: 'unsupportedFormat', format: portable.format };
+      return { status: 'unsupportedFormat' };
     }
     if (portable.schemaVersion !== CUSTOM_TEAM_TEMPLATE_PORTABLE_SCHEMA_VERSION) {
-      return { status: 'unsupportedVersion', version: portable.schemaVersion };
+      return { status: 'unsupportedVersion' };
     }
 
     // name (allow override)
@@ -155,7 +155,10 @@ export class ImportCustomTeamTemplateUseCase {
     if (typeof portable.teamPrompt !== 'string') {
       return validationFailed([{ code: 'teamPromptInvalidType', field: 'teamPrompt' }]);
     }
-    const teamPrompt = portable.teamPrompt;
+    // Normalize with the established projection/update trim() policy before
+    // validation, hashing and the write payload. Internal whitespace and
+    // newlines are preserved; empty and whitespace-only prompts stay allowed.
+    const teamPrompt = portable.teamPrompt.trim();
 
     // description
     let description: string | undefined;
@@ -278,7 +281,7 @@ export class ImportCustomTeamTemplateUseCase {
     });
     const contentHash = this.deps.hasher.hashCanonicalContent(canonical);
 
-    const templateId = this.deps.createTemplateId();
+    let templateId = this.deps.createTemplateId();
     let hadUnknownExecution = false;
     for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt += 1) {
       let result;
@@ -347,7 +350,15 @@ export class ImportCustomTeamTemplateUseCase {
               portable: portableTemplate,
             };
           }
+          // A generated id that is already stored with different content is a
+          // definitive collision: retrying the same id would repeat it. Only a
+          // confirmed answer may rotate identity; an uncertain prior execution
+          // must never be retried under a different id.
+          if (hadUnknownExecution) {
+            return { status: 'unresolvedWriteOutcome', templateId };
+          }
           if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
+            templateId = this.deps.createTemplateId();
             break;
           }
           return { status: 'templateIdConflict', templateId: result.existingTemplateId };

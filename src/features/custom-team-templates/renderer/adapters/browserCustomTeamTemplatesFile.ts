@@ -101,8 +101,9 @@ export class CustomTeamTemplateBrowserFileService implements CustomTeamTemplates
    *
    * The size ceiling is enforced before any bytes are read, the payload must be
    * strict UTF-8 (BOM discarded) and valid JSON, and a rejected transport call is
-   * reported as `transportFailed` because the request may simply never have
-   * completed. It never reports a write as definitely failed when it is unknown.
+   * reported as `unresolvedWriteOutcome` because the request was already
+   * dispatched and may have committed. It never reports a write as definitely
+   * failed when it is unknown.
    */
   async importFromFile(file: File): Promise<ImportCustomTeamTemplateFromBrowserFileResult> {
     // Reject oversized files before any content is read into memory.
@@ -138,11 +139,12 @@ export class CustomTeamTemplateBrowserFileService implements CustomTeamTemplates
     try {
       result = await this.importExecutor({ portable: parsed });
     } catch {
-      // A transport failure (network error, timeout, non-2xx HTTP response)
-      // is distinct from a domain storageUnavailable outcome: the store may be
-      // fine, the request simply never completed. Do not claim the import
-      // definitely failed or that nothing was written.
-      return { status: 'transportFailed' };
+      // The request was already dispatched, so a timeout, network failure or
+      // non-2xx response cannot prove the server did not commit the import.
+      // Report the write as unresolved instead of a definitive failure so the
+      // renderer blocks a second import. The browser never learns the
+      // server-assigned id, so it reconciles against an empty id.
+      return { status: 'unresolvedWriteOutcome', templateId: '' };
     }
     return result;
   }

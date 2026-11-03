@@ -6,7 +6,10 @@ import {
   type PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 
-import { CustomTeamTemplateBrowserFileService, DefaultBrowserFileDownload } from '@features/custom-team-templates/renderer/adapters/browserCustomTeamTemplatesFile';
+import {
+  CustomTeamTemplateBrowserFileService,
+  DefaultBrowserFileDownload,
+} from '@features/custom-team-templates/renderer/adapters/browserCustomTeamTemplatesFile';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -283,8 +286,8 @@ describe('CustomTeamTemplateBrowserFileService import', () => {
     }
   });
 
-  it('reports unsupported format', async () => {
-    const { importTemplate } = executors({ status: 'unsupportedFormat', format: 'wrong' });
+  it('reports unsupported format without echoing the rejected value', async () => {
+    const { importTemplate } = executors({ status: 'unsupportedFormat' });
     const service = new CustomTeamTemplateBrowserFileService({
       importTemplate: importTemplate as unknown as (
         payload: unknown
@@ -303,11 +306,11 @@ describe('CustomTeamTemplateBrowserFileService import', () => {
     });
     const result = await service.importFromFile(file);
 
-    expect(result).toEqual({ status: 'unsupportedFormat', format: 'wrong' });
+    expect(result).toEqual({ status: 'unsupportedFormat' });
   });
 
-  it('reports unsupported version', async () => {
-    const { importTemplate } = executors({ status: 'unsupportedVersion', version: 2 });
+  it('reports unsupported version without echoing the rejected value', async () => {
+    const { importTemplate } = executors({ status: 'unsupportedVersion' });
     const service = new CustomTeamTemplateBrowserFileService({
       importTemplate: importTemplate as unknown as (
         payload: unknown
@@ -318,7 +321,7 @@ describe('CustomTeamTemplateBrowserFileService import', () => {
     const file = makeFile({ contents: JSON.stringify({ ...PORTABLE, schemaVersion: 2 }) });
     const result = await service.importFromFile(file);
 
-    expect(result).toEqual({ status: 'unsupportedVersion', version: 2 });
+    expect(result).toEqual({ status: 'unsupportedVersion' });
   });
 });
 
@@ -566,18 +569,23 @@ describe('CustomTeamTemplateBrowserFileService export', () => {
     expect(download.download).not.toHaveBeenCalled();
   });
 
-  it('classifies import executor throw as transportFailed, not storageUnavailable', async () => {
+  it('classifies a rejected import request as unresolvedWriteOutcome, not a definitive failure', async () => {
     const { importTemplate } = executors();
-    importTemplate.mockRejectedValueOnce(new Error('network down'));
+    importTemplate.mockRejectedValueOnce(new Error('request aborted after dispatch'));
     const service = new CustomTeamTemplateBrowserFileService({
-      importTemplate: importTemplate as unknown as (payload: unknown) => Promise<ImportCustomTeamTemplateResult>,
+      importTemplate: importTemplate as unknown as (
+        payload: unknown
+      ) => Promise<ImportCustomTeamTemplateResult>,
       exportTemplate: vi.fn(),
     });
 
     const file = makeFile({ contents: JSON.stringify(PORTABLE) });
     const result = await service.importFromFile(file);
 
-    expect(result).toEqual({ status: 'transportFailed' });
+    // The request was dispatched, so a timeout/transport rejection cannot prove
+    // the server did not commit. The browser has no server-assigned id.
+    expect(result).toEqual({ status: 'unresolvedWriteOutcome', templateId: '' });
+    expect(importTemplate).toHaveBeenCalledTimes(1);
     expect(importTemplate).toHaveBeenCalledWith({ portable: PORTABLE });
   });
 
@@ -590,7 +598,9 @@ describe('CustomTeamTemplateBrowserFileService export', () => {
     const { download } = downloadMock();
     const service = new CustomTeamTemplateBrowserFileService({
       importTemplate: vi.fn(),
-      exportTemplate: exportTemplate as unknown as (payload: unknown) => Promise<ExportCustomTeamTemplateResult>,
+      exportTemplate: exportTemplate as unknown as (
+        payload: unknown
+      ) => Promise<ExportCustomTeamTemplateResult>,
       download,
     });
 
@@ -603,7 +613,9 @@ describe('CustomTeamTemplateBrowserFileService export', () => {
   it('keeps domain storageUnavailable distinct from transport failure on import', async () => {
     const { importTemplate } = executors({ status: 'storageUnavailable' });
     const service = new CustomTeamTemplateBrowserFileService({
-      importTemplate: importTemplate as unknown as (payload: unknown) => Promise<ImportCustomTeamTemplateResult>,
+      importTemplate: importTemplate as unknown as (
+        payload: unknown
+      ) => Promise<ImportCustomTeamTemplateResult>,
       exportTemplate: vi.fn(),
     });
 
@@ -620,7 +632,9 @@ describe('CustomTeamTemplateBrowserFileService export', () => {
     const { download, calls } = downloadMock();
     const service = new CustomTeamTemplateBrowserFileService({
       importTemplate: vi.fn(),
-      exportTemplate: exportTemplate as unknown as (payload: unknown) => Promise<ExportCustomTeamTemplateResult>,
+      exportTemplate: exportTemplate as unknown as (
+        payload: unknown
+      ) => Promise<ExportCustomTeamTemplateResult>,
       download,
     });
 

@@ -1,5 +1,8 @@
 // @vitest-environment node
-import { CUSTOM_TEAM_TEMPLATE_CHANNELS } from '@features/custom-team-templates/contracts';
+import {
+  CUSTOM_TEAM_TEMPLATE_CHANNELS,
+  CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS,
+} from '@features/custom-team-templates/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -35,8 +38,30 @@ const { startCustomTeamTemplatesFeature } = await import('@main/startCustomTeamT
 
 import type { InternalStorageFeature } from '@features/internal-storage/main';
 
-const CHANNELS = Object.values(CUSTOM_TEAM_TEMPLATE_CHANNELS);
+// Both authoritative channel definitions: the shared data channels and the two
+// desktop-only file channels that startup also registers.
+const CHANNELS = [
+  ...Object.values(CUSTOM_TEAM_TEMPLATE_CHANNELS),
+  ...Object.values(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS),
+];
 const BACKEND = { kind: 'templates-backend' };
+
+function registeredChannels(): string[] {
+  return hoisted.handle.mock.calls.map(([channel]) => String(channel));
+}
+
+function removedChannels(): string[] {
+  return hoisted.removeHandler.mock.calls.map(([channel]) => String(channel));
+}
+
+const byChannelName = (left: string, right: string): number => left.localeCompare(right);
+
+/** Every expected channel exactly once, with no duplicates or stragglers. */
+function expectExactlyChannels(channels: string[]): void {
+  expect(channels).toHaveLength(CHANNELS.length);
+  expect(new Set(channels).size).toBe(CHANNELS.length);
+  expect([...channels].sort(byChannelName)).toEqual([...CHANNELS].sort(byChannelName));
+}
 
 function internalStorage(): InternalStorageFeature {
   return { customTeamTemplatesBackend: BACKEND } as unknown as InternalStorageFeature;
@@ -56,8 +81,11 @@ describe('startCustomTeamTemplatesFeature', () => {
     expect(hoisted.createCustomTeamTemplatesFeature).toHaveBeenCalledExactlyOnceWith({
       backend: BACKEND,
     });
-    expect(hoisted.handle.mock.calls.map(([channel]) => channel).sort()).toEqual(
-      [...CHANNELS].sort()
+    expectExactlyChannels(registeredChannels());
+    // The desktop file channels must be part of the actual startup surface, not
+    // just the shared data channels.
+    expect(registeredChannels()).toEqual(
+      expect.arrayContaining(Object.values(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS))
     );
     // The startup surface is the composed feature plus a bridge-aware disposer.
     expect(startup.preparePreview).toBe(hoisted.feature.preparePreview);
@@ -79,8 +107,9 @@ describe('startCustomTeamTemplatesFeature', () => {
 
     startup.dispose();
 
-    expect(hoisted.removeHandler.mock.calls.map(([channel]) => channel).sort()).toEqual(
-      [...CHANNELS].sort()
+    expectExactlyChannels(removedChannels());
+    expect(removedChannels()).toEqual(
+      expect.arrayContaining(Object.values(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS))
     );
     expect(hoisted.featureDispose).toHaveBeenCalledTimes(1);
   });

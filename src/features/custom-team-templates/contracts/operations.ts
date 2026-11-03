@@ -313,7 +313,9 @@ export type ImportCustomTeamTemplateResult =
     }
   | { status: 'templateIdConflict'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
-  | { status: 'unsupportedFormat'; format: unknown }
-  | { status: 'unsupportedVersion'; version: unknown }
+  // Status-only: the rejected format/version is untrusted file content and must
+  // never be echoed back through IPC or HTTP responses.
+  | { status: 'unsupportedFormat' }
+  | { status: 'unsupportedVersion' }
   | { status: 'storageUnavailable' }
   | { status: 'unresolvedWriteOutcome'; templateId: string };
