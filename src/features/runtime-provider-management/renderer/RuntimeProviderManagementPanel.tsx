@@ -54,6 +54,15 @@ export const RuntimeProviderManagementPanel = ({
   const invalidateOpenCodeRuntimeStatus = useStore(
     (state) => state.invalidateOpenCodeRuntimeStatus
   );
+  const runtimeRevision =
+    nativeOpenCodeStatus?.state === 'ready' && nativeOpenCodeStatus.installed
+      ? JSON.stringify(['ready', nativeOpenCodeStatus.version ?? null, nativeOpenCodeStatus.binaryPath ?? null])
+      : nativeOpenCodeStatus && !nativeOpenCodeStatus.installed &&
+          nativeOpenCodeStatus.state !== 'checking' &&
+          nativeOpenCodeStatus.state !== 'downloading' &&
+          nativeOpenCodeStatus.state !== 'installing'
+        ? 'unavailable'
+        : null;
   const openCodeGeneration =
     nativeOpenCodeStatus?.installed &&
     nativeOpenCodeStatus.version &&
@@ -149,6 +158,7 @@ export const RuntimeProviderManagementPanel = ({
     directoryPageSize: initialProviderId ? 100 : 250,
     directorySummaryOnEnable: !searchInitialProviderDirectly,
     reuseCachedFullDirectory: !searchInitialProviderDirectly,
+    runtimeRevision,
     loadViewOnEnable: false,
     preserveViewRequestOnDisable: open && !providerContextReady,
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
