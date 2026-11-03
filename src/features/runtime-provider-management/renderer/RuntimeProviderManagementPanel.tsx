@@ -239,7 +239,7 @@ export const RuntimeProviderManagementPanel = ({
     ) {
       return;
     }
-    const hydrationKey = `${effectiveProjectPath ?? ''}:full-catalog`;
+    const hydrationKey = `${effectiveProjectPath ?? ''}:${runtimeRevision ?? 'pending'}:full-catalog`;
     if (backgroundHydrationKeyRef.current === hydrationKey) {
       return;
     }
@@ -254,6 +254,7 @@ export const RuntimeProviderManagementPanel = ({
     return () => window.clearTimeout(timeout);
   }, [
     effectiveProjectPath,
+    runtimeRevision,
     hydrateDirectory,
     open,
     searchInitialProviderDirectly,
