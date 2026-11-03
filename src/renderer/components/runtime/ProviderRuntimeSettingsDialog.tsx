@@ -1193,7 +1193,9 @@ export const ProviderRuntimeSettingsDialog = ({
     ? t('providerRuntime.connectionUi.status.checking')
     : openCodeStatusIssue
       ? sanitizeOpenCodeStatusText(
-          openCodeTopLevelFailure && selectedProvider?.statusMessage && !/passive/i.test(selectedProvider.statusMessage)
+          openCodeTopLevelFailure &&
+            selectedProvider?.statusMessage &&
+            !/passive/i.test(selectedProvider.statusMessage)
             ? selectedProvider.statusMessage
             : t('providerRuntime.connectionUi.status.unableToVerify')
         )
@@ -1744,7 +1746,7 @@ export const ProviderRuntimeSettingsDialog = ({
     >
       <DialogContent
         closeDisabled={runtimeProviderOperationBlocking}
-        className="w-[min(calc(100vw-2rem),980px)] max-w-[min(calc(100vw-2rem),980px)]"
+        className="h-[90vh] w-[min(calc(100vw-2rem),980px)] max-w-[min(calc(100vw-2rem),980px)] grid-rows-[auto_minmax(0,1fr)]"
         onEscapeKeyDown={(event) => {
           if (runtimeProviderOperationBlocking) event.preventDefault();
         }}
@@ -1756,7 +1758,7 @@ export const ProviderRuntimeSettingsDialog = ({
           <DialogTitle>{t('providerRuntime.title')}</DialogTitle>
           <DialogDescription>{t('providerRuntime.description')}</DialogDescription>
         </DialogHeader>
-        <div className="min-w-0 space-y-4">
+        <div className="min-h-0 min-w-0 space-y-4 overflow-y-auto">
           {selectedProviderId === 'opencode' ? <OpenCodeStartupCleanupRecovery /> : null}
           <div>
             <Tabs
