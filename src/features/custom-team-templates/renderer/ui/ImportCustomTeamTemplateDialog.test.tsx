@@ -1120,5 +1120,70 @@ describe('ImportCustomTeamTemplateDialog', () => {
 
       expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
     });
+
+    it('keeps Cancel enabled when the rename field is blank', async () => {
+      await startConflict();
+
+      // Clear the pre-filled rename name so the field is blank.
+      await typeRenameName('');
+
+      // No name entered; Cancel must still be clickable because cancelling does
+      // not consume the proposed name. Only Confirm requires a nonblank name.
+      const cancelButton = Array.from(host.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('actions.cancel')
+      );
+      expect(cancelButton).not.toBeUndefined();
+      expect(cancelButton!.disabled).toBe(false);
+
+      const confirmBtn = confirmButton();
+      expect(confirmBtn.disabled).toBe(true);
+    });
+
+    it('clears rename failure banner on Cancel but preserves unresolvedWriteOutcome', async () => {
+      // A rename that fails with a definitive error sets errorState.
+      importTemplate.mockResolvedValue({
+        status: 'storageUnavailable',
+      } satisfies ImportCustomTeamTemplateResult);
+
+      await startConflict();
+      await act(async () => {
+        confirmButton().click();
+      });
+
+      expect(
+        host.querySelector('[data-testid="import-template-storage-unavailable"]')
+      ).not.toBeNull();
+
+      const cancelButton = Array.from(host.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('actions.cancel')
+      );
+      expect(cancelButton).not.toBeUndefined();
+      await act(async () => {
+        cancelButton!.click();
+      });
+
+      // Back in idle, the definitive failure banner is cleared.
+      expect(host.querySelector('[data-testid="import-template-storage-unavailable"]')).toBeNull();
+
+      // An unresolved write must survive cancellation and keep blocking retries.
+      importTemplate.mockRejectedValue(new Error('transport rejected after dispatch'));
+      await startConflict();
+      await act(async () => {
+        confirmButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      const cancelButton2 = Array.from(host.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('actions.cancel')
+      );
+      expect(cancelButton2).not.toBeUndefined();
+      await act(async () => {
+        cancelButton2!.click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      expect(fileInput().disabled).toBe(true);
+      expect(closeButton().disabled).toBe(false);
+    });
   });
 });

@@ -598,13 +598,19 @@ export const ImportCustomTeamTemplateDialog = ({
             <>
               <Button
                 variant="outline"
-                disabled={renameBusy || !renameName.trim()}
+                disabled={renameBusy}
                 onClick={() => {
                   setImportStage('idle');
                   setConflictPortable(null);
                   setConflictExistingId(null);
                   setRenameName('');
                   setRenameIssues([]);
+                  // Clearing cancel should not surface a stale rename failure
+                  // banner in the idle import view. Keep unresolvedWriteOutcome
+                  // because a possibly committed write must still block retries.
+                  if (errorState !== 'unresolvedWriteOutcome') {
+                    setErrorState(null);
+                  }
                   resetFileInput();
                 }}
               >
