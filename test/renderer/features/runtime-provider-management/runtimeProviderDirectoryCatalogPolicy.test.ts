@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   getAuthoritativeCachedFullDirectory,
+  getCachedDirectoryForInitialPaint,
   isDefaultFullCatalogPage,
   publishDefaultFullCatalogPage,
   shouldKeepVisibleDirectoryRows,
@@ -45,6 +46,18 @@ describe('runtimeProviderDirectoryCatalogPolicy', () => {
         visibleEntryCount: 2,
       })
     ).toBe(false);
+  });
+
+  it('keeps cached summary rows visible while a new summary request is pending', () => {
+    expect(
+      shouldKeepVisibleDirectoryRows({
+        append: false,
+        directorySummary: true,
+        requestedSummary: true,
+        refreshDirectoryData: false,
+        visibleEntryCount: 17,
+      })
+    ).toBe(true);
   });
 
   it('treats only the default unfiltered first page as the full catalog', () => {
@@ -146,11 +159,62 @@ describe('runtimeProviderDirectoryCatalogPolicy', () => {
       })?.totalCount
     ).toBe(40);
     expect(
+      getCachedDirectoryForInitialPaint({
+        reuseCachedFullDirectory: true,
+        directoryQuery: '',
+        projectPath: null,
+      })?.authoritative
+    ).toBe(true);
+    expect(
       getAuthoritativeCachedFullDirectory({
         reuseCachedFullDirectory: true,
         directoryQuery: 'openrouter',
         projectPath: null,
       })
     ).toBeNull();
+  });
+
+  it('reuses only the exact scope for a non-authoritative cached summary', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{
+        providerId: 'project-a-only',
+        displayName: 'Project A',
+        state: 'connected',
+        connectedAuthHint: 'api',
+        setupKind: 'connected',
+        ownership: ['project'],
+        recommended: false,
+        modelCount: 1,
+        authMethods: ['api'],
+        defaultModelId: null,
+        sources: ['inventory'],
+        sourceLabel: 'OpenCode',
+        providerSource: null,
+        detail: null,
+        actions: [],
+        metadata: {
+          hasKnownModels: true,
+          requiresManualConfig: false,
+          supportedInlineAuth: true,
+          configuredAuthless: false,
+        },
+      }],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: false,
+    });
+    const input = {
+      reuseCachedFullDirectory: true,
+      directoryQuery: '',
+      projectPath: '/tmp/project-a',
+    };
+    expect(getCachedDirectoryForInitialPaint(input)).toMatchObject({
+      authoritative: false,
+      entries: [{ providerId: 'project-a-only' }],
+    });
+    expect(getCachedDirectoryForInitialPaint({ ...input, projectPath: '/tmp/project-b' })).toBeNull();
+    expect(getCachedDirectoryForInitialPaint({ ...input, projectPath: null })).toBeNull();
+    expect(getCachedDirectoryForInitialPaint({ ...input, directoryQuery: 'project' })).toBeNull();
+    expect(getCachedDirectoryForInitialPaint({ ...input, reuseCachedFullDirectory: false })).toBeNull();
   });
 });

@@ -17,12 +17,14 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
+import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
 } from '../view-models/openCodeDefaultModelInheritance';
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
+import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import {
   getProviderConnectErrorDiagnostics,
   normalizeGitHubDeviceAuthorizationUrl,
@@ -31,7 +33,7 @@ import {
   commitDirectoryPageLoad,
   DEFAULT_DIRECTORY_FILTER,
   EMPTY_FULL_CATALOG_WARNING,
-  getAuthoritativeCachedFullDirectory,
+  getCachedDirectoryForInitialPaint,
   shouldKeepVisibleDirectoryRows,
 } from './runtimeProviderDirectoryCatalogPolicy';
 import {
@@ -89,6 +91,7 @@ interface UseRuntimeProviderManagementOptions {
   directoryPageSize?: number;
   directorySummaryOnEnable?: boolean;
   reuseCachedFullDirectory?: boolean;
+  runtimeRevision?: string | null;
   loadViewOnEnable?: boolean;
   preserveViewRequestOnDisable?: boolean;
   searchDirectoryOnQueryChange?: boolean;
@@ -326,6 +329,13 @@ export function useRuntimeProviderManagement(
       .catch(() => undefined);
   }, []);
   const currentProjectPath = normalizeProjectContextPath(options.projectPath);
+  const [renderedProjectPath, setRenderedProjectPath] = useState(currentProjectPath);
+  const [settledRuntimeRevision, setSettledRuntimeRevision] = useState(options.runtimeRevision ?? null);
+  const [renderedRuntimeRevision, setRenderedRuntimeRevision] = useState(settledRuntimeRevision);
+  if (options.runtimeRevision && options.runtimeRevision !== settledRuntimeRevision)
+    setSettledRuntimeRevision(options.runtimeRevision);
+  const currentRuntimeRevision = useRef(settledRuntimeRevision);
+  currentRuntimeRevision.current = settledRuntimeRevision;
   const cancelModelTestBestEffort = useCallback((): void => {
     const requestGroupIds = [...activeModelTestRequestGroupsRef.current.entries()];
     if (requestGroupIds.length === 0) return;
@@ -340,7 +350,6 @@ export function useRuntimeProviderManagement(
     currentProjectPath,
     options.runtimeId
   );
-
   const openModelPickerState = useCallback(
     (providerId: string, mode: RuntimeProviderModelPickerMode): void => {
       cancelModelTestBestEffort();
@@ -365,7 +374,6 @@ export function useRuntimeProviderManagement(
     },
     [cancelModelTestBestEffort]
   );
-
   const closeModelPickerState = useCallback((): void => {
     cancelModelTestBestEffort();
     modelLoadRequestSeq.current += 1;
@@ -387,8 +395,10 @@ export function useRuntimeProviderManagement(
     setTestingModelIds([]);
     setModelTestStartedAt({});
   }, [cancelModelTestBestEffort]);
-
   useEffect(() => {
+    observeRuntimeProviderDirectoryRevision(settledRuntimeRevision);
+    setRenderedProjectPath(currentProjectPath);
+    setRenderedRuntimeRevision(settledRuntimeRevision);
     cancelModelTestBestEffort();
     directoryRequestSeq.current += 1;
     setupFormRequestSeq.current += 1;
@@ -402,7 +412,10 @@ export function useRuntimeProviderManagement(
     setDirectoryError(null);
     setDirectoryErrorDiagnostics(null);
     setDirectorySelectedProviderId(null);
+    appliedInitialProviderRef.current = null;
     setDirectoryLoaded(false);
+    setDirectorySupported(true);
+    setDirectorySummary(options.directorySummaryOnEnable === true);
     setSetupForm(null);
     setSetupFormLoading(false);
     setSetupFormError(null);
@@ -432,8 +445,7 @@ export function useRuntimeProviderManagement(
     setModelResults({});
     setSuccessMessage(null);
     setWarningMessage(null);
-  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath]);
-
+  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath, options.directorySummaryOnEnable, settledRuntimeRevision]);
   const refresh = useCallback(
     async (input: { silent?: boolean } = {}): Promise<boolean> => {
       if (!options.enabled) {
@@ -495,7 +507,6 @@ export function useRuntimeProviderManagement(
     },
     [getProjectContextSnapshot, isProjectContextCurrent, options.enabled, options.runtimeId]
   );
-
   const loadDirectoryPage = useCallback(
     async (
       input: {
@@ -510,7 +521,6 @@ export function useRuntimeProviderManagement(
       if (!options.enabled || !directorySupported) {
         return true;
       }
-
       const append = input.append === true;
       const refreshDirectoryData = input.refresh === true;
       const query = input.query ?? directoryQuery;
@@ -528,7 +538,9 @@ export function useRuntimeProviderManagement(
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
       const requestIsCurrent = (): boolean =>
-        directoryRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);
+        directoryRequestSeq.current === requestSeq &&
+        currentRuntimeRevision.current === settledRuntimeRevision &&
+        isProjectContextCurrent(projectContext);
 
       if (keepVisibleRows) {
         setDirectoryRefreshing(true);
@@ -537,7 +549,6 @@ export function useRuntimeProviderManagement(
       }
       setDirectoryError(null);
       setDirectoryErrorDiagnostics(null);
-
       try {
         const response = await api.runtimeProviderManagement.loadProviderDirectory({
           runtimeId: options.runtimeId,
@@ -579,6 +590,7 @@ export function useRuntimeProviderManagement(
           visibleEntryCount: directoryEntriesRef.current.length,
           directory,
           presentEntry: presentDirectoryEntry,
+          runtimeRevision: settledRuntimeRevision,
         });
         if (commit.action === 'retain') {
           setWarningMessage(EMPTY_FULL_CATALOG_WARNING);
@@ -616,6 +628,7 @@ export function useRuntimeProviderManagement(
       options.enabled,
       options.directoryPageSize,
       options.runtimeId,
+      settledRuntimeRevision,
     ]
   );
   const loadDirectoryPageRef = useRef(loadDirectoryPage);
@@ -681,8 +694,8 @@ export function useRuntimeProviderManagement(
     options.loadViewOnEnable,
     options.preserveViewRequestOnDisable,
     refresh,
+    settledRuntimeRevision,
   ]);
-
   useEffect(() => {
     if (!options.enabled) return;
     return api.runtimeProviderManagement.onOAuthProgress?.((event) => {
@@ -701,22 +714,23 @@ export function useRuntimeProviderManagement(
     if (!options.enabled || !directorySupported) {
       return;
     }
-    const cached = getAuthoritativeCachedFullDirectory({
+    const cached = getCachedDirectoryForInitialPaint({
       reuseCachedFullDirectory: options.reuseCachedFullDirectory,
       directoryQuery,
       projectPath: currentProjectPath,
+      runtimeRevision: settledRuntimeRevision,
     });
     if (cached) {
-      directoryEntriesRef.current = cached.entries;
-      setDirectoryEntries(cached.entries);
+      directoryEntriesRef.current = cached.entries.map(presentDirectoryEntry);
+      setDirectoryEntries(directoryEntriesRef.current);
       setDirectoryLoaded(true);
-      setDirectorySummary(false);
+      setDirectorySummary(!cached.authoritative);
       setDirectoryTotalCount(cached.totalCount ?? cached.entries.length);
       setDirectoryNextCursor(cached.nextCursor ?? null);
       setDirectoryError(null);
       setDirectoryErrorDiagnostics(null);
       void loadDirectoryPageRef.current({
-        summary: false,
+        summary: !cached.authoritative,
         refresh: false,
         cursor: null,
       });
@@ -741,6 +755,7 @@ export function useRuntimeProviderManagement(
     directorySupported,
     options.enabled,
     options.reuseCachedFullDirectory,
+    settledRuntimeRevision,
   ]);
 
   useEffect(() => {
@@ -757,7 +772,6 @@ export function useRuntimeProviderManagement(
     );
     return () => window.clearTimeout(timeout);
   }, [debouncedModelQuery, modelPickerProviderId, modelQuery, options.enabled]);
-
   const loadModelsPage = useCallback(
     async (input: { append?: boolean; cursor?: string | null } = {}): Promise<void> => {
       if (!options.enabled || !modelPickerProviderId) {
@@ -856,7 +870,6 @@ export function useRuntimeProviderManagement(
       options.runtimeId,
     ]
   );
-
   const loadModelsPageRef = useRef(loadModelsPage);
   useEffect(() => {
     loadModelsPageRef.current = loadModelsPage;
@@ -908,7 +921,6 @@ export function useRuntimeProviderManagement(
     selectedProviderId,
     view,
   ]);
-
   const loadMoreDirectory = useCallback(async (): Promise<void> => {
     if (!directoryNextCursor || directoryLoading || directoryRefreshing) {
       return;
@@ -918,7 +930,6 @@ export function useRuntimeProviderManagement(
       cursor: directoryNextCursor,
     });
   }, [directoryLoading, directoryNextCursor, directoryRefreshing, loadDirectoryPage]);
-
   const loadMoreModels = useCallback(async (): Promise<void> => {
     if (!modelsNextCursor || modelsLoading || modelsLoadingMore) {
       return;
@@ -928,7 +939,6 @@ export function useRuntimeProviderManagement(
       cursor: modelsNextCursor,
     });
   }, [loadModelsPage, modelsLoading, modelsLoadingMore, modelsNextCursor]);
-
   const refreshDirectory = useCallback(async (): Promise<void> => {
     setSuccessMessage(null);
     setWarningMessage(null);
@@ -944,7 +954,6 @@ export function useRuntimeProviderManagement(
       await loadModelsPage();
     }
   }, [loadDirectoryPage, loadModelsPage, modelPickerProviderId, refresh]);
-
   const hydrateDirectory = useCallback(async (): Promise<boolean> => {
     if (!options.enabled || !directorySupported || !directorySummary) {
       return false;
@@ -955,7 +964,6 @@ export function useRuntimeProviderManagement(
       cursor: null,
     });
   }, [directorySummary, directorySupported, loadDirectoryPage, options.enabled]);
-
   const selectDirectoryProvider = useCallback(
     (providerId: string): void => {
       setDirectorySelectedProviderId(providerId);
@@ -996,7 +1004,6 @@ export function useRuntimeProviderManagement(
       view,
     ]
   );
-
   const searchAllProviders = useCallback((query: string): void => {
     setDirectorySummary(false);
     setDirectoryQuery(query);
@@ -1004,7 +1011,6 @@ export function useRuntimeProviderManagement(
     setDirectoryErrorDiagnostics(null);
     setDirectoryNextCursor(null);
   }, []);
-
   const startConnection = useCallback(
     (providerId: string, intent: RuntimeProviderConnectionIntent): void => {
       setSelectedProviderId(providerId);
@@ -1095,17 +1101,14 @@ export function useRuntimeProviderManagement(
       options.runtimeId,
     ]
   );
-
   const startConnect = useCallback(
     (providerId: string): void => startConnection(providerId, 'connect'),
     [startConnection]
   );
-
   const startReconnect = useCallback(
     (providerId: string): void => startConnection(providerId, 'reconnect'),
     [startConnection]
   );
-
   const updateProviderQuery = useCallback(
     (value: string): void => {
       setProviderQuery(value);
@@ -1124,7 +1127,6 @@ export function useRuntimeProviderManagement(
     },
     [directoryQuery, directorySupported, options.searchDirectoryOnQueryChange]
   );
-
   const updateModelQuery = useCallback((value: string): void => {
     modelLoadRequestSeq.current += 1;
     setModelQuery(value);
@@ -1132,7 +1134,6 @@ export function useRuntimeProviderManagement(
     setModelsLoadingMore(false);
     setModelsNextCursor(null);
   }, []);
-
   const cancelConnect = useCallback((): void => {
     const cancellation = cancelActiveOAuthBestEffort();
     setupFormRequestSeq.current += 1;
@@ -1155,13 +1156,11 @@ export function useRuntimeProviderManagement(
       void cancellation.then(() => onProviderChanged?.('oauth_cancelled')).catch(() => undefined);
     }
   }, [cancelActiveOAuthBestEffort, onProviderChanged]);
-
   const updateApiKeyValue = useCallback((value: string): void => {
     setApiKeyValue(value);
     setSetupSubmitError(null);
     setSetupSubmitErrorDiagnostics(null);
   }, []);
-
   const setAuthOption = useCallback((authOptionId: string): void => {
     setSelectedAuthOptionId(authOptionId);
     setApiKeyValue('');
@@ -1171,7 +1170,6 @@ export function useRuntimeProviderManagement(
     setSetupSubmitError(null);
     setSetupSubmitErrorDiagnostics(null);
   }, []);
-
   const submitOAuthCode = useCallback(async (): Promise<void> => {
     const operationId = activeOAuthOperationRef.current;
     const code = oauthCodeValue.trim();
@@ -1186,7 +1184,6 @@ export function useRuntimeProviderManagement(
     }
     setOAuthCodeValue('');
   }, [oauthCodeValue]);
-
   const setSetupMetadataValue = useCallback((key: string, value: string): void => {
     setSetupMetadata((current) => ({
       ...current,
@@ -1889,7 +1886,6 @@ export function useRuntimeProviderManagement(
     startConnection,
     updateProviderQuery,
   ]);
-
   const state = useMemo<RuntimeProviderManagementState>(
     () => ({
       view,
@@ -1997,7 +1993,6 @@ export function useRuntimeProviderManagement(
       view,
     ]
   );
-
   const actions = useMemo<RuntimeProviderManagementActions>(
     () => ({
       refresh,
@@ -2063,5 +2058,11 @@ export function useRuntimeProviderManagement(
     ]
   );
 
-  return [state, actions];
+  return [
+    renderedProjectPath === currentProjectPath &&
+    renderedRuntimeRevision === settledRuntimeRevision
+      ? state
+      : maskRuntimeProviderStateForScope(state),
+    actions,
+  ];
 }

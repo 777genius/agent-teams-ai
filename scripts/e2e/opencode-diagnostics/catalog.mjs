@@ -178,14 +178,14 @@ export async function verifyCatalog({
     await click(`[...document.querySelectorAll('button')].find(b =>
       /re-?check.*opencode|opencode.*re-?check/i.test(b.getAttribute('title') || ''))`);
     const previousClipboard = await evaluate('navigator.clipboard.readText()');
-    const expectedFailures =
+    const requiredModelFailures =
       scenario === 'models-four-errors'
-        ? 4
+        ? sources
         : scenario === 'partial-success'
-          ? 3
-          : ['directory-error', 'catalog-timeout'].includes(scenario)
-            ? 1
-            : 0;
+          ? sources.filter((source) => source !== 'opencode')
+          : [];
+    const expectedFailures =
+      requiredModelFailures.length || (['directory-error', 'catalog-timeout'].includes(scenario) ? 1 : 0);
     let calls = [];
     let text = '';
     let copied = '';
@@ -217,7 +217,15 @@ export async function verifyCatalog({
         await pause(150);
         copied = await evaluate('navigator.clipboard.readText()');
         const ids = [...copied.matchAll(/origin=main reportId=(oc-[a-f0-9]{32})/g)];
-        if (ids.length === expectedFailures && copied !== previousClipboard) break;
+        // Clipboard and subprocess audit are emitted independently. Do not stop
+        // just because the fourth report is visible before its audit row is read.
+        if (
+          ids.length === expectedFailures &&
+          copied !== previousClipboard &&
+          requiredModelFailures.every((source) =>
+            calls.some((c) => c.event === 'response' && c.source === source && c.failed)
+          )
+        ) break;
       } else if (
         !expectedFailures &&
         !visible &&
@@ -258,9 +266,7 @@ export async function verifyCatalog({
       );
       correlateReport(copied, logs);
       if (scenario === 'models-four-errors' || scenario === 'partial-success') {
-        for (const source of sources.filter(
-          (s) => scenario !== 'partial-success' || s !== 'opencode'
-        )) {
+        for (const source of requiredModelFailures) {
           assert(copied.includes(`provider_models source=${source}`));
           assert(calls.some((c) => c.event === 'response' && c.source === source && c.failed));
         }

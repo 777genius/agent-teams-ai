@@ -12,6 +12,16 @@ on:
       # Compatibility states change the native runtime user-facing E2E.
       - src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts
       - src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
+      # Provider settings first-paint and status changes require isolated Electron
+      # proof on Windows and Linux, not only a renderer unit test.
+      - src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx
+      - src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts
+      - src/features/runtime-provider-management/renderer/hooks/maskRuntimeProviderStateForScope.ts
+      - src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy.ts
+      - src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts
+      - src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts
+      - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
+      - src/renderer/components/runtime/openCodeStatusPresentation.ts
 
 permissions:
   contents: read
