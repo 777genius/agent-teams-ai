@@ -4,6 +4,7 @@ import {
   getRuntimeProviderDirectoryCacheSnapshot,
   invalidateRuntimeProviderDirectoryCache,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
+  observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
@@ -100,6 +101,95 @@ describe('runtimeProviderDirectoryCache', () => {
     expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
       authoritative: false,
       entries: [{ providerId: 'openrouter' }],
+    });
+  });
+
+  it('overlays newer summary connection state without shrinking full inventory or metadata', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [
+        providerEntry,
+        { ...providerEntry, providerId: 'full-only', ownership: ['managed'] },
+      ],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      totalCount: 42,
+      nextCursor: 'next-page',
+    });
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...providerEntry, state: 'needs-auth', connectedAuthHint: null }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      lastSummaryFetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      totalCount: 42,
+      nextCursor: 'next-page',
+      entries: [
+        { providerId: 'openrouter', state: 'needs-auth', connectedAuthHint: null },
+        { providerId: 'full-only', state: 'connected' },
+      ],
+    });
+    // A delayed summary cannot put the credential back after logout.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...providerEntry, state: 'connected' }],
+      fetchedAt: '2026-07-20T10:00:30.000Z',
+      authoritative: false,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.entries[0]?.state).toBe('needs-auth');
+    // A newer complete directory supersedes the temporary summary state.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [{ ...providerEntry, state: 'connected' }],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      authoritative: true,
+      entries: [{ providerId: 'openrouter', state: 'connected' }],
+      totalCount: 1,
+    });
+  });
+
+  it('rejects cached snapshots from another settled binary revision', () => {
+    observeRuntimeProviderDirectoryRevision('runtime-v1');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-v1',
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a', 'runtime-v1')?.entries)
+      .toHaveLength(1);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a', 'runtime-v2')).toBeNull();
+    observeRuntimeProviderDirectoryRevision('runtime-v2');
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    // In-flight old runtime results cannot contaminate the new runtime cache.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-v1',
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: false,
+      runtimeRevision: 'runtime-v2',
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toMatchObject({
+      runtimeRevision: 'runtime-v2',
+      authoritative: false,
     });
   });
 
