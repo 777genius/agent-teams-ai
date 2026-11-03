@@ -4,7 +4,7 @@ import type { CliExternalRuntimeDiagnostic, CliProviderStatus } from '@shared/ty
 
 const FAILURE_MESSAGE = /\b(?:error|failed|failure|unavailable|timeout|timed out|cannot|could not|denied|invalid)\b/i;
 
-function hasTopLevelFailure(provider: CliProviderStatus): boolean {
+export function hasTopLevelOpenCodeFailure(provider: CliProviderStatus): boolean {
   return (
     provider.verificationState === 'error' ||
     provider.verificationState === 'offline' ||
@@ -45,7 +45,7 @@ export function getActionableOpenCodeDiagnostics(
 export function hasActionableOpenCodeStatusIssue(provider: CliProviderStatus): boolean {
   return (
     provider.providerId === 'opencode' &&
-    (hasTopLevelFailure(provider) ||
+    (hasTopLevelOpenCodeFailure(provider) ||
       (provider.externalRuntimeDiagnostics ?? []).some(isFailureDiagnostic))
   );
 }
