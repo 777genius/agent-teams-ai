@@ -1815,7 +1815,7 @@ export const ProviderRuntimeSettingsDialog = ({
                   className="text-xs"
                   style={{
                     color: openCodeStatusIssue
-                      ? 'var(--color-danger-text)'
+                      ? 'var(--color-error)'
                       : getProviderStatusColor(
                           getProviderUsageLabel(selectedProvider, t),
                           selectedProvider.authenticated
