@@ -31,6 +31,8 @@ import {
 import {
   markOpenCodeGroupHandoff,
   observedOpenCodeDelivery,
+  settleUnconfirmedGroupDelivery,
+  terminalOpenCodeDelivery,
   unknownGroupHandoffSnapshot,
 } from './OpenCodeDeliverySnapshots';
 import { selectOpenCodeDeliveryTurnActivityLogLevel } from './OpenCodeDeliveryTurnActivityLogGate';
@@ -711,17 +713,7 @@ export class OpenCodeMemberMessageDeliveryService {
           ledgerRecord
         );
         notifyActivity('idle');
-        return {
-          delivered: false,
-          accepted: false,
-          responsePending: false,
-          responseState: ledgerRecord.responseState,
-          ledgerStatus: ledgerRecord.status,
-          ledgerRecordId: ledgerRecord.id,
-          laneId: laneIdentity.laneId,
-          reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
-          diagnostics: ledgerRecord.diagnostics,
-        };
+        return terminalOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
       }
       let attemptDue = isOpenCodePromptDeliveryAttemptDue(ledgerRecord);
       if (!ledgerRecord.groupChatId && isOpenCodeAcceptedDeliveryMissingPromptProof(ledgerRecord)) {
@@ -827,8 +819,6 @@ export class OpenCodeMemberMessageDeliveryService {
           observed.responseObservation
         );
         await checkpoint();
-        // Snapshot turn activity before applyObservation overwrites it;
-        // comparing the updated record against itself cannot show progress.
         const previousAssistantMessageId = ledgerRecord.observedAssistantMessageId?.trim() ?? '';
         const previousToolCallCount = ledgerRecord.observedToolCallNames.length;
         const previousAssistantPreview = ledgerRecord.observedAssistantPreview?.trim() ?? '';
@@ -909,28 +899,17 @@ export class OpenCodeMemberMessageDeliveryService {
           return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
         }
         const stillUnknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
-        if (
-          stillUnknownHandoff &&
-          !observed.ok &&
-          turnActivityAgeMs !== null &&
-          turnActivityAgeMs >= 60_000 &&
-          observed.diagnostics.some((diagnostic) => /\boriginal_input_unknown\b/.test(diagnostic))
-        ) {
-          const settled = await ledger.markFailedTerminal({
-            id: ledgerRecord.id,
-            reason: 'group_delivery_unconfirmed',
-            diagnostics: observed.diagnostics,
-            failedAt: nowIso(),
-          });
+        const unconfirmed = await settleUnconfirmedGroupDelivery(
+          ledger,
+          ledgerRecord,
+          stillUnknownHandoff,
+          observed,
+          turnActivityAgeMs
+        );
+        if (unconfirmed) {
           await checkpoint();
           notifyActivity('idle');
-          return {
-            ...stillUnknownHandoff,
-            responsePending: false,
-            ledgerStatus: settled.status,
-            reason: 'group_delivery_unconfirmed',
-            diagnostics: settled.diagnostics,
-          };
+          return unconfirmed;
         }
         if (stillUnknownHandoff) {
           ledgerRecord = await deferOpenCodePromptDeliveryAttempt({
@@ -948,8 +927,6 @@ export class OpenCodeMemberMessageDeliveryService {
           });
           return stillUnknownHandoff;
         }
-        // Turn activity is decided before the stale-pending guard: both read the
-        // same observation, and the guard must see the richer signal.
         const observeFailed = !observed.ok || responseObservation?.state === 'reconcile_failed';
         const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
           previousAssistantMessageId,
