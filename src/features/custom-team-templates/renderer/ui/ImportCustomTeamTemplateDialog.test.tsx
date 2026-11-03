@@ -1046,5 +1046,79 @@ describe('ImportCustomTeamTemplateDialog', () => {
       expect(importTemplate).toHaveBeenCalledTimes(2);
       expect(host.querySelector('[data-testid="import-template-done"]')).not.toBeNull();
     });
+
+    it('clears rename validation errors when cancelling a conflict', async () => {
+      importTemplate.mockResolvedValue({
+        status: 'validationFailed',
+        issues: [{ code: 'templateNameRequired', field: 'name' }],
+      } satisfies ImportCustomTeamTemplateResult);
+
+      await startConflict();
+
+      await typeRenameName('Bad Name');
+      await act(async () => {
+        confirmButton().click();
+      });
+
+      expect(host.querySelector('#import-rename-name-error')).not.toBeNull();
+      expect(renameInput().getAttribute('aria-invalid')).toBe('true');
+
+      const cancelButton = Array.from(host.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('actions.cancel')
+      );
+      expect(cancelButton).not.toBeUndefined();
+      await act(async () => {
+        cancelButton!.click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-name-conflict"]')).toBeNull();
+
+      // A new conflict must start with a clean rename validation state.
+      browserFile.importFromFile.mockResolvedValue(conflictResult());
+      await selectPortableFile();
+
+      expect(host.querySelector('[data-testid="import-template-name-conflict"]')).not.toBeNull();
+      expect(renameInput().getAttribute('aria-invalid')).toBeNull();
+      expect(host.querySelector('#import-rename-name-error')).toBeNull();
+    });
+
+    it('keeps unresolved write protection after cancelling a conflict', async () => {
+      importTemplate.mockRejectedValue(new Error('transport rejected after dispatch'));
+
+      await startConflict();
+      await act(async () => {
+        confirmButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+
+      const cancelButton = Array.from(host.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('actions.cancel')
+      );
+      expect(cancelButton).not.toBeUndefined();
+      await act(async () => {
+        cancelButton!.click();
+      });
+
+      // Back in idle but the unresolved write outcome persists.
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+      expect(fileInput().disabled).toBe(true);
+      expect(importButton().disabled).toBe(true);
+      expect(closeButton().disabled).toBe(false);
+
+      // Another file import cannot be dispatched while uncertainty remains.
+      const input = fileInput();
+      Object.defineProperty(input, 'files', {
+        value: [
+          new File([JSON.stringify(portable)], 'template.json', { type: 'application/json' }),
+        ],
+        configurable: true,
+      });
+      await act(async () => {
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+    });
   });
 });

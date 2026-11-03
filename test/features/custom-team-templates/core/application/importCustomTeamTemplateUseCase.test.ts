@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   CreateCustomTeamTemplateRecordRequest,
   CreateCustomTeamTemplateRecordResult,
+  CustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 import type { CustomTeamTemplateStorageGateway } from '@features/custom-team-templates/core/application/ports';
 
@@ -266,7 +267,7 @@ describe('ImportCustomTeamTemplateUseCase', () => {
   });
 
   it('imports valid template with fresh identity', async () => {
-    const created = {
+    const created: CustomTeamTemplateV1 = {
       templateId: 'tmpl-new',
       name: 'N',
       schemaVersion: 1,
@@ -316,7 +317,10 @@ describe('ImportCustomTeamTemplateUseCase', () => {
   describe('bounded unsupported results', () => {
     function useCase(): ImportCustomTeamTemplateUseCase {
       return new ImportCustomTeamTemplateUseCase({
-        gateway: gatewayWith(() => ({ status: 'storageUnavailable' })),
+        gateway: gatewayWith(() => ({
+          status: 'created',
+          template: { templateId: 'x', name: 'x', schemaVersion: 1, teamPrompt: '', members: [], revision: 1 },
+        })),
         hasher,
         createTemplateId: () => 'tmpl-new',
       });
@@ -540,7 +544,7 @@ describe('ImportCustomTeamTemplateUseCase', () => {
       });
       // Reconciliation proves the first write is absent, so the use case retries
       // before it observes the definitive conflict.
-      gateway.customTeamTemplateGetById = vi.fn(() => ({ status: 'notFound' as const }));
+      gateway.customTeamTemplateGetById = vi.fn(() => Promise.resolve({ status: 'notFound' as const }));
 
       const uc = new ImportCustomTeamTemplateUseCase({
         gateway,

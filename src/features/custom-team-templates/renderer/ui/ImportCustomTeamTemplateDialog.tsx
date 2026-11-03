@@ -224,10 +224,12 @@ export const ImportCustomTeamTemplateDialog = ({
     setIssues(view.issues);
     if (result.status === 'nameConflict') {
       // The reviewed portable content is retained so a rename retry never has to
-      // re-read or re-parse the untrusted file.
+      // re-read or re-parse the untrusted file. Stale rename validation issues
+      // from a previous conflict must not leak into the new one.
       setConflictPortable(result.portable);
       setConflictExistingId(result.existingTemplateId);
       setRenameName(result.portable.name);
+      setRenameIssues([]);
     }
   }, []);
 
@@ -602,6 +604,7 @@ export const ImportCustomTeamTemplateDialog = ({
                   setConflictPortable(null);
                   setConflictExistingId(null);
                   setRenameName('');
+                  setRenameIssues([]);
                   resetFileInput();
                 }}
               >
