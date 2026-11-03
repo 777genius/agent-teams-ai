@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import {
   CUSTOM_TEAM_TEMPLATE_CHANNELS,
   CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS,
@@ -74,11 +77,11 @@ describe('startCustomTeamTemplatesFeature', () => {
   it('registers every shared data channel and both desktop file channels at startup', () => {
     startCustomTeamTemplatesFeature(internalStorage());
 
-    expect([...ipc.handlers.keys()].sort()).toEqual(
+    expect([...ipc.handlers.keys()].sort((left, right) => left.localeCompare(right))).toEqual(
       [
         ...Object.values(CUSTOM_TEAM_TEMPLATE_CHANNELS),
         ...Object.values(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS),
-      ].sort()
+      ].sort((left, right) => left.localeCompare(right))
     );
     expect(ipc.handlers.size).toBe(12);
   });
@@ -100,7 +103,8 @@ describe('startCustomTeamTemplatesFeature', () => {
       members: [{ name: 'engineer', role: 'Engineer', workflow: 'Build' }],
       revision: 1,
     };
-    fileGateway.pickImportFile.mockResolvedValue('/tmp/template.json');
+    const filePath = join(tmpdir(), 'template.json');
+    fileGateway.pickImportFile.mockResolvedValue(filePath);
     fileGateway.readUtf8File.mockResolvedValue({
       status: 'ok',
       contents: JSON.stringify(portableDocument),
@@ -122,7 +126,7 @@ describe('startCustomTeamTemplatesFeature', () => {
 
     expect(fileGateway.pickImportFile).toHaveBeenCalledTimes(1);
     expect(fileGateway.readUtf8File).toHaveBeenCalledWith(
-      '/tmp/template.json',
+      filePath,
       CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES
     );
     expect(featureMock.importTemplate.execute).toHaveBeenCalledTimes(1);

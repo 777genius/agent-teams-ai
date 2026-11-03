@@ -83,16 +83,16 @@ function fakeStatHandle(options: FakeHandleOptions): BoundedReadableFileHandle {
   let statCall = 0;
   let readCall = 0;
   return {
-    stat: vi.fn(async () => {
-      if (options.statError) throw options.statError;
+    stat: vi.fn(() => {
+      if (options.statError) return Promise.reject(options.statError);
       const snapshot =
         options.snapshots[Math.min(statCall, options.snapshots.length - 1)] ??
         statSnapshot({ size: 0 });
       statCall += 1;
-      return snapshot;
+      return Promise.resolve(snapshot);
     }),
-    read: vi.fn(async (buffer: Buffer, offset: number, length: number, position: number) => {
-      if (options.readError) throw options.readError;
+    read: vi.fn((buffer: Buffer, offset: number, length: number, position: number) => {
+      if (options.readError) return Promise.reject(options.readError);
       const requested =
         options.chunks === undefined
           ? length
@@ -101,10 +101,10 @@ function fakeStatHandle(options: FakeHandleOptions): BoundedReadableFileHandle {
       const available = Math.max(0, options.contents.length - position);
       const bytesToCopy = Math.min(requested, length, available);
       if (bytesToCopy <= 0) {
-        return { bytesRead: 0 };
+        return Promise.resolve({ bytesRead: 0 });
       }
       options.contents.copy(buffer, offset, position, position + bytesToCopy);
-      return { bytesRead: bytesToCopy };
+      return Promise.resolve({ bytesRead: bytesToCopy });
     }),
   };
 }
@@ -166,7 +166,7 @@ describe('readBoundedUtf8FromFileHandle', () => {
 
   it('rejects a handle that is not a regular file', async () => {
     const handle: BoundedReadableFileHandle = {
-      stat: vi.fn(async () => ({ ...statSnapshot({ size: 0 }), isFile: () => false })),
+      stat: vi.fn(() => Promise.resolve({ ...statSnapshot({ size: 0 }), isFile: () => false })),
       read: vi.fn(),
     };
     expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({ status: 'notAFile' });
@@ -359,8 +359,9 @@ describe('ElectronCustomTeamTemplateFileGateway', () => {
   });
 
   it('suggests a safe basename in the save dialog and returns null on cancel', async () => {
-    dialogMock.showSaveDialog.mockResolvedValue({ canceled: false, filePath: '/tmp/out.json' });
-    expect(await gateway.pickExportDestination('Release Pipeline.json')).toBe('/tmp/out.json');
+    const filePath = path.join(workDir, 'out.json');
+    dialogMock.showSaveDialog.mockResolvedValue({ canceled: false, filePath });
+    expect(await gateway.pickExportDestination('Release Pipeline.json')).toBe(filePath);
     expect(
       (dialogMock.showSaveDialog.mock.calls[0]?.[0] as { defaultPath: string }).defaultPath
     ).toBe('Release Pipeline.json');

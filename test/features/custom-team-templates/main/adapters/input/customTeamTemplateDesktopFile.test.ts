@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES } from '@features/custom-team-templates/contracts';
 import { CustomTeamTemplateStorageInterruptedError } from '@features/custom-team-templates/core/application/CustomTeamTemplateStorageInterruptedError';
 import { ExportCustomTeamTemplateUseCase } from '@features/custom-team-templates/core/application/ExportCustomTeamTemplateUseCase';
@@ -17,6 +20,8 @@ import type {
 } from '@features/custom-team-templates/main/adapters/output/CustomTeamTemplateFileGateway';
 
 const hasher = new NodeCustomTeamTemplateHasher();
+const importFilePath = join(tmpdir(), 'template.json');
+const exportFilePath = join(tmpdir(), 'export.json');
 
 const PORTABLE: PortableCustomTeamTemplateV1 = {
   format: 'agent-teams-custom-template',
@@ -34,19 +39,19 @@ function library(initial: readonly CustomTeamTemplateV1[] = []) {
   const rows = new Map(initial.map((template) => [template.templateId, { ...template }]));
   const gateway: CustomTeamTemplateStorageGateway = {
     customTeamTemplateCreate: vi.fn<CustomTeamTemplateStorageGateway['customTeamTemplateCreate']>(
-      async (request) => {
+      (request) => {
         const sameId = rows.get(request.template.templateId);
         if (sameId) {
-          return { status: 'alreadySaved', template: sameId };
+          return Promise.resolve({ status: 'alreadySaved', template: sameId });
         }
         const nameKey = request.template.name.trim().toLowerCase();
         for (const row of rows.values()) {
           if (row.name.trim().toLowerCase() === nameKey) {
-            return {
+            return Promise.resolve({
               status: 'conflict',
               reason: 'nameTaken',
               existingTemplateId: row.templateId,
-            };
+            });
           }
         }
         const template: CustomTeamTemplateV1 = {
@@ -54,17 +59,21 @@ function library(initial: readonly CustomTeamTemplateV1[] = []) {
           createdAt: '2026-01-01T00:00:00.000Z',
         };
         rows.set(template.templateId, template);
-        return { status: 'created', template };
+        return Promise.resolve({ status: 'created', template });
       }
     ),
-    customTeamTemplateList: vi.fn(async () => ({
-      templates: [...rows.values()],
-      unreadableRecords: [],
-    })),
+    customTeamTemplateList: vi.fn(() =>
+      Promise.resolve({
+        templates: [...rows.values()],
+        unreadableRecords: [],
+      })
+    ),
     customTeamTemplateGetById: vi.fn<CustomTeamTemplateStorageGateway['customTeamTemplateGetById']>(
-      async ({ templateId }) => {
+      ({ templateId }) => {
         const found = rows.get(templateId);
-        return found ? { status: 'found', template: found } : { status: 'notFound' };
+        return Promise.resolve(
+          found ? { status: 'found', template: found } : { status: 'notFound' }
+        );
       }
     ),
     customTeamTemplateUpdate: vi.fn(),
@@ -76,17 +85,17 @@ function library(initial: readonly CustomTeamTemplateV1[] = []) {
 function readResult(
   result: CustomTeamTemplateFileReadResult
 ): CustomTeamTemplateFileGateway['readUtf8File'] {
-  return vi.fn<CustomTeamTemplateFileGateway['readUtf8File']>(async () => result);
+  return vi.fn<CustomTeamTemplateFileGateway['readUtf8File']>(() => Promise.resolve(result));
 }
 
 function files(
   overrides: Partial<CustomTeamTemplateFileGateway> = {}
 ): CustomTeamTemplateFileGateway {
   return {
-    pickImportFile: vi.fn(async () => '/tmp/template.json'),
+    pickImportFile: vi.fn(() => Promise.resolve(importFilePath)),
     readUtf8File: readResult({ status: 'ok', contents: JSON.stringify(PORTABLE) }),
-    pickExportDestination: vi.fn(async () => '/tmp/export.json'),
-    writeFileAtomically: vi.fn(async () => undefined),
+    pickExportDestination: vi.fn(() => Promise.resolve(exportFilePath)),
+    writeFileAtomically: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
 }
@@ -126,14 +135,14 @@ describe('CustomTeamTemplateDesktopFileService import', () => {
       });
     }
     expect(fileGateway.readUtf8File).toHaveBeenCalledWith(
-      '/tmp/template.json',
+      importFilePath,
       CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES
     );
   });
 
   it('treats picker cancellation as a normal outcome and never reads the file', async () => {
     const { gateway } = library();
-    const fileGateway = files({ pickImportFile: vi.fn(async () => null) });
+    const fileGateway = files({ pickImportFile: vi.fn(() => Promise.resolve(null)) });
     const result = await importService(gateway, fileGateway).importFromFile();
 
     expect(result).toEqual({ status: 'cancelled' });
@@ -266,9 +275,7 @@ describe('CustomTeamTemplateDesktopFileService import', () => {
 
   it('reports storage failure without claiming success', async () => {
     const gateway = library().gateway;
-    gateway.customTeamTemplateCreate = vi.fn(async () => {
-      throw new Error('worker unavailable');
-    });
+    gateway.customTeamTemplateCreate = vi.fn(() => Promise.reject(new Error('worker unavailable')));
     const result = await importService(gateway, files()).importFromFile();
 
     expect(result).toEqual({ status: 'storageUnavailable' });
@@ -277,9 +284,7 @@ describe('CustomTeamTemplateDesktopFileService import', () => {
   it('never rejects when the import use case throws unexpectedly', async () => {
     const service = new CustomTeamTemplateDesktopFileService({
       importTemplate: {
-        execute: vi.fn(async () => {
-          throw new Error('unexpected');
-        }),
+        execute: vi.fn(() => Promise.reject(new Error('unexpected'))),
       },
       exportTemplate: { execute: vi.fn() },
       files: files(),
@@ -290,19 +295,23 @@ describe('CustomTeamTemplateDesktopFileService import', () => {
 
   it('reports an unresolved write outcome when reconciliation cannot confirm the result', async () => {
     const gateway = library().gateway;
-    gateway.customTeamTemplateCreate = vi.fn(async () => {
-      throw new CustomTeamTemplateStorageInterruptedError(
-        'worker died mid-write',
-        'unknown',
-        Promise.resolve()
-      );
-    });
+    gateway.customTeamTemplateCreate = vi.fn(() =>
+      Promise.reject(
+        new CustomTeamTemplateStorageInterruptedError(
+          'worker died mid-write',
+          'unknown',
+          Promise.resolve()
+        )
+      )
+    );
     gateway.customTeamTemplateGetById = vi.fn<
       CustomTeamTemplateStorageGateway['customTeamTemplateGetById']
-    >(async ({ templateId }) => ({
-      status: 'unreadable',
-      templateId,
-    }));
+    >(({ templateId }) =>
+      Promise.resolve({
+        status: 'unreadable',
+        templateId,
+      })
+    );
 
     const result = await importService(gateway, files()).importFromFile();
 
@@ -313,7 +322,7 @@ describe('CustomTeamTemplateDesktopFileService import', () => {
     const { gateway } = library();
     const result = await importService(
       gateway,
-      files({ pickImportFile: vi.fn(async () => 'C:\\untrusted\\Taken Name.json') })
+      files({ pickImportFile: vi.fn(() => Promise.resolve('C:\\untrusted\\Taken Name.json')) })
     ).importFromFile();
 
     expect(result.status).toBe('imported');
@@ -391,7 +400,7 @@ describe('CustomTeamTemplateDesktopFileService export', () => {
 
   it('treats save-dialog cancellation as a normal outcome and writes nothing', async () => {
     const { gateway } = library([stored]);
-    const fileGateway = files({ pickExportDestination: vi.fn(async () => null) });
+    const fileGateway = files({ pickExportDestination: vi.fn(() => Promise.resolve(null)) });
     const result = await importService(gateway, fileGateway).exportToFile({
       templateId: 'tmpl-1',
     });
@@ -447,7 +456,7 @@ describe('CustomTeamTemplateDesktopFileService export', () => {
     });
     expect(fileGateway.pickExportDestination).toHaveBeenCalledWith('Release Pipeline.json');
     expect(fileGateway.writeFileAtomically).toHaveBeenCalledWith(
-      '/tmp/export.json',
+      exportFilePath,
       expect.any(String)
     );
   });

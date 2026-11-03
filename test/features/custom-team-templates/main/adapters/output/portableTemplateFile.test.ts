@@ -72,7 +72,7 @@ describe('buildCustomTeamTemplateFileName', () => {
   });
 
   it('never returns a directory component', () => {
-    for (const name of ['../x', 'C:\\temp\\x', '/etc/passwd', '\\\\server\\share\\x']) {
+    for (const name of ['../x', 'C:\\fixtures\\x', '/etc/passwd', '\\\\server\\share\\x']) {
       const fileName = buildCustomTeamTemplateFileName(name);
       expect(fileName).not.toContain('/');
       expect(fileName).not.toContain('\\');
