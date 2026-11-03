@@ -745,22 +745,22 @@ describe('useRuntimeProviderManagement', () => {
       authMethods: ['oauth'],
     };
     const makeDirectoryResponse = (): RuntimeProviderManagementDirectoryResponse => ({
-        schemaVersion: 1 as const,
-        runtimeId: 'opencode' as const,
-        directory: {
-          runtimeId: 'opencode' as const,
-          totalCount: 1,
-          returnedCount: 1,
-          query: null,
-          filter: 'all' as const,
-          limit: 50,
-          cursor: null,
-          nextCursor: null,
-          entries: [entry],
-          diagnostics: [],
-          fetchedAt: '2026-07-20T10:00:00.000Z',
-        },
-      });
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 1,
+        returnedCount: 1,
+        query: null,
+        filter: 'all',
+        limit: 50,
+        cursor: null,
+        nextCursor: null,
+        entries: [entry],
+        diagnostics: [],
+        fetchedAt: '2026-07-20T10:00:00.000Z',
+      },
+    });
     const pendingDirectoryResolves: Array<
       (response: RuntimeProviderManagementDirectoryResponse) => void
     > = [];
