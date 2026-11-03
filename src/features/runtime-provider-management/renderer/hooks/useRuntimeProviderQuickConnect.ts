@@ -4,6 +4,7 @@ import { api } from '@renderer/api';
 
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  invalidateRuntimeProviderDirectoryCache,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
 
@@ -44,6 +45,7 @@ export function useRuntimeProviderQuickConnect({
   const previousRefreshKey = useRef(refreshKey);
   const previousRefreshRequestSequence = useRef(0);
   const previousProjectScope = useRef(projectPath?.trim() ?? '');
+  const previousRuntimeRevision = useRef(runtimeRevision);
   const hasStartedLoad = useRef(false);
   const [entries, setEntries] = useState<readonly RuntimeProviderDirectoryEntryDto[]>(
     initialDirectoryCache?.entries ?? []
@@ -73,6 +75,20 @@ export function useRuntimeProviderQuickConnect({
   const refresh = useCallback(() => {
     setRefreshRequestSequence((current) => current + 1);
   }, []);
+
+  useEffect(() => {
+    if (
+      runtimeRevision !== null &&
+      previousRuntimeRevision.current !== null &&
+      runtimeRevision !== previousRuntimeRevision.current
+    ) {
+      invalidateRuntimeProviderDirectoryCache();
+      setEntries([]);
+      setLoaded(false);
+      setAuthoritativeLoaded(false);
+    }
+    if (runtimeRevision !== null) previousRuntimeRevision.current = runtimeRevision;
+  }, [runtimeRevision]);
 
   useEffect(() => {
     if (!enabled) {
