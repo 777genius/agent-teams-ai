@@ -744,8 +744,7 @@ describe('useRuntimeProviderManagement', () => {
       ownership: [],
       authMethods: ['oauth'],
     };
-    const loadProviderDirectory = vi.fn(() =>
-      Promise.resolve({
+    const makeDirectoryResponse = (): RuntimeProviderManagementDirectoryResponse => ({
         schemaVersion: 1 as const,
         runtimeId: 'opencode' as const,
         directory: {
@@ -761,6 +760,13 @@ describe('useRuntimeProviderManagement', () => {
           diagnostics: [],
           fetchedAt: '2026-07-20T10:00:00.000Z',
         },
+      });
+    const pendingDirectoryResolves: Array<
+      (response: RuntimeProviderManagementDirectoryResponse) => void
+    > = [];
+    const loadProviderDirectory = vi.fn(
+      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+        pendingDirectoryResolves.push(resolve);
       })
     );
     const loadSetupForm = vi.fn(() =>
@@ -806,14 +812,24 @@ describe('useRuntimeProviderManagement', () => {
     };
     await render(null);
     await act(async () => {
-      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
     });
+    await act(async () => {
+      pendingDirectoryResolves[0]?.(makeDirectoryResponse());
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalledTimes(1));
     expect(state?.activeFormProviderId).toBe('xai');
 
     await render('["ready","1.19.4","/opencode"]');
     await act(async () => {
-      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(2));
     });
+    await act(async () => {
+      pendingDirectoryResolves[1]?.(makeDirectoryResponse());
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalledTimes(2));
     expect(state?.activeFormProviderId).toBe('xai');
     expect(state?.setupForm?.providerId).toBe('xai');
     await act(async () => root.unmount());
@@ -1151,11 +1167,17 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.directoryEntries.map((provider) => provider.providerId)).toEqual(['project-a-only']);
     await renderScope('/tmp/project-b');
     expect(state?.directoryEntries).toEqual([]);
+    // Let B's scheduled read actually start before transitioning to global:
+    // otherwise the 0ms timer is correctly cancelled and no B IPC is required.
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(loadProviderDirectory).toHaveBeenCalledWith(
+          expect.objectContaining({ projectPath: '/tmp/project-b' })
+        )
+      );
+    });
     await renderScope(null);
     expect(state?.directoryEntries).toEqual([]);
-    expect(loadProviderDirectory).toHaveBeenCalledWith(
-      expect.objectContaining({ projectPath: '/tmp/project-b' })
-    );
     expect(loadProviderDirectory).toHaveBeenCalledWith(
       expect.objectContaining({ projectPath: null })
     );
