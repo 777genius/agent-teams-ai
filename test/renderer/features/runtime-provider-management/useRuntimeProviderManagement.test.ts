@@ -19,6 +19,7 @@ import {
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
@@ -172,6 +173,7 @@ describe('useRuntimeProviderManagement', () => {
     directoryPageSize?: number;
     directorySummaryOnEnable?: boolean;
     reuseCachedFullDirectory?: boolean;
+    runtimeRevision?: string | null;
     projectPath?: string | null;
     loadViewOnEnable?: boolean;
     preserveViewRequestOnDisable?: boolean;
@@ -189,6 +191,7 @@ describe('useRuntimeProviderManagement', () => {
       directoryPageSize: props.directoryPageSize,
       directorySummaryOnEnable: props.directorySummaryOnEnable,
       reuseCachedFullDirectory: props.reuseCachedFullDirectory,
+      runtimeRevision: props.runtimeRevision,
       projectPath: props.projectPath,
       loadViewOnEnable: props.loadViewOnEnable,
       preserveViewRequestOnDisable: props.preserveViewRequestOnDisable,
@@ -1026,6 +1029,97 @@ describe('useRuntimeProviderManagement', () => {
     expect(loadProviderDirectory).toHaveBeenCalledWith(
       expect.objectContaining({ projectPath: null })
     );
+    await act(async () => root.unmount());
+  });
+
+  it('masks cached rows and ignores pending responses when the OpenCode binary changes', async () => {
+    observeRuntimeProviderDirectoryRevision('runtime-v1');
+    const previousEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'old-runtime-credential',
+    };
+    const newEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'new-runtime-provider',
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      entries: [previousEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      runtimeRevision: 'runtime-v1',
+    });
+    const pending: Array<{
+      resolve: (response: RuntimeProviderManagementDirectoryResponse) => void;
+    }> = [];
+    const loadProviderDirectory = vi.fn(
+      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+        pending.push({ resolve });
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    const renderRevision = async (runtimeRevision: string) => {
+      await act(async () => {
+        root.render(React.createElement(ConfigurableHarness, {
+          enabled: true,
+          runtimeRevision,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          reuseCachedFullDirectory: true,
+        }));
+        await Promise.resolve();
+      });
+    };
+    await renderRevision('runtime-v1');
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual([
+      'old-runtime-credential',
+    ]);
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    await renderRevision('runtime-v2');
+    expect(state?.directoryEntries).toEqual([]);
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(2));
+    });
+    const response = (entry: RuntimeProviderDirectoryEntryDto): RuntimeProviderManagementDirectoryResponse => ({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 1,
+        returnedCount: 1,
+        query: null,
+        filter: 'all',
+        limit: 50,
+        cursor: null,
+        nextCursor: null,
+        entries: [entry],
+        diagnostics: [],
+        fetchedAt: '2026-07-20T10:01:00.000Z',
+      },
+    });
+    await act(async () => {
+      pending[0]?.resolve(response(previousEntry));
+      await Promise.resolve();
+    });
+    expect(state?.directoryEntries).toEqual([]);
+    await act(async () => {
+      pending[1]?.resolve(response(newEntry));
+      await Promise.resolve();
+    });
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual([
+      'new-runtime-provider',
+    ]);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)).toMatchObject({
+      runtimeRevision: 'runtime-v2',
+      authoritative: false,
+      entries: [{ providerId: 'new-runtime-provider' }],
+    });
     await act(async () => root.unmount());
   });
 
