@@ -19,6 +19,7 @@ import {
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 import {
@@ -875,6 +876,111 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['xai']);
     expect(state?.warningMessage).toContain('full OpenCode catalog came back empty');
     expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.authoritative).not.toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it('paints same-scope curated cache while summary IPC is pending and retains errors', async () => {
+    const cachedEntry = {
+      ...createOpenAiLocalDirectoryEntry(),
+      providerId: 'project-a-cached',
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [cachedEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: false,
+    });
+    let resolveDirectory: ((response: RuntimeProviderManagementDirectoryResponse) => void) | null =
+      null;
+    const loadProviderDirectory = vi.fn(
+      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+        resolveDirectory = resolve;
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(ConfigurableHarness, {
+        enabled: true,
+        projectPath: '/tmp/project-a',
+        loadViewOnEnable: false,
+        directorySummaryOnEnable: true,
+        reuseCachedFullDirectory: true,
+      }));
+      await Promise.resolve();
+    });
+
+    expect(state?.directoryLoaded).toBe(true);
+    expect(state?.directorySummary).toBe(true);
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['project-a-cached']);
+    expect(state?.directoryRefreshing).toBe(true);
+    expect(state?.directoryLoading).toBe(false);
+    expect(loadProviderDirectory).toHaveBeenCalledWith(
+      expect.objectContaining({ projectPath: '/tmp/project-a', summary: true, refresh: false })
+    );
+
+    await act(async () => {
+      resolveDirectory?.({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: {
+          code: 'runtime-unavailable',
+          message: 'OpenCode binary verification failed',
+        },
+      });
+      await Promise.resolve();
+    });
+    expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['project-a-cached']);
+    expect(state?.directoryError).toContain('verification failed');
+    expect(state?.directoryRefreshing).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('does not project cached summary credentials into another project or global scope', async () => {
+    const entry = { ...createOpenAiLocalDirectoryEntry(), providerId: 'project-a-only' };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [entry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: false,
+    });
+    const loadProviderDirectory = vi.fn(() => new Promise<RuntimeProviderManagementDirectoryResponse>(
+      () => undefined
+    ));
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+    const root = createRoot(host);
+    const renderScope = async (projectPath: string | null) => {
+      await act(async () => {
+        root.render(React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          reuseCachedFullDirectory: true,
+        }));
+        await Promise.resolve();
+      });
+    };
+
+    await renderScope('/tmp/project-a');
+    expect(state?.directoryEntries.map((provider) => provider.providerId)).toEqual(['project-a-only']);
+    await renderScope('/tmp/project-b');
+    expect(state?.directoryEntries).toEqual([]);
+    await renderScope(null);
+    expect(state?.directoryEntries).toEqual([]);
+    expect(loadProviderDirectory).toHaveBeenCalledWith(
+      expect.objectContaining({ projectPath: '/tmp/project-b' })
+    );
+    expect(loadProviderDirectory).toHaveBeenCalledWith(
+      expect.objectContaining({ projectPath: null })
+    );
     await act(async () => root.unmount());
   });
 
