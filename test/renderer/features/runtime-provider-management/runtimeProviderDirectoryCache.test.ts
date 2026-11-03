@@ -118,7 +118,13 @@ describe('runtimeProviderDirectoryCache', () => {
     });
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
-      entries: [{ ...providerEntry, state: 'not-connected', connectedAuthHint: null }],
+      entries: [{
+        ...providerEntry,
+        state: 'not-connected',
+        connectedAuthHint: null,
+        setupKind: 'connect-api-key',
+        ownership: [],
+      }],
       fetchedAt: '2026-07-20T10:01:00.000Z',
       authoritative: false,
     });
@@ -129,7 +135,7 @@ describe('runtimeProviderDirectoryCache', () => {
       totalCount: 42,
       nextCursor: 'next-page',
       entries: [
-        { providerId: 'openrouter', state: 'not-connected', connectedAuthHint: null },
+        { providerId: 'openrouter', state: 'not-connected', setupKind: 'connect-api-key', ownership: [], connectedAuthHint: null },
         { providerId: 'full-only', state: 'connected' },
       ],
     });
