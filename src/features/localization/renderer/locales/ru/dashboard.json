@@ -103,6 +103,8 @@
       "verifiedTitle": "Маршруты OpenCode с успешным proof выполнения."
     },
     "quickConnect": {
+      "v1CheckedUsingV2Detail": "Это подключение поддерживается в OpenCode V1. У вас V2 — проверьте выбранную модель перед использованием.",
+      "v1CheckedUsingV2": "Подтверждено для OpenCode V1 (у вас V2)",
       "alsoConnectOpenCode": "Также подключить через OpenCode",
       "browseAll": "Все провайдеры",
       "setupModelEndpoint": "Локальная модель или эндпоинт",
@@ -209,10 +211,14 @@
       "reinstall": "Переустановить {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportFiles": "Файлы поддержки OpenCode V2",
+      "v2ReinstallCancel": "Отмена",
+      "v2ReinstallConfirm": "Проверить и восстановить",
+      "v2ReinstallEffect": "Мы проверим файлы и скачаем новую копию только при необходимости. Установленный OpenCode и подключения провайдеров не изменятся.",
+      "v2ReinstallDescription": "Эти файлы нужны для работы OpenCode V2 в Agent Teams. Если всё работает, делать это необязательно.",
+      "v2SupportFiles": "Подготовка OpenCode V2",
       "v2SupportInstall": "Завершить настройку OpenCode V2",
-      "v2SupportRequiredDetail": "OpenCode V2 установлен. Добавьте файлы поддержки для загрузки провайдеров и моделей.",
-      "v2SupportRepair": "Восстановить поддержку V2",
+      "v2SupportRequiredDetail": "Один раз скачайте оставшиеся файлы, чтобы подключать провайдеров и использовать модели.",
+      "v2SupportRepair": "Переустановить поддержку V2",
       "overrideSelection": "Задан явный путь к OpenCode. Уберите его, чтобы использовать установленную приложением версию.",
       "v2Unavailable": "Совместимая V2 для этой платформы недоступна. Можно установить V1.",
 

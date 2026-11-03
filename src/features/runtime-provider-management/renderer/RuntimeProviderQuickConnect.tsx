@@ -27,6 +27,7 @@ import {
   useRuntimeProviderCompanion,
 } from './hooks/useRuntimeProviderCompanion';
 import { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
+import { getOpenCodeUnverifiedCardCopy } from './ui/OpenCodeProviderCompatibilityStatus';
 import { RuntimeProviderCompanionSetupDialog } from './ui/RuntimeProviderCompanionSetupDialog';
 import {
   type RuntimeProviderQuickCardViewModel,
@@ -42,7 +43,11 @@ import type {
   RuntimeProviderDirectoryEntryDto,
 } from '../contracts';
 import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
-import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
+import type {
+  CliProviderStatus,
+  OpenCodeRuntimeInstallOptions,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 import type { JSX } from 'react';
 
 interface RuntimeProviderQuickConnectProps {
@@ -53,7 +58,7 @@ interface RuntimeProviderQuickConnectProps {
   openCodeRuntimeStatusLoading: boolean;
   projectPath?: string | null;
   refreshKey?: number;
-  onInstallOpenCode: () => void;
+  onInstallOpenCode: (options?: OpenCodeRuntimeInstallOptions) => void;
   onRefreshOpenCode: () => void;
   onOpenCodeProviderAction: (
     providerId: string,
@@ -553,7 +558,7 @@ export const RuntimeProviderQuickConnect = ({
 
       const onAction =
         state === 'update-required'
-          ? onInstallOpenCode
+          ? () => onInstallOpenCode()
           : state === 'connected' || state === 'manual'
             ? () => onOpenCodeProviderAction(entry?.providerId ?? plan.providerId, 'select')
             : state === 'connectable' || state === 'different-credential'
@@ -634,16 +639,7 @@ export const RuntimeProviderQuickConnect = ({
       if (gate !== 'ready' || generation !== 'v2' || compatibility.state !== 'unverified') {
         return card;
       }
-      return {
-        ...card,
-        description: `${card.description} ${t('cliStatus.quickConnect.v2UnverifiedDetail')}`,
-        stateLabel:
-          card.state === 'connected'
-            ? t('cliStatus.quickConnect.v2ConnectedUnverified')
-            : card.state === 'connectable'
-              ? t('cliStatus.quickConnect.v2Unverified')
-              : card.stateLabel,
-      };
+      return { ...card, ...getOpenCodeUnverifiedCardCopy(card, t) };
     });
   }, [
     directory.entries,
@@ -702,6 +698,7 @@ export const RuntimeProviderQuickConnect = ({
         )}
         gate={gate}
         runtimeStatus={openCodeRuntimeStatus}
+        runtimeStatusLoading={openCodeRuntimeStatusLoading}
         directoryError={directory.error}
         onInstallOpenCode={onInstallOpenCode}
         onRefreshOpenCode={onRefreshOpenCode}

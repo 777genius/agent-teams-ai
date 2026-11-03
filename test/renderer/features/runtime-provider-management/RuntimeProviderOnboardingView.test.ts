@@ -226,10 +226,12 @@ describe('RuntimeProviderOnboardingView', () => {
         })
       );
     });
-    expect(host.querySelector('[data-testid="opencode-plan-compatibility-supergrok"]')?.textContent)
-      .toContain('Requires OpenCode V1');
-    expect(host.querySelector('[data-testid="opencode-plan-compatibility-zai-coding-plan"]')?.textContent)
-      .toContain('V2 model not verified');
+    expect(
+      host.querySelector('[data-testid="opencode-plan-compatibility-supergrok"]')?.textContent
+    ).toContain('Requires OpenCode V1');
+    expect(
+      host.querySelector('[data-testid="opencode-plan-compatibility-zai-coding-plan"]')?.textContent
+    ).toContain('Confirmed for OpenCode V1 (you are using V2)');
     const unavailable = host.querySelector('#runtime-provider-wizard-supergrok');
     expect(unavailable?.hasAttribute('disabled')).toBe(true);
     const supported = host.querySelector('#runtime-provider-wizard-zai-coding-plan');

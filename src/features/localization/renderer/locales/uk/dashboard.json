@@ -103,6 +103,8 @@
       "verifiedTitle": "Маршрути OpenCode з успішним підтвердженням виконання."
     },
     "quickConnect": {
+      "v1CheckedUsingV2Detail": "Це підключення підтримується в OpenCode V1. У вас V2 — перевірте вибрану модель перед використанням.",
+      "v1CheckedUsingV2": "Підтверджено для OpenCode V1 (у вас V2)",
       "alsoConnectOpenCode": "Також підключити через OpenCode",
       "browseAll": "Переглянути всіх провайдерів",
       "checkingOpenCode": "Перевірка OpenCode",
@@ -201,10 +203,14 @@
       "reinstall": "Перевстановити {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportFiles": "Файли підтримки OpenCode V2",
+      "v2ReinstallCancel": "Скасувати",
+      "v2ReinstallConfirm": "Перевірити й відновити",
+      "v2ReinstallEffect": "Ми перевіримо файли й завантажимо нову копію лише за потреби. Встановлений OpenCode і підключення провайдерів не зміняться.",
+      "v2ReinstallDescription": "Ці файли потрібні для роботи OpenCode V2 в Agent Teams. Якщо все працює, робити це необов’язково.",
+      "v2SupportFiles": "Підготовка OpenCode V2",
       "v2SupportInstall": "Завершити налаштування OpenCode V2",
-      "v2SupportRequiredDetail": "OpenCode V2 встановлено. Додайте файли підтримки для завантаження провайдерів і моделей.",
-      "v2SupportRepair": "Відновити підтримку V2",
+      "v2SupportRequiredDetail": "Один раз завантажте решту файлів, щоб підключати провайдерів і використовувати моделі.",
+      "v2SupportRepair": "Перевстановити підтримку V2",
       "checking": "Перевірка",
       "codexTitle": "Встановити Codex CLI у дані застосунку",
       "downloading": "Завантаження",

@@ -1,7 +1,12 @@
 import { createContext, useContext } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 
 import {
   inferOpenCodeProviderAuthMethod,
@@ -48,11 +53,54 @@ export function useOpenCodeProviderRowCompatibility(provider: {
   const generation = useContext(OpenCodeGenerationContext);
   const offeredMethod = inferOpenCodeProviderAuthMethod(provider.authMethods);
   const connectedAuthMethod =
-    provider.state === 'connected' ? provider.connectedAuthHint ?? offeredMethod : offeredMethod;
+    provider.state === 'connected' ? (provider.connectedAuthHint ?? offeredMethod) : offeredMethod;
   return {
-    connectionBlocked: isOpenCodeProviderConnectionBlocked(provider.providerId, generation, offeredMethod),
-    reconnectBlocked: isOpenCodeProviderConnectionBlocked(provider.providerId, generation, connectedAuthMethod),
+    connectionBlocked: isOpenCodeProviderConnectionBlocked(
+      provider.providerId,
+      generation,
+      offeredMethod
+    ),
+    reconnectBlocked: isOpenCodeProviderConnectionBlocked(
+      provider.providerId,
+      generation,
+      connectedAuthMethod
+    ),
     connectedAuthMethod,
+  };
+}
+
+/** A V1 integration baseline is not a test result for every model. */
+export function getOpenCodeUnverifiedCopyKeys(providerId: string) {
+  return resolveOpenCodeProviderCompatibility(providerId, 'v1').state === 'supported'
+    ? ({
+        label: 'cliStatus.quickConnect.v1CheckedUsingV2',
+        detail: 'cliStatus.quickConnect.v1CheckedUsingV2Detail',
+      } as const)
+    : ({
+        label: 'cliStatus.quickConnect.v2Unverified',
+        detail: 'cliStatus.quickConnect.v2UnverifiedDetail',
+      } as const);
+}
+
+/** Keep the V1 baseline explanation consistent across quick-connect card states. */
+export function getOpenCodeUnverifiedCardCopy(
+  card: {
+    readonly id: string;
+    readonly description: string;
+    readonly state: string;
+    readonly stateLabel: string;
+  },
+  t: ReturnType<typeof useAppTranslation>['t']
+): { description: string; stateLabel: string } {
+  const copy = getOpenCodeUnverifiedCopyKeys(card.id);
+  return {
+    description: `${card.description} ${t(copy.detail)}`,
+    stateLabel:
+      card.state === 'connected'
+        ? `${t('cliStatus.quickConnect.connected')}; ${t(copy.label)}`
+        : card.state === 'connectable'
+          ? t(copy.label)
+          : card.stateLabel,
   };
 }
 
@@ -67,10 +115,12 @@ export function OpenCodeProviderCompatibilityStatus({
   const generation = useContext(OpenCodeGenerationContext);
   const { t } = useAppTranslation('dashboard');
   if (generation === undefined || generation === 'v1') return null;
-  const compatibility = generation === 'v2'
-    ? resolveOpenCodeProviderCompatibility(providerId, generation, authMethod)
-    : null;
+  const compatibility =
+    generation === 'v2'
+      ? resolveOpenCodeProviderCompatibility(providerId, generation, authMethod)
+      : null;
   const incompatible = compatibility?.state === 'incompatible';
+  const unverifiedCopy = getOpenCodeUnverifiedCopyKeys(providerId);
   const reason =
     generation === null
       ? t('cliStatus.quickConnect.statusUnavailable')
@@ -78,7 +128,7 @@ export function OpenCodeProviderCompatibilityStatus({
         ? t('cliStatus.quickConnect.v2CliPluginLimitation')
         : incompatible
           ? t('cliStatus.quickConnect.v2OAuthLimitation')
-          : t('cliStatus.quickConnect.v2UnverifiedDetail');
+          : t(unverifiedCopy.detail);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -89,11 +139,13 @@ export function OpenCodeProviderCompatibilityStatus({
           onClick={(event) => event.stopPropagation()}
           className="rounded text-[10px] text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
         >
-          {t(generation === null
-            ? 'cliStatus.quickConnect.statusUnavailable'
-            : incompatible
-              ? 'cliStatus.quickConnect.requiresV1'
-              : 'cliStatus.quickConnect.v2Unverified')}
+          {t(
+            generation === null
+              ? 'cliStatus.quickConnect.statusUnavailable'
+              : incompatible
+                ? 'cliStatus.quickConnect.requiresV1'
+                : unverifiedCopy.label
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" align="start" className="max-w-72 text-pretty text-xs">

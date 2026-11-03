@@ -16,6 +16,7 @@ import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
 import { ActivityItem } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
+import { GroupDeliveryNotice } from './GroupDeliveryNotice';
 import { useMessageReadVisibility } from './useMessageReadVisibility';
 
 import type { ChatAppearance } from './activityMessagePresentation';
@@ -192,6 +193,7 @@ const MessageRowWithObserver = ({
         continuesPreviousAuthor={continuesPreviousAuthor}
         continuesNextAuthor={continuesNextAuthor}
       />
+      <GroupDeliveryNotice teamName={teamName} message={message} />
     </AnimatedHeightReveal>
   );
 };

@@ -177,6 +177,41 @@ describe('useRuntimeProviderQuickConnect', () => {
     });
   });
 
+  it('does not commit provider rows from the previous runtime while its replacement loads', async () => {
+    const committedStates: RuntimeProviderQuickConnectDirectoryState[] = [];
+    function RuntimeHarness({ runtimeRevision }: { runtimeRevision: string }) {
+      const state = useRuntimeProviderQuickConnect({
+        enabled: true,
+        projectPath: '/tmp/test-project',
+        runtimeRevision,
+      });
+      React.useLayoutEffect(() => {
+        committedStates.push(state);
+      });
+      return null;
+    }
+    loadProviderDirectory.mockResolvedValueOnce(directoryResponse('old-runtime-provider'));
+    await act(async () => {
+      root.render(React.createElement(RuntimeHarness, { runtimeRevision: 'runtime-old' }));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(committedStates.at(-1)?.entries[0]?.providerId).toBe('old-runtime-provider');
+
+    committedStates.length = 0;
+    loadProviderDirectory.mockReturnValue(new Promise(() => undefined));
+    await act(async () => {
+      root.render(React.createElement(RuntimeHarness, { runtimeRevision: 'runtime-new' }));
+    });
+
+    expect(committedStates.length).toBeGreaterThan(0);
+    expect(committedStates.every((state) => state.entries.length === 0)).toBe(true);
+    expect(committedStates.every((state) => !state.loaded && state.authoritativePending)).toBe(
+      true
+    );
+  });
+
   it('keeps the automatic dashboard directory on the passive summary route', async () => {
     loadProviderDirectory.mockResolvedValueOnce(directoryResponse('zai-coding-plan'));
     await act(async () => root.render(React.createElement(Harness)));

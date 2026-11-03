@@ -196,23 +196,28 @@ export function useRuntimeProviderQuickConnect({
   }, [enabled, projectPath, refreshKey, refreshRequestSequence]);
 
   // Passive effects run after React commits. Gate the returned snapshot during
-  // that short transition so a project-only provider can never flash in the
-  // picker for a different project.
-  const transitionDirectoryCache =
-    directoryProjectScope === currentProjectScope
-      ? null
-      : getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
-  const isProjectScopeTransition = directoryProjectScope !== currentProjectScope;
+  // that short transition so providers from the previous project or runtime
+  // cannot appear in the picker for its replacement.
+  const isScopeTransition =
+    directoryProjectScope !== currentProjectScope ||
+    (runtimeRevision !== null &&
+      ((previousRuntimeRevision.current !== null &&
+        previousRuntimeRevision.current !== runtimeRevision) ||
+        (cacheSeenOnMount.current !== null &&
+          cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)));
+  const transitionDirectoryCache = isScopeTransition
+    ? getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision)
+    : null;
 
   return {
-    entries: isProjectScopeTransition ? (transitionDirectoryCache?.entries ?? []) : entries,
-    loading: isProjectScopeTransition ? enabled : loading,
-    loaded: isProjectScopeTransition ? Boolean(transitionDirectoryCache) : loaded,
-    authoritativeLoaded: isProjectScopeTransition
+    entries: isScopeTransition ? (transitionDirectoryCache?.entries ?? []) : entries,
+    loading: isScopeTransition ? enabled : loading,
+    loaded: isScopeTransition ? Boolean(transitionDirectoryCache) : loaded,
+    authoritativeLoaded: isScopeTransition
       ? (transitionDirectoryCache?.authoritative ?? false)
       : authoritativeLoaded,
-    authoritativePending: isProjectScopeTransition ? true : authoritativePending,
-    error: isProjectScopeTransition ? null : error,
+    authoritativePending: isScopeTransition ? true : authoritativePending,
+    error: isScopeTransition ? null : error,
     refresh,
   };
 }

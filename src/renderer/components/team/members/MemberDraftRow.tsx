@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { MemberGatewaySelector } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
@@ -138,7 +137,6 @@ interface MemberDraftRowProps {
 }
 export const MemberDraftRow = ({
   member,
-  teamName,
   index,
   avatarSrc,
   resolvedColor,
@@ -758,24 +756,7 @@ export const MemberDraftRow = ({
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                 onOpenProviderSettings={onOpenProviderSettings}
               />
-              {teamName?.trim() &&
-              !lockProviderModel &&
-              ['anthropic', 'codex', 'opencode'].includes(effectiveProviderId) ? (
-                <MemberGatewaySelector
-                  teamName={teamName.trim()}
-                  memberName={member.name}
-                  originalName={member.originalName}
-                  selectedModel={member.model}
-                  onBindingsChange={gatewayBindings?.refresh}
-                  onBindRequest={gatewayBindings?.runBinding}
-                  onBindingPendingChange={gatewayBindings?.onBindingPendingChange}
-                  disabled={gatewayBindings?.pending}
-                  onModelChange={(model) => {
-                    if (lockProviderModel) return;
-                    onModelChange(member.id, model);
-                  }}
-                />
-              ) : null}
+              {/* Teammate gateway settings are temporarily hidden. Existing bindings are preserved. */}
               <EffortLevelSelector
                 value={effectiveEffort ?? ''}
                 onValueChange={(value) => {

@@ -505,7 +505,7 @@ try {
   const visibleReady = await wait('visible V2 support-ready action', () =>
     cdp.inspect(`(() => {
       const repair = [...document.querySelectorAll('button')].find(button =>
-        button.textContent.trim() === 'Repair V2 support' && !button.disabled &&
+        button.textContent.trim() === 'Reinstall V2 support' && !button.disabled &&
         button.getClientRects().length > 0);
       return repair ? { label: repair.textContent.trim(),
         installActionPresent: [...document.querySelectorAll('button')].some(button =>

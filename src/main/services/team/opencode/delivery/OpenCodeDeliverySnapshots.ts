@@ -73,3 +73,51 @@ export function unknownGroupHandoffSnapshot(
     diagnostics: record.diagnostics,
   };
 }
+
+/** An unknown submission remains fenced even after automatic observation ends. */
+export async function settleUnconfirmedGroupDelivery(
+  ledger: OpenCodePromptDeliveryLedgerStore,
+  record: OpenCodePromptDeliveryLedgerRecord,
+  snapshot: OpenCodeMemberInboxDelivery | null,
+  observed: { ok: boolean; diagnostics: string[] },
+  ageMs: number | null
+): Promise<OpenCodeMemberInboxDelivery | null> {
+  if (
+    !snapshot ||
+    observed.ok ||
+    ageMs === null ||
+    ageMs < 60_000 ||
+    !observed.diagnostics.some((diagnostic) => /\boriginal_input_unknown\b/.test(diagnostic))
+  )
+    return null;
+  const settled = await ledger.markFailedTerminal({
+    id: record.id,
+    reason: 'group_delivery_unconfirmed',
+    diagnostics: observed.diagnostics,
+    failedAt: new Date().toISOString(),
+  });
+  return {
+    ...snapshot,
+    responsePending: false,
+    ledgerStatus: settled.status,
+    reason: 'group_delivery_unconfirmed',
+    diagnostics: settled.diagnostics,
+  };
+}
+
+export function terminalOpenCodeDelivery(
+  ledgerRecord: OpenCodePromptDeliveryLedgerRecord,
+  laneId: string
+): OpenCodeMemberInboxDelivery {
+  return {
+    delivered: false,
+    accepted: false,
+    responsePending: false,
+    responseState: ledgerRecord.responseState,
+    ledgerStatus: ledgerRecord.status,
+    ledgerRecordId: ledgerRecord.id,
+    laneId,
+    reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+    diagnostics: ledgerRecord.diagnostics,
+  };
+}

@@ -11,7 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import {
   AlertTriangle,
   Check,
@@ -30,6 +35,7 @@ import {
   resolveOpenCodeProviderCompatibility,
 } from '../../core/domain';
 
+import { getOpenCodeUnverifiedCopyKeys } from './OpenCodeProviderCompatibilityStatus';
 import { ProviderBrandIcon } from './providerBrandIcons';
 import { ProviderSetupFormPanel } from './RuntimeProviderManagementPanelView';
 
@@ -233,90 +239,100 @@ const WizardPlanPicker = ({
   return (
     <TooltipProvider>
       <div className="space-y-3">
-      <div>
-        <div className="text-sm font-semibold text-[var(--color-text)]">Connect all my plans</div>
-        <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-          Select the subscriptions you own. Already connected plans are detected automatically.
+        <div>
+          <div className="text-sm font-semibold text-[var(--color-text)]">Connect all my plans</div>
+          <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+            Select the subscriptions you own. Already connected plans are detected automatically.
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {state.plans.map((plan) => {
+            const selected = state.selectedPlanIds.includes(plan.id);
+            const compatibility = resolveOpenCodeProviderCompatibility(
+              plan.id,
+              state.openCodeGeneration
+            );
+            const unsupported = compatibility.state === 'incompatible';
+            const unverifiedCopy = getOpenCodeUnverifiedCopyKeys(plan.id);
+            const status = state.planStatuses.find((entry) => entry.plan.id === plan.id)?.state;
+            return (
+              <Label
+                key={plan.id}
+                htmlFor={`runtime-provider-wizard-${plan.id}`}
+                className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 font-normal"
+                style={{
+                  borderColor: selected ? 'rgba(96, 165, 250, 0.42)' : 'var(--color-border-subtle)',
+                  backgroundColor: selected ? 'rgba(96, 165, 250, 0.06)' : 'rgba(255,255,255,0.02)',
+                }}
+              >
+                <Checkbox
+                  id={`runtime-provider-wizard-${plan.id}`}
+                  checked={selected}
+                  disabled={disabled || unsupported}
+                  onCheckedChange={() => actions.togglePlan(plan.id)}
+                />
+                <ProviderBrandIcon
+                  provider={{ providerId: plan.providerId, displayName: plan.displayName }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2 text-xs font-medium text-[var(--color-text)]">
+                    <span className="truncate">{plan.displayName}</span>
+                    {status === 'connected' && !unsupported ? (
+                      <span className="shrink-0 text-[10px] text-emerald-300">Connected</span>
+                    ) : null}
+                    {unsupported ||
+                    (state.openCodeGeneration === 'v2' && compatibility.state === 'unverified') ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            data-testid={`opencode-plan-compatibility-${plan.id}`}
+                            className="shrink-0 rounded text-[10px] text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
+                          >
+                            {t(
+                              unsupported
+                                ? 'cliStatus.quickConnect.requiresV1'
+                                : unverifiedCopy.label
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-72 text-xs">
+                          {compatibility.state === 'unverified'
+                            ? t(unverifiedCopy.detail)
+                            : compatibility.reason === 'cli-plugin'
+                              ? t('cliStatus.quickConnect.v2CliPluginLimitation')
+                              : t('cliStatus.quickConnect.v2OAuthLimitation')}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </span>
+                  <span className="mt-0.5 block text-[10.5px] leading-4 text-[var(--color-text-muted)]">
+                    {plan.description}
+                  </span>
+                </span>
+              </Label>
+            );
+          })}
+        </div>
+        {state.stageError ? (
+          <div role="alert" className="text-xs text-red-300">
+            {state.stageError}
+          </div>
+        ) : null}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            disabled={disabled || state.selectedPlanIds.length === 0}
+            onClick={() => void actions.startWizard()}
+          >
+            Start setup
+          </Button>
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {state.plans.map((plan) => {
-          const selected = state.selectedPlanIds.includes(plan.id);
-          const compatibility = resolveOpenCodeProviderCompatibility(plan.id, state.openCodeGeneration);
-          const unsupported = compatibility.state === 'incompatible';
-          const status = state.planStatuses.find((entry) => entry.plan.id === plan.id)?.state;
-          return (
-            <Label
-              key={plan.id}
-              htmlFor={`runtime-provider-wizard-${plan.id}`}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 font-normal"
-              style={{
-                borderColor: selected ? 'rgba(96, 165, 250, 0.42)' : 'var(--color-border-subtle)',
-                backgroundColor: selected ? 'rgba(96, 165, 250, 0.06)' : 'rgba(255,255,255,0.02)',
-              }}
-            >
-              <Checkbox
-                id={`runtime-provider-wizard-${plan.id}`}
-                checked={selected}
-                disabled={disabled || unsupported}
-                onCheckedChange={() => actions.togglePlan(plan.id)}
-              />
-              <ProviderBrandIcon
-                provider={{ providerId: plan.providerId, displayName: plan.displayName }}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2 text-xs font-medium text-[var(--color-text)]">
-                  <span className="truncate">{plan.displayName}</span>
-                  {status === 'connected' && !unsupported ? (
-                    <span className="shrink-0 text-[10px] text-emerald-300">Connected</span>
-                  ) : null}
-                  {unsupported || (state.openCodeGeneration === 'v2' && compatibility.state === 'unverified') ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          data-testid={`opencode-plan-compatibility-${plan.id}`}
-                          className="shrink-0 rounded text-[10px] text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-                          onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
-                        >
-                          {t(unsupported
-                            ? 'cliStatus.quickConnect.requiresV1'
-                            : 'cliStatus.quickConnect.v2Unverified')}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-72 text-xs">
-                        {compatibility.state === 'unverified'
-                          ? t('cliStatus.quickConnect.v2UnverifiedDetail')
-                          : compatibility.reason === 'cli-plugin'
-                            ? t('cliStatus.quickConnect.v2CliPluginLimitation')
-                            : t('cliStatus.quickConnect.v2OAuthLimitation')}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
-                </span>
-                <span className="mt-0.5 block text-[10.5px] leading-4 text-[var(--color-text-muted)]">
-                  {plan.description}
-                </span>
-              </span>
-            </Label>
-          );
-        })}
-      </div>
-      {state.stageError ? (
-        <div role="alert" className="text-xs text-red-300">
-          {state.stageError}
-        </div>
-      ) : null}
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          disabled={disabled || state.selectedPlanIds.length === 0}
-          onClick={() => void actions.startWizard()}
-        >
-          Start setup
-        </Button>
-      </div>
-    </div>
     </TooltipProvider>
   );
 };

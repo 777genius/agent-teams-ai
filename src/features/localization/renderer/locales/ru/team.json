@@ -792,6 +792,7 @@
         "skipped": "пропущено"
       },
       "recipient": "Кому: {{name}}",
+      "deliveryUnconfirmed": "Доставка не подтверждена для {{names}}",
       "recipientRestartHint": "Перед отправкой {{name}} должен работать с совместимой версией среды выполнения.",
       "showTasksOnBoard": "Показать задачи на доске"
     },

@@ -258,7 +258,7 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(connect?.disabled).toBe(false);
     expect(
       host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
-    ).toContain('cliStatus.quickConnect.v2Unverified');
+    ).toContain('cliStatus.quickConnect.v1CheckedUsingV2');
     const browse = [...host.querySelectorAll('button')].find((button) =>
       button.textContent?.includes('cliStatus.quickConnect.browseAll')
     );
@@ -328,11 +328,11 @@ describe('RuntimeProviderQuickConnect', () => {
     );
     expect(
       host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
-    ).toContain('cliStatus.quickConnect.v2ConnectedUnverified');
+    ).toContain('cliStatus.quickConnect.v1CheckedUsingV2');
     // Help is accessible through the card's description tooltip, not rendered inline.
     expect(
       host.querySelector(
-        '[data-testid="provider-quick-card-openrouter"] [aria-label*="v2UnverifiedDetail"]'
+        '[data-testid="provider-quick-card-openrouter"] [aria-label*="v1CheckedUsingV2Detail"]'
       )
     ).not.toBeNull();
     expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
@@ -856,8 +856,10 @@ describe('RuntimeProviderQuickConnect', () => {
         expect(host.textContent).not.toContain('cliStatus.quickConnect.retryOpenCode');
         expect(host.textContent).not.toContain('ENOENT');
         const notice = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
-        expect(notice?.textContent).toContain('2.1.4');
-        expect(notice?.textContent).toContain('cliStatus.runtimeInstall.overrideSelection');
+        expect(notice?.textContent).not.toContain('cliStatus.runtimeInstall.overrideSelection');
+        expect(notice?.querySelector('button')?.textContent).toContain(
+          'cliStatus.runtimeInstall.v2SupportInstall'
+        );
         if (reason === 'support failed') {
           expect(host.querySelector('[role="alert"]')?.textContent).toContain(
             'V2 support download failed: network unavailable'

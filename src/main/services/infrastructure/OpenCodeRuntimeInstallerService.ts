@@ -962,7 +962,10 @@ export class OpenCodeRuntimeInstallerService {
         error: getErrorMessage(error),
         progress: {
           phase: 'failed',
-          detail: getErrorMessage(error),
+          // Keep retry scoped to support files even when the quick status still reports ready.
+          detail: options.supportOnly
+            ? `OpenCode V2 support: ${getErrorMessage(error)}`
+            : getErrorMessage(error),
         },
       };
       logger.error('Failed to install OpenCode runtime:', status.error);

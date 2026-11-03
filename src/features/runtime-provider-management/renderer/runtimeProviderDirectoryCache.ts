@@ -220,15 +220,23 @@ export function publishRuntimeProviderDirectoryCache({
   const nextEntries = summaryByProvider
     ? (current?.entries ?? []).map((entry) => {
         const latest = summaryByProvider.get(entry.providerId);
-        return latest
-          ? {
-              ...entry,
-              state: latest.state,
-              setupKind: latest.setupKind,
-              connectedAuthHint: latest.connectedAuthHint,
-              ownership: latest.ownership,
-            }
-          : entry;
+        if (!latest) return entry;
+        const connectionChanged =
+          entry.state !== latest.state ||
+          entry.setupKind !== latest.setupKind ||
+          entry.connectedAuthHint !== latest.connectedAuthHint ||
+          entry.ownership.length !== latest.ownership.length ||
+          entry.ownership.some((owner) => !latest.ownership.includes(owner));
+        return {
+          ...entry,
+          state: latest.state,
+          setupKind: latest.setupKind,
+          connectedAuthHint: latest.connectedAuthHint,
+          ownership: latest.ownership,
+          // Passive summaries have fewer capabilities. Keep live actions until
+          // connection changes make those actions stale (for example, logout).
+          actions: connectionChanged ? latest.actions : entry.actions,
+        };
       })
     : entries;
   const nextSnapshot: RuntimeProviderDirectoryCacheSnapshot = {

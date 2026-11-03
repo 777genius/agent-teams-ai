@@ -129,10 +129,17 @@ export function isOpenCodePassiveStatusReadyForCatalog(
   if (providerStatus?.supported && !nonAuthoritative) {
     return true;
   }
+  // Detection permits a read-only scoped catalog query, never launch authority.
+  const detectedExternalRuntime = providerStatus?.externalRuntimeDiagnostics?.some(
+    (diagnostic) =>
+      diagnostic.detected &&
+      (diagnostic.id === 'opencode-live-host' || diagnostic.id === 'opencode-managed-runtime')
+  );
   return Boolean(
     nonAuthoritative &&
-    runtimeStatus?.source !== 'missing' &&
-    (runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
+    (detectedExternalRuntime || runtimeStatus?.source !== 'missing') &&
+    (detectedExternalRuntime ||
+    (runtimeStatus?.installed === true && runtimeStatus.state === 'ready')
       ? true
       : Boolean(providerStatus?.models.length || providerStatus?.modelCatalog?.models.length))
   );
@@ -296,9 +303,21 @@ export type OpenCodePassiveCatalogState = 'pending' | 'unavailable' | 'settled';
 export function getOpenCodePassiveCatalogState(
   readyForCatalog: boolean,
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
-  providerStatus?: CliProviderStatus | null
+  providerStatus?: CliProviderStatus | null,
+  scopedCatalogStatus?: 'idle' | 'loading' | 'ready' | 'error'
 ): OpenCodePassiveCatalogState {
   if (isOpenCodeProjectFolderMissing(providerStatus)) return 'unavailable';
+  // The scoped read can finish before the passive launch-status check settles.
+  if (scopedCatalogStatus === 'error') return 'unavailable';
+  if (scopedCatalogStatus === 'loading') return 'pending';
+  if (readyForCatalog && scopedCatalogStatus === 'ready') return 'settled';
+  // A finished scoped catalog is display evidence even while launch checks remain pending.
+  if (
+    readyForCatalog &&
+    providerStatus?.modelCatalogRefreshState === 'ready' &&
+    providerStatus.modelCatalog?.status === 'ready'
+  )
+    return 'settled';
   if (
     runtimeStatusUiState === 'checking' &&
     (!readyForCatalog || providerStatus?.statusCheckOutcome === 'pending')
