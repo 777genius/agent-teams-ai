@@ -66,6 +66,11 @@ describe('buildCustomTeamTemplateFileName', () => {
     expect(longName.endsWith('.json')).toBe(true);
   });
 
+  it('keeps complete surrogate pairs at the basename limit', () => {
+    expect(buildCustomTeamTemplateFileName('a'.repeat(78) + '😀')).toBe('a'.repeat(78) + '😀.json');
+    expect(buildCustomTeamTemplateFileName('a'.repeat(79) + '😀')).toBe('a'.repeat(79) + '.json');
+  });
+
   it('falls back for blank names', () => {
     expect(buildCustomTeamTemplateFileName('   ')).toBe('custom-team-template.json');
     expect(buildCustomTeamTemplateFileName('')).toBe('custom-team-template.json');

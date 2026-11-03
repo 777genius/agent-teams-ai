@@ -39,7 +39,11 @@ export function buildCustomTeamTemplateFileName(templateName: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^[.\s-]+|[.\s-]+$/g, '');
-  const base = cleaned.slice(0, MAX_FILE_BASENAME_LENGTH).replace(/[.\s-]+$/g, '');
+  const base = cleaned
+    .slice(0, MAX_FILE_BASENAME_LENGTH)
+    // Keep the UTF-16 length bound without leaving half of a surrogate pair.
+    .replace(/[\uD800-\uDBFF]$/, '')
+    .replace(/[.\s-]+$/g, '');
   const usableBase = base.length > 0 ? base : DEFAULT_FILE_BASENAME;
   const safeBase = hasReservedDeviceStem(usableBase) ? `template-${usableBase}` : usableBase;
   return `${safeBase}.json`;
