@@ -1,7 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { createCliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
 
 import * as companion from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion';
 import * as quickConnectDirectory from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
@@ -10,6 +12,10 @@ import {
   type RuntimeProviderQuickCardViewModel,
   RuntimeProviderQuickConnectView,
 } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderQuickConnectView';
+
+import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { StateCreator } from 'zustand';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -432,6 +438,129 @@ describe('RuntimeProviderQuickConnectView', () => {
       supportOnly: true,
     });
   });
+
+  it.each(['path', 'override'] as const)(
+    'keeps a failed optional support repair retry separate from the %s native binary',
+    async (source) => {
+      vi.spyOn(companion, 'useRuntimeProviderCompanion').mockReturnValue({
+        status: null,
+        loading: false,
+        runInstallAndConnect: vi.fn(),
+        runConnect: vi.fn(),
+        runAction: vi.fn(),
+        refresh: vi.fn(),
+      });
+      vi.spyOn(quickConnectDirectory, 'useRuntimeProviderQuickConnect').mockReturnValue({
+        entries: [],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: null,
+        refresh: vi.fn(),
+      });
+      const previousApi = window.electronAPI;
+      const initial: OpenCodeRuntimeStatus = {
+        installed: true,
+        version: '2.2.0',
+        binaryPath: '/TEST/selected-opencode',
+        source,
+        state: 'ready',
+        compatibleV2Version: '2.2.0',
+        v2Support: 'ready',
+      };
+      let releaseFollowUp!: () => void;
+      let startedFollowUp!: () => void;
+      const followUp = new Promise<void>((resolve) => {
+        releaseFollowUp = resolve;
+      });
+      const followUpStarted = new Promise<void>((resolve) => {
+        startedFollowUp = resolve;
+      });
+      let installation: Promise<void> | undefined;
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...previousApi,
+          openCodeRuntime: {
+            install: vi.fn().mockRejectedValue(new Error('TEST IPC disconnected')),
+            invalidateStatus: vi.fn(() => {
+              startedFollowUp();
+              return followUp;
+            }),
+          },
+          cliInstaller: undefined,
+        },
+      });
+      try {
+        const store = createStore<CliInstallerSlice>()(
+          createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+        );
+        store.setState({ openCodeRuntimeStatus: initial });
+        installation = store
+          .getState()
+          .installOpenCodeRuntime({ generation: 'v2', supportOnly: true });
+        await followUpStarted;
+        const runtimeStatus = store.getState().openCodeRuntimeStatus;
+        expect(runtimeStatus).toMatchObject({
+          source,
+          binaryPath: initial.binaryPath,
+          state: 'failed',
+          v2Support: 'ready',
+          error: 'TEST IPC disconnected',
+        });
+        const onInstallOpenCode = vi.fn();
+        const renderQuickConnect = () =>
+          act(async () =>
+            root.render(
+              React.createElement(RuntimeProviderQuickConnect, {
+                enabled: true,
+                cliStatusLoading: false,
+                providers: [],
+                openCodeRuntimeStatus: runtimeStatus,
+                openCodeRuntimeStatusLoading: store.getState().openCodeRuntimeStatusLoading,
+                onInstallOpenCode,
+                onRefreshOpenCode: vi.fn(),
+                onOpenCodeProviderAction: vi.fn(),
+                onBrowseProviders: vi.fn(),
+              })
+            )
+          );
+        await renderQuickConnect();
+        // A failed optional repair does not revoke the working native runtime.
+        expect(
+          vi.mocked(quickConnectDirectory.useRuntimeProviderQuickConnect).mock.calls.at(-1)?.[0]
+        ).toMatchObject({ enabled: true });
+        const browseButton = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('Browse all providers')
+        );
+        expect(browseButton?.disabled).toBe(false);
+        const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+        expect(banner?.querySelector('[role="alert"]')).not.toBeNull();
+        expect(banner?.textContent).toContain('TEST IPC disconnected');
+        const retry = banner?.querySelector<HTMLButtonElement>('button');
+        expect(store.getState().openCodeRuntimeStatusLoading).toBe(true);
+        expect(retry?.disabled).toBe(true);
+        act(() => retry?.click());
+        expect(onInstallOpenCode).not.toHaveBeenCalled();
+        releaseFollowUp();
+        await installation;
+        await renderQuickConnect();
+        expect(store.getState().openCodeRuntimeStatusLoading).toBe(false);
+        expect(retry?.disabled).toBe(false);
+        act(() => retry?.click());
+        expect(onInstallOpenCode).toHaveBeenCalledExactlyOnceWith({
+          generation: 'v2',
+          supportOnly: true,
+        });
+      } finally {
+        releaseFollowUp();
+        await installation;
+        Object.defineProperty(window, 'electronAPI', { configurable: true, value: previousApi });
+        vi.mocked(console.error).mockClear();
+      }
+    }
+  );
 
   it('keeps the prerequisite notice hidden while OpenCode availability is checked', async () => {
     await act(async () => {

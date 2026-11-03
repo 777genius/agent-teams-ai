@@ -698,6 +698,7 @@ export const RuntimeProviderQuickConnect = ({
         )}
         gate={gate}
         runtimeStatus={openCodeRuntimeStatus}
+        runtimeStatusLoading={openCodeRuntimeStatusLoading}
         directoryError={directory.error}
         onInstallOpenCode={onInstallOpenCode}
         onRefreshOpenCode={onRefreshOpenCode}

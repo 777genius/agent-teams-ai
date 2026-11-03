@@ -105,10 +105,10 @@ export const RuntimeProviderManagementPanel = ({
     projectContextResolved || (activeProjectPath === null && initialProjectPath === null);
   const effectiveProjectPath = useMemo(
     () =>
-      projectContextResolved && !projectContextError
+      projectContextResolved
         ? resolveRuntimeProviderProjectContext(activeProjectPath, projectContextProjects).path
         : null,
-    [activeProjectPath, projectContextError, projectContextProjects, projectContextResolved]
+    [activeProjectPath, projectContextProjects, projectContextResolved]
   );
 
   useEffect(() => {

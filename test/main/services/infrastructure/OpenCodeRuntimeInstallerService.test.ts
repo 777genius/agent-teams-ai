@@ -368,6 +368,43 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   );
 
+  it('retains support-only repair intent when a native-ready installation fails', async () => {
+    const binaryPath = path.join(tempRoot!, 'TEST-path-v2', getTestNativeOpenCodeBinaryName());
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'selected native bytes', { mode: 0o755 });
+    process.env.PATH = path.dirname(binaryPath);
+    execCliMock.mockResolvedValue({ stdout: '2.9.0\n', stderr: '' });
+    const service = new OpenCodeRuntimeInstallerService({
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) => ({
+        ...status,
+        v2Support: 'ready' as const,
+      })),
+      install: vi.fn().mockRejectedValue(new TypeError('TEST fetch failed')),
+    });
+    const status = await service.install({ generation: 'v2', supportOnly: true });
+    expect(vi.mocked(console.error).mock.calls).toEqual([
+      [
+        '[OpenCodeRuntimeInstallerService]',
+        'Failed to install OpenCode runtime:',
+        'TEST fetch failed',
+      ],
+    ]);
+    vi.mocked(console.error).mockClear();
+    expect(status).toMatchObject({
+      installed: true,
+      binaryPath,
+      version: '2.9.0',
+      source: 'path',
+      state: 'failed',
+      v2Support: 'ready',
+      error: 'TEST fetch failed',
+      progress: { phase: 'failed', detail: expect.stringContaining('OpenCode V2 support') },
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+    expect(await readFile(binaryPath, 'utf8')).toBe('selected native bytes');
+  });
+
   it('reports selected native V2 as requiring its missing default support without downloading', async () => {
     const binaryPath = path.join(
       tempRoot!,
