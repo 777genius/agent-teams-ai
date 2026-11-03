@@ -1178,9 +1178,15 @@ describe('useRuntimeProviderManagement', () => {
     });
     await renderScope(null);
     expect(state?.directoryEntries).toEqual([]);
-    expect(loadProviderDirectory).toHaveBeenCalledWith(
-      expect.objectContaining({ projectPath: null })
-    );
+    // The global read is also scheduled on a 0ms timer; await that invocation
+    // rather than assuming it ran during React's render/commit.
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(loadProviderDirectory).toHaveBeenCalledWith(
+          expect.objectContaining({ projectPath: null })
+        )
+      );
+    });
     await act(async () => root.unmount());
   });
 
