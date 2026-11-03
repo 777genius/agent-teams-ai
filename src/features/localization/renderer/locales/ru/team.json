@@ -3297,7 +3297,7 @@
       "edit": "Изменить",
       "delete": "Удалить",
       "copyToMyTemplates": "Скопировать в «Мои шаблоны»",
-      "export": "Export"
+      "export": "Экспорт"
     },
     "createFromTemplate": {
       "builtinGroup": "Встроенные шаблоны",
@@ -3330,7 +3330,8 @@
         "memberWorkflowTooLong": "Процесс участника слишком длинный.",
         "teamPromptInvalidType": "Промпт команды должен быть текстовым.",
         "teamPromptTooLong": "Промпт команды слишком длинный.",
-        "tooManyMembers": "Слишком много участников."
+        "tooManyMembers": "Слишком много участников.",
+        "unexpectedProperty": "Файл содержит недопустимое свойство «{{property}}»."
       },
       "nameConflict": "Шаблон с таким названием уже существует. Измените название — существующие шаблоны никогда не перезаписываются.",
       "requestFailed": "Запрос не выполнен. Попробуйте ещё раз.",
@@ -3403,7 +3404,7 @@
       "unresolvedDeleteBody": "Не удалось подтвердить удаление, поэтому автоматический повтор не выполнялся. Проверьте «Мои шаблоны», прежде чем пробовать снова: возможно, шаблон уже удалён.",
       "unresolvedMutationBody": "Не удалось подтвердить изменение, поэтому автоматический повтор не выполнялся. Проверьте «Мои шаблоны», прежде чем пробовать снова: возможно, изменение уже применено.",
       "unresolvedTitle": "Результат не подтверждён",
-      "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported."
+      "unresolvedImportBody": "Импорт не удалось подтвердить, поэтому автоматический повтор не выполнялся. Проверьте «Мои шаблоны», прежде чем пробовать снова: шаблон мог уже импортироваться."
     },
     "warnings": {
       "emptyRoster": "Состав прочитан успешно и пуст. Шаблон только с промптом допустим.",
@@ -3471,48 +3472,48 @@
       "title": "Изменить шаблон"
     },
     "import": {
-      "title": "Import Template",
-      "description": "Import a portable team template from a JSON file.",
-      "action": "Import Template",
-      "importing": "Importing…",
-      "success": "Import successful",
-      "successBody": "The template has been imported into My Templates.",
-      "selectFileLabel": "Select JSON file",
-      "fileHint": "Choose a .json file exported from Agent Teams.",
-      "platformBrowser": "Browser file import",
-      "platformElectron": "Native file picker",
-      "platformUnavailable": "File import is not available in this environment.",
-      "renameNameFieldLabel": "Template name",
-      "nameConflictTitle": "Template already exists",
-      "nameConflictBody": "A template named “{{name}}” already exists. Choose a different name to import as a new template.",
-      "confirmImport": "Confirm import",
+      "title": "Импорт шаблона",
+      "description": "Импортируйте переносимый шаблон команды из файла JSON.",
+      "action": "Импортировать шаблон",
+      "importing": "Импорт…",
+      "success": "Импорт выполнен",
+      "successBody": "Шаблон добавлен в «Мои шаблоны».",
+      "selectFileLabel": "Выберите файл JSON",
+      "fileHint": "Выберите файл .json, экспортированный из Agent Teams.",
+      "platformBrowser": "Импорт файла через браузер",
+      "platformElectron": "Системный выбор файла",
+      "platformUnavailable": "Импорт файлов недоступен в этом окружении.",
+      "renameNameFieldLabel": "Название шаблона",
+      "nameConflictTitle": "Шаблон уже существует",
+      "nameConflictBody": "Шаблон с названием «{{name}}» уже существует. Выберите другое название, чтобы импортировать его как новый шаблон.",
+      "confirmImport": "Подтвердить импорт",
       "errors": {
-        "invalidJson": "The file is not valid JSON.",
-        "invalidEncoding": "The file is not valid UTF-8.",
-        "fileTooLarge": "The file is too large to import.",
-        "fileReadFailed": "The file could not be read.",
-        "transportFailed": "The import request could not be completed. Try again.",
-        "unsupportedFormat": "The file format is not supported.",
-        "unsupportedVersion": "The template schema version is not supported.",
-        "validationFailed": "The template content failed validation.",
-        "storageUnavailable": "The template library is unavailable. Nothing was imported.",
-        "filePickerFailed": "The file picker could not be opened.",
-        "fileChanged": "The file changed while it was being read."
+        "invalidJson": "Файл не является корректным JSON.",
+        "invalidEncoding": "Файл не является корректным UTF-8.",
+        "fileTooLarge": "Файл слишком большой для импорта.",
+        "fileReadFailed": "Не удалось прочитать файл.",
+        "filePickerFailed": "Не удалось открыть выбор файла.",
+        "fileChanged": "Файл изменился во время чтения.",
+        "transportFailed": "Не удалось выполнить запрос импорта. Попробуйте ещё раз.",
+        "unsupportedFormat": "Формат файла не поддерживается.",
+        "unsupportedVersion": "Версия схемы шаблона не поддерживается.",
+        "validationFailed": "Содержимое шаблона не прошло проверку.",
+        "storageUnavailable": "Хранилище шаблонов недоступно. Ничего не импортировано."
       }
     },
     "export": {
-      "title": "Export Template",
-      "description": "Export “{{name}}” as a portable JSON file.",
-      "action": "Export",
-      "exporting": "Exporting…",
-      "success": "Export successful",
-      "successBody": "“{{name}}” has been exported as a JSON file.",
+      "title": "Экспорт шаблона",
+      "description": "Экспортируйте «{{name}}» как переносимый файл JSON.",
+      "action": "Экспорт",
+      "exporting": "Экспорт…",
+      "success": "Экспорт выполнен",
+      "successBody": "«{{name}}» экспортирован как файл JSON.",
       "errors": {
-        "downloadFailed": "The download could not be started. Try again.",
-        "transportFailed": "The export request could not be completed. Try again.",
-        "filePickerFailed": "The file picker could not be opened.",
-        "fileWriteFailed": "The file could not be written. Try again.",
-        "invalidRequest": "The export request was invalid."
+        "downloadFailed": "Не удалось начать загрузку. Попробуйте ещё раз.",
+        "transportFailed": "Не удалось выполнить запрос экспорта. Попробуйте ещё раз.",
+        "filePickerFailed": "Не удалось открыть выбор файла.",
+        "fileWriteFailed": "Не удалось записать файл. Попробуйте ещё раз.",
+        "invalidRequest": "Запрос экспорта недопустим."
       }
     }
   }

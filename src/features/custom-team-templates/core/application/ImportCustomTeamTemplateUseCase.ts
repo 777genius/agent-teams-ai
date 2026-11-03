@@ -25,6 +25,7 @@ import { waitForStorageSettlement } from './waitForStorageSettlement';
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
 import type {
   CustomTeamTemplateMemberV1,
+  CustomTeamTemplateValidationIssue,
   ImportCustomTeamTemplateResult,
   PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
@@ -36,6 +37,11 @@ export interface ImportCustomTeamTemplateUseCaseDeps {
 }
 
 const MAX_CREATE_ATTEMPTS = 2;
+/**
+ * Upper bound for the property name echoed back in a validation issue, so a
+ * hostile file cannot inflate the localized message with a huge key.
+ */
+const MAX_REPORTED_PROPERTY_LENGTH = 80;
 
 const ALLOWED_TOP_LEVEL_KEYS = new Set([
   'format',
@@ -46,37 +52,71 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set([
   'members',
 ]);
 const ALLOWED_MEMBER_KEYS = new Set(['name', 'role', 'workflow']);
+const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
+/** Narrows an untrusted value to a non-null, non-array object. */
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-  // Reject dangerous keys by constructing from null prototype.
-  return true;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function hasOnlyKeys(obj: Record<string, unknown>, allowed: Set<string>): boolean {
+/**
+ * Returns the first own key outside `allowed`, or null when the object only has
+ * allowlisted keys.
+ *
+ * Prototype-pollution keys are reported as unexpected even when a future
+ * allowlist accidentally contains them, so this stays a separate allowlist
+ * check rather than being folded into `isPlainRecord`.
+ */
+function findUnexpectedKey(obj: Record<string, unknown>, allowed: Set<string>): string | null {
   for (const key of Object.keys(obj)) {
-    if (!allowed.has(key)) {
-      return false;
-    }
-    // Guard against prototype-pollution keys even if somehow present.
-    if (key === '__proto__' || key === 'prototype' || key === 'constructor') {
-      return false;
+    if (FORBIDDEN_KEYS.has(key) || !allowed.has(key)) {
+      return key;
     }
   }
-  return true;
+  return null;
+}
+
+/** Bounds the reported key so an oversized key cannot bloat a UI message. */
+function reportedKey(key: string): string {
+  return key.length > MAX_REPORTED_PROPERTY_LENGTH
+    ? `${key.slice(0, MAX_REPORTED_PROPERTY_LENGTH)}…`
+    : key;
+}
+
+function unexpectedPropertyIssue(path: string, key: string): CustomTeamTemplateValidationIssue {
+  return { code: 'unexpectedProperty', field: reportedKey(path), parameter: reportedKey(key) };
 }
 
 function validationFailed(
-  issues: readonly import('@features/custom-team-templates/contracts').CustomTeamTemplateValidationIssue[]
+  issues: readonly CustomTeamTemplateValidationIssue[]
 ): ImportCustomTeamTemplateResult {
   return { status: 'validationFailed', issues };
 }
 
+/**
+ * Imports one untrusted portable template under a brand-new local identity.
+ *
+ * The document is validated field by field against the portable allowlist before
+ * anything is hashed or written, and the stored record always receives a fresh
+ * id, a fresh revision and a canonical content hash derived here, so imported
+ * files can never control storage identity.
+ *
+ * Write outcomes are closed and honest: `storageUnavailable` means nothing was
+ * written, while `unresolvedWriteOutcome` means the write may already have
+ * landed and must therefore never be retried automatically. The bounded
+ * `MAX_CREATE_ATTEMPTS` retry only covers answers that prove nothing was stored.
+ */
 export class ImportCustomTeamTemplateUseCase {
   constructor(private readonly deps: ImportCustomTeamTemplateUseCaseDeps) {}
 
+  /**
+   * Validates, hashes and persists one portable payload.
+   *
+   * Resolves with a typed result for every outcome (including cancellation-free
+   * validation failures and unknown write outcomes) instead of rejecting, except
+   * for a rejected storage call, which is reported as `storageUnavailable` or
+   * `unresolvedWriteOutcome` depending on whether a write was already in flight.
+   */
   async execute(payload: unknown): Promise<ImportCustomTeamTemplateResult> {
     if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
       return { status: 'unsupportedFormat', format: payload };
@@ -87,10 +127,13 @@ export class ImportCustomTeamTemplateUseCase {
     if (!isPlainRecord(portableInput)) {
       return { status: 'unsupportedFormat', format: portableInput };
     }
-    const portable = portableInput as Record<string, unknown>;
+    const portable = portableInput;
 
-    if (!hasOnlyKeys(portable, ALLOWED_TOP_LEVEL_KEYS)) {
-      return validationFailed([{ code: 'templateNameRequired', field: 'name' }]); // unexpected property
+    const unexpectedTopLevelKey = findUnexpectedKey(portable, ALLOWED_TOP_LEVEL_KEYS);
+    if (unexpectedTopLevelKey !== null) {
+      return validationFailed([
+        unexpectedPropertyIssue(unexpectedTopLevelKey, unexpectedTopLevelKey),
+      ]);
     }
 
     if (portable.format !== CUSTOM_TEAM_TEMPLATE_PORTABLE_FORMAT) {
@@ -124,7 +167,7 @@ export class ImportCustomTeamTemplateUseCase {
       if (descIssues.length > 0) {
         return validationFailed(descIssues);
       }
-      const trimmed = (portable.description as string).trim();
+      const trimmed = portable.description.trim();
       description = trimmed.length > 0 ? trimmed : undefined;
     }
 
@@ -142,9 +185,12 @@ export class ImportCustomTeamTemplateUseCase {
       if (!isPlainRecord(m)) {
         return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
       }
-      const member = m as Record<string, unknown>;
-      if (!hasOnlyKeys(member, ALLOWED_MEMBER_KEYS)) {
-        return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
+      const member = m;
+      const unexpectedMemberKey = findUnexpectedKey(member, ALLOWED_MEMBER_KEYS);
+      if (unexpectedMemberKey !== null) {
+        return validationFailed([
+          unexpectedPropertyIssue(`members[${i}].${unexpectedMemberKey}`, unexpectedMemberKey),
+        ]);
       }
       if (typeof member.name !== 'string') {
         return validationFailed([{ code: 'memberNameRequired', field: `members[${i}].name` }]);
@@ -158,7 +204,7 @@ export class ImportCustomTeamTemplateUseCase {
         if (typeof member.role !== 'string') {
           return validationFailed([{ code: 'memberRoleTooLong', field: `members[${i}].role` }]);
         }
-        const r = (member.role as string).trim();
+        const r = member.role.trim();
         if (r.length > TEMPLATE_MEMBER_ROLE_MAX_LENGTH) {
           return validationFailed([{ code: 'memberRoleTooLong', field: `members[${i}].role` }]);
         }
@@ -171,15 +217,15 @@ export class ImportCustomTeamTemplateUseCase {
             { code: 'memberWorkflowTooLong', field: `members[${i}].workflow` },
           ]);
         }
-        const w = (member.workflow as string).trim();
+        const w = member.workflow.trim();
         // Multiline instructions keep their internal newlines; only the edges
         // are trimmed to match the established projection convention.
-        if ((member.workflow as string).length > TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH) {
+        if (member.workflow.length > TEMPLATE_MEMBER_WORKFLOW_MAX_LENGTH) {
           return validationFailed([
             { code: 'memberWorkflowTooLong', field: `members[${i}].workflow` },
           ]);
         }
-        workflow = w.length > 0 ? (member.workflow as string) : undefined;
+        workflow = w.length > 0 ? member.workflow : undefined;
       }
       members.push({
         name,

@@ -45,6 +45,13 @@ export interface CustomTeamTemplateBrowserFileServiceDeps {
  * removes the anchor, and revokes the object URL to avoid leaks.
  */
 export class DefaultBrowserFileDownload implements BrowserFileDownload {
+  /**
+   * Triggers one download and releases the object URL afterwards.
+   *
+   * The anchor is always removed, and the URL is revoked on a short delay so the
+   * browser has time to consume it. Rejects when the download cannot start, which
+   * the caller reports as `downloadFailed`.
+   */
   async download(blob: Blob, fileName: string): Promise<void> {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -89,6 +96,14 @@ export class CustomTeamTemplateBrowserFileService implements CustomTeamTemplates
     this.exportExecutor = deps.exportTemplate;
   }
 
+  /**
+   * Reads one browser `File` and hands the parsed document to the import use case.
+   *
+   * The size ceiling is enforced before any bytes are read, the payload must be
+   * strict UTF-8 (BOM discarded) and valid JSON, and a rejected transport call is
+   * reported as `transportFailed` because the request may simply never have
+   * completed. It never reports a write as definitely failed when it is unknown.
+   */
   async importFromFile(file: File): Promise<ImportCustomTeamTemplateFromBrowserFileResult> {
     // Reject oversized files before any content is read into memory.
     if (file.size > this.maxImportFileBytes) {
@@ -132,6 +147,13 @@ export class CustomTeamTemplateBrowserFileService implements CustomTeamTemplates
     return result;
   }
 
+  /**
+   * Exports one saved template as a portable JSON download.
+   *
+   * Only the portable fields the export use case returns are serialized, and the
+   * filename is derived locally from the template name. Export is read-only, so
+   * a failure is never reported as an unresolved write.
+   */
   async exportToFile(request: {
     templateId: string;
   }): Promise<ExportCustomTeamTemplateToBrowserFileResult> {

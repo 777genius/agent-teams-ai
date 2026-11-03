@@ -15,9 +15,23 @@ export interface ExportCustomTeamTemplateUseCaseDeps {
   gateway: CustomTeamTemplateStorageGateway | null;
 }
 
+/**
+ * Projects one saved custom template onto the portable file contract.
+ *
+ * Read-only: it fails with `notFound`/`unreadableRecord`/`storageUnavailable`
+ * instead of writing anything, and it never copies a template id, revision,
+ * creation timestamp or content hash into the portable document, so the exported
+ * file cannot smuggle local storage metadata across machines.
+ */
 export class ExportCustomTeamTemplateUseCase {
   constructor(private readonly deps: ExportCustomTeamTemplateUseCaseDeps) {}
 
+  /**
+   * Resolves the stored record and answers with the portable projection.
+   *
+   * `payload` is untrusted: only a non-empty `templateId` string is read and any
+   * other property is ignored. Every failure is a typed outcome, never a throw.
+   */
   async execute(payload: unknown): Promise<ExportCustomTeamTemplateResult> {
     if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
       return { status: 'notFound', templateId: '' };

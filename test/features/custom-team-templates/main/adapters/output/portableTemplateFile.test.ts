@@ -31,6 +31,34 @@ describe('buildCustomTeamTemplateFileName', () => {
     expect(buildCustomTeamTemplateFileName('lpt1')).toBe('template-lpt1.json');
   });
 
+  it('treats a reserved device stem as reserved even with an extension', () => {
+    expect(buildCustomTeamTemplateFileName('CON.txt')).toBe('template-CON.txt.json');
+    expect(buildCustomTeamTemplateFileName('NUL.backup')).toBe('template-NUL.backup.json');
+    expect(buildCustomTeamTemplateFileName('PRN.json')).toBe('template-PRN.json.json');
+    expect(buildCustomTeamTemplateFileName('AUX')).toBe('template-AUX.json');
+    expect(buildCustomTeamTemplateFileName('nul.tar.gz')).toBe('template-nul.tar.gz.json');
+  });
+
+  it('covers the numbered COM and LPT device names', () => {
+    for (const stem of ['COM1', 'COM9', 'LPT1', 'LPT9', 'com3', 'lpt7']) {
+      expect(buildCustomTeamTemplateFileName(stem)).toBe(`template-${stem}.json`);
+    }
+    expect(buildCustomTeamTemplateFileName('COM10')).toBe('COM10.json');
+    expect(buildCustomTeamTemplateFileName('LPT0')).toBe('LPT0.json');
+  });
+
+  it('covers the superscript COM and LPT device names', () => {
+    for (const stem of ['COM¹', 'COM²', 'COM³', 'LPT¹', 'LPT²', 'LPT³']) {
+      expect(buildCustomTeamTemplateFileName(stem)).toBe(`template-${stem}.json`);
+    }
+  });
+
+  it('keeps names that merely start with a device name', () => {
+    expect(buildCustomTeamTemplateFileName('CONSOLE')).toBe('CONSOLE.json');
+    expect(buildCustomTeamTemplateFileName('NULlable')).toBe('NULlable.json');
+    expect(buildCustomTeamTemplateFileName('v1.2 notes')).toBe('v1.2 notes.json');
+  });
+
   it('preserves Unicode and bounds the basename length', () => {
     expect(buildCustomTeamTemplateFileName('تیم محصول')).toBe('تیم محصول.json');
     const longName = buildCustomTeamTemplateFileName('a'.repeat(300));

@@ -1,6 +1,7 @@
 import {
   CUSTOM_TEAM_TEMPLATE_CHANNELS,
   CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS,
+  CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES,
 } from '@features/custom-team-templates/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,6 +19,14 @@ const ipc = vi.hoisted(() => {
     }),
   };
 });
+
+/** Fake native file gateway; the desktop file service is composed for real. */
+const fileGateway = vi.hoisted(() => ({
+  pickImportFile: vi.fn(),
+  readUtf8File: vi.fn(),
+  pickExportDestination: vi.fn(),
+  writeFileAtomically: vi.fn(),
+}));
 
 const featureMock = vi.hoisted(() => ({
   importTemplate: { execute: vi.fn() },
@@ -42,6 +51,11 @@ vi.mock('@features/custom-team-templates/main', async (importOriginal) => {
   return {
     ...actual,
     createCustomTeamTemplatesFeature: vi.fn(() => featureMock),
+    // Startup composes the real desktop file service, so only the native file
+    // boundary is replaced; that keeps the wiring assertions meaningful.
+    ElectronCustomTeamTemplateFileGateway: vi.fn().mockImplementation(function gatewayStub() {
+      return fileGateway;
+    }),
   };
 });
 
@@ -70,11 +84,61 @@ describe('startCustomTeamTemplatesFeature', () => {
   });
 
   it('wires desktop import to the composed import use case', async () => {
+    const portableDocument = {
+      format: 'agent-teams-custom-template',
+      schemaVersion: 1,
+      name: 'Release Pipeline',
+      description: 'Ships releases.',
+      teamPrompt: 'Ship it.',
+      members: [{ name: 'engineer', role: 'Engineer', workflow: 'Build' }],
+    };
+    const importedTemplate = {
+      templateId: 'tmpl-new',
+      name: 'Release Pipeline',
+      schemaVersion: 1,
+      teamPrompt: 'Ship it.',
+      members: [{ name: 'engineer', role: 'Engineer', workflow: 'Build' }],
+      revision: 1,
+    };
+    fileGateway.pickImportFile.mockResolvedValue('/tmp/template.json');
+    fileGateway.readUtf8File.mockResolvedValue({
+      status: 'ok',
+      contents: JSON.stringify(portableDocument),
+    });
+    featureMock.importTemplate.execute.mockResolvedValue({
+      status: 'imported',
+      template: importedTemplate,
+    });
+
     const startup = startCustomTeamTemplatesFeature(internalStorage());
     expect(startup.importTemplate).toBe(featureMock.importTemplate);
 
     const handler = ipc.handlers.get(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.importFromFile);
     expect(handler).toBeTypeOf('function');
+
+    // Invoke the registered handler: it must drive the composed use case end to
+    // end, not merely exist.
+    const result = await handler?.({ sender: 'renderer' });
+
+    expect(fileGateway.pickImportFile).toHaveBeenCalledTimes(1);
+    expect(fileGateway.readUtf8File).toHaveBeenCalledWith(
+      '/tmp/template.json',
+      CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES
+    );
+    expect(featureMock.importTemplate.execute).toHaveBeenCalledTimes(1);
+    expect(featureMock.importTemplate.execute).toHaveBeenCalledWith({ portable: portableDocument });
+    expect(result).toEqual({ status: 'imported', template: importedTemplate });
+  });
+
+  it('answers with a typed outcome when the desktop import is cancelled', async () => {
+    fileGateway.pickImportFile.mockResolvedValue(null);
+    startCustomTeamTemplatesFeature(internalStorage());
+
+    const handler = ipc.handlers.get(CUSTOM_TEAM_TEMPLATE_FILE_CHANNELS.importFromFile);
+    const result = await handler?.({ sender: 'renderer' });
+
+    expect(result).toEqual({ status: 'cancelled' });
+    expect(featureMock.importTemplate.execute).not.toHaveBeenCalled();
   });
 
   it('removes every handler and disposes the composed feature once', () => {

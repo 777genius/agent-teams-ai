@@ -438,9 +438,9 @@ describe('MyTemplatesDialog', () => {
     it('clicking Import opens the import dialog', async () => {
       listTemplates.mockResolvedValue({ status: 'empty' });
       await render();
-      const importButton = host.querySelector(
+      const importButton = host.querySelector<HTMLButtonElement>(
         '[data-testid="import-template-button"]'
-      ) as HTMLButtonElement;
+      )!;
       expect(importButton).not.toBeNull();
       await act(async () => {
         importButton.click();
@@ -465,9 +465,9 @@ describe('MyTemplatesDialog', () => {
       });
 
       await render();
-      const importButton = host.querySelector(
+      const importButton = host.querySelector<HTMLButtonElement>(
         '[data-testid="import-template-button"]'
-      ) as HTMLButtonElement;
+      )!;
       await act(async () => {
         importButton.click();
       });
@@ -484,24 +484,83 @@ describe('MyTemplatesDialog', () => {
       expect(listTemplates).toHaveBeenCalledTimes(2); // initial + reload
     });
 
-    it('initial import into an empty library works end-to-end', async () => {
-      listTemplates.mockResolvedValue({ status: 'empty' });
+    it('shows the imported template after the first import into an empty library', async () => {
+      const portableDocument = {
+        format: 'agent-teams-custom-template',
+        schemaVersion: 1,
+        name: 'First Template',
+        description: 'Imported from a file.',
+        teamPrompt: 'Coordinate the work.',
+        members: [{ name: 'ann', role: 'Developer' }],
+      };
+      listTemplates.mockResolvedValueOnce({ status: 'empty' }).mockResolvedValueOnce({
+        status: 'ready',
+        templates: [
+          {
+            templateId: 'tmpl-new',
+            name: 'First Template',
+            description: 'Imported from a file.',
+            schemaVersion: 1,
+            teamPrompt: 'Coordinate the work.',
+            members: [{ name: 'ann', role: 'Developer' }],
+            revision: 1,
+          },
+        ],
+      });
       browserFile.importFromFile.mockResolvedValue({
         status: 'imported',
         template: {
           templateId: 'tmpl-new',
           name: 'First Template',
+          description: 'Imported from a file.',
           schemaVersion: 1,
-          teamPrompt: '',
-          members: [],
+          teamPrompt: 'Coordinate the work.',
+          members: [{ name: 'ann', role: 'Developer' }],
           revision: 1,
         },
       });
 
       await render();
-      const importButton = host.querySelector('[data-testid="import-template-button"]');
-      expect(importButton).not.toBeNull();
-      expect(importButton?.getAttribute('disabled')).toBeNull();
+      // The library starts empty and offers the import action.
+      expect(host.textContent).toContain('customTemplates.library.empty');
+      expect(host.textContent).not.toContain('First Template');
+
+      await act(async () => {
+        button('customTemplates.import.action').click();
+      });
+      const fileInput = host.querySelector<HTMLInputElement>('#import-file-input');
+      expect(fileInput).not.toBeNull();
+      Object.defineProperty(fileInput, 'files', {
+        value: [
+          new File([JSON.stringify(portableDocument)], 'template.json', {
+            type: 'application/json',
+          }),
+        ],
+        configurable: true,
+      });
+      await act(async () => {
+        fileInput?.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+      expect(host.querySelector('[data-testid="import-template-done"]')).not.toBeNull();
+
+      // Closing the import dialog makes the parent reload the library.
+      const closeButtons = Array.from(host.querySelectorAll('button')).filter((candidate) =>
+        candidate.textContent?.includes('actions.close')
+      );
+      expect(closeButtons.length).toBeGreaterThan(0);
+      await act(async () => {
+        closeButtons[closeButtons.length - 1].click();
+      });
+
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+      // The imported template is the visible library content, not just a refetch.
+      const library = host.querySelector('[data-testid="custom-template-library"]');
+      expect(library).not.toBeNull();
+      expect(library?.textContent).toContain('First Template');
+      expect(library?.textContent).toContain('Imported from a file.');
+      expect(host.textContent).not.toContain('customTemplates.library.empty');
     });
   });
 

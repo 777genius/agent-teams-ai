@@ -23,6 +23,15 @@ interface ExportCustomTeamTemplateDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Export dialog for one saved custom team template.
+ *
+ * Resolves the platform capability once, then runs a single closed export attempt
+ * against the native file API (Electron) or the browser download adapter. The
+ * footer always renders exactly one Close control; the Export action appears only
+ * while the attempt has not completed and a file capability exists, and it is
+ * disabled while the attempt is in flight so a second request cannot be sent.
+ */
 export const ExportCustomTeamTemplateDialog = ({
   open,
   templateId,
@@ -300,19 +309,11 @@ export const ExportCustomTeamTemplateDialog = ({
           <Button variant="outline" disabled={closeDisabled} onClick={handleClose}>
             {tCommon('actions.close')}
           </Button>
-          {exportStage === 'done' ? (
-            <Button variant="outline" onClick={handleClose} disabled={closeDisabled}>
-              {tCommon('actions.close')}
+          {exportStage !== 'done' && platform !== 'none' ? (
+            <Button disabled={closeDisabled || busy} aria-busy={isBusy} onClick={handleExport}>
+              {isBusy ? t('customTemplates.export.exporting') : t('customTemplates.export.action')}
             </Button>
-          ) : platform === 'none' ? (
-            <Button variant="outline" disabled onClick={handleClose}>
-              {tCommon('actions.close')}
-            </Button>
-          ) : (
-            <Button disabled={closeDisabled || busy} aria-busy={busy} onClick={handleExport}>
-              {busy ? t('customTemplates.export.exporting') : t('customTemplates.export.action')}
-            </Button>
-          )}
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -31,6 +31,15 @@ export type CustomTeamTemplatesStartup = Omit<CustomTeamTemplatesFeature, 'dispo
   dispose(): void;
 };
 
+/**
+ * Composes and starts the custom-team-templates feature for the main process.
+ *
+ * Side effects: registers the shared data IPC channels and the two desktop file
+ * channels, and constructs the native file gateway. The returned `dispose()` is
+ * idempotent from the caller's perspective: it removes every handler it
+ * registered and disposes the composed feature exactly once. The SQLite backend
+ * itself stays owned by internal-storage.
+ */
 export function startCustomTeamTemplatesFeature(
   internalStorage: InternalStorageFeature
 ): CustomTeamTemplatesStartup {

@@ -5,13 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const browserFile = vi.hoisted(() => ({ exportToFile: vi.fn() }));
 const desktopFile = vi.hoisted(() => ({ exportToFile: vi.fn() }));
+/** Platform the mocked capability hook reports; tests switch it per case. */
+const platformRef = vi.hoisted(() => ({ current: 'browser' as 'browser' | 'electron' | 'none' }));
 
 vi.mock('../hooks/useTemplateFileOperations', () => ({
-  useTemplateFileOperations: () => ({
-    platform: 'browser',
-    desktopFile: undefined,
-    browserFile,
-  }),
+  useTemplateFileOperations: () => {
+    if (platformRef.current === 'electron') {
+      return { platform: 'electron', desktopFile, browserFile: undefined };
+    }
+    if (platformRef.current === 'none') {
+      return { platform: 'none', desktopFile: undefined, browserFile: undefined };
+    }
+    return { platform: 'browser', desktopFile: undefined, browserFile };
+  },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -83,6 +89,7 @@ function closeButton(): HTMLButtonElement {
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  platformRef.current = 'browser';
   browserFile.exportToFile.mockReset();
   desktopFile.exportToFile.mockReset();
   onClose = vi.fn();
@@ -138,13 +145,25 @@ describe('ExportCustomTeamTemplateDialog', () => {
     await act(async () => {
       exportButton().click();
     });
-    // While busy, a second export should not be triggered
+
     expect(browserFile.exportToFile).toHaveBeenCalledTimes(1);
+    const busyButton = host.querySelector<HTMLButtonElement>('button[aria-busy="true"]');
+    expect(busyButton).not.toBeNull();
+    expect(busyButton?.disabled).toBe(true);
+    expect(busyButton?.textContent).toContain('customTemplates.export.exporting');
+    // No second action control is offered while the first one is still pending.
+    expect(
+      Array.from(host.querySelectorAll('button')).filter((candidate) =>
+        candidate.textContent?.includes('customTemplates.export.action')
+      )
+    ).toHaveLength(0);
 
     resolveExport(exportResult('exported'));
     await act(async () => {
       await exportPromise;
     });
+
+    expect(browserFile.exportToFile).toHaveBeenCalledTimes(1);
   });
 
   it('handles notFound without downloading', async () => {
@@ -219,5 +238,102 @@ describe('ExportCustomTeamTemplateDialog', () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  describe('footer controls', () => {
+    function closeButtons(): HTMLButtonElement[] {
+      return Array.from(host.querySelectorAll('button')).filter((candidate) =>
+        candidate.textContent?.includes('actions.close')
+      );
+    }
+
+    it('renders exactly one Close control and an export action when idle', async () => {
+      await render();
+
+      expect(closeButtons()).toHaveLength(1);
+      expect(closeButton().disabled).toBe(false);
+      expect(exportButton().disabled).toBe(false);
+      expect(exportButton().getAttribute('aria-busy')).toBe('false');
+    });
+
+    it('renders exactly one Close control while busy', async () => {
+      browserFile.exportToFile.mockReturnValue(new Promise(() => {}));
+
+      await render();
+      await act(async () => {
+        exportButton().click();
+      });
+
+      expect(closeButtons()).toHaveLength(1);
+      expect(closeButton().disabled).toBe(true);
+      expect(
+        Array.from(host.querySelectorAll('button')).filter((candidate) =>
+          candidate.textContent?.includes('customTemplates.export.action')
+        )
+      ).toHaveLength(0);
+    });
+
+    it('renders exactly one Close control when done', async () => {
+      browserFile.exportToFile.mockResolvedValue(exportResult('exported'));
+
+      await render();
+      await act(async () => {
+        exportButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="export-template-done"]')).not.toBeNull();
+      expect(closeButtons()).toHaveLength(1);
+      expect(closeButton().disabled).toBe(false);
+      expect(
+        Array.from(host.querySelectorAll('button')).filter((candidate) =>
+          candidate.textContent?.includes('customTemplates.export.action')
+        )
+      ).toHaveLength(0);
+    });
+
+    it('renders exactly one Close control when the platform is unsupported', async () => {
+      platformRef.current = 'none';
+
+      await render();
+
+      expect(closeButtons()).toHaveLength(1);
+      expect(closeButton().disabled).toBe(false);
+      expect(
+        host.querySelector('[data-testid="export-template-platform-unavailable"]')
+      ).not.toBeNull();
+      expect(
+        Array.from(host.querySelectorAll('button')).filter((candidate) =>
+          candidate.textContent?.includes('customTemplates.export.action')
+        )
+      ).toHaveLength(0);
+    });
+
+    it('renders exactly one Close control after an error', async () => {
+      browserFile.exportToFile.mockResolvedValue(exportResult('downloadFailed'));
+
+      await render();
+      await act(async () => {
+        exportButton().click();
+      });
+
+      expect(host.querySelector('[data-testid="export-template-download-failed"]')).not.toBeNull();
+      expect(closeButtons()).toHaveLength(1);
+      expect(closeButton().disabled).toBe(false);
+      expect(exportButton().disabled).toBe(false);
+    });
+
+    it('closes from the single Close control in the done stage', async () => {
+      browserFile.exportToFile.mockResolvedValue(exportResult('exported'));
+
+      await render();
+      await act(async () => {
+        exportButton().click();
+      });
+      await act(async () => {
+        closeButton().click();
+      });
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 });

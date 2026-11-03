@@ -4036,7 +4036,8 @@ export default interface Resources {
           "templateNameInvalidCharacters": "The template name contains unsupported characters.",
           "templateNameRequired": "A template name is required.",
           "templateNameTooLong": "The template name is too long.",
-          "tooManyMembers": "Too many members."
+          "tooManyMembers": "Too many members.",
+          "unexpectedProperty": "The file contains an unexpected property “{{property}}”."
         },
         "nameConflict": "A template with this name already exists. Change the name — existing templates are never overwritten.",
         "notFound": "Template not found.",

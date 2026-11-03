@@ -19,6 +19,12 @@ export type CustomTeamTemplateValidationIssueCode =
   | 'duplicateMemberName'
   | 'memberRoleTooLong'
   | 'memberWorkflowTooLong'
+  /**
+   * The imported document carries an own property outside the portable
+   * allowlist. `field` is the offending path (`templateId`,
+   * `members[2].provider`) and `parameter` is the bare property name.
+   */
+  | 'unexpectedProperty'
   /** The requested source team identity is missing or not a valid team identity. */
   | 'sourceTeamNameInvalid'
   /** Confirm-save arrived without a usable preview token. */
@@ -32,6 +38,14 @@ export interface CustomTeamTemplateValidationIssue {
   code: CustomTeamTemplateValidationIssueCode;
   /** Stable field path, e.g. `name`, `description`, `teamPrompt`, `members[0].role`. */
   field: string;
+  /**
+   * Optional interpolation value for codes whose message names the offending
+   * input, e.g. the bare property name for `unexpectedProperty`.
+   *
+   * Renderers must interpolate it as text through the localization layer; it is
+   * untrusted file content and must never be treated as markup or as a path.
+   */
+  parameter?: string;
 }
 
 /**

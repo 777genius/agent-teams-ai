@@ -25,11 +25,114 @@ import type {
   PortableCustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 
+/**
+ * Every closed import outcome the dialog can receive.
+ *
+ * The desktop and browser transports differ only by which file-level failures
+ * they can report (`fileChanged`/`filePickerFailed` versus `transportFailed`), so
+ * the dialog maps the union once instead of duplicating a switch per transport.
+ */
+type ImportOutcomeResult =
+  | ImportCustomTeamTemplateFromFileResult
+  | ImportCustomTeamTemplateFromBrowserFileResult;
+
 interface ImportCustomTeamTemplateDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
+type ImportStage = 'idle' | 'importing' | 'conflict' | 'done';
+
+/** Every terminal failure the dialog can render, or `null` for a silent outcome. */
+type ImportErrorState =
+  | 'invalidJson'
+  | 'invalidEncoding'
+  | 'fileTooLarge'
+  | 'fileReadFailed'
+  | 'filePickerFailed'
+  | 'fileChanged'
+  | 'transportFailed'
+  | 'unsupportedFormat'
+  | 'unsupportedVersion'
+  | 'validationFailed'
+  | 'storageUnavailable'
+  | 'templateIdConflict'
+  | 'unresolvedWriteOutcome';
+
+/** The dialog state one finished import attempt maps onto. */
+interface ImportOutcomeView {
+  /** A finished attempt always leaves `importing`. */
+  stage: Exclude<ImportStage, 'importing'>;
+  errorState: ImportErrorState | null;
+  issues: readonly CustomTeamTemplateValidationIssue[];
+}
+
+const NO_ISSUES: readonly CustomTeamTemplateValidationIssue[] = [];
+
+/**
+ * Maps one closed import outcome onto the dialog's terminal view state.
+ *
+ * This is the only place that decides what a finished attempt means, so the
+ * browser and desktop entry points cannot drift apart and a handled failure can
+ * never leave the dialog stuck in the busy `importing` stage. Success (`done`)
+ * and a name conflict (`conflict`) are never degraded to `idle`, and cancelling
+ * is deliberately silent. `unresolvedWriteOutcome` is a failure state, not a
+ * retry: the write may already have landed, so it must never be re-sent
+ * automatically.
+ */
+function describeImportOutcome(result: ImportOutcomeResult): ImportOutcomeView {
+  switch (result.status) {
+    case 'imported':
+      return { stage: 'done', errorState: null, issues: NO_ISSUES };
+    case 'nameConflict':
+      return { stage: 'conflict', errorState: null, issues: NO_ISSUES };
+    case 'validationFailed':
+      return { stage: 'idle', errorState: 'validationFailed', issues: result.issues };
+    case 'unsupportedFormat':
+      return { stage: 'idle', errorState: 'unsupportedFormat', issues: NO_ISSUES };
+    case 'unsupportedVersion':
+      return { stage: 'idle', errorState: 'unsupportedVersion', issues: NO_ISSUES };
+    case 'storageUnavailable':
+      return { stage: 'idle', errorState: 'storageUnavailable', issues: NO_ISSUES };
+    case 'templateIdConflict':
+      return { stage: 'idle', errorState: 'templateIdConflict', issues: NO_ISSUES };
+    case 'unresolvedWriteOutcome':
+      return { stage: 'idle', errorState: 'unresolvedWriteOutcome', issues: NO_ISSUES };
+    case 'invalidJson':
+      return { stage: 'idle', errorState: 'invalidJson', issues: NO_ISSUES };
+    case 'invalidEncoding':
+      return { stage: 'idle', errorState: 'invalidEncoding', issues: NO_ISSUES };
+    case 'fileTooLarge':
+      return { stage: 'idle', errorState: 'fileTooLarge', issues: NO_ISSUES };
+    case 'fileReadFailed':
+      return { stage: 'idle', errorState: 'fileReadFailed', issues: NO_ISSUES };
+    case 'filePickerFailed':
+      return { stage: 'idle', errorState: 'filePickerFailed', issues: NO_ISSUES };
+    case 'fileChanged':
+      return { stage: 'idle', errorState: 'fileChanged', issues: NO_ISSUES };
+    case 'transportFailed':
+      return { stage: 'idle', errorState: 'transportFailed', issues: NO_ISSUES };
+    case 'cancelled':
+      return { stage: 'idle', errorState: null, issues: NO_ISSUES };
+    default:
+      // Unreachable while the result contracts stay closed. Treating an unknown
+      // status as "nothing happened" is the only safe reading: the dialog leaves
+      // the busy stage and the user can try again.
+      return { stage: 'idle', errorState: null, issues: NO_ISSUES };
+  }
+}
+
+/**
+ * Import dialog for one portable team template.
+ *
+ * Owns a small closed state machine: `idle` (pick a file), `importing` (busy),
+ * `conflict` (rename an existing name), `done` (success). Every finished attempt
+ * maps through `describeImportOutcome`, so a handled failure always leaves the
+ * busy stage and re-enables Close and Import. A name conflict keeps the already
+ * validated portable content in memory, so a rename retry never re-reads the
+ * file, and an `unresolvedWriteOutcome` blocks the retry because the template may
+ * already have been imported.
+ */
 export const ImportCustomTeamTemplateDialog = ({
   open,
   onClose,
@@ -39,24 +142,8 @@ export const ImportCustomTeamTemplateDialog = ({
   const { platform, desktopFile, browserFile } = useTemplateFileOperations();
   const { importTemplate } = useTemplateImport();
 
-  const [importStage, setImportStage] = useState<'idle' | 'importing' | 'conflict' | 'done'>(
-    'idle'
-  );
-  const [errorState, setErrorState] = useState<
-    | 'invalidJson'
-    | 'invalidEncoding'
-    | 'fileTooLarge'
-    | 'fileReadFailed'
-    | 'filePickerFailed'
-    | 'fileChanged'
-    | 'transportFailed'
-    | 'unsupportedFormat'
-    | 'unsupportedVersion'
-    | 'validationFailed'
-    | 'storageUnavailable'
-    | 'unresolvedWriteOutcome'
-    | null
-  >(null);
+  const [importStage, setImportStage] = useState<ImportStage>('idle');
+  const [errorState, setErrorState] = useState<ImportErrorState | null>(null);
   const [issues, setIssues] = useState<readonly CustomTeamTemplateValidationIssue[]>([]);
   const [conflictPortable, setConflictPortable] = useState<PortableCustomTeamTemplateV1 | null>(
     null
@@ -115,61 +202,30 @@ export const ImportCustomTeamTemplateDialog = ({
         return t('customTemplates.errors.issues.memberRoleTooLong');
       case 'memberWorkflowTooLong':
         return t('customTemplates.errors.issues.memberWorkflowTooLong');
+      case 'unexpectedProperty':
+        // `parameter` is the bare property name from the imported file. It is
+        // interpolated as text, never as markup, and never as a filesystem path.
+        return t('customTemplates.errors.issues.unexpectedProperty', {
+          property: issue.parameter ?? issue.field,
+        });
       default:
         return t('customTemplates.errors.issues.invalidContent');
     }
   };
 
-  const handleImportResult = useCallback(
-    (result: ImportCustomTeamTemplateFromBrowserFileResult) => {
-      switch (result.status) {
-        case 'imported':
-          setImportStage('done');
-          break;
-        case 'nameConflict':
-          setImportStage('conflict');
-          setConflictPortable(result.portable);
-          setConflictExistingId(result.existingTemplateId);
-          setRenameName(result.portable.name);
-          break;
-        case 'validationFailed':
-          setErrorState('validationFailed');
-          setIssues(result.issues);
-          break;
-        case 'unsupportedFormat':
-          setErrorState('unsupportedFormat');
-          break;
-        case 'unsupportedVersion':
-          setErrorState('unsupportedVersion');
-          break;
-        case 'storageUnavailable':
-          setErrorState('storageUnavailable');
-          break;
-        case 'unresolvedWriteOutcome':
-          setErrorState('unresolvedWriteOutcome');
-          break;
-        case 'invalidJson':
-          setErrorState('invalidJson');
-          break;
-        case 'invalidEncoding':
-          setErrorState('invalidEncoding');
-          break;
-        case 'fileTooLarge':
-          setErrorState('fileTooLarge');
-          break;
-        case 'fileReadFailed':
-          setErrorState('fileReadFailed');
-          break;
-        case 'transportFailed':
-          setErrorState('transportFailed');
-          break;
-        case 'cancelled':
-        default:
-          break;
-      }
-    },
-    []
-  );
+  const handleImportResult = useCallback((result: ImportOutcomeResult) => {
+    const view = describeImportOutcome(result);
+    setImportStage(view.stage);
+    setErrorState(view.errorState);
+    setIssues(view.issues);
+    if (result.status === 'nameConflict') {
+      // The reviewed portable content is retained so a rename retry never has to
+      // re-read or re-parse the untrusted file.
+      setConflictPortable(result.portable);
+      setConflictExistingId(result.existingTemplateId);
+      setRenameName(result.portable.name);
+    }
+  }, []);
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,24 +236,19 @@ export const ImportCustomTeamTemplateDialog = ({
       setErrorState(null);
       setIssues([]);
 
-      let result: ImportCustomTeamTemplateFromBrowserFileResult;
-
       try {
-        if (platform === 'browser' && browserFile) {
-          result = await browserFile.importFromFile(file);
-        } else {
+        if (platform !== 'browser' || !browserFile) {
           setImportStage('idle');
           return;
         }
+        handleImportResult(await browserFile.importFromFile(file));
       } catch {
-        setImportStage('idle');
-        setErrorState('transportFailed');
-        return;
+        // A rejected browser read is definitive: nothing was written, so the
+        // dialog must offer a retry instead of staying busy.
+        handleImportResult({ status: 'transportFailed' });
       } finally {
         resetFileInput();
       }
-
-      handleImportResult(result);
     },
     [platform, browserFile, handleImportResult, resetFileInput]
   );
@@ -209,73 +260,28 @@ export const ImportCustomTeamTemplateDialog = ({
     setErrorState(null);
     setIssues([]);
 
-    let result: ImportCustomTeamTemplateFromFileResult;
-
     try {
-      result = await desktopFile.importFromFile();
+      handleImportResult(await desktopFile.importFromFile());
     } catch {
-      setImportStage('idle');
-      setErrorState('transportFailed');
-      return;
+      // The IPC channel rejected instead of answering with a typed outcome, so
+      // the read never completed and the dialog must leave the busy stage.
+      handleImportResult({ status: 'transportFailed' });
     }
-
-    switch (result.status) {
-      case 'imported':
-        setImportStage('done');
-        break;
-      case 'nameConflict':
-        setImportStage('conflict');
-        setConflictPortable(result.portable);
-        setConflictExistingId(result.existingTemplateId);
-        setRenameName(result.portable.name);
-        break;
-      case 'validationFailed':
-        setErrorState('validationFailed');
-        setIssues(result.issues);
-        break;
-      case 'unsupportedFormat':
-        setErrorState('unsupportedFormat');
-        break;
-      case 'unsupportedVersion':
-        setErrorState('unsupportedVersion');
-        break;
-      case 'storageUnavailable':
-        setErrorState('storageUnavailable');
-        break;
-      case 'unresolvedWriteOutcome':
-        setErrorState('unresolvedWriteOutcome');
-        break;
-      case 'invalidJson':
-        setErrorState('invalidJson');
-        break;
-      case 'invalidEncoding':
-        setErrorState('invalidEncoding');
-        break;
-      case 'fileTooLarge':
-        setErrorState('fileTooLarge');
-        break;
-      case 'fileReadFailed':
-        setErrorState('fileReadFailed');
-        break;
-      case 'filePickerFailed':
-        setErrorState('filePickerFailed');
-        break;
-      case 'fileChanged':
-        setErrorState('fileChanged');
-        break;
-      case 'cancelled':
-      default:
-        setImportStage('idle');
-        break;
-    }
-  }, [desktopFile]);
+  }, [desktopFile, handleImportResult]);
 
   const handleRenameConfirm = useCallback(async () => {
     if (!conflictPortable || !conflictExistingId) return;
     if (!renameName.trim()) return;
+    // A previous attempt may have committed without a confirmed answer. Retrying
+    // it automatically could create a duplicate template, so the user must close
+    // the dialog and start a fresh import after checking My Templates.
+    if (errorState === 'unresolvedWriteOutcome') return;
 
     setRenameBusy(true);
     setRenameIssues([]);
+    // A new, definitively allowed attempt supersedes the previous failure
+    // banner; otherwise a success could render next to a stale error.
+    setErrorState(null);
 
     const renamed: PortableCustomTeamTemplateV1 = {
       ...conflictPortable,
@@ -291,35 +297,28 @@ export const ImportCustomTeamTemplateDialog = ({
       return;
     }
 
+    const view = describeImportOutcome(result ?? { status: 'transportFailed' });
     switch (result?.status) {
       case 'imported':
         setImportStage('done');
-        setRenameBusy(false);
         break;
       case 'nameConflict':
         // Preserve the imported data and allow another rename attempt.
         setConflictPortable(result.portable);
         setConflictExistingId(result.existingTemplateId);
         setRenameName(result.portable.name);
-        setRenameBusy(false);
         break;
       case 'validationFailed':
         setRenameIssues(result.issues);
-        setRenameBusy(false);
-        break;
-      case 'storageUnavailable':
-        setErrorState('storageUnavailable');
-        setRenameBusy(false);
-        break;
-      case 'unresolvedWriteOutcome':
-        // Do not blindly retry; keep the data and let the user decide.
-        setErrorState('unresolvedWriteOutcome');
-        setRenameBusy(false);
         break;
       default:
-        setRenameBusy(false);
+        // Stay in the conflict stage so the reviewed content and the chosen name
+        // survive, and surface the failure instead of retrying it silently.
+        setErrorState(view.errorState ?? 'transportFailed');
+        break;
     }
-  }, [conflictPortable, conflictExistingId, importTemplate, renameName]);
+    setRenameBusy(false);
+  }, [conflictPortable, conflictExistingId, errorState, importTemplate, renameName]);
 
   if (!open) return null;
 
@@ -492,6 +491,17 @@ export const ImportCustomTeamTemplateDialog = ({
             </div>
           ) : null}
 
+          {errorState === 'templateIdConflict' ? (
+            <div
+              role="alert"
+              data-testid="import-template-id-conflict"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.errors.templateIdConflict')}</p>
+            </div>
+          ) : null}
+
           {errorState === 'unresolvedWriteOutcome' ? (
             <div
               role="alert"
@@ -591,8 +601,12 @@ export const ImportCustomTeamTemplateDialog = ({
               >
                 {tCommon('actions.cancel')}
               </Button>
+              {/* A possibly committed import is never re-sent automatically, so the
+                  retry stays disabled until the user starts a fresh import. */}
               <Button
-                disabled={renameBusy || !renameName.trim()}
+                disabled={
+                  renameBusy || !renameName.trim() || errorState === 'unresolvedWriteOutcome'
+                }
                 aria-busy={renameBusy}
                 onClick={() => handleRenameConfirm()}
               >
@@ -601,11 +615,7 @@ export const ImportCustomTeamTemplateDialog = ({
                   : t('customTemplates.import.confirmImport')}
               </Button>
             </>
-          ) : importStage === 'done' ? (
-            <Button variant="outline" onClick={handleClose} disabled={closeDisabled}>
-              {tCommon('actions.close')}
-            </Button>
-          ) : (
+          ) : importStage === 'done' ? null : (
             <Button
               variant="outline"
               disabled={closeDisabled || platform === 'none'}

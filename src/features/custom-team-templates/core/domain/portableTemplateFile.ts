@@ -4,10 +4,21 @@ const DEFAULT_FILE_BASENAME = 'custom-team-template';
 const MAX_FILE_BASENAME_LENGTH = 80;
 
 /**
- * Windows reserves these device names even when an extension is appended, so
- * `CON.json` is still not a creatable file.
+ * Windows reserves a device name even when an extension follows it, so
+ * `CON.json` and `NUL.backup` are still not creatable files. The rule applies to
+ * the stem before the first extension separator, and Windows also reserves the
+ * superscript digits `¹`, `²` and `³` for `COM`/`LPT`.
  */
-const RESERVED_WINDOWS_BASENAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+const RESERVED_WINDOWS_DEVICE_STEM = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])$/i;
+
+/**
+ * Returns true when a basename would collide with a reserved Windows device
+ * name, checking only the stem before the first `.` separator.
+ */
+function hasReservedDeviceStem(baseName: string): boolean {
+  const stem = baseName.split('.', 1)[0] ?? '';
+  return RESERVED_WINDOWS_DEVICE_STEM.test(stem.trimEnd());
+}
 
 /**
  * Derives a safe suggested filename from a user-controlled template name.
@@ -15,8 +26,10 @@ const RESERVED_WINDOWS_BASENAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
  * The result is always a basename ending in `.json`: path separators, Windows
  * reserved characters and control characters are replaced with spaces, leading
  * and trailing dots/spaces/dashes are removed so `.`/`..` cannot survive, and
- * reserved device names are prefixed. The renderer never supplies this value
- * and never receives the destination directory.
+ * reserved device stems (`CON`, `NUL.backup`, `COM¹`, ...) are prefixed. Only the
+ * derived filename is changed; the stored template name is never renamed. The
+ * renderer never supplies this value and never receives the destination
+ * directory.
  */
 export function buildCustomTeamTemplateFileName(templateName: string): string {
   const cleaned = templateName
@@ -28,9 +41,7 @@ export function buildCustomTeamTemplateFileName(templateName: string): string {
     .replace(/^[.\s-]+|[.\s-]+$/g, '');
   const base = cleaned.slice(0, MAX_FILE_BASENAME_LENGTH).replace(/[.\s-]+$/g, '');
   const usableBase = base.length > 0 ? base : DEFAULT_FILE_BASENAME;
-  const safeBase = RESERVED_WINDOWS_BASENAME.test(usableBase)
-    ? `template-${usableBase}`
-    : usableBase;
+  const safeBase = hasReservedDeviceStem(usableBase) ? `template-${usableBase}` : usableBase;
   return `${safeBase}.json`;
 }
 

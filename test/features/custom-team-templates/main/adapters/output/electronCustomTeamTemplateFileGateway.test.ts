@@ -15,7 +15,10 @@ import {
 } from '@features/custom-team-templates/main/adapters/output/ElectronCustomTeamTemplateFileGateway';
 import { dialog } from 'electron';
 
-import type { BoundedReadableFileHandle } from '@features/custom-team-templates/main/adapters/output/ElectronCustomTeamTemplateFileGateway';
+import type {
+  BoundedFileHandleStat,
+  BoundedReadableFileHandle,
+} from '@features/custom-team-templates/main/adapters/output/ElectronCustomTeamTemplateFileGateway';
 
 const dialogMock = dialog as unknown as {
   showOpenDialog: ReturnType<typeof vi.fn>;
@@ -33,23 +36,84 @@ afterEach(async () => {
   await rm(workDir, { recursive: true, force: true });
 });
 
-function fakeHandle(options: {
-  sizes: readonly number[];
+/**
+ * Builds one `stat({ bigint: true })` snapshot.
+ *
+ * Production always requests bigint stats, so the doubly used helpers model
+ * exact byte counts and nanosecond timestamps instead of rounded doubles.
+ */
+function statSnapshot(input: {
+  size: number;
+  dev?: number;
+  ino?: number;
+  mtimeNs?: bigint;
+  ctimeNs?: bigint;
+}): BoundedFileHandleStat {
+  return {
+    isFile: () => true,
+    size: BigInt(input.size),
+    ...(input.dev === undefined ? {} : { dev: BigInt(input.dev) }),
+    ...(input.ino === undefined ? {} : { ino: BigInt(input.ino) }),
+    ...(input.mtimeNs === undefined ? {} : { mtimeNs: input.mtimeNs }),
+    ...(input.ctimeNs === undefined ? {} : { ctimeNs: input.ctimeNs }),
+  };
+}
+
+/** A stable metadata snapshot for `size` bytes of an unchanged file. */
+function stableStat(size: number) {
+  return statSnapshot({ size, dev: 1, ino: 2, mtimeNs: 1_000n, ctimeNs: 1_000n });
+}
+
+interface FakeHandleOptions {
+  /** Sequential snapshots; the last one repeats for any further call. */
+  snapshots: readonly BoundedFileHandleStat[];
   contents: Buffer;
-}): BoundedReadableFileHandle {
+  /** Bytes returned by each successive read call; the last value repeats. */
+  chunks?: readonly number[];
+  readError?: Error;
+  statError?: Error;
+}
+
+/**
+ * Fake handle that can return short reads, fail, or report mutating metadata,
+ * mirroring the parts of `FileHandle` the bounded reader depends on.
+ */
+function fakeStatHandle(options: FakeHandleOptions): BoundedReadableFileHandle {
   let statCall = 0;
+  let readCall = 0;
   return {
     stat: vi.fn(async () => {
-      const size = options.sizes[Math.min(statCall, options.sizes.length - 1)] ?? 0;
+      if (options.statError) throw options.statError;
+      const snapshot =
+        options.snapshots[Math.min(statCall, options.snapshots.length - 1)] ??
+        statSnapshot({ size: 0 });
       statCall += 1;
-      return { isFile: () => true, size };
+      return snapshot;
     }),
     read: vi.fn(async (buffer: Buffer, offset: number, length: number, position: number) => {
-      const slice = options.contents.subarray(position, position + length);
-      slice.copy(buffer, offset);
-      return { bytesRead: slice.length };
+      if (options.readError) throw options.readError;
+      const requested =
+        options.chunks === undefined
+          ? length
+          : (options.chunks[Math.min(readCall, options.chunks.length - 1)] ?? length);
+      readCall += 1;
+      const available = Math.max(0, options.contents.length - position);
+      const bytesToCopy = Math.min(requested, length, available);
+      if (bytesToCopy <= 0) {
+        return { bytesRead: 0 };
+      }
+      options.contents.copy(buffer, offset, position, position + bytesToCopy);
+      return { bytesRead: bytesToCopy };
     }),
   };
+}
+
+/** Convenience wrapper for the common "size changed between two stats" case. */
+function fakeHandle(options: { sizes: readonly number[]; contents: Buffer }) {
+  return fakeStatHandle({
+    snapshots: options.sizes.map((size) => stableStat(size)),
+    contents: options.contents,
+  });
 }
 
 describe('readBoundedUtf8FromFileHandle', () => {
@@ -101,10 +165,170 @@ describe('readBoundedUtf8FromFileHandle', () => {
 
   it('rejects a handle that is not a regular file', async () => {
     const handle: BoundedReadableFileHandle = {
-      stat: vi.fn(async () => ({ isFile: () => false, size: 0 })),
+      stat: vi.fn(async () => ({ ...statSnapshot({ size: 0 }), isFile: () => false })),
       read: vi.fn(),
     };
     expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({ status: 'notAFile' });
+  });
+
+  it('loops over short reads until the bounded buffer is complete', async () => {
+    const json = '{"name":"تیم محصول","members":[]}';
+    const contents = Buffer.from(json, 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [stableStat(contents.length)],
+      contents,
+      chunks: [2, 3],
+    });
+
+    const result = await readBoundedUtf8FromFileHandle(handle, 1024);
+
+    expect(result).toEqual({ status: 'ok', contents: json });
+    expect(JSON.parse(json)).toEqual({ name: 'تیم محصول', members: [] });
+    // 2 bytes + 3 bytes + the remaining bytes + the final zero-byte read that
+    // proves EOF was reached before the detection byte.
+    expect((handle.read as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('reports a change when EOF arrives before the expected size (file shrank)', async () => {
+    const handle = fakeStatHandle({
+      snapshots: [stableStat(10)],
+      contents: Buffer.from('{"a":1}', 'utf8'),
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'changedDuringRead',
+    });
+  });
+
+  it('reports a change when a read returns zero bytes before the expected size', async () => {
+    const handle = fakeStatHandle({
+      snapshots: [stableStat(8)],
+      contents: Buffer.from('{"a":1}', 'utf8'),
+      chunks: [2, 0],
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'changedDuringRead',
+    });
+  });
+
+  it('accepts a file of exactly the maximum size', async () => {
+    const contents = Buffer.from('{"a":1}', 'utf8');
+    const result = await readBoundedUtf8FromFileHandle(
+      fakeHandle({ sizes: [contents.length], contents }),
+      contents.length
+    );
+
+    expect(result).toEqual({ status: 'ok', contents: '{"a":1}' });
+  });
+
+  it('rejects a file of maximum size plus one even before reading', async () => {
+    const contents = Buffer.from('{"a":12}', 'utf8');
+    const result = await readBoundedUtf8FromFileHandle(
+      fakeHandle({ sizes: [contents.length], contents }),
+      contents.length - 1
+    );
+
+    expect(result).toEqual({ status: 'tooLarge', maxBytes: contents.length - 1 });
+  });
+
+  it('rejects a file that grows past the ceiling during the read', async () => {
+    const contents = Buffer.from('abcdef', 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [stableStat(contents.length - 1)],
+      contents,
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, contents.length - 1)).toEqual({
+      status: 'tooLarge',
+      maxBytes: contents.length - 1,
+    });
+  });
+
+  it('propagates a read failure instead of returning partial content', async () => {
+    const handle = fakeStatHandle({
+      snapshots: [stableStat(4)],
+      contents: Buffer.from('{"a":1}', 'utf8'),
+      readError: new Error('EIO: i/o error'),
+    });
+
+    await expect(readBoundedUtf8FromFileHandle(handle, 1024)).rejects.toThrow('EIO');
+  });
+
+  it('detects a same-size rewrite through changed modification metadata', async () => {
+    const contents = Buffer.from('{"a":1}', 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [
+        statSnapshot({ size: contents.length, dev: 1, ino: 2, mtimeNs: 1_000n, ctimeNs: 1_000n }),
+        statSnapshot({ size: contents.length, dev: 1, ino: 2, mtimeNs: 1_500n, ctimeNs: 1_500n }),
+      ],
+      contents,
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'changedDuringRead',
+    });
+  });
+
+  it('detects a replaced file of the same size through its identity', async () => {
+    const contents = Buffer.from('{"a":1}', 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [
+        statSnapshot({ size: contents.length, dev: 1, ino: 2, mtimeNs: 1_000n, ctimeNs: 1_000n }),
+        statSnapshot({ size: contents.length, dev: 1, ino: 3, mtimeNs: 1_000n, ctimeNs: 1_000n }),
+      ],
+      contents,
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'changedDuringRead',
+    });
+  });
+
+  it('detects a change when the read was short and the metadata also moved', async () => {
+    const contents = Buffer.from('{"a":1}', 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [
+        statSnapshot({ size: contents.length, dev: 1, ino: 2, mtimeNs: 1_000n, ctimeNs: 1_000n }),
+        statSnapshot({ size: contents.length, dev: 1, ino: 2, mtimeNs: 2_000n, ctimeNs: 2_000n }),
+      ],
+      contents,
+      chunks: [3],
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'changedDuringRead',
+    });
+  });
+
+  it('still returns complete content when only the size is reported', async () => {
+    // Documented degradation: a platform that reports no dev/ino/timestamps can
+    // only support size-based change detection, so a stable size is accepted.
+    const contents = Buffer.from('{"a":1}', 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [statSnapshot({ size: contents.length }), statSnapshot({ size: contents.length })],
+      contents,
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'ok',
+      contents: '{"a":1}',
+    });
+  });
+
+  it('still detects a size change when no other metadata is reported', async () => {
+    const contents = Buffer.from('{"a":1}', 'utf8');
+    const handle = fakeStatHandle({
+      snapshots: [
+        statSnapshot({ size: contents.length }),
+        statSnapshot({ size: contents.length + 1 }),
+      ],
+      contents,
+    });
+
+    expect(await readBoundedUtf8FromFileHandle(handle, 1024)).toEqual({
+      status: 'changedDuringRead',
+    });
   });
 });
 

@@ -72,6 +72,15 @@ export class CustomTeamTemplateDesktopFileService {
     this.maxImportFileBytes = deps.maxImportFileBytes ?? CUSTOM_TEAM_TEMPLATE_MAX_IMPORT_FILE_BYTES;
   }
 
+  /**
+   * Runs the full native import workflow for one user-initiated attempt.
+   *
+   * Cancellation is a typed `cancelled` outcome, not an error. File-level
+   * failures (picker, read, encoding, size, change-during-read, JSON) are
+   * reported before the use case is consulted, and the use case keeps ownership
+   * of format/version/field/name/storage semantics. A possibly committed write is
+   * surfaced as `unresolvedWriteOutcome` and is never retried here.
+   */
   async importFromFile(): Promise<ImportCustomTeamTemplateFromFileResult> {
     let filePath: string | null;
     try {
@@ -122,6 +131,13 @@ export class CustomTeamTemplateDesktopFileService {
     }
   }
 
+  /**
+   * Runs the full native export workflow for one saved template id.
+   *
+   * The renderer supplies only an id: the destination comes from the native save
+   * dialog and never crosses IPC. `exported` deliberately carries no path. Export
+   * is read-only, so a failure is never an unresolved write.
+   */
   async exportToFile(payload: unknown): Promise<ExportCustomTeamTemplateToFileResult> {
     const templateId = readTemplateId(payload);
     if (!templateId) {
