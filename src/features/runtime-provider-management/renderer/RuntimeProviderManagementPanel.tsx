@@ -14,6 +14,7 @@ import {
   isOpenCodeProviderConnectionBlocked,
 } from '../core/domain';
 
+import { maskRuntimeProviderStateForScope } from './hooks/maskRuntimeProviderStateForScope';
 import {
   type RuntimeProviderChangeKind,
   useRuntimeProviderManagement,
@@ -267,7 +268,7 @@ export const RuntimeProviderManagementPanel = ({
   return (
     <OpenCodeProviderCompatibilityScope generation={openCodeGeneration}>
       <RuntimeProviderManagementPanelView
-        state={state}
+        state={providerContextReady ? state : maskRuntimeProviderStateForScope(state)}
         actions={guardedActions}
         disabled={disabled || !providerContextReady}
         projectPath={effectiveProjectPath}
