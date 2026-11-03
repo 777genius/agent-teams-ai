@@ -412,6 +412,7 @@ export function useRuntimeProviderManagement(
     setDirectoryError(null);
     setDirectoryErrorDiagnostics(null);
     setDirectorySelectedProviderId(null);
+    appliedInitialProviderRef.current = null;
     setDirectoryLoaded(false);
     setDirectorySummary(options.directorySummaryOnEnable === true);
     setSetupForm(null);
@@ -519,7 +520,6 @@ export function useRuntimeProviderManagement(
       if (!options.enabled || !directorySupported) {
         return true;
       }
-
       const append = input.append === true;
       const refreshDirectoryData = input.refresh === true;
       const query = input.query ?? directoryQuery;
