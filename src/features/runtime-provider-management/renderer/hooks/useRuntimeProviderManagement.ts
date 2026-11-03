@@ -31,7 +31,7 @@ import {
   commitDirectoryPageLoad,
   DEFAULT_DIRECTORY_FILTER,
   EMPTY_FULL_CATALOG_WARNING,
-  getAuthoritativeCachedFullDirectory,
+  getCachedDirectoryForInitialPaint,
   shouldKeepVisibleDirectoryRows,
 } from './runtimeProviderDirectoryCatalogPolicy';
 import {
@@ -701,7 +701,7 @@ export function useRuntimeProviderManagement(
     if (!options.enabled || !directorySupported) {
       return;
     }
-    const cached = getAuthoritativeCachedFullDirectory({
+    const cached = getCachedDirectoryForInitialPaint({
       reuseCachedFullDirectory: options.reuseCachedFullDirectory,
       directoryQuery,
       projectPath: currentProjectPath,
@@ -710,13 +710,13 @@ export function useRuntimeProviderManagement(
       directoryEntriesRef.current = cached.entries;
       setDirectoryEntries(cached.entries);
       setDirectoryLoaded(true);
-      setDirectorySummary(false);
+      setDirectorySummary(!cached.authoritative);
       setDirectoryTotalCount(cached.totalCount ?? cached.entries.length);
       setDirectoryNextCursor(cached.nextCursor ?? null);
       setDirectoryError(null);
       setDirectoryErrorDiagnostics(null);
       void loadDirectoryPageRef.current({
-        summary: false,
+        summary: !cached.authoritative,
         refresh: false,
         cursor: null,
       });
