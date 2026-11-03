@@ -395,7 +395,6 @@ export function useRuntimeProviderManagement(
     setTestingModelIds([]);
     setModelTestStartedAt({});
   }, [cancelModelTestBestEffort]);
-
   useEffect(() => {
     observeRuntimeProviderDirectoryRevision(settledRuntimeRevision);
     setRenderedProjectPath(currentProjectPath);
@@ -414,6 +413,7 @@ export function useRuntimeProviderManagement(
     setDirectoryErrorDiagnostics(null);
     setDirectorySelectedProviderId(null);
     setDirectoryLoaded(false);
+    setDirectorySummary(options.directorySummaryOnEnable === true);
     setSetupForm(null);
     setSetupFormLoading(false);
     setSetupFormError(null);
@@ -443,7 +443,7 @@ export function useRuntimeProviderManagement(
     setModelResults({});
     setSuccessMessage(null);
     setWarningMessage(null);
-  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath, settledRuntimeRevision]);
+  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath, options.directorySummaryOnEnable, settledRuntimeRevision]);
   const refresh = useCallback(
     async (input: { silent?: boolean } = {}): Promise<boolean> => {
       if (!options.enabled) {
