@@ -37,6 +37,7 @@ vi.mock('../../../src/main/services', () => ({
 }));
 vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => fixturePaths.root,
+  getClaudeBasePath: () => join(fixturePaths.root, '.claude'),
   getAppDataPath: () => fixturePaths.root,
   getTeamsBasePath: () => {
     throw new Error('TEST legacy Team reader forbidden');

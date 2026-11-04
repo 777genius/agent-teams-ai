@@ -48,17 +48,23 @@ const mainSource = ts.createSourceFile(
   ts.ScriptTarget.Latest,
   true
 );
-function sourceNode(name: string): ts.Node {
+const shutdownStepSource = ts.createSourceFile(
+  'shutdownStep.ts',
+  readFileSync('src/main/utils/shutdownStep.ts', 'utf8'),
+  ts.ScriptTarget.Latest,
+  true
+);
+function sourceNode(name: string, source: ts.SourceFile = mainSource): ts.Node {
   let found: ts.Node | undefined;
   function visit(node: ts.Node) {
     if (
       (ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node)) &&
-      node.name?.getText(mainSource) === name
+      node.name?.getText(source) === name
     )
       found = node;
     ts.forEachChild(node, visit);
   }
-  visit(mainSource);
+  visit(source);
   if (!found) throw new Error(`Source boundary missing: ${name}`);
   return found;
 }
@@ -678,7 +684,7 @@ describe('shutdown MCP transport authority', () => {
         client.execute(command, body, { cwd: directory, timeoutMs: 1000 });
       const logger = { info: vi.fn(), warn: vi.fn(), diagnostic: vi.fn() };
       const realRunShutdownStep = compileExpression(
-        sourceNode('runShutdownStep').getText(mainSource),
+        sourceNode('runShutdownStep', shutdownStepSource).getText(shutdownStepSource),
         { logger, SHUTDOWN_STEP_TIMEOUT_MS: 10_000 }
       ) as (label: string, action: () => unknown, timeoutMs?: number) => Promise<void>;
       const prepare = vi.spyOn(bridge, 'prepareShutdownStop');

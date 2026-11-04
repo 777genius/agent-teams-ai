@@ -465,6 +465,7 @@ describe('TeamBackupService', () => {
     args[1] = { getTasks } as never;
     args[2] = { getMessagesFor: async () => [] } as never;
     const data = new TeamDataService(...args);
+    data.setTeamProfileOwnership(async () => true);
     data.setLegacySourceWriteAdmission(
       createLegacySourceWriteAdmissionPolicy({
         teamsRoot: root,
