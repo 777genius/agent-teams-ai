@@ -112,7 +112,7 @@ proof that the above tests passed.
 | --- | --- | --- |
 | Stable owner after new default/rollback | `test/features/agent-backend/backendOwnerRouter.test.ts` | Run unchanged tests against actual two-owner adapters with retained A and fresh B, then rollback |
 | Concurrent bind / missing or corrupt record | Same owner-router tests | Native recovery with real new owner store; never select default for missing or UNKNOWN |
-| Lost response and stale authorization | Owner-router tests plus `hostProductLifecycle.test.ts` | Real accepted/UNKNOWN receipts; no replay, no stale grants, negative duplicate count |
+| Lost response and stale authorization | Owner-router tests plus `hostProductLifecycle.test.ts` | Real accepted/UNKNOWN receipts; zero additional side effects after the original admitted attempt, no stale grants or replay |
 | Cross-owner recipient / TaskRef | `hostTeamRouting.test.ts` and existing TaskRef tests | Explicit incompatible cross-owner DM/TaskRef refusals, no legacy relay or second writer |
 | Cold resume / history continuity | `checkpointAvailability.test.ts`, `restoreIntents.test.ts` and prior Stage 1 native receipts | Exact new-runtime native session, history prefix, storage/custody and failed-version negatives |
 | Background process / physical stop | Existing Stage 1 M19 native and UI receipts | Captured target-core process identity, real stop/readback and foreign/shared-child survival |
@@ -137,10 +137,14 @@ required before an implementation exists.
    open/submit/observe/stop/readback and one single-owner Team mutation. Then
    expand to all M01–M19, V01–V08 for V2, native processes, multiple OS tuples
    and packaged Electron. Record genuine refs, logs and artifact receipts.
-4. **Retained data:** old/UNKNOWN handles always resolve to the old owner.
-   Archive import is a separate read-only/dry-run exercise; active session
-   adoption, model-based cross-version resume and destructive migration are
-   prohibited.
+4. **Retained data:** a retained handle, including a handle with an operation
+   whose outcome is UNKNOWN, remains bound to its recorded owner for lookup,
+   reconciliation, stop and subsequent authorized intents. UNKNOWN is the
+   *operation outcome*, not a distinct kind of handle. If that owner is
+   unavailable, return unavailable/HOLD; never switch to the current default,
+   replay the uncertain intent or move work to another owner. Archive import
+   is a separate read-only/dry-run exercise; active session adoption,
+   model-based cross-version resume and destructive migration are prohibited.
 
 **Stop-ship:** any UNKNOWN input replay; cross-owner mutation or fallback;
 unverified V1/V2 plugin/API reuse; credential leakage; stale permission grant;
