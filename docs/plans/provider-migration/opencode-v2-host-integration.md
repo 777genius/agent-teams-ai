@@ -36,6 +36,17 @@
   MCP permissions и checkpoint identity. V1 plugin implementation нельзя
   автоматически объявить V2-compatible. Смена generation не усыновляет
   active/unknown V1 session.
+- **Effective V2 permission gate:** официальный
+  [V1→V2 migration guide](https://dev.opencode.ai/v2/docs/migrate-v1/)
+  подтверждает изменение default: V1 запрашивает разрешение на доступ вне
+  проекта, V2 по умолчанию допускает `external_directory`. Нельзя наследовать
+  это расширение прав как «совместимую» конфигурацию. Host сверяет effective
+  ordered `permissions` и выбранную product policy; при отсутствии
+  подтверждённого ask/deny пути удерживает запуск (HOLD), не переписывая
+  пользовательские файлы. В V2 `bash→shell`, `task→subagent`,
+  `write/patch→edit` — это изменение семантики, не простое имя в UI.
+  V1 plugin hooks должны отдельно проходить
+  [V2 plugin migration](https://dev.opencode.ai/v2/docs/build/plugins/migrate-v1).
 - Совместные utility допускаются только для **проверенных** одинаковых правил
   (bounded parsing, authority, nonce, resource cleanup). V1 и V2 протоколы,
   модель permission, authentication и event ordering не объединять ради DRY.
@@ -56,7 +67,9 @@
    один выбранный TEST member, handshake → submit → observe → stop → readback.
 4. **V2.3, parity.** Existing Create/Launch/Resume, mixed providers, Tasks,
    approvals/interrupt, MCP/team tools, messages, cross-team, review/attachment,
-   lost ACK, cold restart и resource custody.
+   lost ACK, cold restart и resource custody. Отдельный native TEST:
+   доступ за пределы workspace требует выбранного explicit grant (если политика
+   требует ask), default-allow не считается авторизацией Host.
 5. **V2.4, release candidate proof.** Pinned native tuples, full CI + CodeQL,
    packed Electron, independent reviews и actual data/provenance receipts.
    Real account/subscription proof отдельно, если действительно доступен;
@@ -70,7 +83,7 @@ provider adapter и тестируем контракт, не дублируем
 | ID  | Положительное доказательство                                               | Обязательное отрицательное доказательство                                      |
 | --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | V01 | Native V2 binary/engine/version/digest и выбранный profile                 | Старый или неподдерживаемый version, подменённый exe, чужой profile → HOLD     |
-| V02 | Чтение config, auth namespace, model/provider/agent и MCP policy           | Нельзя подменить credentials, V1 plugin не объявляется V2 plugin               |
+| V02 | Чтение **effective** config/auth/agent/MCP/ordered permissions            | Нет implicit `external_directory` allow, чужой auth или V1 plugin reuse       |
 | V03 | Session submit → native ack → ordered feed → terminal outcome              | Lost ACK/UNKNOWN не повторяет submit, late feed не откатывает cursor           |
 | V04 | Permission/reply и targeted interrupt/control                              | Stale/foreign reply не grant; interrupt A не отменяет B                        |
 | V05 | Cold selected resume с настоящим native history prefix                     | Несовместимый V1 checkpoint или missing V2 history → explicit HOLD             |

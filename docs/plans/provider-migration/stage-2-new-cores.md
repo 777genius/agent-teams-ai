@@ -32,12 +32,18 @@ Baseline Desktop/legacy-host: `999c468e3f4f09a5e5eb1655f6b97a64e046c55e`
 | Team owner → Orchestrator        | `agent-teams-ai/agent-teams-orchestrator` main `981dd836`, README и contracts    | **requires new capability**: репозиторий описывает architecture-definition stage, а не production Team/Task/Message/Review implementation | Published versioned API с actual writers, authority, grants, inbox, review, archive и native TEST consumer                                                |
 | Runtime owner → agent-runtime    | `agent-teams-ai/agent-runtime` main `4e12b68b`, `docs/architecture/readiness.md` | **requires new capability**: interactive contract без qualified production Host; OpenCode ACP contract-only                               | Реальный Host/SDK: session/submit/observe/reply/interrupt/reconcile/checkpoint/stop, durable receipts, independent controls и scoped native qualification |
 | Runtime → provider Session SPI   | `agent-teams-ai/old-provider-implementations` PR #1 `7573a508` (Draft)           | **translated** для V1 SPI, не доказывает V2 Host                                                                                          | Выбранный pinned provider artifact, private adapter, exact-sha tests, без второго session implementation в Desktop                                        |
-| Data/retained ownership          | Stage 1 `BackendOwnerRouter`, `HandleBindingStore`, stopped archive              | **translation required**; live state не имеет честной общей migration receipt                                                             | Старый owner обслуживает retained/UNKNOWN handles; новая версия создаёт только unbound handles; архив read-only                                           |
+| Data/retained ownership          | Stage 1 `BackendOwnerRouter`, `HandleBindingStore`, stopped archive              | **translation required**; live state не имеет честной общей migration receipt                                                             | Старый owner обслуживает retained handles, включая UNKNOWN исход операции; новые handles только unbound; архив read-only                                           |
 | OpenCode V2                      | [V2 план](opencode-v2-host-integration.md)                                       | **incompatible until qualified** в новом Host; V1 работает отдельно                                                                       | Точный V2 binary/engine/SDK, новая plugin/API семантика, полноценные negative/native E2E                                                                  |
 
 Ключевые источники: [Orchestrator README](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/981dd836ca3d35b764561bdc11dc2e0544d83416/README.md),
 [agent-runtime readiness](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md),
 [проверенный Stage 1](https://github.com/777genius/agent-teams-ai/pull/982).
+**Текущий отдельный upstream increment:** [Agent Runtime Draft PR #253](https://github.com/agent-teams-ai/agent-runtime/pull/253)
+исправляет строгую read-only проверку PostgreSQL `CHECK`-ограничений generation/revision
+и добавляет TEST/CI PostgreSQL proof. Пока PR не замёрджен и его проверки не
+закрыты, это **не** published dependency, production Host или S2.1 PASS.
+Владелец Runtime остаётся в собственном репозитории; Stage 1 и Desktop не меняются.
+
 Не приравнивать принятые ADR, схему Protobuf или synthetic conformance к готовому production API.
 
 **Решение по зависимостям.** При отсутствии квалифицированного Orchestrator/Runtime
