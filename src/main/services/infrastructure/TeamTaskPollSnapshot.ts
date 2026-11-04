@@ -28,6 +28,7 @@ async function listTeamDirectoryNames(root: string): Promise<string[]> {
 /** Poll active teams every tick while spreading historical snapshots across ticks. */
 export class ChunkedTeamTaskPollSnapshot {
   private cycle: { names: string[]; nextIndex: number } | null = null;
+  private generation = 0;
 
   constructor(
     private readonly root: string,
@@ -44,10 +45,14 @@ export class ChunkedTeamTaskPollSnapshot {
   ): Promise<PollSnapshotResult> {
     // A missing scope provider means every team may be live: retain the old full scan.
     if (!baselineReady || priorityTeams === null) {
+      // An old asynchronous slice can settle after polling restarts. Invalidate
+      // its cursor before the fresh full baseline waits on filesystem I/O.
+      this.generation += 1;
       this.cycle = null;
       return { files: await this.collect(this.root), cycleComplete: true, deleteSafe: true, resetPartial: true };
     }
 
+    const generation = this.generation;
     const available = new Set(await listTeamDirectoryNames(this.root));
     const cycle = this.cycle ?? { names: [...available], nextIndex: 0 };
     const end = Math.min(cycle.nextIndex + this.maxTeamsPerTick, cycle.names.length);
@@ -62,9 +67,11 @@ export class ChunkedTeamTaskPollSnapshot {
     // Do not advance after a failed read. The next partial snapshot must
     // inspect the missing slice before it can report deleted files.
     const files = await this.collect(this.root, [...names]);
-    cycle.nextIndex = end;
     const cycleComplete = end === cycle.names.length;
-    this.cycle = cycleComplete ? null : cycle;
+    if (generation === this.generation) {
+      cycle.nextIndex = end;
+      this.cycle = cycleComplete ? null : cycle;
+    }
     return { files, cycleComplete, deleteSafe: cycleComplete, recheckedTeamNames: [...recheckedTeamNames] };
   }
 }
