@@ -100,9 +100,9 @@ describe('read-only process CPU capture', () => {
   });
 
   it.each([
-    { changed: 'ppid' as const, replacement: 200 },
-    { changed: 'name' as const, replacement: 'different' },
-  ])('rejects a same-second PID reuse when the root $changed changes', async ({ changed, replacement }) => {
+    { changed: 'ppid' as const, replacement: 200, shouldStop: false },
+    { changed: 'name' as const, replacement: 'different', shouldStop: true },
+  ])('handles root $changed changes without misidentifying the process', async ({ changed, replacement, shouldStop }) => {
     if (process.platform === 'win32') return;
     const original = {
       pid: 99,
@@ -118,8 +118,13 @@ describe('read-only process CPU capture', () => {
       { pid: 99, duration: 1, intervalMs: 250 },
       () => (samples++ === 0 ? [original] : [reused])
     );
-    expect(result.frames).toHaveLength(1);
-    expect(samples).toBe(2);
+    if (shouldStop) {
+      expect(result.frames).toHaveLength(1);
+      expect(samples).toBe(2);
+    } else {
+      expect(result.frames.length).toBeGreaterThanOrEqual(2);
+      expect(result.frames[1]?.processes[0]?.ppid).toBe(200);
+    }
   });
 
   it('captures a real test-owned child without terminating it', async () => {
