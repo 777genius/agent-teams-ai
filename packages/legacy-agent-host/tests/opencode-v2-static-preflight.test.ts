@@ -90,7 +90,7 @@ test('missing or damaged platform delivery cannot be promoted to V2 candidate', 
 
 test('V2 workspace bindings are lexically canonical on their selected host OS', () => {
   assert.equal(isCanonicalOpenCodeV2Directory('darwin-arm64', selected.directory), true);
-  for (const directory of ['/', '/TEST/../foreign', '/TEST//duplicate', 'relative/workspace', '/TEST\\0foreign']) {
+  for (const directory of ['/', '/TEST/../foreign', '/TEST//duplicate', 'relative/workspace', '/TEST\u0000foreign']) {
     assert.equal(isCanonicalOpenCodeV2Directory('darwin-arm64', directory), false);
     assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, directory }, lock),
       { kind: 'hold', reason: 'binding' });
