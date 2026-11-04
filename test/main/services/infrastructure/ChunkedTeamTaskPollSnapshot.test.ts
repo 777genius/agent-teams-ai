@@ -63,10 +63,15 @@ describe('chunked fallback team and task snapshots', () => {
         expect(events).toEqual([{ type: 'change', path: `team-5/${file}` }]);
 
         await writeFile('team-4', file, '{"updated":true}');
-        await source.pollOnce();
-        expect(events.map((event) => event.path)).toEqual([`team-5/${file}`]);
+        await writeFile('team-5', file, '{"updatedAgain":true}');
         await source.pollOnce();
         expect(events.map((event) => event.path)).toEqual([
+          `team-5/${file}`,
+          `team-5/${file}`,
+        ]);
+        await source.pollOnce();
+        expect(events.map((event) => event.path)).toEqual([
+          `team-5/${file}`,
           `team-5/${file}`,
           `team-4/${file}`,
         ]);
@@ -90,6 +95,39 @@ describe('chunked fallback team and task snapshots', () => {
       expect(events).toEqual([{ type: 'rename', path: 'team-2/task.json' }]);
       for (let index = 0; index < 3; index += 1) await source.pollOnce();
       expect(events).toHaveLength(1);
+    } finally {
+      source.stop();
+    }
+  });
+
+  it('does not retain a deleted priority file from an earlier partial snapshot', async () => {
+    for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
+    const { source, events } = createHarness('tasks', { current: new Set(['team-5']) });
+    try {
+      source.startPolling();
+      await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+      await source.pollOnce(); // First slice includes team-5 as priority.
+      await fsp.unlink(path.join(root, 'team-5', 'task.json'));
+      await source.pollOnce(); // Second slice rescans team-5 without its file.
+      expect(events).toEqual([]);
+      await source.pollOnce(); // Complete the historical rotation.
+      expect(events).toEqual([{ type: 'rename', path: 'team-5/task.json' }]);
+    } finally {
+      source.stop();
+    }
+  });
+
+  it('does not retain files when a priority team's directory disappears', async () => {
+    for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
+    const { source, events } = createHarness('teams', { current: new Set(['team-5']) });
+    try {
+      source.startPolling();
+      await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+      await source.pollOnce();
+      await fsp.rm(path.join(root, 'team-5'), { recursive: true });
+      await source.pollOnce();
+      await source.pollOnce();
+      expect(events).toEqual([{ type: 'rename', path: 'team-5/task.json' }]);
     } finally {
       source.stop();
     }
@@ -123,6 +161,7 @@ describe('chunked fallback team and task snapshots', () => {
       await writeFile('new-team');
       source.startPolling();
       await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+      for (let index = 0; index < 4; index += 1) await source.pollOnce();
       expect(events).toEqual([]);
     } finally {
       source.stop();
