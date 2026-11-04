@@ -51,10 +51,11 @@ export class ChunkedTeamTaskPollSnapshot {
     const available = new Set(await listTeamDirectoryNames(this.root));
     const cycle = this.cycle ?? { names: [...available], nextIndex: 0 };
     const end = Math.min(cycle.nextIndex + this.maxTeamsPerTick, cycle.names.length);
-    const names = new Set(
-      cycle.names.slice(cycle.nextIndex, end).filter((name) => available.has(name))
-    );
-    for (const name of priorityTeams ?? []) {
+    const sliceNames = cycle.names.slice(cycle.nextIndex, end);
+    const names = new Set(sliceNames.filter((name) => available.has(name)));
+    const recheckedTeamNames = new Set(sliceNames);
+    for (const name of priorityTeams) {
+      recheckedTeamNames.add(name);
       if (available.has(name)) names.add(name);
     }
 
@@ -64,7 +65,7 @@ export class ChunkedTeamTaskPollSnapshot {
     cycle.nextIndex = end;
     const cycleComplete = end === cycle.names.length;
     this.cycle = cycleComplete ? null : cycle;
-    return { files, cycleComplete, deleteSafe: cycleComplete };
+    return { files, cycleComplete, deleteSafe: cycleComplete, recheckedTeamNames: [...recheckedTeamNames] };
   }
 }
 
