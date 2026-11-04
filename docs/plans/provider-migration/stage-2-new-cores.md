@@ -1,13 +1,63 @@
 # Этап 2: замена legacy-host будущими Orchestrator и agent-runtime
 
-Статус: **отложен, не выполняется в текущей задаче** (уточнение владельца
-22 октября 2026). Этот этап — интеграция новых Orchestrator и agent-runtime,
-когда их реализации будут готовы и владелец отдельно поручит переход.
-Разработка новых ядер и описанные ниже шаги сейчас не запускаются; они не входят
-в процент готовности, оставшийся LOC или Definition of done этапа 1.
-Документ сохраняет только ориентир последующей замены. Нынешний runtime
-implementation не считается неизменяемым основанием.
+Статус на 4 ноября 2026: **новое поручение владельца начать Stage 2 и OpenCode V2**.
+Начат этап **S2.0: проверка текущих публичных контрактов и зависимостей**.
+Переключение владельцев, миграция активных сессий, удаление legacy-host и
+production activation пока **не разрешены технической готовностью** новых ядер.
+Остальная последовательность S2.1–S2.4 ниже остаётся критериями допуска, а не
+утверждением о реализованной миграции. Предыдущее решение от 22 октября об
+отложенном Stage 2 относилось к прежнему scope; Stage 1 P0–P8/M01–M19 не
+расширяется задним числом. Для OpenCode V2 — отдельный
+[план Host-интеграции](opencode-v2-host-integration.md).
 [Программа](README.md) · [этап 1](stage-1-legacy-host.md).
+
+
+## 0. Актуальный S2.0: contract/readiness audit (4 ноября 2026)
+
+Фиксируем **реальные**, а не будущие public APIs до написания адаптера.
+Baseline Desktop/legacy-host: `999c468e3f4f09a5e5eb1655f6b97a64e046c55e`
+в PR #982; его [Full CI](https://github.com/777genius/agent-teams-ai/actions/runs/41906833145),
+[CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/41906839469)
+и [пять packaged smoke](https://github.com/777genius/agent-teams-ai/actions/runs/41905798052)
+прошли на этом SHA. Один root-test shard потребовал retry без изменения кода;
+это наблюдаемая нестабильность, а не доказательство исправленного flaky test.
+Нативные Stage 1 11/11 Desktop и процессный proof прошли на `d0d30e3`,
+после него до `999c468` изменены только три тестовых файла. Эти proofs
+переиспользуются **только для неизменённых границ**, не для новых ядер.
+
+| Граница | Проверенный источник | Текущий результат S2.0 | Требование до подключения |
+| --- | --- | --- | --- |
+| Desktop → backend, owner binding | `src/features/agent-backend` PR #982, immutable handle and lookup | **exact-compatible candidate** внутри Stage 1, новый backend ещё не проверен | Не менять публичные UI/IPC DTO; проверить pinned owner после default switch, unknown и rollback |
+| Team owner → Orchestrator | `agent-teams-ai/agent-teams-orchestrator` main `981dd836`, README и contracts | **requires new capability**: репозиторий описывает architecture-definition stage, а не production Team/Task/Message/Review implementation | Published versioned API с actual writers, authority, grants, inbox, review, archive и native TEST consumer |
+| Runtime owner → agent-runtime | `agent-teams-ai/agent-runtime` main `4e12b68b`, `docs/architecture/readiness.md` | **requires new capability**: interactive contract без qualified production Host; OpenCode ACP contract-only | Реальный Host/SDK: session/submit/observe/reply/interrupt/reconcile/checkpoint/stop, durable receipts, independent controls и scoped native qualification |
+| Runtime → provider Session SPI | `agent-teams-ai/old-provider-implementations` PR #1 `7573a508` (Draft) | **translated** для V1 SPI, не доказывает V2 Host | Выбранный pinned provider artifact, private adapter, exact-sha tests, без второго session implementation в Desktop |
+| Data/retained ownership | Stage 1 `BackendOwnerRouter`, `HandleBindingStore`, stopped archive | **translation required**; live state не имеет честной общей migration receipt | Старый owner обслуживает retained/UNKNOWN handles; новая версия создаёт только unbound handles; архив read-only |
+| OpenCode V2 | [V2 план](opencode-v2-host-integration.md) | **incompatible until qualified** в новом Host; V1 работает отдельно | Точный V2 binary/engine/SDK, новая plugin/API семантика, полноценные negative/native E2E |
+
+Ключевые источники: [Orchestrator README](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/981dd836ca3d35b764561bdc11dc2e0544d83416/README.md),
+[agent-runtime readiness](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md),
+[проверенный Stage 1](https://github.com/777genius/agent-teams-ai/pull/982).
+Не приравнивать принятые ADR, схему Protobuf или synthetic conformance к готовому production API.
+
+**Решение по зависимостям.** При отсутствии квалифицированного Orchestrator/Runtime
+не создавать в Desktop фиктивный API, dummy owners или второй durable журнал,
+чтобы объявить Stage 2 завершённым. Сначала довести публичные capabilities
+**в их собственных репозиториях**, потом небольшие adapters на consumer ports.
+Существующий Stage 1 сохраняется как E2E oracle, не как цель массового refactor.
+
+**Порядок инкрементов (отдельные небольшие Draft PR):**
+
+1. S2.0: таблица exact/translated/missing/incompatible по операциям M01–M19,
+   контрактные негативные fixtures для owner/UNKNOWN/recovery и E2E profiles.
+2. S2.1: один runtime adapter с native contained session + stop/readback; только
+   после implementation-qualified API, затем permissions, history и fault recovery.
+3. S2.2: один Orchestrator adapter к Team/Task/Messages, после готовых writers.
+   Проверять retained old/new owner без cross-owner relay.
+4. S2.3–S2.4: read-only архив, dry-run data mapping, полная M01–M19 UI E2E
+   на новой композиции, resource/process cleanup и независимое code/security review.
+
+Это **порядок**, а не новые feature flags или разрешение на частичную production
+активацию. Детальные правила S2.1–S2.4 и retirement остаются ниже.
 
 ## 1. Что сохраняем
 
@@ -140,3 +190,25 @@ Rollback меняет default только для новых unbound handles; с
 rewrite сохранит нынешние guarantees. Основной способ уменьшить повторную работу —
 стабилизировать проверенные consumer contracts, а не заморозить всё внутреннее
 устройство старого или будущего runtime.
+
+## 6. Review gates для реализации
+
+Каждый implementation PR требует **двух независимых проверок**, где возможно:
+архитектурные boundary/DDD/SOLID/DRY, затем security/lifecycle/negative E2E.
+Отдельно проверять реальные наблюдения, а не только типы и моки. Самопроверка
+или список критериев в документе **не считаются состоявшимся независимым review**.
+
+- **Stop-ship:** повторная отправка UNKNOWN, silent switch owner на retained
+  handle, новое Team/Runtime data ownership в UI, shared-process kill, потеря
+  permissions/review/TaskRefs, неявное преобразование V1 checkpoint в V2.
+- **E2E:** существующие LaunchTeamDialog/CreateTeamDialog, Resume, Tasks,
+  messages/cross-team, reviews, permissions/interrupt, crashed Host/recovery,
+  backup/trash/archive, teardown и packed Electron в выбранных TEST tuples.
+  Проверять все M01–M19 и negative controls; не заменять UI smoke прямым RPC.
+- **Verification:** точный dependency SHA; focused regression, typecheck, CI,
+  CodeQL, process/native proofs, packed artifact, inspector/ownership audit.
+  Нет подтверждённого receipt — нет статуса PASS.
+- **Delivery:** Stage 1 PR #982 остаётся Draft; Stage 2 stacked отдельно.
+  Не делать merge/release/rollout до готовности ядер, полных проверок и
+  отдельного product decision. Отсутствие merge conflicts не равно eligibility.
+
