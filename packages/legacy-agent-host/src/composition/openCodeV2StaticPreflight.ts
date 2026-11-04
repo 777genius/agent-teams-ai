@@ -1,0 +1,77 @@
+/**
+ * V2.0 qualification boundary, not a native readiness certificate.
+ * Only trusted Host composition may provide these captures. Neither the renderer nor
+ * a model choice may select the engine, executable, lease or session identity.
+ * A passing result permits a later *read-only native probe*, never submit/launch.
+ */
+export interface OpenCodeV2Selection {
+  generation: string;
+  platform: string;
+  version: string;
+  nativeReportedVersion: string;
+  executableSha256: string;
+  observedExecutableSha256: string;
+  endpoint: string;
+  directory: string;
+  nativeSessionId: string;
+  sessionBinding: string;
+  accountBinding: string;
+}
+
+export interface OpenCodeV2RuntimeLock {
+  opencodeV2?: {
+    qualified?: Record<string, string[]>;
+  };
+  opencodeV2Delivery?: Record<string, {
+    engineVersions?: string[];
+    sourceCommit?: string;
+    archive?: { sha256?: string };
+  }>;
+}
+
+export type OpenCodeV2StaticPreflight =
+  | { kind: 'hold'; reason: 'generation' | 'driver-version' | 'runtime-version' |
+      'delivery' | 'native-version' | 'binary-digest' | 'binding' }
+  | { kind: 'candidate'; platform: string; version: string; sourceCommit: string; archiveSha256: string };
+
+// Exact pinned private factory at agent-teams-ai/old-provider-implementations PR #1,
+// 7573a508. These are *not* the Desktop launcher engine qualification versions.
+const pinnedDriverVersions = new Set(['2.0.0', '2.0.21']);
+const platforms = new Set([
+  'darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-arm64', 'win32-x64',
+]);
+const sha256 = /^[0-9a-f]{64}$/;
+const commit = /^[0-9a-f]{40}$/;
+const nativeSession = /^ses_[A-Za-z0-9]+$/;
+const endpoint = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/;
+
+/** Requires an independently verified exact binary digest/version; does not itself read the binary. */
+export function preflightOpenCodeV2Selection(
+  selection: Readonly<OpenCodeV2Selection>,
+  lock: Readonly<OpenCodeV2RuntimeLock>
+): OpenCodeV2StaticPreflight {
+  if (selection.generation !== 'v2' || !platforms.has(selection.platform))
+    return { kind: 'hold', reason: 'generation' };
+  if (!pinnedDriverVersions.has(selection.version))
+    return { kind: 'hold', reason: 'driver-version' };
+  if (!lock.opencodeV2?.qualified?.[selection.platform]?.includes(selection.version))
+    return { kind: 'hold', reason: 'runtime-version' };
+  const delivery = lock.opencodeV2Delivery?.[selection.platform];
+  if (!delivery?.engineVersions?.includes(selection.version) ||
+      !commit.test(delivery.sourceCommit ?? '') || !sha256.test(delivery.archive?.sha256 ?? ''))
+    return { kind: 'hold', reason: 'delivery' };
+  if (selection.nativeReportedVersion !== selection.version)
+    return { kind: 'hold', reason: 'native-version' };
+  if (!sha256.test(selection.executableSha256) ||
+      selection.executableSha256 !== selection.observedExecutableSha256)
+    return { kind: 'hold', reason: 'binary-digest' };
+  const port = endpoint.exec(selection.endpoint)?.[1];
+  if (!port || Number(port) > 65535 || !selection.directory.startsWith('/') ||
+      !nativeSession.test(selection.nativeSessionId) ||
+      !selection.sessionBinding || !selection.accountBinding)
+    return { kind: 'hold', reason: 'binding' };
+  return {
+    kind: 'candidate', platform: selection.platform, version: selection.version,
+    sourceCommit: delivery.sourceCommit!, archiveSha256: delivery.archive!.sha256!,
+  };
+}
