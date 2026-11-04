@@ -14,6 +14,8 @@ production activation пока **не разрешены технической 
 ## 0. Актуальный S2.0: contract/readiness audit (4 ноября 2026)
 
 Фиксируем **реальные**, а не будущие public APIs до написания адаптера.
+Операционный [S2.0 delta-аудит M01–M19](stage-2-contract-delta.md) фиксирует
+текущие границы и обязательные недостающие E2E, не подменяя их PASS.
 Baseline Desktop/legacy-host: `999c468e3f4f09a5e5eb1655f6b97a64e046c55e`
 в PR #982; его [Full CI](https://github.com/777genius/agent-teams-ai/actions/runs/41906833145),
 [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/41906839469)
