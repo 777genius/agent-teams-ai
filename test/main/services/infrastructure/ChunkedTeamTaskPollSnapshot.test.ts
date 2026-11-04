@@ -78,7 +78,7 @@ describe('chunked fallback team and task snapshots', () => {
 
   it('emits a historical deletion once after all slices, without false intermediate deletions', async () => {
     for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
-    const { source, events } = createHarness('tasks', { current: null });
+    const { source, events } = createHarness('tasks', { current: new Set() });
     try {
       source.startPolling();
       await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
@@ -97,7 +97,7 @@ describe('chunked fallback team and task snapshots', () => {
 
   it('detects a newly live team during an unfinished historical cycle', async () => {
     for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
-    const priority: { current: ReadonlySet<string> | null } = { current: null };
+    const priority: { current: ReadonlySet<string> | null } = { current: new Set() };
     const { source, events } = createHarness('tasks', priority);
     try {
       source.startPolling();
@@ -114,7 +114,7 @@ describe('chunked fallback team and task snapshots', () => {
 
   it('re-primes a complete baseline when fallback is restarted', async () => {
     for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
-    const { source, events } = createHarness('tasks', { current: null });
+    const { source, events } = createHarness('tasks', { current: new Set() });
     try {
       source.startPolling();
       await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
@@ -124,6 +124,20 @@ describe('chunked fallback team and task snapshots', () => {
       source.startPolling();
       await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
       expect(events).toEqual([]);
+    } finally {
+      source.stop();
+    }
+  });
+
+  it('preserves all-team polling when no live scope provider is registered', async () => {
+    for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
+    const { source, events } = createHarness('tasks', { current: null });
+    try {
+      source.startPolling();
+      await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+      await writeFile('team-5', 'task.json', '{"updated":true}');
+      await source.pollOnce();
+      expect(events).toContainEqual({ type: 'change', path: 'team-5/task.json' });
     } finally {
       source.stop();
     }
@@ -145,10 +159,10 @@ describe('chunked fallback team and task snapshots', () => {
       },
       2
     );
-    await snapshots.snapshot(false, null);
-    await snapshots.snapshot(true, null);
+    await snapshots.snapshot(false, new Set());
+    await snapshots.snapshot(true, new Set());
     failNext = true;
-    await expect(snapshots.snapshot(true, null)).rejects.toThrow('temporary failure');
+    await expect(snapshots.snapshot(true, new Set())).rejects.toThrow('temporary failure');
     await snapshots.snapshot(true, null);
     expect(requested.at(-2)).toEqual(['team-2', 'team-3']);
     expect(requested.at(-1)).toEqual(['team-2', 'team-3']);
