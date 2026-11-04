@@ -48,6 +48,42 @@ function createHarness(kind: 'tasks' | 'teams', priority: { current: ReadonlySet
 }
 
 describe('chunked fallback team and task snapshots', () => {
+  it.each(['EMFILE', 'ENOSPC'] as const)(
+    'activates task fallback on native %s and delivers the active team update',
+    async (code) => {
+      for (let index = 0; index < 4; index += 1) await writeFile(`team-${index}`);
+      const snapshots = new ChunkedTeamTaskPollSnapshot(root, collectTasksPollSnapshot, 2);
+      const events: { type: 'change' | 'rename'; path: string }[] = [];
+      const source = new CrossPlatformFileChangeSource({
+        name: 'tasks',
+        pollIntervalMs: 60_000,
+        createWatcher: () => {
+          throw Object.assign(new Error(code), { code });
+        },
+        collectPollSnapshot: () =>
+          snapshots.snapshot(source.isPollingPrimed, new Set(['team-3'])),
+        emitPolledChange: (type, relativePath) => events.push({ type, path: relativePath }),
+        isOwnerActive: () => true,
+        isWatchLimitError: (error) =>
+          (error as NodeJS.ErrnoException).code === 'EMFILE' ||
+          (error as NodeJS.ErrnoException).code === 'ENOSPC',
+        requestRetry: () => {
+          throw new Error('Native watcher retry must not run on file descriptor exhaustion');
+        },
+      });
+      try {
+        await source.start();
+        expect(source.currentPollingTimer).not.toBeNull();
+        await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+        await writeFile('team-3', 'task.json', '{"changed":"longer"}');
+        await source.pollOnce();
+        expect(events).toContainEqual({ type: 'change', path: 'team-3/task.json' });
+      } finally {
+        source.stop();
+      }
+    }
+  );
+
   it.each(['tasks', 'teams'] as const)(
     'polls live %s on every tick while historical changes eventually arrive',
     async (kind) => {
