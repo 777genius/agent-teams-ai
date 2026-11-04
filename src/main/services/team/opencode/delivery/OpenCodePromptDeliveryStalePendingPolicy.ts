@@ -1,5 +1,9 @@
 import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
 import {
+  isOpenCodeCompletedGroupNonResponse,
+  OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+} from './OpenCodeGroupNonResponse';
+import {
   hasOpenCodeAcceptedRuntimePrompt,
   isOpenCodeDirectUserPromptDelivery,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
@@ -221,7 +225,10 @@ export function isOpenCodePromptDeliveryStalePending(
 export function decideOpenCodeStalePendingResolution(input: {
   record: OpenCodePromptDeliveryLedgerRecord;
   laneKind: 'primary' | 'secondary';
-  observation?: Pick<OpenCodeDeliveryResponseObservation, 'state' | 'assistantMessageId'> | null;
+  observation?:
+    | (Pick<OpenCodeDeliveryResponseObservation, 'state' | 'assistantMessageId'> &
+        Partial<Pick<OpenCodeDeliveryResponseObservation, 'reason' | 'deliveredUserMessageId'>>)
+    | null;
   observedDiagnostics?: readonly string[];
   /** `decideOpenCodePromptDeliveryTurnActivity` over the same observation. */
   turnActivity?: { active: boolean; reason: string } | null;
@@ -239,6 +246,21 @@ export function decideOpenCodeStalePendingResolution(input: {
   const { staleAfterMs, hardCapMs } = input.config;
   const isUserPrompt = isOpenCodeDirectUserPromptDelivery(record);
   const activity = getOpenCodeObservedSessionActivity(input.observedDiagnostics);
+  const promptId = record.lastRuntimePromptMessageId ?? record.runtimePromptMessageId;
+  // V2 supplies an owned native terminal result rather than V1 idle diagnostics.
+  // Require this observation's exact accepted input/assistant, not an old reason
+  // retained on the ledger after a failed read. This grants no visible-reply proof.
+  const nativeTurnCompleted = Boolean(
+    activity !== 'busy' &&
+    record.acceptedAt &&
+    !record.acceptanceUnknown &&
+    promptId &&
+    input.observation?.state === 'pending' &&
+    input.observation.reason === 'session.execution.succeeded' &&
+    input.observation.deliveredUserMessageId === promptId &&
+    input.observation.assistantMessageId?.trim() &&
+    input.observation.assistantMessageId === record.observedAssistantMessageId
+  );
   const sessionActive = activity !== 'idle' || input.turnActivity?.active === true;
   const assistantMessageSeen = Boolean(
     input.observation?.assistantMessageId?.trim() || record.observedAssistantMessageId?.trim()
@@ -259,7 +281,26 @@ export function decideOpenCodeStalePendingResolution(input: {
   const turnCompleted =
     assistantMessageSeen &&
     !turnOutputProgressed &&
-    (hasOpenCodeObservedTurnEndHeuristic(input.observedDiagnostics) || activity === 'idle');
+    (nativeTurnCompleted ||
+      hasOpenCodeObservedTurnEndHeuristic(input.observedDiagnostics) ||
+      activity === 'idle');
+
+  // Preserve fresh V2 completion as a peer-group no-response disposition.
+  // The generic plain-text reason cannot satisfy the stricter group read gate.
+  if (
+    nativeTurnCompleted &&
+    turnCompleted &&
+    isOpenCodeCompletedGroupNonResponse({
+      ...record,
+      responseState: 'responded_plain_text',
+      lastReason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+    })
+  ) {
+    return {
+      action: 'settle_plain_text',
+      reason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+    };
+  }
 
   if (
     input.laneKind === 'primary' &&

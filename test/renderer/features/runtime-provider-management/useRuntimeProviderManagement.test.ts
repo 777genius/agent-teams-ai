@@ -22,6 +22,7 @@ import {
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
+  useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 import {
   getStoredCreateTeamModel,
@@ -232,6 +233,307 @@ describe('useRuntimeProviderManagement', () => {
     state = null;
     actions = null;
   });
+
+  it.each([
+    { operation: 'connect', projectPath: null, authoritative: false },
+    {
+      operation: 'connect',
+      projectPath: '/tmp/TEST-connected-provider-cache',
+      authoritative: false,
+    },
+    {
+      operation: 'connect',
+      projectPath: '/tmp/TEST-connected-provider-cache',
+      authoritative: true,
+    },
+    { operation: 'forget', projectPath: null, authoritative: false },
+    {
+      operation: 'forget',
+      projectPath: '/tmp/TEST-connected-provider-cache',
+      authoritative: false,
+    },
+    { operation: 'forget', projectPath: '/tmp/TEST-connected-provider-cache', authoritative: true },
+  ])(
+    'refreshes shared provider metadata after filtered $operation ($projectPath, full=$authoritative)',
+    async ({ operation, projectPath, authoritative }) => {
+      const disconnected = {
+        ...createOpenAiLocalDirectoryEntry(),
+        state: 'not-connected' as const,
+      };
+      const connected = { ...createOpenAiLocalProvider(), ownership: ['managed'] as const };
+      const connectedEntry = { ...createOpenAiLocalDirectoryEntry(), ...connected };
+      const unrelated = { ...disconnected, providerId: 'unrelated', displayName: 'Unrelated' };
+      const initial = {
+        entries:
+          operation === 'forget'
+            ? [connectedEntry, unrelated]
+            : authoritative
+              ? [disconnected, unrelated]
+              : [unrelated],
+        fetchedAt: '2026-11-04T09:00:00.000Z',
+        authoritative,
+      };
+      publishRuntimeProviderDirectoryCache({ projectPath, ...initial });
+      publishRuntimeProviderDirectoryCache({ projectPath: '/tmp/TEST-other-project', ...initial });
+      let connectedNow = operation === 'forget';
+      let pendingSummary: Promise<RuntimeProviderManagementDirectoryResponse> | null = null;
+      const loadProviderDirectory = vi.fn(
+        async (input: { summary?: boolean; query?: string | null }) =>
+          input.summary && pendingSummary
+            ? pendingSummary
+            : {
+                ...createEmptyDirectoryResponse(input.query),
+                directory: {
+                  ...createEmptyDirectoryResponse(input.query).directory!,
+                  entries:
+                    input.summary || !input.query
+                      ? [connectedNow ? connectedEntry : disconnected, unrelated]
+                      : [connectedNow ? connectedEntry : disconnected],
+                  totalCount: input.summary || !input.query ? 2 : 1,
+                  fetchedAt: '2026-11-04T10:00:00.000Z',
+                },
+              }
+      );
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            loadProviderDirectory,
+            loadSetupForm: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              setupForm: {
+                runtimeId: 'opencode',
+                providerId: 'openai',
+                displayName: 'OpenAI',
+                method: 'api',
+                supported: true,
+                title: 'Connect OpenAI',
+                description: null,
+                submitLabel: 'Connect',
+                disabledReason: null,
+                source: 'curated',
+                secret: null,
+                prompts: [],
+              },
+            })),
+            connectProvider: vi.fn(async () => {
+              connectedNow = true;
+              return { schemaVersion: 1, runtimeId: 'opencode', provider: connected };
+            }),
+            forgetCredential: vi.fn(async () => {
+              connectedNow = false;
+              return { schemaVersion: 1, runtimeId: 'opencode', provider: disconnected };
+            }),
+          },
+        },
+      });
+      let observedConnected = false;
+      function CacheSubscriber(): React.ReactElement {
+        const cache = useRuntimeProviderDirectoryCacheWithGlobalFallback(
+          projectPath ?? '/tmp/TEST-selector-project'
+        );
+        observedConnected =
+          cache?.entries.some(
+            (entry) => entry.providerId === 'openai' && entry.state === 'connected'
+          ) ?? false;
+        return React.createElement('div');
+      }
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(ConfigurableHarness, {
+              enabled: true,
+              loadViewOnEnable: false,
+              projectPath,
+            }),
+            React.createElement(CacheSubscriber)
+          )
+        );
+      });
+      act(() => actions?.setProviderQuery('openai'));
+      await act(async () => {
+        await vi.waitFor(() => expect(state?.providerQuery).toBe('openai'));
+      });
+      const prepareConnection = async () => {
+        if (operation === 'connect') {
+          act(() => actions?.startConnect('openai'));
+          await act(async () => {
+            await Promise.resolve();
+          });
+        }
+      };
+      const mutateCredential = () =>
+        operation === 'connect'
+          ? actions?.submitConnect('openai')
+          : actions?.forgetProvider('openai');
+      await prepareConnection();
+      await act(async () => {
+        await mutateCredential();
+      });
+      expect(observedConnected).toBe(operation === 'connect');
+      expect(loadProviderDirectory).toHaveBeenCalledWith({
+        runtimeId: 'opencode',
+        summary: true,
+        projectPath,
+        query: null,
+        filter: 'all',
+        limit: 100,
+        cursor: null,
+        refresh: true,
+      });
+      expect(
+        getRuntimeProviderDirectoryCacheSnapshot(projectPath)?.entries.map(
+          (entry) => entry.providerId
+        )
+      ).toEqual(['openai', 'unrelated']);
+      expect(getRuntimeProviderDirectoryCacheSnapshot(projectPath)?.authoritative).toBe(
+        authoritative
+      );
+      expect(
+        getRuntimeProviderDirectoryCacheSnapshot('/tmp/TEST-other-project')?.entries.find(
+          (entry) => entry.providerId === 'unrelated'
+        )?.state
+      ).toBe('not-connected');
+      expect(state?.providerQuery).toBe('openai');
+      expect(state?.directoryEntries.map((entry) => entry.providerId)).toEqual(['openai']);
+
+      // A response from the previous project must not overwrite either scope.
+      const connectedSnapshot = getRuntimeProviderDirectoryCacheSnapshot(projectPath);
+      let resolveSummary!: (response: RuntimeProviderManagementDirectoryResponse) => void;
+      pendingSummary = new Promise((resolve) => {
+        resolveSummary = resolve;
+      });
+      await prepareConnection();
+      let submit!: Promise<unknown>;
+      await act(async () => {
+        submit = Promise.resolve(mutateCredential());
+        await Promise.resolve();
+      });
+      await act(async () => {
+        root.render(
+          React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(ConfigurableHarness, {
+              enabled: false,
+              loadViewOnEnable: false,
+              projectPath: '/tmp/TEST-other-project',
+            }),
+            React.createElement(CacheSubscriber)
+          )
+        );
+      });
+      await act(async () => {
+        resolveSummary({
+          ...createEmptyDirectoryResponse(),
+          directory: {
+            ...createEmptyDirectoryResponse().directory!,
+            entries: [disconnected],
+            fetchedAt: '2026-11-04T11:00:00.000Z',
+          },
+        });
+        await submit;
+      });
+      expect(getRuntimeProviderDirectoryCacheSnapshot(projectPath)).toBe(connectedSnapshot);
+      expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/TEST-other-project')?.entries).toEqual(
+        initial.entries
+      );
+    }
+  );
+
+  it.each(['connect', 'forget'])(
+    'skips unsupported shared directory reads after %s without a refresh warning',
+    async (operation) => {
+      const provider = createOpenAiLocalProvider();
+      const unsupported: RuntimeProviderManagementDirectoryResponse = {
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        error: { code: 'unsupported-action', message: 'Unknown command', recoverable: true },
+      };
+      let finishDirectory!: (response: RuntimeProviderManagementDirectoryResponse) => void;
+      const loadProviderDirectory = vi
+        .fn()
+        .mockReturnValueOnce(
+          new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+            finishDirectory = resolve;
+          })
+        )
+        .mockResolvedValue(unsupported);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            loadProviderDirectory,
+            loadSetupForm: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              setupForm: {
+                runtimeId: 'opencode',
+                providerId: 'openai',
+                displayName: 'OpenAI',
+                method: 'api',
+                supported: true,
+                title: 'Connect OpenAI',
+                description: null,
+                submitLabel: 'Connect',
+                disabledReason: null,
+                source: 'curated',
+                secret: null,
+                prompts: [],
+              },
+            })),
+            connectProvider: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              provider,
+            })),
+            forgetCredential: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              provider,
+            })),
+          },
+        },
+      });
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: true,
+            loadViewOnEnable: false,
+            projectPath: '/tmp/TEST-unsupported-directory',
+          })
+        );
+      });
+      await act(async () => {
+        await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledOnce());
+        finishDirectory(unsupported);
+      });
+      expect(state?.directorySupported).toBe(false);
+      const initialDirectoryCalls = loadProviderDirectory.mock.calls.length;
+      if (operation === 'connect') {
+        act(() => actions?.startConnect('openai'));
+        await act(async () => {
+          await Promise.resolve();
+        });
+      }
+      await act(async () => {
+        if (operation === 'connect') await actions?.submitConnect('openai');
+        else await actions?.forgetProvider('openai');
+      });
+      expect(loadProviderDirectory).toHaveBeenCalledTimes(initialDirectoryCalls);
+      expect(state?.warningMessage).toBeNull();
+      expect(state?.successMessage).toBe(
+        operation === 'connect'
+          ? 'OpenAI connected. Model execution was not verified during setup.'
+          : 'Managed credential removed. Provider remains connected through local OpenCode credentials.'
+      );
+    }
+  );
 
   afterEach(async () => {
     // Removing DOM alone leaves effects alive and able to overwrite the next test's state.
@@ -697,9 +999,7 @@ describe('useRuntimeProviderManagement', () => {
         view: createRuntimeView(),
       })
     );
-    const loadProviderDirectory = vi.fn(() =>
-      Promise.resolve(createEmptyDirectoryResponse())
-    );
+    const loadProviderDirectory = vi.fn(() => Promise.resolve(createEmptyDirectoryResponse()));
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
       value: {
@@ -709,12 +1009,14 @@ describe('useRuntimeProviderManagement', () => {
     const root = createRoot(host);
     const render = async (runtimeRevision: string | null) => {
       await act(async () => {
-        root.render(React.createElement(ConfigurableHarness, {
-          enabled: true,
-          loadViewOnEnable: false,
-          directorySummaryOnEnable: true,
-          runtimeRevision,
-        }));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: true,
+            loadViewOnEnable: false,
+            directorySummaryOnEnable: true,
+            runtimeRevision,
+          })
+        );
         await Promise.resolve();
       });
     };
@@ -765,9 +1067,10 @@ describe('useRuntimeProviderManagement', () => {
       (response: RuntimeProviderManagementDirectoryResponse) => void
     > = [];
     const loadProviderDirectory = vi.fn(
-      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
-        pendingDirectoryResolves.push(resolve);
-      })
+      () =>
+        new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          pendingDirectoryResolves.push(resolve);
+        })
     );
     const loadSetupForm = vi.fn(() =>
       Promise.resolve({
@@ -798,15 +1101,17 @@ describe('useRuntimeProviderManagement', () => {
     const root = createRoot(host);
     const render = async (runtimeRevision: string | null) => {
       await act(async () => {
-        root.render(React.createElement(ConfigurableHarness, {
-          enabled: true,
-          directorySummaryOnEnable: true,
-          searchDirectoryOnQueryChange: false,
-          loadViewOnEnable: false,
-          initialProviderId: 'xai',
-          initialProviderAction: 'connect',
-          runtimeRevision,
-        }));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: true,
+            directorySummaryOnEnable: true,
+            searchDirectoryOnQueryChange: false,
+            loadViewOnEnable: false,
+            initialProviderId: 'xai',
+            initialProviderAction: 'connect',
+            runtimeRevision,
+          })
+        );
         await Promise.resolve();
       });
     };
@@ -1042,9 +1347,10 @@ describe('useRuntimeProviderManagement', () => {
     let resolveDirectory: ((response: RuntimeProviderManagementDirectoryResponse) => void) | null =
       null;
     const loadProviderDirectory = vi.fn(
-      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
-        resolveDirectory = resolve;
-      })
+      () =>
+        new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          resolveDirectory = resolve;
+        })
     );
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
@@ -1053,13 +1359,15 @@ describe('useRuntimeProviderManagement', () => {
 
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(ConfigurableHarness, {
-        enabled: true,
-        projectPath: '/tmp/project-a',
-        loadViewOnEnable: false,
-        directorySummaryOnEnable: true,
-        reuseCachedFullDirectory: true,
-      }));
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath: '/tmp/project-a',
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+          reuseCachedFullDirectory: true,
+        })
+      );
       await Promise.resolve();
     });
 
@@ -1142,9 +1450,9 @@ describe('useRuntimeProviderManagement', () => {
       fetchedAt: '2026-07-20T10:00:00.000Z',
       authoritative: false,
     });
-    const loadProviderDirectory = vi.fn(() => new Promise<RuntimeProviderManagementDirectoryResponse>(
-      () => undefined
-    ));
+    const loadProviderDirectory = vi.fn(
+      () => new Promise<RuntimeProviderManagementDirectoryResponse>(() => undefined)
+    );
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
       value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
@@ -1152,19 +1460,23 @@ describe('useRuntimeProviderManagement', () => {
     const root = createRoot(host);
     const renderScope = async (projectPath: string | null) => {
       await act(async () => {
-        root.render(React.createElement(ConfigurableHarness, {
-          enabled: true,
-          projectPath,
-          loadViewOnEnable: false,
-          directorySummaryOnEnable: true,
-          reuseCachedFullDirectory: true,
-        }));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: true,
+            projectPath,
+            loadViewOnEnable: false,
+            directorySummaryOnEnable: true,
+            reuseCachedFullDirectory: true,
+          })
+        );
         await Promise.resolve();
       });
     };
 
     await renderScope('/tmp/project-a');
-    expect(state?.directoryEntries.map((provider) => provider.providerId)).toEqual(['project-a-only']);
+    expect(state?.directoryEntries.map((provider) => provider.providerId)).toEqual([
+      'project-a-only',
+    ]);
     await renderScope('/tmp/project-b');
     expect(state?.directoryEntries).toEqual([]);
     // Let B's scheduled read actually start before transitioning to global:
@@ -1191,13 +1503,12 @@ describe('useRuntimeProviderManagement', () => {
   });
 
   it('recovers directory support when a newer OpenCode runtime replaces an unsupported one', async () => {
-    const pending: Array<
-      (response: RuntimeProviderManagementDirectoryResponse) => void
-    > = [];
+    const pending: Array<(response: RuntimeProviderManagementDirectoryResponse) => void> = [];
     const loadProviderDirectory = vi.fn(
-      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
-        pending.push(resolve);
-      })
+      () =>
+        new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          pending.push(resolve);
+        })
     );
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
@@ -1206,12 +1517,14 @@ describe('useRuntimeProviderManagement', () => {
     const root = createRoot(host);
     const renderRevision = async (runtimeRevision: string) => {
       await act(async () => {
-        root.render(React.createElement(ConfigurableHarness, {
-          enabled: true,
-          runtimeRevision,
-          loadViewOnEnable: false,
-          directorySummaryOnEnable: true,
-        }));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: true,
+            runtimeRevision,
+            loadViewOnEnable: false,
+            directorySummaryOnEnable: true,
+          })
+        );
         await Promise.resolve();
       });
     };
@@ -1268,9 +1581,10 @@ describe('useRuntimeProviderManagement', () => {
       resolve: (response: RuntimeProviderManagementDirectoryResponse) => void;
     }> = [];
     const loadProviderDirectory = vi.fn(
-      () => new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
-        pending.push({ resolve });
-      })
+      () =>
+        new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          pending.push({ resolve });
+        })
     );
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
@@ -1279,13 +1593,15 @@ describe('useRuntimeProviderManagement', () => {
     const root = createRoot(host);
     const renderRevision = async (runtimeRevision: string) => {
       await act(async () => {
-        root.render(React.createElement(ConfigurableHarness, {
-          enabled: true,
-          runtimeRevision,
-          loadViewOnEnable: false,
-          directorySummaryOnEnable: true,
-          reuseCachedFullDirectory: true,
-        }));
+        root.render(
+          React.createElement(ConfigurableHarness, {
+            enabled: true,
+            runtimeRevision,
+            loadViewOnEnable: false,
+            directorySummaryOnEnable: true,
+            reuseCachedFullDirectory: true,
+          })
+        );
         await Promise.resolve();
       });
     };
@@ -1301,7 +1617,9 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => {
       await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(2));
     });
-    const response = (entry: RuntimeProviderDirectoryEntryDto): RuntimeProviderManagementDirectoryResponse => ({
+    const response = (
+      entry: RuntimeProviderDirectoryEntryDto
+    ): RuntimeProviderManagementDirectoryResponse => ({
       schemaVersion: 1,
       runtimeId: 'opencode',
       directory: {
@@ -2627,8 +2945,10 @@ describe('useRuntimeProviderManagement', () => {
     expect(loadView).toHaveBeenCalledTimes(3);
     expect(
       loadProviderDirectory.mock.calls.filter((call) => {
-        const input = (call as unknown[])[0] as { refresh?: boolean } | undefined;
-        return input?.refresh === true;
+        const input = (call as unknown[])[0] as
+          | { refresh?: boolean; summary?: boolean }
+          | undefined;
+        return input?.refresh === true && !input.summary;
       })
     ).toHaveLength(2);
     expect(state?.successMessage).toBeNull();
@@ -2701,11 +3021,12 @@ describe('useRuntimeProviderManagement', () => {
     const loadProviderDirectory = vi
       .fn()
       .mockResolvedValueOnce(directoryResponse)
-      .mockImplementation(
-        () =>
-          new Promise<typeof directoryResponse>((resolve) => {
-            resolveRefreshDirectory = () => resolve(directoryResponse);
-          })
+      .mockImplementation((input: { summary?: boolean }) =>
+        input.summary
+          ? Promise.resolve(directoryResponse)
+          : new Promise<typeof directoryResponse>((resolve) => {
+              resolveRefreshDirectory = () => resolve(directoryResponse);
+            })
       );
     const loadSetupForm = vi.fn(() =>
       Promise.resolve({
@@ -2789,6 +3110,10 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.savingProviderId).toBe('openai');
     expect(state?.activeFormProviderId).toBeNull();
 
+    await vi.waitFor(() => {
+      expect(resolveRefreshView).toBeTypeOf('function');
+      expect(resolveRefreshDirectory).toBeTypeOf('function');
+    });
     await act(async () => {
       resolveRefreshView?.();
       resolveRefreshDirectory?.();
@@ -2798,8 +3123,10 @@ describe('useRuntimeProviderManagement', () => {
     expect(loadView).toHaveBeenCalledTimes(2);
     expect(
       loadProviderDirectory.mock.calls.filter((call) => {
-        const input = (call as unknown[])[0] as { refresh?: boolean } | undefined;
-        return input?.refresh === true;
+        const input = (call as unknown[])[0] as
+          | { refresh?: boolean; summary?: boolean }
+          | undefined;
+        return input?.refresh === true && !input.summary;
       })
     ).toHaveLength(1);
     expect(state?.savingProviderId).toBeNull();

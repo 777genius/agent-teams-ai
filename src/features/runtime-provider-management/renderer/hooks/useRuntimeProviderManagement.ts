@@ -25,6 +25,7 @@ import {
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
 import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
+import { refreshRuntimeProviderConnection } from './refreshRuntimeProviderConnection';
 import {
   getProviderConnectErrorDiagnostics,
   normalizeGitHubDeviceAuthorizationUrl,
@@ -330,7 +331,9 @@ export function useRuntimeProviderManagement(
   }, []);
   const currentProjectPath = normalizeProjectContextPath(options.projectPath);
   const [renderedProjectPath, setRenderedProjectPath] = useState(currentProjectPath);
-  const [settledRuntimeRevision, setSettledRuntimeRevision] = useState(options.runtimeRevision ?? null);
+  const [settledRuntimeRevision, setSettledRuntimeRevision] = useState(
+    options.runtimeRevision ?? null
+  );
   const [renderedRuntimeRevision, setRenderedRuntimeRevision] = useState(settledRuntimeRevision);
   if (options.runtimeRevision && options.runtimeRevision !== settledRuntimeRevision)
     setSettledRuntimeRevision(options.runtimeRevision);
@@ -445,7 +448,13 @@ export function useRuntimeProviderManagement(
     setModelResults({});
     setSuccessMessage(null);
     setWarningMessage(null);
-  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath, options.directorySummaryOnEnable, settledRuntimeRevision]);
+  }, [
+    cancelActiveOAuthBestEffort,
+    cancelModelTestBestEffort,
+    currentProjectPath,
+    options.directorySummaryOnEnable,
+    settledRuntimeRevision,
+  ]);
   const refresh = useCallback(
     async (input: { silent?: boolean } = {}): Promise<boolean> => {
       if (!options.enabled) {
@@ -1335,36 +1344,28 @@ export function useRuntimeProviderManagement(
         setSetupSubmitError(null);
         setSetupSubmitErrorDiagnostics(null);
         const success = formatProviderConnectSuccess(connectedProvider);
-        try {
-          const externalRefreshResult = await options.onProviderChanged?.('connection');
-          if (!isProjectContextCurrent(projectContext)) {
-            return null;
-          }
-          const [viewRefreshed, directoryRefreshed] = await Promise.all([
-            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
-            loadDirectoryPage({ refresh: true, cursor: null }),
-          ]);
-          if (externalRefreshResult === false || !viewRefreshed || !directoryRefreshed) {
-            setError(null);
-            setErrorDiagnostics(null);
-            setDirectoryError(null);
-            setDirectoryErrorDiagnostics(null);
-            setSuccessMessage(null);
-            setWarningMessage(formatPostOperationRefreshWarning(success));
-          } else {
-            setWarningMessage(null);
-            setSuccessMessage(success);
-          }
-        } catch {
-          if (!isProjectContextCurrent(projectContext)) {
-            return null;
-          }
+        const refreshOutcome = await refreshRuntimeProviderConnection({
+          runtimeId: options.runtimeId,
+          projectPath: projectContext.path,
+          runtimeRevision: settledRuntimeRevision,
+          directorySupported,
+          isContextCurrent: () => isProjectContextCurrent(projectContext),
+          isRuntimeRevisionCurrent: () => currentRuntimeRevision.current === settledRuntimeRevision,
+          refreshExternal: () => options.onProviderChanged?.('connection'),
+          refreshView: () => !viewRequestedRef.current || refresh({ silent: true }),
+          refreshDirectory: () => loadDirectoryPage({ refresh: true, cursor: null }),
+        });
+        if (refreshOutcome === 'stale' || !isProjectContextCurrent(projectContext)) return null;
+        if (refreshOutcome === 'warning') {
           setError(null);
           setErrorDiagnostics(null);
           setDirectoryError(null);
           setDirectoryErrorDiagnostics(null);
           setSuccessMessage(null);
           setWarningMessage(formatPostOperationRefreshWarning(success));
+        } else {
+          setWarningMessage(null);
+          setSuccessMessage(success);
         }
         return {
           status: 'connected',
@@ -1400,6 +1401,7 @@ export function useRuntimeProviderManagement(
     [
       apiKeyValue,
       connectionIntent,
+      directorySupported,
       getProjectContextSnapshot,
       isProjectContextCurrent,
       loadDirectoryPage,
@@ -1410,6 +1412,7 @@ export function useRuntimeProviderManagement(
       setupFormErrorDiagnostics,
       setupMetadata,
       selectedAuthOptionId,
+      settledRuntimeRevision,
     ]
   );
 
@@ -1442,39 +1445,28 @@ export function useRuntimeProviderManagement(
           setView((current) => replaceProvider(current, response.provider!));
         }
         const success = formatCredentialRemovedMessage(response.provider ?? null);
-        try {
-          const externalRefreshResult = await options.onProviderChanged?.('credential_removed');
-          if (!isProjectContextCurrent(projectContext)) {
-            return;
-          }
-          const [viewRefreshed, directoryRefreshed] = await Promise.all([
-            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
-            loadDirectoryPage({ refresh: true, cursor: null }),
-          ]);
-          if (externalRefreshResult === false || !viewRefreshed || !directoryRefreshed) {
-            setError(null);
-            setErrorDiagnostics(null);
-            setDirectoryError(null);
-            setDirectoryErrorDiagnostics(null);
-            setSuccessMessage(null);
-            setWarningMessage(formatPostOperationRefreshWarning(success));
-          } else {
-            setWarningMessage(null);
-            setSuccessMessage(success);
-          }
-        } catch {
-          if (!isProjectContextCurrent(projectContext)) {
-            return;
-          }
+        const refreshOutcome = await refreshRuntimeProviderConnection({
+          runtimeId: options.runtimeId,
+          projectPath: projectContext.path,
+          runtimeRevision: settledRuntimeRevision,
+          directorySupported,
+          isContextCurrent: () => isProjectContextCurrent(projectContext),
+          isRuntimeRevisionCurrent: () => currentRuntimeRevision.current === settledRuntimeRevision,
+          refreshExternal: () => options.onProviderChanged?.('credential_removed'),
+          refreshView: () => !viewRequestedRef.current || refresh({ silent: true }),
+          refreshDirectory: () => loadDirectoryPage({ refresh: true, cursor: null }),
+        });
+        if (refreshOutcome === 'stale' || !isProjectContextCurrent(projectContext)) return;
+        if (refreshOutcome === 'warning') {
           setError(null);
           setErrorDiagnostics(null);
           setDirectoryError(null);
           setDirectoryErrorDiagnostics(null);
           setSuccessMessage(null);
           setWarningMessage(formatPostOperationRefreshWarning(success));
-        }
-        if (!isProjectContextCurrent(projectContext)) {
-          return;
+        } else {
+          setWarningMessage(null);
+          setSuccessMessage(success);
         }
       } catch (forgetError) {
         if (!isProjectContextCurrent(projectContext)) {
@@ -1490,7 +1482,15 @@ export function useRuntimeProviderManagement(
         }
       }
     },
-    [getProjectContextSnapshot, isProjectContextCurrent, loadDirectoryPage, options, refresh]
+    [
+      directorySupported,
+      getProjectContextSnapshot,
+      isProjectContextCurrent,
+      loadDirectoryPage,
+      options,
+      refresh,
+      settledRuntimeRevision,
+    ]
   );
 
   const openModelPicker = useCallback(
@@ -2059,8 +2059,7 @@ export function useRuntimeProviderManagement(
   );
 
   return [
-    renderedProjectPath === currentProjectPath &&
-    renderedRuntimeRevision === settledRuntimeRevision
+    renderedProjectPath === currentProjectPath && renderedRuntimeRevision === settledRuntimeRevision
       ? state
       : maskRuntimeProviderStateForScope(state),
     actions,
