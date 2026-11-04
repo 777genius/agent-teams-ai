@@ -3,7 +3,9 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CrossPlatformFileChangeSource } from '../../../../src/main/services/infrastructure/CrossPlatformFileChangeSource';
+import {
+  CrossPlatformFileChangeSource,
+} from '../../../../src/main/services/infrastructure/CrossPlatformFileChangeSource';
 import {
   ChunkedTeamTaskPollSnapshot,
   collectTasksPollSnapshot,
