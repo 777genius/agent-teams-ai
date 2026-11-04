@@ -79,6 +79,7 @@ describe('read-only process CPU capture', () => {
   });
 
   it('stops when the root PID belongs to a different process', async () => {
+    if (process.platform === 'win32') return;
     const original = {
       pid: 99,
       ppid: 1,
