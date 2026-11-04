@@ -133,6 +133,27 @@ describe('chunked fallback team and task snapshots', () => {
     }
   });
 
+  it('discards unfinished partial state after the live scope becomes unavailable', async () => {
+    for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
+    const priority: { current: ReadonlySet<string> | null } = {
+      current: new Set(['team-5']),
+    };
+    const { source, events } = createHarness('tasks', priority);
+    try {
+      source.startPolling();
+      await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+      await source.pollOnce(); // Partial cycle remembers a live team's previous file.
+      await fsp.unlink(path.join(root, 'team-5', 'task.json'));
+      priority.current = null;
+      await source.pollOnce(); // This must replace the partial with a complete rescan.
+      expect(events).toEqual([{ type: 'rename', path: 'team-5/task.json' }]);
+      await source.pollOnce();
+      expect(events).toHaveLength(1);
+    } finally {
+      source.stop();
+    }
+  });
+
   it('detects a newly live team during an unfinished historical cycle', async () => {
     for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
     const priority: { current: ReadonlySet<string> | null } = { current: new Set() };
