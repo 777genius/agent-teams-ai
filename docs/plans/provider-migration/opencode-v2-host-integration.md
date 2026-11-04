@@ -7,13 +7,13 @@
 
 ## 1. Факты и текущие расхождения
 
-| Источник / contract | Проверенный факт | Вывод |
-| --- | --- | --- |
-| `packages/legacy-agent-host/src/composition/runtimeProfile.ts` PR #982 | OpenCode profile принимает только `1.18.35` / `1.19.4`; `OpenCodeMemberProvider` вызывает `createOpenCodeV1DriverFactory` | Host V2 **ещё не подключён**, нельзя переименовать V1 factory |
-| `old-provider-implementations` PR #1 `7573a508`, `v2-driver-config.ts` | `snapshotDriverConfig` допускает только `2.0.0` / `2.0.21` и требует существующий `nativeSessionId`, bound loopback и read-only probe | Не расширять список версий без actual protocol/native qualification; сборка не равна работе модели |
-| Desktop main `runtime.lock.json` `62709419` | Для V2 pinned qualified engines включают `2.0.0`, `2.0.32`, `2.1.4` на разных OS/arch; есть отдельные delivery descriptors | Launcher engine qualification **не переносится автоматически** на standalone Session SPI driver |
-| Desktop `docs/plans/opencode-provider-generation-compatibility-2026-11-01.md` | Новые установки V1; существующий/явно выбранный V2 сохраняется; Cursor/Kiro/SuperGrok OAuth/Copilot OAuth V2 managed routes не адаптированы | Не ставить этим маршрутам `supported`; `xai` API key не путать с `supergrok` OAuth |
-| Официальная [миграция V1→V2](https://dev.opencode.ai/v2/docs/migrate-v1/) | Новые server/plugin API; V1 конфиги читаются частично совместимо; V1 plugins не работают в V2 | Нельзя использовать V1 клиент, plugin injection или V1 resume contract без V2 proof |
+| Источник / contract                                                           | Проверенный факт                                                                                                                            | Вывод                                                                                              |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `packages/legacy-agent-host/src/composition/runtimeProfile.ts` PR #982        | OpenCode profile принимает только `1.18.35` / `1.19.4`; `OpenCodeMemberProvider` вызывает `createOpenCodeV1DriverFactory`                   | Host V2 **ещё не подключён**, нельзя переименовать V1 factory                                      |
+| `old-provider-implementations` PR #1 `7573a508`, `v2-driver-config.ts`        | `snapshotDriverConfig` допускает только `2.0.0` / `2.0.21` и требует существующий `nativeSessionId`, bound loopback и read-only probe       | Не расширять список версий без actual protocol/native qualification; сборка не равна работе модели |
+| Desktop main `runtime.lock.json` `62709419`                                   | Для V2 pinned qualified engines включают `2.0.0`, `2.0.32`, `2.1.4` на разных OS/arch; есть отдельные delivery descriptors                  | Launcher engine qualification **не переносится автоматически** на standalone Session SPI driver    |
+| Desktop `docs/plans/opencode-provider-generation-compatibility-2026-11-01.md` | Новые установки V1; существующий/явно выбранный V2 сохраняется; Cursor/Kiro/SuperGrok OAuth/Copilot OAuth V2 managed routes не адаптированы | Не ставить этим маршрутам `supported`; `xai` API key не путать с `supergrok` OAuth                 |
+| Официальная [миграция V1→V2](https://dev.opencode.ai/v2/docs/migrate-v1/)     | Новые server/plugin API; V1 конфиги читаются частично совместимо; V1 plugins не работают в V2                                               | Нельзя использовать V1 клиент, plugin injection или V1 resume contract без V2 proof                |
 
 Нормативны **выбранные exact source и опубликованные runtime artifacts**,
 а не версия из каталога моделей или успешный login. Официальный
@@ -67,16 +67,16 @@ provider adapter и тестируем контракт, не дублируем
 
 ## 4. E2E contract matrix и stop conditions
 
-| ID | Положительное доказательство | Обязательное отрицательное доказательство |
-| --- | --- | --- |
-| V01 | Native V2 binary/engine/version/digest и выбранный profile | Старый или неподдерживаемый version, подменённый exe, чужой profile → HOLD |
-| V02 | Чтение config, auth namespace, model/provider/agent и MCP policy | Нельзя подменить credentials, V1 plugin не объявляется V2 plugin |
-| V03 | Session submit → native ack → ordered feed → terminal outcome | Lost ACK/UNKNOWN не повторяет submit, late feed не откатывает cursor |
-| V04 | Permission/reply и targeted interrupt/control | Stale/foreign reply не grant; interrupt A не отменяет B |
-| V05 | Cold selected resume с настоящим native history prefix | Несовместимый V1 checkpoint или missing V2 history → explicit HOLD |
+| ID  | Положительное доказательство                                               | Обязательное отрицательное доказательство                                      |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| V01 | Native V2 binary/engine/version/digest и выбранный profile                 | Старый или неподдерживаемый version, подменённый exe, чужой profile → HOLD     |
+| V02 | Чтение config, auth namespace, model/provider/agent и MCP policy           | Нельзя подменить credentials, V1 plugin не объявляется V2 plugin               |
+| V03 | Session submit → native ack → ordered feed → terminal outcome              | Lost ACK/UNKNOWN не повторяет submit, late feed не откатывает cursor           |
+| V04 | Permission/reply и targeted interrupt/control                              | Stale/foreign reply не grant; interrupt A не отменяет B                        |
+| V05 | Cold selected resume с настоящим native history prefix                     | Несовместимый V1 checkpoint или missing V2 history → explicit HOLD             |
 | V06 | Existing CreateTeamDialog/LaunchTeamDialog, Tasks, DM, cross-Team и review | Нет дополнительного writer, двойного recipient effect, replay под другим owner |
-| V07 | Stop/close/cleanup всех captured child resources, backed process ledger | Shared/foreign child не убивается, UNKNOWN custody не считается clean |
-| V08 | Selected macOS/Windows/Linux native + packed and CodeQL, actual receipts | Не заявлять платформы, для которых нет proof; no release/default switch |
+| V07 | Stop/close/cleanup всех captured child resources, backed process ledger    | Shared/foreign child не убивается, UNKNOWN custody не считается clean          |
+| V08 | Selected macOS/Windows/Linux native + packed and CodeQL, actual receipts   | Не заявлять платформы, для которых нет proof; no release/default switch        |
 
 ## 5. Ревью решения до кода
 
