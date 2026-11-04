@@ -26,7 +26,7 @@ function parseRows(output) {
     rows.push({
       pid: Number(pid),
       ppid: Number(ppid),
-      cpu,
+      psReportedCpuPercent: cpu,
       rssMiB: +(Number(rss) / 1024).toFixed(2),
       started: start.replace(/\s+/g, ' ').trim(),
       name: path.basename(command),
@@ -102,9 +102,18 @@ async function capture({ pid, duration, intervalMs }, tableReader = readTable) {
   const durationMs = duration * 1000;
   const sampleCount = Math.max(1, Math.ceil(durationMs / intervalMs));
   let rootIdentity = null;
+  let stopReason = null;
   for (let i = 0; i <= sampleCount; i += 1) {
     const at = new Date().toISOString();
-    const rows = tableReader();
+    let rows;
+    try {
+      rows = tableReader();
+    } catch (error) {
+      if (!frames.length) throw error;
+      // Preserve collected evidence rather than losing it to a later ps error.
+      stopReason = 'ps_read_failed';
+      break;
+    }
     const root = rows.find((row) => row.pid === pid);
     // A root may be reparented while still running. Compare only its start
     // time and process name, never its parent PID.
@@ -121,7 +130,7 @@ async function capture({ pid, duration, intervalMs }, tableReader = readTable) {
     frames.push({
       at,
       processCount: processes.length,
-      totalCpuPercent: +processes.reduce((sum, proc) => sum + proc.cpu, 0).toFixed(1),
+      totalPsReportedCpuPercent: +processes.reduce((sum, proc) => sum + proc.psReportedCpuPercent, 0).toFixed(1),
       totalRssMiB: +processes.reduce((sum, proc) => sum + proc.rssMiB, 0).toFixed(1),
       processes,
     });
@@ -143,8 +152,12 @@ async function capture({ pid, duration, intervalMs }, tableReader = readTable) {
     pid,
     duration,
     intervalMs,
+    stopReason,
+    cpuPercentSemantics: process.platform === 'linux'
+      ? 'Linux ps %CPU is a process-lifetime average, not interval utilization'
+      : 'macOS ps %CPU is a system-reported estimate, not interval utilization',
     caveats: [
-      'ps CPU% may be smoothed; this is not a JavaScript CPU stack profile',
+      'ps CPU% can miss short spikes; this is not a JavaScript CPU stack profile',
       'Detached OpenCode/Bun hosts outside the PID tree are excluded',
       'No command-line arguments, team files, or environment variables collected',
       'Verify the selected PID before launch: the first sample cannot authenticate it',
