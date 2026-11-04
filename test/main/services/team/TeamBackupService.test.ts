@@ -383,7 +383,7 @@ describe('TeamBackupService', () => {
       );
     }
     const feature = createMemberWorkSyncFeature({
-        isManagedByThisProfile: async () => true,
+      isManagedByThisProfile: async () => true,
       teamsBasePath: hoisted.teamsBase,
       sourceWriteAdmission: policy,
       lifecycleIdentity: backup.workSyncIdentity,
