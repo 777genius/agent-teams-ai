@@ -723,6 +723,8 @@ describe('shutdown MCP transport authority', () => {
       const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
         shutdownPromise: null,
         stopAdmittingOpenCodeStartupCleanup: vi.fn(),
+        nativeLegacyMaintenanceRequired: () => Promise.resolve(false),
+        shutdownDesktopAgentBackend: () => Promise.resolve(),
         openCodeLifecycleBridge: bridge,
         runtimeProviderManagementFeature: null,
         externalAgentConnection: { ...connection, closeAdmission },
@@ -747,6 +749,7 @@ describe('shutdown MCP transport authority', () => {
         teamRuntimeRecoveryFeature: null,
         teamProvisioningService: {
           setRuntimeRecoveryFailureObserver: vi.fn(),
+          hasTrackedRuntimeObligations: () => false,
           stopAllTeams: () => (stopAllTeamsRun = stopAllTeams()),
         },
         cleanupOpenCodeHostsForLifecycle: async () => {
