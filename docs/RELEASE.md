@@ -29,6 +29,82 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.18.5 (Prepared draft)
+
+Target branch: `main`. Build the application draft only after runtime `0.0.156` is verified and published, and `runtime.lock.json` matches its manifest.
+
+<!-- RELEASE_BODY_START v2.18.5 -->
+
+OpenCode setup now shows download progress and clearer recovery actions. Installed OpenCode 1.x stays available, while 2.x support downloads separately.
+
+### What's New
+
+- See a cost warning before OpenRouter tests retry once on a paid model.
+- Use Provider Settings in a larger dialog, with OpenCode V2 download progress and an optional reinstall action.
+- Find free models through provider badges and clearer model compatibility labels.
+- See which group-chat recipient has an unconfirmed message delivery.
+
+### Fixes
+
+- Show Teams card placeholders and cached providers sooner; preserve project selection and clear stale models after switching.
+- Fix stalled OpenCode V2 startup on macOS and setup retries after interrupted downloads.
+- Bound slow catalog and message-delivery checks, and keep background cleanup within the current app profile.
+- Notify the team lead when tasks stall and show progress while deleting teams.
+- Preserve Codex conversations and detect Claude credentials from your login shell.
+- Include Electron and bundled dependency security fixes.
+
+### macOS installation
+
+macOS 2.18.5 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.5 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/Agent.Teams.AI-2.18.5-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/Agent.Teams.AI-2.18.5-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/Agent.Teams.AI.Setup.2.18.5.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/Agent.Teams.AI.Setup.2.18.5-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/Agent.Teams.AI-2.18.5.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/agent-teams-ai_2.18.5_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/agent-teams-ai-2.18.5.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.5/agent-teams-ai-2.18.5.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.18.5 -->
+
 ## v2.18.4 (Prepared draft)
 
 Target branch: `main`. Existing `v2.18.0`, `v2.18.1`, `v2.18.2`, and `v2.18.3` tags remain unchanged. This draft supersedes earlier unpublished drafts with recovery for OpenCode message delivery after temporary failures.

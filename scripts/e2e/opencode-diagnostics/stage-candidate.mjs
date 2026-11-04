@@ -10,7 +10,7 @@ import { extractArchive, publishRuntimePayload } from '../../lib/runtime-payload
 
 function candidateBunVersion(value) {
   const version = value === undefined ? '1.3.11' : value;
-  assert(['1.3.11', '1.4.3'].includes(version), 'Unsupported candidate Bun version');
+  assert(['1.3.11', '1.4.3', '1.4.4'].includes(version), 'Unsupported candidate Bun version');
   return version;
 }
 

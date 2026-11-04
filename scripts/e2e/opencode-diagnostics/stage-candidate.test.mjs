@@ -159,7 +159,7 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     assert.equal(verified.bunVersion, '1.3.11');
     assert.equal(verified.entrySha256, hash(js));
     assert.equal(verified.bunSha256, hash(bun));
-    for (const bunVersion of [null, '', '1.4.4', false, ['1.4.3']])
+    for (const bunVersion of [null, '', '1.4.5', false, ['1.4.3']])
       await assert.rejects(verifyCandidatePayload(source, { ...expected, bunVersion }));
     await assert.rejects(verifyCandidatePayload(source, { ...expected, bunVersion: '1.4.3' }));
     delivery.bunVersion = '1.4.3';
@@ -198,6 +198,9 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     delivery.bunVersion = '1.4.4';
     await writeFile(path.join(source, 'opencode-delivery.json'), JSON.stringify(delivery));
     await assert.rejects(verifyCandidatePayload(source, nativeExpected));
+    await assert.rejects(verifyCandidatePayload(source, expected));
+    const macVerified = await verifyCandidatePayload(source, { ...expected, bunVersion: '1.4.4' });
+    assert.equal(macVerified.bunVersion, '1.4.4');
     delivery.bunVersion = '1.3.11';
     await writeFile(path.join(source, 'opencode-delivery.json'), JSON.stringify(delivery));
     await publishRuntimePayload(
