@@ -163,7 +163,7 @@ describe('chunked fallback team and task snapshots', () => {
     await snapshots.snapshot(true, new Set());
     failNext = true;
     await expect(snapshots.snapshot(true, new Set())).rejects.toThrow('temporary failure');
-    await snapshots.snapshot(true, null);
+    await snapshots.snapshot(true, new Set());
     expect(requested.at(-2)).toEqual(['team-2', 'team-3']);
     expect(requested.at(-1)).toEqual(['team-2', 'team-3']);
   });
