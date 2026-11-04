@@ -155,7 +155,7 @@ describe('chunked fallback team and task snapshots', () => {
     }
   });
 
-  it('does not retain files when a priority team's directory disappears', async () => {
+  it("does not retain files when a priority team's directory disappears", async () => {
     for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
     const { source, events } = createHarness('teams', { current: new Set(['team-5']) });
     try {
