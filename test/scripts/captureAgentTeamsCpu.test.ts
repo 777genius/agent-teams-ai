@@ -101,7 +101,8 @@ describe('read-only process CPU capture', () => {
 
   it('captures a real test-owned child without terminating it', async () => {
     if (process.platform === 'win32') return;
-    const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 10000)'], {
+    const sentinel = 'cpu-capture-argument-sentinel';
+    const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 10000)', sentinel], {
       stdio: 'ignore',
     });
     try {
@@ -118,6 +119,7 @@ describe('read-only process CPU capture', () => {
       expect(data.frames).toHaveLength(2);
       expect(data.frames.every((frame) => frame.processes.length === 1)).toBe(true);
       expect(data.frames.every((frame) => frame.processes[0]?.pid === pid)).toBe(true);
+      expect(JSON.stringify(data)).not.toContain(sentinel);
       expect(child.exitCode).toBeNull();
     } finally {
       // Only this test-owned child is stopped, never an app/agent process.
