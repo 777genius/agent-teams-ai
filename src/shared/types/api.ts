@@ -434,6 +434,9 @@ export interface ContextInfo {
 export interface HttpServerStatus {
   running: boolean;
   port: number;
+  /** Browser URL. Credentials are supplied separately through trusted desktop IPC. */
+  accessUrl?: string;
+  accessKey?: string;
 }
 
 /**

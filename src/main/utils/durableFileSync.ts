@@ -25,7 +25,7 @@ export async function syncFile(filePath: string, strict: boolean): Promise<void>
 const UNSUPPORTED_DIRECTORY_SYNC_CODES = new Set(['EINVAL', 'ENOSYS', 'ENOTSUP', 'EOPNOTSUPP']);
 
 function isUnsupportedDirectorySyncError(error: unknown): boolean {
-  const code = (error as NodeJS.ErrnoException).code;
+  const code = (error as NodeJS.ErrnoException | null | undefined)?.code;
   if (code && UNSUPPORTED_DIRECTORY_SYNC_CODES.has(code)) return true;
   // Windows does not provide a portable directory handle that can be fsynced.
   // Keep only the platform-specific open/sync failures best-effort there; real
@@ -48,7 +48,14 @@ export async function syncDirectory(dirPath: string, strict: boolean): Promise<v
     try {
       await fd?.close();
     } catch (error) {
-      firstError ??= error;
+      // An unsupported sync must not mask an unexpected close/storage failure in strict mode.
+      if (
+        firstError == null ||
+        (strict &&
+          isUnsupportedDirectorySyncError(firstError) &&
+          !isUnsupportedDirectorySyncError(error))
+      )
+        firstError = error;
     }
   }
   if (strict && firstError && !isUnsupportedDirectorySyncError(firstError)) {

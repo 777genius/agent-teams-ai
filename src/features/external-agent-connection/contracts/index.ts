@@ -39,9 +39,27 @@ export interface ConnectionInfoV1 {
   recovery: string | null;
 }
 
+/** Token-free native registration. Only the MCP child reads the protected config. */
+export interface ExternalAgentCopyRegistration {
+  name: string;
+  command: string;
+  args: string[];
+  env?: { ELECTRON_RUN_AS_NODE: '1' };
+}
+export interface ExternalAgentCopyRequest {
+  expectedContext: AppConnectionContext;
+  expectedProfileFingerprint: string;
+}
+export interface ExternalAgentCopyHandoff {
+  connection: ConnectionInfoV1;
+  registration: ExternalAgentCopyRegistration;
+}
+
 export interface ExternalAgentConnectionApi {
   getConnectionInfo(): Promise<ConnectionInfoV1>;
   retryConnection(): Promise<ConnectionInfoV1>;
+  /** Desktop-only authenticated stdio registration, containing no bearer. */
+  prepareCopyHandoff?(request: ExternalAgentCopyRequest): Promise<ExternalAgentCopyHandoff>;
   /** Native desktop execution; deliberately unavailable in browser/server mode. */
   directRun?: ExternalAgentRunApi;
 }
@@ -82,6 +100,7 @@ export const EXTERNAL_AGENT_RUN_CHANNELS = {
 
 export const EXTERNAL_AGENT_CONNECTION_CHANNELS = {
   getInfo: 'external-agent-connection:getInfo',
+  prepareCopy: 'external-agent-connection:prepareCopy',
   retry: 'external-agent-connection:retry',
 } as const;
 
@@ -89,3 +108,4 @@ export const EXTERNAL_AGENT_RENDERER_MARKER = '__AGENT_TEAMS_CONNECTION_CONTEXT_
 export const BOUND_CONTROL_CONTEXT_HEADER = 'x-agent-teams-app-context';
 export const BOUND_CONTROL_URL_ENV = 'AGENT_TEAMS_BOUND_CONTROL_URL';
 export const BOUND_CONTROL_CONTEXT_ENV = 'AGENT_TEAMS_BOUND_CONTEXT_JSON';
+export const BOUND_CONTROL_AUTH_TOKEN_ENV = 'AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN';

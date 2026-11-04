@@ -35,7 +35,26 @@ const data = {
   project: path.join(root, 'test-project'),
   artifact: await packagedArtifact(executable),
 };
-const evidence = { passed: false, issue: 684, artifact: data.artifact, steps: [], requests: [] };
+const rendererReadiness = {
+  attempts: 0,
+  stage: 'not-started',
+  ownedCount: null,
+  listenerCount: null,
+  listenerOwnersVerified: false,
+  httpStatus: null,
+  targetCount: null,
+  pageCount: null,
+  failureCounts: {},
+  lastFailure: null,
+};
+const evidence = {
+  passed: false,
+  issue: 684,
+  artifact: data.artifact,
+  steps: [],
+  requests: [],
+  rendererReadiness,
+};
 const token = `issue684-${randomBytes(18).toString('hex')}`;
 const model = 'issue684-compatible-model';
 let app;
@@ -215,16 +234,40 @@ class Cdp {
 }
 
 async function rendererTarget() {
-  const owned = ownedTree(processes(), appIdentity);
+  rendererReadiness.attempts++;
+  rendererReadiness.stage = 'process-snapshot';
+  rendererReadiness.ownedCount = null;
+  rendererReadiness.listenerCount = null;
+  rendererReadiness.listenerOwnersVerified = false;
+  rendererReadiness.httpStatus = null;
+  rendererReadiness.targetCount = null;
+  rendererReadiness.pageCount = null;
+  const snapshot = processes();
+  rendererReadiness.stage = 'owned-tree';
+  const owned = ownedTree(snapshot, appIdentity);
   lastOwned = owned;
+  rendererReadiness.ownedCount = owned.length;
+  rendererReadiness.stage = 'listener-snapshot';
   const ports = listeners();
+  rendererReadiness.listenerCount = ports.length;
+  rendererReadiness.stage = 'listener-ownership';
   assert(
     ports.length && ports.every((pid) => owned.some((entry) => entry.pid === pid)),
     'CDP port owner is not the test app'
   );
-  const targets = await (
-    await fetch('http://127.0.0.1:9222/json/list', { signal: AbortSignal.timeout(5000) })
-  ).json();
+  rendererReadiness.listenerOwnersVerified = true;
+  rendererReadiness.stage = 'target-fetch';
+  const response = await fetch('http://127.0.0.1:9222/json/list', {
+    signal: AbortSignal.timeout(5000),
+  });
+  rendererReadiness.httpStatus = response.status;
+  rendererReadiness.stage = 'target-json';
+  const targets = await response.json();
+  rendererReadiness.targetCount = Array.isArray(targets) ? targets.length : null;
+  rendererReadiness.pageCount = Array.isArray(targets)
+    ? targets.filter((entry) => entry?.type === 'page').length
+    : null;
+  rendererReadiness.stage = 'target-selection';
   return packagedTarget(targets, data.artifact.renderer, true, path.win32);
 }
 
@@ -309,8 +352,31 @@ try {
     if (app.exitCode !== null) throw new Error('Packaged app exited during startup');
     try {
       target = await rendererTarget();
+      rendererReadiness.stage = 'ready';
       break;
-    } catch {
+    } catch (error) {
+      const stage = rendererReadiness.stage;
+      rendererReadiness.failureCounts[stage] = (rendererReadiness.failureCounts[stage] ?? 0) + 1;
+      rendererReadiness.lastFailure = {
+        stage,
+        code: [
+          'ERR_ASSERTION',
+          'ENOENT',
+          'EACCES',
+          'EPERM',
+          'ECONNREFUSED',
+          'ETIMEDOUT',
+          'ABORT_ERR',
+        ].includes(error?.code)
+          ? error.code
+          : 'other',
+        kind: ['AssertionError', 'TypeError', 'SyntaxError', 'TimeoutError', 'Error'].includes(
+          error?.name
+        )
+          ? error.name
+          : 'other',
+        childExitStatus: Number.isInteger(error?.status) ? error.status : null,
+      };
       await pause(1000);
     }
   }

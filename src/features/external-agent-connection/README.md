@@ -36,7 +36,19 @@ read-only prompt immediately below the request, with its copy action alongside
 the label. Four compact real-world team templates follow through the shared
 roster presentation. Fresh connection info is read for each clipboard write;
 management instructions expose only wired create/edit/trash capabilities.
-Copy and opening the popup never mutate or launch a team.
+Copy and opening the popup never mutate or launch a team. Copy prepares a private,
+reference-only stdio handoff through a separate IPC/authenticated HTTP operation;
+public connection discovery never exposes credentials or authority selectors. The
+MCP bootstrap prunes its own inherited environment before loading the controller,
+uses only the management tool profile and resolves the existing private API
+reference itself. The external agent must not read configuration or credential
+files. A local executor is required, including when using the desktop's HTTP UI.
+Successful copies survive dialog closure. Repeated copies reuse the same config;
+clipboard failure does not revoke another copied prompt. Context/endpoint changes
+retire only this service's exact owned config; any context epoch change requires
+copying and registering again. Same-origin token rotation follows the stable API
+reference. Removing a config does not revoke a running child: API authority
+retirement and the existing context admission fence enforce revocation.
 
 The desktop prompt popup also offers native Codex and Claude Code one-shot runs.
 Its optional `directRun` contract is absent in HTTP/browser mode: provider process

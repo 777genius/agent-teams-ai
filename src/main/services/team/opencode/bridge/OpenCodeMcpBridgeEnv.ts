@@ -13,6 +13,7 @@ const MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY = 'agent-teams-app-instance';
 export const OPENCODE_APP_PROFILE_SCOPE_ENV = 'CLAUDE_TEAM_APP_PROFILE_SCOPE';
 export const OPENCODE_APP_PROFILE_FRAGMENT_KEY = 'agent-teams-app-profile';
 const HTTP_MCP_URL_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL';
+const HTTP_MCP_HEADERS_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON';
 const HTTP_MCP_URL_HASH_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH';
 
 const OWNED_CHILD_BINDING_KEYS = [
@@ -111,7 +112,11 @@ export function applyOpenCodeBoundControlEnvironment(
   desktopEnvironment: Readonly<Record<string, string>>
 ): void {
   const binding: OpenCodeMcpBridgeEnv = {};
-  for (const key of ['AGENT_TEAMS_BOUND_CONTROL_URL', 'AGENT_TEAMS_BOUND_CONTEXT_JSON'] as const) {
+  for (const key of [
+    'AGENT_TEAMS_BOUND_CONTROL_URL',
+    'AGENT_TEAMS_BOUND_CONTEXT_JSON',
+    'AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN',
+  ] as const) {
     const value = desktopEnvironment[key];
     if (value === undefined) {
       delete env[key];
@@ -182,6 +187,9 @@ export function retainOpenCodeHttpMcpBridgeEnv(
   }
 
   targetEnv[HTTP_MCP_URL_ENV] = url;
+  if (sourceEnv[HTTP_MCP_HEADERS_ENV])
+    targetEnv[HTTP_MCP_HEADERS_ENV] = sourceEnv[HTTP_MCP_HEADERS_ENV];
+  else delete targetEnv[HTTP_MCP_HEADERS_ENV];
   const urlHash = sourceEnv[HTTP_MCP_URL_HASH_ENV]?.trim();
   if (urlHash) {
     targetEnv[HTTP_MCP_URL_HASH_ENV] = urlHash;
@@ -245,7 +253,7 @@ export function clearOpenCodeLocalMcpLaunchEnv(env: OpenCodeMcpBridgeEnv): void 
 
 /** A projection owned by the existing Host transport, with identity-checked revocation. */
 export function createOpenCodeMcpAppContext(
-  getCurrentHandle: () => { url: string; port: number; urlHash: string } | null
+  getCurrentHandle: () => { url: string; port: number; urlHash: string; authToken: string } | null
 ): {
   bind: (env: OpenCodeMcpBridgeEnv, httpEnabled: boolean) => () => void;
   read: (claudeRoot: string) => OpenCodeMcpBridgeEnv | null;
@@ -280,11 +288,23 @@ export function createOpenCodeMcpAppContext(
       }
       const handle = getCurrentHandle();
       if (httpEnabled && handle) {
-        if (handle.url !== `http://127.0.0.1:${handle.port}/mcp`) {
+        const handleUrl = new URL(handle.url);
+        if (
+          handleUrl.origin !== `http://127.0.0.1:${handle.port}` ||
+          handleUrl.pathname !== '/mcp' ||
+          handleUrl.search ||
+          handleUrl.hash ||
+          !/^\S{32,512}$/.test(handle.authToken) ||
+          handleUrl.username ||
+          handleUrl.password
+        ) {
           throw new Error('Invalid current Host MCP transport');
         }
         result[HTTP_MCP_URL_ENV] = buildOpenCodeAppScopedMcpUrl(handle.url, instance, profile);
         result[HTTP_MCP_URL_HASH_ENV] = handle.urlHash;
+        result[HTTP_MCP_HEADERS_ENV] = JSON.stringify({
+          Authorization: `Bearer ${handle.authToken}`,
+        });
       }
       return result;
     },

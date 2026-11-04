@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
+import { API_AUTH_REFERENCE_ENV } from '@features/local-http-auth/contracts';
 import {
   AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   ANTHROPIC_CONNECTION_MODES,
@@ -38,6 +39,7 @@ const DIRECT_TMUX_RESTART_ENV_KEYS = [
   'PATH',
   'CLAUDE_CONFIG_DIR',
   'CLAUDE_TEAM_CONTROL_URL',
+  API_AUTH_REFERENCE_ENV,
   'CLAUDE_TEAM_RUNTIME_SETTINGS_PATH',
   'CLAUDE_CODE_BOOTSTRAP_RUN_ID',
   'CLAUDE_CODE_DISABLE_1M_CONTEXT',

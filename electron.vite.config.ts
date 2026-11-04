@@ -1,3 +1,4 @@
+import { publicationHelperBuildPlugin } from './scripts/build/publicationHelper'
 import { fileViewerRenderers } from '@file-viewer/vite-plugin';
 import { defineConfig } from 'electron-vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
@@ -14,6 +15,7 @@ import { INHERITED_HARNESS_ENV_BANNER } from './src/main/utils/inheritedHarnessE
 import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
 import { pinDocumentPreviewWorkers, sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
 import { resolveSentryBuildIdentity } from './scripts/build/sentryBuildIdentity'
+import { controllerExternalPaths } from './scripts/electron-builder/controller-external-paths.mts'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -168,9 +170,9 @@ function createTerminalPlatformSdkAliases(): Record<string, string> {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   main: {
-    plugins: [
+    plugins: [publicationHelperBuildPlugin(__dirname),
       nativeModuleStub(),
       ...createSentryPlugins('main'),
     ],
@@ -218,6 +220,7 @@ export default defineConfig({
           // Use .cjs extension since package.json has "type": "module".
           format: 'cjs',
           entryFileNames: '[name].cjs',
+          paths: controllerExternalPaths(command, __dirname),
           // Also drops the env inherited from a parent Claude Code session (see inheritedHarnessEnv.ts).
           // Set UV_THREADPOOL_SIZE before any module code runs.
           // Must be in the banner because ESM→CJS hoists imports above top-level code.
@@ -325,4 +328,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))

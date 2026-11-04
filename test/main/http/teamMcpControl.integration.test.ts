@@ -1,6 +1,9 @@
 // @vitest-environment node
 
+import { randomBytes, randomUUID } from 'node:crypto';
+
 import { BoundControlContext } from '@features/external-agent-connection/main';
+import { apiProfileScope, publishApiAuthority } from '@features/local-http-auth/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { registerTeamRoutes } from '@main/http/teams';
 import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
@@ -12,7 +15,7 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { vi } from 'vitest';
@@ -71,7 +74,10 @@ async function fetchJson(
   body: unknown;
   status: number;
 }> {
-  const response = await fetch(`${baseUrl}${pathname}`);
+  const token = fixtureControlTokens.get(baseUrl);
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   return {
     status: response.status,
     body: await response.json(),
@@ -137,7 +143,24 @@ function responseHeadersFromInject(
   return responseHeaders;
 }
 
-function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () => void {
+const fixtureControlTokens = new Map<string, string>();
+
+async function installControlApiFetchMock(
+  app: FastifyInstance,
+  baseUrl: string,
+  root: string
+): Promise<() => void> {
+  const token = randomBytes(32).toString('base64url');
+  await publishApiAuthority(root, {
+    schemaVersion: 1,
+    service: 'api',
+    profileScope: apiProfileScope(root),
+    instanceId: randomUUID(),
+    generation: randomUUID(),
+    baseUrl,
+    token,
+  });
+  fixtureControlTokens.set(baseUrl, token);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     const request = input instanceof Request ? input : null;
@@ -155,6 +178,11 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
     if (init?.headers) {
       new Headers(init.headers).forEach((value, key) => headers.set(key, value));
     }
+    if (headers.get('authorization') !== `Bearer ${token}`) {
+      return new Response(JSON.stringify({ error: 'Published fixture credential required' }), {
+        status: 401,
+      });
+    }
     const injected = await app.inject({
       method: toInjectHttpMethod(init?.method ?? request?.method),
       url: `${url.pathname}${url.search}`,
@@ -171,6 +199,7 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
   };
   return () => {
     globalThis.fetch = originalFetch;
+    fixtureControlTokens.delete(baseUrl);
   };
 }
 
@@ -398,7 +427,7 @@ describe('MCP team tools over the local REST control API', () => {
   // Catches management writes bypassing immutable context/revision, runtime flags being lost,
   // roster removal resurrecting old identities, or draft trash accidentally deleting artifacts.
   it('manages providerless drafts through MCP, preserving saved runtime fields and reversible trash', async () => {
-    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-'));
+    const root = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-team-management-')));
     setClaudeBasePathOverride(root);
     const app = Fastify();
     const { services, teamDataService, createTeamCalls } = createServices(root);
@@ -406,7 +435,7 @@ describe('MCP team tools over the local REST control API', () => {
     const expectedContext = context.snapshot();
     registerTeamRoutes(app, services);
     const controlUrl = 'http://team-management.test';
-    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    const restoreFetch = await installControlApiFetchMock(app, controlUrl, root);
     const teamName = 'managed-draft';
     const base = { claudeDir: root, controlUrl, teamName, expectedContext };
     const get = async () =>
@@ -1630,7 +1659,7 @@ describe('MCP team tools over the local REST control API', () => {
   });
 
   it('creates, gets, launches, and lists a team through MCP and REST end to end', async () => {
-    const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-'));
+    const claudeRoot = await realpath(await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-')));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-e2e-'));
     setClaudeBasePathOverride(claudeRoot);
 
@@ -1639,7 +1668,7 @@ describe('MCP team tools over the local REST control API', () => {
     registerTeamRoutes(app, services);
 
     const controlUrl = 'http://agent-teams-control.test';
-    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    const restoreFetch = await installControlApiFetchMock(app, controlUrl, claudeRoot);
     try {
       const created = parseJsonToolResult(
         await getTool('team_create').execute({
@@ -1840,7 +1869,7 @@ describe('MCP team tools over the local REST control API', () => {
   });
 
   it('returns active launch status without waiting when MCP team_launch re-enters provisioning', async () => {
-    const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-active-'));
+    const claudeRoot = await realpath(await mkdtemp(path.join(tmpdir(), 'agent-teams-control-active-')));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-active-'));
     const teamName = 'mcp-active-launch';
     setClaudeBasePathOverride(claudeRoot);
@@ -1865,7 +1894,7 @@ describe('MCP team tools over the local REST control API', () => {
     registerTeamRoutes(app, services);
 
     const controlUrl = 'http://agent-teams-control-active.test';
-    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    const restoreFetch = await installControlApiFetchMock(app, controlUrl, claudeRoot);
     try {
       const teamDir = path.join(claudeRoot, 'teams', teamName);
       await mkdir(teamDir, { recursive: true });

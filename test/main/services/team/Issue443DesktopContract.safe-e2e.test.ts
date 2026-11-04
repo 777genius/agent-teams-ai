@@ -71,7 +71,7 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => Promise.resolve({}),
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: () => ({
+  preparePassiveProviderStatusCliEnv: async () => ({
     env: fakeExecutableEnv(),
     connectionIssues: {},
     providerArgs: [],

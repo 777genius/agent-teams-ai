@@ -1,0 +1,8 @@
+{
+  "extends": "./e2e-base.json",
+  "include": [
+    "../../scripts/e2e/local-http-auth/*.mts",
+    "../../src/types/**/*.d.ts"
+  ],
+  "exclude": ["../../node_modules", "../../dist", "../../dist-electron"]
+}

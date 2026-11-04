@@ -126,3 +126,35 @@ and runs that scope's checks, so a code PR runs full CI. Failed or unclassified
 planning fails `Full qualification`. Base and unknown edits run full CI. Verify
 title/body edits while a full run is pending and after it succeeds, plus
 base/unknown edits, on a disposable test PR using `gh`.
+
+## Owner-reviewed canonical snapshots for fork qualification
+
+The fork PR matrix remains restricted. After reviewing an exact fork PR head, the
+owner may normally push that **same commit** to the canonical repository under
+`test/packaged-pr-<PR-number>-<full-head-SHA>`. This creates a dedicated qualification
+branch, preserves the original PR and contributor ancestry, and creates no replacement
+PR. Never force-push, push to main, change required checks, or represent a skipped fork
+matrix as successful packaging evidence.
+
+Only canonical `push` events authenticated to owner `777genius` qualify this path.
+The classifier requires the canonical repository and owner, actor, triggering actor
+and sender, a nondeleted/nonforced push, and agreement between the full SHA in the
+TEST ref, event ref/after/head commit, `GITHUB_SHA`, and checked-out local `HEAD`.
+Invalid push evidence fails classification instead of falling back to FULL. A valid
+snapshot explicitly selects FULL; the existing all-five-platform final gate,
+staging, native/smoke checks and unsigned `--publish never` packaging remain mandatory.
+No `pull_request_target` execution or secret exposure to fork jobs is introduced.
+Existing staging credentials are available only to the authenticated canonical job.
+
+Before each snapshot push, recheck the exact reviewed commit's workflows: this
+branch must trigger only this packaging workflow. Current other push workflows are
+limited to main or named integration branches, no workflow has a `workflow_run`
+trigger, and release/publication/deployment paths require separate dispatch, release
+or main events. Do not create tags or dispatch release/deployment workflows.
+
+Qualification evidence must identify the canonical run, successful classification,
+all five successful jobs and final gate, and its exact `head_sha`. It qualifies the
+original fork PR only while its current head is that identical SHA; a later commit
+requires new evidence. Original fork-PR skipped packaging checks remain skipped;
+they are not rewritten or treated as successful. This snapshot path establishes
+packaging evidence, not an automatic merge or release authorization.

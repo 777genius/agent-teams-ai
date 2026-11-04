@@ -9,13 +9,21 @@
 
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import { ProfileRequestDrain, registerProfileParticipant } from '@features/local-http-auth/main';
 import { type HttpServices, registerHttpRoutes } from '@main/http';
-import { broadcastEvent } from '@main/http/events';
+import { broadcastEvent, closeEventStreams } from '@main/http/events';
 import { createLogger } from '@shared/utils/logger';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+
+import {
+  buildHttpAccessUrl,
+  createHttpAuthToken,
+  exactHttpOrigins,
+  registerHttpApiAuth,
+} from './HttpServerAuth';
 
 const logger = createLogger('Service:HttpServer');
 
@@ -53,6 +61,23 @@ export class HttpServer {
   private port: number = 3456;
   private running: boolean = false;
   private startingPromise: Promise<number> | null = null;
+  private startingRevision: number | null = null;
+  private closingPromise: Promise<void> | null = null;
+  private physicalClosing: Promise<void> | null = null;
+  private stopRevision = 0;
+  private authToken: string | null = null;
+  private host: string = '127.0.0.1';
+  private publicOrigin: string | null = null;
+  private drain: ProfileRequestDrain | null = null;
+  private unregisterProfile: (() => void) | null = null;
+  private lastStart: Parameters<HttpServer['start']> | null = null;
+
+  constructor(
+    private readonly options: {
+      getServices?: () => HttpServices;
+      afterRestart?: () => Promise<void>;
+    } = {}
+  ) {}
 
   /**
    * Start the HTTP server.
@@ -70,14 +95,39 @@ export class HttpServer {
     host: string = '127.0.0.1'
   ): Promise<number> {
     if (this.startingPromise) {
-      return this.startingPromise;
+      const revision = this.startingRevision;
+      const port = await this.startingPromise;
+      if (revision !== this.stopRevision) throw new Error('HTTP startup cancelled by stop');
+      return port;
     }
 
-    this.startingPromise = this.doStart(services, sshModeSwitchCallback, preferredPort, host);
+    const startRevision = this.stopRevision;
+    this.startingRevision = startRevision;
+    this.lastStart = [services, sshModeSwitchCallback, preferredPort, host];
+    this.startingPromise = (async () => {
+      await this.closingPromise;
+      await this.physicalClosing;
+      if (startRevision !== this.stopRevision) throw new Error('HTTP startup cancelled by stop');
+      if (this.app && this.drain?.paused) await this.closeCurrentApp();
+      return this.doStart(services, sshModeSwitchCallback, preferredPort, host);
+    })();
     try {
-      return await this.startingPromise;
+      const port = await this.startingPromise;
+      if (startRevision !== this.stopRevision) throw new Error('HTTP startup cancelled by stop');
+      return port;
+    } catch (error) {
+      const failed = this.app;
+      this.authToken = null;
+      this.app = null;
+      this.running = false;
+      if (failed) {
+        closeEventStreams(failed);
+        await failed.close().catch(() => undefined);
+      }
+      throw error;
     } finally {
       this.startingPromise = null;
+      this.startingRevision = null;
     }
   }
 
@@ -87,36 +137,39 @@ export class HttpServer {
     preferredPort: number,
     host: string
   ): Promise<number> {
+    if (this.running) return this.port;
+    this.authToken = createHttpAuthToken();
+    this.host = host;
     this.app = Fastify({ logger: false });
-
-    // Register CORS
-    const corsOrigin = process.env.CORS_ORIGIN;
-    if (corsOrigin === '*') {
-      // Standalone/Docker mode: allow all origins (Docker network isolation replaces CORS)
-      await this.app.register(cors, { origin: true, credentials: true });
-    } else if (corsOrigin) {
-      // Custom origin(s) from env
-      const origins = corsOrigin.split(',').map((o) => o.trim());
-      await this.app.register(cors, { origin: origins, credentials: true });
-    } else {
-      // Default: allow all localhost origins
-      // eslint-disable-next-line security/detect-unsafe-regex -- anchored, no backtracking risk
-      const localhostPattern = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
-      await this.app.register(cors, {
-        origin: (origin, cb) => {
-          if (!origin) {
-            cb(null, true);
-            return;
-          }
-          if (localhostPattern.test(origin)) {
-            cb(null, true);
-            return;
-          }
-          cb(new Error('Not allowed by CORS'), false);
-        },
-        credentials: true,
-      });
-    }
+    this.drain = new ProfileRequestDrain(this.app);
+    const publicOrigins = exactHttpOrigins(process.env.AGENT_TEAMS_HTTP_PUBLIC_ORIGIN);
+    if (publicOrigins.length > 1)
+      throw new Error('AGENT_TEAMS_HTTP_PUBLIC_ORIGIN requires one exact origin');
+    this.publicOrigin = publicOrigins[0] ?? null;
+    const origins = [...exactHttpOrigins(process.env.CORS_ORIGIN), ...publicOrigins];
+    registerHttpApiAuth(this.app, () => this.authToken, {
+      origins,
+      authorities: () => {
+        const hosts =
+          host === '0.0.0.0' || host === '::'
+            ? ['localhost', '127.0.0.1', '[::1]']
+            : [host.includes(':') ? `[${host}]` : host];
+        return [
+          ...hosts.map((name) => `${name}:${this.port}`),
+          ...publicOrigins.map((origin) => new URL(origin).host),
+        ];
+      },
+    });
+    await this.app.register(cors, {
+      origin: (origin, callback) =>
+        callback(
+          null,
+          !origin || origins.includes(origin) || origin === buildHttpAccessUrl(host, this.port)
+        ),
+      credentials: false,
+      allowedHeaders: ['content-type', 'authorization', 'x-agent-teams-app-context'],
+    });
+    this.app.get('/api/auth/ready', () => ({ ready: true, service: 'api' }));
 
     // Register static file serving and SPA fallback when renderer output exists.
     // In dev mode this requires a prior `pnpm build`; in production/standalone it's always present.
@@ -153,10 +206,64 @@ export class HttpServer {
       const tryPort = preferredPort + attempt;
       try {
         await this.app.listen({ host, port: tryPort });
-        this.port = tryPort;
+        const address = this.app.server.address();
+        this.port = address && typeof address !== 'string' ? address.port : tryPort;
         this.running = true;
-        logger.info(`HTTP server started on http://${host}:${tryPort}`);
-        return tryPort;
+        const admissionApp = this.app,
+          admissionDrain = this.drain;
+        this.unregisterProfile = registerProfileParticipant({
+          closeAdmission: () => {
+            admissionDrain.paused = true;
+            closeEventStreams(admissionApp);
+          },
+          pause: async (request) => {
+            const revision = this.stopRevision;
+            const drain = this.drain!,
+              app = this.app,
+              authToken = this.authToken;
+            drain.paused = true;
+            if (this.app) closeEventStreams(this.app);
+            await drain.wait(request);
+            const resume = async () => {
+              await drain.wait();
+              if (revision !== this.stopRevision)
+                throw new Error('HTTP server was stopped during profile change');
+              const previous = this.lastStart;
+              await this.closeCurrentApp();
+              if (revision !== this.stopRevision)
+                throw new Error('HTTP server was stopped during profile change');
+              if (!previous) return;
+              const current = this.options.getServices?.() ?? previous[0];
+              await this.start(current, previous[1], previous[2], previous[3]);
+              if (revision !== this.stopRevision)
+                throw new Error('HTTP server was stopped during profile change');
+              try {
+                await this.options.afterRestart?.();
+              } catch (error) {
+                await this.stop();
+                throw error;
+              }
+            };
+            resume.unchanged = async (assertUnchanged: () => void) => {
+              await drain.wait();
+              if (
+                revision !== this.stopRevision ||
+                this.app !== app ||
+                this.drain !== drain ||
+                !this.running ||
+                this.authToken !== authToken
+              )
+                throw new Error('HTTP server changed during profile rejection');
+              // Recheck authority after the async response drain, immediately before reopening.
+              assertUnchanged();
+              // No root/service mutation occurred: retain the physical listener and credential epoch.
+              drain.paused = false;
+            };
+            return resume;
+          },
+        });
+        logger.info(`HTTP server started on http://${host}:${this.port}`);
+        return this.port;
       } catch (err: unknown) {
         const error = err as NodeJS.ErrnoException;
         if (error.code === 'EADDRINUSE') {
@@ -173,13 +280,40 @@ export class HttpServer {
   /**
    * Stop the HTTP server gracefully.
    */
-  async stop(): Promise<void> {
-    if (this.app && this.running) {
-      await this.app.close();
-      this.running = false;
-      this.app = null;
-      logger.info('HTTP server stopped');
-    }
+  stop(): Promise<void> {
+    ++this.stopRevision;
+    if (this.closingPromise) return this.closingPromise;
+    const starting = this.startingPromise;
+    this.closingPromise = (async () => {
+      await starting?.catch(() => undefined);
+      await this.closeCurrentApp();
+    })().finally(() => {
+      this.closingPromise = null;
+    });
+    return this.closingPromise;
+  }
+
+  private closeCurrentApp(): Promise<void> {
+    if (this.physicalClosing) return this.physicalClosing;
+    const app = this.app,
+      drain = this.drain;
+    if (drain) drain.paused = true;
+    this.unregisterProfile?.();
+    this.unregisterProfile = null;
+    this.authToken = null;
+    this.running = false;
+    this.app = null;
+    this.physicalClosing = (async () => {
+      if (app) {
+        closeEventStreams(app);
+        await drain?.wait();
+        await app.close();
+        logger.info('HTTP server stopped');
+      }
+    })().finally(() => {
+      this.physicalClosing = null;
+    });
+    return this.physicalClosing;
   }
 
   /**
@@ -200,6 +334,16 @@ export class HttpServer {
    * Check if the server is currently running.
    */
   isRunning(): boolean {
-    return this.running;
+    return this.running && this.drain?.paused !== true;
+  }
+
+  getAuthToken(): string | null {
+    return this.running ? this.authToken : null;
+  }
+
+  getAccessUrl(): string | null {
+    return this.running && this.authToken
+      ? (this.publicOrigin ?? buildHttpAccessUrl(this.host, this.port))
+      : null;
   }
 }

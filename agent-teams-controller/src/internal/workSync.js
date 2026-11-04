@@ -1,4 +1,5 @@
 const desktopBinding = require('./desktopControlBinding.js');
+const controlApiAuth = require('./controlApiAuth.cts');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -9,7 +10,6 @@ const { withFileLockSync } = require('./fileLock.js');
 const DEFAULT_WAIT_TIMEOUT_MS = 10000;
 const MIN_WAIT_TIMEOUT_MS = 1000;
 const MAX_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
-const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
 
 function normalizeTimeoutMs(rawValue) {
   const numeric =
@@ -19,75 +19,38 @@ function normalizeTimeoutMs(rawValue) {
   return Math.min(MAX_WAIT_TIMEOUT_MS, Math.max(MIN_WAIT_TIMEOUT_MS, numeric));
 }
 
-function readControlApiState(context) {
-  const filePath = path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE);
-  try {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    return typeof parsed?.baseUrl === 'string' && parsed.baseUrl.trim()
-      ? parsed.baseUrl.trim()
-      : '';
-  } catch {
-    return '';
-  }
-}
-
-function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
-  const explicit =
-    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
-    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
-    '';
-  return [
-    `explicit=${explicit ? 'set' : 'missing'}`,
-    `stateFile=${
-      stateFileUrl ? 'set' : `missing:${path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE)}`
-    }`,
-    `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
-  ].join(', ');
-}
-
 function resolveControlBaseUrls(context, flags = {}) {
   const boundUrls = desktopBinding.boundControlBaseUrls(context, flags);
-  if (boundUrls) return boundUrls;
-  const explicit =
-    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
-    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
-    '';
-  const stateFileUrl = readControlApiState(context);
-  const envUrl =
-    typeof process.env.CLAUDE_TEAM_CONTROL_URL === 'string'
-      ? process.env.CLAUDE_TEAM_CONTROL_URL.trim()
-      : '';
-  const candidates = [...new Set([explicit, stateFileUrl, envUrl].filter(Boolean))];
-  if (candidates.length === 0) {
-    throw new Error(
-      `Team control API is unavailable. Start the desktop app team runtime first so it can validate member work sync reports. Lookup: ${describeControlApiLookup(
-        context,
-        flags,
-        stateFileUrl,
-        envUrl
-      )}.`
-    );
-  }
-  return candidates;
+  return boundUrls || controlApiAuth.resolveControlAuthorities(context, flags);
 }
 
-async function requestJson(baseUrl, pathname, options = {}) {
+async function requestJson(target, pathname, options = {}) {
+  const { baseUrl, authToken } = target;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), normalizeTimeoutMs(options.timeoutMs));
   try {
     const boundOptions = desktopBinding.boundRequestOptions(baseUrl);
-    const response = await fetch(`${baseUrl}${pathname}`, {
-      ...boundOptions,
-      method: options.method || 'GET',
-      headers: {
-        accept: 'application/json',
-        ...boundOptions.headers,
-        ...(options.body ? { 'content-type': 'application/json' } : {}),
-      },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-      signal: controller.signal,
-    });
+    const response =
+      typeof target.read === 'function'
+        ? await controlApiAuth.authenticatedControlFetch(target, pathname, {
+            method: options.method || 'GET',
+            body: options.body,
+            signal: controller.signal,
+          })
+        : await fetch(`${baseUrl}${pathname}`, {
+            ...boundOptions,
+            redirect: 'error',
+            credentials: 'omit',
+            method: options.method || 'GET',
+            headers: {
+              accept: 'application/json',
+              ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
+              ...boundOptions.headers,
+              ...(options.body ? { 'content-type': 'application/json' } : {}),
+            },
+            ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+            signal: controller.signal,
+          });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
       const detail =
@@ -114,7 +77,10 @@ async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
     try {
       return await requestJson(baseUrl, pathname, options);
     } catch (error) {
-      if (error && error.controlApiStatus && !isRetryableControlApiStatus(error.controlApiStatus)) {
+      if (
+        (options.method || 'GET').toUpperCase() !== 'GET' ||
+        (error && error.controlApiStatus && !isRetryableControlApiStatus(error.controlApiStatus))
+      ) {
         throw error;
       }
       lastError = error;
@@ -333,14 +299,9 @@ async function memberWorkSyncReport(context, flags = {}) {
     return appendPendingReportIntent(context, body, 'control_api_unavailable');
   }
 
-  try {
-    return await requestJsonWithFallback(baseUrls, pathname, options);
-  } catch (error) {
-    if (desktopBinding.isDesktopBound() || (error && error.controlApiStatus)) {
-      throw error;
-    }
-    return appendPendingReportIntent(context, body, 'control_api_unavailable');
-  }
+  // Once HTTP delivery starts, a transport error can mean the validator already
+  // committed. Do not queue a second mutation for later replay.
+  return requestJsonWithFallback(baseUrls, pathname, options);
 }
 
 module.exports = {

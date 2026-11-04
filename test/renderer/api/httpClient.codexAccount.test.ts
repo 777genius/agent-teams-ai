@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { HttpAPIClient } from '../../../src/renderer/api/httpClient';
@@ -21,7 +22,10 @@ describe('HttpAPIClient Codex account browser fallback', () => {
 
   it('rejects Codex account actions with a consistent browser-mode error and returns a safe noop subscription', async () => {
     vi.stubGlobal('EventSource', MockEventSource);
-    const client = new HttpAPIClient('http://localhost:9999');
+    const client = new HttpAPIClient(
+      'http://localhost:9999',
+      fixtureBrowserAccess('http://localhost:9999')
+    );
     const expectedMessage = 'Codex account bridge is unavailable in browser mode';
 
     await expect(client.getCodexAccountSnapshot()).rejects.toThrow(expectedMessage);

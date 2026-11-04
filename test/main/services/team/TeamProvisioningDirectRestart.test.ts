@@ -24,6 +24,25 @@ describe('TeamProvisioningDirectRestart', () => {
     expect(assignments).toContain("CLAUDE_CODE_DISABLE_1M_CONTEXT='1'");
   });
 
+  it('carries the managed control reference through restart without raw app credentials', () => {
+    const assignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        CLAUDE_TEAM_CONTROL_URL: 'http://127.0.0.1:43000',
+        CLAUDE_TEAM_CONTROL_AUTH_REF:
+          '/TEST/private-root/local-http-auth/api-00000000-0000-0000-0000-000000000000.ref.json',
+        CLAUDE_TEAM_CONTROL_AUTH_TOKEN: 'TEST-raw-control-token-must-not-enter-shell-argv',
+        AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'TEST-bound-token-must-not-enter-shell-argv',
+      },
+      'anthropic'
+    );
+    expect(assignments).toContain('CLAUDE_TEAM_CONTROL_AUTH_REF=');
+    expect(assignments).toContain(
+      '/TEST/private-root/local-http-auth/api-00000000-0000-0000-0000-000000000000.ref.json'
+    );
+    expect(assignments).not.toContain('TEST-raw-control-token');
+    expect(assignments).not.toContain('TEST-bound-token');
+  });
+
   it('quotes shell values without losing apostrophes or empty strings', () => {
     expect(shellQuote('')).toBe("''");
     expect(shellQuote('/tmp/demo path')).toBe("'/tmp/demo path'");

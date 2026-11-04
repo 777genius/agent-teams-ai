@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   clearOpenCodeRuntimeBinaryResolverCache,
+  getOpenCodeRuntimePlatformCandidates,
   OpenCodeRuntimeInstallerService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService';
@@ -180,6 +181,8 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
 
   // Allow a cold .NET compiler on Windows CI, the 30s version probe, and status/launch checks.
   it('selects the native OpenCode executable behind an nvm cmd shim', async () => {
+    const [candidate] = await getOpenCodeRuntimePlatformCandidates();
+    if (!candidate) throw new Error('TEST runner has no admitted native OpenCode package');
     const versionDir = path.join(process.env.NVM_HOME!, 'v20.20.0');
     const shimPath = path.join(versionDir, 'opencode.cmd');
     const nativeBinaryPath = path.join(
@@ -187,7 +190,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       'node_modules',
       'opencode-ai',
       'node_modules',
-      `opencode-windows-${process.arch}`,
+      candidate.packageName,
       'bin',
       'opencode.exe'
     );

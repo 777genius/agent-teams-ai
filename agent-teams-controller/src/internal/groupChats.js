@@ -12,7 +12,7 @@ async function request(context, action, flags = {}, timeoutMs = 135000) {
   if (action === 'create' && from !== flags.from) {
     throw new Error('from must be the exact configured teammate name.');
   }
-  const baseUrl = urls[0];
+  const { baseUrl } = urls[0];
   const bound = desktopBinding.boundRequestOptions(baseUrl);
   const response = await fetch(
     `${baseUrl}/api/teams/${encodeURIComponent(context.teamName)}/group-chats/${action}`,

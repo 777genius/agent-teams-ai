@@ -1,3 +1,4 @@
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import fs from 'fs';
 import http from 'http';
 import os from 'os';
@@ -104,7 +105,7 @@ describe('agent-teams-mcp tools', () => {
   }
 
   function makeClaudeDir() {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-mcp-'));
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-mcp-')));
     tempDirs.push(dir);
     return dir;
   }
@@ -137,13 +138,20 @@ describe('agent-teams-mcp tools', () => {
   }
 
   async function startControlServer(
+    claudeDir: string,
     handler: (request: {
       method?: string;
       url?: string;
       body?: unknown;
     }) => Promise<{ statusCode?: number; body: unknown }> | { statusCode?: number; body: unknown }
   ) {
+    const authToken = randomBytes(32).toString('base64url');
     const server = http.createServer(async (req, res) => {
+      if (req.headers.authorization !== `Bearer ${authToken}`) {
+        res.writeHead(401, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Test control API requires its published credential' }));
+        return;
+      }
       const chunks: Buffer[] = [];
       req.on('data', (chunk) => chunks.push(chunk));
       req.on('end', async () => {
@@ -168,8 +176,41 @@ describe('agent-teams-mcp tools', () => {
       throw new Error('Failed to bind control server');
     }
 
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const directory = path.join(claudeDir, 'local-http-auth');
+    fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const authority = {
+      schemaVersion: 1,
+      service: 'api',
+      profileScope: createHash('sha256').update(claudeDir).digest('hex'),
+      instanceId: randomUUID(),
+      generation: randomUUID(),
+      baseUrl,
+      token: authToken,
+    };
+    const descriptorPath = path.join(
+      directory,
+      `api-${authority.instanceId}-${authority.generation}.json`
+    );
+    fs.writeFileSync(descriptorPath, JSON.stringify(authority), { mode: 0o600 });
+    const reference = {
+      schemaVersion: authority.schemaVersion,
+      service: authority.service,
+      profileScope: authority.profileScope,
+      instanceId: authority.instanceId,
+      generation: authority.generation,
+      descriptorPath,
+    };
+    fs.writeFileSync(
+      path.join(directory, `api-${authority.instanceId}.ref.json`),
+      JSON.stringify(reference),
+      { mode: 0o600 }
+    );
+    fs.writeFileSync(path.join(claudeDir, 'team-control-api.json'), JSON.stringify(reference), {
+      mode: 0o600,
+    });
     return {
-      baseUrl: `http://127.0.0.1:${address.port}`,
+      baseUrl,
       close: async () =>
         await new Promise<void>((resolve, reject) =>
           server.close((error) => (error ? reject(error) : resolve()))
@@ -382,7 +423,7 @@ describe('agent-teams-mcp tools', () => {
       members: [{ name: 'lead', role: 'team-lead' }],
     });
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
 
       if (method === 'POST' && url === '/api/teams/alpha/launch') {
@@ -482,7 +523,7 @@ describe('agent-teams-mcp tools', () => {
   it('lists, gets, and creates teams through the local control API', async () => {
     const claudeDir = makeClaudeDir();
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
 
       if (method === 'GET' && url === '/api/teams') {
@@ -636,7 +677,7 @@ describe('agent-teams-mcp tools', () => {
       ],
     });
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       return { body: { ok: true, state: 'accepted' } };
     });
@@ -710,7 +751,7 @@ describe('agent-teams-mcp tools', () => {
       ],
     });
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/alice/refresh') {
         return {
@@ -811,9 +852,8 @@ describe('agent-teams-mcp tools', () => {
     writeTeamConfig(claudeDir, 'alpha', {
       members: [{ name: 'lead', role: 'team-lead' }],
     });
-    const statePath = path.join(claudeDir, 'team-control-api.json');
 
-    const server = await startControlServer(async ({ method, url }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url }) => {
       if (method === 'POST' && url === '/api/teams/alpha/launch') {
         return { body: { runId: 'run-state-file' } };
       }
@@ -833,11 +873,6 @@ describe('agent-teams-mcp tools', () => {
     });
 
     try {
-      fs.writeFileSync(
-        statePath,
-        JSON.stringify({ baseUrl: server.baseUrl, updatedAt: new Date().toISOString() }, null, 2)
-      );
-
       const launched = parseJsonToolResult(
         await getTool('team_launch').execute({
           teamName: 'alpha',
@@ -861,10 +896,9 @@ describe('agent-teams-mcp tools', () => {
         { name: 'alice', role: 'developer' },
       ],
     });
-    const statePath = path.join(claudeDir, 'team-control-api.json');
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
 
-    const server = await startControlServer(async ({ method, url, body }) => {
+    const server = await startControlServer(claudeDir, async ({ method, url, body }) => {
       calls.push({ method, url, body });
       if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/alice/refresh') {
         return {
@@ -894,11 +928,6 @@ describe('agent-teams-mcp tools', () => {
     });
 
     try {
-      fs.writeFileSync(
-        statePath,
-        JSON.stringify({ baseUrl: server.baseUrl, updatedAt: new Date().toISOString() }, null, 2)
-      );
-
       const status = parseJsonToolResult(
         await getTool('member_work_sync_status').execute({
           claudeDir,
@@ -939,7 +968,7 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
-  it('falls back from a stale explicit work-sync control URL to the published state file', async () => {
+  it('rejects a stale explicit work-sync URL before using the published authority', async () => {
     const claudeDir = makeClaudeDir();
     writeTeamConfig(claudeDir, 'alpha', {
       members: [
@@ -947,15 +976,14 @@ describe('agent-teams-mcp tools', () => {
         { name: 'alice', role: 'developer' },
       ],
     });
-    const statePath = path.join(claudeDir, 'team-control-api.json');
     const staleCalls: Array<{ method?: string; url?: string }> = [];
     const freshCalls: Array<{ method?: string; url?: string; body?: unknown }> = [];
 
-    const staleServer = await startControlServer(async ({ method, url }) => {
+    const staleServer = await startControlServer(claudeDir, async ({ method, url }) => {
       staleCalls.push({ method, url });
       return { statusCode: 404, body: { error: 'stale control server' } };
     });
-    const freshServer = await startControlServer(async ({ method, url, body }) => {
+    const freshServer = await startControlServer(claudeDir, async ({ method, url, body }) => {
       freshCalls.push({ method, url, body });
       if (method === 'POST' && url === '/api/teams/alpha/member-work-sync/alice/refresh') {
         return {
@@ -985,22 +1013,15 @@ describe('agent-teams-mcp tools', () => {
     });
 
     try {
-      fs.writeFileSync(
-        statePath,
-        JSON.stringify({ baseUrl: freshServer.baseUrl, updatedAt: new Date().toISOString() })
-      );
-
-      const status = parseJsonToolResult(
-        await getTool('member_work_sync_status').execute({
+      await expect(
+        getTool('member_work_sync_status').execute({
           claudeDir,
           teamName: 'alpha',
           controlUrl: staleServer.baseUrl,
           from: 'alice',
         })
-      );
-      expect(status.agenda.fingerprint).toBe('agenda:v1:fresh-state-file');
-
-      const report = parseJsonToolResult(
+      ).rejects.toThrow('does not match the private credential authority');
+      const pending = parseJsonToolResult(
         await getTool('member_work_sync_report').execute({
           claudeDir,
           teamName: 'alpha',
@@ -1012,11 +1033,59 @@ describe('agent-teams-mcp tools', () => {
           taskIds: ['task-1'],
         })
       );
-      expect(report.accepted).toBe(true);
-      expect(staleCalls.map((call) => call.url)).toEqual([
-        '/api/teams/alpha/member-work-sync/alice/refresh',
-        '/api/teams/alpha/member-work-sync/report',
+      expect(pending).toMatchObject({
+        accepted: false,
+        pendingValidation: true,
+        code: 'pending_validation',
+      });
+      const pendingReports = JSON.parse(
+        fs.readFileSync(
+          path.join(claudeDir, 'teams', 'alpha', '.member-work-sync', 'pending-reports.json'),
+          'utf8'
+        )
+      );
+      expect(Object.values(pendingReports.intents)).toEqual([
+        expect.objectContaining({
+          id: pending.intentId,
+          teamName: 'alpha',
+          memberName: 'alice',
+          reason: 'control_api_unavailable',
+          status: 'pending',
+          request: {
+            teamName: 'alpha',
+            memberName: 'alice',
+            state: 'still_working',
+            agendaFingerprint: 'agenda:v1:fresh-state-file',
+            reportToken: 'wrs:v1.fresh.state.token',
+            taskIds: ['task-1'],
+            source: 'mcp',
+          },
+        }),
       ]);
+      expect(staleCalls).toEqual([]);
+      expect(freshCalls).toEqual([]);
+      const status = parseJsonToolResult(
+        await getTool('member_work_sync_status').execute({
+          claudeDir,
+          teamName: 'alpha',
+          from: 'alice',
+        })
+      );
+      expect(status.agenda.fingerprint).toBe('agenda:v1:fresh-state-file');
+
+      const report = parseJsonToolResult(
+        await getTool('member_work_sync_report').execute({
+          claudeDir,
+          teamName: 'alpha',
+          memberName: 'alice',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:fresh-state-file',
+          reportToken: 'wrs:v1.fresh.state.token',
+          taskIds: ['task-1'],
+        })
+      );
+      expect(report.accepted).toBe(true);
+      expect(staleCalls).toEqual([]);
       expect(freshCalls.map((call) => call.url)).toEqual([
         '/api/teams/alpha/member-work-sync/alice/refresh',
         '/api/teams/alpha/member-work-sync/report',

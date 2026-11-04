@@ -26,7 +26,7 @@ vi.mock('@main/utils/shellEnv', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: (...args: unknown[]) =>
+  preparePassiveProviderStatusCliEnv: async (...args: unknown[]) =>
     buildPassiveProviderStatusCliEnvMock(...args),
   buildProviderAwareCliEnv: (...args: unknown[]) => buildProviderAwareCliEnvMock(...args),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [],

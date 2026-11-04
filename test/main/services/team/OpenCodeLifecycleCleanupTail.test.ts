@@ -92,23 +92,24 @@ describe('OpenCode lifecycle cleanup admission', () => {
     await runOpenCodeLifecycleHostCleanup({ ...shutdown, cleanupRegistry });
 
     expect(cleanupRegistry).not.toHaveBeenCalled();
-    expect(fixture.kill).toHaveBeenCalledExactlyOnceWith(101);
+    expect(fixture.kill).not.toHaveBeenCalled();
+    expect(fixture.alive.has(101)).toBe(true);
     expect(fixture.alive.has(202)).toBe(true);
-    expect(fixture.order).toEqual(['kill:101', 'release']);
-    expect(shutdown.ports.logSweepResult).toHaveBeenCalledWith(
-      '[OpenCode] opencode_managed_hosts_killed sweep=shutdown fallback count=1'
+    expect(fixture.order).toEqual(['release']);
+    expect(shutdown.ports.logSweepResult).not.toHaveBeenCalled();
+    expect(shutdown.ports.logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('retained native custody is required')
     );
   });
 
-  it('retains cleanup diagnostics and releases the shared runtime after a failed fallback', async () => {
+  it('retains missing-custody diagnostics and still releases the shared runtime', async () => {
     const shutdown = input('shutdown');
-    fixture.kill.mockRejectedValue(new Error('TEST cleanup refused'));
     await runOpenCodeLifecycleHostCleanup({ ...shutdown, cleanupRegistry: vi.fn() });
 
     expect(fixture.alive).toEqual(new Set([101, 202]));
     expect(shutdown.releaseSharedRuntime).toHaveBeenCalledOnce();
     expect(shutdown.ports.logWarning).toHaveBeenCalledWith(
-      expect.stringContaining('TEST cleanup refused')
+      expect.stringContaining('retained native custody is required')
     );
   });
 

@@ -289,7 +289,7 @@ export function redactOpenCodeLaunchEvidence(evidence: unknown): unknown {
 
   const output: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(evidence)) {
-    if (/token|secret|password|api[_-]?key|authorization/i.test(key)) {
+    if (/token|secret|password|api[_-]?key|authorization|headers/i.test(key)) {
       output[key] = '[redacted]';
     } else {
       output[key] = redactOpenCodeLaunchEvidence(value);

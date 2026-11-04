@@ -6,7 +6,7 @@ import { defineConfig } from 'tsup';
 import { createMcpDeploymentManifest } from './deploymentManifest';
 
 export default defineConfig((overrideOptions) => ({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/copyHandoff.ts'],
   format: ['esm'],
   target: 'node24',
   platform: 'node',
