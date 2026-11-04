@@ -17,10 +17,7 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import {
-  observeRuntimeProviderDirectoryRevision,
-  publishRuntimeProviderDirectoryCache,
-} from '../runtimeProviderDirectoryCache';
+import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -28,6 +25,7 @@ import {
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
 import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
+import { refreshRuntimeProviderConnection } from './refreshRuntimeProviderConnection';
 import {
   getProviderConnectErrorDiagnostics,
   normalizeGitHubDeviceAuthorizationUrl,
@@ -333,7 +331,9 @@ export function useRuntimeProviderManagement(
   }, []);
   const currentProjectPath = normalizeProjectContextPath(options.projectPath);
   const [renderedProjectPath, setRenderedProjectPath] = useState(currentProjectPath);
-  const [settledRuntimeRevision, setSettledRuntimeRevision] = useState(options.runtimeRevision ?? null);
+  const [settledRuntimeRevision, setSettledRuntimeRevision] = useState(
+    options.runtimeRevision ?? null
+  );
   const [renderedRuntimeRevision, setRenderedRuntimeRevision] = useState(settledRuntimeRevision);
   if (options.runtimeRevision && options.runtimeRevision !== settledRuntimeRevision)
     setSettledRuntimeRevision(options.runtimeRevision);
@@ -448,7 +448,13 @@ export function useRuntimeProviderManagement(
     setModelResults({});
     setSuccessMessage(null);
     setWarningMessage(null);
-  }, [cancelActiveOAuthBestEffort, cancelModelTestBestEffort, currentProjectPath, options.directorySummaryOnEnable, settledRuntimeRevision]);
+  }, [
+    cancelActiveOAuthBestEffort,
+    cancelModelTestBestEffort,
+    currentProjectPath,
+    options.directorySummaryOnEnable,
+    settledRuntimeRevision,
+  ]);
   const refresh = useCallback(
     async (input: { silent?: boolean } = {}): Promise<boolean> => {
       if (!options.enabled) {
@@ -1338,81 +1344,27 @@ export function useRuntimeProviderManagement(
         setSetupSubmitError(null);
         setSetupSubmitErrorDiagnostics(null);
         const success = formatProviderConnectSuccess(connectedProvider);
-        // A deep-linked directory can be filtered to this provider. Refresh the
-        // shared metadata separately so selectors update without treating that
-        // filtered page as a complete inventory or changing the visible query.
-        const sharedDirectoryRefresh = (async (): Promise<boolean> => {
-          try {
-            const response = await withUiTimeout(
-              api.runtimeProviderManagement.loadProviderDirectory({
-                runtimeId: options.runtimeId,
-                summary: true,
-                projectPath: projectContext.path,
-                query: null,
-                filter: DEFAULT_DIRECTORY_FILTER,
-                limit: 100,
-                cursor: null,
-                refresh: true,
-              }),
-              'Provider metadata refresh timed out'
-            );
-            if (
-              response.error ||
-              !response.directory ||
-              response.directory.entries.length === 0 ||
-              !isProjectContextCurrent(projectContext) ||
-              currentRuntimeRevision.current !== settledRuntimeRevision
-            )
-              return false;
-            publishRuntimeProviderDirectoryCache({
-              projectPath: projectContext.path,
-              entries: response.directory.entries.map(presentDirectoryEntry),
-              fetchedAt: response.directory.fetchedAt,
-              authoritative: false,
-              runtimeRevision: settledRuntimeRevision,
-            });
-            return true;
-          } catch {
-            return false;
-          }
-        })();
-        try {
-          const externalRefreshResult = await options.onProviderChanged?.('connection');
-          if (!isProjectContextCurrent(projectContext)) {
-            return null;
-          }
-          const [viewRefreshed, directoryRefreshed, sharedDirectoryRefreshed] = await Promise.all([
-            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
-            loadDirectoryPage({ refresh: true, cursor: null }),
-            sharedDirectoryRefresh,
-          ]);
-          if (!isProjectContextCurrent(projectContext)) return null;
-          if (
-            externalRefreshResult === false ||
-            !viewRefreshed ||
-            !directoryRefreshed ||
-            !sharedDirectoryRefreshed
-          ) {
-            setError(null);
-            setErrorDiagnostics(null);
-            setDirectoryError(null);
-            setDirectoryErrorDiagnostics(null);
-            setSuccessMessage(null);
-            setWarningMessage(formatPostOperationRefreshWarning(success));
-          } else {
-            setWarningMessage(null);
-            setSuccessMessage(success);
-          }
-        } catch {
-          if (!isProjectContextCurrent(projectContext)) {
-            return null;
-          }
+        const refreshOutcome = await refreshRuntimeProviderConnection({
+          runtimeId: options.runtimeId,
+          projectPath: projectContext.path,
+          runtimeRevision: settledRuntimeRevision,
+          isContextCurrent: () => isProjectContextCurrent(projectContext),
+          isRuntimeRevisionCurrent: () => currentRuntimeRevision.current === settledRuntimeRevision,
+          refreshExternal: () => options.onProviderChanged?.('connection'),
+          refreshView: () => !viewRequestedRef.current || refresh({ silent: true }),
+          refreshDirectory: () => loadDirectoryPage({ refresh: true, cursor: null }),
+        });
+        if (refreshOutcome === 'stale' || !isProjectContextCurrent(projectContext)) return null;
+        if (refreshOutcome === 'warning') {
           setError(null);
           setErrorDiagnostics(null);
           setDirectoryError(null);
           setDirectoryErrorDiagnostics(null);
           setSuccessMessage(null);
           setWarningMessage(formatPostOperationRefreshWarning(success));
+        } else {
+          setWarningMessage(null);
+          setSuccessMessage(success);
         }
         return {
           status: 'connected',
@@ -2108,8 +2060,7 @@ export function useRuntimeProviderManagement(
   );
 
   return [
-    renderedProjectPath === currentProjectPath &&
-    renderedRuntimeRevision === settledRuntimeRevision
+    renderedProjectPath === currentProjectPath && renderedRuntimeRevision === settledRuntimeRevision
       ? state
       : maskRuntimeProviderStateForScope(state),
     actions,

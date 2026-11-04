@@ -1,0 +1,84 @@
+import { api } from '@renderer/api';
+
+import { publishRuntimeProviderDirectoryCache } from '../runtimeProviderDirectoryCache';
+
+import { DEFAULT_DIRECTORY_FILTER } from './runtimeProviderDirectoryCatalogPolicy';
+import { withUiTimeout } from './runtimeProviderManagementInternals';
+import { presentDirectoryEntry } from './runtimeProviderManagementPresentation';
+
+import type { RuntimeProviderManagementRuntimeId } from '../../contracts';
+
+interface ConnectionRefreshInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  projectPath: string | null;
+  runtimeRevision: string | null;
+  isContextCurrent: () => boolean;
+  isRuntimeRevisionCurrent: () => boolean;
+  refreshExternal: () => Promise<boolean | void> | boolean | void;
+  refreshView: () => Promise<boolean> | boolean;
+  refreshDirectory: () => Promise<boolean>;
+}
+
+async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<boolean> {
+  // A deep-linked directory may be filtered. Publish an unfiltered summary for
+  // selectors without treating that page as authority or changing its query.
+  try {
+    const response = await withUiTimeout(
+      api.runtimeProviderManagement.loadProviderDirectory({
+        runtimeId: input.runtimeId,
+        summary: true,
+        projectPath: input.projectPath,
+        query: null,
+        filter: DEFAULT_DIRECTORY_FILTER,
+        limit: 100,
+        cursor: null,
+        refresh: true,
+      }),
+      'Provider metadata refresh timed out'
+    );
+    if (
+      response.error ||
+      !response.directory ||
+      response.directory.entries.length === 0 ||
+      !input.isContextCurrent() ||
+      !input.isRuntimeRevisionCurrent()
+    )
+      return false;
+    publishRuntimeProviderDirectoryCache({
+      projectPath: input.projectPath,
+      entries: response.directory.entries.map(presentDirectoryEntry),
+      fetchedAt: response.directory.fetchedAt,
+      authoritative: false,
+      runtimeRevision: input.runtimeRevision,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Refresh observations after a confirmed connection; the saved connection
+ * remains successful even when one of these follow-up reads fails. */
+export async function refreshRuntimeProviderConnection(
+  input: ConnectionRefreshInput
+): Promise<'refreshed' | 'warning' | 'stale'> {
+  const sharedDirectoryRefresh = refreshSharedDirectory(input);
+  try {
+    const externalRefreshResult = await input.refreshExternal();
+    if (!input.isContextCurrent()) return 'stale';
+    const [viewRefreshed, directoryRefreshed, sharedDirectoryRefreshed] = await Promise.all([
+      input.refreshView(),
+      input.refreshDirectory(),
+      sharedDirectoryRefresh,
+    ]);
+    if (!input.isContextCurrent()) return 'stale';
+    return externalRefreshResult === false ||
+      !viewRefreshed ||
+      !directoryRefreshed ||
+      !sharedDirectoryRefreshed
+      ? 'warning'
+      : 'refreshed';
+  } catch {
+    return input.isContextCurrent() ? 'warning' : 'stale';
+  }
+}
