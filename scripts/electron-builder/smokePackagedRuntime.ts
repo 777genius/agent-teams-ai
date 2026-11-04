@@ -223,7 +223,10 @@ export function deliveryIdentity(
   assert.equal(identity.schema, 1);
   assert.equal(identity.platform, platform);
   assert.equal(identity.arch, arch);
-  assert.equal(identity.bunVersion, platform === 'win32' ? '1.4.3' : '1.3.11');
+  assert.equal(
+    identity.bunVersion,
+    platform === 'win32' ? '1.4.3' : platform === 'darwin' ? '1.4.4' : '1.3.11'
+  );
   assert.match(bunSha256, /^[a-f0-9]{64}$/);
   assert.match(entrySha256, /^[a-f0-9]{64}$/);
   assert.equal(identity.bunSha256, bunSha256, 'Declared Bun identity differs from physical bytes');
@@ -360,7 +363,10 @@ async function probe(runtime: string, staged: string, project: string, expectedB
     }
   ).Bun;
   assert(bun, 'Runtime probe must execute using bundled Bun');
-  assert.equal(bun.version, process.platform === 'win32' ? '1.4.3' : '1.3.11');
+  assert.equal(
+    bun.version,
+    process.platform === 'win32' ? '1.4.3' : process.platform === 'darwin' ? '1.4.4' : '1.3.11'
+  );
   const executable = containedFile(runtime, process.execPath);
   assert.equal(
     executable.sha256,

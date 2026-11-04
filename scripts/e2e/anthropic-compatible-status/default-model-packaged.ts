@@ -325,7 +325,7 @@ try {
   );
   assert.equal(
     (evidence.bunVersion as { stdout: string }).stdout.trim(),
-    process.platform === 'win32' ? '1.4.3' : '1.3.11'
+    process.platform === 'win32' ? '1.4.3' : process.platform === 'darwin' ? '1.4.4' : '1.3.11'
   );
   app = spawn(
     data.artifact.app.path,
