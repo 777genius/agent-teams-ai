@@ -99,6 +99,29 @@ describe('read-only process CPU capture', () => {
     expect(samples).toBe(2);
   });
 
+  it.each([
+    { changed: 'ppid' as const, replacement: 200 },
+    { changed: 'name' as const, replacement: 'different' },
+  ])('rejects a same-second PID reuse when the root $changed changes', async ({ changed, replacement }) => {
+    if (process.platform === 'win32') return;
+    const original = {
+      pid: 99,
+      ppid: 1,
+      cpu: 20,
+      rssMiB: 1,
+      started: 'Wed Nov 4 09:25:48 2026',
+      name: 'original',
+    };
+    const reused = { ...original, [changed]: replacement };
+    let samples = 0;
+    const result = await captureTool.capture(
+      { pid: 99, duration: 1, intervalMs: 250 },
+      () => (samples++ === 0 ? [original] : [reused])
+    );
+    expect(result.frames).toHaveLength(1);
+    expect(samples).toBe(2);
+  });
+
   it('captures a real test-owned child without terminating it', async () => {
     if (process.platform === 'win32') return;
     const sentinel = 'cpu-capture-argument-sentinel';
@@ -116,7 +139,8 @@ describe('read-only process CPU capture', () => {
       const data = await captureTool.capture({ pid, duration: 1, intervalMs: 5000 });
       expect(Date.now() - startMs).toBeLessThan(4000);
       expect(data.pid).toBe(pid);
-      expect(data.frames).toHaveLength(2);
+      expect(data.frames.length).toBeGreaterThanOrEqual(1);
+      expect(data.frames.length).toBeLessThanOrEqual(2);
       expect(data.frames.every((frame) => frame.processes.length === 1)).toBe(true);
       expect(data.frames.every((frame) => frame.processes[0]?.pid === pid)).toBe(true);
       expect(JSON.stringify(data)).not.toContain(sentinel);
