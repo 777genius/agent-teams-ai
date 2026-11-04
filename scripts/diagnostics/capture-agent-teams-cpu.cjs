@@ -18,9 +18,9 @@ const path = require('node:path');
 function parseRows(output) {
   const rows = [];
   for (const line of output.split(/\r?\n/)) {
-    const match = /^\s*(\d+)\s+(\d+)\s+([-\d.,]+)\s+(\d+)\s+(.+?)\s*$/.exec(line);
+    const match = /^\s*(\d+)\s+(\d+)\s+([-\d.,]+)\s+(\d+)\s+(\S+\s+\S+\s+\d+\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+?)\s*$/.exec(line);
     if (!match) continue;
-    const [, pid, ppid, rawCpu, rss, command] = match;
+    const [, pid, ppid, rawCpu, rss, start, command] = match;
     const cpu = Number(rawCpu.replace(',', '.'));
     if (!Number.isFinite(cpu)) continue;
     rows.push({
@@ -28,6 +28,7 @@ function parseRows(output) {
       ppid: Number(ppid),
       cpu,
       rssMiB: +(Number(rss) / 1024).toFixed(2),
+      started: start.replace(/\s+/g, ' ').trim(),
       name: path.basename(command),
     });
   }
@@ -83,7 +84,7 @@ function parseOptions(argv) {
 
 function readTable() {
   return parseRows(
-    execFileSync('ps', ['-axo', 'pid=,ppid=,pcpu=,rss=,comm='], {
+    execFileSync('ps', ['-axo', 'pid=,ppid=,pcpu=,rss=,lstart=,comm='], {
       encoding: 'utf8',
       timeout: 3000,
       maxBuffer: 8 * 1024 * 1024,
@@ -91,17 +92,23 @@ function readTable() {
   );
 }
 
-async function capture({ pid, duration, intervalMs }) {
+async function capture({ pid, duration, intervalMs }, tableReader = readTable) {
   if (process.platform !== 'darwin' && process.platform !== 'linux') {
     throw Error('Only macOS/Linux supported');
   }
   const startedAt = new Date().toISOString();
   const frames = [];
   const started = process.hrtime.bigint();
-  const sampleCount = Math.max(1, Math.ceil((duration * 1000) / intervalMs));
+  const durationMs = duration * 1000;
+  const sampleCount = Math.max(1, Math.ceil(durationMs / intervalMs));
+  let rootStarted = null;
   for (let i = 0; i <= sampleCount; i += 1) {
     const at = new Date().toISOString();
-    const processes = descendants(readTable(), pid);
+    const rows = tableReader();
+    const root = rows.find((row) => row.pid === pid);
+    if (rootStarted !== null && root?.started !== rootStarted) break;
+    if (rootStarted === null && root) rootStarted = root.started;
+    const processes = descendants(rows, pid);
     frames.push({
       at,
       processCount: processes.length,
@@ -111,7 +118,8 @@ async function capture({ pid, duration, intervalMs }) {
     });
     if (!processes.length) break;
     const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
-    const delayMs = intervalMs * (i + 1) - elapsedMs;
+    if (elapsedMs >= durationMs) break;
+    const delayMs = Math.min(intervalMs * (i + 1), durationMs) - elapsedMs;
     if (i < sampleCount && delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
