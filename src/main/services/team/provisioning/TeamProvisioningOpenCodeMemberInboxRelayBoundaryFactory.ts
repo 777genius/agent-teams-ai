@@ -6,6 +6,7 @@ import {
   type RelayOpenCodeMemberInboxMessagesPorts,
   relayOpenCodeMemberInboxMessagesWithPorts,
 } from './TeamProvisioningOpenCodeMemberInboxRelay';
+import { createOpenCodeMemberInboxRelayResult } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
 
 type OpenCodeMemberInboxRelayPorts = RelayOpenCodeMemberInboxMessagesPorts;
 
@@ -28,6 +29,7 @@ export type TeamProvisioningOpenCodeMemberInboxRelayServiceHost =
 
 export interface TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps {
   host: TeamProvisioningOpenCodeMemberInboxRelayHost;
+  isManagedByThisProfile: (teamName: string) => Promise<boolean>;
   inFlight: OpenCodeMemberInboxRelayPorts['inFlight'];
   getInboxReader(): {
     getMessagesFor: OpenCodeMemberInboxRelayPorts['readInboxMessages'];
@@ -48,6 +50,7 @@ export interface TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps {
   readTaskRefInferenceTasks?: OpenCodeMemberInboxRelayPorts['readTaskRefInferenceTasks'];
   logger: {
     warn(message: string): void;
+    diagnostic(message: string): void;
   };
   nowIso: OpenCodeMemberInboxRelayPorts['nowIso'];
   getErrorMessage: OpenCodeMemberInboxRelayPorts['getErrorMessage'];
@@ -98,7 +101,15 @@ export function createTeamProvisioningOpenCodeMemberInboxRelayBoundary(
     ((teamName: string) => new TeamTaskReader().getTasks(teamName));
 
   return {
-    relayOpenCodeMemberInboxMessages(teamName, memberName, options = {}) {
+    async relayOpenCodeMemberInboxMessages(teamName, memberName, options = {}) {
+      // The inbox of a team of another app profile, or of a native session, is
+      // delivered by its own app: relaying here would recover its lanes and
+      // write its delivery ledger.
+      if (!(await deps.isManagedByThisProfile(teamName))) {
+        return createOpenCodeMemberInboxRelayResult({
+          diagnostics: ['opencode_member_inbox_relay_skipped_team_of_another_app_profile'],
+        });
+      }
       return relayOpenCodeMemberInboxMessagesWithPorts(
         {
           teamName,
@@ -151,6 +162,7 @@ export function createTeamProvisioningOpenCodeMemberInboxRelayBoundary(
           suppressRuntimeInactiveWarning: (teamName) =>
             deps.cleanedStoppedTeamOpenCodeRuntimeLanes.has(teamName),
           logWarning: (message) => deps.logger.warn(message),
+          logDiagnostic: (message) => deps.logger.diagnostic(message),
           nowIso: deps.nowIso,
           getErrorMessage: deps.getErrorMessage,
         }

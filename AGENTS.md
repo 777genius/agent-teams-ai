@@ -55,6 +55,14 @@ For new features:
 - Reference implementation: `src/features/recent-projects`
 - Feature-local guidance for work inside `src/features`: [src/features/CLAUDE.md](src/features/CLAUDE.md)
 
+## User-facing language
+
+- Write notices and actions in plain language: what happened, what the user needs to do, and what happens next.
+- Use technical details when they help a user make a decision or fix a problem. Keep internal terms (SDKs, binary overrides, manifests, runtime paths) out of normal setup messages; put those details in diagnostics or advanced settings.
+- Put a clear action inside an actionable notice. Show progress while work is running and prevent duplicate submissions.
+- Explain optional maintenance before starting it: what it checks or changes, when it is useful, and what stays unchanged.
+- Do not claim a model, connection or version was tested without corresponding evidence. Distinguish supported integration routes from verification of the user's selected model.
+
 ## Git delivery
 
 Follow [docs/GIT_DELIVERY_POLICY.md](docs/GIT_DELIVERY_POLICY.md) for PR/CI

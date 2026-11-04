@@ -118,7 +118,16 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
     { nextAttemptAt: number; inFlight?: Promise<void> }
   >();
 
+  /**
+   * The writing read repairs task-activity intervals, reconciles and may clear
+   * launch-state.json and resumes task clocks. Background passes poll it for
+   * every team in the shared teams directory, so a team of another app profile
+   * or a native session is answered by the write-free projection instead.
+   */
   async getMemberSpawnStatuses(teamName: string) {
+    if (!(await this.profileOwnership.isManagedByThisProfile(teamName))) {
+      return this.getMemberSpawnStatusesReadOnly(teamName);
+    }
     const owner = this.runtimeAdapterRunByTeam.get(teamName);
     const launchInput = owner?.launchInput;
     const adapter = this.getOpenCodeRuntimeAdapter();

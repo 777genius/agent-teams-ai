@@ -103,6 +103,8 @@
       "verifiedTitle": "OpenCode routes with a successful execution proof."
     },
     "quickConnect": {
+      "v1CheckedUsingV2Detail": "This connection is supported on OpenCode V1. You are using V2; test your chosen model before using it.",
+      "v1CheckedUsingV2": "Confirmed for OpenCode V1 (you are using V2)",
       "alsoConnectOpenCode": "Also connect through OpenCode",
       "browseAll": "Browse all providers",
       "setupModelEndpoint": "Local model or endpoint",
@@ -110,6 +112,7 @@
       "checkingPlan": "Checking plan status",
       "checkAndConnect": "Check & connect",
       "cliNotInstalled": "CLI not installed",
+      "cliSignedInRequiresV1": "CLI signed in; OpenCode V1 required",
       "claudeConnected": "Connected through your local Claude CLI session.",
       "claudeDescription": "Use your Claude plan through the Claude CLI.",
       "codexConnected": "Connected through your local Codex CLI session.",
@@ -176,6 +179,7 @@
       "cancel": "Cancel",
       "continue": "Continue",
       "requiresOpenCode": "Requires OpenCode",
+      "requiresV1": "Requires OpenCode V1",
       "retryOpenCode": "Repair OpenCode",
       "retryInstall": "Retry installation",
       "statusUnavailable": "Status unavailable",
@@ -186,6 +190,11 @@
       "switchToSuperGrok": "Switch to SuperGrok",
       "title": "Providers & plans",
       "unavailable": "Unavailable",
+      "v2CliPluginLimitation": "Agent Teams has not verified this CLI plugin with OpenCode V2. Signing in does not confirm model access. Use OpenCode V1.",
+      "v2OAuthLimitation": "This subscription OAuth connection is not supported by Agent Teams on OpenCode V2 yet. Use OpenCode V1; saved credentials remain unchanged.",
+      "v2ConnectedUnverified": "Connected; V2 model not verified",
+      "v2Unverified": "V2 model not verified",
+      "v2UnverifiedDetail": "Sign-in and model listings do not prove execution on OpenCode V2. Test the selected model.",
       "updateForSuperGrok": "Update OpenCode for OAuth",
       "updateOpenCode": "Update OpenCode",
       "xaiApiConnected": "xAI API connected - not SuperGrok",
@@ -202,8 +211,14 @@
       "reinstall": "Reinstall {{runtime}}"
     },
     "runtimeInstall": {
-      "v2SupportInstall": "Install V2 support",
-      "v2SupportRepair": "Repair V2 support",
+      "v2ReinstallCancel": "Cancel",
+      "v2ReinstallConfirm": "Check and restore",
+      "v2ReinstallEffect": "We will check the files and download a new copy only if needed. Your installed OpenCode and provider connections will stay unchanged.",
+      "v2ReinstallDescription": "These files let Agent Teams work with OpenCode V2. This is optional if everything is working normally.",
+      "v2SupportFiles": "OpenCode V2 setup",
+      "v2SupportInstall": "Finish OpenCode V2 setup",
+      "v2SupportRequiredDetail": "Download the remaining files once to connect providers and use models.",
+      "v2SupportRepair": "Reinstall V2 support",
       "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
       "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available.",
 

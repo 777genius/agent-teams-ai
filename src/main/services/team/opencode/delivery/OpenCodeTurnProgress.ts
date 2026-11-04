@@ -40,6 +40,10 @@ export interface OpenCodeTurnProgressObservation {
  * `applyObservation`. Kept in lockstep with that policy on purpose: a signal
  * that defers a retry must also stop the stale clock, or the two policies
  * disagree about the same observation.
+ *
+ * The one exception is `observation_unavailable`: it defers the retry but
+ * deliberately leaves `lastTurnProgressAt` alone. An unreadable pass is not
+ * progress, and moving the anchor on it would keep its cap from ever firing.
  */
 export function hasOpenCodeInferredTurnProgress(
   record: OpenCodeObservedTurnRecord,

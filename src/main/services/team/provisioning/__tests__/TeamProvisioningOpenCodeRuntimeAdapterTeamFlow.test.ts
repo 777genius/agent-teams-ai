@@ -125,6 +125,9 @@ function createPorts(
     mkdir: async (directoryPath) => {
       calls.push(`mkdir:${directoryPath}`);
     },
+    claimCreatedTeam: async (teamName) => {
+      calls.push(`claimCreatedTeam:${teamName}`);
+    },
     nowMs: () => 123,
     writeTeamMeta: async (_teamName, data) => {
       calls.push(`writeTeamMeta:${data.createdAt}:${data.cwd}`);
@@ -324,11 +327,31 @@ describe('OpenCode runtime adapter team flow', () => {
       `mkdir:${path.join('/configured', 'teams', 'alpha')}`,
       'getTasksBasePath',
       `mkdir:${path.join('/configured', 'tasks', 'alpha')}`,
+      'claimCreatedTeam:alpha',
       'writeTeamMeta:123:/repo',
       'writeMembersMeta:alice:adapter',
       'writeOpenCodeTeamConfig:alice',
       'runRuntimeAdapter:team-lead,alice:build it:none',
     ]);
+  });
+
+  it('aborts create before any metadata or runtime launch when the team cannot be claimed', async () => {
+    const calls: string[] = [];
+
+    await expect(
+      createOpenCodeTeamThroughRuntimeAdapterFlow(
+        createRequest(),
+        vi.fn(),
+        createPorts(calls, {
+          claimCreatedTeam: async () => {
+            throw new Error('Team "alpha" was not started: TEST claim failure');
+          },
+        })
+      )
+    ).rejects.toThrow('was not started');
+
+    expect(calls.some((call) => call.startsWith('writeTeamMeta'))).toBe(false);
+    expect(calls.some((call) => call.startsWith('run'))).toBe(false);
   });
 
   it('routes create with a model-distinct member through the aggregate member-lane branch', async () => {

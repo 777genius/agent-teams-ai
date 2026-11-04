@@ -172,6 +172,8 @@ interface RunLike {
   request: { members: { name: string; role?: string }[] };
   activeCrossTeamReplyHints?: Array<{ toTeam: string; conversationId: string }>;
   pendingInboxRelayCandidates?: unknown[];
+  pendingLeadSendMessages: Map<string, unknown>;
+  leadSendMessageSeq: number;
   liveLeadTextBuffer?: unknown;
   memberSpawnStatuses: Map<string, unknown>;
   pendingApprovals: Map<string, unknown>;
@@ -210,6 +212,8 @@ function attachRun(
     leadRelayCapture: null,
     silentUserDmForward: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     child: { stdin: { writable: true, write: vi.fn(), end: vi.fn() } },
     processKilled: false,
     cancelRequested: false,
@@ -239,6 +243,24 @@ function callHandleStreamJsonMessage(
   (
     service as unknown as { handleStreamJsonMessage: (r: unknown, m: unknown) => void }
   ).handleStreamJsonMessage(run, msg);
+}
+
+/** Feeds an assistant message, then a successful tool_result for each tool_use, as the runtime does. */
+function callLeadToolTurn(
+  service: TeamProvisioningService,
+  run: RunLike,
+  msg: Record<string, unknown>
+): void {
+  callHandleStreamJsonMessage(service, run, msg);
+  const content = (msg.content ?? []) as Array<Record<string, unknown>>;
+  callHandleStreamJsonMessage(service, run, {
+    type: 'user',
+    message: {
+      content: content
+        .filter((block) => block.type === 'tool_use' && typeof block.id === 'string')
+        .map((block) => ({ type: 'tool_result', tool_use_id: block.id, content: 'Message sent' })),
+    },
+  });
 }
 
 describe('TeamProvisioningService pre-ready live messages', () => {
@@ -446,11 +468,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     seedConfig('my-team');
     const run = attachRun(service, 'my-team', { provisioningComplete: false });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-1',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -477,12 +500,13 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     seedConfig('my-team');
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Forwarding the clarification request now.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-2',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -499,8 +523,8 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(live[0].to).toBe('team-lead');
     expect(live[0].text).toBe('Need clarification on #abcd1234');
     expect(live[0].source).toBe('lead_process');
-    // Non-user recipient → delivered to inbox, not sentMessages
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
+    // Non-user recipient → the runtime writes the inbox, the app neither writes it nor sentMessages
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
   });
 
@@ -509,12 +533,13 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     seedConfig('my-team');
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         { type: 'text', text: 'Task completed. Sending the summary now.' },
         {
           type: 'tool_use',
+          id: 'toolu-send-3',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -632,18 +657,19 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     }
   );
 
-  it('SendMessage(to:teammate) creates inbox row and emits inbox detail for recipient', () => {
+  it('SendMessage(to:teammate) keeps a live copy and leaves the inbox write to the runtime', () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
     const emitter = vi.fn<(event: TeamChangeEvent) => void>();
     service.setTeamChangeEmitter(emitter);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-4',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -655,22 +681,16 @@ describe('TeamProvisioningService pre-ready live messages', () => {
       ],
     });
 
-    // Delivered to recipient inbox, not sentMessages
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledWith(
-      'my-team',
-      expect.objectContaining({ member: 'alice' })
-    );
+    // The runtime is the single durable writer of the recipient inbox
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
-
-    // Emits inbox event for the specific recipient
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
+      expect.objectContaining({ to: 'alice', source: 'lead_process' }),
+    ]);
     expect(emitter).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'inbox',
-        teamName: 'my-team',
-        detail: 'inboxes/alice.json',
-      })
+      expect.objectContaining({ type: 'lead-message', detail: 'lead-send-message' })
     );
+    expect(emitter).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'inbox' }));
   });
 
   it('SendMessage(to:user) still persists to sentMessages.json', () => {
@@ -680,11 +700,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     service.setTeamChangeEmitter(emitter);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-5',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -713,11 +734,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     seedConfig('my-team');
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-6',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -746,11 +768,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
     run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-123' }];
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-7',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -785,6 +808,162 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(live[0].text).toBe('Привет!');
     expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
+  });
+
+  it('sends a qualified SendMessage only after the runtime reports success', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const crossTeamSender = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'cross-1' }));
+    service.setCrossTeamSender(crossTeamSender);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'toolu-rejected',
+          name: 'SendMessage',
+          input: { type: 'message', recipient: 'team-best.user', content: 'First try' },
+        },
+        {
+          type: 'tool_use',
+          id: 'toolu-ok',
+          name: 'SendMessage',
+          input: { type: 'message', recipient: 'team-best.user', content: 'Second try' },
+        },
+      ],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(crossTeamSender).not.toHaveBeenCalled();
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([]);
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'user',
+      message: {
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu-rejected',
+            content: 'UNKNOWN_RECIPIENT: nothing was sent.',
+            is_error: true,
+          },
+          { type: 'tool_result', tool_use_id: 'toolu-ok', content: 'Message sent' },
+        ],
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(service.getLiveLeadProcessMessages('my-team')).toHaveLength(1);
+    });
+    expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    expect(crossTeamSender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toTeam: 'team-best',
+        text: 'Second try',
+        messageId: 'lead-sendmsg-run-1-2-toolu-ok',
+      })
+    );
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
+      expect.objectContaining({ source: 'cross_team_sent', text: 'Second try' }),
+    ]);
+  });
+
+  it('drops a SendMessage that gets no tool result before the turn ends', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const crossTeamSender = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'cross-1' }));
+    service.setCrossTeamSender(crossTeamSender);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'toolu-1',
+          name: 'SendMessage',
+          input: { type: 'message', recipient: 'team-best.user', content: 'Hello' },
+        },
+        {
+          type: 'tool_use',
+          id: 'toolu-2',
+          name: 'SendMessage',
+          input: { type: 'message', recipient: 'alice', content: 'Hi alice' },
+        },
+      ],
+    });
+    callHandleStreamJsonMessage(service, run, { type: 'result', subtype: 'success' });
+
+    expect(run.pendingLeadSendMessages.size).toBe(0);
+    expect(vi.mocked(console.warn)).toHaveBeenCalledOnce();
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'Dropped lead SendMessage call(s) that got no tool result: toolu-1 (cross-team), toolu-2 (member)'
+    );
+    vi.mocked(console.warn).mockClear();
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'user',
+      message: {
+        content: [
+          { type: 'tool_result', tool_use_id: 'toolu-1', content: 'Message sent' },
+          { type: 'tool_result', tool_use_id: 'toolu-2', content: 'Message sent' },
+        ],
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(crossTeamSender).not.toHaveBeenCalled();
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([]);
+  });
+
+  it('shows no live copy for a teammate SendMessage the runtime rejected', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'toolu-typo',
+          name: 'SendMessage',
+          input: { type: 'message', recipient: 'alcie', content: 'Typo recipient' },
+        },
+        {
+          type: 'tool_use',
+          id: 'toolu-ok',
+          name: 'SendMessage',
+          input: { type: 'message', recipient: 'alice', content: 'Right recipient' },
+        },
+      ],
+    });
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([]);
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'user',
+      message: {
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu-typo',
+            content: 'UNKNOWN_RECIPIENT: nothing was sent.',
+            is_error: true,
+          },
+          { type: 'tool_result', tool_use_id: 'toolu-ok', content: 'Message sent' },
+        ],
+      },
+    });
+
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
+      expect.objectContaining({
+        to: 'alice',
+        text: 'Right recipient',
+        messageId: 'lead-sendmsg-run-1-2-toolu-ok',
+        source: 'lead_process',
+      }),
+    ]);
   });
 
   it('bounds live lead process message text before it enters the overlay cache', () => {
@@ -849,11 +1028,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     });
     oldRun.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-old' }];
 
-    callHandleStreamJsonMessage(service, oldRun, {
+    callLeadToolTurn(service, oldRun, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-8',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -912,11 +1092,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     service.setCrossTeamSender(crossTeamSender);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-9',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -946,61 +1127,6 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(live[0].from).toBe('team-lead');
     expect(live[0].source).toBe('cross_team_sent');
     expect(live[0].to).toBe('cross-team:team-best');
-    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
-  });
-
-  it('upgrades MCP message_send pseudo recipients into cross-team sends', async () => {
-    const service = new TeamProvisioningService();
-    seedConfig('my-team');
-    const crossTeamSender = vi.fn(async () => ({
-      deliveredToInbox: true,
-      messageId: 'cross-mcp-1',
-    }));
-    service.setCrossTeamSender(crossTeamSender);
-    const run = attachRun(service, 'my-team', { provisioningComplete: true });
-    run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-mcp-1' }];
-    const taskRefs = [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }];
-
-    callHandleStreamJsonMessage(service, run, {
-      type: 'assistant',
-      content: [
-        {
-          type: 'tool_use',
-          name: 'mcp__agent-teams__message_send',
-          input: {
-            teamName: 'my-team',
-            to: 'cross-team:team-best',
-            text: 'Ответ через MCP.',
-            from: 'team-lead',
-            summary: 'MCP reply',
-            taskRefs,
-          },
-        },
-      ],
-    });
-
-    await vi.waitFor(() => {
-      expect(crossTeamSender).toHaveBeenCalledTimes(1);
-    });
-
-    expect(crossTeamSender).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fromTeam: 'my-team',
-        fromMember: 'team-lead',
-        toTeam: 'team-best',
-        text: 'Ответ через MCP.',
-        conversationId: 'conv-mcp-1',
-        replyToConversationId: 'conv-mcp-1',
-        taskRefs,
-      })
-    );
-
-    const live = service.getLiveLeadProcessMessages('my-team');
-    expect(live).toHaveLength(1);
-    expect(live[0].from).toBe('team-lead');
-    expect(live[0].source).toBe('cross_team_sent');
-    expect(live[0].to).toBe('cross-team:team-best');
-    expect(live[0].taskRefs).toEqual(taskRefs);
     expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
   });
 
@@ -1130,103 +1256,6 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(run.activeCrossTeamReplyHints).toEqual([]);
   });
 
-  it('rescues mistaken cross_team_send recipients into actual cross-team replies', async () => {
-    const service = new TeamProvisioningService();
-    seedConfig('my-team');
-    const crossTeamSender = vi.fn(async () => ({
-      deliveredToInbox: true,
-      messageId: 'cross-mcp-tool-1',
-    }));
-    service.setCrossTeamSender(crossTeamSender);
-    const run = attachRun(service, 'my-team', { provisioningComplete: true });
-    run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-tool-1' }];
-
-    callHandleStreamJsonMessage(service, run, {
-      type: 'assistant',
-      content: [
-        {
-          type: 'tool_use',
-          name: 'mcp__agent-teams__message_send',
-          input: {
-            teamName: 'my-team',
-            to: 'cross_team_send',
-            text: 'Исправленный ответ.',
-            from: 'team-lead',
-            summary: 'Ответ через tool recipient mistake',
-          },
-        },
-      ],
-    });
-
-    await vi.waitFor(() => {
-      expect(crossTeamSender).toHaveBeenCalledTimes(1);
-    });
-
-    expect(crossTeamSender).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fromTeam: 'my-team',
-        fromMember: 'team-lead',
-        toTeam: 'team-best',
-        text: 'Исправленный ответ.',
-        conversationId: 'conv-tool-1',
-        replyToConversationId: 'conv-tool-1',
-      })
-    );
-
-    const live = service.getLiveLeadProcessMessages('my-team');
-    expect(live).toHaveLength(1);
-    expect(live[0].from).toBe('team-lead');
-    expect(live[0].source).toBe('cross_team_sent');
-    expect(live[0].to).toBe('team-best.team-lead');
-    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
-  });
-
-  it('rescues cross_team::team pseudo recipients into actual cross-team replies', async () => {
-    const service = new TeamProvisioningService();
-    seedConfig('my-team');
-    const crossTeamSender = vi.fn(async () => ({
-      deliveredToInbox: true,
-      messageId: 'cross-colon-1',
-    }));
-    service.setCrossTeamSender(crossTeamSender);
-    const run = attachRun(service, 'my-team', { provisioningComplete: true });
-
-    callHandleStreamJsonMessage(service, run, {
-      type: 'assistant',
-      content: [
-        {
-          type: 'tool_use',
-          name: 'mcp__agent-teams__message_send',
-          input: {
-            teamName: 'my-team',
-            to: 'cross_team::team-best',
-            text: 'Ответ через fallback pseudo recipient.',
-            summary: 'Fallback pseudo reply',
-          },
-        },
-      ],
-    });
-
-    await vi.waitFor(() => {
-      expect(crossTeamSender).toHaveBeenCalledTimes(1);
-    });
-
-    expect(crossTeamSender).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fromTeam: 'my-team',
-        fromMember: 'team-lead',
-        toTeam: 'team-best',
-        text: 'Ответ через fallback pseudo recipient.',
-      })
-    );
-
-    const live = service.getLiveLeadProcessMessages('my-team');
-    expect(live).toHaveLength(1);
-    expect(live[0].source).toBe('cross_team_sent');
-    expect(live[0].to).toBe('team-best.team-lead');
-    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
-  });
-
   it('strips canonical cross-team tag from outbound cross-team content', async () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
@@ -1238,11 +1267,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
     run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-legacy' }];
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-10',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -1281,11 +1311,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     service.setCrossTeamSender(crossTeamSender);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-11',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -1319,11 +1350,12 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
     run.request.members.push({ name: 'ops.bot', role: 'Specialist' });
 
-    callHandleStreamJsonMessage(service, run, {
+    callLeadToolTurn(service, run, {
       type: 'assistant',
       content: [
         {
           type: 'tool_use',
+          id: 'toolu-send-12',
           name: 'SendMessage',
           input: {
             type: 'message',
@@ -1336,11 +1368,10 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     });
 
     expect(crossTeamSender).not.toHaveBeenCalled();
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
-    expect(hoisted.sendInboxMessage).toHaveBeenCalledWith(
-      'my-team',
-      expect.objectContaining({ member: 'ops.bot' })
-    );
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+    expect(service.getLiveLeadProcessMessages('my-team')).toEqual([
+      expect.objectContaining({ to: 'ops.bot', source: 'lead_process' }),
+    ]);
   });
 });
 

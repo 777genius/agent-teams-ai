@@ -2,6 +2,7 @@ import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibil
 import { isRecognizedOpenCodeV2Version } from '@shared/utils/version';
 
 import { qualifyModelId } from './openCodeModelIdentity';
+import { resolveOpenCodeProviderCompatibility } from './openCodeProviderCompatibility';
 import { isOAuthCredentialHint } from './runtimeProviderQuickConnect';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
@@ -55,6 +56,15 @@ export type OpenCodeGeneration = 'v1' | 'v2';
 
 export function getOpenCodeGeneration(version: string | null | undefined): OpenCodeGeneration {
   return isRecognizedOpenCodeV2Version(version) ? 'v2' : 'v1';
+}
+
+/** Compatibility of Agent Teams' managed route, not of an upstream plugin. */
+export function getOpenCodeV2PlanLimitation(
+  planId: RuntimeProviderOnboardingPlanId,
+  generation: OpenCodeGeneration
+): 'cli-plugin' | 'subscription-oauth' | null {
+  const compatibility = resolveOpenCodeProviderCompatibility(planId, generation);
+  return compatibility.state === 'incompatible' ? compatibility.reason : null;
 }
 
 /** A console domain and the OpenCode V2 integration that serves accounts from it. */
@@ -397,28 +407,23 @@ export function resolveRuntimeProviderOnboardingPlan(
 }
 
 /**
- * Whether the pinned runtime serves V2 route integrations: lists them in its provider
- * directory and returns their key setup form. Runtime 0.0.138 (runtime.lock.json) does.
+ * Whether the pinned runtime returns the key setup form of V2 route integrations. Runtime
+ * 0.0.138 (runtime.lock.json) and later do. The summary provider directory still leaves
+ * them out until one is connected, so the directory cannot tell whether they are served.
  */
 export const OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED = true;
 
 /**
- * Guard: route integrations are used only on V2 when the runtime serves them and its directory
- * lists one of the plan's routes. Otherwise a V2 plan connects through its own provider id,
- * the same path as V1.
+ * Guard: on V2 a plan with routes connects through a route integration whenever the runtime
+ * serves them, whether or not the directory lists them; V2 has no integration under the V1
+ * provider id. V1, and a runtime without route integrations, use the plan's own provider id.
  */
 export function resolveRuntimeProviderOnboardingRouteGeneration(
   plan: RuntimeProviderOnboardingPlan,
   generation: OpenCodeGeneration,
-  directoryEntries: readonly Pick<RuntimeProviderDirectoryEntryDto, 'providerId'>[],
   routesServed: boolean
 ): OpenCodeGeneration {
-  const listed = new Set(directoryEntries.map((entry) => entry.providerId.toLowerCase()));
-  return routesServed &&
-    generation === 'v2' &&
-    plan.routes?.some((route) => listed.has(route.v2ProviderId))
-    ? 'v2'
-    : 'v1';
+  return routesServed && generation === 'v2' && Boolean(plan.routes?.length) ? 'v2' : 'v1';
 }
 
 /**
@@ -444,7 +449,6 @@ export function findRuntimeProviderOnboardingPlanEntry(
   const routeGeneration = resolveRuntimeProviderOnboardingRouteGeneration(
     plan,
     generation,
-    entries,
     OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED
   );
   const planEntries = getRuntimeProviderOnboardingPlanProviderIds(plan, routeGeneration).flatMap(

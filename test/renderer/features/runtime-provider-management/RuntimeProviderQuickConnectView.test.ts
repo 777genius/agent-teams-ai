@@ -1,7 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { createCliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
 
 import * as companion from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion';
 import * as quickConnectDirectory from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
@@ -11,10 +13,23 @@ import {
   RuntimeProviderQuickConnectView,
 } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderQuickConnectView';
 
+import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { StateCreator } from 'zustand';
+
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
     t: (key: string, values?: Record<string, unknown>) => {
       const labels: Record<string, string> = {
+        'cliStatus.runtimeInstall.v2SupportInstall': 'Finish OpenCode V2 setup',
+        'cliStatus.runtimeInstall.v2SupportFiles': 'OpenCode V2 setup',
+        'cliStatus.runtimeInstall.v2SupportRequiredDetail':
+          'Download the remaining files once to connect providers and use models.',
+        'cliStatus.runtimeInstall.overrideSelection': 'Confusing override selection sentence',
+        'cliStatus.runtimeInstall.checking': 'Checking',
+        'cliStatus.runtimeInstall.downloading': 'Downloading',
+        'cliStatus.runtimeInstall.downloadingPercent': `Downloading ${String(values?.percent)}%`,
+        'cliStatus.runtimeInstall.installing': 'Installing',
         'cliStatus.quickConnect.title': 'Optional providers & plans',
         'cliStatus.quickConnect.description': 'Connect any plans you use.',
         'cliStatus.quickConnect.browseAll': 'Browse all providers',
@@ -261,7 +276,400 @@ describe('RuntimeProviderQuickConnectView', () => {
 
     act(() => installButtons[0]?.click());
     expect(onInstallOpenCode).toHaveBeenCalledTimes(1);
+    expect(onInstallOpenCode).toHaveBeenCalledWith();
   });
+
+  it.each(['app-managed', 'override'] as const)(
+    'sets up only V2 support files for a %s native runtime',
+    async (source) => {
+      const onInstallOpenCode = vi.fn();
+      await act(async () =>
+        root.render(
+          React.createElement(RuntimeProviderQuickConnectView, {
+            cards: [],
+            gate: 'error',
+            directoryError: null,
+            runtimeStatus: {
+              installed: true,
+              version: '2.2.0',
+              source,
+              state: 'ready',
+              compatibleV2Version: '2.2.0',
+              v2Support: 'required',
+            },
+            onInstallOpenCode,
+            onRefreshOpenCode: vi.fn(),
+            onRetryDirectory: vi.fn(),
+            onSetupLocalModel: vi.fn(),
+            onBrowseProviders: vi.fn(),
+          })
+        )
+      );
+      const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+      expect(banner?.textContent).toContain(
+        'Download the remaining files once to connect providers and use models.'
+      );
+      expect(banner?.textContent).not.toContain('Confusing override selection sentence');
+      const setup = banner?.querySelector<HTMLButtonElement>('button');
+      expect(setup?.textContent).toContain('Finish OpenCode V2 setup');
+      expect(setup?.disabled).toBe(false);
+      act(() => setup?.click());
+      expect(onInstallOpenCode).toHaveBeenCalledExactlyOnceWith({
+        generation: 'v2',
+        supportOnly: true,
+      });
+    }
+  );
+
+  it('offers refresh instead of an installation when no qualified V2 support is available', async () => {
+    const onInstallOpenCode = vi.fn();
+    const onRefreshOpenCode = vi.fn();
+    await act(async () =>
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [],
+          gate: 'support-required',
+          directoryError: null,
+          runtimeStatus: {
+            installed: true,
+            version: '2.2.0',
+            source: 'override',
+            state: 'ready',
+            v2Support: 'required',
+            compatibleV2Version: null,
+          },
+          onInstallOpenCode,
+          onRefreshOpenCode,
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      )
+    );
+    const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+    expect(banner?.textContent).toContain('cliStatus.runtimeInstall.v2Unavailable');
+    const buttons = banner?.querySelectorAll<HTMLButtonElement>('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons?.[0]?.dataset.testid).toBe('provider-quick-opencode-refresh');
+    act(() => buttons?.[0]?.click());
+    expect(onRefreshOpenCode).toHaveBeenCalledOnce();
+    expect(onInstallOpenCode).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { state: 'checking' as const, percent: undefined, label: 'Checking' },
+    { state: 'downloading' as const, percent: 42, label: 'Downloading 42%' },
+    { state: 'downloading' as const, percent: undefined, label: 'Downloading' },
+    { state: 'installing' as const, percent: undefined, label: 'Installing' },
+  ])(
+    'keeps actual V2 support $state visible without duplicate installation ($percent)',
+    async ({ state, percent, label }) => {
+      const onInstallOpenCode = vi.fn();
+      await act(async () =>
+        root.render(
+          React.createElement(RuntimeProviderQuickConnectView, {
+            cards: [],
+            gate: state === 'checking' ? 'checking' : 'installing',
+            directoryError: null,
+            runtimeStatus: {
+              installed: true,
+              version: '2.2.0',
+              source: 'override',
+              state,
+              compatibleV2Version: '2.2.0',
+              v2Support: 'required',
+              progress: { phase: state, percent, detail: 'OpenCode V2 support files' },
+            },
+            onInstallOpenCode,
+            onRefreshOpenCode: vi.fn(),
+            onRetryDirectory: vi.fn(),
+            onSetupLocalModel: vi.fn(),
+            onBrowseProviders: vi.fn(),
+          })
+        )
+      );
+      const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+      expect(banner?.getAttribute('aria-busy')).toBe('true');
+      expect(banner?.querySelector('.animate-spin')).not.toBeNull();
+      expect(banner?.textContent).toContain(label);
+      expect(banner?.querySelector('[data-testid="provider-quick-opencode-refresh"]')).toBeNull();
+      if (percent === undefined) expect(banner?.textContent).not.toContain('%');
+      const setup = banner?.querySelector<HTMLButtonElement>('button');
+      expect(setup?.disabled).toBe(true);
+      act(() => setup?.click());
+      expect(onInstallOpenCode).not.toHaveBeenCalled();
+    }
+  );
+
+  it('preserves a failed support installation error and retries only support files', async () => {
+    const onInstallOpenCode = vi.fn();
+    await act(async () =>
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [],
+          gate: 'error',
+          directoryError: null,
+          runtimeStatus: {
+            installed: true,
+            version: '2.2.0',
+            source: 'override',
+            state: 'failed',
+            compatibleV2Version: '2.2.0',
+            v2Support: 'required',
+            error: 'Support download failed',
+            progress: { phase: 'failed', detail: 'OpenCode V2 support files' },
+          },
+          onInstallOpenCode,
+          onRefreshOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      )
+    );
+    const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+    expect(banner?.textContent).toContain('Support download failed');
+    expect(banner?.getAttribute('aria-busy')).toBeNull();
+    const setup = banner?.querySelector<HTMLButtonElement>('button');
+    expect(setup?.disabled).toBe(false);
+    act(() => setup?.click());
+    expect(onInstallOpenCode).toHaveBeenCalledExactlyOnceWith({
+      generation: 'v2',
+      supportOnly: true,
+    });
+  });
+
+  it.each(['path', 'override'] as const)(
+    'keeps a failed optional support repair retry separate from the %s native binary',
+    async (source) => {
+      vi.spyOn(companion, 'useRuntimeProviderCompanion').mockReturnValue({
+        status: null,
+        loading: false,
+        runInstallAndConnect: vi.fn(),
+        runConnect: vi.fn(),
+        runAction: vi.fn(),
+        refresh: vi.fn(),
+      });
+      vi.spyOn(quickConnectDirectory, 'useRuntimeProviderQuickConnect').mockReturnValue({
+        entries: [],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: null,
+        refresh: vi.fn(),
+      });
+      const previousApi = window.electronAPI;
+      const initial: OpenCodeRuntimeStatus = {
+        installed: true,
+        version: '2.2.0',
+        binaryPath: '/TEST/selected-opencode',
+        source,
+        state: 'ready',
+        compatibleV2Version: '2.2.0',
+        v2Support: 'ready',
+      };
+      let releaseFollowUp!: () => void;
+      let startedFollowUp!: () => void;
+      const followUp = new Promise<void>((resolve) => {
+        releaseFollowUp = resolve;
+      });
+      const followUpStarted = new Promise<void>((resolve) => {
+        startedFollowUp = resolve;
+      });
+      let installation: Promise<void> | undefined;
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...previousApi,
+          openCodeRuntime: {
+            install: vi.fn().mockRejectedValue(new Error('TEST IPC disconnected')),
+            invalidateStatus: vi.fn(() => {
+              startedFollowUp();
+              return followUp;
+            }),
+          },
+          cliInstaller: undefined,
+        },
+      });
+      try {
+        const store = createStore<CliInstallerSlice>()(
+          createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+        );
+        store.setState({ openCodeRuntimeStatus: initial });
+        installation = store
+          .getState()
+          .installOpenCodeRuntime({ generation: 'v2', supportOnly: true });
+        await followUpStarted;
+        const runtimeStatus = store.getState().openCodeRuntimeStatus;
+        expect(runtimeStatus).toMatchObject({
+          source,
+          binaryPath: initial.binaryPath,
+          state: 'failed',
+          v2Support: 'ready',
+          error: 'TEST IPC disconnected',
+        });
+        const onInstallOpenCode = vi.fn();
+        const renderQuickConnect = () =>
+          act(async () =>
+            root.render(
+              React.createElement(RuntimeProviderQuickConnect, {
+                enabled: true,
+                cliStatusLoading: false,
+                providers: [],
+                openCodeRuntimeStatus: runtimeStatus,
+                openCodeRuntimeStatusLoading: store.getState().openCodeRuntimeStatusLoading,
+                onInstallOpenCode,
+                onRefreshOpenCode: vi.fn(),
+                onOpenCodeProviderAction: vi.fn(),
+                onBrowseProviders: vi.fn(),
+              })
+            )
+          );
+        await renderQuickConnect();
+        // A failed optional repair does not revoke the working native runtime.
+        expect(
+          vi.mocked(quickConnectDirectory.useRuntimeProviderQuickConnect).mock.calls.at(-1)?.[0]
+        ).toMatchObject({ enabled: true });
+        const browseButton = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('Browse all providers')
+        );
+        expect(browseButton?.disabled).toBe(false);
+        const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+        expect(banner?.querySelector('[role="alert"]')).not.toBeNull();
+        expect(banner?.textContent).toContain('TEST IPC disconnected');
+        const retry = banner?.querySelector<HTMLButtonElement>('button');
+        expect(store.getState().openCodeRuntimeStatusLoading).toBe(true);
+        expect(retry?.disabled).toBe(true);
+        act(() => retry?.click());
+        expect(onInstallOpenCode).not.toHaveBeenCalled();
+        releaseFollowUp();
+        await installation;
+        await renderQuickConnect();
+        expect(store.getState().openCodeRuntimeStatusLoading).toBe(false);
+        expect(retry?.disabled).toBe(false);
+        act(() => retry?.click());
+        expect(onInstallOpenCode).toHaveBeenCalledExactlyOnceWith({
+          generation: 'v2',
+          supportOnly: true,
+        });
+      } finally {
+        releaseFollowUp();
+        await installation;
+        Object.defineProperty(window, 'electronAPI', { configurable: true, value: previousApi });
+        vi.mocked(console.error).mockClear();
+      }
+    }
+  );
+
+  it.each(['v1', 'missing'] as const)(
+    'retries the full V2 install when support failure preserves a %s selection',
+    async (selected) => {
+      vi.spyOn(companion, 'useRuntimeProviderCompanion').mockReturnValue({
+        status: null,
+        loading: false,
+        runInstallAndConnect: vi.fn(),
+        runConnect: vi.fn(),
+        runAction: vi.fn(),
+        refresh: vi.fn(),
+      });
+      vi.spyOn(quickConnectDirectory, 'useRuntimeProviderQuickConnect').mockReturnValue({
+        entries: [],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: null,
+        refresh: vi.fn(),
+      });
+      const previousApi = window.electronAPI;
+      const initial: OpenCodeRuntimeStatus =
+        selected === 'v1'
+          ? {
+              installed: true,
+              version: '1.18.3',
+              binaryPath: '/TEST/selected-v1',
+              source: 'path',
+              state: 'ready',
+              compatibleV2Version: '2.2.0',
+            }
+          : {
+              installed: false,
+              source: 'missing',
+              state: 'idle',
+              compatibleV2Version: '2.2.0',
+            };
+      const message = 'OpenCode V2 support archive checksum mismatch';
+      // The installer preserves the native selection until both V2 parts verify.
+      const failed: OpenCodeRuntimeStatus = {
+        ...initial,
+        state: 'failed',
+        error: message,
+        progress: { phase: 'failed', detail: message },
+      };
+      const install = vi
+        .fn()
+        .mockResolvedValueOnce(failed)
+        .mockResolvedValueOnce({
+          ...initial,
+          installed: true,
+          state: 'ready',
+          version: '2.2.0',
+          source: 'app-managed',
+          v2Support: 'ready',
+        });
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          ...previousApi,
+          cliInstaller: undefined,
+          openCodeRuntime: { install, invalidateStatus: vi.fn().mockResolvedValue(undefined) },
+        },
+      });
+      try {
+        const store = createStore<CliInstallerSlice>()(
+          createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+        );
+        store.setState({ openCodeRuntimeStatus: initial });
+        await store.getState().installOpenCodeRuntime({ generation: 'v2' });
+        expect(store.getState().openCodeRuntimeStatus).toEqual(failed);
+        let retry: Promise<void> | undefined;
+        await act(async () =>
+          root.render(
+            React.createElement(RuntimeProviderQuickConnect, {
+              enabled: true,
+              cliStatusLoading: false,
+              providers: [],
+              openCodeRuntimeStatus: store.getState().openCodeRuntimeStatus,
+              openCodeRuntimeStatusLoading: store.getState().openCodeRuntimeStatusLoading,
+              onInstallOpenCode: (options) => {
+                retry = store.getState().installOpenCodeRuntime(options);
+              },
+              onRefreshOpenCode: vi.fn(),
+              onOpenCodeProviderAction: vi.fn(),
+              onBrowseProviders: vi.fn(),
+            })
+          )
+        );
+        const banner = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+        expect(banner?.textContent).toContain(message);
+        expect(banner?.textContent).not.toContain('Finish OpenCode V2 setup');
+        const button = banner?.querySelector<HTMLButtonElement>('button');
+        expect(button?.disabled).toBe(false);
+        await act(async () => {
+          button?.click();
+          await retry;
+        });
+        expect(install).toHaveBeenNthCalledWith(2, { generation: 'v2' });
+        expect(store.getState().openCodeRuntimeStatus).toMatchObject({
+          version: '2.2.0',
+          state: 'ready',
+        });
+      } finally {
+        Object.defineProperty(window, 'electronAPI', { configurable: true, value: previousApi });
+      }
+    }
+  );
 
   it('keeps the prerequisite notice hidden while OpenCode availability is checked', async () => {
     await act(async () => {

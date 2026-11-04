@@ -406,6 +406,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       const teamDataService = new TeamDataService();
       const createFeature = (busy = false) =>
         createMemberWorkSyncFeature({
+          isManagedByThisProfile: async () => true,
           lifecycleIdentity: owned!.identity,
           teamsBasePath: getTeamsBasePath(),
           ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
@@ -731,6 +732,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
       const teamDataService = new TeamDataService();
       const createFeature = () =>
         createMemberWorkSyncFeature({
+          isManagedByThisProfile: async () => true,
           lifecycleIdentity: owned!.identity,
           teamsBasePath: getTeamsBasePath(),
           ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
@@ -1121,6 +1123,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     const teamDataService = new TeamDataService();
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: owned!.identity,
         teamsBasePath: getTeamsBasePath(),
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
@@ -1332,6 +1335,7 @@ liveDescribe('Member work sync recovery live Codex native teammate', () => {
     const lifecycleIdentity = owned!.identity;
     const createFeature = () =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity,
         teamsBasePath: getTeamsBasePath(),
         recoveryAllocation: { enabled: false },

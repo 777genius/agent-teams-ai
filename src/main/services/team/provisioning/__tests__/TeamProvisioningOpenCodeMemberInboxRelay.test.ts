@@ -10,13 +10,13 @@ import {
   commitOpenCodeInboxRelayReadAfterDelivery,
   handleOpenCodeInboxAttachmentFailure,
   type OpenCodeMemberInboxRelayResult,
-  projectOpenCodeInboxDeliveryFailure,
   type RelayOpenCodeMemberInboxMessagesPorts,
   relayOpenCodeMemberInboxMessagesWithPorts,
   resolveOpenCodeMemberInboxDeliveryDecision,
   scheduleOpenCodeMemberInboxDeliveryWakeWithPorts,
   selectOpenCodeMemberInboxRelayUnreadMessages,
 } from '../TeamProvisioningOpenCodeMemberInboxRelay';
+import { projectOpenCodeInboxDeliveryFailure } from '../TeamProvisioningOpenCodeMemberInboxRelayResults';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { OpenCodePromptDeliveryLedgerStore } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
@@ -147,6 +147,7 @@ function createRelayPorts(
     deliverOpenCodeMemberMessage: vi.fn().mockResolvedValue({ delivered: true }),
     suppressRuntimeInactiveWarning: vi.fn().mockReturnValue(false),
     logWarning: vi.fn(),
+    logDiagnostic: vi.fn(),
     nowIso: () => '2026-01-01T00:00:00.000Z',
     getErrorMessage: (error) => (error instanceof Error ? error.message : String(error)),
     ...overrides,
@@ -2217,6 +2218,65 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
         suppressRuntimeInactiveWarning: false,
       }).shouldLogWarning
     ).toBe(true);
+  });
+
+  it('logs a delivery deferred until bootstrap check-in without a relay failure warning', async () => {
+    const deferredDelivery = {
+      delivered: false,
+      reason: 'opencode_runtime_not_active',
+      deferredUntilBootstrap: true as const,
+      diagnostics: [
+        'OpenCode runtime bootstrap is not confirmed for worker. Message was saved and will be retried after runtime check-in.',
+      ],
+    };
+    const ports = createRelayPorts({
+      readInboxMessages: vi.fn().mockResolvedValue([message()]),
+      deliverOpenCodeMemberMessage: vi.fn().mockResolvedValue(deferredDelivery),
+    });
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'deferred-until-bootstrap' },
+      ports
+    );
+
+    expect(ports.logWarning).not.toHaveBeenCalled();
+    expect(ports.logDiagnostic).toHaveBeenCalledTimes(1);
+    expect(ports.logDiagnostic).toHaveBeenCalledWith(
+      '[team] OpenCode inbox relay deferred until runtime check-in for worker/message-1: opencode_runtime_not_active'
+    );
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ delivered: 0, failed: 1, lastDelivery: deferredDelivery });
+    expect(result.diagnostics).toEqual(deferredDelivery.diagnostics);
+  });
+
+  it.each([
+    ['a stopped or missing lane', undefined],
+    [
+      'a lane index without runtime evidence',
+      [
+        'OpenCode runtime bootstrap evidence is not ready for worker. Message was saved and will be retried after runtime check-in.',
+      ],
+    ],
+  ])('still warns when OpenCode runtime is not active for %s', async (_case, diagnostics) => {
+    const ports = createRelayPorts({
+      readInboxMessages: vi.fn().mockResolvedValue([message()]),
+      deliverOpenCodeMemberMessage: vi.fn().mockResolvedValue({
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+        ...(diagnostics ? { diagnostics } : {}),
+      }),
+    });
+
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'runtime-not-active' },
+      ports
+    );
+
+    expect(ports.logWarning).toHaveBeenCalledTimes(1);
+    expect(ports.logWarning).toHaveBeenCalledWith(
+      '[team] OpenCode inbox relay failed for worker/message-1: opencode_runtime_not_active'
+    );
+    expect(ports.logDiagnostic).not.toHaveBeenCalled();
   });
 
   it('commits inbox reads and marks ledger commit failures when read persistence fails', async () => {

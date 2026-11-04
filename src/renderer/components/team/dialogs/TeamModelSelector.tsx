@@ -2025,7 +2025,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       setSelectedOpenCodeRouteTags(new Set(['local']));
       return;
     }
-
     const selectedSourceId = selectedMetadata.sourceInfo?.id ?? null;
     if (
       !selectedSourceId ||
@@ -2033,33 +2032,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     ) {
       return;
     }
-
     lastAutoFocusedOpenCodeModelRef.current = selectedModel;
     autoFocusedOpenCodeSourceRef.current = selectedSourceId;
     setSelectedOpenCodeSourceIds(new Set([selectedSourceId]));
     setSelectedOpenCodeRouteTags(new Set());
   }, [effectiveProviderId, normalizedValue, openCodeModelMetadataByValue, openCodeProviderTabs]);
-
   useEffect(() => {
     if (previousSelectedProviderIdRef.current === selectedProviderId) {
       return;
     }
     previousSelectedProviderIdRef.current = selectedProviderId;
+    if (selectedProviderId !== 'opencode') {
+      setSelectedOpenCodeSourceIds(new Set());
+      setSelectedOpenCodeRouteTags(new Set());
+    }
     setInspectedProviderId(null);
   }, [selectedProviderId]);
-
   useEffect(() => {
     if (recommendedOnly && (effectiveProviderId !== 'opencode' || !hasRecommendedOpenCodeModels)) {
       setRecommendedOnly(false);
     }
   }, [effectiveProviderId, hasRecommendedOpenCodeModels, recommendedOnly]);
-
   useEffect(() => {
     if (freeOnly && (effectiveProviderId !== 'opencode' || !hasFreeOpenCodeModels)) {
       setFreeOnly(false);
     }
   }, [effectiveProviderId, freeOnly, hasFreeOpenCodeModels]);
-
   useEffect(() => {
     if (newOnly && (effectiveProviderId !== 'opencode' || !hasNewOpenCodeModels)) {
       setNewOnly(false);
@@ -2518,7 +2516,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodePassiveCatalogState = getOpenCodePassiveCatalogState(
     openCodePassiveStatusReadyForCatalog,
     openCodeRuntimeStatusUiState,
-    openCodeProviderStatus
+    openCodeProviderStatus,
+    openCodeScopedCatalog.status
   );
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
@@ -2543,9 +2542,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     );
   };
   const shouldShowOpenCodeCatalogLoading =
-    openCodeCatalogLoading &&
-    openCodeLocalModelOverlay.options.length === 0 &&
-    concreteModelOptionCount === 0;
+    openCodeCatalogLoading && visibleConcreteModelOptionCount === 0;
   const shouldShowOpenCodeSourceSkeleton =
     openCodeCatalogLoading &&
     openCodeProviderTabs.length === 0 &&
@@ -2557,10 +2554,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const shouldShowOpenCodeFilterSkeleton =
     openCodeCatalogLoading && !shouldShowOpenCodeCatalogLoading;
   const shouldShowModelSearch =
-    !shouldShowOpenCodeCatalogLoading &&
+    (!shouldShowOpenCodeCatalogLoading || concreteModelOptionCount > 0 || Boolean(modelQuery)) &&
     (effectiveProviderId === 'opencode' || concreteModelOptionCount > 8);
   const shouldShowOpenCodeFilters =
-    !shouldShowOpenCodeCatalogLoading &&
+    (!shouldShowOpenCodeCatalogLoading || concreteModelOptionCount > 0) &&
     ((effectiveProviderId === 'opencode' &&
       openCodeSourceOptions.length > 1 &&
       !selectedOpenCodeSourceTab) ||
@@ -2939,9 +2936,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           shouldShowOpenCodeNeedsTestBadge(
             openCodeProofState,
             openCodeMetadata?.sourceInfo?.id,
-            openCodeRouteKind
+            openCodeRouteKind,
+            opt.value
           ) ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-amber-600/30 bg-amber-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200">
+            <span className="inline-flex items-center justify-center rounded-full border border-amber-600/30 bg-amber-500/10 px-1.5 py-0 text-[9px] font-semibold lowercase text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200">
               {t('modelSelector.badges.needsTest')}
             </span>
           ) : null}

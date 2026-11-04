@@ -4,7 +4,7 @@ import {
   TeamRuntimeRecoveryStorePaths,
   type TeamRuntimeRecoveryFeatureFacade,
 } from '@features/team-runtime-recovery/main';
-import { mkdtemp, rm } from 'fs/promises';
+import { mkdtemp, readFile, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -45,7 +45,11 @@ interface SandboxHarness {
   snapshot: TeamAgentRuntimeSnapshot;
   notifications: Array<{ summary?: string; body?: string }>;
   relay: ReturnType<typeof vi.fn>;
-  createFeature(): TeamRuntimeRecoveryFeatureFacade;
+  /** By default the sandbox team runs in this app and belongs to this profile. */
+  createFeature(options?: {
+    active?: boolean;
+    managed?: boolean;
+  }): TeamRuntimeRecoveryFeatureFacade;
 }
 
 async function createHarness(memberNames: string[]): Promise<SandboxHarness> {
@@ -98,7 +102,9 @@ async function createHarness(memberNames: string[]): Promise<SandboxHarness> {
     snapshot,
     notifications,
     relay,
-    createFeature() {
+    createFeature(options) {
+      const active = options?.active ?? true;
+      const managed = options?.managed ?? true;
       return createTeamRuntimeRecoveryFeature({
         teamsBasePath: root,
         configManager: {
@@ -109,9 +115,10 @@ async function createHarness(memberNames: string[]): Promise<SandboxHarness> {
           },
         },
         getCurrentContextId: () => 'local',
-        listActiveTeamNames: async () => [TEAM_NAME],
-        isTeamActive: async () => true,
-        getRuntimeState: async () => ({ isAlive: true, runId: RUN_ID }),
+        listActiveTeamNames: async () => (active ? [TEAM_NAME] : []),
+        isTeamActive: async () => active,
+        isTeamManagedByThisProfile: async () => managed,
+        getRuntimeState: async () => ({ isAlive: active, runId: RUN_ID }),
         getRuntimeSnapshot: async () => snapshot,
         getLeadName: async () => 'team-lead',
         getTeamDisplayName: async () => 'Sandbox runtime recovery',
@@ -151,10 +158,15 @@ async function createHarness(memberNames: string[]): Promise<SandboxHarness> {
   return harness;
 }
 
-function seedTerminalFailures(harness: SandboxHarness, memberNames: string[]): void {
+function seedTerminalFailures(
+  harness: SandboxHarness,
+  memberNames: string[],
+  firstIndex = 0
+): void {
   const observedAt = new Date(Date.now() - 1_000).toISOString();
   const leadMessages = harness.messages.get(inboxKey(TEAM_NAME, 'team-lead')) ?? [];
-  memberNames.forEach((memberName, index) => {
+  memberNames.forEach((memberName, offset) => {
+    const index = firstIndex + offset;
     const failedMessageId = `failed-message-${index}`;
     harness.messages.set(inboxKey(TEAM_NAME, memberName), [
       {
@@ -333,6 +345,48 @@ describe('TeamRuntimeRecoveryFeature sandbox E2E', () => {
         (message) => message.messageKind === 'runtime_recovery_nudge'
       )
     ).toHaveLength(1);
+  });
+
+  it('neither scans nor cancels the recovery state of a team another profile runs', async () => {
+    const harness = await createHarness(['member-0', 'member-1']);
+    roots.push(harness.root);
+    seedTerminalFailures(harness, ['member-0']);
+    // Whoever runs the team observed a failure and keeps a pending recovery job.
+    const owner = harness.createFeature();
+    features.push(owner);
+    owner.start();
+    owner.noteTeamChange({ type: 'inbox', teamName: TEAM_NAME });
+    await waitFor(
+      async () => (await harness.repository.read(TEAM_NAME)).jobs.length === 1,
+      'the owner recovery job'
+    );
+    await owner.dispose();
+    features.splice(features.indexOf(owner), 1);
+    const statePath = new TeamRuntimeRecoveryStorePaths(harness.root).getStatePath(TEAM_NAME);
+    const ownerState = await readFile(statePath, 'utf8');
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 600));
+
+    // This app does not run the team and does not manage it.
+    const app = harness.createFeature({ active: false, managed: false });
+    features.push(app);
+    app.start();
+    await settle();
+    expect(await readFile(statePath, 'utf8')).toBe(ownerState);
+
+    seedTerminalFailures(harness, ['member-1'], 1);
+    app.noteTeamChange({ type: 'inbox', teamName: TEAM_NAME });
+    app.noteTeamChange({ type: 'process', teamName: TEAM_NAME });
+    await settle();
+    expect(await readFile(statePath, 'utf8')).toBe(ownerState);
+
+    harness.config.transientErrorsEnabled = false;
+    for (const listener of harness.configListeners) listener('teamRuntimeRecovery');
+    await settle();
+    expect(await readFile(statePath, 'utf8')).toBe(ownerState);
+
+    await expect(app.cancelAll('context_changed')).resolves.toBe(0);
+    expect(await readFile(statePath, 'utf8')).toBe(ownerState);
+    expect(harness.relay).not.toHaveBeenCalled();
   });
 
   it('cancels durable pending work immediately when the setting is disabled', async () => {

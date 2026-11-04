@@ -5,6 +5,7 @@ import {
 } from '@features/opencode-compatibility';
 import {
   chooseOpenCodeInstallGeneration,
+  DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
 import {
@@ -21,7 +22,6 @@ import {
 } from '@features/runtime-provider-management/main';
 import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
-import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
   collectRuntimePathBinaryCandidates,
@@ -86,7 +86,6 @@ const logger = createLogger('OpenCodeRuntimeInstallerService');
 
 const CHANNEL = 'openCodeRuntime:progress';
 const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
-const VERSION_TIMEOUT_MS = 30_000;
 const VERSION_PROBE_SUCCESS_CACHE_TTL_MS = 30_000;
 const VERSION_PROBE_FAILURE_CACHE_TTL_MS = 5_000;
 const RUNTIME_STATUS_SUCCESS_CACHE_TTL_MS = 30_000;
@@ -815,7 +814,10 @@ export class OpenCodeRuntimeInstallerService {
         generation,
         compatibleV2Version,
         getOpenCodeRuntimePlatformCandidates(),
-        fetchOpenCodePackageMetadata
+        fetchOpenCodePackageMetadata,
+        generation === 'v1' && !previousStatus.installed && !options.generation
+          ? DEFAULT_OPENCODE_V1_INSTALL_VERSION
+          : undefined
       );
       const platformMetadata = selected.metadata;
 
@@ -850,7 +852,6 @@ export class OpenCodeRuntimeInstallerService {
         generation === 'v2' ? path.join('bin', getExecutableName()) : getExecutableName();
       const binaryPath = path.join(versionDir, relativeBinaryPath);
 
-      let stdout = '';
       try {
         await fsp.rm(tempDir, { recursive: true, force: true });
         await fsp.mkdir(tempDir, { recursive: true });
@@ -866,12 +867,9 @@ export class OpenCodeRuntimeInstallerService {
         }
 
         this.publishProgress({ phase: 'installing', detail: 'Verifying OpenCode binary...' });
-        ({ stdout } = await execCli(tempBinaryPath, ['--version'], {
-          timeout: VERSION_TIMEOUT_MS,
-          windowsHide: true,
-        }));
-
-        const verified = classifyNativeVersion(stdout.trim());
+        const versionProbe = await probeOpenCodeBinaryVersion(tempBinaryPath);
+        if (!versionProbe.ok) throw new Error(versionProbe.error);
+        const verified = classifyNativeVersion(versionProbe.version ?? '');
         if (
           verified.kind !== 'recognized' ||
           verified.generation !== generation ||
@@ -964,7 +962,10 @@ export class OpenCodeRuntimeInstallerService {
         error: getErrorMessage(error),
         progress: {
           phase: 'failed',
-          detail: getErrorMessage(error),
+          // Keep retry scoped to support files even when the quick status still reports ready.
+          detail: options.supportOnly
+            ? `OpenCode V2 support: ${getErrorMessage(error)}`
+            : getErrorMessage(error),
         },
       };
       logger.error('Failed to install OpenCode runtime:', status.error);

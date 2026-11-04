@@ -199,7 +199,7 @@ export async function injectPostCompactReminder<
     ``,
     `You are "${leadName}", the team lead of team "${run.teamName}".`,
     `You are running in a non-interactive CLI session. Do not ask questions.`,
-    `CRITICAL: Execute ALL steps directly yourself in sequence. Do NOT delegate any step to a sub-agent via the Agent tool. The ONLY valid use of the Agent tool is spawning individual teammates.`,
+    `CRITICAL: Execute ALL steps directly yourself in sequence. Do NOT delegate any step to a sub-agent via the Agent tool.`,
     ``,
     persistentContext,
     taskBoardBlock.trim() ? `\n${taskBoardBlock}` : '',

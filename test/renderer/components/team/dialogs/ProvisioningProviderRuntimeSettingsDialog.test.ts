@@ -120,6 +120,7 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
         expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith(providerId, {
           silent: false,
           checkReason: 'provider_change',
+          ...(providerId === 'opencode' ? { projectPath: '/test-fixtures/project' } : {}),
         });
       });
       expect(onProviderRuntimeChanged).not.toHaveBeenCalled();

@@ -8,12 +8,12 @@ export { validateTaskId } from '@agent-teams/task-change-ledger/review-writer';
  */
 
 import { isValidProjectId } from '@main/utils/pathDecoder';
+import { MESSAGE_ID_MAX_LENGTH, MESSAGE_ID_PATTERN } from '@shared/utils/messageId';
 
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const NOTIFICATION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRIGGER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const MESSAGE_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
 const FROM_FIELD_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 const MAX_QUERY_LENGTH = 512;
@@ -119,7 +119,7 @@ export function validateTriggerId(triggerId: unknown): ValidationResult<string> 
 }
 
 export function validateMessageId(messageId: unknown): ValidationResult<string> {
-  const basic = validateString(messageId, 'messageId', 128);
+  const basic = validateString(messageId, 'messageId', MESSAGE_ID_MAX_LENGTH);
   if (!basic.valid) return basic;
   return MESSAGE_ID_PATTERN.test(basic.value!)
     ? basic

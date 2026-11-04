@@ -123,6 +123,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       projectPath,
       configureServices: (svc) => {
         feature = createMemberWorkSyncFeature({
+          isManagedByThisProfile: async () => true,
           lifecycleIdentity,
           teamsBasePath: getTeamsBasePath(),
           recoveryAllocation: { enabled: false },
@@ -189,6 +190,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     await feature!.stopAutoResume({ teamName, memberName, reason: 'user_stop' });
     await feature!.dispose();
     feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
       lifecycleIdentity,
       teamsBasePath: getTeamsBasePath(),
       recoveryAllocation: { enabled: false },
@@ -234,6 +236,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
     const createFeature = (svc: OpenCodeLiveHarness['svc']) =>
       createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         lifecycleIdentity: owned!.identity,
         teamsBasePath: getTeamsBasePath(),
         ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
@@ -400,6 +403,7 @@ liveDescribe('Member work sync recovery OpenCode live canary', () => {
       const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
       const createFeature = (svc: OpenCodeLiveHarness['svc'], busy = false) =>
         createMemberWorkSyncFeature({
+          isManagedByThisProfile: async () => true,
           lifecycleIdentity: owned!.identity,
           teamsBasePath: getTeamsBasePath(),
           ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,

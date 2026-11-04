@@ -90,7 +90,7 @@ describe('Windows draft backfill workflow contract', () => {
 
   it('confines draft credentials and keeps repository, tag and asset construction fixed', () => {
     expect(job.if).toBe(
-      "github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository"
+      "(github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)"
     );
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(download.env!.GH_TOKEN).toBe(
@@ -107,7 +107,7 @@ describe('Windows draft backfill workflow contract', () => {
       'gh release download $tag --repo 777genius/agent_teams_orchestrator_binaries --pattern $asset'
     );
     expect(text).not.toMatch(/pull_request_target|gh release (create|edit|upload)|contents: write/);
-    expect(job.env.WINDOWS_BACKFILL_SUPPORT_SHA).toBe('391ce5c8915951e1c412c84ff2970ab9065e4ac6');
+    expect(job.env.WINDOWS_BACKFILL_SUPPORT_SHA).toBe('cb0b0995290218c2caa5f09541cc1d828a0fa832');
   });
 
   it('gates extraction and execution on archive and embedded metadata and records selected provenance', () => {

@@ -41,7 +41,7 @@ overrides:
   fast-uri: 3.1.7
   file-type@21: 21.3.2
   flatted: 3.4.2
-  follow-redirects: 1.16.1
+  follow-redirects: 1.16.2
   find-my-way: 9.7.0
   handlebars: 4.7.10
   hono: 4.12.30
@@ -63,7 +63,7 @@ overrides:
   '@electron/rebuild>node-abi': 4.35.0
   nanoid@3: 3.3.18
   nitropack: 2.13.4
-  node-forge: 1.4.0
+  node-forge: 1.4.2
   path-to-regexp: 8.4.0
   picomatch@2: 2.3.2
   picomatch@4: 4.0.4
@@ -116,7 +116,6 @@ patchedDependencies:
   fastmcp@3.35.0: d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809
   http-cache-semantics@4.2.0: 39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7
   mcp-proxy@6.4.1: 7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5
-  node-forge@1.4.0: 7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c
 
 importers:
 
@@ -586,8 +585,8 @@ importers:
         specifier: npm:better-sqlite3@12.10.1
         version: better-sqlite3@12.10.1
       electron:
-        specifier: ^44.9.3
-        version: 44.9.3(supports-color@10.2.2)
+        specifier: ^44.10.1
+        version: 44.10.1(supports-color@10.2.2)
       electron-builder:
         specifier: 26.17.0
         version: 26.17.0(electron-builder-squirrel-windows@26.17.0)(supports-color@10.2.2)
@@ -7444,8 +7443,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@44.9.3:
-    resolution: {integrity: sha512-Cv9/yMnZxNWsMlIe8T4v//NKHdUvbeyoTJoXE3BIcRxus2meeFaO9h/P3zB5d4cBXum51IgAYrT2QjpIDWKpJA==}
+  electron@44.10.1:
+    resolution: {integrity: sha512-CTqxvx02P+xCR/xUxAWBexQEJ42g9Rzy1/0N+ofGAtI/atgSYZKQnTX9/juwzftocWbZtoF2ftEGMGJujJDeBw==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -8089,8 +8088,8 @@ packages:
   focus-trap@8.2.0:
     resolution: {integrity: sha512-CaBdQ9P4fa/yCA6pDf/3aJd8bf9IOG5QGK21/E+86o2V4V8kzXaR4A9E6tNR7KkkS1+T5ZIU1tJDBDLwsucz9g==}
 
-  follow-redirects@1.16.1:
-    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
+  follow-redirects@1.16.2:
+    resolution: {integrity: sha512-/kVP2U8z596Ia0gwFrwyIeo74ta5aVmSeU1FfAUMAmcEP5EP7zydmag3SLiN64NaRKef3lxsq7i/g7ltJQDGow==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -9758,8 +9757,8 @@ packages:
       encoding:
         optional: true
 
-  node-forge@1.4.0:
-    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+  node-forge@1.4.2:
+    resolution: {integrity: sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ==}
     engines: {node: '>= 6.13.0'}
 
   node-gyp-build@4.8.4:
@@ -18780,7 +18779,7 @@ snapshots:
 
   axios@1.20.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
-      follow-redirects: 1.16.1(debug@4.4.3(supports-color@10.2.2))
+      follow-redirects: 1.16.2(debug@4.4.3(supports-color@10.2.2))
       form-data: 4.0.6
       https-proxy-agent: 5.0.1(supports-color@10.2.2)
       proxy-from-env: 2.1.0
@@ -19893,7 +19892,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@44.9.3(supports-color@10.2.2):
+  electron@44.10.1(supports-color@10.2.2):
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0(supports-color@10.2.2)
@@ -20890,7 +20889,7 @@ snapshots:
     dependencies:
       tabbable: 6.4.0
 
-  follow-redirects@1.16.1(debug@4.4.3(supports-color@10.2.2)):
+  follow-redirects@1.16.2(debug@4.4.3(supports-color@10.2.2)):
     optionalDependencies:
       debug: 4.4.3(supports-color@10.2.2)
 
@@ -22102,7 +22101,7 @@ snapshots:
       http-shutdown: 1.2.2
       jiti: 2.7.0
       mlly: 1.8.2
-      node-forge: 1.4.0(patch_hash=7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c)
+      node-forge: 1.4.2
       pathe: 2.0.3
       std-env: 4.1.0
       tinyclip: 0.1.12
@@ -23031,7 +23030,7 @@ snapshots:
     optionalDependencies:
       encoding: 0.1.13
 
-  node-forge@1.4.0(patch_hash=7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c): {}
+  node-forge@1.4.2: {}
 
   node-gyp-build@4.8.4: {}
 

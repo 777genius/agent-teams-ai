@@ -1,7 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ADVISORY, installedForgePackages, verifyForgePackage } from './node-forge-security.mjs';
 import { BACKPORTS, installedBackportPackages, verifyBackport } from './transitive-security.ts';
 
 const severities = ['info', 'low', 'moderate', 'high', 'critical'];
@@ -27,7 +26,7 @@ function advisoryId(value) {
 }
 
 // Exceptions require exact advisories/packages AND independently verified installed code.
-export function assessAuditReport(report, { npm = false, patched = false, backported = [] } = {}) {
+export function assessAuditReport(report, { npm = false, backported = [] } = {}) {
   assert(object(report) && !report.error && !report.errors, 'error or missing report');
   const entries = npm ? report.vulnerabilities : report.advisories;
   assert(object(entries), 'missing vulnerability map');
@@ -85,10 +84,6 @@ export function assessAuditReport(report, { npm = false, patched = false, backpo
     const allowed =
       high.length > 0 &&
       high.every((item) => {
-        if (advisoryId(item) === ADVISORY && patched)
-          return npm
-            ? item.name === 'node-forge' && item.dependency === 'node-forge'
-            : item.module_name === 'node-forge';
         const spec = BACKPORTS.find((candidate) => candidate.advisory === advisoryId(item));
         if (!spec || !backported.includes(spec.name)) return false;
         if (npm) return item.name === spec.name && item.dependency === spec.name;
@@ -127,27 +122,6 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     throw new Error('Audit failed without a reported HIGH/CRITICAL vulnerability');
   if (result.status === 0 && original.blocked.length > 0)
     throw new Error('Audit exit status disagrees with vulnerability report');
-  let patched = false;
-  if (original.blocked.length > 0) {
-    const targets = installedForgePackages(cwd, { npm });
-    for (const target of targets) verifyForgePackage(target);
-    // npm may report nested copies beyond the hoisted package.
-    if (npm) {
-      const nodes = report.vulnerabilities['node-forge']?.nodes;
-      if (nodes) {
-        assert(
-          Array.isArray(nodes) &&
-            nodes.length > 0 &&
-            nodes.every(
-              (node) => typeof node === 'string' && node.endsWith('node_modules/node-forge')
-            ),
-          'invalid node-forge install paths'
-        );
-        for (const node of nodes) verifyForgePackage(resolve(cwd, node));
-      }
-    }
-    patched = true;
-  }
   const backported = [];
   for (const spec of BACKPORTS) {
     const reported = npm
@@ -169,13 +143,17 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     for (const target of targets) verifyBackport(spec.name, target);
     backported.push(spec.name);
   }
-  const assessed = assessAuditReport(report, { npm, patched, backported });
+  const assessed = assessAuditReport(report, { npm, backported });
   // Retain the full raw report so advisories below the chosen threshold remain visible.
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  if (assessed.excepted.length)
-    console.log(
-      `Verified local security backports: ${[...(patched ? [ADVISORY] : []), ...BACKPORTS.filter((spec) => backported.includes(spec.name)).map((spec) => spec.advisory)].join(', ')} (${assessed.excepted.join(', ')})`
+  if (assessed.excepted.length) {
+    const advisories = BACKPORTS.filter((spec) => backported.includes(spec.name)).map(
+      (spec) => spec.advisory
     );
+    console.log(
+      `Verified local security backports: ${advisories.join(', ')} (${assessed.excepted.join(', ')})`
+    );
+  }
   if (assessed.blocked.length)
     throw new Error(`Unresolved HIGH/CRITICAL vulnerabilities: ${assessed.blocked.join(', ')}`);
   return assessed;

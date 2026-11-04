@@ -19,12 +19,14 @@ import {
   RuntimeStoreFileInspector,
   RuntimeStoreRecoveryPlanner,
 } from '@main/services/team/opencode/store/RuntimeStoreManifest';
+import { createOpenCodeSecondaryLaneLaunchAttempt } from '@main/services/team/provisioning/OpenCodeSecondaryLaneLaunchAttempt';
 import {
   commitOpenCodeRuntimeBootstrapSessionEvidence,
   createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
   stampOpenCodeAppMcpTransportEvidenceIfMissing,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
 import { assertOpenCodeRuntimeStopEffective } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { createSecondaryRuntimeRunStore } from '@main/services/team/provisioning/TeamProvisioningSecondaryRuntimeRuns';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
@@ -45,6 +47,7 @@ import {
   type OpenCodeBridgePeerIdentity,
   type OpenCodeBridgeResult,
   type OpenCodeBridgeSuccess,
+  type OpenCodeLaunchTeamCommandBody,
   type RuntimeStoreManifestEvidence,
   stableHash,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
@@ -116,6 +119,122 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     vi.useRealTimers();
     await fs.rm(tempDir, { recursive: true, force: true });
   });
+
+  it.each([true, false])(
+    'fences native launch after Stop during environment preparation (state changing=%s)',
+    async (stateChanging) => {
+      const scope = {
+        teamsBasePath: path.join(tempDir, 'teams'),
+        teamName: 'team-a',
+        laneId: 'secondary:opencode:alice',
+        runId: 'run-1',
+      };
+      await setOpenCodeRuntimeActiveRunManifest(scope);
+      const reader = new OpenCodeRuntimeManifestEvidenceReader({
+        teamsBasePath: scope.teamsBasePath,
+      });
+      const attempt = createOpenCodeSecondaryLaneLaunchAttempt(scope.runId, () => true);
+      const store = createSecondaryRuntimeRunStore({
+        secondaryRuntimeRunByTeam: new Map(),
+        ports: { clearOpenCodeRuntimeToolApprovals: vi.fn() },
+      });
+      store.setSecondaryRuntimeRun({
+        ...scope,
+        providerId: 'opencode',
+        memberName: 'alice',
+        launchAttempt: attempt,
+      });
+      let entered!: () => void;
+      let release!: () => void;
+      const envEntered = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const pendingEnv = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const processRunner = {
+        run: vi.fn(async () => ({
+          stdout: '',
+          stderr: 'Unexpected native launch',
+          exitCode: 1,
+          timedOut: false,
+        })),
+      };
+      const client = new OpenCodeBridgeCommandClient({
+        binaryPath: '/unused/native',
+        tempDirectory: path.join(tempDir, 'bridge'),
+        processRunner,
+        envProvider: async () => {
+          entered();
+          await pendingEnv;
+          return {};
+        },
+      });
+      const service = createService({ bridge: client, manifestReader: reader });
+      const readinessBridge = new OpenCodeReadinessBridge(
+        client,
+        stateChanging ? { stateChangingCommands: service } : {}
+      );
+      const body: OpenCodeLaunchTeamCommandBody = {
+        ...scope,
+        teamId: scope.teamName,
+        projectPath: tempDir,
+        selectedModel: 'deepinfra/model',
+        skipPermissions: true,
+        members: [],
+        leadPrompt: '',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedBehaviorFingerprint: 'a'.repeat(64),
+        manifestHighWatermark: null,
+      };
+      expect(attempt.mayDispatch()).toBe(true); // Existing conservative adapter handoff.
+      const launching = attempt.launch(async () => {
+        const data = await readinessBridge.launchOpenCodeTeam(body, () => attempt.mayDispatch());
+        expect(data.teamLaunchState).toBe('failed');
+        return {
+          runId: scope.runId,
+          teamName: scope.teamName,
+          launchPhase: 'finished',
+          teamLaunchState: 'partial_failure',
+          members: {},
+          warnings: [],
+          diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
+        };
+      });
+      await envEntered;
+      try {
+        await expect(attempt.cancelAndJoin()).resolves.toBe(false);
+        if (stateChanging) {
+          await expect(
+            readinessBridge.stopOpenCodeTeam({
+              ...body,
+              reason: 'user_requested',
+              force: true,
+            })
+          ).resolves.toMatchObject({ stopped: false, members: {} });
+        }
+      } finally {
+        release();
+      }
+      const result = await launching;
+      attempt.finish();
+      expect(processRunner.run).not.toHaveBeenCalled();
+      expect(result.teamLaunchState).toBe('partial_failure');
+      expect(result).not.toHaveProperty('preLaunchGate');
+      expect(attempt.wasBlockedBeforeLaunch()).toBe(false);
+      expect(store.getSecondaryRuntimeRuns(scope.teamName)).toEqual([
+        expect.objectContaining({ runId: scope.runId, launchAttempt: attempt }),
+      ]);
+      await expect(reader.read(scope.teamName, scope.laneId)).resolves.toMatchObject({
+        activeRunId: scope.runId,
+        capabilitySnapshotId: null,
+      });
+      expect(launchAuthorityWriter.publish).not.toHaveBeenCalled();
+      if (stateChanging) {
+        await expect(leaseStore.getActive(scope.teamName)).resolves.toBeNull();
+      }
+    }
+  );
 
   it('publishes validated launch authority before completion and preserves it through bootstrap, transport and stop', async () => {
     const teamsBasePath = path.join(tempDir, 'teams');
@@ -293,14 +412,21 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     'forwards exact launch model and approval scope to the handshake (%s)',
     async (skipPermissions) => {
       const input = buildLaunchInput();
-      input.body = { ...(input.body as object), selectedModel: 'openai/gpt-5.4', skipPermissions, effort: 'low' };
+      input.body = {
+        ...(input.body as object),
+        selectedModel: 'openai/gpt-5.4',
+        skipPermissions,
+        effort: 'low',
+      };
       expect(manifestReader.manifest.highWatermark).toBeGreaterThan(0);
       await createService().execute(input);
       expect(handshakePort.calls[0]).toMatchObject({
         selectedModel: 'openai/gpt-5.4',
         effort: 'low',
         expectedManifestHighWatermark: null,
-        executionProofIdentity: stableHash((input.body as Record<string, unknown>).executionProof ?? null),
+        executionProofIdentity: stableHash(
+          (input.body as Record<string, unknown>).executionProof ?? null
+        ),
         toolApprovalMode: skipPermissions ? 'auto' : 'manual',
         teamId: 'team-a',
         laneId: null,
@@ -365,6 +491,33 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       options: { cwd: '/tmp/project' },
     });
   });
+
+  it.each([
+    [undefined, 180_000],
+    [300_000, 180_000],
+    [42_000, 42_000],
+  ] as const)(
+    'handshake loading preserves the caller budget %s',
+    async (callerBudget, expected) => {
+      vi.useFakeTimers();
+      bridge.resultFactory = ({ command, options }) =>
+        bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          data: handshakePort.nextHandshake,
+        });
+      const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity });
+      await port.handshake({
+        requiredCommand: 'opencode.launchTeam',
+        expectedRunId: null,
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: null,
+        timeoutMs: callerBudget,
+      });
+      expect(bridge.calls).toHaveLength(1);
+      expect(bridge.calls[0].options.timeoutMs).toBe(expected);
+    }
+  );
 
   it('retries a busy registry handshake before dispatch within the original deadline', async () => {
     vi.useFakeTimers();
@@ -476,7 +629,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
             requestId: options.requestId,
             data: handshakePort.nextHandshake,
           });
-    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 60_000 });
+    const port = new OpenCodeBridgeCommandHandshakePort({
+      bridge,
+      clientIdentity,
+      timeoutMs: 60_000,
+    });
     const pending = port.handshake({
       requiredCommand: 'opencode.launchTeam',
       expectedRunId: null,
@@ -513,7 +670,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
             requestId: options.requestId,
             data: handshakePort.nextHandshake,
           });
-    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    const port = new OpenCodeBridgeCommandHandshakePort({
+      bridge,
+      clientIdentity,
+      timeoutMs: 10_000,
+    });
     const pending = port.handshake({
       requiredCommand: 'opencode.launchTeam',
       expectedRunId: null,
@@ -540,7 +701,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         retryable: true,
       },
     });
-    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    const port = new OpenCodeBridgeCommandHandshakePort({
+      bridge,
+      clientIdentity,
+      timeoutMs: 10_000,
+    });
     await expect(
       port.handshake({
         requiredCommand: 'opencode.stopTeam',

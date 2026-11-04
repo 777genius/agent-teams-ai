@@ -6,7 +6,31 @@ import {
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
-import type { CliProviderId, CliProviderStatus } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  CliProviderStatusRequestOptions,
+} from '@shared/types';
+
+export function getProviderDisplayName(providerId: CliProviderId): string {
+  switch (providerId) {
+    case 'anthropic':
+      return 'Anthropic';
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'opencode':
+      return 'OpenCode (200+ providers)';
+  }
+}
+
+export function isMultimodelCliStatus(
+  status: CliInstallationStatus | null | undefined
+): status is CliInstallationStatus & { flavor: 'agent_teams_orchestrator' } {
+  return status?.flavor === 'agent_teams_orchestrator';
+}
 
 export function settleCliProviderStatusLoading(
   currentLoading: Partial<Record<CliProviderId, boolean>>,
@@ -128,14 +152,18 @@ export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliP
 export function shouldRetryCliProviderStatusCheck(
   providerId: CliProviderId,
   verifyModels: boolean,
-  provider: CliProviderStatus | null
+  provider: CliProviderStatus | null,
+  options: CliProviderStatusRequestOptions = {}
 ): boolean {
   if (verifyModels || !provider) return false;
   return (
     (providerId === 'opencode' &&
       provider.statusCheckErrorCode === 'partial_response' &&
       provider.statusCheckOutcome !== 'model_only') ||
-    (provider.statusCheckOutcome === 'transient_error' &&
+    // Project-scoped OpenCode reads use the full loading budget. Retry only the
+    // shorter global summary timeouts instead of immediately repeating a full read.
+    ((providerId !== 'opencode' || !options.projectPath?.trim()) &&
+      provider.statusCheckOutcome === 'transient_error' &&
       provider.statusCheckErrorCode === 'timeout')
   );
 }

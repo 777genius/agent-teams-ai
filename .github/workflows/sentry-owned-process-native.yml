@@ -2,6 +2,7 @@ name: Sentry owned process native gates
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - '.github/workflows/sentry-owned-process-native.yml'
       - 'tools/owned-process-broker/**'
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   native:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     name: owned native (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30

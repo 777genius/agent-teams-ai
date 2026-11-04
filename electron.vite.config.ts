@@ -10,6 +10,7 @@ import {
   isOfficialPostHogReleaseBuild,
   resolvePostHogBuildKey,
 } from './src/shared/utils/posthogBuildPolicy'
+import { INHERITED_HARNESS_ENV_BANNER } from './src/main/utils/inheritedHarnessEnv'
 import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
 import { pinDocumentPreviewWorkers, sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
 import { resolveSentryBuildIdentity } from './scripts/build/sentryBuildIdentity'
@@ -217,11 +218,12 @@ export default defineConfig({
           // Use .cjs extension since package.json has "type": "module".
           format: 'cjs',
           entryFileNames: '[name].cjs',
+          // Also drops the env inherited from a parent Claude Code session (see inheritedHarnessEnv.ts).
           // Set UV_THREADPOOL_SIZE before any module code runs.
           // Must be in the banner because ESM→CJS hoists imports above top-level code.
           // On Windows, fs.watch({recursive:true}) occupies a UV pool thread per watcher;
           // with 3+ watchers + concurrent fs/DNS/spawn, the default 4 threads deadlock.
-          banner: `if(!process.env.UV_THREADPOOL_SIZE){process.env.UV_THREADPOOL_SIZE='24'}`
+          banner: `${INHERITED_HARNESS_ENV_BANNER};if(!process.env.UV_THREADPOOL_SIZE){process.env.UV_THREADPOOL_SIZE='24'}`
         }
       }
     }

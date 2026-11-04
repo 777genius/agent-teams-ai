@@ -16,6 +16,7 @@ import { StringDecoder } from 'string_decoder';
 
 import { JsonTeamTranscriptAffinityIndexStore } from './cache/JsonTeamTranscriptAffinityIndexStore';
 import { TeamConfigReader } from './TeamConfigReader';
+import { mayWriteTeamFiles, type TeamFileWritePolicy } from './teamFileWritePolicy';
 import { normalizeLogSourceSessionId } from './teamLogSourceWatchScope';
 
 import type {
@@ -351,6 +352,7 @@ export class TeamTranscriptProjectResolver {
   >();
 
   constructor(
+    private readonly canWriteTeamFiles: TeamFileWritePolicy,
     private readonly configReader: TeamTranscriptProjectConfigReader = new TeamConfigReader(),
     private readonly affinityIndexStore: TeamTranscriptAffinityIndexStore = new JsonTeamTranscriptAffinityIndexStore()
   ) {}
@@ -868,12 +870,11 @@ export class TeamTranscriptProjectResolver {
     nextProjectPath: string
   ): Promise<void> {
     const normalizedNextPath = normalizeProjectPathCandidate(nextProjectPath);
-    if (!normalizedNextPath) {
+    const currentProjectPath = normalizeProjectPathCandidate(config.projectPath);
+    if (!normalizedNextPath || currentProjectPath === normalizedNextPath) {
       return;
     }
-
-    const currentProjectPath = normalizeProjectPathCandidate(config.projectPath);
-    if (currentProjectPath === normalizedNextPath) {
+    if (!(await mayWriteTeamFiles(this.canWriteTeamFiles, teamName))) {
       return;
     }
 
@@ -1114,7 +1115,8 @@ export class TeamTranscriptProjectResolver {
       )
     );
 
-    if (indexEnabled && (pendingIndexEntries.length > 0 || shouldPruneAffinityIndex)) {
+    const writeIndex = indexEnabled && (pendingIndexEntries.length > 0 || shouldPruneAffinityIndex);
+    if (writeIndex && (await mayWriteTeamFiles(this.canWriteTeamFiles, teamName))) {
       await this.affinityIndexStore
         .upsertProjectEntries({
           teamName,

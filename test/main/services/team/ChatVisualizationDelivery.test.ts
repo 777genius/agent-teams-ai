@@ -10,7 +10,7 @@ describe('OpenUI discovery through actual create and message delivery paths', ()
   it.each([{ members: [] }, { members: [{ name: 'reviewer', role: 'reviewer' }] }])(
     'delivers the full display contract with a fresh native create request ($members)',
     ({ members }) => {
-      const prompt = buildCreateBootstrapUserPrompt(request, members);
+      const prompt = buildCreateBootstrapUserPrompt('alpha', request, members);
       expect(prompt).toContain(protocols.buildChatVisualizationProtocolText());
       expect(prompt.match(/CHAT VISUALIZATION PROTOCOL v1/g)).toHaveLength(1);
       expect(prompt).toContain('Stack(children: Card[])');
@@ -20,7 +20,7 @@ describe('OpenUI discovery through actual create and message delivery paths', ()
   );
 
   it('keeps empty creation silent and supplies discovery with the first real lead message', () => {
-    expect(buildCreateBootstrapUserPrompt('   ', [])).toBe('');
+    expect(buildCreateBootstrapUserPrompt('alpha', '   ', [])).toBe('');
     const prompt = buildMessageDeliveryText(request, {
       isLeadRecipient: true,
       actionMode: 'ask',

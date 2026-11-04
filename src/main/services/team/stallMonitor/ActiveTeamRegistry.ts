@@ -5,8 +5,15 @@ import type { TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('Service:ActiveTeamRegistry');
 
-interface TeamAliveProcessesReader {
+/**
+ * The teams directory is shared with other app profiles and native sessions,
+ * and processes.json lists live processes of their teams too. A scan of an
+ * active team writes its stall journal, work-sync observations and inbox
+ * messages, so only a team this profile manages becomes active.
+ */
+interface ActiveTeamSource {
   listAliveProcessTeams(): Promise<string[]>;
+  isTeamManagedByThisProfile(teamName: string): Promise<boolean>;
 }
 
 interface TeamLogSourceTrackingHandle {
@@ -32,7 +39,7 @@ export class ActiveTeamRegistry {
   private reconcileTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
-    private readonly teamDataService: TeamAliveProcessesReader,
+    private readonly teamDataService: ActiveTeamSource,
     private readonly teamLogSourceTracker: Pick<
       TeamLogSourceTracker,
       'enableTracking' | 'disableTracking'
@@ -59,8 +66,14 @@ export class ActiveTeamRegistry {
     }
   }
 
+  /**
+   * Checked again on every call: another profile can take a team over between
+   * two reconciles, and from then on this profile's scans leave it alone.
+   */
   async listActiveTeams(): Promise<string[]> {
-    return [...this.activeTeams].sort((left, right) => left.localeCompare(right));
+    return this.filterTeamsOfThisProfile(
+      [...this.activeTeams].sort((left, right) => left.localeCompare(right))
+    );
   }
 
   start(): void {
@@ -92,7 +105,9 @@ export class ActiveTeamRegistry {
 
   async reconcile(): Promise<void> {
     const reconcileGeneration = this.activationGeneration;
-    const aliveTeams = await this.teamDataService.listAliveProcessTeams();
+    const aliveTeams = await this.filterTeamsOfThisProfile(
+      await this.teamDataService.listAliveProcessTeams()
+    );
     const aliveSet = new Set(aliveTeams);
 
     for (const teamName of aliveTeams) {
@@ -125,6 +140,11 @@ export class ActiveTeamRegistry {
     this.activationInFlight.add(teamName);
     const activationGeneration = this.activationGeneration;
     try {
+      if (!(await this.isTeamOfThisProfile(teamName))) {
+        return;
+      }
+      // A stop during the ownership check is caught by the generation check
+      // below, which undoes the tracking.
       await this.teamLogSourceTracker.enableTracking(teamName, 'stall_monitor');
       if (activationGeneration !== this.activationGeneration) {
         await this.disableStaleActivation(teamName);
@@ -136,6 +156,21 @@ export class ActiveTeamRegistry {
     } finally {
       this.activationInFlight.delete(teamName);
     }
+  }
+
+  /**
+   * A scan asks again before it writes into a team: another profile can take
+   * the team over while the scan runs.
+   */
+  isTeamOfThisProfile(teamName: string): Promise<boolean> {
+    return this.teamDataService.isTeamManagedByThisProfile(teamName);
+  }
+
+  private async filterTeamsOfThisProfile(teamNames: readonly string[]): Promise<string[]> {
+    const managed = await Promise.all(
+      teamNames.map((teamName) => this.isTeamOfThisProfile(teamName))
+    );
+    return teamNames.filter((_, index) => managed[index]);
   }
 
   private async disableStaleActivation(teamName: string): Promise<void> {

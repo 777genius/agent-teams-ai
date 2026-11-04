@@ -326,6 +326,30 @@ describe('external OpenCode V2 support installation', () => {
     ).toThrow();
   });
 
+  it.each(['short', 'oversized'] as const)(
+    'rejects a %s streamed body without a content-length before activating support',
+    async (bodyKind) => {
+      const { lock, descriptor, archive } = fixture();
+      const service = installer(lock);
+      const body =
+        bodyKind === 'short'
+          ? archive.subarray(0, archive.length - 1)
+          : Buffer.concat([archive, Buffer.from([0])]);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(new Uint8Array(body)))
+      );
+      await expect(service.install(native.version!, vi.fn())).rejects.toThrow(
+        bodyKind === 'short' ? 'archive checksum mismatch' : 'archive exceeds pinned length'
+      );
+      expect((await service.withStatus(native)).v2Support).toBe('required');
+      expect(await readdir(directory(descriptor))).toEqual([]);
+      download(archive);
+      await service.install(native.version!, vi.fn());
+      expect((await service.withStatus(native)).v2Support).toBe('ready');
+    }
+  );
+
   it('keeps concurrent publishers immutable and exposes only a complete receipt', async () => {
     const { lock, descriptor, archive } = fixture();
     download(archive);
@@ -339,7 +363,7 @@ describe('external OpenCode V2 support installation', () => {
     expect(names.filter((name) => name !== 'installed.json').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('preserves the previous receipt on an interrupted repair and removes only its own staging', async () => {
+  it('preserves a receipt on interrupted repair and retries successfully in the same installer', async () => {
     const { lock, descriptor, archive } = fixture();
     const service = installer(lock);
     download(archive);
@@ -355,25 +379,93 @@ describe('external OpenCode V2 support installation', () => {
       ),
       'tamper fixture'
     );
+    let streamed = false;
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
         Promise.resolve(
           new Response(
             new ReadableStream({
-              start(controller) {
-                controller.enqueue(archive.subarray(0, 32));
-                controller.error(new Error('TEST interrupted download'));
+              pull(controller) {
+                if (!streamed) {
+                  streamed = true;
+                  controller.enqueue(archive.subarray(0, 32));
+                } else {
+                  controller.error(new Error('TEST interrupted download'));
+                }
               },
             })
           )
         )
       )
     );
-    await expect(service.install(native.version!, vi.fn())).rejects.toThrow(
+    const progress = vi.fn();
+    await expect(service.install(native.version!, progress)).rejects.toThrow(
       'TEST interrupted download'
     );
+    expect(progress).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'downloading', downloadedBytes: 32 })
+    );
     expect(await readFile(receiptFile, 'utf8')).toBe(before);
+    expect((await readdir(directory(descriptor))).filter((name) => name.startsWith('.'))).toEqual(
+      []
+    );
+    download(archive);
+    await service.install(native.version!, vi.fn());
+    expect((await service.withStatus(native)).v2Support).toBe('ready');
+    const repaired = JSON.parse(await readFile(receiptFile, 'utf8')) as { instance: string };
+    expect(repaired.instance).not.toBe(receipt.instance);
+  });
+
+  it('keeps support unavailable until the entire streamed archive is verified and published', async () => {
+    const { lock, descriptor, archive } = fixture();
+    const service = installer(lock);
+    let finishDownload!: () => void;
+    const resume = new Promise<void>((resolve) => {
+      finishDownload = resolve;
+    });
+    let observeProgress!: () => void;
+    const started = new Promise<void>((resolve) => {
+      observeProgress = resolve;
+    });
+    let streamed = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            new ReadableStream({
+              async pull(controller) {
+                if (!streamed) {
+                  streamed = true;
+                  controller.enqueue(archive.subarray(0, 32));
+                } else {
+                  await resume;
+                  controller.enqueue(archive.subarray(32));
+                  controller.close();
+                }
+              },
+            })
+          )
+      )
+    );
+    const installing = service.install(native.version!, (progress) => {
+      if (progress.downloadedBytes === 32) observeProgress();
+    });
+    try {
+      await started;
+      expect(await service.withStatus(native)).toMatchObject({
+        installed: true,
+        binaryPath: native.binaryPath,
+        state: 'idle',
+        v2Support: 'required',
+      });
+      await expect(readFile(path.join(directory(descriptor), 'installed.json'))).rejects.toThrow();
+    } finally {
+      finishDownload();
+      await installing;
+    }
+    expect(await service.withStatus(native)).toMatchObject({ ...native, v2Support: 'ready' });
     expect((await readdir(directory(descriptor))).filter((name) => name.startsWith('.'))).toEqual(
       []
     );

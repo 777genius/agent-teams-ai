@@ -90,7 +90,10 @@ export interface OpenCodeTeamRuntimeBridgePort {
     skipPermissions?: boolean,
     identity?: { effort?: string; freshExecutionProofRequestId?: string }
   ): OpenCodeBridgeRuntimeSnapshot | null;
-  launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
+  launchOpenCodeTeam?(
+    input: OpenCodeLaunchTeamCommandBody,
+    canDispatch?: () => boolean
+  ): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
   ): Promise<OpenCodeReconcileTeamCommandData>;
@@ -489,9 +492,19 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       ...(recoveryAttemptId ? { capabilitySnapshotRecoveryAttemptId: recoveryAttemptId } : {}),
     });
 
-    let data = await this.bridge.launchOpenCodeTeam(
-      buildLaunchCommand(runtimeSnapshot, selectedModel)
-    );
+    if (input.mayDispatch?.() === false) {
+      return blockedLaunchResult(
+        input,
+        'opencode_launch_cancelled',
+        ['OpenCode team launch was cancelled before native dispatch.'],
+        [],
+        { preLaunchGate: true, retryable: false }
+      );
+    }
+    const launchOpenCodeTeam = this.bridge.launchOpenCodeTeam.bind(this.bridge);
+    const launch = (body: OpenCodeLaunchTeamCommandBody) =>
+      input.mayDispatch ? launchOpenCodeTeam(body, input.mayDispatch) : launchOpenCodeTeam(body);
+    let data = await launch(buildLaunchCommand(runtimeSnapshot, selectedModel));
     let capabilitySnapshotRefreshAttempts = 0;
     while (
       !skipReadinessPreflight &&
@@ -566,7 +579,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         // structured bridge failure details: expectedCapabilitySnapshotId,
         // actualCapabilitySnapshotId, preconditionStage, and safeToRetryWithFreshCommand.
         // Keep this app-side attempt id until packaged runtimes all expose that protocol.
-        data = await this.bridge.launchOpenCodeTeam(
+        if (input.mayDispatch?.() === false) {
+          // An earlier handoff entered the bridge; retain its exact stop authority.
+          return blockedLaunchResult(input, 'opencode_launch_cancelled', [
+            'OpenCode team launch was cancelled during capability refresh.',
+          ]);
+        }
+        data = await launch(
           buildLaunchCommand(
             runtimeSnapshot,
             selectedModel,

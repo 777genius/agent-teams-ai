@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { getOpenCodeGeneration } from '@features/runtime-provider-management';
 import { clearMemberModelOverrides } from '@renderer/components/team/members/MembersEditorSection';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useStore } from '@renderer/store';
@@ -242,6 +243,8 @@ export function useOpenCodeProviderScopedDialogModelState({
   const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
     useOpenCodeProviderScopedModelAuthority(projectPath);
   const catalogRefreshRevision = useStore((state) => state.cliProviderStatusScopeRevision) ?? 0;
+  const openCodeVersion = useStore((state) => state.openCodeRuntimeStatus?.version);
+  const openCodeGeneration = getOpenCodeGeneration(openCodeVersion);
   const { t } = useAppTranslation('team');
   const openCodeProjectDefault = useOpenCodeProjectDefaultModel(passiveProviderStatus, projectPath);
   const openCodeDefaultSelection = useMemo(() => {
@@ -310,11 +313,13 @@ export function useOpenCodeProviderScopedDialogModelState({
       scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
       localSourceIds: openCodeLocalProviderIds ?? new Set<string>(),
       localProviderLookupAuthoritative: openCodeLocalProviderLookupAuthoritative === true,
+      generation: openCodeGeneration,
     }),
     [
       effectiveMemberDrafts,
       gatewayBoundMemberNames,
       gatewayBindingsPending,
+      openCodeGeneration,
       openCodeLocalProviderIds,
       openCodeLocalProviderLookupAuthoritative,
       openCodeProviderScopedStatusBySourceId,

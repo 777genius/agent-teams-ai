@@ -870,7 +870,7 @@ describe('MemberDraftRow', () => {
     });
   });
 
-  it('renders the gateway selector right after the model selector when a team name is provided', () => {
+  it('temporarily hides gateway settings even when a team name is provided', () => {
     const { host, root } = renderMemberDraftRow({ teamName: 'alpha' });
     const modelButton = host.querySelector<HTMLButtonElement>(
       'button[aria-label="anthropic provider, opus"]'
@@ -879,14 +879,7 @@ describe('MemberDraftRow', () => {
       modelButton.click();
     });
 
-    const gatewaySelector = host.querySelector('[data-testid="member-gateway-selector"]')!;
-    expect(gatewaySelector).toBeTruthy();
-    const teamModelSelector = Array.from(host.querySelectorAll('div')).find(
-      (div) => div.textContent === 'team-model-selector'
-    )!;
-    expect(
-      teamModelSelector.compareDocumentPosition(gatewaySelector) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
+    expect(host.querySelector('[data-testid="member-gateway-selector"]')).toBeNull();
 
     act(() => {
       root.unmount();

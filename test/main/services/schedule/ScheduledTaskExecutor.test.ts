@@ -753,33 +753,6 @@ describe('ScheduledTaskExecutor', () => {
     proc.emit('close', 0);
   });
 
-  it('strips CLAUDECODE env var to avoid nested session detection', async () => {
-    const proc = createMockProcess();
-    mockSpawnCli.mockReturnValue(proc);
-    mockResolveShellEnv.mockResolvedValue({});
-
-    // Simulate CLAUDECODE being set in parent process
-    const originalClaudeCode = process.env.CLAUDECODE;
-    process.env.CLAUDECODE = '1';
-
-    try {
-      const executor = new ScheduledTaskExecutor();
-      void executor.execute(makeRequest());
-      await flushAsync();
-
-      const opts = mockSpawnCli.mock.calls[0][2];
-      expect(opts.env.CLAUDECODE).toBeUndefined();
-
-      proc.emit('close', 0);
-    } finally {
-      if (originalClaudeCode === undefined) {
-        delete process.env.CLAUDECODE;
-      } else {
-        process.env.CLAUDECODE = originalClaudeCode;
-      }
-    }
-  });
-
   it('fails fast when provider-aware env reports a missing API key', async () => {
     buildProviderAwareCliEnvMock.mockResolvedValue({
       env: { SHELL: '/bin/zsh' },

@@ -361,10 +361,9 @@ export async function runDeterministicCreateSpawnFlow<
   logger,
   ports,
 }: RunDeterministicCreateSpawnFlowInput<TRun>): Promise<{ runId: string }> {
-  // Create-mode delivers this deferred prompt before any teammate confirms
-  // bootstrap; the roster wrap keeps the lead from inventing teammate names
-  // or executing teammates' work while they are still joining.
+  // Deferred first prompt: the lead's only source of team scope and roster in create mode.
   const initialUserPrompt = buildCreateBootstrapUserPrompt(
+    request.teamName,
     request.prompt ?? '',
     allEffectiveMemberSpecs
   );

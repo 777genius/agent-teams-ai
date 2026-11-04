@@ -800,6 +800,7 @@
         "skipped": "skipped"
       },
       "recipient": "To {{name}}",
+      "deliveryUnconfirmed": "Delivery not confirmed for {{names}}",
       "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
       "showTasksOnBoard": "Show tasks on board"
     },

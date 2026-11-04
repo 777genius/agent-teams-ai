@@ -172,6 +172,7 @@ liveDescribe('TeamRuntimeRecoveryFeature live provider E2E', () => {
       getCurrentContextId: () => 'runtime-recovery-live-smoke',
       listActiveTeamNames: async () => service!.getAliveTeams(),
       isTeamActive: async (name) => service!.isTeamAlive(name),
+      isTeamManagedByThisProfile: (name) => service!.isTeamManagedByThisProfile(name),
       getRuntimeState: (name) => service!.getRuntimeState(name),
       getRuntimeSnapshot: (name) => service!.getTeamAgentRuntimeSnapshot(name),
       getLeadName: async () => 'team-lead',

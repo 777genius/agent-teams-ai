@@ -11,10 +11,12 @@ import { useStore } from '@renderer/store';
 import {
   findRuntimeProviderOnboardingPlanEntry,
   getOpenCodeGeneration,
+  getOpenCodeV2PlanLimitation,
   getRuntimeProviderOnboardingPlan,
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
+  resolveOpenCodeProviderCompatibility,
   resolveOpenCodeQuickConnectGate,
   resolveOpenCodeQuickConnectRuntimeRevision,
   resolveOpenCodeQuickPlanState,
@@ -25,13 +27,15 @@ import {
   useRuntimeProviderCompanion,
 } from './hooks/useRuntimeProviderCompanion';
 import { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
+import { getOpenCodeUnverifiedCardCopy } from './ui/OpenCodeProviderCompatibilityStatus';
 import { RuntimeProviderCompanionSetupDialog } from './ui/RuntimeProviderCompanionSetupDialog';
 import {
   type RuntimeProviderQuickCardViewModel,
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
-import { sortQuickConnectCards } from './quickProviderCards';
+import { getOpenCodeInstallLabels } from './openCodeInstallLabels';
+import { OPEN_CODE_GATEWAYS, OPEN_CODE_PLANS, sortQuickConnectCards } from './quickProviderCards';
 import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
 import type {
@@ -39,7 +43,11 @@ import type {
   RuntimeProviderDirectoryEntryDto,
 } from '../contracts';
 import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
-import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
+import type {
+  CliProviderStatus,
+  OpenCodeRuntimeInstallOptions,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 import type { JSX } from 'react';
 
 interface RuntimeProviderQuickConnectProps {
@@ -50,7 +58,7 @@ interface RuntimeProviderQuickConnectProps {
   openCodeRuntimeStatusLoading: boolean;
   projectPath?: string | null;
   refreshKey?: number;
-  onInstallOpenCode: () => void;
+  onInstallOpenCode: (options?: OpenCodeRuntimeInstallOptions) => void;
   onRefreshOpenCode: () => void;
   onOpenCodeProviderAction: (
     providerId: string,
@@ -60,93 +68,7 @@ interface RuntimeProviderQuickConnectProps {
   onConnectedCountChange?: (count: number) => void;
 }
 
-interface OpenCodePlanDefinition {
-  id: RuntimeProviderOnboardingPlanId;
-  providerId: string;
-  displayName: string;
-  descriptionKey:
-    | 'superGrokDescription'
-    | 'zaiDescription'
-    | 'miniMaxDescription'
-    | 'copilotDescription'
-    | 'kimiDescription'
-    | 'kiroDescription'
-    | 'cursorDescription';
-  requiresOAuthCredential?: boolean;
-  connectionStrategy: ReturnType<typeof getRuntimeProviderOnboardingPlan>['connectionStrategy'];
-}
-
-interface OpenCodeGatewayDefinition {
-  id: 'openrouter' | 'vercel';
-  providerId: 'openrouter' | 'vercel';
-  displayName: string;
-  description: string;
-}
-
 type CompanionPlanId = 'kiro' | 'cursor';
-
-const OPEN_CODE_PLAN_PRESENTATION: readonly Pick<
-  OpenCodePlanDefinition,
-  'id' | 'descriptionKey' | 'requiresOAuthCredential'
->[] = [
-  {
-    id: 'supergrok',
-    descriptionKey: 'superGrokDescription',
-    requiresOAuthCredential: true,
-  },
-  {
-    id: 'zai-coding-plan',
-    descriptionKey: 'zaiDescription',
-  },
-  {
-    id: 'minimax-token-plan',
-    descriptionKey: 'miniMaxDescription',
-  },
-  {
-    id: 'github-copilot',
-    descriptionKey: 'copilotDescription',
-  },
-  {
-    id: 'kimi-code-membership',
-    descriptionKey: 'kimiDescription',
-  },
-  {
-    id: 'kiro',
-    descriptionKey: 'kiroDescription',
-  },
-  {
-    id: 'cursor',
-    descriptionKey: 'cursorDescription',
-  },
-];
-
-const OPEN_CODE_PLANS: readonly OpenCodePlanDefinition[] = OPEN_CODE_PLAN_PRESENTATION.map(
-  (presentation) => {
-    const plan = getRuntimeProviderOnboardingPlan(presentation.id);
-    return {
-      ...presentation,
-      providerId: plan.providerId,
-      displayName: plan.displayName,
-      connectionStrategy: plan.connectionStrategy,
-    };
-  }
-);
-
-const OPEN_CODE_GATEWAYS: readonly OpenCodeGatewayDefinition[] = [
-  {
-    id: 'openrouter',
-    providerId: 'openrouter',
-    displayName: 'OpenRouter',
-    description: 'Use one API key to access models from many providers through OpenRouter.',
-  },
-  {
-    id: 'vercel',
-    providerId: 'vercel',
-    displayName: 'Vercel AI Gateway',
-    description:
-      'Use Vercel AI Gateway to access OpenAI, Anthropic, Google, xAI, and other models.',
-  },
-];
 
 function findDirectoryEntry(
   entries: readonly RuntimeProviderDirectoryEntryDto[],
@@ -187,20 +109,17 @@ export const RuntimeProviderQuickConnect = ({
     cliStatusLoading,
   });
   const directory = useRuntimeProviderQuickConnect({
-    // Warm the provider directory while the lightweight OpenCode readiness
-    // check is still running. Waiting for the gate made these independent
-    // probes sequential and kept every plan card in a loading state longer.
-    enabled: enabled && (gate === 'checking' || gate === 'ready'),
+    // Unknown native status and missing V2 support cannot serve directory reads.
+    enabled: enabled && gate === 'ready',
     projectPath,
     refreshKey,
-    // Reads cached before an install or update completed describe the old
-    // runtime; a settled runtime change forces a fresh directory read.
+    // A settled runtime change invalidates directory reads from its previous identity.
     runtimeRevision: resolveOpenCodeQuickConnectRuntimeRevision({
       gate,
       runtimeStatus: openCodeRuntimeStatus,
     }),
   });
-  const canWarmProviderStatus = enabled && (gate === 'checking' || gate === 'ready');
+  const canWarmProviderStatus = enabled && gate === 'ready';
   const kiroCompanion = useRuntimeProviderCompanion(
     'kiro-cli',
     canWarmProviderStatus,
@@ -220,6 +139,12 @@ export const RuntimeProviderQuickConnect = ({
   const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
   const generation = getOpenCodeGeneration(openCodeRuntimeStatus?.version);
+  const { checking, installing } = getOpenCodeInstallLabels(openCodeRuntimeStatus, t);
+  const supportRequired =
+    (gate === 'support-required' || gate === 'error') &&
+    openCodeRuntimeStatus?.installed === true &&
+    openCodeRuntimeStatus.v2Support === 'required' &&
+    generation === 'v2';
   useEffect(() => {
     if (!localProviderSetupOpen) return;
     setLocalProviderProjectPath(projectPath?.trim() || null);
@@ -307,8 +232,8 @@ export const RuntimeProviderQuickConnect = ({
           state: busy ? 'checking' : 'unavailable',
           stateLabel: busy
             ? gate === 'installing'
-              ? t('cliStatus.quickConnect.installingOpenCode')
-              : t('cliStatus.quickConnect.checkingOpenCode')
+              ? installing
+              : checking
             : t('cliStatus.quickConnect.requiresOpenCode'),
           actionLabel: null,
           onAction: null,
@@ -422,9 +347,32 @@ export const RuntimeProviderQuickConnect = ({
           state: busy ? 'checking' : 'unavailable',
           stateLabel: busy
             ? gate === 'installing'
-              ? t('cliStatus.quickConnect.installingOpenCode')
-              : t('cliStatus.quickConnect.checkingOpenCode')
+              ? installing
+              : checking
             : t('cliStatus.quickConnect.requiresOpenCode'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+
+      const v2Limitation = getOpenCodeV2PlanLimitation(plan.id, generation);
+      if (v2Limitation) {
+        const cliSignedIn =
+          v2Limitation === 'cli-plugin' &&
+          getCompanionState(plan.id as CompanionPlanId).status?.authenticated === true;
+        const reason =
+          v2Limitation === 'cli-plugin'
+            ? t('cliStatus.quickConnect.v2CliPluginLimitation')
+            : t('cliStatus.quickConnect.v2OAuthLimitation');
+        return {
+          id: plan.id,
+          providerId: plan.providerId,
+          displayName: plan.displayName,
+          description: `${t(`cliStatus.quickConnect.${plan.descriptionKey}`)} ${reason}`,
+          state: 'manual',
+          stateLabel: cliSignedIn
+            ? t('cliStatus.quickConnect.cliSignedInRequiresV1')
+            : t('cliStatus.quickConnect.requiresV1'),
           actionLabel: null,
           onAction: null,
         };
@@ -610,7 +558,7 @@ export const RuntimeProviderQuickConnect = ({
 
       const onAction =
         state === 'update-required'
-          ? onInstallOpenCode
+          ? () => onInstallOpenCode()
           : state === 'connected' || state === 'manual'
             ? () => onOpenCodeProviderAction(entry?.providerId ?? plan.providerId, 'select')
             : state === 'connectable' || state === 'different-credential'
@@ -652,7 +600,11 @@ export const RuntimeProviderQuickConnect = ({
             ? 'unavailable'
             : 'connectable',
       stateLabel: xiaomiLoading
-        ? t('cliStatus.quickConnect.checkingPlan')
+        ? gate === 'installing'
+          ? installing
+          : gate === 'checking'
+            ? checking
+            : t('cliStatus.quickConnect.checkingPlan')
         : xiaomiConnected
           ? t('cliStatus.quickConnect.planConnected')
           : gate !== 'ready'
@@ -673,7 +625,22 @@ export const RuntimeProviderQuickConnect = ({
           ? null
           : () => setXiaomiDialogOpen(true),
     });
-    return [...gatewayCards, ...planCards];
+    return [...gatewayCards, ...planCards].map((card) => {
+      if (supportRequired) {
+        return {
+          ...card,
+          state: 'unavailable' as const,
+          stateLabel: t('cliStatus.runtimeInstall.v2SupportInstall'),
+          actionLabel: null,
+          onAction: null,
+        };
+      }
+      const compatibility = resolveOpenCodeProviderCompatibility(card.id, generation);
+      if (gate !== 'ready' || generation !== 'v2' || compatibility.state !== 'unverified') {
+        return card;
+      }
+      return { ...card, ...getOpenCodeUnverifiedCardCopy(card, t) };
+    });
   }, [
     directory.entries,
     directory.error,
@@ -683,6 +650,9 @@ export const RuntimeProviderQuickConnect = ({
     directory.loading,
     connectedXiaomiEntry,
     gate,
+    supportRequired,
+    checking,
+    installing,
     getCompanionState,
     handleCompanionCardAction,
     oauthBridgeOutdated,
@@ -711,7 +681,9 @@ export const RuntimeProviderQuickConnect = ({
     <>
       <RuntimeProviderQuickConnectView
         cards={sortQuickConnectCards(openCodeCards).map((card) =>
-          gate === 'ready' && (!card.actionLabel || !card.onAction)
+          gate === 'ready' &&
+          !getOpenCodeV2PlanLimitation(card.id as RuntimeProviderOnboardingPlanId, generation) &&
+          (!card.actionLabel || !card.onAction)
             ? {
                 ...card,
                 actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
@@ -726,6 +698,7 @@ export const RuntimeProviderQuickConnect = ({
         )}
         gate={gate}
         runtimeStatus={openCodeRuntimeStatus}
+        runtimeStatusLoading={openCodeRuntimeStatusLoading}
         directoryError={directory.error}
         onInstallOpenCode={onInstallOpenCode}
         onRefreshOpenCode={onRefreshOpenCode}

@@ -2,10 +2,15 @@ import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from './OpenCodePromptDeliv
 
 import type {
   DeliverableTrackedRun,
+  OpenCodeMemberInboxDelivery,
   OpenCodeMemberMessageDeliveryServiceDependencies,
 } from './OpenCodeMemberMessageDeliveryPorts';
 
-/** Capture before the bootstrap read; a later answer cannot authorize another lane generation. */
+/**
+ * Capture before the bootstrap read; a later answer cannot authorize another lane generation.
+ * The returned wake reports whether it armed a retry, so a caller can tell an expected wait
+ * from a message nothing will pick up again.
+ */
 export function createOpenCodeBootstrapPendingDeliveryWake(
   ports: Pick<
     OpenCodeMemberMessageDeliveryServiceDependencies,
@@ -24,7 +29,7 @@ export function createOpenCodeBootstrapPendingDeliveryWake(
     trackedRun: DeliverableTrackedRun | null | undefined;
     runtimeRunId: string | null;
   }
-): () => void {
+): () => boolean {
   const { teamName, laneId, trackedRunId, trackedRun, runtimeRunId } = input;
   const lane = trackedRun?.mixedSecondaryLanes.find(
     (entry) => entry.laneId === laneId && entry.runId === runtimeRunId
@@ -45,7 +50,7 @@ export function createOpenCodeBootstrapPendingDeliveryWake(
   // Refuse a read that began without an exact in-memory owner, even if one appears later.
   const authorizedBeforeRead = isCurrent();
   return () => {
-    if (!authorizedBeforeRead || !input.messageId?.trim() || !isCurrent()) return;
+    if (!authorizedBeforeRead || !input.messageId?.trim() || !isCurrent()) return false;
     ports.scheduleOpenCodePromptDeliveryWatchdog({
       teamName,
       memberName: input.memberName,
@@ -53,5 +58,26 @@ export function createOpenCodeBootstrapPendingDeliveryWake(
       delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
       isCurrent,
     });
+    return true;
+  };
+}
+
+/**
+ * The lane's bootstrap has not checked in yet and the message stays saved. It keeps the
+ * stopped-lane reason code; only a delivery whose bootstrap wake armed a retry is flagged as
+ * an expected wait, so one nothing will retry still reads as a relay failure.
+ */
+export function buildOpenCodeBootstrapDeferredDelivery(
+  memberName: string,
+  retryArmed: boolean
+): OpenCodeMemberInboxDelivery {
+  return {
+    delivered: false,
+    reason: 'opencode_runtime_not_active',
+    ...(retryArmed ? { deferredUntilBootstrap: true as const } : {}),
+    diagnostics: [
+      `OpenCode runtime bootstrap is not confirmed for ${memberName}. ` +
+        'Message was saved and will be retried after runtime check-in.',
+    ],
   };
 }

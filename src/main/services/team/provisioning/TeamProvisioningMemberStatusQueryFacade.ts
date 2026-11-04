@@ -225,9 +225,11 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
 
   /**
    * The write-free projection, for callers that must not disturb a launch (the
-   * HTTP diagnostics route an external monitor polls).
+   * HTTP diagnostics route an external monitor polls), and the answer
+   * `getMemberSpawnStatuses` gives for a team this app profile does not manage.
    *
-   * The IPC/UI path deliberately keeps the writing variant: the persisted-launch
+   * For this profile's teams the IPC/UI path deliberately keeps the writing
+   * variant: the persisted-launch
    * reconcile, the task-activity repair and the expired-launch-grace
    * persistence only ever run from it, and the renderer already backs its poll
    * off during launch. Those maintenance jobs riding a getter is why the two

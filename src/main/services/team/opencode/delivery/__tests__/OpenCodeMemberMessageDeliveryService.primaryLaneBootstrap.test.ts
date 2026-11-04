@@ -57,9 +57,22 @@ function createDeps(input: {
   requestRebootstrap?: ReturnType<typeof vi.fn>;
   /** `null` mirrors a team whose tracked run is fenced by a stop or cleanup. */
   deliverableTrackedRunId?: string | null;
+  /** Tracks the secondary lane under the deliverable run, so its bootstrap wake can arm. */
+  trackedSecondaryLaneRunId?: string;
 }): DeliveryDeps {
   const laneId = input.laneKind === 'primary' ? 'primary' : 'secondary:opencode:worker';
   const memberName = input.laneKind === 'primary' ? 'team-lead' : 'Worker';
+  const trackedRun = input.trackedSecondaryLaneRunId
+    ? {
+        mixedSecondaryLanes: [
+          {
+            laneId,
+            runId: input.trackedSecondaryLaneRunId,
+            member: { name: memberName, providerId: 'opencode' as const },
+          },
+        ],
+      }
+    : undefined;
   return {
     createOpenCodePromptDeliveryLedger: vi.fn(() => ({ ensurePending, getByInboxMessage })),
     openCodePromptDeliveryFollowUpPolicy: { schedule },
@@ -87,8 +100,9 @@ function createDeps(input: {
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() =>
       input.deliverableTrackedRunId === undefined ? 'run-a1' : input.deliverableTrackedRunId
     ),
-    runs: { get: vi.fn(() => undefined) },
-    getCurrentOpenCodeRuntimeRunId: vi.fn(() => 'run-a1'),
+    runs: { get: vi.fn(() => trackedRun) },
+    getCurrentOpenCodeRuntimeRunId: vi.fn(() => input.trackedSecondaryLaneRunId ?? 'run-a1'),
+    scheduleOpenCodePromptDeliveryWatchdog: vi.fn(),
     resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'run-a1'),
     isOpenCodeRuntimeLaneIndexActive: vi.fn(async () => true),
     tryRecoverOpenCodeRuntimeLaneBeforeDelivery: vi.fn(async () => false),
@@ -257,6 +271,42 @@ describe('OpenCodeMemberMessageDeliveryService primary lane bootstrap', () => {
     expect(delivery.reason).toBe('opencode_runtime_not_active');
     expect(delivery.diagnostics?.[0]).toContain('retried after runtime check-in');
     expect(requestRebootstrap).not.toHaveBeenCalled();
+    expect(sendMessageToMember).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The relay and its log gates stay quiet only for a deferral the bootstrap wake
+   * actually armed. A deferral nothing will retry (no exact tracked owner of the
+   * lane) keeps the stopped-lane shape and still reads as a relay failure.
+   */
+  it.each([
+    ['flags an armed bootstrap deferral as an expected wait', 'lane-run-1', true],
+    ['leaves an unarmed bootstrap deferral unflagged', undefined, false],
+  ])('%s', async (_case, trackedSecondaryLaneRunId, armed) => {
+    sendMessageToMember.mockClear();
+    const deps = createDeps({
+      laneKind: 'secondary',
+      bootstrapSession: null,
+      ...(trackedSecondaryLaneRunId ? { trackedSecondaryLaneRunId } : {}),
+    });
+    const service = new OpenCodeMemberMessageDeliveryService(deps);
+
+    const delivery = await service.deliver(TEAM_NAME, { ...message, memberName: 'Worker' });
+
+    expect(delivery).toEqual({
+      delivered: false,
+      reason: 'opencode_runtime_not_active',
+      ...(armed ? { deferredUntilBootstrap: true } : {}),
+      diagnostics: [
+        'OpenCode runtime bootstrap is not confirmed for Worker. Message was saved and will be retried after runtime check-in.',
+      ],
+    });
+    expect(deps.scheduleOpenCodePromptDeliveryWatchdog).toHaveBeenCalledTimes(armed ? 1 : 0);
+    if (armed) {
+      expect(deps.scheduleOpenCodePromptDeliveryWatchdog).toHaveBeenCalledWith(
+        expect.objectContaining({ memberName: 'Worker', messageId: 'launch-prompt-1' })
+      );
+    }
     expect(sendMessageToMember).not.toHaveBeenCalled();
   });
 

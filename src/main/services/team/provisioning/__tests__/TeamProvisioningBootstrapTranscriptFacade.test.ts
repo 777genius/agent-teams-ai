@@ -1,13 +1,15 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningBootstrapTranscriptFacadeDepsFromService,
   TeamProvisioningBootstrapTranscriptFacade,
   type TeamProvisioningBootstrapTranscriptFacadeServiceHost,
 } from '../TeamProvisioningBootstrapTranscriptFacade';
+
+import type { TeamProvisioningService } from '../../TeamProvisioningService';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -37,6 +39,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const membersMetaStore =
       {} as TeamProvisioningBootstrapTranscriptFacadeServiceHost['membersMetaStore'];
     const readConfigSnapshot = vi.fn(async () => null);
+    const isTeamManagedByThisProfile = vi.fn(async (teamName: string) => teamName === 'alpha');
     const service = {
       runTracking: {
         getTrackedRunId,
@@ -48,6 +51,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
       configFacade: {
         readConfigSnapshot,
       },
+      isTeamManagedByThisProfile,
     } satisfies TeamProvisioningBootstrapTranscriptFacadeServiceHost;
     const deps = createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(service, {
       nowIso: () => NOW,
@@ -64,8 +68,20 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     getTrackedRunId.mockReturnValue('run-1');
     expect(deps.isLookupCacheEnabled('alpha')).toBe(false);
     await deps.readConfigSnapshot('alpha');
+    await expect(deps.canWriteTeamFiles('alpha')).resolves.toBe(true);
+    await expect(deps.canWriteTeamFiles('other-profile-team')).resolves.toBe(false);
 
     expect(readConfigSnapshot).toHaveBeenCalledWith('alpha');
+    expect(isTeamManagedByThisProfile).toHaveBeenCalledWith('other-profile-team');
+  });
+
+  it('reads ownership through a public service method', () => {
+    // The host is cast from the service, and a missing method would only make every team
+    // read only at runtime. `Pick` takes public members only, so renaming or hiding the
+    // method fails to compile here.
+    expectTypeOf<Pick<TeamProvisioningService, 'isTeamManagedByThisProfile'>>().toExtend<
+      Pick<TeamProvisioningBootstrapTranscriptFacadeServiceHost, 'isTeamManagedByThisProfile'>
+    >();
   });
 
   it('owns transcript outcome lookup ports and exposes their parsed tail cache', async () => {
@@ -86,6 +102,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const facade = new TeamProvisioningBootstrapTranscriptFacade({
       nowIso: () => NOW,
       isLookupCacheEnabled: () => false,
+      canWriteTeamFiles: async () => true,
       memberLogsFinder: { findMemberLogs },
       persistedTranscriptClaudeLogs: {
         get: vi.fn(async () => null),
@@ -119,6 +136,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const facade = new TeamProvisioningBootstrapTranscriptFacade({
       nowIso: () => NOW,
       isLookupCacheEnabled: () => false,
+      canWriteTeamFiles: async () => true,
       memberLogsFinder: { findMemberLogs: vi.fn(async () => []) },
       persistedTranscriptClaudeLogs: { get, invalidate },
       readConfigSnapshot: vi.fn(async () => null),
@@ -147,6 +165,7 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
     const facade = new TeamProvisioningBootstrapTranscriptFacade({
       nowIso: () => NOW,
       isLookupCacheEnabled: () => false,
+      canWriteTeamFiles: async () => true,
       memberLogsFinder: { findMemberLogs: vi.fn(async () => []) },
       transcriptProjectResolver: { getContext },
       readConfigSnapshot: vi.fn(async () => null),

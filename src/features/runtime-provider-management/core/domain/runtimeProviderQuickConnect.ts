@@ -1,5 +1,5 @@
 import { isOpenCodeVersionServedByRuntime } from '@features/opencode-compatibility';
-import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import { isRecognizedOpenCodeV2Version } from '@shared/utils/version';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
@@ -8,6 +8,7 @@ export type RuntimeProviderQuickConnectGate =
   | 'checking'
   | 'installing'
   | 'ready'
+  | 'support-required'
   | 'missing'
   | 'error';
 
@@ -34,15 +35,6 @@ export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | n
     runtimeStatus?.installed === true &&
     runtimeStatus.v2Support !== 'required' &&
     isOpenCodeVersionServedByRuntime(runtimeStatus.version)
-  );
-}
-
-function isProviderCheckPending(provider: CliProviderStatus | null): boolean {
-  return Boolean(
-    provider &&
-    !provider.authenticated &&
-    (provider.statusMessage === 'Checking...' ||
-      provider.statusMessage === CLI_PROVIDER_STATUS_DEFERRED_MESSAGE)
   );
 }
 
@@ -73,24 +65,26 @@ export function resolveOpenCodeQuickConnectGate(input: {
   cliStatusLoading: boolean;
 }): RuntimeProviderQuickConnectGate {
   const { runtimeStatus } = input;
-  // A concrete installer state is more authoritative than the generic request flag.
-  // `runtimeStatusLoading` remains true while install IPC is pending, including while
-  // progress events report downloading/installing or the request has already failed.
+  // Preserve concrete installation progress and a usable existing runtime during refresh.
   if (runtimeStatus?.state === 'downloading' || runtimeStatus?.state === 'installing') {
     return 'installing';
   }
-  if (runtimeStatus?.state === 'failed') {
-    return isOpenCodeRuntimeUsable(runtimeStatus) ? 'ready' : 'error';
-  }
-  if (runtimeStatus?.state === 'ready' && isOpenCodeRuntimeUsable(runtimeStatus)) {
+  if (
+    (runtimeStatus?.state === 'ready' || runtimeStatus?.state === 'failed') &&
+    isOpenCodeRuntimeUsable(runtimeStatus)
+  ) {
     return 'ready';
   }
-  if (
-    input.runtimeStatusLoading ||
-    runtimeStatus?.state === 'checking' ||
-    (runtimeStatus === null && (input.cliStatusLoading || isProviderCheckPending(input.provider)))
-  ) {
+  if (input.runtimeStatusLoading || runtimeStatus?.state === 'checking' || runtimeStatus === null) {
     return 'checking';
+  }
+  if (runtimeStatus.state === 'failed') return 'error';
+  if (
+    runtimeStatus.installed &&
+    runtimeStatus.v2Support === 'required' &&
+    isRecognizedOpenCodeV2Version(runtimeStatus.version)
+  ) {
+    return 'support-required';
   }
   if (isOpenCodeRuntimeUsable(runtimeStatus)) {
     return 'ready';

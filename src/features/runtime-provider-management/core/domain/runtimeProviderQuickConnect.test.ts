@@ -13,6 +13,37 @@ function runtimeStatus(state: OpenCodeRuntimeStatus['state']): OpenCodeRuntimeSt
 }
 
 describe('resolveOpenCodeQuickConnectGate', () => {
+  it('keeps unobserved native status checking without inferring a missing installation', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: null,
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('checking');
+  });
+
+  it.each([false, true])(
+    'distinguishes required V2 support while native refresh is %s',
+    (loading) => {
+      expect(
+        resolveOpenCodeQuickConnectGate({
+          runtimeStatus: {
+            installed: true,
+            source: 'path',
+            state: 'idle',
+            version: '2.1.4',
+            v2Support: 'required',
+          },
+          runtimeStatusLoading: loading,
+          provider: null,
+          cliStatusLoading: true,
+        })
+      ).toBe(loading ? 'checking' : 'support-required');
+    }
+  );
+
   it.each(['downloading', 'installing'] as const)(
     'keeps concrete %s progress visible while the runtime request is pending',
     (state) => {
@@ -27,7 +58,25 @@ describe('resolveOpenCodeQuickConnectGate', () => {
     }
   );
 
-  it('surfaces a concrete runtime failure while the request flag is still pending', () => {
+  it('surfaces a failed V2 support download before the setup prerequisite', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: {
+          installed: true,
+          source: 'path',
+          state: 'failed',
+          version: '2.1.4',
+          v2Support: 'required',
+          error: 'V2 support download failed: network unavailable',
+        },
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: true,
+      })
+    ).toBe('error');
+  });
+
+  it('waits for a pending native refresh before proposing repair for an older failure', () => {
     expect(
       resolveOpenCodeQuickConnectGate({
         runtimeStatus: runtimeStatus('failed'),
@@ -35,7 +84,7 @@ describe('resolveOpenCodeQuickConnectGate', () => {
         provider: null,
         cliStatusLoading: false,
       })
-    ).toBe('error');
+    ).toBe('checking');
   });
 
   it('keeps a usable installed runtime ready when only its update failed', () => {

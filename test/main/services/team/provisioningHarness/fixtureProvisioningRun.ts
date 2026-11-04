@@ -112,6 +112,8 @@ export function makeProvisioningRun(options: ProvisioningRunFixtureOptions = {})
     silentUserDmForward: null,
     silentUserDmForwardClearHandle: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     provisioningOutputParts: [],
     provisioningTraceLines: [],
     lastProvisioningTraceKey: null,

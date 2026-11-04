@@ -289,6 +289,36 @@ describe('OpenCodePromptDeliveryWatchdogScheduler relay diagnostics', () => {
 
     expect(deps.warn).toHaveBeenCalledTimes(2);
   });
+
+  /**
+   * A wake for a teammate whose bootstrap has not checked in yet comes back with
+   * the stopped-lane reason and wording. Only the armed-retry flag on the relay's
+   * last delivery tells the two apart: the wait stays on the diagnostic channel,
+   * a lane that is really not active still warns.
+   */
+  it.each([
+    ['an armed bootstrap deferral on the diagnostic channel', true],
+    ['an unarmed opencode_runtime_not_active as a warning', false],
+  ])('reports %s', async (_case, deferredUntilBootstrap) => {
+    const bootstrapPending = [
+      'OpenCode runtime bootstrap is not confirmed for alice. Message was saved and will be retried after runtime check-in.',
+    ];
+    const { scheduler, deps } = makeScheduler({
+      relay: vi.fn(async () => ({
+        diagnostics: bootstrapPending,
+        lastDelivery: deferredUntilBootstrap ? { deferredUntilBootstrap: true as const } : {},
+      })),
+    });
+
+    await runWake(scheduler, { teamName: 'team', memberName: 'alice', messageId: 'msg-1' });
+
+    expect(deps.info).not.toHaveBeenCalled();
+    expect(deps.warn).toHaveBeenCalledTimes(deferredUntilBootstrap ? 0 : 1);
+    expect(deps.diagnostic).toHaveBeenCalledTimes(deferredUntilBootstrap ? 1 : 0);
+    const line = vi.mocked(deferredUntilBootstrap ? deps.diagnostic : deps.warn).mock.calls[0]?.[0];
+    expect(line).toContain('alice/msg-1');
+    expect(line).toContain(bootstrapPending[0]);
+  });
 });
 
 describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () => {

@@ -98,6 +98,7 @@ function createRelayPorts(
     deliverOpenCodeMemberMessage: vi.fn().mockResolvedValue({ delivered: true }),
     suppressRuntimeInactiveWarning: vi.fn().mockReturnValue(false),
     logWarning: vi.fn(),
+    logDiagnostic: vi.fn(),
     nowIso: () => NOW_ISO,
     getErrorMessage: (error) => (error instanceof Error ? error.message : String(error)),
     ...overrides,

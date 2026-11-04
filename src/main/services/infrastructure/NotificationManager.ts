@@ -2,7 +2,7 @@
  * NotificationManager service - Manages native notifications and notification history.
  *
  * Responsibilities:
- * - Store notification history at ~/.claude/agent-teams-notifications.json (max 100 entries)
+ * - Store notification history at <Claude root>/agent-teams-notifications.json (max 100 entries)
  * - Show native notifications using Electron's Notification API (cross-platform)
  * - Two adapters: addError() for error notifications, addTeamNotification() for team events
  * - Shared internal pipeline: storeNotification() for unconditional storage + IPC emission
@@ -51,8 +51,8 @@ import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { ConfigManager } from './ConfigManager';
 import {
+  getNotificationsPath,
   migrateLegacyNotificationPath,
-  NOTIFICATIONS_PATH,
   parseNotificationHistory,
   type StoredNotification,
   writeNotificationsFileAtomically,
@@ -572,7 +572,7 @@ export class NotificationManager extends EventEmitter {
    *  Used by addError() to wait for notifications to be loaded from disk
    *  before writing, preventing a race where save overwrites unloaded data. */
   private initPromise: Promise<void> | null = null;
-  private notificationsPath = NOTIFICATIONS_PATH;
+  private notificationsPath = getNotificationsPath();
   private saveChain: Promise<void> = Promise.resolve();
   private viewedTeamName: string | null = null;
   private unbindMainWindowFocus: (() => void) | null = null;

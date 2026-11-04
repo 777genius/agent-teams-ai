@@ -41,8 +41,6 @@ export async function prepareNativeAgentRun(
   });
   if (preparedEnv.connectionIssues[provider]) throw new Error('Provider connection is unavailable');
   const env = { ...preparedEnv.env };
-  delete env.CLAUDECODE;
-  delete env.CLAUDE_CODE_ENTRYPOINT;
   delete env.ELECTRON_RUN_AS_NODE;
   let managementMcp: NativeManagementMcp | undefined;
   if (provider === 'anthropic') {

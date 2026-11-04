@@ -274,6 +274,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const activeService = svc;
     const teamDataService = new TeamDataService();
     feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
@@ -535,6 +536,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const activeService = svc;
     const teamDataService = new TeamDataService();
     feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
@@ -755,6 +757,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const taskReader = new TeamTaskReader();
     const membersMetaStore = new TeamMembersMetaStore();
     feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),
@@ -1199,6 +1202,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     const teamDataService = new TeamDataService();
     const taskReader = new TeamTaskReader();
     feature = createMemberWorkSyncFeature({
+      isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
       teamsBasePath: getTeamsBasePath(),
       configReader: new TeamConfigReader(),

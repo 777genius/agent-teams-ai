@@ -57,6 +57,7 @@ function createSource() {
       })
     ),
     stopTeam: vi.fn(() => Promise.resolve()),
+    clearStoppedLaneStopBackoff: vi.fn(),
     isTeamAlive: vi.fn(() => false),
     getAliveTeams: vi.fn(() => []),
     getCurrentRunId: vi.fn(() => null),
@@ -186,6 +187,7 @@ describe('bindTeamIpcHandlerApis', () => {
       'repairStaleTaskActivityIntervalsBeforeSnapshot',
     ]);
     expect(sortedKeys(api.runtime)).toEqual([
+      'clearStoppedLaneStopBackoff',
       'getAliveTeams',
       'getCurrentRunId',
       'getRuntimeState',

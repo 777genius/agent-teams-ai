@@ -64,6 +64,7 @@ export interface OpenCodeBridgeCommandExecutor {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
     }
@@ -129,6 +130,15 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   leaseAcquireRetryDelayMs?: number;
 }
 
+export type OpenCodeStateChangingTeamCommandName = Extract<
+  OpenCodeBridgeCommandName,
+  | 'opencode.launchTeam'
+  | 'opencode.reconcileTeam'
+  | 'opencode.stopTeam'
+  | 'opencode.sendMessage'
+  | 'opencode.answerPermission'
+>;
+
 interface StateChangingInput<TBody> {
   command: OpenCodeBridgeCommandName;
   teamName: string;
@@ -139,6 +149,7 @@ interface StateChangingInput<TBody> {
   body: TBody;
   cwd: string;
   timeoutMs: number;
+  canDispatch?: () => boolean;
 }
 
 export class OpenCodeStateChangingBridgeCommandService {
@@ -440,6 +451,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           // restarting the full command clock after the pre-dispatch phases.
           timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           requestId: commandRequestId,
+          ...(input.canDispatch ? { canDispatch: input.canDispatch } : {}),
         }
       );
 

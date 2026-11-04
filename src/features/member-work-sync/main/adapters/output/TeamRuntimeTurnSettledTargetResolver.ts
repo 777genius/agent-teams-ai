@@ -33,10 +33,19 @@ export interface AttributedMemberFileSource {
 export interface TeamRuntimeTurnSettledTargetResolverDeps {
   teamSource: RuntimeTurnSettledTeamSource;
   membersMetaStore: TeamMembersMetaStore;
+  /**
+   * The teams directory is shared with other app profiles and native sessions. A
+   * Claude Stop hook names only its session, so the resolver searches teams for it:
+   * only teams this profile manages, and another team's files are never opened.
+   */
+  isManagedByThisProfile(teamName: string): Promise<boolean>;
   memberLogsFinder?: AttributedMemberFileSource;
   maxTeamsToScan?: number;
   captureSourceExecution?(teamName: string): RuntimeTurnSettledSourceExecution | null | undefined;
 }
+
+/** Each ownership check reads one small marker file. */
+export const OWNERSHIP_CHECK_BATCH_SIZE = 8;
 
 function memberKey(member: Pick<TeamMember, 'name'>): string {
   return normalizeMemberName(member.name);
@@ -96,9 +105,7 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       return { ok: false, reason: 'missing_session_identity' };
     }
 
-    const teams = (await this.deps.teamSource.listTeams())
-      .filter((team) => !team.deletedAt)
-      .slice(0, this.maxTeamsToScan);
+    const teams = await this.listOwnTeamsToScan();
 
     const candidates: {
       teamName: string;
@@ -165,6 +172,36 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       memberName: normalizeMemberName(member.name),
       ...(candidate.sourceExecution ? { sourceExecution: candidate.sourceExecution } : {}),
     };
+  }
+
+  /**
+   * Ownership is checked before the scan limit, so other profiles' teams never use it up.
+   * Checks run in small parallel batches in list order and stop after the batch that
+   * reaches the limit.
+   */
+  private async listOwnTeamsToScan(): Promise<TeamSummary[]> {
+    const liveTeams = (await this.deps.teamSource.listTeams()).filter((team) => !team.deletedAt);
+    const ownTeams: TeamSummary[] = [];
+    for (
+      let start = 0;
+      start < liveTeams.length && ownTeams.length < this.maxTeamsToScan;
+      start += OWNERSHIP_CHECK_BATCH_SIZE
+    ) {
+      const batch = liveTeams.slice(start, start + OWNERSHIP_CHECK_BATCH_SIZE);
+      const owned = await Promise.all(
+        batch.map((team) => this.isManagedByThisProfile(team.teamName))
+      );
+      ownTeams.push(...batch.filter((_team, index) => owned[index]));
+    }
+    return ownTeams.slice(0, this.maxTeamsToScan);
+  }
+
+  private async isManagedByThisProfile(teamName: string): Promise<boolean> {
+    try {
+      return (await this.deps.isManagedByThisProfile(teamName)) === true;
+    } catch {
+      return false;
+    }
   }
 
   private async resolveProviderOwnedEvent(

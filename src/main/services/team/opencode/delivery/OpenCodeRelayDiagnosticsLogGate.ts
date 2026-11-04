@@ -53,10 +53,20 @@ export interface OpenCodeRelayDiagnosticsLogWriter {
   debug(message: string): void;
 }
 
+/**
+ * The part of a relay result the gate reads. A last delivery flagged
+ * `deferredUntilBootstrap` is an armed wait for bootstrap check-in, so its line
+ * is never a warning; the flag is read from the result, never from the text.
+ */
+export interface OpenCodeRelayDiagnosticsLogOutcome {
+  diagnostics?: readonly string[];
+  lastDelivery?: { deferredUntilBootstrap?: true };
+}
+
 export interface OpenCodeRelayDiagnosticsLogInput {
   dedupKey: string;
   prefix: string;
-  diagnostics: readonly string[] | undefined;
+  outcome: OpenCodeRelayDiagnosticsLogOutcome | null | undefined;
   nowMs: number;
 }
 
@@ -78,19 +88,30 @@ export class OpenCodeRelayDiagnosticsLogGate {
    * The line to write for `diagnostics`, or null when nothing is worth writing:
    * no diagnostics at all, or the same condition already written this window.
    *
-   * The dedup signature is the diagnostics ALONE; `prefix` names the message
-   * that happened to hit the condition and is presentation only. A lane blocked
-   * on one condition reports it identically for every message queued behind it,
-   * so a caller whose prefix carries a message id would otherwise let a queue of
-   * rows walk straight past the window one id at a time.
+   * The dedup signature is the diagnostics and the resulting level; `prefix`
+   * names the message that happened to hit the condition and is presentation
+   * only. A lane blocked on one condition reports it identically for every
+   * message queued behind it, so a caller whose prefix carries a message id
+   * would otherwise let a queue of rows walk straight past the window one id at
+   * a time.
    */
   note(input: OpenCodeRelayDiagnosticsLogInput): OpenCodeRelayDiagnosticsLogLine | null {
-    if (!input.diagnostics?.length) {
+    const diagnostics = input.outcome?.diagnostics;
+    if (!diagnostics?.length) {
       return null;
     }
-    const signature = input.diagnostics.join('; ');
+    const deferredUntilBootstrap = input.outcome?.lastDelivery?.deferredUntilBootstrap === true;
+    const level =
+      !deferredUntilBootstrap && hasWarningOpenCodeRelayDiagnostics(diagnostics) ? 'warn' : 'debug';
+    const signature = diagnostics.join('; ');
+    // The level is part of the condition: the same text turning from an armed
+    // wait into an unarmed miss is news and must not hide inside the window.
+    const dedupSignature = `${level}:${signature}`;
     const previous = this.lastLogged.get(input.dedupKey);
-    if (previous?.signature === signature && input.nowMs - previous.loggedAtMs < this.dedupMs) {
+    if (
+      previous?.signature === dedupSignature &&
+      input.nowMs - previous.loggedAtMs < this.dedupMs
+    ) {
       return null;
     }
     if (previous) {
@@ -106,11 +127,8 @@ export class OpenCodeRelayDiagnosticsLogGate {
         this.lastLogged.delete(oldestKey.value);
       }
     }
-    this.lastLogged.set(input.dedupKey, { signature, loggedAtMs: input.nowMs });
-    return {
-      level: hasWarningOpenCodeRelayDiagnostics(input.diagnostics) ? 'warn' : 'debug',
-      message: `${input.prefix}: ${signature}`,
-    };
+    this.lastLogged.set(input.dedupKey, { signature: dedupSignature, loggedAtMs: input.nowMs });
+    return { level, message: `${input.prefix}: ${signature}` };
   }
 
   /**

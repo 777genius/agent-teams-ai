@@ -73,6 +73,7 @@ import {
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
 import { createOpenCodePromptDeliveryLedger } from '../../../../src/main/services/team/provisioning/OpenCodePromptDeliveryQueries';
+import { claimTeamForThisProfile } from '../../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import {
   cancelRuntimeAdapterProvisioning,
   type RuntimeAdapterCancellationPorts,
@@ -15437,6 +15438,7 @@ describe(
     it('does not scan or deliver orphaned mixed OpenCode lanes after app restart when team is stopped', async () => {
       const teamName = 'mixed-opencode-stopped-orphaned-lane-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await upsertOpenCodeRuntimeLaneIndexEntry({
@@ -15815,6 +15817,7 @@ describe(
     it('recovers a missing mixed OpenCode lane index before watchdog scans unread OpenCode inbox', async () => {
       const teamName = 'mixed-opencode-watchdog-recovers-missing-lane-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await fs.writeFile(
@@ -15949,6 +15952,7 @@ describe(
       const laneId = 'secondary:opencode:bob';
       const runId = 'session-evidence-opencode-run';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await writeOpenCodeBootstrapSessionEvidenceForTest({
@@ -16025,6 +16029,7 @@ describe(
       const laneId = 'secondary:opencode:bob';
       const runId = 'stopped-session-evidence-opencode-run';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await writeOpenCodeBootstrapSessionEvidenceForTest({
@@ -16071,6 +16076,7 @@ describe(
     it('recovers one missing mixed OpenCode lane before watchdog scans while sibling lane is active', async () => {
       const teamName = 'mixed-opencode-watchdog-recovers-one-missing-lane-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
+      await markLaunchedByThisProfile(teamName);
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       await fs.writeFile(
@@ -20095,7 +20101,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
 
       expect(adapter.pendingLaunchInputs).toHaveLength(1);
-      expect(adapter.launchInputs).toHaveLength(0);
+      expect(adapter.launchInputs).toHaveLength(1);
       expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
         'launching',
         'queued',
@@ -20147,7 +20153,7 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
 
       expect(adapter.pendingLaunchInputs).toHaveLength(1);
-      expect(adapter.launchInputs).toHaveLength(0);
+      expect(adapter.launchInputs).toHaveLength(1);
       expect(run.mixedSecondaryLanes.map((lane: { state: string }) => lane.state)).toEqual([
         'launching',
         'queued',
@@ -22475,6 +22481,18 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   }
 
   async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    if (input.mayDispatch?.() === false) {
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {},
+        warnings: [],
+        diagnostics: ['Fake OpenCode launch cancelled before native handoff'],
+        preLaunchGate: { blocked: true, reason: 'opencode_launch_cancelled', retryable: false },
+      };
+    }
     this.launchInputs.push(input);
     if (input.laneId === 'primary' && this.nextPrimaryLaunchGate) {
       const gate = this.nextPrimaryLaunchGate;
@@ -22885,9 +22903,11 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   });
 
   override async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    const result = await super.launch(input);
+    if (result.preLaunchGate?.blocked) return result;
     this.pendingLaunchInputs.push(input);
     await this.gate;
-    return super.launch(input);
+    return result;
   }
 
   releaseLaunches(): void {
@@ -23016,6 +23036,8 @@ class RejectingBlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter
   }
 
   override async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    const result = await super.launch(input);
+    if (result.preLaunchGate?.blocked) return result;
     this.pendingLaunchInputs.push(input);
     await this.gate;
     this.rejectedLaunchCount += 1;
@@ -23291,6 +23313,8 @@ function createMixedLiveRun(input: {
     activeToolCalls: new Map(),
     activeCrossTeamReplyHints: [],
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map(),
+    leadSendMessageSeq: 0,
     mcpConfigPath: null,
     bootstrapSpecPath: null,
     bootstrapUserPromptPath: null,
@@ -23494,6 +23518,11 @@ function trackLiveRun(svc: TeamProvisioningService, run: any): void {
   (svc as any).runs.set(run.runId, run);
   (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
   (svc as any).aliveRunByTeam.set(run.teamName, run.runId);
+}
+
+/** The restarted service only recovers or cleans up teams this app profile launched. */
+async function markLaunchedByThisProfile(teamName: string): Promise<void> {
+  await claimTeamForThisProfile({ teamsBasePath: getTeamsBasePath(), teamName, reason: 'launch' });
 }
 
 async function writeAliveProcessRegistry(teamName: string): Promise<void> {
@@ -24020,6 +24049,8 @@ async function writePureAnthropicTeamConfigWithMembers(input: {
     )}\n`,
     'utf8'
   );
+  // Persisted-state fixtures model a team this app profile launched before a restart.
+  await markLaunchedByThisProfile(input.teamName);
 }
 
 async function writeMixedTeamConfig(input: {
@@ -24112,6 +24143,8 @@ async function writeMixedTeamConfig(input: {
     )}\n`,
     'utf8'
   );
+  // Persisted-state fixtures model a team this app profile launched before a restart.
+  await markLaunchedByThisProfile(input.teamName);
 }
 
 async function writeMixedTeamConfigWithoutOpenCodeProviderMetadata(input: {

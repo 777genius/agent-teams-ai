@@ -51,12 +51,18 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { qualifyModelId } from '../../core/domain/openCodeModelIdentity';
+import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
 
 import { LegacyConfiguredModelsPanel } from './LegacyConfiguredModelsPanel';
 import {
   OpenCodeDefaultModelInheritanceCard,
   OpenCodeDefaultTargetBanner,
 } from './OpenCodeDefaultModelInheritanceCard';
+import {
+  OpenCodeProviderCompatibilityStatus,
+  useOpenCodeProviderConnectionBlocked,
+  useOpenCodeProviderRowCompatibility,
+} from './OpenCodeProviderCompatibilityStatus';
 import { ProviderBrandIcon } from './providerBrandIcons';
 import { RuntimeProviderErrorAlert } from './RuntimeProviderErrorAlert';
 import { ModelRow } from './RuntimeProviderModelRow';
@@ -96,6 +102,8 @@ interface RuntimeProviderManagementPanelViewProps {
 
 interface ProviderActionsProps {
   readonly provider: RuntimeProviderConnectionDto;
+  readonly connectionBlocked: boolean;
+  readonly reconnectBlocked: boolean;
   readonly busy: boolean;
   readonly disabled: boolean;
   readonly onStartConnect: () => void;
@@ -115,24 +123,20 @@ interface ProviderRowProps {
   readonly intendedProjectPath: string | null;
   readonly actions: RuntimeProviderManagementActions;
 }
-
 type OpenCodeSettingsSection = 'models' | 'providers';
 interface DefaultModelSelectionTarget {
   readonly scope: RuntimeProviderDefaultScopeDto;
   readonly projectPath: string | null;
 }
 type SettingsT = ReturnType<typeof useAppTranslation>['t'];
-
 const PROVIDER_MODEL_VIRTUALIZATION_THRESHOLD = 40;
 const PROVIDER_MODEL_ROW_ESTIMATE_PX = 112;
-
 function getDirectoryAction(
   provider: RuntimeProviderDirectoryEntryDto,
   actionId: RuntimeProviderConnectionDto['actions'][number]['id']
 ): RuntimeProviderConnectionDto['actions'][number] | null {
   return provider.actions.find((action) => action.id === actionId) ?? null;
 }
-
 function getManagedActionLabel(
   t: SettingsT,
   action: RuntimeProviderConnectionDto['actions'][number],
@@ -152,7 +156,6 @@ function getManagedActionLabel(
   }
   return t('runtimeProvider.actions.reconnect');
 }
-
 function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): string {
   if (provider.state === 'connected' || provider.setupKind === 'connected') {
     return 'Connected';
@@ -402,6 +405,7 @@ export const ProviderSetupFormPanel = ({
   const secret = authOption?.secret ?? form?.secret ?? null;
   const prompts = authOption?.prompts ?? form?.prompts ?? [];
   const selectedMethod = authOption?.method ?? form?.method ?? null;
+  const connectionBlocked = useOpenCodeProviderConnectionBlocked(provider.providerId, selectedMethod);
   const verifiesWithModel =
     selectedMethod === 'api' && form?.verification?.kind === 'model-request';
   const presentation = form
@@ -475,20 +479,18 @@ export const ProviderSetupFormPanel = ({
   useEffect(() => {
     setSecretVisible(false);
   }, [authOption?.id, provider.providerId]);
-
   const submitForm = (): void => {
     if (oauthProgress?.phase === 'waiting-for-code') {
-      if (state.oauthCodeValue.trim()) {
+      if (state.oauthCodeValue.trim() && !connectionBlocked) {
         void actions.submitOAuthCode();
       }
       return;
     }
-    if (disabled || busy || loading || oauthInProgress || !canSubmit) {
+    if (disabled || connectionBlocked || busy || loading || oauthInProgress || !canSubmit) {
       return;
     }
     void actions.submitConnect(provider.providerId);
   };
-
   return (
     <form
       className="mt-3 rounded-md border p-3"
@@ -555,6 +557,9 @@ export const ProviderSetupFormPanel = ({
             ) : null}
           </div>
 
+          {provider.providerId === 'xai' && selectedMethod === 'oauth' ? (
+            <OpenCodeProviderCompatibilityStatus providerId="xai" authMethod="oauth" />
+          ) : null}
           {form.authOptions && form.authOptions.length > 1 ? (
             <div className="space-y-1.5">
               <Label className="text-xs">Sign-in method</Label>
@@ -766,7 +771,7 @@ export const ProviderSetupFormPanel = ({
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!state.oauthCodeValue.trim()}
+                    disabled={!state.oauthCodeValue.trim() || connectionBlocked}
                     onClick={() => void actions.submitOAuthCode()}
                   >
                     Continue
@@ -821,7 +826,7 @@ export const ProviderSetupFormPanel = ({
             : t('runtimeProvider.actions.cancel')}
         </Button>
         {!oauthInProgress ? (
-          <Button type="submit" size="sm" disabled={disabled || busy || loading || !canSubmit}>
+          <Button type="submit" size="sm" disabled={disabled || connectionBlocked || busy || loading || !canSubmit}>
             {busy ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
             {submitLabel}
           </Button>
@@ -830,7 +835,6 @@ export const ProviderSetupFormPanel = ({
     </form>
   );
 };
-
 const RuntimeProviderLoadingPlaceholder = (): JSX.Element => {
   const { t } = useAppTranslation('settings');
   return (
@@ -937,7 +941,6 @@ const RuntimeProviderLoadingPlaceholder = (): JSX.Element => {
     </div>
   );
 };
-
 const RuntimeProviderModelLoadingSkeleton = (): JSX.Element => {
   return (
     <div className="space-y-2" data-testid="runtime-provider-model-loading-skeleton">
@@ -980,9 +983,10 @@ const RuntimeProviderModelLoadingSkeleton = (): JSX.Element => {
     </div>
   );
 };
-
 const ProviderActions = ({
   provider,
+  connectionBlocked,
+  reconnectBlocked,
   busy,
   disabled,
   onStartConnect,
@@ -994,7 +998,6 @@ const ProviderActions = ({
   const reconnect = getProviderAction(provider, 'reconnect');
   const forget = getProviderAction(provider, 'forget');
   const configure = getProviderAction(provider, 'configure');
-
   return (
     <div className="flex flex-wrap justify-end gap-1.5">
       {connect ? (
@@ -1002,7 +1005,7 @@ const ProviderActions = ({
           type="button"
           size="sm"
           variant="outline"
-          disabled={disabled || busy || !connect.enabled}
+          disabled={disabled || connectionBlocked || busy || !connect.enabled}
           title={connect.disabledReason ?? undefined}
           onClick={(event) => {
             event.stopPropagation();
@@ -1022,7 +1025,7 @@ const ProviderActions = ({
           type="button"
           size="sm"
           variant="outline"
-          disabled={disabled || busy || !reconnect.enabled}
+          disabled={disabled || reconnectBlocked || busy || !reconnect.enabled}
           title={reconnect.disabledReason ?? undefined}
           onClick={(event) => {
             event.stopPropagation();
@@ -1071,7 +1074,6 @@ const ProviderActions = ({
     </div>
   );
 };
-
 const ProviderRow = ({
   provider,
   state,
@@ -1085,11 +1087,10 @@ const ProviderRow = ({
   actions,
 }: ProviderRowProps): JSX.Element => {
   const { t } = useAppTranslation('settings');
-  const connect = getProviderAction(provider, 'connect');
-  const test = getProviderAction(provider, 'test');
-  const canOpenConnect = provider.state !== 'connected' && connect?.enabled === true;
-  const canSelectModels =
-    provider.modelCount > 0 && (provider.state === 'connected' || test?.enabled === true);
+  const { connectionBlocked, reconnectBlocked, connectedAuthMethod } =
+    useOpenCodeProviderRowCompatibility(provider);
+  const { canOpenConnect: rawConnect, canSelectModels } = runtimeProviderDirectoryInteraction(provider);
+  const canOpenConnect = rawConnect && !connectionBlocked;
   const clickable = !disabled && (canOpenConnect || canSelectModels);
   const visuallyActive = active && (canSelectModels || formOpen);
   const rowInteractive = clickable && !formOpen && !(active && canSelectModels);
@@ -1113,7 +1114,6 @@ const ProviderRow = ({
     event.preventDefault();
     handleActivate();
   };
-
   return (
     <div
       role={rowInteractive ? 'button' : undefined}
@@ -1140,6 +1140,7 @@ const ProviderRow = ({
             <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
               {provider.displayName}
             </span>
+            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} authMethod={connectedAuthMethod} />
             {provider.recommended ? (
               <Badge variant="secondary">{t('runtimeProvider.providers.recommended')}</Badge>
             ) : null}
@@ -1178,6 +1179,8 @@ const ProviderRow = ({
         <div className="flex justify-end">
           <ProviderActions
             provider={provider}
+            connectionBlocked={connectionBlocked}
+            reconnectBlocked={reconnectBlocked}
             busy={busy}
             disabled={disabled}
             onStartConnect={() => actions.startConnect(provider.providerId)}
@@ -1206,7 +1209,7 @@ const ProviderRow = ({
               state={state}
               actions={actions}
               provider={provider}
-              disabled={disabled || busy}
+              disabled={disabled || busy || reconnectBlocked}
               hasProjectContext={hasProjectContext}
               defaultTarget={defaultTarget}
               intendedProjectPath={intendedProjectPath}
@@ -1217,7 +1220,6 @@ const ProviderRow = ({
     </div>
   );
 };
-
 const DirectoryProviderRow = ({
   provider,
   state,
@@ -1242,17 +1244,14 @@ const DirectoryProviderRow = ({
   readonly actions: RuntimeProviderManagementActions;
 }): JSX.Element => {
   const { t } = useAppTranslation('settings');
+  const { connectionBlocked, reconnectBlocked, connectedAuthMethod } =
+    useOpenCodeProviderRowCompatibility(provider);
   const connect = getDirectoryAction(provider, 'connect');
   const reconnect = getDirectoryAction(provider, 'reconnect');
   const configure = getDirectoryAction(provider, 'configure');
   const forget = getDirectoryAction(provider, 'forget');
-  const test = getDirectoryAction(provider, 'test');
-  const canOpenConnect = provider.state !== 'connected' && connect?.enabled === true;
-  const canSelectModels =
-    provider.modelCount !== 0 &&
-    (provider.state === 'connected' ||
-      provider.metadata.configuredAuthless === true ||
-      test?.enabled === true);
+  const { canOpenConnect: rawConnect, canSelectModels } = runtimeProviderDirectoryInteraction(provider);
+  const canOpenConnect = rawConnect && !connectionBlocked;
   const clickable = !disabled && (canOpenConnect || canSelectModels);
   const visuallyActive = active && (canSelectModels || formOpen);
   const rowInteractive = clickable && !formOpen && !(active && canSelectModels);
@@ -1266,7 +1265,6 @@ const DirectoryProviderRow = ({
     }
     actions.selectDirectoryProvider(provider.providerId);
   };
-
   return (
     <div
       role={rowInteractive ? 'button' : undefined}
@@ -1302,6 +1300,7 @@ const DirectoryProviderRow = ({
             <span className="text-sm font-medium text-[var(--color-text)]">
               {provider.displayName}
             </span>
+            <OpenCodeProviderCompatibilityStatus providerId={provider.providerId} authMethod={connectedAuthMethod} />
             {provider.recommended ? (
               <Badge variant="secondary">{t('runtimeProvider.providers.recommended')}</Badge>
             ) : null}
@@ -1336,7 +1335,7 @@ const DirectoryProviderRow = ({
               type="button"
               size="sm"
               variant="outline"
-              disabled={disabled || busy || !connect.enabled}
+              disabled={disabled || connectionBlocked || busy || !connect.enabled}
               title={connect.disabledReason ?? undefined}
               onClick={(event) => {
                 event.stopPropagation();
@@ -1356,7 +1355,7 @@ const DirectoryProviderRow = ({
               type="button"
               size="sm"
               variant="outline"
-              disabled={disabled || busy || !reconnect.enabled}
+              disabled={disabled || reconnectBlocked || busy || !reconnect.enabled}
               title={reconnect.disabledReason ?? undefined}
               onClick={(event) => {
                 event.stopPropagation();
@@ -1425,7 +1424,7 @@ const DirectoryProviderRow = ({
               state={state}
               actions={actions}
               provider={directoryEntryToProviderConnection(provider)}
-              disabled={disabled || busy}
+              disabled={disabled || busy || reconnectBlocked}
               hasProjectContext={hasProjectContext}
               defaultTarget={defaultTarget}
               intendedProjectPath={intendedProjectPath}
@@ -1436,7 +1435,6 @@ const DirectoryProviderRow = ({
     </div>
   );
 };
-
 const ModelBadges = ({
   model,
 }: {
@@ -1569,7 +1567,6 @@ const ModelBadges = ({
     </div>
   );
 };
-
 function isFreeRuntimeProviderModel(model: RuntimeProviderModelDto): boolean {
   return isOpenCodeModelExplicitlyFree(model);
 }
@@ -1653,7 +1650,6 @@ interface JsonPayloadRange {
 
 const MAX_JSON_PAYLOAD_PARSE_ATTEMPTS = 64;
 const MAX_JSON_PAYLOAD_LENGTH = 256_000;
-
 function isPlausibleJsonPayloadStart(value: string, start: number): boolean {
   const opener = value[start];
   let cursor = start + 1;
@@ -1852,7 +1848,6 @@ const ProviderModelList = ({
       ?.querySelectorAll<HTMLElement>('[data-runtime-provider-model-virtual-row]')
       .forEach((row) => modelVirtualizer.measureElement(row));
   }, [modelVirtualizer, shouldVirtualize, state.modelResults, state.testingModelIds]);
-
   const requestNextModelPage = useCallback((): void => {
     const cursor = state.modelsNextCursor;
     if (
@@ -1899,7 +1894,6 @@ const ProviderModelList = ({
     state.modelsLoadingMore,
     state.modelsNextCursor,
   ]);
-
   const loadNextModelPageNearEnd = useCallback(
     (element: HTMLDivElement): void => {
       const remainingScrollDistance =
@@ -1933,7 +1927,6 @@ const ProviderModelList = ({
     state.modelsNextCursor,
     visibleModels.length,
   ]);
-
   const renderModel = (model: RuntimeProviderModelDto): JSX.Element => (
     <ModelRow
       provider={provider}
@@ -1960,7 +1953,6 @@ const ProviderModelList = ({
       actions={actions}
     />
   );
-
   return (
     <div className="space-y-3 border-t border-white/10 pt-3">
       <div
@@ -2118,7 +2110,6 @@ const ProviderModelList = ({
     </div>
   );
 };
-
 export const RuntimeProviderManagementPanelView = ({
   state,
   actions,

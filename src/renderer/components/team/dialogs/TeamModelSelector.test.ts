@@ -326,6 +326,14 @@ describe('resolveTeamModelSelectorValue', () => {
 });
 
 describe('shouldShowOpenCodeNeedsTestBadge', () => {
+  it('hides the advisory for Big Pickle without changing its execution proof', () => {
+    expect(
+      shouldShowOpenCodeNeedsTestBadge('needs_probe', 'opencode', 'zen', 'opencode/big-pickle')
+    ).toBe(false);
+    expect(
+      shouldShowOpenCodeNeedsTestBadge('needs_probe', 'opencode', 'zen', 'opencode/other-free')
+    ).toBe(true);
+  });
   it('hides the needs-test badge for Cursor ACP, whose connection flow verifies the model', () => {
     expect(shouldShowOpenCodeNeedsTestBadge('needs_probe', 'cursor-acp')).toBe(false);
   });

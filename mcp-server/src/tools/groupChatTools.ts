@@ -8,7 +8,13 @@ import { assertConfiguredTeam } from '../utils/teamConfig';
 
 const context = {
   teamName: z.string().min(1),
-  claudeDir: z.string().min(1).optional(),
+  claudeDir: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Optional Claude data directory, not the project working directory. For a desktop-bound connection, omit this field; the desktop selects its bound data root.'
+    ),
   from: z.string().min(1),
 };
 

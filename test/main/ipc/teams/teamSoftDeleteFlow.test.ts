@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { softDeleteTeamWithBestEffortStop } from '@main/ipc/teams/teamSoftDeleteFlow';
+import {
+  createTeamSoftDeleteRequests,
+  softDeleteTeamWithBestEffortStop,
+} from '@main/ipc/teams/teamSoftDeleteFlow';
 
 import type { TeamSoftDeleteFlowPorts } from '@main/ipc/teams/teamSoftDeleteFlow';
 
@@ -11,6 +14,7 @@ function createPorts(overrides: Partial<TeamSoftDeleteFlowPorts> = {}): TeamSoft
     stopTeam: vi.fn(async () => undefined),
     softDeleteTeam: vi.fn(async () => undefined),
     invalidateTeamConfig: vi.fn(),
+    clearStoppedLaneStopBackoff: vi.fn(),
     logWarning: vi.fn(),
     ...overrides,
   };
@@ -34,6 +38,40 @@ describe('softDeleteTeamWithBestEffortStop', () => {
     expect(ports.softDeleteTeam).toHaveBeenCalledWith('fixteam');
     expect(ports.invalidateTeamConfig).toHaveBeenCalledWith('fixteam');
     expect(ports.logWarning).not.toHaveBeenCalled();
+  });
+
+  it('clears the background lane stop backoff only after the soft delete succeeded', async () => {
+    let finishSoftDelete!: () => void;
+    const ports = createPorts({
+      softDeleteTeam: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishSoftDelete = resolve;
+          })
+      ),
+    });
+
+    const flow = softDeleteTeamWithBestEffortStop('fixteam', ports);
+    await vi.waitFor(() => expect(ports.softDeleteTeam).toHaveBeenCalledTimes(1));
+    // Cleared any earlier, a background pass could queue on the team lock ahead
+    // of the soft delete and hold it for minutes.
+    expect(ports.clearStoppedLaneStopBackoff).not.toHaveBeenCalled();
+
+    finishSoftDelete();
+    await flow;
+    expect(ports.clearStoppedLaneStopBackoff).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('still reports a finished trash as done when clearing the backoff throws', async () => {
+    const ports = createPorts({
+      clearStoppedLaneStopBackoff: vi.fn(() => {
+        throw new Error('runtime api not ready');
+      }),
+    });
+
+    await expect(softDeleteTeamWithBestEffortStop('fixteam', ports)).resolves.toBeUndefined();
+    expect(ports.invalidateTeamConfig).toHaveBeenCalledWith('fixteam');
+    expect(ports.logWarning).toHaveBeenCalledWith(expect.stringContaining('runtime api not ready'));
   });
 
   it('soft deletes even when the stop rejects because a lane retained ownership', async () => {
@@ -90,6 +128,7 @@ describe('softDeleteTeamWithBestEffortStop', () => {
       'Team not found: fixteam'
     );
     expect(ports.invalidateTeamConfig).not.toHaveBeenCalled();
+    expect(ports.clearStoppedLaneStopBackoff).not.toHaveBeenCalled();
   });
 
   it('claims a stop rejection that arrives after the timeout', async () => {
@@ -113,5 +152,61 @@ describe('softDeleteTeamWithBestEffortStop', () => {
     rejectStop?.(new Error('late stop failure'));
     await vi.advanceTimersByTimeAsync(0);
     expect(ports.logWarning).toHaveBeenCalledWith(expect.stringContaining('late stop failure'));
+  });
+});
+
+describe('createTeamSoftDeleteRequests', () => {
+  function deferred(): { promise: Promise<void>; resolve(): void; reject(error: Error): void } {
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it('joins a repeated request for the same team instead of stopping and deleting again', async () => {
+    const softDelete = deferred();
+    const ports = createPorts({ softDeleteTeam: vi.fn(() => softDelete.promise) });
+    const requests = createTeamSoftDeleteRequests();
+
+    const first = requests.softDelete('fixteam', ports);
+    const repeated = requests.softDelete('fixteam', ports);
+    const other = requests.softDelete('other-team', ports);
+    await vi.waitFor(() => expect(ports.softDeleteTeam).toHaveBeenCalledTimes(2));
+
+    expect(repeated).toBe(first);
+    expect(ports.stopTeam).toHaveBeenCalledTimes(2);
+    expect(ports.stopTeam).toHaveBeenCalledWith('fixteam');
+    expect(ports.stopTeam).toHaveBeenCalledWith('other-team');
+
+    softDelete.resolve();
+    await expect(first).resolves.toBeUndefined();
+    await expect(other).resolves.toBeUndefined();
+
+    // Settled requests are forgotten, so the next one runs on its own.
+    await requests.softDelete('fixteam', ports);
+    expect(ports.stopTeam).toHaveBeenCalledTimes(3);
+    expect(ports.softDeleteTeam).toHaveBeenCalledTimes(3);
+  });
+
+  it('gives the joined caller the failure too and lets a retry run after it', async () => {
+    const softDelete = deferred();
+    const ports = createPorts({ softDeleteTeam: vi.fn(() => softDelete.promise) });
+    const requests = createTeamSoftDeleteRequests();
+
+    const first = requests.softDelete('fixteam', ports);
+    const repeated = requests.softDelete('fixteam', ports);
+    await vi.waitFor(() => expect(ports.softDeleteTeam).toHaveBeenCalledTimes(1));
+    softDelete.reject(new Error('quiesce timed out'));
+
+    await expect(first).rejects.toThrow('quiesce timed out');
+    await expect(repeated).rejects.toThrow('quiesce timed out');
+
+    vi.mocked(ports.softDeleteTeam).mockResolvedValueOnce(undefined);
+    await expect(requests.softDelete('fixteam', ports)).resolves.toBeUndefined();
+    expect(ports.stopTeam).toHaveBeenCalledTimes(2);
+    expect(ports.softDeleteTeam).toHaveBeenCalledTimes(2);
   });
 });

@@ -96,19 +96,13 @@ describe('JsonTeamTranscriptAffinityIndexStore', () => {
     expect(loaded?.projectDir).toBe('/repo/a');
   });
 
-  it('deletes corrupt or wrong-schema index files without throwing', async () => {
+  it('ignores corrupt, wrong-schema or foreign index files without deleting them', async () => {
     await setupClaudeRoot();
     const store = new JsonTeamTranscriptAffinityIndexStore();
     const filePath = indexPath('team-a', 'project-a');
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, '{not-json', 'utf8');
-
-    await expect(store.loadProject('team-a', 'project-a')).resolves.toBeNull();
-    await expect(fs.access(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
-
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(
-      filePath,
+    const unusableContents = [
+      '{not-json',
       JSON.stringify({
         version: TEAM_TRANSCRIPT_AFFINITY_INDEX_SCHEMA_VERSION + 1,
         teamName: 'team-a',
@@ -117,11 +111,44 @@ describe('JsonTeamTranscriptAffinityIndexStore', () => {
         writtenAt: '2026-05-30T10:00:00.000Z',
         entries: {},
       }),
-      'utf8'
-    );
+      JSON.stringify({
+        version: TEAM_TRANSCRIPT_AFFINITY_INDEX_SCHEMA_VERSION,
+        teamName: 'team-b',
+        projectId: 'project-a',
+        projectDir: '/repo/a',
+        writtenAt: '2026-05-30T10:00:00.000Z',
+        entries: {},
+      }),
+    ];
 
-    await expect(store.loadProject('team-a', 'project-a')).resolves.toBeNull();
-    await expect(fs.access(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
+    for (const contents of unusableContents) {
+      await fs.writeFile(filePath, contents, 'utf8');
+      const before = await fs.stat(filePath);
+
+      await expect(store.loadProject('team-a', 'project-a')).resolves.toBeNull();
+
+      await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(contents);
+      expect((await fs.stat(filePath)).mtimeMs).toBe(before.mtimeMs);
+    }
+  });
+
+  it('replaces an unusable index on the next upsert', async () => {
+    await setupClaudeRoot();
+    const store = new JsonTeamTranscriptAffinityIndexStore();
+    const filePath = indexPath('team-a', 'project-a');
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, '{not-json', 'utf8');
+
+    await store.upsertProjectEntries({
+      teamName: 'team-a',
+      projectId: 'project-a',
+      projectDir: '/repo/a',
+      rootFileNames: new Set(['a.jsonl']),
+      entries: [entry('a.jsonl')],
+    });
+
+    const loaded = await store.loadProject('team-a', 'project-a');
+    expect(Object.keys(loaded?.entries ?? {})).toEqual(['a.jsonl']);
   });
 
   it('skips invalid entries while preserving valid entries in the same index', async () => {

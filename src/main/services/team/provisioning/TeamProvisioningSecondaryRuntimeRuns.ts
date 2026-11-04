@@ -11,6 +11,7 @@ import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { matchesTeamMemberIdentity } from './TeamProvisioningMemberIdentity';
 
 import type { TeamRuntimeLaunchResult } from '../runtime/TeamRuntimeAdapter';
+import type { OpenCodeSecondaryLaneLaunchAttempt } from './OpenCodeSecondaryLaneLaunchAttempt';
 import type {
   PersistedTeamLaunchPhase,
   TeamCreateRequest,
@@ -28,6 +29,7 @@ export interface MixedSecondaryRuntimeLaneState {
   warnings: string[];
   diagnostics: string[];
   launchScheduled?: boolean;
+  launchAttempt?: OpenCodeSecondaryLaneLaunchAttempt;
   queuedAtMs?: number;
   launchStartedAtMs?: number;
   launchFinishedAtMs?: number;
@@ -41,6 +43,7 @@ export interface MixedSecondaryRuntimeLaneState {
 }
 
 export interface SecondaryRuntimeRunEntry {
+  launchAttempt?: OpenCodeSecondaryLaneLaunchAttempt;
   runId: string;
   providerId: 'opencode';
   laneId: string;
@@ -256,6 +259,7 @@ export function setSecondaryRuntimeRun(
     laneId: input.laneId,
     memberName: input.memberName,
     cwd: input.cwd,
+    ...(input.launchAttempt ? { launchAttempt: input.launchAttempt } : {}),
   });
   secondaryRuntimeRunByTeam.set(input.teamName, runs);
 }

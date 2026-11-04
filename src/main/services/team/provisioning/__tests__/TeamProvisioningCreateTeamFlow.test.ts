@@ -2,9 +2,9 @@ import * as fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { setClaudeBasePathOverride } from '../../../../utils/pathDecoder';
+import { setAppDataBasePath, setClaudeBasePathOverride } from '../../../../utils/pathDecoder';
 import { TeamInboxReader } from '../../TeamInboxReader';
 import {
   assertCreateTeamDoesNotExist,
@@ -13,6 +13,10 @@ import {
   createDeterministicCreateProvisioningRun,
   materializeDeterministicCreateTeamBootstrapFiles,
 } from '../TeamProvisioningCreateTeamFlow';
+import {
+  resolveThisAppProfileScope,
+  TEAM_PROFILE_OWNER_MARKER_FILE,
+} from '../TeamProvisioningProfileOwnership';
 
 import type {
   MemberSpawnStatusEntry,
@@ -131,6 +135,57 @@ describe('TeamProvisioningCreateTeamFlow', () => {
           })
         ).rejects.toBe(stopBeforeRuntime);
       } finally {
+        setClaudeBasePathOverride(null);
+        await fs.rm(claudeRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each([false, true])(
+    'claims the team for this app profile before pre-spawn metadata, fail-closed (blocked=%s)',
+    async (blocked) => {
+      const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-native-create-owner-'));
+      setClaudeBasePathOverride(claudeRoot);
+      setAppDataBasePath(path.join(claudeRoot, 'user-data'));
+      const request = buildRequest({ teamName: 'TEST-native-create-owner', cwd: claudeRoot });
+      const run = createDeterministicCreateProvisioningRun(buildCreateRunInput(request));
+      const markerPath = path.join(
+        claudeRoot,
+        'teams',
+        request.teamName,
+        TEAM_PROFILE_OWNER_MARKER_FILE
+      );
+      const stopBeforeRuntime = new Error('TEST stop before runtime materialization');
+      const writeMeta = vi.fn(async () => {
+        const marker = JSON.parse(await fs.readFile(markerPath, 'utf8')) as Record<string, unknown>;
+        expect(marker).toMatchObject({
+          schemaVersion: 1,
+          profileScope: resolveThisAppProfileScope(),
+          reason: 'create',
+        });
+        throw stopBeforeRuntime;
+      });
+
+      try {
+        if (blocked) await fs.mkdir(markerPath, { recursive: true });
+        await expect(
+          materializeDeterministicCreateTeamBootstrapFiles({
+            request,
+            run,
+            effectiveMemberSpecs: [],
+            allEffectiveMemberSpecs: [],
+            launchIdentity: null,
+            initialUserPrompt: '',
+            teamMetaStore: { writeMeta },
+            membersMetaStore: { writeMembers: async () => undefined },
+            mcpConfigBuilder: { writeConfigFile: async () => TEST_MCP_CONFIG_PATH },
+            buildMemberMcpLaunchConfigs: async () => new Map(),
+            validateAgentTeamsMcpRuntime: async () => undefined,
+          })
+        ).rejects.toThrow(blocked ? /was not started/ : stopBeforeRuntime.message);
+        expect(writeMeta).toHaveBeenCalledTimes(blocked ? 0 : 1);
+      } finally {
+        setAppDataBasePath(null);
         setClaudeBasePathOverride(null);
         await fs.rm(claudeRoot, { recursive: true, force: true });
       }

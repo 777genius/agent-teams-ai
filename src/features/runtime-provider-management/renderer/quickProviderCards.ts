@@ -1,4 +1,93 @@
+import { getRuntimeProviderOnboardingPlan } from '../core/domain';
+
+import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
 import type { RuntimeProviderQuickCardViewModel } from './ui/RuntimeProviderQuickConnectView';
+
+interface OpenCodePlanDefinition {
+  id: RuntimeProviderOnboardingPlanId;
+  providerId: string;
+  displayName: string;
+  descriptionKey:
+    | 'superGrokDescription'
+    | 'zaiDescription'
+    | 'miniMaxDescription'
+    | 'copilotDescription'
+    | 'kimiDescription'
+    | 'kiroDescription'
+    | 'cursorDescription';
+  requiresOAuthCredential?: boolean;
+  connectionStrategy: ReturnType<typeof getRuntimeProviderOnboardingPlan>['connectionStrategy'];
+}
+
+interface OpenCodeGatewayDefinition {
+  id: 'openrouter' | 'vercel';
+  providerId: 'openrouter' | 'vercel';
+  displayName: string;
+  description: string;
+}
+
+const OPEN_CODE_PLAN_PRESENTATION: readonly Pick<
+  OpenCodePlanDefinition,
+  'id' | 'descriptionKey' | 'requiresOAuthCredential'
+>[] = [
+  {
+    id: 'supergrok',
+    descriptionKey: 'superGrokDescription',
+    requiresOAuthCredential: true,
+  },
+  {
+    id: 'zai-coding-plan',
+    descriptionKey: 'zaiDescription',
+  },
+  {
+    id: 'minimax-token-plan',
+    descriptionKey: 'miniMaxDescription',
+  },
+  {
+    id: 'github-copilot',
+    descriptionKey: 'copilotDescription',
+  },
+  {
+    id: 'kimi-code-membership',
+    descriptionKey: 'kimiDescription',
+  },
+  {
+    id: 'kiro',
+    descriptionKey: 'kiroDescription',
+  },
+  {
+    id: 'cursor',
+    descriptionKey: 'cursorDescription',
+  },
+];
+
+export const OPEN_CODE_PLANS: readonly OpenCodePlanDefinition[] = OPEN_CODE_PLAN_PRESENTATION.map(
+  (presentation) => {
+    const plan = getRuntimeProviderOnboardingPlan(presentation.id);
+    return {
+      ...presentation,
+      providerId: plan.providerId,
+      displayName: plan.displayName,
+      connectionStrategy: plan.connectionStrategy,
+    };
+  }
+);
+
+export const OPEN_CODE_GATEWAYS: readonly OpenCodeGatewayDefinition[] = [
+  {
+    id: 'openrouter',
+    providerId: 'openrouter',
+    displayName: 'OpenRouter',
+    description: 'Use one API key to access models from many providers through OpenRouter.',
+  },
+  {
+    id: 'vercel',
+    providerId: 'vercel',
+    displayName: 'Vercel AI Gateway',
+    description:
+      'Use Vercel AI Gateway to access OpenAI, Anthropic, Google, xAI, and other models.',
+  },
+];
 
 const QUICK_CONNECT_CARD_ORDER = [
   'github-copilot',

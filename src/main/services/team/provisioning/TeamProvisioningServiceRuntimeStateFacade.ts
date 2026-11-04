@@ -314,6 +314,7 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
       cancelRuntimeAdapterProvisioning: (runId, progress) =>
         this.cancellationBoundary.cancelRuntimeAdapterProvisioning(runId, progress),
       killProcessTree,
+      isManagedByThisProfile: (teamName) => this.profileOwnership.isManagedByThisProfile(teamName),
       logger,
     }
   );

@@ -9,8 +9,8 @@ function unregisterProcess(context, flags) {
   return listProcesses(context);
 }
 
-function listProcesses(context) {
-  return processStore.listProcesses(context.paths);
+function listProcesses(context, flags) {
+  return processStore.listProcesses(context.paths, { readOnly: flags?.readOnly === true });
 }
 
 function stopProcess(context, flags) {

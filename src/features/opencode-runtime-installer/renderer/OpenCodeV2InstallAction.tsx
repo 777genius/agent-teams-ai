@@ -1,5 +1,15 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@renderer/components/ui/dialog';
 
 import type { OpenCodeRuntimeInstallOptions } from '../contracts';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
@@ -15,34 +25,67 @@ export const OpenCodeV2InstallAction = ({
   onInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
+  if (busy || !status || ['checking', 'downloading', 'installing'].includes(status.state))
+    return null;
   if (
     status?.installed &&
     status.version?.startsWith('2.') &&
     status.v2Support &&
     status.compatibleV2Version
   ) {
+    const installSupport = () => onInstall({ generation: 'v2', supportOnly: true });
+    if (status.v2Support === 'required') {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={installSupport}
+          className="h-6 px-2 text-[10px]"
+        >
+          {t('cliStatus.runtimeInstall.v2SupportInstall')}
+        </Button>
+      );
+    }
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={busy}
-        onClick={() => onInstall({ generation: 'v2', supportOnly: true })}
-        className="h-6 px-2 text-[10px]"
-      >
-        {t(
-          status.v2Support === 'required'
-            ? 'cliStatus.runtimeInstall.v2SupportInstall'
-            : 'cliStatus.runtimeInstall.v2SupportRepair'
-        )}
-      </Button>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={busy} className="h-6 px-2 text-[10px]">
+            {t('cliStatus.runtimeInstall.v2SupportRepair')}
+          </Button>
+        </DialogTrigger>
+        <DialogContent data-testid="opencode-v2-reinstall-dialog">
+          <DialogHeader>
+            <DialogTitle>{t('cliStatus.runtimeInstall.v2SupportRepair')}</DialogTitle>
+            <DialogDescription>
+              {t('cliStatus.runtimeInstall.v2ReinstallDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            {t('cliStatus.runtimeInstall.v2ReinstallEffect')}
+          </p>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t('cliStatus.runtimeInstall.v2ReinstallCancel')}</Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button data-testid="opencode-v2-reinstall-confirm" onClick={installSupport}>
+                {t('cliStatus.runtimeInstall.v2ReinstallConfirm')}
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
+
+  // Fresh installations show V1 only; keep diagnostics for a broken binary override.
   if (
     !status ||
+    (!status.installed && status.source !== 'override') ||
     (status.installed && (status.version?.startsWith('1.') || status.version?.startsWith('2.')))
   )
     return null;
-  if (!status.installed && status.compatibleV2Version) return null;
   if (status.source === 'override') {
     return (
       <span className="max-w-64 text-[10px] text-[var(--color-text-muted)]">

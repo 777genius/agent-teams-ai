@@ -1,3 +1,5 @@
+import { OPENCODE_LOADING_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
+
 import type { OpenCodeLaunchTeamCommandBody } from './OpenCodeBridgeCommandContract';
 
 /**
@@ -30,7 +32,7 @@ export const OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS = 10_000;
 /** Applied whenever the caller configures no explicit budget for a command. */
 export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   readiness: 300_000,
-  launch: 120_000,
+  launch: OPENCODE_LOADING_TIMEOUT_MS,
   reconcile: 30_000,
   // Longer than the renderer-facing UI timeout: late OpenCode turns should still
   // finish bridge-side observation and emit member-work-sync signals.
@@ -100,7 +102,7 @@ export function resolveOpenCodeLaunchTimeoutMs(
     return LOCAL_OPENCODE_LAUNCH_TIMEOUT_MS;
   }
   // V2 native startup (graph validation + native child boot) needs the same
-  // budget on every platform; V1 keeps the historical 120s default.
+  // budget on every platform; V1 gets the shared three-minute cold-start allowance.
   const defaultLaunchMs = Math.max(
     OPEN_CODE_BRIDGE_TIMEOUTS_MS.launch,
     input.executionProof?.opencodeVersion?.startsWith('2.') ? 300_000 : 0

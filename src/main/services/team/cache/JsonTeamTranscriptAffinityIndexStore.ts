@@ -86,18 +86,18 @@ export class JsonTeamTranscriptAffinityIndexStore implements TeamTranscriptAffin
       return null;
     }
 
+    // A file that cannot be used is only ignored, never deleted: reads also run for
+    // teams of other profiles, and the next upsert replaces the file atomically.
     let parsed: unknown;
     try {
       parsed = JSON.parse(content) as unknown;
     } catch (error) {
       logger.debug(`Corrupted transcript affinity index ${filePath}: ${String(error)}`);
-      await fs.unlink(filePath).catch(() => undefined);
       return null;
     }
 
     const normalized = normalizeTeamTranscriptAffinityIndex(parsed);
     if (!normalized || normalized.teamName !== teamName || normalized.projectId !== projectId) {
-      await fs.unlink(filePath).catch(() => undefined);
       return null;
     }
 

@@ -59,7 +59,10 @@ export class TeamTranscriptSourceLocator {
   private readonly generationByTeam = new Map<string, number>();
 
   constructor(
-    private readonly projectResolver: TeamTranscriptProjectResolver = new TeamTranscriptProjectResolver()
+    // Read only by default; a caller that may write team files passes its own resolver.
+    private readonly projectResolver: TeamTranscriptProjectResolver = new TeamTranscriptProjectResolver(
+      () => Promise.resolve(false)
+    )
   ) {}
 
   getGeneration(teamName: string): number {

@@ -135,6 +135,7 @@ async function seedAcceptedPendingRecord(
     laneId: PRIMARY_LANE.laneId,
     runId: 'run-1',
     inboxMessageId: input.messageId!,
+    groupChatId: input.groupChatId,
     inboxTimestamp: input.inboxTimestamp ?? at,
     source: input.source ?? 'watcher',
     replyRecipient: input.replyRecipient ?? 'user',
@@ -149,6 +150,8 @@ async function seedAcceptedPendingRecord(
       taskRefs: input.taskRefs ?? [],
       attachments: input.attachments,
       source: input.source,
+      groupChatId: input.groupChatId,
+      groupRunKey: input.groupRunKey,
     }),
     now: at,
   });
@@ -681,22 +684,72 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     ).toBe(true);
   });
 
-  it('queues a new user behind stale busy non-user work until a fresh idle observation', async () => {
+  it.each([
+    { kind: 'V1 idle', observation: pendingObservation(), diagnostics: [TREATED_IDLE] },
+    {
+      kind: 'V2 exact terminal without text',
+      observation: pendingObservation({ reason: 'session.execution.succeeded', toolCallNames: [] }),
+      diagnostics: [],
+    },
+  ])(
+    'releases queued user work after $kind settles the preceding notification',
+    async ({ observation, diagnostics }) => {
+      const harness = createHarness({
+        ledgerDir,
+        send: async () => acceptedSendResult(),
+        observe: async () => observedResult({ observation, diagnostics }),
+      });
+      await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 90 });
+      expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
+        queuedBehindMessageId: taskCommentNotification.messageId,
+      });
+      expect(harness.send).not.toHaveBeenCalled();
+      expect(await harness.service.deliver(TEAM, taskCommentNotification)).toMatchObject({
+        delivered: true,
+        responsePending: false,
+      });
+      expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({ accepted: true });
+      expect(harness.send).toHaveBeenCalledOnce();
+      expect(harness.observe).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('releases the next DM after an exact V2 completed silent peer group turn', async () => {
+    const peerGroup: OpenCodeMemberMessageDeliveryInput = {
+      ...userMessage,
+      messageId: 'peer-group:g:lead',
+      groupChatId: 'group-1',
+      groupRunKey: 'run-1',
+      replyRecipient: 'alice',
+    };
     const harness = createHarness({
       ledgerDir,
       send: async () => acceptedSendResult(),
       observe: async () =>
-        observedResult({ observation: pendingObservation(), diagnostics: [TREATED_IDLE] }),
+        observedResult({
+          observation: pendingObservation({
+            reason: 'session.execution.succeeded',
+            toolCallNames: [],
+          }),
+          diagnostics: [],
+        }),
     });
-    await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 90 });
+    await seedAcceptedPendingRecord(harness.ledger, peerGroup, {
+      ageMinutes: 1,
+      toolCallNames: [],
+    });
     expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
-      queuedBehindMessageId: taskCommentNotification.messageId,
+      queuedBehindMessageId: peerGroup.messageId,
     });
     expect(harness.send).not.toHaveBeenCalled();
-    expect(await harness.service.deliver(TEAM, taskCommentNotification)).toMatchObject({
+    const peerResult = await harness.service.deliver(TEAM, peerGroup);
+    expect(peerResult).toMatchObject({
       delivered: true,
       responsePending: false,
     });
+    const [settled] = await harness.ledger.list();
+    expect(settled.status).toBe('responded');
+    expect(settled.visibleReplyMessageId).toBeNull();
     expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({ accepted: true });
     expect(harness.send).toHaveBeenCalledOnce();
   });

@@ -278,12 +278,14 @@ it('actual bundled verifier hashes every file with at most eight readers and dra
       files[name] = createHash('sha256').update(bytes).digest('hex');
     }
     const manifest = path.join(root, 'manifest.json');
-    await writeFile(manifest, JSON.stringify({ sdkSha, files }));
+    const appSha = 'b'.repeat(40);
+    await writeFile(manifest, JSON.stringify({ mode: 'candidate_not_public_release', appSha,
+      platform: `${process.platform}-${process.arch}`, runtimeArchiveSha256: 'c'.repeat(64), sdkSha, files }));
     let active = 0, maximum = 0, claimed = 0;
     let fail: Error | null = null;
     const verify = compileFunction(`let preproofStage;const preproofFacts={};
       const BUNDLED_MANIFEST_MAX_BYTES=33554432,BUNDLED_MANIFEST_MAX_ENTRIES=131072;
-      ${compiled};return bundledRuntime;`, ['assert', 'path', 'lstat', 'realpath', 'readFile', 'createHash', 'createReadStream'])(
+      ${compiled};return bundledRuntime;`, ['assert', 'path', 'lstat', 'realpath', 'readFile', 'createHash', 'createReadStream', 'process'])(
       assert, path, async (file: string) => {
         if (file !== manifest) { claimed++; if (fail && file.endsWith('COMMIT_SHA')) throw fail; }
         return lstat(file);
@@ -292,7 +294,7 @@ it('actual bundled verifier hashes every file with at most eight readers and dra
         active++; maximum = Math.max(maximum, active);
         stream.once('close', () => { active--; });
         return stream;
-      }
+      }, { platform: process.platform, arch: process.arch, env: { GITHUB_SHA: appSha } }
     ) as (executable: string, manifest: string) => Promise<{runtimeDigests: Record<string, string>}>;
     const result = await verify(executable, manifest);
     expect(result.runtimeDigests).toEqual(files);

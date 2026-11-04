@@ -1,3 +1,5 @@
+import { isOpenCodeAttachmentDeliveryFailureReason } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+
 import type { OpenCodeMemberInboxDelivery } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 
@@ -19,6 +21,53 @@ export function createOpenCodeMemberInboxRelayResult(
     delivered: 0,
     failed: 0,
     ...overrides,
+  };
+}
+
+export function projectOpenCodeInboxDeliveryFailure(input: {
+  delivery: OpenCodeMemberInboxDelivery;
+  suppressRuntimeInactiveWarning: boolean;
+}): {
+  result: OpenCodeMemberInboxRelayResult;
+  shouldLogWarning: boolean;
+  /** An expected wait for bootstrap check-in: worth a log line, not a warning. */
+  shouldLogDeferral: boolean;
+} {
+  if (input.delivery.accepted === true && input.delivery.ledgerStatus !== 'failed_terminal') {
+    const diagnostics = input.delivery.diagnostics ?? [
+      input.delivery.reason ?? 'opencode_delivery_response_pending',
+    ];
+    return {
+      result: createOpenCodeMemberInboxRelayResult({
+        diagnostics,
+        lastDelivery: {
+          ...input.delivery,
+          diagnostics,
+        },
+      }),
+      shouldLogWarning: false,
+      shouldLogDeferral: false,
+    };
+  }
+
+  const diagnostics = input.delivery.diagnostics ?? [
+    input.delivery.reason ?? 'opencode_message_delivery_failed',
+  ];
+  // A deferral is still projected as a failed attempt with the same
+  // diagnostics and stays unread for the retry; only the log line differs.
+  const deferredUntilBootstrap = input.delivery.deferredUntilBootstrap === true;
+  return {
+    result: createOpenCodeMemberInboxRelayResult({
+      failed: 1,
+      diagnostics,
+      lastDelivery: input.delivery,
+    }),
+    shouldLogWarning:
+      !deferredUntilBootstrap &&
+      !isOpenCodeAttachmentDeliveryFailureReason(input.delivery.reason) &&
+      (input.delivery.reason !== 'opencode_runtime_not_active' ||
+        !input.suppressRuntimeInactiveWarning),
+    shouldLogDeferral: deferredUntilBootstrap,
   };
 }
 

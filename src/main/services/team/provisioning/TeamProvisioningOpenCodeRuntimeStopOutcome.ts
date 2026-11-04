@@ -221,7 +221,7 @@ export function assertOpenCodeRuntimeStopEffective(input: {
     const alive =
       outcome.alivePids.length > 0
         ? ` (host process still alive: pid ${outcome.alivePids.join(', ')})`
-        : ' (no recorded host pid to verify)';
+        : ' (no live host process available for verification)';
     throw new OpenCodeRuntimeStopUnconfirmedError(
       `${input.message}${suffix}${alive}`,
       input.result?.diagnostics,

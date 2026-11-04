@@ -4,13 +4,6 @@ import * as path from 'node:path';
 
 import { pruneDeletedTeamBackups } from '@agent-teams/legacy-agent-host/lifecycle';
 import {
-  APP_DATA_DEEP_SUBDIRS,
-  APP_DATA_SUBDIRS,
-  TEAM_RECURSIVE_SUBDIRS,
-  TEAM_ROOT_FILES,
-  TEAM_SUBDIRS,
-} from '@agent-teams/legacy-agent-host/lifecycle';
-import {
   atomicWriteAsync,
   atomicWriteSync,
   getDurablePathIdentity,
@@ -31,9 +24,18 @@ import {
   type TeamPermanentDeletionIntent,
 } from './permanent-deletion/TeamPermanentDeletionTypes';
 import {
+  createTeamProfileOwnership,
+  type TeamProfileOwnership,
+} from './provisioning/TeamProvisioningProfileOwnership';
+import {
+  APP_DATA_DEEP_SUBDIRS,
+  APP_DATA_SUBDIRS,
   type BackupFileDescriptor,
   collectRecursiveFiles,
   collectRecursiveFilesSync,
+  TEAM_RECURSIVE_SUBDIRS,
+  TEAM_ROOT_FILES,
+  TEAM_SUBDIRS,
 } from './TeamBackupFileCollection';
 import {
   type BackupManifest,
@@ -137,11 +139,19 @@ export class TeamBackupService {
     restoreLegacy: (name) => this.restoreTeam(name),
     restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
     restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
+    isManagedByThisProfile: (name) => this.ownership.isManagedByThisProfile(name),
   });
 
+  /**
+   * The teams directory is shared with other app profiles and native sessions.
+   * Only teams belonging to this profile are backed up.
+   */
   constructor(
     private readonly configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'> &
-      Partial<Pick<TeamDataService, 'setLegacySourceWriteAdmission'>>
+      Partial<Pick<TeamDataService, 'setLegacySourceWriteAdmission'>>,
+    private readonly ownership: TeamProfileOwnership = createTeamProfileOwnership({
+      isTrackedInThisProcess: () => false,
+    })
   ) {
     configuration?.setConfigurationIdentityFence((name, operation) =>
       this.withTeamIdentityFence(name, operation)
@@ -407,6 +417,7 @@ export class TeamBackupService {
 
   private async doBackupTeam(teamName: string): Promise<void> {
     const gen = this.backupGeneration;
+    if (!(await this.ownership.isManagedByThisProfile(teamName))) return;
     if (!(await this.isConfigReady(teamName))) return;
     if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
 
@@ -539,6 +550,7 @@ export class TeamBackupService {
   private doBackupTeamSync(teamName: string): void {
     const teamDir = path.join(getTeamsBasePath(), teamName);
     const configPath = path.join(teamDir, 'config.json');
+    if (!this.ownership.isManagedByThisProfileSync(teamName)) return;
     if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName)) return;
     try {
       const raw = fs.readFileSync(configPath, 'utf8');

@@ -14,6 +14,7 @@ export function canLoadOpenCodeDashboardCatalog(
   provider: CliProviderStatus | null,
   runtime: OpenCodeRuntimeStatus | null
 ): boolean {
+  if (runtime?.v2Support === 'required') return false;
   return Boolean(
     provider &&
     (provider.supported ||
@@ -31,13 +32,15 @@ export function hasAvailableFreeOpenCodeDashboardModel(
   runtime: OpenCodeRuntimeStatus | null
 ): boolean {
   const catalog = provider.modelCatalog;
-  // V2 can report free pricing even when Zen refuses free-tier execution.
+  // Free pricing alone does not prove that the selected native execution works.
   if (
     provider.providerId !== 'opencode' ||
     !provider.supported ||
     !isOpenCodeRuntimeUsable(runtime) ||
-    getOpenCodeGeneration(runtime?.version) !== 'v1' ||
-    catalog?.status !== 'ready'
+    provider.statusCheckOutcome === 'pending' ||
+    provider.statusCheckOutcome === 'transient_error' ||
+    (catalog?.status !== 'ready' &&
+      !(catalog?.status === 'degraded' && provider.modelCatalogRefreshState === 'ready'))
   ) {
     return false;
   }
@@ -52,6 +55,7 @@ export function hasAvailableFreeOpenCodeDashboardModel(
       !route.failureCode &&
       route.proofState !== 'failed' &&
       route.proofState !== 'needs_probe' &&
+      (getOpenCodeGeneration(runtime?.version) !== 'v2' || route.proofState === 'verified') &&
       (!route.requiresExecutionProof || route.proofState === 'verified') &&
       (parseOpenCodeQualifiedModelRef(model.launchModel)?.sourceId !== 'opencode' ||
         !isOpenCodeFreeTierVersionOutdated(runtime?.version)) &&

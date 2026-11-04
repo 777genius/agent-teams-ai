@@ -148,10 +148,7 @@ export class ScheduledTaskExecutor {
       providerId,
       providerBackendId: request.config.providerBackendId,
       shellEnv,
-      env: {
-        ...shellEnv,
-        CLAUDECODE: undefined,
-      },
+      env: { ...shellEnv },
     });
     const connectionIssue = connectionIssues[providerId];
     if (connectionIssue) {
@@ -167,9 +164,7 @@ export class ScheduledTaskExecutor {
       cwd: request.config.cwd,
       // shellEnv spread after buildEnrichedEnv ensures freshly-resolved values
       // take precedence over the cached snapshot inside buildEnrichedEnv.
-      // CLAUDECODE stripped last to prevent nested-session detection regardless
-      // of what buildProviderAwareCliEnv merges in.
-      env: { ...env, CLAUDECODE: undefined },
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 

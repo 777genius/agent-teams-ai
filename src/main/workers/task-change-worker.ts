@@ -9,6 +9,7 @@ import type {
   TaskChangeWorkerResponse,
 } from '@main/services/team/taskChangeWorkerTypes';
 
+// The worker cannot tell which teams this app profile manages; the default resolver is read only.
 const logsFinder = new TeamMemberLogsFinder();
 const boundaryParser = new TaskBoundaryParser();
 const computer = new TaskChangeComputer(logsFinder, boundaryParser);

@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ActiveTeamRegistry } from '../../../../../src/main/services/team/stallMonitor/ActiveTeamRegistry';
 
+const ownsEveryTeam = async (): Promise<boolean> => true;
+
 describe('ActiveTeamRegistry', () => {
   function createDeferred<T>(): {
     promise: Promise<T>;
@@ -23,7 +25,7 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => []) },
+      { listAliveProcessTeams: vi.fn(async () => []), isTeamManagedByThisProfile: ownsEveryTeam },
       tracker as never
     );
 
@@ -45,7 +47,7 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => []) },
+      { listAliveProcessTeams: vi.fn(async () => []), isTeamManagedByThisProfile: ownsEveryTeam },
       tracker as never
     );
 
@@ -72,7 +74,7 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => []) },
+      { listAliveProcessTeams: vi.fn(async () => []), isTeamManagedByThisProfile: ownsEveryTeam },
       tracker as never
     );
 
@@ -92,7 +94,10 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => ['beta']) },
+      {
+        listAliveProcessTeams: vi.fn(async () => ['beta']),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      },
       tracker as never
     );
 
@@ -122,7 +127,10 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => ['demo']) },
+      {
+        listAliveProcessTeams: vi.fn(async () => ['demo']),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      },
       tracker as never
     );
 
@@ -157,7 +165,7 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => []) },
+      { listAliveProcessTeams: vi.fn(async () => []), isTeamManagedByThisProfile: ownsEveryTeam },
       tracker as never
     );
 
@@ -186,7 +194,10 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(() => aliveTeams.promise) },
+      {
+        listAliveProcessTeams: vi.fn(() => aliveTeams.promise),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      },
       tracker as never
     );
 
@@ -205,7 +216,10 @@ describe('ActiveTeamRegistry', () => {
       disableTracking: vi.fn(async () => ({ projectFingerprint: null, logSourceGeneration: null })),
     };
     const registry = new ActiveTeamRegistry(
-      { listAliveProcessTeams: vi.fn(async () => ['demo']) },
+      {
+        listAliveProcessTeams: vi.fn(async () => ['demo']),
+        isTeamManagedByThisProfile: ownsEveryTeam,
+      },
       tracker as never
     );
 
@@ -223,5 +237,63 @@ describe('ActiveTeamRegistry', () => {
 
     expect(tracker.enableTracking).not.toHaveBeenCalled();
     await expect(registry.listActiveTeams()).resolves.toEqual(['demo']);
+  });
+
+  describe('teams of other profiles', () => {
+    function createRegistry(aliveTeams: string[], ownTeams: Set<string>) {
+      const tracker = {
+        enableTracking: vi.fn(async () => ({
+          projectFingerprint: null,
+          logSourceGeneration: null,
+        })),
+        disableTracking: vi.fn(async () => ({
+          projectFingerprint: null,
+          logSourceGeneration: null,
+        })),
+      };
+      const registry = new ActiveTeamRegistry(
+        {
+          listAliveProcessTeams: vi.fn(async () => aliveTeams),
+          isTeamManagedByThisProfile: vi.fn(async (teamName: string) => ownTeams.has(teamName)),
+        },
+        tracker as never
+      );
+      return { registry, tracker };
+    }
+
+    it('reconciles only alive teams that this profile manages', async () => {
+      const { registry, tracker } = createRegistry(['foreign', 'own'], new Set(['own']));
+
+      await registry.reconcile();
+
+      expect(tracker.enableTracking).toHaveBeenCalledTimes(1);
+      expect(tracker.enableTracking).toHaveBeenCalledWith('own', 'stall_monitor');
+      await expect(registry.listActiveTeams()).resolves.toEqual(['own']);
+    });
+
+    it('does not activate a team of another profile from team events', async () => {
+      const { registry, tracker } = createRegistry([], new Set());
+
+      registry.noteTeamChange({ type: 'lead-activity', teamName: 'foreign', detail: 'active' });
+      registry.noteTeamChange({ type: 'member-spawn', teamName: 'foreign', detail: 'alice' });
+      await registry.reconcile();
+
+      expect(tracker.enableTracking).not.toHaveBeenCalled();
+      await expect(registry.listActiveTeams()).resolves.toEqual([]);
+    });
+
+    it('drops a team taken over by another profile before the next reconcile releases it', async () => {
+      const ownTeams = new Set(['own']);
+      const { registry, tracker } = createRegistry(['own'], ownTeams);
+      await registry.reconcile();
+      await expect(registry.listActiveTeams()).resolves.toEqual(['own']);
+
+      ownTeams.delete('own');
+
+      await expect(registry.listActiveTeams()).resolves.toEqual([]);
+      expect(tracker.disableTracking).not.toHaveBeenCalled();
+      await registry.reconcile();
+      expect(tracker.disableTracking).toHaveBeenCalledWith('own', 'stall_monitor');
+    });
   });
 });

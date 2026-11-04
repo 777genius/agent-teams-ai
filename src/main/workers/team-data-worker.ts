@@ -30,7 +30,9 @@ if (typeof workerData === 'string') {
   setClaudeBasePathOverride(workerData);
 }
 
-// Instantiate services with default dependencies — worker has its own event loop
+// Instantiate services with default dependencies — worker has its own event loop.
+// The worker cannot tell which teams this app profile manages, so it only reads team
+// files: TeamDataService gets no profile ownership and the default resolvers are read only.
 const teamDataService = new TeamDataService();
 const logsFinder = new TeamMemberLogsFinder();
 

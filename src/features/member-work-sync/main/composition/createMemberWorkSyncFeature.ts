@@ -104,6 +104,8 @@ export function createMemberWorkSyncFeature(deps: {
   taskReader: TeamTaskReader;
   kanbanManager: TeamKanbanManager;
   membersMetaStore: TeamMembersMetaStore;
+  /** Claude Stop hooks are matched only against teams this profile manages. */
+  isManagedByThisProfile: (teamName: string) => Promise<boolean>;
   isTeamActive?: (teamName: string) => Promise<boolean> | boolean;
   isMemberActive?: (input: { teamName: string; memberName: string }) => Promise<boolean> | boolean;
   canDispatchNudges?: (teamName: string) => Promise<boolean> | boolean;
@@ -167,6 +169,7 @@ export function createMemberWorkSyncFeature(deps: {
     new TeamRuntimeTurnSettledTargetResolver({
       teamSource: configReaderForReadOnlySync,
       membersMetaStore: deps.membersMetaStore,
+      isManagedByThisProfile: deps.isManagedByThisProfile,
       captureSourceExecution: sourceAdmission.captureExecution,
     });
   const reportToken = new HmacMemberWorkSyncReportTokenAdapter(storePaths, deps.lifecycleIdentity);

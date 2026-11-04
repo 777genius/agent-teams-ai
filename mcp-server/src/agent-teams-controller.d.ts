@@ -164,7 +164,10 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerTaskBoardApi
-    extends ControllerTaskBoardTaskApi, ControllerTaskBoardKanbanApi, ControllerReviewWriteApi {}
+    extends ControllerTaskBoardTaskApi, ControllerTaskBoardKanbanApi, ControllerReviewWriteApi {
+    /** Configured member or lead alias, by the task owner rules; leadName is the configured lead. */
+    resolveTaskActor(actor: string): { memberName: string | null; leadName: string | null };
+  }
 
   export interface ControllerMessageApi {
     appendSentMessage(flags: Record<string, unknown>): unknown;

@@ -19,12 +19,14 @@ import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   mergeProvisioningWarnings,
 } from './TeamProvisioningLaunchCompatibility';
+import { claimTeamForThisProfile } from './TeamProvisioningProfileOwnership';
 import {
   emitProvisioningCheckpoint,
   type TeamProvisioningCheckpointRun,
 } from './TeamProvisioningProgressBuffers';
 import { getPromptSizeSummary, type PromptSizeSummary } from './TeamProvisioningRuntimeDiagnostics';
 
+import type { PendingLeadSendMessage } from './TeamProvisioningLeadSendMessageCapture';
 import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   TeamRuntimeLaunchArgsPlan,
@@ -260,6 +262,8 @@ export function createDeterministicCreateProvisioningRun<
     silentUserDmForward: null,
     silentUserDmForwardClearHandle: null,
     pendingInboxRelayCandidates: [],
+    pendingLeadSendMessages: new Map<string, PendingLeadSendMessage>(),
+    leadSendMessageSeq: 0,
     provisioningOutputParts: [],
     provisioningTraceLines: [],
     lastProvisioningTraceKey: null,
@@ -322,6 +326,13 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   const createdTeamDirectory = await fs.promises.mkdir(teamDir, { recursive: true, mode: 0o700 });
   await fs.promises.mkdir(tasksDir, { recursive: true, mode: 0o700 });
   if (createdTeamDirectory) await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
+  // Before any spawn and fail-closed: a failure here aborts the create, and the
+  // create cleanup removes the materialized team directory again.
+  await claimTeamForThisProfile({
+    teamsBasePath: getTeamsBasePath(),
+    teamName: request.teamName,
+    reason: 'create',
+  });
   await teamMetaStore.writeMeta(
     request.teamName,
     buildCreateTeamMetaPayload(request, launchIdentity)

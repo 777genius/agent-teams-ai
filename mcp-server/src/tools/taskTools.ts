@@ -57,7 +57,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create',
     description:
-      "Create a team task. For task intents from a group user message, prefer task_create_from_message with the original messageId; otherwise pass the known groupChatId explicitly when applicable. Raw/headless calls do not inject a user actor or auto-start: owner without createdBy/from/startImmediately creates a pending task with no recorded actor, and assigning it to the lead suppresses the lead's self-notification. For an immediate user-origin assignment, pass createdBy: 'user' and startImmediately: true. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.",
+      "Create a team task. For task intents from a group user message, prefer task_create_from_message with the original messageId; otherwise pass the known groupChatId explicitly when applicable. Raw/headless calls do not inject a user actor or auto-start: owner without createdBy/from/startImmediately creates a pending task with no recorded actor, and assigning it to the lead suppresses the lead's self-notification. Tasks you create yourself (including as lead) pass createdBy with your own configured name. Use createdBy: 'user' only when acting for the user; for an immediate user-origin assignment add startImmediately: true. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.",
     parameters: z.object({
       ...toolContextSchema,
       subject: z.string().min(1),
@@ -76,7 +76,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
         .string()
         .optional()
         .describe(
-          "Explicit creation actor and assignment-notification sender. Use 'user' for a user-origin headless assignment."
+          "Explicit creation actor and assignment-notification sender: your configured name. Use 'user' only when acting for the user."
         ),
       from: z
         .string()

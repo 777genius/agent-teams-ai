@@ -99,6 +99,8 @@ export interface TeamRuntimeLaunchInput {
   allowExperimentalLocalModels?: boolean;
   expectedMembers: TeamRuntimeMemberSpec[];
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  /** Internal admission only; checked synchronously before every OpenCode launch handoff. */
+  mayDispatch?: () => boolean;
 }
 
 export interface TeamRuntimePrepareSuccess {
@@ -151,9 +153,8 @@ export interface TeamRuntimeMemberLaunchEvidence {
 
 /**
  * Present only when the launch was refused BEFORE any state-changing runtime
- * command was issued. It is the caller's deterministic proof that no host or
- * session exists for this run, so the same lane may be launched again without
- * creating a duplicate.
+ * command was issued. This proves no team host or session was launched for this
+ * run. Separately owned readiness probes retain their own cleanup custody.
  */
 export interface TeamRuntimePreLaunchGate {
   blocked: true;

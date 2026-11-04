@@ -24,6 +24,82 @@ import type {
 
 const runtimeStatus = { source: 'path' } as OpenCodeRuntimeStatus;
 
+describe('OpenCode V2 support activation', () => {
+  const supportRequired = {
+    installed: true,
+    version: '2.1.4',
+    source: 'app-managed',
+    state: 'idle',
+    v2Support: 'required',
+    error: 'OpenCode V2 support must be installed.',
+  } as OpenCodeRuntimeStatus;
+
+  it('keeps stale provider readiness from admitting an incomplete V2 runtime', () => {
+    const provider = status('authoritative', true);
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: provider,
+        runtimeStatus: supportRequired,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('missing');
+    expect(isOpenCodePassiveStatusReadyForCatalog(provider, supportRequired)).toBe(false);
+    expect(
+      getOpenCodeProviderDisabledReason({
+        providerStatus: provider,
+        scopedStatus: provider,
+        scopedCatalogStatus: 'ready',
+        scopedCatalogState: 'fresh',
+        runtimeStatusUiState: 'missing',
+        runtimeStatus: supportRequired,
+        runtimeError: null,
+        providerReady: true,
+        loadingMessage: 'Loading',
+      })
+    ).toBe(supportRequired.error);
+  });
+
+  it('keeps cached models blocked during download and admits the same session after activation', () => {
+    const provider = status('pending', true);
+    const downloading = { ...supportRequired, state: 'downloading' as const };
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: provider,
+        runtimeStatus: downloading,
+        runtimeStatusLoading: true,
+      })
+    ).toBe('checking');
+    expect(
+      getOpenCodeProviderDisabledReason({
+        providerStatus: provider,
+        scopedStatus: provider,
+        scopedCatalogStatus: 'ready',
+        scopedCatalogState: 'fresh',
+        runtimeStatusUiState: 'checking',
+        runtimeStatus: downloading,
+        runtimeError: null,
+        providerReady: true,
+        loadingMessage: 'Loading',
+      })
+    ).toBe('Loading');
+    expect(isOpenCodePassiveStatusReadyForCatalog(provider, downloading)).toBe(false);
+    const ready = {
+      ...supportRequired,
+      state: 'ready' as const,
+      v2Support: 'ready' as const,
+      error: undefined,
+    };
+    expect(isOpenCodePassiveStatusReadyForCatalog(status('authoritative', true), ready)).toBe(true);
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: status('authoritative', true),
+        runtimeStatus: ready,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('ready');
+  });
+});
+
 function status(
   outcome: CliProviderStatus['statusCheckOutcome'],
   supported: boolean
@@ -342,9 +418,35 @@ describe('mergeOpenCodePassiveProviderStatus', () => {
 });
 
 describe('getOpenCodePassiveCatalogState', () => {
+  it('keeps a completed scoped failure from spinning under a pending passive check', () => {
+    const pending = status('pending', false);
+    expect(getOpenCodePassiveCatalogState(true, 'checking', pending, 'error')).toBe('unavailable');
+    expect(pending.statusCheckOutcome).toBe('pending');
+    expect(pending.supported).toBe(false);
+  });
+
+  it('settles a completed scoped catalog without waiting for launch readiness', () => {
+    const pending = status('pending', false);
+    expect(getOpenCodePassiveCatalogState(true, 'checking', pending, 'ready')).toBe('settled');
+    expect(pending.statusCheckOutcome).toBe('pending');
+    expect(pending.supported).toBe(false);
+  });
+
+  it('shows a real scoped refresh even when the passive catalog is already ready', () => {
+    const provider = {
+      ...status('authoritative', true),
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: { status: 'ready' },
+    } as CliProviderStatus;
+    expect(getOpenCodePassiveCatalogState(true, 'ready', provider, 'loading')).toBe('pending');
+    expect(getOpenCodePassiveCatalogState(true, 'ready', provider, 'error')).toBe('unavailable');
+  });
+
   it('stays pending only while a check is actually running', () => {
     expect(getOpenCodePassiveCatalogState(false, 'checking')).toBe('pending');
-    expect(getOpenCodePassiveCatalogState(true, 'checking', status('pending', true))).toBe('pending');
+    expect(getOpenCodePassiveCatalogState(true, 'checking', status('pending', true))).toBe(
+      'pending'
+    );
     expect(getOpenCodePassiveCatalogState(true, 'checking', status('authoritative', true))).toBe(
       'settled'
     );
@@ -384,7 +486,9 @@ describe('OpenCode project folder missing status', () => {
       runtimeStatusLoading: false,
     });
     expect(uiState).toBe('retry');
-    expect(isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, installedRuntime)).toBe(false);
+    expect(isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, installedRuntime)).toBe(
+      false
+    );
     expect(
       getOpenCodePassiveCatalogState(
         isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, installedRuntime),
@@ -426,6 +530,56 @@ describe('OpenCode project folder missing status', () => {
 });
 
 describe('isOpenCodePassiveStatusReadyForCatalog', () => {
+  it('allows a read-only catalog query for a detected external host before launch status settles', () => {
+    const provider = {
+      ...status('pending', false),
+      capabilities: { teamLaunch: false },
+      models: [],
+      modelCatalog: null,
+      externalRuntimeDiagnostics: [{ id: 'opencode-live-host', detected: true }],
+    } as unknown as CliProviderStatus;
+    const detecting = {
+      installed: false,
+      source: 'missing',
+      state: 'checking',
+    } as OpenCodeRuntimeStatus;
+    expect(isOpenCodePassiveStatusReadyForCatalog(provider, detecting)).toBe(true);
+    expect(
+      isOpenCodePassiveStatusReadyForCatalog(provider, { ...detecting, v2Support: 'required' })
+    ).toBe(false);
+    expect(
+      isOpenCodePassiveStatusReadyForCatalog(
+        { ...provider, statusCheckErrorCode: 'project_missing' },
+        detecting
+      )
+    ).toBe(false);
+    expect(
+      isOpenCodePassiveStatusReadyForCatalog(
+        { ...provider, externalRuntimeDiagnostics: [] },
+        detecting
+      )
+    ).toBe(false);
+    expect(provider.capabilities.teamLaunch).toBe(false);
+  });
+
+  it('settles the catalog loader independently of pending launch authority', () => {
+    const provider = {
+      ...status('pending', false),
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: { status: 'ready' },
+    } as unknown as CliProviderStatus;
+    expect(getOpenCodePassiveCatalogState(true, 'checking', provider)).toBe('settled');
+    expect(
+      getOpenCodePassiveCatalogState(true, 'checking', {
+        ...provider,
+        modelCatalogRefreshState: 'loading',
+      })
+    ).toBe('pending');
+    expect(provider.statusCheckOutcome).toBe('pending');
+    expect(provider.capabilities.teamLaunch).toBe(false);
+  });
+
   it('accepts authoritative supported runtime evidence', () => {
     expect(isOpenCodePassiveStatusReadyForCatalog(status('authoritative', true), null)).toBe(true);
   });

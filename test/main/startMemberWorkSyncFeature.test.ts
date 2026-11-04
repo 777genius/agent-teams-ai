@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createDeferredWorkSyncStallObservation,
   isAcceptedMemberWorkSyncLeadProof,
+  listMemberWorkSyncLifecycleActiveTeamNames,
   runShutdownBackupAfterWorkSyncDrain,
   startPreparedMemberWorkSyncFeature,
 } from '../../src/main/startMemberWorkSyncFeature';
@@ -499,5 +500,48 @@ describe('isAcceptedMemberWorkSyncLeadProof', () => {
         Date.parse('2026-09-14T00:05:00.000Z')
       )
     ).toBe(false);
+  });
+});
+
+describe('listMemberWorkSyncLifecycleActiveTeamNames', () => {
+  const runSequentially = async (
+    teamNames: readonly string[],
+    run: (teamName: string) => Promise<void>
+  ): Promise<void> => {
+    for (const teamName of teamNames) await run(teamName);
+  };
+
+  it('never probes a team this app profile does not manage', async () => {
+    const owned = new Set(['own-active', 'own-idle', 'own-broken']);
+    const isTeamActive = vi.fn(async (teamName: string) => {
+      if (teamName === 'own-broken') throw new Error('snapshot failed');
+      return teamName !== 'own-idle';
+    });
+    const hasLocalRuntime = vi.fn(() => true);
+
+    const active = await listMemberWorkSyncLifecycleActiveTeamNames({
+      listTeams: async () => [
+        { teamName: 'own-active' },
+        { teamName: 'other-profile' },
+        { teamName: 'session-native' },
+        { teamName: 'own-idle' },
+        { teamName: 'own-deleted', deletedAt: '2026-10-30T00:00:00.000Z' },
+        { teamName: 'own-broken' },
+      ],
+      isManagedByThisProfile: async (teamName) => owned.has(teamName),
+      isTeamActive,
+      hasLocalRuntime,
+      runBounded: runSequentially,
+      logger: { warn: vi.fn() },
+    });
+
+    expect(active).toEqual(['own-active', 'own-broken']);
+    // The activity check reads spawn statuses and runtime snapshots of the team.
+    expect(isTeamActive.mock.calls.map(([teamName]) => teamName)).toEqual([
+      'own-active',
+      'own-idle',
+      'own-broken',
+    ]);
+    expect(hasLocalRuntime.mock.calls).toEqual([['own-broken']]);
   });
 });

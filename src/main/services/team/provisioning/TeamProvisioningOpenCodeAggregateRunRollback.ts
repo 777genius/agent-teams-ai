@@ -169,7 +169,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
     const launchWasSkipped = wasOpenCodeLaneBlockedBeforeLaunch(lane);
     let laneCleanupConfirmed = launchWasSkipped;
     let exactLaneStopOwner: SecondaryRuntimeRunEntry | undefined;
-    if (ownedLane?.providerId === 'opencode' && ownedLane.runId === laneRunId) {
+    if (
+      ownedLane?.providerId === 'opencode' &&
+      ownedLane.runId === laneRunId &&
+      !launchWasSkipped
+    ) {
       exactLaneStopOwner = ownedLane;
       try {
         const stopResult = await input.adapter.stop({

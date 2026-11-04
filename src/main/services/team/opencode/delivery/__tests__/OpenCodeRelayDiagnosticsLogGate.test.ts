@@ -7,8 +7,17 @@ import {
   OpenCodeRelayDiagnosticsLogGate,
 } from '../OpenCodeRelayDiagnosticsLogGate';
 
+import type { TeamCrossTeamMessagingApi } from '../../../contracts/TeamProvisioningApis';
+
+type FileWatcherRelay = Awaited<
+  ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>
+>;
+
 const BLOCKED = ['opencode runtime delivery did not complete.'];
 const INFORMATIONAL = ['opencode session status busy'];
+const BOOTSTRAP_PENDING = [
+  'OpenCode runtime bootstrap is not confirmed for researcher. Message was saved and will be retried after runtime check-in.',
+];
 
 function note(
   gate: OpenCodeRelayDiagnosticsLogGate,
@@ -16,13 +25,19 @@ function note(
     dedupKey?: string;
     prefix?: string;
     diagnostics?: readonly string[];
+    deferredUntilBootstrap?: boolean;
     nowMs?: number;
   } = {}
 ): ReturnType<OpenCodeRelayDiagnosticsLogGate['note']> {
   return gate.note({
     dedupKey: overrides.dedupKey ?? 'demo/researcher',
     prefix: overrides.prefix ?? '[FileWatcher] relay diagnostics for demo/researcher',
-    diagnostics: 'diagnostics' in overrides ? overrides.diagnostics : BLOCKED,
+    outcome: {
+      diagnostics: 'diagnostics' in overrides ? overrides.diagnostics : BLOCKED,
+      ...(overrides.deferredUntilBootstrap
+        ? { lastDelivery: { deferredUntilBootstrap: true as const } }
+        : {}),
+    },
     nowMs: overrides.nowMs ?? 0,
   });
 }
@@ -150,6 +165,27 @@ describe('OpenCodeRelayDiagnosticsLogGate', () => {
     expect(hasWarningOpenCodeRelayDiagnostics(mixed)).toBe(true);
   });
 
+  /**
+   * A bootstrap deferral with an armed retry keeps the stopped-lane wording, which
+   * is off the informational allowlist. The flag on the relay's last delivery, not
+   * the text, keeps it off the warning channel; the same text without the flag is
+   * a lane nothing will retry and stays a warning.
+   */
+  it('keeps an armed bootstrap deferral off warn and still warns for the unarmed miss', () => {
+    const gate = new OpenCodeRelayDiagnosticsLogGate();
+
+    expect(note(gate, { diagnostics: BOOTSTRAP_PENDING, deferredUntilBootstrap: true })).toEqual({
+      level: 'debug',
+      message: `[FileWatcher] relay diagnostics for demo/researcher: ${BOOTSTRAP_PENDING[0]}`,
+    });
+    expect(hasWarningOpenCodeRelayDiagnostics(BOOTSTRAP_PENDING)).toBe(true);
+    // The same text losing its armed retry inside the window is news, not a repeat.
+    expect(note(gate, { diagnostics: BOOTSTRAP_PENDING, nowMs: 5_000 })).toMatchObject({
+      level: 'warn',
+    });
+    expect(note(gate, { diagnostics: BOOTSTRAP_PENDING, nowMs: 10_000 })).toBeNull();
+  });
+
   it('forgets everything on clear', () => {
     const gate = new OpenCodeRelayDiagnosticsLogGate();
     note(gate);
@@ -172,13 +208,13 @@ describe('OpenCodeRelayDiagnosticsLogGate', () => {
       gate.log(writer, {
         dedupKey: 'demo/researcher',
         prefix: 'relay diagnostics for demo/researcher',
-        diagnostics: BLOCKED,
+        outcome: { diagnostics: BLOCKED },
         nowMs: 0,
       });
       gate.log(writer, {
         dedupKey: 'demo/reviewer',
         prefix: 'relay diagnostics for demo/reviewer',
-        diagnostics: INFORMATIONAL,
+        outcome: { diagnostics: INFORMATIONAL },
         nowMs: 0,
       });
 
@@ -190,17 +226,58 @@ describe('OpenCodeRelayDiagnosticsLogGate', () => {
       );
     });
 
+    /**
+     * The FileWatcher path in `src/main/index.ts` hands the gate the whole
+     * `relayInboxFileToLiveRecipient` result. Typed as that result, so the flag
+     * it reads cannot drift off the contract unnoticed.
+     */
+    it('reads the bootstrap deferral flag off a FileWatcher relay result', () => {
+      const gate = new OpenCodeRelayDiagnosticsLogGate();
+      const writer = { warn: vi.fn(), debug: vi.fn() };
+      const relay = (deferredUntilBootstrap: boolean): FileWatcherRelay => ({
+        kind: 'opencode_member',
+        relayed: 0,
+        diagnostics: BOOTSTRAP_PENDING,
+        lastDelivery: {
+          delivered: false,
+          reason: 'opencode_runtime_not_active',
+          ...(deferredUntilBootstrap ? { deferredUntilBootstrap: true as const } : {}),
+          diagnostics: BOOTSTRAP_PENDING,
+        },
+      });
+
+      gate.log(writer, {
+        dedupKey: 'demo/researcher',
+        prefix: '[FileWatcher] relay diagnostics for demo/researcher',
+        outcome: relay(true),
+        nowMs: 0,
+      });
+      gate.log(writer, {
+        dedupKey: 'demo/reviewer',
+        prefix: '[FileWatcher] relay diagnostics for demo/reviewer',
+        outcome: relay(false),
+        nowMs: 0,
+      });
+
+      expect(writer.debug).toHaveBeenCalledExactlyOnceWith(
+        `[FileWatcher] relay diagnostics for demo/researcher: ${BOOTSTRAP_PENDING[0]}`
+      );
+      expect(writer.warn).toHaveBeenCalledExactlyOnceWith(
+        `[FileWatcher] relay diagnostics for demo/reviewer: ${BOOTSTRAP_PENDING[0]}`
+      );
+    });
+
     it('writes nothing at all when the gate returns no line', () => {
       const gate = new OpenCodeRelayDiagnosticsLogGate();
       const writer = { warn: vi.fn(), debug: vi.fn() };
       const input = {
         dedupKey: 'demo/researcher',
         prefix: 'relay diagnostics for demo/researcher',
-        diagnostics: BLOCKED,
+        outcome: { diagnostics: BLOCKED },
         nowMs: 0,
       };
 
-      gate.log(writer, { ...input, diagnostics: undefined });
+      gate.log(writer, { ...input, outcome: undefined });
       gate.log(writer, input);
       gate.log(writer, { ...input, nowMs: 15_000 });
 

@@ -135,7 +135,7 @@ export function hasOpenCodeOwnedChildBinding(
 }
 
 /** Copy only a successful child whose authority still matches the current app binding. */
-export function prepareOpenCodeShutdownCleanupEnvironment(
+export function prepareOpenCodeShutdownStopEnvironment(
   previous: Readonly<OpenCodeMcpBridgeEnv> | null,
   currentBoundChildEnv: Readonly<Record<string, string>>
 ): OpenCodeMcpBridgeEnv | null {

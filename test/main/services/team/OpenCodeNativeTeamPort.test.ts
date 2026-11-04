@@ -182,6 +182,7 @@ it('relaunches a stopped TEST run after restart clears the active runtime pointe
 
 it('projects bounded exact shell matcher facts before CDP without commands or results', async () => {
   const secret = 'TEST_PRIVATE_COMMAND_OUTPUT';
+  const executable = 'D:\\TEST-node\\node.exe';
   const program = 'C:\\TEST-project\\bob-verify.cjs';
   const marker = 'COMMAND_EXEC:TEST-nonce';
   const execution = (command: string, paired = true, content = marker): Parameters<typeof nativeCommandMatch>[0] => ({
@@ -189,9 +190,9 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
     toolCall: { id: secret, name: 'bash', input: { command }, isTask: false },
     result: { toolUseId: paired ? secret : 'unpaired', isError: false, content },
   });
-  const exact = execution(`node "${program}" ${secret}`);
-  const calls = [execution(`node other.cjs ${secret}`), execution(`other "${program}"`),
-    execution(`node "${program}"`, false), execution(`node "${program}"`, true, secret), exact];
+  const exact = execution(`${executable} "${program}"`);
+  const calls = [execution(`${executable} other.cjs ${secret}`), execution(`other "${program}"`),
+    execution(`${executable} "${program}"`, false), execution(`${executable} "${program}"`, true, secret), exact];
   const task = { id: 'owned', owner: 'bob', status: 'completed',
     comments: [{ author: 'bob', text: 'TASK_COMMENT:TEST-comment-nonce' }] };
   const chunk = { chunkType: 'ai', responses: [{ type: 'assistant', model: 'test/model' }],
@@ -211,7 +212,7 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
   try {
     await port.getData();
     const result = await port.getSafeTaskFailureSnapshot('owned', 'bob', {
-      session: 'original', program, marker, model: 'test/model',
+      session: 'original', executable, program, marker, model: 'test/model',
       comment: 'TASK_COMMENT:TEST-comment-nonce',
     });
     expect(result.commentObservation).toEqual({
@@ -224,7 +225,7 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
     expect(observed.exhaustive).toBe(false);
     const owned = observed.tuples.filter((row) => row.actorMatches && row.sessionMatches);
     expect(owned.map((row) => row.match)).toEqual(calls.map((call) =>
-      nativeCommandMatch(call, program, marker)));
+      nativeCommandMatch(call, program, marker, executable)));
     expect(owned.map((row) => [row.match.programMatches, row.match.nodeMatches,
       row.match.resultPaired, row.match.markerMatches])).toEqual([
       [false, true, true, true], [true, false, true, true], [true, true, false, true],
@@ -236,12 +237,13 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
     for (const raw of [secret, program, marker, 'test/model', 'original', 'foreign'])
       expect(output).not.toContain(raw);
     await expect(port.getSafeTaskFailureSnapshot('foreign-task', 'bob', {
-      session: 'original', program, marker, model: 'test/model',
+      session: 'original', executable, program, marker, model: 'test/model',
     })).rejects.toThrow('not owned');
   } finally { port.dispose(); }
 });
 
 it('canonicalizes Windows path separators while rejecting case changes and unbound commands', () => {
+  const executable = 'D:\\TEST-node\\node.exe';
   const program = 'C:\\TEST-project\\bob-verify.cjs';
   const marker = 'COMMAND_EXEC:TEST-private-nonce';
   const match = new Function(`return ${serializedFunction(nativeCommandMatch)};`)() as typeof nativeCommandMatch;
@@ -249,9 +251,9 @@ it('canonicalizes Windows path separators while rejecting case changes and unbou
     startTime: new Date(0),
     toolCall: { id: 'owned', name: 'bash', input: { command, workdir }, isTask: false },
     result: { toolUseId: 'owned', isError: false, content: marker },
-  }, program, marker);
-  const slash = observe('node "C:/TEST-project/bob-verify.cjs"');
-  const caseChanged = observe('node "c:/test-project/bob-verify.cjs"');
+  }, program, marker, executable);
+  const slash = observe(`${executable} "C:/TEST-project/bob-verify.cjs"`);
+  const caseChanged = observe(`${executable} "c:/test-project/bob-verify.cjs"`);
   const relative = observe('node .\\bob-verify.cjs', 'c:/test-project/');
   const unbound = observe('node bob-verify.cjs');
   const foreign = observe('node bob-verify.cjs', 'C:\\TEST-other');
@@ -280,21 +282,22 @@ it('canonicalizes Windows path separators while rejecting case changes and unbou
   for (const result of [caseChanged, relative, unbound, foreign]) {
     expect(result.programMatches).toBe(false);
     expect(result.nativeMatches).toBe(false);
-    expect(result.succeeded).toBe(true);
+    expect(result.succeeded).toBe(false);
     expect(JSON.stringify(result)).not.toMatch(/TEST-project|bob-verify|TEST-private-nonce/i);
   }
-  expect(observe(`node "${program}"`).nativeMatches).toBe(true);
+  expect(observe(`${executable} "${program}"`).nativeMatches).toBe(true);
 });
 
 it('accepts the exact marker line in projected text-block tool results', () => {
+  const executable = 'D:\\TEST-node\\node.exe';
   const program = 'C:\\TEST-project\\bob-verify.cjs';
   const marker = 'COMMAND_EXEC:TEST-block-nonce';
   const match = new Function(`return ${serializedFunction(nativeCommandMatch)};`)() as typeof nativeCommandMatch;
   const observe = (content: unknown) => match({
     startTime: new Date(0),
-    toolCall: { id: 'owned', name: 'bash', input: { command: `node "${program}"` }, isTask: false },
+    toolCall: { id: 'owned', name: 'bash', input: { command: `${executable} "${program}"` }, isTask: false },
     result: { toolUseId: 'owned', isError: false, content: content as string },
-  }, program, marker);
+  }, program, marker, executable);
   const blocks = (text: string) => [{ type: 'text', text }];
   expect(observe(blocks(`${marker}\n`)).markerMatches).toBe(true);
   expect(observe(blocks(`noise\n${marker}\nmore`)).markerMatches).toBe(true);

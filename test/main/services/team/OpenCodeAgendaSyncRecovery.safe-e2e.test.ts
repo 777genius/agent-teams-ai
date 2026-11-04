@@ -382,6 +382,7 @@ function createFeature(input: {
 }) {
   const providerId = input.providerId ?? 'opencode';
   return createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
     lifecycleIdentity: createTestWorkSyncIdentity(),
     teamsBasePath: input.teamsBasePath,
     configReader: {

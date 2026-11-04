@@ -15,6 +15,9 @@ const deferredJobs = {
   'opencode-desktop-e2e': 'desktop',
   'opencode-packaged-e2e': 'packaged-windows',
   'anthropic-compatible-status-e2e': 'packaged-windows',
+  'anthropic-env-portability': 'environment',
+  'sentry-owned-process-native': 'native',
+  'windows-backfill-diagnostic': 'packaged-backfill',
 };
 const workflow = (name: string) =>
   readFileSync(new URL(`../../.github/workflows/${name}.yml`, import.meta.url), 'utf8');

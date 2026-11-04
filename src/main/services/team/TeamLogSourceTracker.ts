@@ -122,7 +122,17 @@ export class TeamLogSourceTracker {
     },
   };
 
-  constructor(private readonly logsFinder: TeamMemberLogsFinder) {}
+  /**
+   * @param isTeamManagedByThisProfile The teams directory and the transcript
+   * project dirs are shared with other app profiles and native Claude Code
+   * sessions, and any of their teams can be opened in the UI. The tracker only
+   * reads there, except for creating the empty freshness directories it
+   * watches, and it creates those only for teams this check confirms.
+   */
+  constructor(
+    private readonly logsFinder: TeamMemberLogsFinder,
+    private readonly isTeamManagedByThisProfile: (teamName: string) => Promise<boolean>
+  ) {}
 
   setEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.emitter = emitter;
@@ -637,6 +647,23 @@ export class TeamLogSourceTracker {
     return roots;
   }
 
+  /** Anything but an explicit yes, including a check that rejects, means the team is foreign. */
+  private async mayCreateFreshnessDirs(teamName: string): Promise<boolean> {
+    try {
+      return (await this.isTeamManagedByThisProfile(teamName)) === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * The freshness directories to watch. For a team this profile manages they
+   * are created up front, so the watcher already sees the first signal file
+   * written into them. A foreign team is left untouched: the watcher gets the
+   * same targets and chokidar quietly waits for a missing one to appear, but at
+   * depth 0 it does not watch the contents of a directory created later, so
+   * signals land in real time only once the watcher is rebuilt.
+   */
   private async ensureLogSourceFreshnessDirs(
     teamName: string,
     transcriptProjectDir: string,
@@ -649,12 +676,15 @@ export class TeamLogSourceTracker {
     pushUniqueNormalizedPath(legacyRootDirs, normalizedTranscriptProjectDir);
     pushUniqueNormalizedPath(logSignalDirs, teamLogFreshnessDir);
 
-    await Promise.all([
-      fs.mkdir(teamLogFreshnessDir, { recursive: true }),
-      fs.mkdir(path.join(normalizedTranscriptProjectDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME), {
-        recursive: true,
-      }),
-    ]);
+    const createMissingDirs = await this.mayCreateFreshnessDirs(teamName);
+    if (createMissingDirs) {
+      await Promise.all([
+        fs.mkdir(teamLogFreshnessDir, { recursive: true }),
+        fs.mkdir(path.join(normalizedTranscriptProjectDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME), {
+          recursive: true,
+        }),
+      ]);
+    }
 
     await Promise.all(
       projectDirs.map(async (projectDir) => {
@@ -666,9 +696,11 @@ export class TeamLogSourceTracker {
           if (!(await this.isDirectory(normalizedProjectDir))) {
             return;
           }
-          await fs.mkdir(path.join(normalizedProjectDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME), {
-            recursive: true,
-          });
+          if (createMissingDirs) {
+            await fs.mkdir(path.join(normalizedProjectDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME), {
+              recursive: true,
+            });
+          }
           pushUniqueNormalizedPath(legacyRootDirs, normalizedProjectDir);
         } catch (error) {
           logger.debug(`Failed to ensure task freshness dirs in ${projectDir}: ${String(error)}`);

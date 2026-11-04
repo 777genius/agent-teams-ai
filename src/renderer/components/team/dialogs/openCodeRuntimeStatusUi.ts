@@ -58,9 +58,9 @@ export function getOpenCodeRuntimeStatusUiState({
   }
 
   if (
-    runtimeStatus?.installed === false &&
-    runtimeStatus.source === 'missing' &&
-    runtimeStatus.state !== 'failed'
+    runtimeStatus?.state !== 'failed' &&
+    (runtimeStatus?.v2Support === 'required' ||
+      (runtimeStatus?.installed === false && runtimeStatus.source === 'missing'))
   ) {
     return 'missing';
   }
@@ -123,15 +123,23 @@ export function isOpenCodePassiveStatusReadyForCatalog(
   providerStatus: CliProviderStatus | null | undefined,
   runtimeStatus: OpenCodeRuntimeStatus | null
 ): boolean {
+  if (runtimeStatus?.v2Support === 'required') return false;
   if (isOpenCodeProjectFolderMissing(providerStatus)) return false;
   const nonAuthoritative = isOpenCodeStatusCheckNonAuthoritative(providerStatus);
   if (providerStatus?.supported && !nonAuthoritative) {
     return true;
   }
+  // Detection permits a read-only scoped catalog query, never launch authority.
+  const detectedExternalRuntime = providerStatus?.externalRuntimeDiagnostics?.some(
+    (diagnostic) =>
+      diagnostic.detected &&
+      (diagnostic.id === 'opencode-live-host' || diagnostic.id === 'opencode-managed-runtime')
+  );
   return Boolean(
     nonAuthoritative &&
-    runtimeStatus?.source !== 'missing' &&
-    (runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
+    (detectedExternalRuntime || runtimeStatus?.source !== 'missing') &&
+    (detectedExternalRuntime ||
+    (runtimeStatus?.installed === true && runtimeStatus.state === 'ready')
       ? true
       : Boolean(providerStatus?.models.length || providerStatus?.modelCatalog?.models.length))
   );
@@ -226,6 +234,13 @@ export function getOpenCodeProviderDisabledReason(input: {
     providerReady,
     loadingMessage,
   } = input;
+  if (runtimeStatus?.v2Support === 'required') {
+    return runtimeStatusUiState === 'checking'
+      ? loadingMessage
+      : (runtimeError ??
+          runtimeStatus.error ??
+          'OpenCode V2 support must be installed from the home page.');
+  }
   if (runtimeStatusUiState === 'missing') {
     return (
       providerStatus?.detailMessage ??
@@ -288,9 +303,21 @@ export type OpenCodePassiveCatalogState = 'pending' | 'unavailable' | 'settled';
 export function getOpenCodePassiveCatalogState(
   readyForCatalog: boolean,
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
-  providerStatus?: CliProviderStatus | null
+  providerStatus?: CliProviderStatus | null,
+  scopedCatalogStatus?: 'idle' | 'loading' | 'ready' | 'error'
 ): OpenCodePassiveCatalogState {
   if (isOpenCodeProjectFolderMissing(providerStatus)) return 'unavailable';
+  // The scoped read can finish before the passive launch-status check settles.
+  if (scopedCatalogStatus === 'error') return 'unavailable';
+  if (scopedCatalogStatus === 'loading') return 'pending';
+  if (readyForCatalog && scopedCatalogStatus === 'ready') return 'settled';
+  // A finished scoped catalog is display evidence even while launch checks remain pending.
+  if (
+    readyForCatalog &&
+    providerStatus?.modelCatalogRefreshState === 'ready' &&
+    providerStatus.modelCatalog?.status === 'ready'
+  )
+    return 'settled';
   if (
     runtimeStatusUiState === 'checking' &&
     (!readyForCatalog || providerStatus?.statusCheckOutcome === 'pending')
@@ -313,9 +340,7 @@ export function getOpenCodeSourceTabCountState(input: {
   if (input.sourceScopedStatus === 'loading') return 'pending';
   if (input.sourceScopedStatus === 'error') return 'unavailable';
   if (input.sourceScopedStatus === 'ready' || !input.directoryExpectsModels) return 'known';
-  return input.passiveCatalogState === 'settled'
-    ? 'unknown'
-    : input.passiveCatalogState;
+  return input.passiveCatalogState === 'settled' ? 'unknown' : input.passiveCatalogState;
 }
 
 export function isOpenCodeProjectFolderMissing(
@@ -471,6 +496,7 @@ export function getOpenCodeReadinessMessage(
   if (
     runtimeStatusUiState === 'checking' &&
     runtimeStatus?.installed !== false &&
+    runtimeStatus?.v2Support !== 'required' &&
     providerStatus?.supported &&
     !providerStatus.authenticated &&
     hasFreeOpenCodeModelRoute(providerStatus)

@@ -58,3 +58,15 @@ export function startModelTest(
 ): Readonly<Record<string, number>> {
   return { ...current, [modelId]: Math.max(Date.now(), (current[modelId] ?? 0) + 1) };
 }
+
+/** Refresh global badges after either outcome without rewriting the native test
+ * result when the separate status service is unavailable. */
+export async function refreshAfterModelTest(
+  refresh: () => Promise<boolean | void> | boolean | void
+): Promise<void> {
+  try {
+    await refresh();
+  } catch {
+    // The owning status store retains its refresh error and retry state.
+  }
+}

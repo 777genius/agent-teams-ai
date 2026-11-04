@@ -3,12 +3,13 @@ import {
   OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY,
   OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY,
 } from './OpenCodePromptDeliveryWatchdog';
-import { OpenCodeRelayDiagnosticsLogGate } from './OpenCodeRelayDiagnosticsLogGate';
+import {
+  OpenCodeRelayDiagnosticsLogGate,
+  type OpenCodeRelayDiagnosticsLogOutcome,
+} from './OpenCodeRelayDiagnosticsLogGate';
 
 /** What a wake's relay reports back; a port that reports nothing stays valid. */
-export interface OpenCodePromptDeliveryWatchdogRelayOutcome {
-  diagnostics?: readonly string[];
-}
+export type OpenCodePromptDeliveryWatchdogRelayOutcome = OpenCodeRelayDiagnosticsLogOutcome;
 
 export interface OpenCodePromptDeliveryWatchdogSchedulerDependencies {
   canDeliverToTeamRuntime(teamName: string): boolean;
@@ -193,10 +194,11 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
   /**
    * Severity follows the diagnostics themselves, and the gate decides it:
    * anything off the informational allowlist makes the whole line a warning,
-   * so a lane that is genuinely stuck reaches the durable log. The dedup key is
-   * the member lane and the signature is the diagnostics alone - the message id
-   * that happened to hit the condition is presentation only, so a queue of rows
-   * cannot walk past the window one message id at a time.
+   * so a lane that is genuinely stuck reaches the durable log. An armed wait for
+   * bootstrap check-in, flagged on the relay's last delivery, is not. The dedup
+   * key is the member lane and the signature is the diagnostics and their level -
+   * the message id that happened to hit the condition is presentation only, so a
+   * queue of rows cannot walk past the window one message id at a time.
    */
   private logRelayDiagnostics(input: {
     teamName: string;
@@ -219,7 +221,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
       {
         dedupKey: this.getMemberKey(input.teamName, input.memberName),
         prefix: `[${input.teamName}] delivery watchdog relay diagnostics for ${input.memberName}/${input.messageId}`,
-        diagnostics: input.outcome?.diagnostics,
+        outcome: input.outcome || undefined,
         nowMs: Date.now(),
       }
     );

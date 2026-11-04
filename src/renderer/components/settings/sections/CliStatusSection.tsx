@@ -9,7 +9,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
-  mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
@@ -64,6 +63,7 @@ import {
 } from 'lucide-react';
 
 import { SettingsSectionHeader } from '../components';
+import { useSettingsCliStatus } from '../hooks/useSettingsCliStatus';
 
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
@@ -116,7 +116,7 @@ function getProviderLabel(providerId: CliProviderId): string {
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode (200+ models)';
+      return 'OpenCode (200+ providers)';
   }
 }
 
@@ -186,20 +186,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
       codexAccount.snapshot,
       codexAccount.error
     ) && Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
-  const effectiveCliStatus = useMemo(
-    () =>
-      loadingCliStatus
-        ? {
-            ...loadingCliStatus,
-            providers: loadingCliStatus.providers.map((provider) =>
-              provider.providerId === 'codex'
-                ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
-                : provider
-            ),
-          }
-        : loadingCliStatus,
-    [codexAccount.snapshot, loadingCliStatus]
-  );
+  const effectiveCliStatus = useSettingsCliStatus({
+    cliStatus: loadingCliStatus,
+    projectPath: selectedProjectPath,
+    enabled: isElectron && multimodelEnabled,
+    codexSnapshot: codexAccount.snapshot,
+  });
   const visibleEffectiveProviders = useMemo(
     () => filterMainScreenCliProviders(effectiveCliStatus?.providers ?? []),
     [effectiveCliStatus?.providers]
@@ -246,10 +238,6 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     visibleEffectiveProviders,
   ]);
 
-  const handleInstall = useCallback(() => {
-    installCli();
-  }, [installCli]);
-
   const handleRefresh = useCallback(() => {
     void (async () => {
       await invalidateCliStatus();
@@ -267,9 +255,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
       await invalidateCliStatus();
-      return fetchCliProviderStatus(providerId, { checkReason });
+      return fetchCliProviderStatus(providerId, {
+        checkReason,
+        ...(providerId === 'opencode' ? { projectPath: selectedProjectPath } : {}),
+      });
     },
-    [fetchCliProviderStatus, invalidateCliStatus]
+    [fetchCliProviderStatus, invalidateCliStatus, selectedProjectPath]
   );
 
   const openNativeAuthentication = useCallback(
@@ -392,7 +383,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                   {/* Inline action buttons */}
                   {effectiveCliStatus.supportsSelfUpdate && effectiveCliStatus.updateAvailable ? (
                     <button
-                      onClick={handleInstall}
+                      onClick={installCli}
                       disabled={isBusy}
                       className="flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium text-white transition-colors disabled:opacity-50"
                       style={{ backgroundColor: '#3b82f6' }}
@@ -720,7 +711,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                   {t('cliRuntime.actions.recheck')}
                 </button>
                 <button
-                  onClick={handleInstall}
+                  onClick={installCli}
                   disabled={isBusy}
                   className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
                   style={{ backgroundColor: '#3b82f6' }}
@@ -829,7 +820,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
               {installerError ?? t('cliRuntime.installer.failed')}
             </div>
             <button
-              onClick={handleInstall}
+              onClick={installCli}
               className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
               style={{
                 borderColor: 'var(--color-border)',

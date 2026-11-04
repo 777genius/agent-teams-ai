@@ -9,6 +9,7 @@ import { TeamTaskReader } from '../TeamTaskReader';
 
 import { ensureCwdExists as defaultEnsureCwdExists } from './TeamProvisioningAsyncUtils';
 import { type OpenCodeRuntimeAdapterTeamFlowPorts } from './TeamProvisioningOpenCodeRuntimeAdapterTeamFlow';
+import { claimTeamForThisProfile } from './TeamProvisioningProfileOwnership';
 import { buildDeterministicLaunchHydrationPrompt as defaultBuildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { tryReadRegularFileUtf8 as defaultReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
 import { TEAM_CONFIG_MAX_BYTES, TEAM_JSON_READ_TIMEOUT_MS } from './TeamProvisioningRunModel';
@@ -38,6 +39,7 @@ export interface TeamProvisioningOpenCodeRuntimeAdapterTeamFlowFactoryDeps {
   getTasksBasePath?: OpenCodeRuntimeAdapterTeamFlowPorts['getTasksBasePath'];
   ensureCwdExists?: OpenCodeRuntimeAdapterTeamFlowPorts['ensureCwdExists'];
   mkdir?: OpenCodeRuntimeAdapterTeamFlowPorts['mkdir'];
+  claimCreatedTeam?: OpenCodeRuntimeAdapterTeamFlowPorts['claimCreatedTeam'];
   nowMs?: OpenCodeRuntimeAdapterTeamFlowPorts['nowMs'];
   readRegularFileUtf8?: typeof defaultReadRegularFileUtf8;
   readExistingTasks?: OpenCodeRuntimeAdapterTeamFlowPorts['readExistingTasks'];
@@ -63,6 +65,14 @@ export function createOpenCodeRuntimeAdapterTeamFlowPortsFromService(
       (async (directoryPath) => {
         return fs.promises.mkdir(directoryPath, { recursive: true, mode: 0o700 });
       }),
+    claimCreatedTeam:
+      deps.claimCreatedTeam ??
+      ((teamName) =>
+        claimTeamForThisProfile({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          reason: 'create',
+        })),
     nowMs: deps.nowMs ?? (() => Date.now()),
     writeTeamMeta: (teamName, data) => service.teamMetaStore.writeMeta(teamName, data),
     writeMembersMeta: (teamName, members, options) =>

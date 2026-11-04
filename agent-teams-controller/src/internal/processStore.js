@@ -30,7 +30,32 @@ function writeProcesses(paths, processes) {
   writeJson(paths.processesPath, processes);
 }
 
-function listProcesses(paths) {
+/**
+ * A read-only listing cannot settle a row, and when its process stopped is not
+ * known. It reports the row's registeredAt, the earliest the process can have
+ * stopped, so every listing returns the same value until the owner settles the
+ * row. A row without a valid registeredAt gets the mtime of processes.json,
+ * which changes only when the file does.
+ */
+function estimateStoppedAt(paths, entry) {
+  if (typeof entry.registeredAt === 'string' && Number.isFinite(Date.parse(entry.registeredAt))) {
+    return entry.registeredAt;
+  }
+  try {
+    return fs.statSync(paths.processesPath).mtime.toISOString();
+  } catch {
+    return new Date(0).toISOString();
+  }
+}
+
+/**
+ * Lists the rows with their liveness. A row whose pid is gone comes back with a
+ * stoppedAt, and by default that is written back to processes.json. With
+ * `readOnly` the file is left as it is, for callers that may only read the
+ * team, and such a row gets a stable estimate (see estimateStoppedAt).
+ */
+function listProcesses(paths, options = {}) {
+  const readOnly = options.readOnly === true;
   const existing = readProcesses(paths);
   const processes = existing.map((entry) => {
     const alive =
@@ -41,7 +66,7 @@ function listProcesses(paths) {
     if (!alive && !entry.stoppedAt) {
       return {
         ...entry,
-        stoppedAt: nowIso(),
+        stoppedAt: readOnly ? estimateStoppedAt(paths, entry) : nowIso(),
         alive: false,
       };
     }
@@ -51,6 +76,9 @@ function listProcesses(paths) {
       alive,
     };
   });
+  if (readOnly) {
+    return processes;
+  }
 
   const changed = processes.some((entry, index) => entry.stoppedAt !== existing[index]?.stoppedAt);
   if (changed) {

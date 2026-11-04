@@ -1,5 +1,6 @@
 import { type JSX, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import {
   loadProjectPathProjects,
   type ProjectPathProject,
@@ -8,9 +9,17 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
+  getOpenCodeGeneration,
+  inferOpenCodeProviderAuthMethod,
+  isOpenCodeProviderConnectionBlocked,
+} from '../core/domain';
+
+import { maskRuntimeProviderStateForScope } from './hooks/maskRuntimeProviderStateForScope';
+import {
   type RuntimeProviderChangeKind,
   useRuntimeProviderManagement,
 } from './hooks/useRuntimeProviderManagement';
+import { OpenCodeProviderCompatibilityScope } from './ui/OpenCodeProviderCompatibilityStatus';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
 import { resolveRuntimeProviderProjectContext } from './ui/runtimeProviderProjectContext';
 
@@ -40,6 +49,39 @@ export const RuntimeProviderManagementPanel = ({
   onBlockingOperationChange,
 }: RuntimeProviderManagementPanelProps): JSX.Element => {
   const repositoryGroups = useStore(useShallow((state) => state.repositoryGroups));
+  const nativeOpenCodeStatus = useStore((state) => state.openCodeRuntimeStatus);
+  const fetchOpenCodeRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
+  const invalidateOpenCodeRuntimeStatus = useStore(
+    (state) => state.invalidateOpenCodeRuntimeStatus
+  );
+  const runtimeRevision =
+    nativeOpenCodeStatus?.state === 'ready' && nativeOpenCodeStatus.installed
+      ? JSON.stringify(['ready', nativeOpenCodeStatus.version ?? null, nativeOpenCodeStatus.binaryPath ?? null])
+      : nativeOpenCodeStatus && !nativeOpenCodeStatus.installed &&
+          nativeOpenCodeStatus.state !== 'checking' &&
+          nativeOpenCodeStatus.state !== 'downloading' &&
+          nativeOpenCodeStatus.state !== 'installing'
+        ? 'unavailable'
+        : null;
+  const openCodeGeneration =
+    nativeOpenCodeStatus?.installed &&
+    nativeOpenCodeStatus.version &&
+    isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
+      ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
+      : null;
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    // A replaced native binary must not reuse the previous generation's cached status.
+    void invalidateOpenCodeRuntimeStatus()
+      .catch(() => undefined)
+      .then(() => {
+        if (active) return fetchOpenCodeRuntimeStatus();
+      });
+    return () => {
+      active = false;
+    };
+  }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus, open]);
   const initialProjectPath = useMemo(() => projectPath?.trim() || null, [projectPath]);
   const [activeProjectPath, setActiveProjectPath] = useState<string | null>(initialProjectPath);
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
@@ -48,6 +90,7 @@ export const RuntimeProviderManagementPanel = ({
   const projectContextRequestKey = activeProjectPath ?? initialProjectPath ?? '';
   const [resolvedProjectContext, setResolvedProjectContext] = useState<{
     readonly requestKey: string;
+    readonly initialProjectPath: string | null;
     readonly repositoryGroups: typeof repositoryGroups;
   } | null>(null);
   const backgroundHydrationKeyRef = useRef<string | null>(null);
@@ -55,13 +98,17 @@ export const RuntimeProviderManagementPanel = ({
     initialProviderId === 'openrouter' || initialProviderId === 'vercel';
   const projectContextResolved =
     resolvedProjectContext?.requestKey === projectContextRequestKey &&
+    resolvedProjectContext.initialProjectPath === initialProjectPath &&
     resolvedProjectContext.repositoryGroups === repositoryGroups;
+  // A global directory read has no project credentials and must not wait for discovery.
+  const providerContextReady =
+    projectContextResolved || (activeProjectPath === null && initialProjectPath === null);
   const effectiveProjectPath = useMemo(
     () =>
-      projectContextResolved && !projectContextError
+      projectContextResolved
         ? resolveRuntimeProviderProjectContext(activeProjectPath, projectContextProjects).path
         : null,
-    [activeProjectPath, projectContextError, projectContextProjects, projectContextResolved]
+    [activeProjectPath, projectContextProjects, projectContextResolved]
   );
 
   useEffect(() => {
@@ -95,7 +142,11 @@ export const RuntimeProviderManagementPanel = ({
       })
       .finally(() => {
         if (!cancelled) {
-          setResolvedProjectContext({ requestKey: projectContextRequestKey, repositoryGroups });
+          setResolvedProjectContext({
+            requestKey: projectContextRequestKey,
+            initialProjectPath,
+            repositoryGroups,
+          });
           setProjectContextLoading(false);
         }
       });
@@ -106,25 +157,69 @@ export const RuntimeProviderManagementPanel = ({
 
   const [state, actions] = useRuntimeProviderManagement({
     runtimeId,
-    enabled: open && projectContextResolved,
+    enabled: open && providerContextReady,
     // Paint the curated summary immediately (no live OpenCode host), then fill
     // the complete catalog in the background. OpenRouter/Vercel deep-links skip
     // this because they search the live directory by provider id.
     directoryPageSize: initialProviderId ? 100 : 250,
     directorySummaryOnEnable: !searchInitialProviderDirectly,
     reuseCachedFullDirectory: !searchInitialProviderDirectly,
+    runtimeRevision,
     loadViewOnEnable: false,
-    preserveViewRequestOnDisable: open && !projectContextResolved,
+    preserveViewRequestOnDisable: open && !providerContextReady,
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
     projectPath: effectiveProjectPath,
     initialProviderId,
-    initialProviderAction,
+    initialProviderAction:
+      initialProviderId &&
+      isOpenCodeProviderConnectionBlocked(initialProviderId, openCodeGeneration)
+        ? null
+        : initialProviderAction,
     onProviderChanged,
   });
   const activeAuthOption = state.setupForm?.authOptions?.find(
     (option) => option.id === state.selectedAuthOptionId
   );
   const activeSetupMethod = activeAuthOption?.method ?? state.setupForm?.method ?? null;
+  const guardedActions = useMemo(() => {
+    const blocked = (providerId: string, method?: string | null): boolean =>
+      isOpenCodeProviderConnectionBlocked(providerId, openCodeGeneration, method);
+    const authMethodsFor = (providerId: string): readonly string[] =>
+      state.directoryEntries?.find((provider) => provider.providerId === providerId)?.authMethods ??
+      [];
+    const offeredMethodFor = (providerId: string): string | null =>
+      inferOpenCodeProviderAuthMethod(authMethodsFor(providerId));
+    const connectedMethodFor = (providerId: string): string | null =>
+      state.providers?.find((provider) => provider.providerId === providerId)?.connectedAuthHint ??
+      state.directoryEntries?.find((provider) => provider.providerId === providerId)
+        ?.connectedAuthHint ??
+      offeredMethodFor(providerId);
+    return {
+      ...actions,
+      startConnect: (providerId: string): void => {
+        if (!blocked(providerId, offeredMethodFor(providerId))) actions.startConnect(providerId);
+      },
+      startReconnect: (providerId: string): void => {
+        if (!blocked(providerId, connectedMethodFor(providerId)))
+          actions.startReconnect(providerId);
+      },
+      submitConnect: (providerId: string) =>
+        blocked(providerId, activeSetupMethod)
+          ? Promise.resolve(null)
+          : actions.submitConnect(providerId),
+      submitOAuthCode: (): Promise<void> =>
+        state.activeFormProviderId && blocked(state.activeFormProviderId, 'oauth')
+          ? Promise.resolve()
+          : actions.submitOAuthCode(),
+    };
+  }, [
+    actions,
+    activeSetupMethod,
+    openCodeGeneration,
+    state.activeFormProviderId,
+    state.directoryEntries,
+    state.providers,
+  ]);
   const blockingCredentialWrite = Boolean(
     state.savingProviderId && activeSetupMethod && activeSetupMethod !== 'oauth'
   );
@@ -150,7 +245,7 @@ export const RuntimeProviderManagementPanel = ({
     ) {
       return;
     }
-    const hydrationKey = `${effectiveProjectPath ?? ''}:full-catalog`;
+    const hydrationKey = `${effectiveProjectPath ?? ''}:${runtimeRevision ?? 'pending'}:full-catalog`;
     if (backgroundHydrationKeyRef.current === hydrationKey) {
       return;
     }
@@ -165,6 +260,7 @@ export const RuntimeProviderManagementPanel = ({
     return () => window.clearTimeout(timeout);
   }, [
     effectiveProjectPath,
+    runtimeRevision,
     hydrateDirectory,
     open,
     searchInitialProviderDirectly,
@@ -187,17 +283,17 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <>
+    <OpenCodeProviderCompatibilityScope generation={openCodeGeneration}>
       <RuntimeProviderManagementPanelView
-        state={state}
-        actions={actions}
-        disabled={disabled || !projectContextResolved}
+        state={providerContextReady ? state : maskRuntimeProviderStateForScope(state)}
+        actions={guardedActions}
+        disabled={disabled || !providerContextReady}
         projectPath={effectiveProjectPath}
         projectContextProjects={projectContextProjects}
         projectContextLoading={projectContextLoading || !projectContextResolved}
         projectContextError={projectContextError}
         onProjectContextChange={setActiveProjectPath}
       />
-    </>
+    </OpenCodeProviderCompatibilityScope>
   );
 };
