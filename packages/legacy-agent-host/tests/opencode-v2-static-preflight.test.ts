@@ -61,7 +61,7 @@ test('no implicit V1 promotion, forged binary, endpoint, identity or missing nat
 });
 
 test('missing or damaged platform delivery cannot be promoted to V2 candidate', () => {
-  const withoutDelivery: OpenCodeV2RuntimeLock = { opencodeV2: lock.opencodeV2 };
+  const withoutDelivery: OpenCodeV2RuntimeLock = lock.opencodeV2 ? { opencodeV2: lock.opencodeV2 } : {};
   assert.deepEqual(preflightOpenCodeV2Selection(selected, withoutDelivery),
     { kind: 'hold', reason: 'delivery' });
   assert.deepEqual(preflightOpenCodeV2Selection(selected, {
@@ -71,6 +71,18 @@ test('missing or damaged platform delivery cannot be promoted to V2 candidate', 
       'darwin-arm64': {
         ...lock.opencodeV2Delivery?.['darwin-arm64'],
         archive: { sha256: 'bad' },
+      },
+    },
+  }), { kind: 'hold', reason: 'delivery' });
+  // Delivery metadata must explicitly include the selected engine, even when other
+  // descriptor fields are well-formed.
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, {
+    ...lock,
+    opencodeV2Delivery: {
+      ...lock.opencodeV2Delivery,
+      'darwin-arm64': {
+        ...lock.opencodeV2Delivery?.['darwin-arm64'],
+        engineVersions: ['2.0.32', '2.1.4'],
       },
     },
   }), { kind: 'hold', reason: 'delivery' });
