@@ -93,7 +93,7 @@ describe('read-only process CPU capture', () => {
     if (!originalPlatform) throw Error('process.platform descriptor missing');
     let reads = 0;
     Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
-    let rejected;
+    let rejected: ReturnType<CpuCaptureModule['capture']>;
     try {
       // Call capture while mocked, then restore before awaiting test assertions.
       rejected = captureTool.capture({ pid: 99, duration: 1, intervalMs: 250 }, () => {
