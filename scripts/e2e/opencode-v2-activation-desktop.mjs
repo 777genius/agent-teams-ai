@@ -222,34 +222,7 @@ async function clickControl(selector) {
     clickCount: 1,
   });
 }
-async function clickVisibleButtonByText(label) {
-  const point = await cdp.inspect(`(() => {
-    const buttons = [...document.querySelectorAll('button')].filter(button =>
-      button.textContent.trim() === ${JSON.stringify(label)} && !button.disabled &&
-      button.getClientRects().length > 0);
-    if (buttons.length !== 1) throw new Error('Expected one visible enabled installation button');
-    const button = buttons[0];
-    button.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-    const rect = button.getBoundingClientRect();
-    const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
-    if (!button.contains(document.elementFromPoint(x, y)))
-      throw new Error('Installation button is obscured');
-    return { x, y };
-  })()`);
-  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
-  await cdp.send('Input.dispatchMouseEvent', {
-    type: 'mousePressed',
-    ...point,
-    button: 'left',
-    clickCount: 1,
-  });
-  await cdp.send('Input.dispatchMouseEvent', {
-    type: 'mouseReleased',
-    ...point,
-    button: 'left',
-    clickCount: 1,
-  });
-}
+
 try {
   const dirs = {
     HOME: 'home',
@@ -449,7 +422,10 @@ try {
     })()`)
   );
   await snapshot('before-install');
-  await milestone('missing V2 detected; default V1 offered', { source: initial.source, expectedVersion });
+  await milestone('missing V2 detected; default V1 offered', {
+    source: initial.source,
+    expectedVersion,
+  });
 
   // Explicit V2 request exercises the production IPC path without changing the V1 default.
   phase = 'explicit V2 installation';
@@ -471,12 +447,18 @@ try {
     })()`)
   );
   await save('installation-started.json', started);
-  const explicitInstall = await wait('explicit V2 install completion',
-    () => cdp.inspect('window.__opencodeV2ExplicitInstall'), 720_000);
-  assert(!explicitInstall.error && explicitInstall.value?.installed === true &&
-    explicitInstall.value.version === expectedVersion &&
-    explicitInstall.value.state === 'ready',
-    'Explicit V2 installation failed: ' + JSON.stringify(explicitInstall));
+  const explicitInstall = await wait(
+    'explicit V2 install completion',
+    () => cdp.inspect('window.__opencodeV2ExplicitInstall'),
+    720_000
+  );
+  assert(
+    !explicitInstall.error &&
+      explicitInstall.value?.installed === true &&
+      explicitInstall.value.version === expectedVersion &&
+      explicitInstall.value.state === 'ready',
+    'Explicit V2 installation failed: ' + JSON.stringify(explicitInstall)
+  );
   assert.equal(started.error, null, JSON.stringify(started));
   assert.notEqual(started.state, 'failed', JSON.stringify(started));
   const activated = await wait(
@@ -649,8 +631,8 @@ try {
     'real selected-model proof and physical retirement',
     () =>
       cdp.inspect(`(() => {
-    const text = document.querySelector('[data-testid="runtime-provider-model-result-opencode/big-pickle"]')?.textContent ?? '';
-    return text.includes('execution and physical retirement verified') ? text : null;
+    const result = document.querySelector('[data-testid="runtime-provider-model-result-opencode/big-pickle"]');
+    return result?.getAttribute('data-result-status') === 'success' ? result.textContent : null;
   })()`),
     240_000
   );

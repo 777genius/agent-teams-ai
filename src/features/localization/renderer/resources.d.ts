@@ -3475,6 +3475,10 @@ export default interface Resources {
         "testCancelUnsupported": "Stopping tests is not supported by this runtime.",
         "testCancelled": "Test stopped.",
         "testInProgress": "Model test is already running.",
+        "freeQuotaReached": "OpenRouter’s daily limit for free models has been reached.",
+        "paidRetryNotice": "If the daily free-model limit is reached, this test will automatically retry once with gpt-oss-20b. That request uses your OpenRouter balance.",
+        "paidRetryRunning": "Free-model limit reached. Testing gpt-oss-20b using your OpenRouter balance…",
+        "paidRetryResult": "Paid retry with gpt-oss-20b",
         "testingElapsed": "Waiting for test result... {{seconds}}s",
         "useInTeamPicker": "Save for team picker",
         "validationContextRequired": "Select a validation context above to enable Test and Set default. Saving for team picker only stores the route for new teams."
