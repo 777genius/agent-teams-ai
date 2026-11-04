@@ -41,6 +41,7 @@ import { type DataCache } from './DataCache';
 import { LocalFileSystemProvider } from './LocalFileSystemProvider';
 import { type NotificationManager } from './NotificationManager';
 import {
+  ChunkedTeamTaskPollSnapshot,
   collectTasksPollSnapshot,
   collectTeamsPollSnapshot,
   isNotFoundError,
@@ -160,6 +161,8 @@ export class FileWatcher extends EventEmitter {
   }
 
   private createChangeSources(): Record<FileWatcherSourceType, CrossPlatformFileChangeSource> {
+    const teamPoll = new ChunkedTeamTaskPollSnapshot(this.teamsPath, collectTeamsPollSnapshot);
+    const taskPoll = new ChunkedTeamTaskPollSnapshot(this.tasksPath, collectTasksPollSnapshot);
     return {
       projects: new CrossPlatformFileChangeSource({
         name: 'projects',
@@ -219,7 +222,11 @@ export class FileWatcher extends EventEmitter {
         pollIntervalMs: TEAMS_POLL_INTERVAL_MS,
         createWatcher: ({ onError, isCurrent }) =>
           this.createTeamTaskRegistry('teams', this.teamsPath, onError, isCurrent),
-        collectPollSnapshot: () => collectTeamsPollSnapshot(this.teamsPath),
+        collectPollSnapshot: () =>
+          teamPoll.snapshot(
+            this.changeSources.teams.isPollingPrimed,
+            this.teamWatchScopeProvider?.() ?? null
+          ),
         emitPolledChange: (eventType, relativePath) =>
           this.handleTeamsChange(eventType, relativePath),
         isOwnerActive: () => this.isWatching,
@@ -234,7 +241,11 @@ export class FileWatcher extends EventEmitter {
         pollIntervalMs: TASKS_POLL_INTERVAL_MS,
         createWatcher: ({ onError, isCurrent }) =>
           this.createTeamTaskRegistry('tasks', this.tasksPath, onError, isCurrent),
-        collectPollSnapshot: () => collectTasksPollSnapshot(this.tasksPath),
+        collectPollSnapshot: () =>
+          taskPoll.snapshot(
+            this.changeSources.tasks.isPollingPrimed,
+            this.teamWatchScopeProvider?.() ?? null
+          ),
         emitPolledChange: (eventType, relativePath) =>
           this.handleTasksChange(eventType, relativePath),
         isOwnerActive: () => this.isWatching,
