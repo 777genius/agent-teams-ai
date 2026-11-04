@@ -681,25 +681,35 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     ).toBe(true);
   });
 
-  it('queues a new user behind stale busy non-user work until a fresh idle observation', async () => {
-    const harness = createHarness({
-      ledgerDir,
-      send: async () => acceptedSendResult(),
-      observe: async () =>
-        observedResult({ observation: pendingObservation(), diagnostics: [TREATED_IDLE] }),
-    });
-    await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 90 });
-    expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
-      queuedBehindMessageId: taskCommentNotification.messageId,
-    });
-    expect(harness.send).not.toHaveBeenCalled();
-    expect(await harness.service.deliver(TEAM, taskCommentNotification)).toMatchObject({
-      delivered: true,
-      responsePending: false,
-    });
-    expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({ accepted: true });
-    expect(harness.send).toHaveBeenCalledOnce();
-  });
+  it.each([
+    { kind: 'V1 idle', observation: pendingObservation(), diagnostics: [TREATED_IDLE] },
+    {
+      kind: 'V2 exact terminal without text',
+      observation: pendingObservation({ reason: 'session.execution.succeeded', toolCallNames: [] }),
+      diagnostics: [],
+    },
+  ])(
+    'releases queued user work after $kind settles the preceding notification',
+    async ({ observation, diagnostics }) => {
+      const harness = createHarness({
+        ledgerDir,
+        send: async () => acceptedSendResult(),
+        observe: async () => observedResult({ observation, diagnostics }),
+      });
+      await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 90 });
+      expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
+        queuedBehindMessageId: taskCommentNotification.messageId,
+      });
+      expect(harness.send).not.toHaveBeenCalled();
+      expect(await harness.service.deliver(TEAM, taskCommentNotification)).toMatchObject({
+        delivered: true,
+        responsePending: false,
+      });
+      expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({ accepted: true });
+      expect(harness.send).toHaveBeenCalledOnce();
+      expect(harness.observe).toHaveBeenCalledOnce();
+    }
+  );
 
   it('still queues a user message behind a non-stale non-user record', async () => {
     const harness = createHarness({ ledgerDir, send: async () => acceptedSendResult() });

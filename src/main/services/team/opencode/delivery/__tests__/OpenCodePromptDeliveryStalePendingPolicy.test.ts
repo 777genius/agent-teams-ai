@@ -750,6 +750,87 @@ describe('decideOpenCodeStalePendingResolution', () => {
   });
 });
 
+describe('V2 completed silent notification', () => {
+  const observation = {
+    state: 'pending' as const,
+    assistantMessageId: 'msg_assistant',
+    deliveredUserMessageId: 'msg_prompt',
+    reason: 'session.execution.succeeded',
+  };
+  const fresh = () => record({ lastAttemptAt: minutesAgo(1), acceptedAt: minutesAgo(1) });
+
+  it('settles the exact completed notification without legacy idle diagnostics', () => {
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: fresh(),
+        laneKind: 'primary',
+        observation,
+        observedDiagnostics: [],
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON });
+  });
+
+  it('does not manufacture a human group reply or settle uncertain/foreign turns', () => {
+    for (const overrides of [
+      { replyRecipient: 'user', groupChatId: 'TEST-group' },
+      { acceptanceUnknown: true },
+      { lastRuntimePromptMessageId: 'msg_newer' },
+      { observedAssistantMessageId: 'msg_other' },
+    ]) {
+      expect(
+        decideOpenCodeStalePendingResolution({
+          record: { ...fresh(), ...overrides },
+          laneKind: 'primary',
+          observation,
+          observedDiagnostics: [],
+          nowMs: NOW_MS,
+          config: POLICY,
+        })
+      ).toEqual({ action: 'none' });
+    }
+    for (const reason of ['native_terminal_not_observed', 'session.execution.failed', null]) {
+      expect(
+        decideOpenCodeStalePendingResolution({
+          record: fresh(),
+          laneKind: 'primary',
+          observation: { ...observation, reason },
+          observedDiagnostics: [],
+          nowMs: NOW_MS,
+          config: POLICY,
+        })
+      ).toEqual({ action: 'none' });
+    }
+  });
+
+  it('retains current busy, unavailable and progressing-turn safeguards', () => {
+    for (const reason of ['observation_unavailable', 'assistant_message_progressed']) {
+      expect(
+        decideOpenCodeStalePendingResolution({
+          record: fresh(),
+          laneKind: 'primary',
+          observation,
+          observedDiagnostics: [],
+          turnActivity: { active: true, reason },
+          nowMs: NOW_MS,
+          config: POLICY,
+        })
+      ).toEqual({ action: 'none' });
+    }
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: fresh(),
+        laneKind: 'primary',
+        observation,
+        observedDiagnostics: [BUSY],
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'none' });
+  });
+});
+
 describe('buildOpenCodeStalePendingPlainTextObservation', () => {
   it('carries the observed assistant evidence into a responded_plain_text observation', () => {
     expect(

@@ -17,7 +17,10 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
+import {
+  observeRuntimeProviderDirectoryRevision,
+  publishRuntimeProviderDirectoryCache,
+} from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -1335,16 +1338,61 @@ export function useRuntimeProviderManagement(
         setSetupSubmitError(null);
         setSetupSubmitErrorDiagnostics(null);
         const success = formatProviderConnectSuccess(connectedProvider);
+        // A deep-linked directory can be filtered to this provider. Refresh the
+        // shared metadata separately so selectors update without treating that
+        // filtered page as a complete inventory or changing the visible query.
+        const sharedDirectoryRefresh = (async (): Promise<boolean> => {
+          try {
+            const response = await withUiTimeout(
+              api.runtimeProviderManagement.loadProviderDirectory({
+                runtimeId: options.runtimeId,
+                summary: true,
+                projectPath: projectContext.path,
+                query: null,
+                filter: DEFAULT_DIRECTORY_FILTER,
+                limit: 100,
+                cursor: null,
+                refresh: true,
+              }),
+              'Provider metadata refresh timed out'
+            );
+            if (
+              response.error ||
+              !response.directory ||
+              response.directory.entries.length === 0 ||
+              !isProjectContextCurrent(projectContext) ||
+              currentRuntimeRevision.current !== settledRuntimeRevision
+            )
+              return false;
+            publishRuntimeProviderDirectoryCache({
+              projectPath: projectContext.path,
+              entries: response.directory.entries.map(presentDirectoryEntry),
+              fetchedAt: response.directory.fetchedAt,
+              authoritative: false,
+              runtimeRevision: settledRuntimeRevision,
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        })();
         try {
           const externalRefreshResult = await options.onProviderChanged?.('connection');
           if (!isProjectContextCurrent(projectContext)) {
             return null;
           }
-          const [viewRefreshed, directoryRefreshed] = await Promise.all([
+          const [viewRefreshed, directoryRefreshed, sharedDirectoryRefreshed] = await Promise.all([
             viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
             loadDirectoryPage({ refresh: true, cursor: null }),
+            sharedDirectoryRefresh,
           ]);
-          if (externalRefreshResult === false || !viewRefreshed || !directoryRefreshed) {
+          if (!isProjectContextCurrent(projectContext)) return null;
+          if (
+            externalRefreshResult === false ||
+            !viewRefreshed ||
+            !directoryRefreshed ||
+            !sharedDirectoryRefreshed
+          ) {
             setError(null);
             setErrorDiagnostics(null);
             setDirectoryError(null);
@@ -1410,6 +1458,7 @@ export function useRuntimeProviderManagement(
       setupFormErrorDiagnostics,
       setupMetadata,
       selectedAuthOptionId,
+      settledRuntimeRevision,
     ]
   );
 
