@@ -684,7 +684,9 @@ describe('shutdown MCP transport authority', () => {
         client.execute(command, body, { cwd: directory, timeoutMs: 1000 });
       const logger = { info: vi.fn(), warn: vi.fn(), diagnostic: vi.fn() };
       const realRunShutdownStep = compileExpression(
-        sourceNode('runShutdownStep', shutdownStepSource).getText(shutdownStepSource),
+        sourceNode('runShutdownStep', shutdownStepSource)
+          .getText(shutdownStepSource)
+          .replace(/^export\s+/, ''),
         { logger, SHUTDOWN_STEP_TIMEOUT_MS: 10_000 }
       ) as (label: string, action: () => unknown, timeoutMs?: number) => Promise<void>;
       const prepare = vi.spyOn(bridge, 'prepareShutdownStop');
