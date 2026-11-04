@@ -18,6 +18,8 @@ export interface PollSnapshotResult {
   files: Map<string, string>;
   cycleComplete: boolean;
   deleteSafe?: boolean;
+  /** Team directories covered by this slice, even if some have since disappeared. */
+  recheckedTeamNames?: readonly string[];
 }
 
 type PollSnapshot = Map<string, string> | PollSnapshotResult;
@@ -280,7 +282,7 @@ export class CrossPlatformFileChangeSource {
       return;
     }
 
-    this.mergePartialPollSnapshot(nextSnapshot.files);
+    this.mergePartialPollSnapshot(nextSnapshot.files, nextSnapshot.recheckedTeamNames);
 
     if (!this.pollingPrimed) {
       if (nextSnapshot.cycleComplete) {
@@ -316,7 +318,23 @@ export class CrossPlatformFileChangeSource {
     }
   }
 
-  private mergePartialPollSnapshot(files: Map<string, string>): void {
+  private mergePartialPollSnapshot(
+    files: Map<string, string>,
+    recheckedTeamNames?: readonly string[]
+  ): void {
+    // A live team can be checked more than once in a historical rotation.
+    // Replace its previous partial entries so deleted files do not reappear
+    // when the cycle completes.
+    if (recheckedTeamNames?.length) {
+      const rescanned = new Set(recheckedTeamNames);
+      for (const relativePath of this.partialPollSnapshot.keys()) {
+        const separator = relativePath.indexOf('/');
+        if (separator > 0 && rescanned.has(relativePath.slice(0, separator))) {
+          this.partialPollSnapshot.delete(relativePath);
+        }
+      }
+    }
+
     for (const [relativePath, fingerprint] of files) {
       this.partialPollSnapshot.set(relativePath, fingerprint);
     }
