@@ -230,6 +230,67 @@ describe('chunked fallback team and task snapshots', () => {
     );
   });
 
+  it('ignores a stale slice that finishes after polling stops and restarts', async () => {
+    for (let index = 0; index < 6; index += 1) await writeFile(`team-${index}`);
+    let blockNextSlice = false;
+    let release!: () => void;
+    let reportBlocked!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      reportBlocked = resolve;
+    });
+    const proceed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requested: string[][] = [];
+    const snapshots = new ChunkedTeamTaskPollSnapshot(
+      root,
+      async (dir, names) => {
+        if (names) {
+          requested.push([...names]);
+          if (blockNextSlice) {
+            blockNextSlice = false;
+            reportBlocked();
+            await proceed;
+          }
+        }
+        return collectTasksPollSnapshot(dir, names);
+      },
+      2
+    );
+    const events: string[] = [];
+    const source = new CrossPlatformFileChangeSource({
+      name: 'restart-stale-poll',
+      pollIntervalMs: 60_000,
+      collectPollSnapshot: () => snapshots.snapshot(source.isPollingPrimed, new Set()),
+      emitPolledChange: (_type, relativePath) => events.push(relativePath),
+      isOwnerActive: () => true,
+      isWatchLimitError: () => false,
+      requestRetry: () => {},
+    });
+    try {
+      source.startPolling();
+      await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+      blockNextSlice = true;
+      const oldPoll = source.pollOnce();
+      await blocked;
+
+      source.stop();
+      source.startPolling();
+      await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
+
+      release(); // Old generation can no longer advance the new cursor.
+      await oldPoll;
+      await source.pollOnce();
+      expect(requested.at(-1)).toEqual(['team-0', 'team-1']);
+      await source.pollOnce();
+      await source.pollOnce();
+      expect(events).toEqual([]);
+    } finally {
+      release();
+      source.stop();
+    }
+  });
+
   it('retries a failed slice before advancing its cursor', async () => {
     for (let index = 0; index < 5; index += 1) await writeFile(`team-${index}`);
     let failNext = false;
