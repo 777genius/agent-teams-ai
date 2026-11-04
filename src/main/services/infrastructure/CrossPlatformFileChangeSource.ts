@@ -20,6 +20,8 @@ export interface PollSnapshotResult {
   deleteSafe?: boolean;
   /** Team directories covered by this slice, even if some have since disappeared. */
   recheckedTeamNames?: readonly string[];
+  /** A complete rescan replaces all unfinished partial results. */
+  resetPartial?: boolean;
 }
 
 type PollSnapshot = Map<string, string> | PollSnapshotResult;
@@ -282,6 +284,7 @@ export class CrossPlatformFileChangeSource {
       return;
     }
 
+    if (nextSnapshot.resetPartial) this.partialPollSnapshot.clear();
     this.mergePartialPollSnapshot(nextSnapshot.files, nextSnapshot.recheckedTeamNames);
 
     if (!this.pollingPrimed) {
