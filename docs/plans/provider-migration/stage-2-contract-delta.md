@@ -59,6 +59,53 @@ after their owners publish implementations and pass semantic conformance. No row
 above is qualified as an end-to-end target-core replacement. In M09, silently
 treating a V1 checkpoint as a V2 native resume is **incompatible**.
 
+## Critical S2.0 boundary: bound Host transport is not a generic owner port
+
+**Confirmed in Stage 1 source** (`999c468`):
+
+- [`backendBinding.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/application/backendBinding.ts)
+  permits only `StoredBackendBinding.schemaVersion = 1`, which requires
+  `profileId`, `buildId`, `protocolVersion = 1`, `nodeSha256`,
+  `hostEntrySha256` and absolute `storageRoot`.
+- [`BackendOwnerRouter.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/application/BackendOwnerRouter.ts)
+  registers `CapturedBackendOwner` with a concrete `CapturedHostClient`; its
+  `request`, `requestPair`, `lookup`, `startOwner` and `shutdownOwner`
+  speak Host JSON-RPC and use Host-specific lifecycle/error taxonomy.
+- [`loadDesktopBackendDescriptor.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts)
+  accepts only `schemaVersion = 1` and the local Node executable/profile,
+  while [`DesktopBackendFeature.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/composition/DesktopBackendFeature.ts)
+  directly composes legacy Team registry, stopped import and management.
+
+**Classification:** public `BackendHandle` and finite `AgentBackendApi` stay
+exact-compatible as consumer surfaces. **Transport ownership and private persisted
+owner binding are incompatible with direct use by a remote/new-core client.**
+An adapter cannot simply satisfy TypeScript structurally or manufacture Host
+`nodeSha256`, `hostEntrySha256` or `storageRoot` to pass validation.
+
+**Required minimal handoff after an actual new-core API exists:**
+
+1. Introduce only the target-owned transport and narrowly versioned persisted
+   owner record needed by that API; distinguish local legacy Host from the
+   explicitly selected new target, without weakening the existing v1 decoder.
+   Reuse an existing standardized identity/custody contract if the core publishes
+   one. Do **not** add a generic transport registry or new network protocol.
+2. Old v1 records remain immutable and readable by their original Host adapter;
+   new records use durable no-clobber publication and an exact target revision.
+   Unknown/new schema, altered target identity or revoked authority results
+   in HOLD, never a rebind to the current default.
+3. Prove a mixed-target test with retained v1 A and newly created target B,
+   then default switch, rollback, two new intents, lookup, restart, corrupt/foreign
+   binding, lost ACK and concurrent creation. Verify effects only at their own
+   owner, not merely successful return values. Keep old Host lifecycle closed
+   around its own captured process without killing target B.
+4. Only then translate specific Team and Runtime operations at their owning
+   adapter; preserve existing public UI contracts and separately qualify
+   `DesktopBackendFeature` registry/creation/management paths. Core adoption
+   must not rely on a fabricated Host JSON-RPC server.
+
+This is a **newly identified interface gap**, not a new implementation or
+proof that the above tests passed.
+
 ## Current regression oracle versus missing new-core proof
 
 | Gate | Existing Stage 1 source evidence | Additional target proof still needed |

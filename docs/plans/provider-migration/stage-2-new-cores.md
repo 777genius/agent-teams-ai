@@ -115,6 +115,14 @@ TypeScript assignability не доказывает Liskov compatibility.
 Отсутствующая обязательная возможность сначала реализуется либо откладывает
 переключение этой комбинации; молчаливый fallback не считается adapter.
 
+**Критическая граница S2.0:** `BackendOwnerRouter` имеет только
+конкретный `CapturedHostClient`; сохранённый `schemaVersion: 1` binding требует
+Node/Host SHA и storageRoot. Новый Orchestrator/Runtime нельзя легально
+«подменить» Host-клиентом или подставить фиктивные SHA. До S2.1 требуется
+проверенный узкий новый target transport и versioned owner record с
+сохранением чтения всех старых immutable bindings. Подробное source-доказательство
+и смешанный negative E2E: [S2.0 delta](stage-2-contract-delta.md#critical-s20-boundary-bound-host-transport-is-not-a-generic-owner-port).
+
 ### S2.1. Adapter к переписанному runtime
 
 Runtime adapter переводит Team port в public runtime API, сохраняет исходные
