@@ -55,6 +55,7 @@ describe('runtime target original-source restriction', () => {
           await finishRead.promise;
         };
         const resolver = new TeamRuntimeTurnSettledTargetResolver({
+          isManagedByThisProfile: async () => true,
           captureSourceExecution: (name) => {
             const admission = policy.capture(name);
             if (admission.kind === 'read-only') return null;

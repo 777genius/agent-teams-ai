@@ -242,6 +242,7 @@ describe('TeamBackupService', () => {
       });
       const gate = new MemberWorkSyncTeamOperationGate();
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         operationGate: gate,
         bindRestoreParticipant: (participant) => backup.configureWorkSyncRestore(gate, participant),
         teamsBasePath: capturedRoot,
@@ -382,6 +383,7 @@ describe('TeamBackupService', () => {
       );
     }
     const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
       teamsBasePath: hoisted.teamsBase,
       sourceWriteAdmission: policy,
       lifecycleIdentity: backup.workSyncIdentity,
@@ -677,6 +679,7 @@ describe('TeamBackupService', () => {
         sourceWriteAdmission: policy,
       });
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         teamsBasePath: hoisted.teamsBase,
         lifecycleIdentity: owner.workSyncIdentity,
         sourceWriteAdmission: policy,
@@ -734,6 +737,7 @@ describe('TeamBackupService', () => {
         withIdentityFence: (name, operation) => owner.withTeamIdentityFence(name, operation),
       });
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         teamsBasePath: hoisted.teamsBase,
         lifecycleIdentity: owner.workSyncIdentity,
         sourceWriteAdmission: policy,
@@ -823,6 +827,7 @@ describe('TeamBackupService', () => {
         withIdentityFence: (name, operation) => owner.withTeamIdentityFence(name, operation),
       });
       const feature = createMemberWorkSyncFeature({
+        isManagedByThisProfile: async () => true,
         teamsBasePath: hoisted.teamsBase,
         lifecycleIdentity: owner.workSyncIdentity,
         sourceWriteAdmission: policy,
