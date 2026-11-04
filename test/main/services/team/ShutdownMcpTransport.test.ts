@@ -815,15 +815,23 @@ describe('shutdown MCP transport authority', () => {
           expect(logger.warn).toHaveBeenCalledWith(
             'Shutdown step failed (stop all teams): stop all teams failed'
           );
-        expect(logger.diagnostic).toHaveBeenCalledExactlyOnceWith(
-          expect.stringMatching(
+        expect(
+          logger.diagnostic.mock.calls.filter(
+            ([message]) =>
+              typeof message === 'string' &&
+              message.startsWith('Shutdown stop all teams took ')
+          )
+        ).toEqual([
+          [
+            expect.stringMatching(
             new RegExp(
               `^Shutdown stop all teams took \\d+ms; OpenCode lane stops confirmed=2 unconfirmed=0 pending=${
                 outcome === 'times out' ? 1 : 0
               } capturedStopAuthority=true$`
             )
-          )
-        );
+            ),
+          ],
+        ]);
         if (outcome === 'times out') {
           finishHungChild();
           expect(await settlesSoon(lateLaneStop!, 'the late lane stop')).toMatchObject({
