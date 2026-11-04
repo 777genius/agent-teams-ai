@@ -3052,10 +3052,10 @@ async function shutdownServices(): Promise<void> {
     // step, and is released before host cleanup even when the step times out.
     const stopAllTeamsStartedAtMs = Date.now();
     try {
+      if (teamProvisioningService?.hasTrackedRuntimeObligations())
+        await nativeLegacyMaintenanceRequired();
       shutdownStopBridge?.openShutdownStop();
       if (teamProvisioningService) {
-        if (teamProvisioningService.hasTrackedRuntimeObligations())
-          await nativeLegacyMaintenanceRequired();
         await runShutdownStep(
           'stop all teams',
           () => teamProvisioningService.stopAllTeams(),
