@@ -188,19 +188,25 @@ test('final Host backup runs after ingress seal with the original owner/lease an
   assert.ok(manifest.fileStats[`tasks/${f.taskId}.json`]);
 });
 
-test('selected Host backup restores the profile owner marker with the original team', async t => {
+test('selected Host backup retains the profile owner marker without granting restore authority', async t => {
   const f = await fixture(t);
   const markerPath = join(f.roots.teams, 'TEST-team', '.agent-teams-owner.json');
   const marker = '{"schemaVersion":1,"profileScope":"TEST-profile"}\n';
   writeFileSync(markerPath, marker);
-  await f.backup.snapshot();
+  const backup = await f.backup.snapshot();
+  assert.deepEqual(backup.held, []);
   const manifest = readBackupManifestStrictSync(
     getBackupManifestPath(join(f.roots.backups, 'teams/TEST-team')),
     'TEST-team'
   )!;
   assert.ok(manifest.fileStats['.agent-teams-owner.json']);
+  assert.equal(
+    readFileSync(join(f.roots.backups, 'teams/TEST-team/.agent-teams-owner.json'), 'utf8'),
+    marker
+  );
+  // A foreign profile cannot acquire this team merely by restoring backup metadata.
   unlinkSync(markerPath);
   const result = await f.backup.restoreMissing();
-  assert.ok(result.restored >= 1);
-  assert.equal(readFileSync(markerPath, 'utf8'), marker);
+  assert.equal(result.restored, 0);
+  assert.equal(existsSync(markerPath), false);
 });
