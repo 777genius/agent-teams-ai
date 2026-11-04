@@ -1,3 +1,5 @@
+import { posix, win32 } from 'node:path';
+
 /**
  * V2.0 qualification boundary, not a native readiness certificate.
  * Only trusted Host composition may provide these captures. Neither the renderer nor
@@ -45,6 +47,19 @@ const commit = /^[0-9a-f]{40}$/;
 const nativeSession = /^ses_[A-Za-z0-9]+$/;
 const endpoint = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/;
 
+/**
+ * Lexical captured-path guard only; native realpath/process ownership still require
+ * a separate TEST-owned proof. Do not accept drive-relative, UNC, root or traversal.
+ */
+export function isCanonicalOpenCodeV2Directory(platform: string, directory: string): boolean {
+  if (typeof directory !== 'string' || directory.length === 0 ||
+      directory.length > 8192 || directory.includes('\0')) return false;
+  if (platform.startsWith('win32-'))
+    return /^[A-Za-z]:\\/.test(directory) && win32.isAbsolute(directory) &&
+      win32.normalize(directory) === directory && directory.length > win32.parse(directory).root.length;
+  return posix.isAbsolute(directory) && posix.normalize(directory) === directory && directory !== '/';
+}
+
 /** Requires an independently verified exact binary digest/version; does not itself read the binary. */
 export function preflightOpenCodeV2Selection(
   selection: Readonly<OpenCodeV2Selection>,
@@ -66,7 +81,7 @@ export function preflightOpenCodeV2Selection(
       selection.executableSha256 !== selection.observedExecutableSha256)
     return { kind: 'hold', reason: 'binary-digest' };
   const port = endpoint.exec(selection.endpoint)?.[1];
-  if (!port || Number(port) > 65535 || !selection.directory.startsWith('/') ||
+  if (!port || Number(port) > 65535 || !isCanonicalOpenCodeV2Directory(selection.platform, selection.directory) ||
       !nativeSession.test(selection.nativeSessionId) ||
       !selection.sessionBinding || !selection.accountBinding)
     return { kind: 'hold', reason: 'binding' };
