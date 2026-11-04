@@ -10,9 +10,8 @@
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 
-import type { Dirent } from 'fs';
-
 import type { PollSnapshotResult } from './CrossPlatformFileChangeSource';
+import type { Dirent } from 'fs';
 
 export function isNotFoundError(error: unknown): boolean {
   const code = (error as { code?: unknown } | undefined)?.code;
