@@ -1,4 +1,4 @@
-import { defaultLocale, getLocalizedPagePath, sitemapPages, supportedLocales } from "~/data/i18n";
+import { defaultLocale, getLocalizedPagePath, legalPages, sitemapPages, supportedLocales } from "~/data/i18n";
 import { screenshots } from "~/data/screenshots";
 
 const escapeXml = (value: string) =>
@@ -47,6 +47,9 @@ ${entries
       return `  <url>\n    <loc>${escapeXml(toSiteUrl(path))}</loc>\n${alternates}\n    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(defaultHref)}" />\n${images}\n    <lastmod>${buildDate}</lastmod>\n  </url>`;
     }
   )
+  .join("\n")}
+${legalPages
+  .map((path) => `  <url>\n    <loc>${escapeXml(toSiteUrl(path))}</loc>\n    <lastmod>${buildDate}</lastmod>\n  </url>`)
   .join("\n")}
 </urlset>
 `;
