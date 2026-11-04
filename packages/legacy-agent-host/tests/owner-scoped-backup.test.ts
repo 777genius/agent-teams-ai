@@ -187,3 +187,20 @@ test('final Host backup runs after ingress seal with the original owner/lease an
   assert.ok(manifest.fileStats[`tasks/${latestId}.json`]);
   assert.ok(manifest.fileStats[`tasks/${f.taskId}.json`]);
 });
+
+test('selected Host backup restores the profile owner marker with the original team', async t => {
+  const f = await fixture(t);
+  const markerPath = join(f.roots.teams, 'TEST-team', '.agent-teams-owner.json');
+  const marker = '{"schemaVersion":1,"profileScope":"TEST-profile"}\n';
+  writeFileSync(markerPath, marker);
+  await f.backup.snapshot();
+  const manifest = readBackupManifestStrictSync(
+    getBackupManifestPath(join(f.roots.backups, 'teams/TEST-team')),
+    'TEST-team'
+  )!;
+  assert.ok(manifest.fileStats['.agent-teams-owner.json']);
+  unlinkSync(markerPath);
+  const result = await f.backup.restoreMissing();
+  assert.ok(result.restored >= 1);
+  assert.equal(readFileSync(markerPath, 'utf8'), marker);
+});

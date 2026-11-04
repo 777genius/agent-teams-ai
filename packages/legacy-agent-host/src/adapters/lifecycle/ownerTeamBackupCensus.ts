@@ -6,7 +6,7 @@ import type { BackupFileDescriptor } from './TeamBackupFileCollection.js';
 import type { LifecycleDirectories } from './lifecycleRoots.js';
 
 /** Existing Desktop backup product census; private Host control/checkpoint/profile roots are excluded. */
-export const TEAM_ROOT_FILES = ['config.json', 'team.meta.json', 'launch-state.json', 'launch-summary.json',
+export const TEAM_ROOT_FILES = ['config.json', '.agent-teams-owner.json', 'team.meta.json', 'launch-state.json', 'launch-summary.json',
   'launch-stopped.json', 'kanban-state.json', 'sentMessages.json', 'sent-cross-team.json', 'members.meta.json', 'comment-notification-journal.json'];
 export const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
 export const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime', 'members', '.member-work-sync'];
