@@ -824,11 +824,11 @@ describe('shutdown MCP transport authority', () => {
         ).toEqual([
           [
             expect.stringMatching(
-            new RegExp(
-              `^Shutdown stop all teams took \\d+ms; OpenCode lane stops confirmed=2 unconfirmed=0 pending=${
-                outcome === 'times out' ? 1 : 0
-              } capturedStopAuthority=true$`
-            )
+              new RegExp(
+                `^Shutdown stop all teams took \\d+ms; OpenCode lane stops confirmed=2 unconfirmed=0 pending=${
+                  outcome === 'times out' ? 1 : 0
+                } capturedStopAuthority=true$`
+              )
             ),
           ],
         ]);
