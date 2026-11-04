@@ -207,7 +207,11 @@ describe('chunked fallback team and task snapshots', () => {
     for (let index = 0; index < 70; index += 1) {
       await writeFile(`team-${String(index).padStart(3, '0')}`);
     }
-    const snapshots = new ChunkedTeamTaskPollSnapshot(root, collectTasksPollSnapshot);
+    const requested: string[][] = [];
+    const snapshots = new ChunkedTeamTaskPollSnapshot(root, (dir, names) => {
+      requested.push([...(names ?? [])]);
+      return collectTasksPollSnapshot(dir, names);
+    });
     const live = new Set(['team-069']);
     const baseline = await snapshots.snapshot(false, live);
     expect(baseline.files.size).toBe(70);
@@ -215,10 +219,15 @@ describe('chunked fallback team and task snapshots', () => {
     const first = await snapshots.snapshot(true, live);
     expect(first.cycleComplete).toBe(false);
     expect(first.files.size).toBe(65);
+    expect(requested.at(-1)).toHaveLength(65);
 
     const second = await snapshots.snapshot(true, live);
     expect(second.cycleComplete).toBe(true);
     expect(second.files.size).toBe(6);
+    expect(requested.at(-1)).toHaveLength(6);
+    expect(new Set([...first.files.keys(), ...second.files.keys()])).toEqual(
+      new Set(baseline.files.keys())
+    );
   });
 
   it('retries a failed slice before advancing its cursor', async () => {
