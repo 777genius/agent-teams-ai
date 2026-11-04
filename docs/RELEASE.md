@@ -29,6 +29,81 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.18.6 (Planned CPU mitigation candidate)
+
+Target branch: `main`. The existing `v2.18.5` draft and immutable tag contain an earlier build and must not be republished as the CPU mitigation. Build a fresh `v2.18.6` draft from the reviewed source commit after runtime `0.0.156` verification. Sign and qualify platform artifacts before any publication. This candidate addresses a reproduced fallback path; the original 2.18.4 user's CPU source remains unconfirmed (issue #1098).
+
+<!-- RELEASE_BODY_START v2.18.6 -->
+
+Large team histories now avoid repeated full scans when file watching reaches operating-system limits. OpenCode setup also shows clearer progress and recovery steps.
+
+### What's New
+
+- See a cost warning before OpenRouter tests retry once on a paid model.
+- Track OpenCode V2 download progress and reinstall when recovery is needed.
+- Find free models with provider badges and clearer compatibility labels.
+- See which group-chat recipient has an unconfirmed message delivery.
+
+### Fixes
+
+- Reduce repeated disk scans after file-watcher limits are reached, while keeping active team updates timely.
+- Keep unrelated app profiles from triggering unnecessary startup, background and Quit work.
+- Prevent oversized OpenUI chat visualizations from exhausting renderer resources.
+- Fix stalled OpenCode V2 startup on macOS and recover interrupted installs.
+- Restore Codex conversations, show team loading progress and keep provider selection responsive.
+- Include Electron and bundled dependency security fixes.
+
+### macOS installation
+
+macOS 2.18.6 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.6 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/Agent.Teams.AI-2.18.6-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/Agent.Teams.AI-2.18.6-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/Agent.Teams.AI.Setup.2.18.6.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/Agent.Teams.AI.Setup.2.18.6-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/Agent.Teams.AI-2.18.6.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/agent-teams-ai_2.18.6_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/agent-teams-ai-2.18.6.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.6/agent-teams-ai-2.18.6.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.18.6 -->
+
 ## v2.18.5 (Prepared draft)
 
 Target branch: `main`. Build the application draft only after runtime `0.0.156` is verified and published, and `runtime.lock.json` matches its manifest.
