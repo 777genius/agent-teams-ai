@@ -88,6 +88,25 @@ describe('read-only process CPU capture', () => {
     });
   });
 
+  it('rejects unsupported platforms before trying to read processes', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    if (!originalPlatform) throw Error('process.platform descriptor missing');
+    let reads = 0;
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    let rejected;
+    try {
+      // Call capture while mocked, then restore before awaiting test assertions.
+      rejected = captureTool.capture({ pid: 99, duration: 1, intervalMs: 250 }, () => {
+        reads += 1;
+        return [];
+      });
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+    }
+    await expect(rejected).rejects.toThrow('Only macOS/Linux supported');
+    expect(reads).toBe(0);
+  });
+
   it('stops when the root PID belongs to a different process', async () => {
     if (process.platform !== 'linux' && process.platform !== 'darwin') return;
     const original = {
@@ -113,6 +132,8 @@ describe('read-only process CPU capture', () => {
     expect(result.cpuPercentSemantics).toContain('not interval utilization');
     if (process.platform === 'linux') {
       expect(result.cpuPercentSemantics).toContain('lifetime average');
+    } else {
+      expect(result.cpuPercentSemantics).toContain('system-reported estimate');
     }
     expect(samples).toBe(2);
   });
