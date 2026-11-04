@@ -73,6 +73,14 @@ describe('chunked fallback team and task snapshots', () => {
       });
       try {
         await source.start();
+        // The fallback warning is expected for a deliberately exhausted watcher.
+        const warnings = vi.mocked(console.warn);
+        expect(
+          warnings.mock.calls.some((args) =>
+            args.some((arg) => String(arg).includes(`watcher hit ${code}`))
+          )
+        ).toBe(true);
+        warnings.mockClear();
         expect(source.currentPollingTimer).not.toBeNull();
         await vi.waitFor(() => expect(source.isPollingPrimed).toBe(true));
         await writeFile('team-3', 'task.json', '{"changed":"longer"}');
