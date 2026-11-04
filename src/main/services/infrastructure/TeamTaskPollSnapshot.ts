@@ -11,31 +11,79 @@ import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import type { Dirent } from 'fs';
+import type { PollSnapshotResult } from './CrossPlatformFileChangeSource';
 
 export function isNotFoundError(error: unknown): boolean {
   const code = (error as { code?: unknown } | undefined)?.code;
   return code === 'ENOENT' || code === '2' || code === 2;
 }
 
-export async function collectTeamsPollSnapshot(teamsPath: string): Promise<Map<string, string>> {
+async function listTeamDirectoryNames(root: string): Promise<string[]> {
+  return (await readSnapshotDir(root))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+/** Poll active teams every tick while spreading historical snapshots across ticks. */
+export class ChunkedTeamTaskPollSnapshot {
+  private cycle: { names: string[]; nextIndex: number } | null = null;
+
+  constructor(
+    private readonly root: string,
+    private readonly collect: (
+      root: string,
+      teamNames?: readonly string[]
+    ) => Promise<Map<string, string>>,
+    private readonly maxTeamsPerTick = 64
+  ) {}
+
+  async snapshot(
+    baselineReady: boolean,
+    priorityTeams: ReadonlySet<string> | null
+  ): Promise<PollSnapshotResult> {
+    if (!baselineReady) {
+      this.cycle = null;
+      return { files: await this.collect(this.root), cycleComplete: true, deleteSafe: true };
+    }
+
+    const available = new Set(await listTeamDirectoryNames(this.root));
+    const cycle = this.cycle ?? { names: [...available], nextIndex: 0 };
+    const end = Math.min(cycle.nextIndex + this.maxTeamsPerTick, cycle.names.length);
+    const names = new Set(
+      cycle.names.slice(cycle.nextIndex, end).filter((name) => available.has(name))
+    );
+    for (const name of priorityTeams ?? []) {
+      if (available.has(name)) names.add(name);
+    }
+
+    // Do not advance after a failed read. The next partial snapshot must
+    // inspect the missing slice before it can report deleted files.
+    const files = await this.collect(this.root, [...names]);
+    cycle.nextIndex = end;
+    const cycleComplete = end === cycle.names.length;
+    this.cycle = cycleComplete ? null : cycle;
+    return { files, cycleComplete, deleteSafe: cycleComplete };
+  }
+}
+
+export async function collectTeamsPollSnapshot(
+  teamsPath: string,
+  teamNames?: readonly string[]
+): Promise<Map<string, string>> {
   const snapshot = new Map<string, string>();
-  const teamEntries = await readSnapshotDir(teamsPath);
+  const names = teamNames ?? (await listTeamDirectoryNames(teamsPath));
 
   // Fallback polling mirrors TeamTaskWatchRegistry. Do not recurse into members,
   // runtime, .opencode-runtime, logs, or other deep trees from here.
-  for (const teamEntry of teamEntries) {
-    if (!teamEntry.isDirectory()) {
-      continue;
-    }
-
-    const teamName = teamEntry.name;
+  for (const teamName of names) {
     const teamPath = path.join(teamsPath, teamName);
     await collectPolledDirectoryFiles(
       snapshot,
       teamPath,
       teamName,
       (fileName) => fileName.endsWith('.json'),
-      { missingAsEmpty: false }
+      { missingAsEmpty: teamNames !== undefined }
     );
 
     await collectPolledDirectoryFiles(
@@ -50,24 +98,22 @@ export async function collectTeamsPollSnapshot(teamsPath: string): Promise<Map<s
   return snapshot;
 }
 
-export async function collectTasksPollSnapshot(tasksPath: string): Promise<Map<string, string>> {
+export async function collectTasksPollSnapshot(
+  tasksPath: string,
+  teamNames?: readonly string[]
+): Promise<Map<string, string>> {
   const snapshot = new Map<string, string>();
-  const teamEntries = await readSnapshotDir(tasksPath);
+  const names = teamNames ?? (await listTeamDirectoryNames(tasksPath));
 
   // Keep task fallback scoped to tasks/<team>/*.json. Hidden files and nested
   // runtime directories are intentionally outside the public team-change surface.
-  for (const teamEntry of teamEntries) {
-    if (!teamEntry.isDirectory()) {
-      continue;
-    }
-
-    const teamName = teamEntry.name;
+  for (const teamName of names) {
     await collectPolledDirectoryFiles(
       snapshot,
       path.join(tasksPath, teamName),
       teamName,
       (fileName) => !fileName.startsWith('.') && fileName.endsWith('.json'),
-      { missingAsEmpty: false }
+      { missingAsEmpty: teamNames !== undefined }
     );
   }
 
