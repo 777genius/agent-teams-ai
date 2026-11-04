@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import type { OpenCodeV2RuntimeLock, OpenCodeV2Selection } from '../src/composition/openCodeV2StaticPreflight.ts';
 
 const sourceMode = process.env.LEGACY_PROVIDER_SOURCE_TEST === '1';
-const { preflightOpenCodeV2Selection }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
+const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
   await import(sourceMode
     ? '../src/composition/openCodeV2StaticPreflight.ts'
     : '../dist/composition/openCodeV2StaticPreflight.js');
@@ -86,4 +86,21 @@ test('missing or damaged platform delivery cannot be promoted to V2 candidate', 
       },
     },
   }), { kind: 'hold', reason: 'delivery' });
+});
+
+test('V2 workspace bindings are lexically canonical on their selected host OS', () => {
+  assert.equal(isCanonicalOpenCodeV2Directory('darwin-arm64', selected.directory), true);
+  for (const directory of ['/', '/TEST/../foreign', '/TEST//duplicate', 'relative/workspace', '/TEST\\0foreign']) {
+    assert.equal(isCanonicalOpenCodeV2Directory('darwin-arm64', directory), false);
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, directory }, lock),
+      { kind: 'hold', reason: 'binding' });
+  }
+
+  // Windows tuples remain unqualified in the product manifest. These fixtures
+  // validate only native path syntax and do NOT promote a Windows driver version.
+  assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', 'C:\\TEST\\owned'), true);
+  for (const directory of [
+    'C:\\', 'C:TEST\\owned', '\\\\server\\share\\owned', 'C:\\TEST\\..\\other',
+    'C:/TEST/owned', 'C:\\TEST\\\\owned', 'C:\\TEST\\\0owned',
+  ]) assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory), false, JSON.stringify(directory));
 });
