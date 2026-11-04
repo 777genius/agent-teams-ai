@@ -14,6 +14,12 @@ Exact reviewed sources:
 - Agent Runtime main `4e12b68b751d0b6fbb1e629235f789d01aa910b2`:
   [readiness register](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md)
   accepts an interactive contract but **not** a production Host or the required end-to-end interactive adapter.
+  **Update (5 Nov 2026):** upstream `main` advanced to
+  [`92934d718a15`](https://github.com/agent-teams-ai/agent-runtime/commit/92934d718a159dacfa2ef9ca6efbd6d70ce60f9a)
+  through [PR #253](https://github.com/agent-teams-ai/agent-runtime/pull/253), qualifying
+  fail-closed PostgreSQL interactive-session `CHECK` validation (exact-head CI and
+  independent review). The prior public Host readiness classification does
+  **not** change; this is not a new-core runtime adapter or V2 E2E pass.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.

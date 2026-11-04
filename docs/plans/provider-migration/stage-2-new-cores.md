@@ -38,11 +38,16 @@ Baseline Desktop/legacy-host: `999c468e3f4f09a5e5eb1655f6b97a64e046c55e`
 Ключевые источники: [Orchestrator README](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/981dd836ca3d35b764561bdc11dc2e0544d83416/README.md),
 [agent-runtime readiness](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md),
 [проверенный Stage 1](https://github.com/777genius/agent-teams-ai/pull/982).
-**Текущий отдельный upstream increment:** [Agent Runtime Draft PR #253](https://github.com/agent-teams-ai/agent-runtime/pull/253)
-исправляет строгую read-only проверку PostgreSQL `CHECK`-ограничений generation/revision
-и добавляет TEST/CI PostgreSQL proof. Пока PR не замёрджен и его проверки не
-закрыты, это **не** published dependency, production Host или S2.1 PASS.
-Владелец Runtime остаётся в собственном репозитории; Stage 1 и Desktop не меняются.
+**Upstream increment, 5 ноября:** [Agent Runtime PR #253](https://github.com/agent-teams-ai/agent-runtime/pull/253)
+**слит в `main`** как [`92934d718a15`](https://github.com/agent-teams-ai/agent-runtime/commit/92934d718a159dacfa2ef9ca6efbd6d70ce60f9a).
+Строгая read-only проверка PostgreSQL `CHECK`-ограничений generation/revision
+и TEST proof на PostgreSQL 18 приняты после exact-head
+[Full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41927503773),
+[Node matrix](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41927503701)
+и независимого [review 5/5](https://github.com/agent-teams-ai/agent-runtime/pull/253#issuecomment-6644135541).
+Проверки `push main` отдельно выполняются; они не считаются заранее пройденными.
+Это **только** готовность узкой storage validation, а не production Host,
+версионированный runtime adapter или S2.1 PASS. Stage 1 и Desktop не меняются.
 
 Не приравнивать принятые ADR, схему Protobuf или synthetic conformance к готовому production API.
 
