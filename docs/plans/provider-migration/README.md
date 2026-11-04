@@ -1,5 +1,16 @@
 # Provider migration: двухэтапная программа
 
+**Новый checkpoint, 4 ноября 2026.** Владелец отдельно поручил начать Stage 2
+и OpenCode V2. Сохраняем уже квалифицированный Stage 1 (Draft PR #982) как
+неизменяемый behavioral oracle и работаем в отдельных ветках/PR.
+[Актуальный S2.0 readiness/contract audit](stage-2-new-cores.md#0-актуальный-s20-contractreadiness-audit-4-ноября-2026)
+и [отдельный V2 Host-план](opencode-v2-host-integration.md) задают порядок
+следующих implementation slices. Новые Orchestrator/agent-runtime API пока не
+квалифицированы для полной замены, а V2 factory — для текущих pinned versions;
+их production activation, merge и E2E PASS здесь не заявляются.
+Датированные ниже решения об отложенном Stage 2/V2 сохраняются как история
+**предыдущего scope**, а не запрет нового поручения.
+
 **Физическое отделение провайдеров (25 октября):** исходники `provider-implementations`
 и независимого Session SPI теперь находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations).
 Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;
