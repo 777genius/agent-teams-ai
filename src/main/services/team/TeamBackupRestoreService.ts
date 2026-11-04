@@ -72,6 +72,26 @@ export function isValidConfig(content: string): boolean {
   }
 }
 
+/**
+ * The shutdown backup only adds files, so a stop marker the team no longer
+ * has would stay in the backup and freeze every later restore of its launch
+ * state. Only a proven ENOENT drops it: unreadable is not absent.
+ */
+export function pruneStaleStopMarkerBackupSync(
+  teamName: string,
+  backupDir: string,
+  manifest: BackupManifest
+): void {
+  try {
+    fs.statSync(path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE));
+    return;
+  } catch (err: unknown) {
+    if (!isEnoent(err)) return;
+  }
+  fs.rmSync(path.join(backupDir, TEAM_LAUNCH_STOPPED_MARKER_FILE), { force: true });
+  delete manifest.fileStats[TEAM_LAUNCH_STOPPED_MARKER_FILE];
+}
+
 export class TeamBackupRestoreService {
   constructor(private readonly ports: TeamBackupRestorePorts) {}
 

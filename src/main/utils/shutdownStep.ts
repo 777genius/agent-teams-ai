@@ -1,3 +1,7 @@
+import type { TeamDataService, TeamTaskStallMonitor } from '@main/services';
+import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { InternalStorageFeature } from '@features/internal-storage/main';
+
 import { createLogger } from '@shared/utils/logger';
 
 const logger = createLogger('App');
@@ -32,4 +36,67 @@ export async function runShutdownStep(
       clearTimeout(timeout);
     }
   }
+}
+
+export interface InternalStorageShutdownServices {
+  teamDataService?: Pick<TeamDataService, 'stopProcessHealthPolling'>;
+  teamTaskStallMonitor?: Pick<TeamTaskStallMonitor, 'stop'> | null;
+  memberWorkSyncFeature?: Pick<MemberWorkSyncFeatureFacade, 'dispose'> | null;
+  internalStorageFeature?: Pick<InternalStorageFeature, 'dispose'> | null;
+}
+
+function beginShutdownWork(action: () => void | Promise<void>): Promise<void> {
+  try {
+    return Promise.resolve(action());
+  } catch (error) {
+    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
+ * Closes storage-backed polling and writer ingress immediately, then keeps the
+ * storage close dependent on the actual writer drains. Each visible shutdown
+ * step remains bounded, but a timeout never detaches storage disposal from the
+ * underlying work that is still settling.
+ */
+export async function disposeInternalStorageAfterWriterDrains(
+  services: InternalStorageShutdownServices,
+  options: { stepTimeoutMs?: number } = {}
+): Promise<void> {
+  const stepTimeoutMs = options.stepTimeoutMs ?? SHUTDOWN_STEP_TIMEOUT_MS;
+
+  // Invoke every stop synchronously before awaiting so all ingress is closed
+  // even when an earlier stop takes a long time to drain.
+  const teamDataPollingStop = beginShutdownWork(() =>
+    services.teamDataService?.stopProcessHealthPolling()
+  );
+  const stallMonitorDrain = beginShutdownWork(() => services.teamTaskStallMonitor?.stop());
+  const memberWorkSyncDrain = beginShutdownWork(() => services.memberWorkSyncFeature?.dispose());
+
+  // Start the dependency now. If a bounded step below times out, this promise
+  // still waits for its real work before it is allowed to close storage.
+  const internalStorageDispose = Promise.allSettled([
+    teamDataPollingStop,
+    stallMonitorDrain,
+    memberWorkSyncDrain,
+  ]).then(() => services.internalStorageFeature?.dispose());
+
+  if (services.teamDataService) {
+    await runShutdownStep('team data polling stop', () => teamDataPollingStop, stepTimeoutMs);
+  }
+  if (services.teamTaskStallMonitor) {
+    await runShutdownStep('team task stall monitor stop', () => stallMonitorDrain, stepTimeoutMs);
+  }
+  if (services.memberWorkSyncFeature) {
+    await runShutdownStep('member work sync dispose', () => memberWorkSyncDrain, stepTimeoutMs);
+  }
+  if (services.internalStorageFeature) {
+    // WAL checkpoint + close inside the worker, then terminate it.
+    await runShutdownStep(
+      'internal storage dispose',
+      () => internalStorageDispose.then(() => undefined),
+      stepTimeoutMs
+    );
+  }
+  await internalStorageDispose.catch(() => undefined);
 }
