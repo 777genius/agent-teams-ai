@@ -1,8 +1,8 @@
-import type { TeamDataService, TeamTaskStallMonitor } from '@main/services';
-import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
-import type { InternalStorageFeature } from '@features/internal-storage/main';
-
 import { createLogger } from '@shared/utils/logger';
+
+import type { InternalStorageFeature } from '@features/internal-storage/main';
+import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { TeamDataService, TeamTaskStallMonitor } from '@main/services';
 
 const logger = createLogger('App');
 export const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;

@@ -189,13 +189,7 @@ import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
-import {
-  disposeInternalStorageAfterWriterDrains,
-  runShutdownStep,
-  SHUTDOWN_STEP_TIMEOUT_MS,
-} from '@main/utils/shutdownStep';
-export { disposeInternalStorageAfterWriterDrains };
-export type { InternalStorageShutdownServices } from '@main/utils/shutdownStep';
+import { disposeInternalStorageAfterWriterDrains, runShutdownStep } from '@main/utils/shutdownStep';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
   APP_STARTUP_GET_STATUS,
@@ -395,6 +389,10 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
+
+export { disposeInternalStorageAfterWriterDrains };
+export type { InternalStorageShutdownServices } from '@main/utils/shutdownStep';
+
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
