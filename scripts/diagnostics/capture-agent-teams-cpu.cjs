@@ -106,17 +106,16 @@ async function capture({ pid, duration, intervalMs }, tableReader = readTable) {
     const at = new Date().toISOString();
     const rows = tableReader();
     const root = rows.find((row) => row.pid === pid);
-    // lstart is only second-precision; parent and executable name provide
-    // independent evidence that a recycled PID no longer belongs to this app.
+    // A root may be reparented while still running. Compare only its start
+    // time and process name, never its parent PID.
     if (
       rootIdentity &&
       (!root ||
         root.started !== rootIdentity.started ||
-        root.ppid !== rootIdentity.ppid ||
         root.name !== rootIdentity.name)
     ) break;
     if (!rootIdentity && root) {
-      rootIdentity = { started: root.started, ppid: root.ppid, name: root.name };
+      rootIdentity = { started: root.started, name: root.name };
     }
     const processes = descendants(rows, pid);
     frames.push({
@@ -148,7 +147,8 @@ async function capture({ pid, duration, intervalMs }, tableReader = readTable) {
       'ps CPU% may be smoothed; this is not a JavaScript CPU stack profile',
       'Detached OpenCode/Bun hosts outside the PID tree are excluded',
       'No command-line arguments, team files, or environment variables collected',
-      'PID identity combines second-precision start time, parent PID and process name',
+      'Verify the selected PID before launch: the first sample cannot authenticate it',
+      'Start time has one-second precision; same-second PID reuse with the same process name cannot be excluded',
     ],
     frames,
   };
