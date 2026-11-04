@@ -11,7 +11,6 @@ production activation пока **не разрешены технической 
 [план Host-интеграции](opencode-v2-host-integration.md).
 [Программа](README.md) · [этап 1](stage-1-legacy-host.md).
 
-
 ## 0. Актуальный S2.0: contract/readiness audit (4 ноября 2026)
 
 Фиксируем **реальные**, а не будущие public APIs до написания адаптера.
