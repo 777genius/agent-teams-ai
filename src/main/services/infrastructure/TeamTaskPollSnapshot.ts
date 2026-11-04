@@ -45,7 +45,7 @@ export class ChunkedTeamTaskPollSnapshot {
     // A missing scope provider means every team may be live: retain the old full scan.
     if (!baselineReady || priorityTeams === null) {
       this.cycle = null;
-      return { files: await this.collect(this.root), cycleComplete: true, deleteSafe: true };
+      return { files: await this.collect(this.root), cycleComplete: true, deleteSafe: true, resetPartial: true };
     }
 
     const available = new Set(await listTeamDirectoryNames(this.root));
