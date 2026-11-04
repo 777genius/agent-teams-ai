@@ -135,6 +135,7 @@ async function seedAcceptedPendingRecord(
     laneId: PRIMARY_LANE.laneId,
     runId: 'run-1',
     inboxMessageId: input.messageId!,
+    groupChatId: input.groupChatId,
     inboxTimestamp: input.inboxTimestamp ?? at,
     source: input.source ?? 'watcher',
     replyRecipient: input.replyRecipient ?? 'user',
@@ -149,6 +150,8 @@ async function seedAcceptedPendingRecord(
       taskRefs: input.taskRefs ?? [],
       attachments: input.attachments,
       source: input.source,
+      groupChatId: input.groupChatId,
+      groupRunKey: input.groupRunKey,
     }),
     now: at,
   });
@@ -710,6 +713,46 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       expect(harness.observe).toHaveBeenCalledOnce();
     }
   );
+
+  it('releases the next DM after an exact V2 completed silent peer group turn', async () => {
+    const peerGroup: OpenCodeMemberMessageDeliveryInput = {
+      ...userMessage,
+      messageId: 'peer-group:g:lead',
+      groupChatId: 'group-1',
+      groupRunKey: 'run-1',
+      replyRecipient: 'alice',
+    };
+    const harness = createHarness({
+      ledgerDir,
+      send: async () => acceptedSendResult(),
+      observe: async () =>
+        observedResult({
+          observation: pendingObservation({
+            reason: 'session.execution.succeeded',
+            toolCallNames: [],
+          }),
+          diagnostics: [],
+        }),
+    });
+    await seedAcceptedPendingRecord(harness.ledger, peerGroup, {
+      ageMinutes: 1,
+      toolCallNames: [],
+    });
+    expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
+      queuedBehindMessageId: peerGroup.messageId,
+    });
+    expect(harness.send).not.toHaveBeenCalled();
+    const peerResult = await harness.service.deliver(TEAM, peerGroup);
+    expect(peerResult).toMatchObject({
+      delivered: true,
+      responsePending: false,
+    });
+    const [settled] = await harness.ledger.list();
+    expect(settled.status).toBe('responded');
+    expect(settled.visibleReplyMessageId).toBeNull();
+    expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({ accepted: true });
+    expect(harness.send).toHaveBeenCalledOnce();
+  });
 
   it('still queues a user message behind a non-stale non-user record', async () => {
     const harness = createHarness({ ledgerDir, send: async () => acceptedSendResult() });

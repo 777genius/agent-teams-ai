@@ -1,5 +1,9 @@
 import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
 import {
+  isOpenCodeCompletedGroupNonResponse,
+  OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+} from './OpenCodeGroupNonResponse';
+import {
   hasOpenCodeAcceptedRuntimePrompt,
   isOpenCodeDirectUserPromptDelivery,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
@@ -280,6 +284,23 @@ export function decideOpenCodeStalePendingResolution(input: {
     (nativeTurnCompleted ||
       hasOpenCodeObservedTurnEndHeuristic(input.observedDiagnostics) ||
       activity === 'idle');
+
+  // Preserve fresh V2 completion as a peer-group no-response disposition.
+  // The generic plain-text reason cannot satisfy the stricter group read gate.
+  if (
+    nativeTurnCompleted &&
+    turnCompleted &&
+    isOpenCodeCompletedGroupNonResponse({
+      ...record,
+      responseState: 'responded_plain_text',
+      lastReason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+    })
+  ) {
+    return {
+      action: 'settle_plain_text',
+      reason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+    };
+  }
 
   if (
     input.laneKind === 'primary' &&

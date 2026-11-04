@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON } from '../OpenCodeGroupNonResponse';
 import {
   buildOpenCodeStalePendingPlainTextObservation,
   decideOpenCodeStalePendingResolution,
@@ -758,6 +759,51 @@ describe('V2 completed silent notification', () => {
     reason: 'session.execution.succeeded',
   };
   const fresh = () => record({ lastAttemptAt: minutesAgo(1), acceptedAt: minutesAgo(1) });
+
+  it('retains a certified silent peer-group disposition without inventing a visible reply', () => {
+    const peer = record({
+      groupChatId: 'group',
+      replyRecipient: 'alice',
+      observedToolCallNames: [],
+      lastAttemptAt: minutesAgo(1),
+      acceptedAt: minutesAgo(1),
+    });
+    const decide = (overrides: Partial<OpenCodePromptDeliveryLedgerRecord> = {}) =>
+      decideOpenCodeStalePendingResolution({
+        record: { ...peer, ...overrides },
+        laneKind: 'primary',
+        observation,
+        observedDiagnostics: [],
+        nowMs: NOW_MS,
+        config: POLICY,
+      });
+    expect(decide()).toEqual({
+      action: 'settle_plain_text',
+      reason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+    });
+    expect(
+      decide({
+        observedAssistantPreview: '[[AGENT_TEAMS_NO_REPLY]]',
+        observedToolCallNames: ['agent-teams_group_chat_list'],
+      })
+    ).toEqual({
+      action: 'settle_plain_text',
+      reason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+    });
+    for (const overrides of [
+      { replyRecipient: 'user' },
+      { replyRecipient: 'system' },
+      { observedAssistantPreview: 'A real answer' },
+      { observedToolCallNames: ['group_chat_send'] },
+      { cancelledAt: minutesAgo(0) },
+      { acceptanceUnknown: true },
+      { deliveredUserMessageId: 'other' },
+      { observedAssistantMessageId: 'other' },
+    ])
+      expect(decide(overrides)).not.toMatchObject({
+        reason: OPENCODE_NATIVE_PEER_GROUP_NON_RESPONSE_REASON,
+      });
+  });
 
   it('settles the exact completed notification without legacy idle diagnostics', () => {
     expect(
