@@ -49,7 +49,12 @@ export class ChunkedTeamTaskPollSnapshot {
       // its cursor before the fresh full baseline waits on filesystem I/O.
       this.generation += 1;
       this.cycle = null;
-      return { files: await this.collect(this.root), cycleComplete: true, deleteSafe: true, resetPartial: true };
+      return {
+        files: await this.collect(this.root),
+        cycleComplete: true,
+        deleteSafe: true,
+        resetPartial: true,
+      };
     }
 
     const generation = this.generation;
@@ -72,7 +77,12 @@ export class ChunkedTeamTaskPollSnapshot {
       cycle.nextIndex = end;
       this.cycle = cycleComplete ? null : cycle;
     }
-    return { files, cycleComplete, deleteSafe: cycleComplete, recheckedTeamNames: [...recheckedTeamNames] };
+    return {
+      files,
+      cycleComplete,
+      deleteSafe: cycleComplete,
+      recheckedTeamNames: [...recheckedTeamNames],
+    };
   }
 }
 
