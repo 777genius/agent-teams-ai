@@ -11,6 +11,7 @@ import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import type { Dirent } from 'fs';
+
 import type { PollSnapshotResult } from './CrossPlatformFileChangeSource';
 
 export function isNotFoundError(error: unknown): boolean {
