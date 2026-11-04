@@ -12,6 +12,7 @@ interface ConnectionRefreshInput {
   runtimeId: RuntimeProviderManagementRuntimeId;
   projectPath: string | null;
   runtimeRevision: string | null;
+  directorySupported: boolean;
   isContextCurrent: () => boolean;
   isRuntimeRevisionCurrent: () => boolean;
   refreshExternal: () => Promise<boolean | void> | boolean | void;
@@ -20,6 +21,7 @@ interface ConnectionRefreshInput {
 }
 
 async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<boolean> {
+  if (!input.directorySupported) return true;
   // A deep-linked directory may be filtered. Publish an unfiltered summary for
   // selectors without treating that page as authority or changing its query.
   try {
@@ -57,7 +59,7 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
   }
 }
 
-/** Refresh observations after a confirmed connection; the saved connection
+/** Refresh observations after a confirmed credential change; the saved change
  * remains successful even when one of these follow-up reads fails. */
 export async function refreshRuntimeProviderConnection(
   input: ConnectionRefreshInput

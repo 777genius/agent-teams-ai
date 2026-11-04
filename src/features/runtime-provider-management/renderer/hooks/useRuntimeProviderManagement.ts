@@ -1348,6 +1348,7 @@ export function useRuntimeProviderManagement(
           runtimeId: options.runtimeId,
           projectPath: projectContext.path,
           runtimeRevision: settledRuntimeRevision,
+          directorySupported,
           isContextCurrent: () => isProjectContextCurrent(projectContext),
           isRuntimeRevisionCurrent: () => currentRuntimeRevision.current === settledRuntimeRevision,
           refreshExternal: () => options.onProviderChanged?.('connection'),
@@ -1400,6 +1401,7 @@ export function useRuntimeProviderManagement(
     [
       apiKeyValue,
       connectionIntent,
+      directorySupported,
       getProjectContextSnapshot,
       isProjectContextCurrent,
       loadDirectoryPage,
@@ -1443,39 +1445,28 @@ export function useRuntimeProviderManagement(
           setView((current) => replaceProvider(current, response.provider!));
         }
         const success = formatCredentialRemovedMessage(response.provider ?? null);
-        try {
-          const externalRefreshResult = await options.onProviderChanged?.('credential_removed');
-          if (!isProjectContextCurrent(projectContext)) {
-            return;
-          }
-          const [viewRefreshed, directoryRefreshed] = await Promise.all([
-            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
-            loadDirectoryPage({ refresh: true, cursor: null }),
-          ]);
-          if (externalRefreshResult === false || !viewRefreshed || !directoryRefreshed) {
-            setError(null);
-            setErrorDiagnostics(null);
-            setDirectoryError(null);
-            setDirectoryErrorDiagnostics(null);
-            setSuccessMessage(null);
-            setWarningMessage(formatPostOperationRefreshWarning(success));
-          } else {
-            setWarningMessage(null);
-            setSuccessMessage(success);
-          }
-        } catch {
-          if (!isProjectContextCurrent(projectContext)) {
-            return;
-          }
+        const refreshOutcome = await refreshRuntimeProviderConnection({
+          runtimeId: options.runtimeId,
+          projectPath: projectContext.path,
+          runtimeRevision: settledRuntimeRevision,
+          directorySupported,
+          isContextCurrent: () => isProjectContextCurrent(projectContext),
+          isRuntimeRevisionCurrent: () => currentRuntimeRevision.current === settledRuntimeRevision,
+          refreshExternal: () => options.onProviderChanged?.('credential_removed'),
+          refreshView: () => !viewRequestedRef.current || refresh({ silent: true }),
+          refreshDirectory: () => loadDirectoryPage({ refresh: true, cursor: null }),
+        });
+        if (refreshOutcome === 'stale' || !isProjectContextCurrent(projectContext)) return;
+        if (refreshOutcome === 'warning') {
           setError(null);
           setErrorDiagnostics(null);
           setDirectoryError(null);
           setDirectoryErrorDiagnostics(null);
           setSuccessMessage(null);
           setWarningMessage(formatPostOperationRefreshWarning(success));
-        }
-        if (!isProjectContextCurrent(projectContext)) {
-          return;
+        } else {
+          setWarningMessage(null);
+          setSuccessMessage(success);
         }
       } catch (forgetError) {
         if (!isProjectContextCurrent(projectContext)) {
@@ -1491,7 +1482,15 @@ export function useRuntimeProviderManagement(
         }
       }
     },
-    [getProjectContextSnapshot, isProjectContextCurrent, loadDirectoryPage, options, refresh]
+    [
+      directorySupported,
+      getProjectContextSnapshot,
+      isProjectContextCurrent,
+      loadDirectoryPage,
+      options,
+      refresh,
+      settledRuntimeRevision,
+    ]
   );
 
   const openModelPicker = useCallback(
