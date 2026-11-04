@@ -401,7 +401,9 @@ describe('assertOpenCodeRuntimeStopEffective', () => {
         logWarning: vi.fn(),
         isRuntimeProcessAlive: () => false,
       })
-    ).toThrow('OpenCode lane lane-a did not confirm stop (no recorded host pid to verify)');
+    ).toThrow(
+      'OpenCode lane lane-a did not confirm stop (no live host process available for verification)'
+    );
   });
 });
 
