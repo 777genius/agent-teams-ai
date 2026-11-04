@@ -8,6 +8,7 @@ interface ProcessRow {
   ppid: number;
   cpu: number;
   rssMiB: number;
+  started: string;
   name: string;
 }
 
@@ -22,7 +23,8 @@ interface CpuCaptureModule {
   descendants(rows: ProcessRow[], pid: number): ProcessRow[];
   parseOptions(argv: string[]): CaptureOptions;
   capture(
-    options: CaptureOptions
+    options: CaptureOptions,
+    tableReader?: () => ProcessRow[]
   ): Promise<{ pid: number; frames: { processes: ProcessRow[] }[] }>;
 }
 
@@ -33,9 +35,16 @@ const captureTool = createRequire(import.meta.url)(
 describe('read-only process CPU capture', () => {
   it('parses ps rows without retaining executable paths or arguments', () => {
     expect(
-      captureTool.parseRows('  11  1  42,5  10240 /Applications/Agent Teams AI\n')
+      captureTool.parseRows('  11  1  42,5  10240 Wed Nov  4 09:25:48 2026 /Applications/Agent Teams AI\n')
     ).toEqual([
-      { pid: 11, ppid: 1, cpu: 42.5, rssMiB: 10, name: 'Agent Teams AI' },
+      {
+        pid: 11,
+        ppid: 1,
+        cpu: 42.5,
+        rssMiB: 10,
+        started: 'Wed Nov 4 09:25:48 2026',
+        name: 'Agent Teams AI',
+      },
     ]);
   });
 
@@ -45,6 +54,7 @@ describe('read-only process CPU capture', () => {
       ppid,
       cpu: 0,
       rssMiB: 0,
+      started: 'Wed Nov 4 09:25:48 2026',
       name: 'test',
     });
     const rows = [row(1, 0), row(2, 1), row(3, 2), row(4, 0), row(5, 1)];
@@ -68,6 +78,26 @@ describe('read-only process CPU capture', () => {
     });
   });
 
+  it('stops when the root PID belongs to a different process', async () => {
+    const original = {
+      pid: 99,
+      ppid: 1,
+      cpu: 20,
+      rssMiB: 1,
+      started: 'Wed Nov 4 09:25:48 2026',
+      name: 'original',
+    };
+    const replacement = { ...original, started: 'Wed Nov 4 09:25:49 2026', name: 'other' };
+    let samples = 0;
+    const result = await captureTool.capture(
+      { pid: 99, duration: 1, intervalMs: 250 },
+      () => (samples++ === 0 ? [original] : [replacement])
+    );
+    expect(result.frames).toHaveLength(1);
+    expect(result.frames[0]?.processes[0]?.name).toBe('original');
+    expect(samples).toBe(2);
+  });
+
   it('captures a real test-owned child without terminating it', async () => {
     if (process.platform === 'win32') return;
     const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 10000)'], {
@@ -80,9 +110,11 @@ describe('read-only process CPU capture', () => {
       });
       const pid = child.pid;
       if (!pid) throw new Error('Test child did not start');
-      const data = await captureTool.capture({ pid, duration: 1, intervalMs: 500 });
+      const startMs = Date.now();
+      const data = await captureTool.capture({ pid, duration: 1, intervalMs: 5000 });
+      expect(Date.now() - startMs).toBeLessThan(4000);
       expect(data.pid).toBe(pid);
-      expect(data.frames).toHaveLength(3);
+      expect(data.frames).toHaveLength(2);
       expect(data.frames.every((frame) => frame.processes.length === 1)).toBe(true);
       expect(data.frames.every((frame) => frame.processes[0]?.pid === pid)).toBe(true);
       expect(child.exitCode).toBeNull();
