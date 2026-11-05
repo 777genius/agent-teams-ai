@@ -178,13 +178,23 @@ export async function measureOpenCodeV2Executable(
     const handle = await open(executablePath, flags);
     try {
       const before = await handle.stat({ bigint: true });
-      if (!before.isFile()) return { kind: 'hold', reason: 'path' };
+      // Never hash an unbounded or empty input: a TEST-owned path can name a
+      // sparse huge file or grow concurrently while a read is in progress.
+      // The native binary must be a bounded regular file before it can be measured.
+      if (!before.isFile() || before.size === 0n || before.size > 1024n * 1024n * 1024n)
+        return { kind: 'hold', reason: 'path' };
       const hash = createHash('sha256');
-      for await (const chunk of handle.createReadStream({ autoClose: false }))
+      let bytesRead = 0n;
+      for await (const chunk of handle.createReadStream({
+        autoClose: false, end: Number(before.size - 1n),
+      })) {
+        bytesRead += BigInt(chunk.length);
         hash.update(chunk);
+      }
       const after = await handle.stat({ bigint: true });
       const byPath = await stat(executablePath, { bigint: true });
-      if (before.dev !== after.dev || before.ino !== after.ino ||
+      if (bytesRead !== before.size ||
+          before.dev !== after.dev || before.ino !== after.ino ||
           before.size !== after.size || before.mtimeNs !== after.mtimeNs ||
           before.ctimeNs !== after.ctimeNs ||
           before.dev !== byPath.dev || before.ino !== byPath.ino ||
