@@ -62,6 +62,33 @@ test('driver version and runtime manifest qualification are separate gates', () 
     { kind: 'hold', reason: 'delivery' });
 });
 
+test('a current-main 2.1.4-only runtime lock cannot activate an older private V2 driver', () => {
+  // Fail-closed regression for the observed main 0.0.157 generation split.
+  // This is a deliberate synthetic shape, not a copied product lock or proof
+  // that the unqualified 2.1.4 driver/protocol is implemented in Host.
+  const qualified = Object.fromEntries([
+    'darwin-arm64', 'linux-x64', 'win32-arm64', 'win32-x64',
+  ].map(platform => [platform, ['2.1.4']]));
+  const delivery = Object.fromEntries(
+    Object.entries(lock.opencodeV2Delivery ?? {}).map(([platform, descriptor]) =>
+      [platform, { ...descriptor, runtimeVersion: '0.0.157', engineVersions: ['2.1.4'] }]
+    )
+  );
+  const mainV2Only: OpenCodeV2RuntimeLock = {
+    ...lock, version: '0.0.157', opencodeV2: { qualified }, opencodeV2Delivery: delivery,
+  };
+  for (const platform of [
+    'darwin-arm64', 'darwin-x64', 'linux-arm64',
+    'linux-x64', 'win32-arm64', 'win32-x64',
+  ]) {
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, platform }, mainV2Only),
+      { kind: 'hold', reason: 'runtime-version' }, platform);
+    assert.deepEqual(preflightOpenCodeV2Selection({
+      ...selected, platform, version: '2.1.4', nativeReportedVersion: '2.1.4',
+    }, mainV2Only), { kind: 'hold', reason: 'driver-version' }, platform);
+  }
+});
+
 test('no implicit V1 promotion, forged binary, endpoint, identity or missing native proof', () => {
   const cases: Array<[Partial<OpenCodeV2Selection>, string]> = [
     [{ generation: 'v1' }, 'generation'],
