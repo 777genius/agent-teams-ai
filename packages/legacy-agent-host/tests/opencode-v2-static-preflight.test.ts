@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -361,4 +362,27 @@ test('V01 TEST-owned executable measurement hashes actual file bytes (not a call
   assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
     kind: 'hold', reason: 'read',
   });
+});
+
+test('V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight', async (t) => {
+  // Windows device aliases are rejected lexically. POSIX mkfifo is a real
+  // blocking-open regression, so invoke the measurement in a TEST-owned child
+  // with a hard deadline; never leave a waiting open() in the CI runner.
+  if (process.platform === 'win32') { t.skip('POSIX FIFO only'); return; }
+  const temp = await mkdtemp(join(tmpdir(), 'TEST-v2-fifo-'));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const fifo = join(await realpath(temp), 'TEST-native-engine-fifo');
+  execFileSync('mkfifo', [fifo]);
+  const moduleUrl = new URL(sourceMode
+    ? '../src/composition/openCodeV2StaticPreflight.ts'
+    : '../dist/composition/openCodeV2StaticPreflight.js', import.meta.url).href;
+  const probe = `const { measureOpenCodeV2Executable } = await import(process.argv[1]);
+const proof = await measureOpenCodeV2Executable(process.argv[2], process.argv[3]);
+process.stdout.write(JSON.stringify(proof));`;
+  const child = spawnSync(process.execPath, [
+    '--input-type=module', '-e', probe, moduleUrl, fifo, 'a'.repeat(64),
+  ], { encoding: 'utf8', timeout: 3000 });
+  assert.ifError(child.error);
+  assert.equal(child.status, 0, child.stderr);
+  assert.deepEqual(JSON.parse(child.stdout), { kind: 'hold', reason: 'path' });
 });
