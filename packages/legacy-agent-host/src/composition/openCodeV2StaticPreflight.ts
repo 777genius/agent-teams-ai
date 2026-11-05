@@ -27,6 +27,8 @@ export interface OpenCodeV2RuntimeLock {
     qualified?: Record<string, string[]>;
   };
   opencodeV2Delivery?: Record<string, {
+    schemaVersion?: number;
+    bridgeProtocol?: number;
     engineVersions?: string[];
     sourceCommit?: string;
     platform?: string;
@@ -104,6 +106,9 @@ export function preflightOpenCodeV2Selection(
   // A digest for another OS or release is not an authenticated native engine
   // for this tuple. Selectors and delivery metadata must agree before probing.
   if (typeof lock.version !== 'string' || !lock.version ||
+      // A future delivery schema/bridge must not be mistaken for an already
+      // qualified native protocol, even when its engine and digest match.
+      delivery?.schemaVersion !== 1 || delivery?.bridgeProtocol !== 1 ||
       delivery?.runtimeVersion !== lock.version ||
       delivery?.platform !== expectedPlatform || delivery?.arch !== expectedArch ||
       !Array.isArray(delivered) || !delivered.every((value) => typeof value === 'string') ||
