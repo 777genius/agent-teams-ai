@@ -96,6 +96,20 @@ Observation**. Agent Runtime separately owns provider output, technical event
 origin and parent/child subagent provenance. Neither owner's partial feed
 satisfies both contracts or qualifies the Stage 2 Desktop Activity E2E.
 
+**Existing upstream sandbox implementation (not current-main or production):**
+[Orchestrator PR #85](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/85)
+contains a real Execution Observation PostgreSQL Activity writer, scoped
+runtime binding, read cursors and native PostgreSQL restart/RLS/disconnect tests.
+At exact PR HEAD [`ce32a195`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/ce32a19582a0a9f0f27df1d8a7f17d7facea6fa6),
+a further release-time UNKNOWN guard and same-source reconciliation **test case**
+were committed; that new test has **no confirmed exact-head E2E execution**.
+The PR remains unmerged and conflicts with current Orchestrator `main`;
+its older trusted Docs workflow failed. Preserve its single intended M11 owner
+instead of implementing a duplicate Activity writer. Reconcile accepted
+GetModular/docs/current main and qualify real PostgreSQL, authorization and
+complete Runtime subagent provenance before changing M11 from
+`requires new capability` or declaring any Stage 2 Desktop PASS.
+
 **Consumer classification:** the existing Desktop `AgentBackendApi`, selected
 `BackendHandle`, and retained-handle routing are **exact-compatible at the
 Stage 1 source boundary**, not yet proven with the new cores. A future Orchestrator
