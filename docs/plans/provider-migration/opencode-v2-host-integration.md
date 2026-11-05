@@ -17,6 +17,33 @@
 | Desktop `docs/plans/opencode-provider-generation-compatibility-2026-11-01.md` | Новые установки V1; существующий/явно выбранный V2 сохраняется; Cursor/Kiro/SuperGrok OAuth/Copilot OAuth V2 managed routes не адаптированы | Не ставить этим маршрутам `supported`; `xai` API key не путать с `supergrok` OAuth                 |
 | Официальная [миграция V1→V2](https://dev.opencode.ai/v2/docs/migrate-v1/)     | Новые server/plugin API; V1 конфиги читаются частично совместимо; V1 plugins не работают в V2                                               | Нельзя использовать V1 клиент, plugin injection или V1 resume contract без V2 proof                |
 
+### Current-code compatibility gate: Desktop `main` 0.0.157 (5 November 2026)
+
+Сверка **не со старым baseline Stage 1**, а с текущим
+[`main/runtime.lock.json`](https://github.com/777genius/agent-teams-ai/blob/9935ac64b8b3f9df46eb9902a83375d9583efd76/runtime.lock.json):
+`version: 0.0.157`; `opencodeV2.qualified` содержит **только `2.1.4`**
+для `darwin-arm64`, `linux-x64`, `win32-arm64`, `win32-x64`.
+Для `darwin-x64` и `linux-arm64` qualified-набор пуст.
+`opencodeV2Delivery` также описывает только `2.1.4` для четырёх
+перечисленных tuples. На Stage 1 HEAD `999c468` по-прежнему
+[`runtime.lock.json` версии 0.0.156](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/runtime.lock.json)
+с дополнительными `2.0.0/2.0.32` — это **исторический** тестовый baseline,
+не готовность на актуальном `main`.
+
+Private [V2 DriverConfig](https://github.com/agent-teams-ai/old-provider-implementations/blob/7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9/packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.ts)
+пока принимает только `2.0.0/2.0.21`. Следовательно,
+**пересечение driver ∩ current runtime qualified ∩ delivery пусто на каждой
+платформе**. Положительный `candidate` в Host static preflight PR #1106
+на старом Stage 1 `0.0.156` не является допуском V2 на `main` `0.0.157`.
+
+Для устранения: выбрать **точную** 2.1.4 production-driver реализацию с
+отдельным versioned protocol/permission/interrupt/MCP/custody proof и
+согласовать runtime lock с объединённым деревом; сохранить прежний driver
+fail-closed до нативного подтверждения. Нельзя просто расширить allowlist
+или откатить новый `runtime.lock`. После синхронизации повторить full
+source/Host/Electron V01–V08 и Stage 2 M01–M19; не считать isolated SDK TEST
+production-квалификацией.
+
 Нормативны **выбранные exact source и опубликованные runtime artifacts**,
 а не версия из каталога моделей или успешный login. Официальный
 [embedded SDK](https://dev.opencode.ai/v2/docs/build/sdk/) может быть
