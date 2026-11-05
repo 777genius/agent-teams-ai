@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { posix, win32 } from 'node:path';
 
 /**
@@ -81,7 +82,9 @@ export function preflightOpenCodeV2Selection(
   if (selection.nativeReportedVersion !== selection.version)
     return { kind: 'hold', reason: 'native-version' };
   if (!sha256.test(selection.executableSha256) ||
-      selection.executableSha256 !== selection.observedExecutableSha256)
+      !sha256.test(selection.observedExecutableSha256) ||
+      !timingSafeEqual(Buffer.from(selection.executableSha256, 'hex'),
+        Buffer.from(selection.observedExecutableSha256, 'hex')))
     return { kind: 'hold', reason: 'binary-digest' };
   const port = endpoint.exec(selection.endpoint)?.[1];
   if (!port || Number(port) > 65535 || !isCanonicalOpenCodeV2Directory(selection.platform, selection.directory) ||

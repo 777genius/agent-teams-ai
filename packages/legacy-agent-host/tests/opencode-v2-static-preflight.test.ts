@@ -47,6 +47,8 @@ test('no implicit V1 promotion, forged binary, endpoint, identity or missing nat
     [{ platform: 'unknown' }, 'generation'],
     [{ nativeReportedVersion: '2.0.32' }, 'native-version'],
     [{ observedExecutableSha256: 'b'.repeat(64) }, 'binary-digest'],
+    [{ observedExecutableSha256: 'invalid' }, 'binary-digest'],
+    [{ observedExecutableSha256: 'B'.repeat(64) }, 'binary-digest'],
     [{ executableSha256: '' }, 'binary-digest'],
     [{ endpoint: 'http://localhost:14321' }, 'binding'],
     [{ endpoint: 'http://127.0.0.1:65536' }, 'binding'],
