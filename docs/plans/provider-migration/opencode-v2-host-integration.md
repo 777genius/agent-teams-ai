@@ -1,7 +1,7 @@
 # OpenCode V2 в новом Host: отдельная qualification lane
 
-Статус на 5 ноября 2026: **частичные Linux x64 native TEST E2E подтверждены**,
-но Stage 2 Host integration, model/tool execution, macOS/Windows packaged E2E
+Статус на 5 ноября 2026: **частичные native/embedded TEST E2E подтверждены на Linux x64, macOS x64 и Windows Server 2022**,
+но Stage 2 Host integration, реальные model/tool permissions, macOS/Windows packaged E2E
 и production rollout **не квалифицированы**.
 Владелец 4 ноября 2026 запросил V2 отдельно от ранее принятого Stage 1.
 Зависимость — [Stage 1](stage-1-legacy-host.md), [Stage 2](stage-2-new-cores.md).
@@ -26,8 +26,8 @@
 
 ### Текущие проверенные native TEST-срезы (5 ноября 2026)
 
-Реальный upstream [OpenCode `v2.0.21`](https://github.com/anomalyco/opencode/tree/8a8bd622a3d7dc29ccf30ec17f84e363ed95ed72)
-запускался только на выделенном Linux x64 AVX2 runner со временными
+Штатный CLI upstream [OpenCode `v2.0.21`](https://github.com/anomalyco/opencode/tree/8a8bd622a3d7dc29ccf30ec17f84e363ed95ed72)
+квалифицировался на выделенном Linux x64 AVX2 runner со временными
 HOME/XDG/workspace, тестовой loopback-аутентификацией и pin SHA-256
 фактического ELF. Доказательства принадлежат
 [Provider Draft PR #2](https://github.com/agent-teams-ai/old-provider-implementations/pull/2);
@@ -45,6 +45,7 @@ HOME/XDG/workspace, тестовой loopback-аутентификацией и 
 | Real V2 user `/prompt`, durable inbox, lost ACK и 0 повторных POST | [CI 41954680976](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41954680976) | `resume:false`, без исполнения модели |
 | Local fake LLM: native model turn и assistant readback | [CI 41956054950](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41956054950) | **STOP-SHIP:** `Session.log` возвращает только `log.synced` (watermark 12), без событий; terminal V03/V05 не доказан |
 | Embedded `@opencode/sdk@2.0.21`, `events.persist:true`: настоящий TEST-local model turn → session.inbox.delivered → terminal → cold restart | [Linux x64 embedded-model job 127022083313](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41959447572/job/127022083313), HEAD `43da939` | Один owned input, один durable terminal, 13 событий, сохранённые ID и 0 дополнительных model calls после cold restart; `qualified:false`, **не stock CLI**, не Host, не packed/Electron |
+| Embedded SDK V2.0.21 macOS x64 и Windows Server 2022: production codec, реальный message cursor, durable terminal и cold readback | [macOS job 127027822033](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41961125113/job/127027822033), [Windows job 127027821885](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41961125113/job/127027821885) | В обоих фактических артефактах 13 событий, 1 delivered, 1 terminal, `earlyModelRequests=0`, `cleanup:true`, `qualified:false`; без Electron/Host custody и настоящих tool permissions |
 
 На уровне Desktop [Host Draft PR #1106](https://github.com/777genius/agent-teams-ai/pull/1106)
 реализует лишь статический V2 candidate/HOLD preflight; на
