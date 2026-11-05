@@ -11,6 +11,20 @@ Exact reviewed sources:
 - Orchestrator main `981dd836ca3d35b764561bdc11dc2e0544d83416`:
   [README/status](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/981dd836ca3d35b764561bdc11dc2e0544d83416/README.md)
   explicitly identifies architecture definition, not a qualified Team/Task/Message production service.
+  **Upstream correction (5 Nov 2026):** Orchestrator `main` advanced to
+  [`b33005a53792`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/b33005a537928eb28a8d2c66944f1ff2aacc4161)
+  through merged [PR #95](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/95).
+  This corrects only existing sandbox-manifest PostgreSQL checked-out client
+  release custody; six typed deterministic regression cases and the actual
+  PostgreSQL restart/disconnect fixture passed on PR HEAD `9c5bb87a4295` in
+  [Architecture CI](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/41940145482)
+  with Node 24, macOS and Windows checks. Separate `main` push
+  [Architecture](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/41941309167)
+  and [Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/41941309660)
+  must be judged on their own results. Later ReviewRouter attempts on the final
+  PR revision were incomplete, not an independent final-head approval.
+  Neither this sandbox fix nor its CI qualifies a production Team/Task/Message
+  writer, OD-035/OD-040, or any M01–M19 target-core replacement.
 - Agent Runtime main `4e12b68b751d0b6fbb1e629235f789d01aa910b2`:
   [readiness register](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md)
   accepts an interactive contract but **not** a production Host or the required end-to-end interactive adapter.
