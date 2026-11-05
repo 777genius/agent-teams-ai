@@ -44,7 +44,7 @@ test('driver version and runtime manifest qualification are separate gates', () 
 test('no implicit V1 promotion, forged binary, endpoint, identity or missing native proof', () => {
   const cases: Array<[Partial<OpenCodeV2Selection>, string]> = [
     [{ generation: 'v1' }, 'generation'],
-    [{ platform: 'unknown' }, 'generation'],
+    [{ platform: 'unknown' }, 'platform'],
     [{ nativeReportedVersion: '2.0.32' }, 'native-version'],
     [{ observedExecutableSha256: 'b'.repeat(64) }, 'binary-digest'],
     [{ observedExecutableSha256: 'invalid' }, 'binary-digest'],
@@ -55,7 +55,9 @@ test('no implicit V1 promotion, forged binary, endpoint, identity or missing nat
     [{ endpoint: 'http://127.0.0.1:14321/foreign' }, 'binding'],
     [{ nativeSessionId: 'V1_session' }, 'binding'],
     [{ sessionBinding: '' }, 'binding'],
+    [{ sessionBinding: ' \t ' }, 'binding'],
     [{ accountBinding: '' }, 'binding'],
+    [{ accountBinding: '   ' }, 'binding'],
   ];
   for (const [change, reason] of cases)
     assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, ...change }, lock),
