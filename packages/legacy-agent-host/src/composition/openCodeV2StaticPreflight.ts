@@ -45,8 +45,9 @@ const platforms = new Set([
 ]);
 const sha256 = /^[0-9a-f]{64}$/;
 const commit = /^[0-9a-f]{40}$/;
-// Match the safe single-segment part of pinned V2-created ses_ IDs; never accept URL delimiters.
-const nativeSession = /^ses_[A-Za-z0-9_-]{1,256}$/;
+// The pinned private V2 DriverConfig accepts only alphanumeric ses_ suffixes.
+// Keep Host admission no wider than that executable driver contract.
+const nativeSession = /^ses_[A-Za-z0-9]{1,256}$/;
 const endpoint = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/;
 
 /**

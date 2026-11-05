@@ -28,11 +28,11 @@ test('V2.0 creates a static candidate, never a native readiness/launch receipt',
   });
 });
 
-test('V2 native session binding accepts safe IDs with separators, never URL separators or unbounded captures', () => {
-  for (const nativeSessionId of ['ses_TEST-owned_1', 'ses_a-b', 'ses_a_b'])
+test('V2 native session binding matches pinned private driver alphabet, not merely URL-safe IDs', () => {
+  for (const nativeSessionId of ['ses_TESTowned1', 'ses_a1', 'ses_' + 'a'.repeat(256)])
     assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, nativeSessionId }, lock).kind,
       'candidate', nativeSessionId);
-  for (const nativeSessionId of ['ses_', 'ses_bad/other', 'ses_bad?x=1', 'ses_bad#section', 'ses_bad%2fother',
+  for (const nativeSessionId of ['ses_', 'ses_a-b', 'ses_a_b', 'ses_bad/other', 'ses_bad?x=1', 'ses_bad#section', 'ses_bad%2fother',
     'ses_bad\\\\other', 'ses_' + 'a'.repeat(257)])
     assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, nativeSessionId }, lock),
       { kind: 'hold', reason: 'binding' }, nativeSessionId);
