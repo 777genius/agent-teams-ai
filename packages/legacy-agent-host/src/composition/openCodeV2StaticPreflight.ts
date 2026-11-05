@@ -74,7 +74,8 @@ export function isCanonicalOpenCodeV2Directory(platform: string, directory: stri
         !/[<>:"|?*\x00-\x1f]/.test(segment) &&
         !/^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\.|$)/i.test(segment));
   }
-  return posix.isAbsolute(directory) && posix.normalize(directory) === directory && directory !== '/';
+  return posix.isAbsolute(directory) && !directory.endsWith('/') &&
+    posix.normalize(directory) === directory && directory !== '/';
 }
 
 /** Requires an independently verified exact binary digest/version; does not itself read the binary. */
