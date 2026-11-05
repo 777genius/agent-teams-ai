@@ -80,6 +80,12 @@ export function preflightOpenCodeV2Selection(
   selection: Readonly<OpenCodeV2Selection>,
   lock: Readonly<OpenCodeV2RuntimeLock>
 ): OpenCodeV2StaticPreflight {
+  // A malformed captured profile/manifest must HOLD rather than crash the Host.
+  // These values originate from serialized data; TypeScript types alone are not runtime proof.
+  if (selection === null || typeof selection !== 'object' || Array.isArray(selection))
+    return { kind: 'hold', reason: 'binding' };
+  if (lock === null || typeof lock !== 'object' || Array.isArray(lock))
+    return { kind: 'hold', reason: 'runtime-version' };
   if (selection.generation !== 'v2')
     return { kind: 'hold', reason: 'generation' };
   if (!platforms.has(selection.platform))
