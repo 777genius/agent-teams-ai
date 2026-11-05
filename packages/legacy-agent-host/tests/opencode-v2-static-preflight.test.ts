@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import type { OpenCodeV2RuntimeLock, OpenCodeV2Selection } from '../src/composition/openCodeV2StaticPreflight.ts';
 
 const sourceMode = process.env.LEGACY_PROVIDER_SOURCE_TEST === '1';
-const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
+const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, measureOpenCodeV2Executable }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
   await import(sourceMode
     ? '../src/composition/openCodeV2StaticPreflight.ts'
     : '../dist/composition/openCodeV2StaticPreflight.js');
@@ -301,4 +305,48 @@ test('V2 preflight rejects one-element JSON arrays masquerading as trusted witne
     assert.deepEqual(preflightOpenCodeV2Selection(malformed, lock),
       { kind: 'hold', reason }, JSON.stringify(changed));
   }
+});
+
+
+test('V01 TEST-owned executable measurement hashes actual file bytes (not a caller-supplied observed string)', async (t) => {
+  const temp = await mkdtemp(join(tmpdir(), 'TEST-v2-exe-'));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const canonicalRoot = await realpath(temp);
+  const file = join(canonicalRoot, 'TEST-native-engine.bin');
+  const bytes = 'TEST-owned native fixture bytes, NOT an installed OpenCode engine';
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  await writeFile(file, bytes);
+
+  assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
+    kind: 'measured', executableSha256: digest,
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(file, 'f'.repeat(64)), {
+    kind: 'hold', reason: 'digest',
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(file, 'F'.repeat(64)), {
+    kind: 'hold', reason: 'digest',
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(join(canonicalRoot, '..', 'other'), digest), {
+    kind: 'hold', reason: 'read',
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(file + '/../foreign', digest), {
+    kind: 'hold', reason: 'path',
+  });
+
+  if (process.platform !== 'win32') {
+    const alias = join(canonicalRoot, 'TEST-symlink-engine');
+    await symlink(file, alias);
+    assert.deepEqual(await measureOpenCodeV2Executable(alias, digest), {
+      kind: 'hold', reason: 'path',
+    });
+  }
+
+  await writeFile(file, bytes + '-mutated');
+  assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
+    kind: 'hold', reason: 'digest',
+  });
+  await rm(file);
+  assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
+    kind: 'hold', reason: 'read',
+  });
 });
