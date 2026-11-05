@@ -194,3 +194,29 @@ test('V2 static preflight refuses malformed JSON version lists and non-string bi
       { kind: 'hold', reason: 'binding' }, key);
   }
 });
+
+test('V2 delivery release and OS identity cannot be borrowed from another tuple', () => {
+  const original = lock.opencodeV2Delivery?.['darwin-arm64'];
+  assert.ok(original);
+  for (const changed of [
+    { platform: 'linux' },
+    { platform: 'win32' },
+    { arch: 'x64' },
+    { runtimeVersion: '0.0.999' },
+    { runtimeVersion: null },
+  ]) {
+    const corrupted = {
+      ...lock,
+      opencodeV2Delivery: {
+        ...lock.opencodeV2Delivery,
+        'darwin-arm64': { ...original, ...changed },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
+      { kind: 'hold', reason: 'delivery' }, JSON.stringify(changed));
+  }
+  for (const version of [undefined, '', '0.0.999']) {
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, { ...lock, version }),
+      { kind: 'hold', reason: 'delivery' }, String(version));
+  }
+});
