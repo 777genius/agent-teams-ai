@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -317,6 +317,22 @@ test('V01 TEST-owned executable measurement hashes actual file bytes (not a call
   const bytes = 'TEST-owned native fixture bytes, NOT an installed OpenCode engine';
   const digest = createHash('sha256').update(bytes).digest('hex');
   await writeFile(file, bytes);
+
+  // Empty/sparse unbounded inputs are not native executable candidates. A
+  // sparse fixture avoids hashing or allocating one gigabyte on the runner.
+  const empty = join(canonicalRoot, 'TEST-empty-executable');
+  await writeFile(empty, '');
+  assert.deepEqual(await measureOpenCodeV2Executable(empty, digest), {
+    kind: 'hold', reason: 'path',
+  });
+  if (process.platform !== 'win32') {
+    const oversized = join(canonicalRoot, 'TEST-oversized-executable');
+    await writeFile(oversized, '');
+    await truncate(oversized, 1024 * 1024 * 1024 + 1);
+    assert.deepEqual(await measureOpenCodeV2Executable(oversized, digest), {
+      kind: 'hold', reason: 'path',
+    });
+  }
 
   assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
     kind: 'measured', executableSha256: digest,
