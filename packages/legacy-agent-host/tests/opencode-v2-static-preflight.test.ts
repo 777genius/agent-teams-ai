@@ -102,5 +102,6 @@ test('V2 workspace bindings are lexically canonical on their selected host OS', 
   for (const directory of [
     'C:\\', 'C:TEST\\owned', '\\\\server\\share\\owned', 'C:\\TEST\\..\\other',
     'C:/TEST/owned', 'C:\\TEST\\\\owned', 'C:\\TEST\\\0owned',
+    'C:\\ ', 'C:\\TEST.\\owned', 'C:\\TEST \\owned', 'C:\\TEST\\owned.', 'C:\\TEST\\owned ',
   ]) assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory), false, JSON.stringify(directory));
 });
