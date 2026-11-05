@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
 import { posix, win32 } from 'node:path';
 
@@ -167,7 +168,14 @@ export async function measureOpenCodeV2Executable(
   try {
     if (await realpath(executablePath) !== executablePath)
       return { kind: 'hold', reason: 'path' };
-    const handle = await open(executablePath, 'r');
+    // A realpath-checked path can still name a FIFO. POSIX O_NONBLOCK keeps the
+    // read-only preflight from hanging on open before fstat can reject it.
+    // O_NOFOLLOW also closes the final-component symlink swap window.
+    // Windows uses its ordinary read-only flag; its device/path aliases are
+    // rejected by isCanonicalOpenCodeV2Directory before opening anything.
+    const flags = process.platform === 'win32' ? constants.O_RDONLY :
+      constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW;
+    const handle = await open(executablePath, flags);
     try {
       const before = await handle.stat({ bigint: true });
       if (!before.isFile()) return { kind: 'hold', reason: 'path' };
