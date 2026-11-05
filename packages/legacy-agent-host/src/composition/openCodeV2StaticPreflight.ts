@@ -33,7 +33,7 @@ export interface OpenCodeV2RuntimeLock {
 }
 
 export type OpenCodeV2StaticPreflight =
-  | { kind: 'hold'; reason: 'generation' | 'driver-version' | 'runtime-version' |
+  | { kind: 'hold'; reason: 'generation' | 'platform' | 'driver-version' | 'runtime-version' |
       'delivery' | 'native-version' | 'binary-digest' | 'binding' }
   | { kind: 'candidate'; platform: string; version: string; sourceCommit: string; archiveSha256: string };
 
@@ -69,8 +69,10 @@ export function preflightOpenCodeV2Selection(
   selection: Readonly<OpenCodeV2Selection>,
   lock: Readonly<OpenCodeV2RuntimeLock>
 ): OpenCodeV2StaticPreflight {
-  if (selection.generation !== 'v2' || !platforms.has(selection.platform))
+  if (selection.generation !== 'v2')
     return { kind: 'hold', reason: 'generation' };
+  if (!platforms.has(selection.platform))
+    return { kind: 'hold', reason: 'platform' };
   if (!pinnedDriverVersions.has(selection.version))
     return { kind: 'hold', reason: 'driver-version' };
   if (!lock.opencodeV2?.qualified?.[selection.platform]?.includes(selection.version))
@@ -89,7 +91,7 @@ export function preflightOpenCodeV2Selection(
   const port = endpoint.exec(selection.endpoint)?.[1];
   if (!port || Number(port) > 65535 || !isCanonicalOpenCodeV2Directory(selection.platform, selection.directory) ||
       !nativeSession.test(selection.nativeSessionId) ||
-      !selection.sessionBinding || !selection.accountBinding)
+      !selection.sessionBinding?.trim() || !selection.accountBinding?.trim())
     return { kind: 'hold', reason: 'binding' };
   return {
     kind: 'candidate', platform: selection.platform, version: selection.version,
