@@ -42,14 +42,21 @@ HOME/XDG/workspace, тестовой loopback-аутентификацией и 
 | Durable synthetic inbox, retry с тем же ID | [CI 41947094675](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41947094675) | `resume:false`, без model turn |
 | Lost ACK после принятого POST: readback, 0 retries | [CI 41950984060](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41950984060) | Отдельная TEST-owned инъекция |
 | Foreign session/permission отказ, first writer wins | [CI 41950529696](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41950529696) | Native TEST-only identity |
+| Real V2 user `/prompt`, durable inbox, lost ACK и 0 повторных POST | [CI 41954680976](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41954680976) | `resume:false`, без исполнения модели |
+| Local fake LLM: native model turn и assistant readback | [CI 41956054950](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41956054950) | **STOP-SHIP:** `Session.log` возвращает только `log.synced` (watermark 12), без событий; terminal V03/V05 не доказан |
 
 На уровне Desktop [Host Draft PR #1106](https://github.com/777genius/agent-teams-ai/pull/1106)
 реализует лишь статический V2 candidate/HOLD preflight; на
 [`0477fe8105`](https://github.com/777genius/agent-teams-ai/commit/0477fe81058edbdbed0f3e3858ec48e0df6693aa)
 Fast feedback [SUCCESS](https://github.com/777genius/agent-teams-ai/actions/runs/41951312245),
 но обязательная Full qualification Draft преднамеренно не выдаёт merge certificate.
+Нативный TEST model turn уже вызвал локальный fake provider и записал assistant
+readback, **но не подтвердил terminal/event lineage**: живой
+`GET /api/experimental/session/:id/log?follow=false` вернул только `log.synced`,
+хотя watermark увеличился и сообщения доступны. Фикстуры V2-драйвера нельзя
+считать доказательством работающего read/observe до восстановления этого контракта.
 Ни один native receipt пока **не** доказывает передачу владения процессом/сессией
-в Host, реальные MCP/tool permissions, V2 model turn, selected Electron package
+в Host, реальные MCP/tool permissions, selected Electron package
 или M01–M19 нового Orchestrator/Runtime.
 
 ## 2. Граница и архитектурное решение
