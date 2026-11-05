@@ -332,6 +332,18 @@ test('V01 TEST-owned executable measurement hashes actual file bytes (not a call
   assert.deepEqual(await measureOpenCodeV2Executable(file + '/../foreign', digest), {
     kind: 'hold', reason: 'path',
   });
+  // Same oracle runs on Linux and Windows; Windows must not admit UNC, ADS or
+  // reserved device aliases as process binaries.
+  for (const unsafePath of [
+    '\\\\server\\share\\engine.exe',
+    'C:\\TEST\\engine.exe:alternate',
+    'C:\\TEST\\CON.exe',
+    'C:\\TEST\\engine.exe.',
+  ]) {
+    assert.deepEqual(await measureOpenCodeV2Executable(unsafePath, digest), {
+      kind: 'hold', reason: 'path',
+    }, unsafePath);
+  }
 
   if (process.platform !== 'win32') {
     const alias = join(canonicalRoot, 'TEST-symlink-engine');
