@@ -15,6 +15,8 @@ import {
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { describe, expect, it, vi } from 'vitest';
 
+import { getOpenCodeV2EngineVersion } from '../../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract';
+
 import type {
   EndpointAuthority,
   NativeIdentity,
@@ -39,7 +41,12 @@ function native(version = '2.0.0'): NativeIdentity {
       }
     : {
         generation: 'v2',
-        apiDialect: version === '2.0.0' ? 'v2-2.0.0' : 'v2-2.0.32',
+        // The pinned runtime may qualify a different engine than the measured CLI version.
+        // The 2.37.105 fixture deliberately uses the separate mocked 2.0.32 engine below.
+        apiDialect:
+          version === '2.37.105'
+            ? 'v2-2.0.32'
+            : `v2-${getOpenCodeV2EngineVersion(version) ?? version}`,
         version,
         executablePath: '/TEST/bin/opencode-native',
         executableSha256: sha,
@@ -153,7 +160,7 @@ function context(version = '2.0.0'): Protocol2CommandContext {
 
 // These protect absent/new strict decoding, not an implemented permission transport.
 describe('bounded protocol2 public contracts', () => {
-  it.each(['2.0.0', '2.0.32'])('decodes exact %s native contracts across public boundaries', (version) => {
+  it.each(['2.0.0', '2.0.32'])('decodes pinned-engine %s native contracts across public boundaries', (version) => {
     expect(decodeProtocol2Offer(offer(version)).ok).toBe(true);
     expect(decodeProtocol2Handshake(handshake(version)).ok).toBe(true);
     expect(decodeProtocol2CommandContext(context(version)).ok).toBe(true);
@@ -168,7 +175,7 @@ describe('bounded protocol2 public contracts', () => {
   it('refuses out-of-range and inconsistent dialects even with claimed ready authority', () => {
     const outOfRange = { ...native('2.0.32'), version: '3.0.0', apiDialect: 'v2-3.0.0' };
     expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: outOfRange }).ok).toBe(false);
-    // An in-range version still needs its own exact dialect.
+    // An in-range native CLI must still identify the runtime-qualified engine dialect.
     expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: {
       ...native('2.0.32'), apiDialect: 'v2-2.0.21',
     } }).ok).toBe(false);
@@ -178,7 +185,7 @@ describe('bounded protocol2 public contracts', () => {
     const current = handshake('2.0.32');
     for (const key of ['v2-3.0.0', 'v2-2.0.32-rc.1', 'v2-next']) {
       expect(decodeProtocol2Handshake({ ...current, dialects: {
-        [key]: current.dialects['v2-2.0.32'],
+        [key]: current.dialects[native('2.0.32').apiDialect],
       } }).ok).toBe(false);
     }
     expect(negotiateOpenCodeProtocol({ version: '3.0.0' })).toEqual({
@@ -431,7 +438,7 @@ describe('native identity and qualified engine dialect pairing', () => {
           selectionEpoch: null,
           selectedAuthority: null,
           support: 'unqualified_version',
-          dialects: { 'v2-2.37.105': handshake().dialects['v2-2.0.0'] },
+          dialects: { 'v2-2.37.105': handshake().dialects[native().apiDialect] },
         };
         expect(protocol.decodeProtocol2Handshake(noAuthority).ok).toBe(!flexible);
       } finally {
