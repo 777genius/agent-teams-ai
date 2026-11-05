@@ -128,3 +128,28 @@ test('V2 workspace bindings are lexically canonical on their selected host OS', 
     'C:\\ ', 'C:\\TEST.\\owned', 'C:\\TEST \\owned', 'C:\\TEST\\owned.', 'C:\\TEST\\owned ',
   ]) assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory), false, JSON.stringify(directory));
 });
+
+
+test('V2 Windows workspace capture refuses device aliases and stream syntax', () => {
+  // The lexical guard is not a filesystem or native process-custody proof.
+  for (const directory of [
+    'C:\\TEST\\CON', 'C:\\TEST\\con.log', 'C:\\NUL\\owned',
+    'C:\\TEST\\prn.txt', 'C:\\TEST\\AUX', 'C:\\TEST\\com1',
+    'C:\\TEST\\LPT9.txt', 'C:\\TEST\\COM¹', 'C:\\TEST\\lpt².log',
+    'C:\\TEST\\item:stream', 'C:\\TEST\\file::$DATA',
+    'C:\\TEST\\bad<name', 'C:\\TEST\\bad>name',
+    'C:\\TEST\\bad"quote', 'C:\\TEST\\bad|pipe',
+    'C:\\TEST\\bad?question', 'C:\\TEST\\bad*asterisk',
+    'C:\\TEST\\' + String.fromCharCode(1) + 'control',
+  ]) {
+    assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory),
+      false, JSON.stringify(directory));
+  }
+  for (const directory of [
+    'C:\\TEST\\owned', 'C:\\TEST\\com10', 'C:\\TEST\\conifer',
+    'C:\\TEST\\.config',
+  ]) {
+    assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory),
+      true, JSON.stringify(directory));
+  }
+});
