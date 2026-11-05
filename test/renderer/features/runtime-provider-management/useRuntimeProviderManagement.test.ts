@@ -347,6 +347,8 @@ describe('useRuntimeProviderManagement', () => {
             null,
             React.createElement(ConfigurableHarness, {
               enabled: true,
+              // This matrix verifies summary refreshes, not full catalog hydration.
+              directorySummaryOnEnable: true,
               loadViewOnEnable: false,
               projectPath,
             }),
