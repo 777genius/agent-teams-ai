@@ -22,12 +22,16 @@ export interface OpenCodeV2Selection {
 }
 
 export interface OpenCodeV2RuntimeLock {
+  version?: string;
   opencodeV2?: {
     qualified?: Record<string, string[]>;
   };
   opencodeV2Delivery?: Record<string, {
     engineVersions?: string[];
     sourceCommit?: string;
+    platform?: string;
+    arch?: string;
+    runtimeVersion?: string;
     archive?: { sha256?: string };
   }>;
 }
@@ -90,7 +94,13 @@ export function preflightOpenCodeV2Selection(
     return { kind: 'hold', reason: 'runtime-version' };
   const delivery = lock.opencodeV2Delivery?.[selection.platform];
   const delivered = delivery?.engineVersions;
-  if (!Array.isArray(delivered) || !delivered.every((value) => typeof value === 'string') ||
+  const [expectedPlatform, expectedArch] = selection.platform.split('-');
+  // A digest for another OS or release is not an authenticated native engine
+  // for this tuple. Selectors and delivery metadata must agree before probing.
+  if (typeof lock.version !== 'string' || !lock.version ||
+      delivery?.runtimeVersion !== lock.version ||
+      delivery?.platform !== expectedPlatform || delivery?.arch !== expectedArch ||
+      !Array.isArray(delivered) || !delivered.every((value) => typeof value === 'string') ||
       !delivered.includes(selection.version) ||
       !commit.test(delivery?.sourceCommit ?? '') || !sha256.test(delivery?.archive?.sha256 ?? ''))
     return { kind: 'hold', reason: 'delivery' };
