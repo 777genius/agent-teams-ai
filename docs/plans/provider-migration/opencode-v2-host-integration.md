@@ -44,6 +44,7 @@ HOME/XDG/workspace, тестовой loopback-аутентификацией и 
 | Foreign session/permission отказ, first writer wins | [CI 41950529696](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41950529696) | Native TEST-only identity |
 | Real V2 user `/prompt`, durable inbox, lost ACK и 0 повторных POST | [CI 41954680976](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41954680976) | `resume:false`, без исполнения модели |
 | Local fake LLM: native model turn и assistant readback | [CI 41956054950](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41956054950) | **STOP-SHIP:** `Session.log` возвращает только `log.synced` (watermark 12), без событий; terminal V03/V05 не доказан |
+| Embedded `@opencode/sdk@2.0.21`, `events.persist:true`: настоящий TEST-local model turn → session.inbox.delivered → terminal → cold restart | [Linux x64 embedded-model job 127022083313](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41959447572/job/127022083313), HEAD `43da939` | Один owned input, один durable terminal, 13 событий, сохранённые ID и 0 дополнительных model calls после cold restart; `qualified:false`, **не stock CLI**, не Host, не packed/Electron |
 
 На уровне Desktop [Host Draft PR #1106](https://github.com/777genius/agent-teams-ai/pull/1106)
 реализует лишь статический V2 candidate/HOLD preflight; на
@@ -54,7 +55,12 @@ Fast feedback [SUCCESS](https://github.com/777genius/agent-teams-ai/actions/runs
 readback, **но не подтвердил terminal/event lineage**: живой
 `GET /api/experimental/session/:id/log?follow=false` вернул только `log.synced`,
 хотя watermark увеличился и сообщения доступны. Фикстуры V2-драйвера нельзя
-считать доказательством работающего read/observe до восстановления этого контракта.
+считать доказательством работающего read/observe **на штатном CLI**. Однако
+встроенный SDK предоставляет отдельный проверенный TEST-путь с явным
+`events.persist:true`: на Linux x64 в действительном embedded model-turn
+прошли native event/assistant lineage и cold readback. Это не переключает
+продукт на SDK и не квалифицирует process custody, V1/V2 permission/tool mapping,
+выбранные OS-архивы или Desktop UI.
 Ни один native receipt пока **не** доказывает передачу владения процессом/сессией
 в Host, реальные MCP/tool permissions, selected Electron package
 или M01–M19 нового Orchestrator/Runtime.
