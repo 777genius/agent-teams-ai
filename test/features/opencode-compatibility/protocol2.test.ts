@@ -15,8 +15,6 @@ import {
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { describe, expect, it, vi } from 'vitest';
 
-import { getOpenCodeV2EngineVersion } from '../../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract';
-
 import type {
   EndpointAuthority,
   NativeIdentity,
@@ -25,6 +23,18 @@ import type {
   Protocol2Handshake,
   Protocol2Offer,
 } from '@features/opencode-compatibility/contracts';
+
+// Contract decoding must be portable even on platforms where the real app ships no V2 engine.
+// Native/runtime integration is qualified separately against the actual release lock.
+vi.mock('../../../runtime.lock.json', () => ({
+  default: {
+    opencodeV2: {
+      cliVersionPolicy: 'stable-v2-qualified-engine',
+      range: { minimum: '2.0.0', below: '3.0.0' },
+      qualified: { [`${process.platform}-${process.arch}`]: ['2.1.4'] },
+    },
+  },
+}));
 
 const sha = 'a'.repeat(64);
 function native(version = '2.0.0'): NativeIdentity {
@@ -41,12 +51,12 @@ function native(version = '2.0.0'): NativeIdentity {
       }
     : {
         generation: 'v2',
-        // The pinned runtime may qualify a different engine than the measured CLI version.
-        // The 2.37.105 fixture deliberately uses the separate mocked 2.0.32 engine below.
+        // The CLI version and mock runtime-qualified engine are independent identities.
+        // The 2.37.105 fixture uses the separate mocked 2.0.32 engine below.
         apiDialect:
           version === '2.37.105'
             ? 'v2-2.0.32'
-            : `v2-${getOpenCodeV2EngineVersion(version) ?? version}`,
+            : 'v2-2.1.4',
         version,
         executablePath: '/TEST/bin/opencode-native',
         executableSha256: sha,
