@@ -102,18 +102,21 @@ export function preflightOpenCodeV2Selection(
       delivery?.platform !== expectedPlatform || delivery?.arch !== expectedArch ||
       !Array.isArray(delivered) || !delivered.every((value) => typeof value === 'string') ||
       !delivered.includes(selection.version) ||
-      !commit.test(delivery?.sourceCommit ?? '') || !sha256.test(delivery?.archive?.sha256 ?? ''))
+      typeof delivery?.sourceCommit !== 'string' || !commit.test(delivery.sourceCommit) ||
+      typeof delivery?.archive?.sha256 !== 'string' || !sha256.test(delivery.archive.sha256))
     return { kind: 'hold', reason: 'delivery' };
   if (selection.nativeReportedVersion !== selection.version)
     return { kind: 'hold', reason: 'native-version' };
-  if (!sha256.test(selection.executableSha256) ||
+  if (typeof selection.executableSha256 !== 'string' ||
+      typeof selection.observedExecutableSha256 !== 'string' ||
+      !sha256.test(selection.executableSha256) ||
       !sha256.test(selection.observedExecutableSha256) ||
       !timingSafeEqual(Buffer.from(selection.executableSha256, 'hex'),
         Buffer.from(selection.observedExecutableSha256, 'hex')))
     return { kind: 'hold', reason: 'binary-digest' };
-  const port = endpoint.exec(selection.endpoint)?.[1];
+  const port = typeof selection.endpoint === 'string' ? endpoint.exec(selection.endpoint)?.[1] : undefined;
   if (!port || Number(port) > 65535 || !isCanonicalOpenCodeV2Directory(selection.platform, selection.directory) ||
-      !nativeSession.test(selection.nativeSessionId) ||
+      typeof selection.nativeSessionId !== 'string' || !nativeSession.test(selection.nativeSessionId) ||
       typeof selection.sessionBinding !== 'string' || !selection.sessionBinding.trim() ||
       typeof selection.accountBinding !== 'string' || !selection.accountBinding.trim())
     return { kind: 'hold', reason: 'binding' };
