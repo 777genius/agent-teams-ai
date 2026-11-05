@@ -1,0 +1,60 @@
+name: TEST Intel OpenCode V2 live team
+on:
+  push:
+    branches: [test/intel-opencode-v2-live-e2e]
+permissions:
+  contents: read
+jobs:
+  e2e:
+    runs-on: macos-15-intel
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: e4b719356b8b0afacccf6fdd50f6bdc798410315
+          path: TEST-runtime
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.2'
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Build exact Intel runtime
+        working-directory: TEST-runtime
+        env:
+          RUNTIME_OPENCODE_V2: bundled
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          bun install --frozen-lockfile --linker hoisted
+          bun scripts/package-runtime.ts --platform darwin-x64
+          base="$RUNNER_TEMP/TEST-candidate/runtime"
+          support="$RUNNER_TEMP/TEST-candidate/support"
+          mkdir -p "$base" "$support"
+          cp dist/cli "$base/claude-multimodel"
+          cp dist/opencode-delivery.json dist/opencode-v2-delivery.json dist/VERSION dist/COMMIT_SHA "$base/"
+          cp -R dist/local-cli dist/bun dist/cursor-managed "$base/"
+          archive="$(bun --no-install -e 'console.log(JSON.parse(await Bun.file("dist/opencode-v2-delivery.json").text()).archive.file)')"
+          unzip -q "dist/$archive" -d "$support"
+          "$base/bun/bun" --no-install --no-env-file scripts/opencode-v2/stage-support-fixture.ts "$base" "$support" "$RUNNER_TEMP/TEST-v2-support" > /dev/null
+          echo "CANDIDATE_CLI=$base/claude-multimodel" >> "$GITHUB_ENV"
+          echo "CLAUDE_MULTIMODEL_OPENCODE_V2_SUPPORT_ROOT=$RUNNER_TEMP/TEST-v2-support" >> "$GITHUB_ENV"
+      - name: Install desktop dependencies
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Run real Kimi team test
+        env:
+          KIMI_TEST_API_KEY: ${{ secrets.KIMI_TEST_API_KEY }}
+        run: bash .github/test-intel-v2-live/run.sh
+      - name: Keep sanitized verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intel-v2-live-result
+          path: ${{ runner.temp }}/TEST-intel-v2-out/verdict.json
+          if-no-files-found: warn
