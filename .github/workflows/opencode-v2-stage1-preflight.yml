@@ -1,0 +1,39 @@
+name: OpenCode V2 Stage1 static preflight (TEST only)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts
+      - packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
+      - .github/workflows/opencode-v2-stage1-preflight.yml
+
+permissions:
+  contents: read
+
+jobs:
+  static-preflight:
+    name: Static V01 source test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install pinned workspace dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build Stage1 Host without launching providers
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Typecheck Host TEST contracts
+        run: pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+      - name: Execute V2 static preflight and FIFO negative tests
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
