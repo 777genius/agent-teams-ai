@@ -61,7 +61,7 @@ own the behavior.
 | M08 | Inputs, UNKNOWN and reconcile       | requires new capability | requires new capability | Durable intent before handoff; no replay or false rejection                 |
 | M09 | Selected-session cold resume        | —                       | requires new capability | Exact checkpoint/engine/account/custody; V1→V2 is incompatible              |
 | M10 | Instructions, compaction, skills    | requires new capability | requires new capability | One reminder owner; settings and MCP policy must not disappear              |
-| M11 | Activity, gaps and subagents        | —                       | requires new capability | Exact source IDs, ordered observations and parent/child custody             |
+| M11 | Activity, gaps and subagents        | requires new capability | requires new capability | Authorized Activity/gap projection and provider subagent provenance         |
 | M12 | Structured TaskRef / navigation     | requires new capability | —                       | Desktop projection retained; imported external ref keeps old owner          |
 | M13 | Git change capture and review       | requires new capability | requires new capability | Real before/final/failed attribution; no synthetic changes ledger           |
 | M14 | Usage, context and quick actions    | requires new capability | requires new capability | Unknown usage stays unknown; action keeps original owner                    |
@@ -70,6 +70,12 @@ own the behavior.
 | M17 | Packed native delivery and OS       | requires new capability | requires new capability | Exact candidate tuple, owned process exit and scoped cleanup                |
 | M18 | IPC/HTTP, feeds and Quit            | requires new capability | requires new capability | Keep existing public Desktop API; immutable routing and no rollback replay  |
 | M19 | Background registry/process stop    | requires new capability | requires new capability | Captured TEST child only; stale binding cannot cause OS kill                |
+
+M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
+cursor/gap projection and protected diagnostics to Orchestrator **Execution
+Observation**. Agent Runtime separately owns provider output, technical event
+origin and parent/child subagent provenance. Neither owner's partial feed
+satisfies both contracts or qualifies the Stage 2 Desktop Activity E2E.
 
 **Consumer classification:** the existing Desktop `AgentBackendApi`, selected
 `BackendHandle`, and retained-handle routing are **exact-compatible at the
