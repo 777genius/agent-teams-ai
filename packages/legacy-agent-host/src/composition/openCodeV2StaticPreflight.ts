@@ -54,9 +54,12 @@ const endpoint = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/;
 export function isCanonicalOpenCodeV2Directory(platform: string, directory: string): boolean {
   if (typeof directory !== 'string' || directory.length === 0 ||
       directory.length > 8192 || directory.includes('\0')) return false;
-  if (platform.startsWith('win32-'))
+  if (platform.startsWith('win32-')) {
+    const root = win32.parse(directory).root;
     return /^[A-Za-z]:\\/.test(directory) && win32.isAbsolute(directory) &&
-      win32.normalize(directory) === directory && directory.length > win32.parse(directory).root.length;
+      win32.normalize(directory) === directory && directory.length > root.length &&
+      directory.slice(root.length).split('\\').every(segment => segment.length > 0 && !/[ .]$/.test(segment));
+  }
   return posix.isAbsolute(directory) && posix.normalize(directory) === directory && directory !== '/';
 }
 
