@@ -28,6 +28,17 @@ test('V2.0 creates a static candidate, never a native readiness/launch receipt',
   });
 });
 
+test('malformed top-level JSON captures HOLD without throwing or starting native work', () => {
+  for (const malformed of [null, false, 'v2', [], 123]) {
+    assert.deepEqual(preflightOpenCodeV2Selection(
+      malformed as unknown as OpenCodeV2Selection, lock
+    ), { kind: 'hold', reason: 'binding' }, String(malformed));
+    assert.deepEqual(preflightOpenCodeV2Selection(
+      selected, malformed as unknown as OpenCodeV2RuntimeLock
+    ), { kind: 'hold', reason: 'runtime-version' }, String(malformed));
+  }
+});
+
 test('V2 native session binding matches pinned private driver alphabet, not merely URL-safe IDs', () => {
   for (const nativeSessionId of ['ses_TESTowned1', 'ses_a1', 'ses_' + 'a'.repeat(256)])
     assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, nativeSessionId }, lock).kind,
