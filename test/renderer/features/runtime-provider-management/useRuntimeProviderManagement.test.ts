@@ -286,10 +286,10 @@ describe('useRuntimeProviderManagement', () => {
                 directory: {
                   ...createEmptyDirectoryResponse(input.query).directory!,
                   entries:
-                    input.summary || !input.query
+                    !input.query
                       ? [connectedNow ? connectedEntry : disconnected, unrelated]
                       : [connectedNow ? connectedEntry : disconnected],
-                  totalCount: input.summary || !input.query ? 2 : 1,
+                  totalCount: !input.query ? 2 : 1,
                   fetchedAt: '2026-11-04T10:00:00.000Z',
                 },
               }
