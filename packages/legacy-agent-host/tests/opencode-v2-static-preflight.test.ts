@@ -62,6 +62,8 @@ test('no implicit V1 promotion, forged binary, endpoint, identity or missing nat
     [{ executableSha256: '' }, 'binary-digest'],
     [{ endpoint: 'http://localhost:14321' }, 'binding'],
     [{ endpoint: 'http://127.0.0.1:65536' }, 'binding'],
+    [{ endpoint: 'http://127.0.0.1:99999' }, 'binding'],
+    [{ endpoint: 'http://127.0.0.1:00080' }, 'binding'],
     [{ endpoint: 'http://127.0.0.1:14321/foreign' }, 'binding'],
     [{ nativeSessionId: 'V1_session' }, 'binding'],
     [{ sessionBinding: '' }, 'binding'],
@@ -72,6 +74,13 @@ test('no implicit V1 promotion, forged binary, endpoint, identity or missing nat
   for (const [change, reason] of cases)
     assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, ...change }, lock),
       { kind: 'hold', reason }, JSON.stringify(change));
+});
+
+test('V2 loopback endpoint validation accepts the top IANA TCP port without a verbose regex', () => {
+  for (const port of [1, 14321, 65535])
+    assert.deepEqual(preflightOpenCodeV2Selection({
+      ...selected, endpoint: `http://127.0.0.1:${port}`,
+    }, lock).kind, 'candidate', String(port));
 });
 
 test('missing or damaged platform delivery cannot be promoted to V2 candidate', () => {
