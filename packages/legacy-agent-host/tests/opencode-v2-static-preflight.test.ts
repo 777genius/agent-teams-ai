@@ -223,3 +223,32 @@ test('V2 delivery release and OS identity cannot be borrowed from another tuple'
       { kind: 'hold', reason: 'delivery' }, String(version));
   }
 });
+
+test('V2 preflight rejects one-element JSON arrays masquerading as trusted witnesses', () => {
+  const original = lock.opencodeV2Delivery?.['darwin-arm64'];
+  assert.ok(original?.sourceCommit && original.archive?.sha256);
+  for (const changed of [
+    { sourceCommit: [original.sourceCommit] },
+    { archive: { sha256: [original.archive.sha256] } },
+  ]) {
+    const corrupted = {
+      ...lock,
+      opencodeV2Delivery: {
+        ...lock.opencodeV2Delivery,
+        'darwin-arm64': { ...original, ...changed },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
+      { kind: 'hold', reason: 'delivery' }, JSON.stringify(changed));
+  }
+  for (const [changed, reason] of [
+    [{ executableSha256: [selected.executableSha256],
+      observedExecutableSha256: [selected.observedExecutableSha256] }, 'binary-digest'],
+    [{ endpoint: [selected.endpoint] }, 'binding'],
+    [{ nativeSessionId: [selected.nativeSessionId] }, 'binding'],
+  ] as const) {
+    const malformed = { ...selected, ...changed } as unknown as OpenCodeV2Selection;
+    assert.deepEqual(preflightOpenCodeV2Selection(malformed, lock),
+      { kind: 'hold', reason }, JSON.stringify(changed));
+  }
+});
