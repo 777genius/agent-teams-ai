@@ -61,7 +61,12 @@ export function isCanonicalOpenCodeV2Directory(platform: string, directory: stri
     const root = win32.parse(directory).root;
     return /^[A-Za-z]:\\/.test(directory) && win32.isAbsolute(directory) &&
       win32.normalize(directory) === directory && directory.length > root.length &&
-      directory.slice(root.length).split('\\').every(segment => segment.length > 0 && !/[ .]$/.test(segment));
+      directory.slice(root.length).split('\\').every(segment =>
+        segment.length > 0 && !/[ .]$/.test(segment) &&
+        // Win32 device aliases and NTFS alternate data streams are not normal
+        // workspace directories even when path.normalize() leaves them unchanged.
+        !/[<>:"|?*\x00-\x1f]/.test(segment) &&
+        !/^(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\.|$)/i.test(segment));
   }
   return posix.isAbsolute(directory) && posix.normalize(directory) === directory && directory !== '/';
 }
