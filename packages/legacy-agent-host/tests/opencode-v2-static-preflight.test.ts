@@ -326,7 +326,7 @@ test('V01 TEST-owned executable measurement hashes actual file bytes (not a call
   assert.deepEqual(await measureOpenCodeV2Executable(file, 'F'.repeat(64)), {
     kind: 'hold', reason: 'digest',
   });
-  assert.deepEqual(await measureOpenCodeV2Executable(join(canonicalRoot, '..', 'other'), digest), {
+  assert.deepEqual(await measureOpenCodeV2Executable(join(canonicalRoot, 'TEST-missing-file'), digest), {
     kind: 'hold', reason: 'read',
   });
   assert.deepEqual(await measureOpenCodeV2Executable(file + '/../foreign', digest), {
