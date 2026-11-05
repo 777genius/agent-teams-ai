@@ -154,3 +154,43 @@ test('V2 Windows workspace capture refuses device aliases and stream syntax', ()
       true, JSON.stringify(directory));
   }
 });
+
+test('V2 static preflight refuses malformed JSON version lists and non-string binding captures', () => {
+  // An unvalidated manifest can contain a string instead of a string array.
+  // String.includes('2.0.0') would incorrectly admit this forged substring.
+  for (const versions of ['unqualified-2.0.0', 200, null, { release: '2.0.0' }, ['2.0.0', 200]]) {
+    const damaged = {
+      ...lock,
+      opencodeV2: {
+        ...lock.opencodeV2,
+        qualified: { ...lock.opencodeV2?.qualified, 'darwin-arm64': versions },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, damaged),
+      { kind: 'hold', reason: 'runtime-version' }, JSON.stringify(versions));
+  }
+  for (const versions of ['prefix-2.0.0-suffix', 200, null, { release: '2.0.0' }, ['2.0.0', false]]) {
+    const damaged = {
+      ...lock,
+      opencodeV2Delivery: {
+        ...lock.opencodeV2Delivery,
+        'darwin-arm64': {
+          ...lock.opencodeV2Delivery?.['darwin-arm64'],
+          engineVersions: versions,
+        },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, damaged),
+      { kind: 'hold', reason: 'delivery' }, JSON.stringify(versions));
+  }
+  for (const [key, value] of [
+    ['sessionBinding', 123],
+    ['sessionBinding', { id: 'TEST-owner' }],
+    ['accountBinding', 456],
+    ['accountBinding', ['TEST-account']],
+  ] as const) {
+    const damaged = { ...selected, [key]: value } as unknown as OpenCodeV2Selection;
+    assert.deepEqual(preflightOpenCodeV2Selection(damaged, lock),
+      { kind: 'hold', reason: 'binding' }, key);
+  }
+});
