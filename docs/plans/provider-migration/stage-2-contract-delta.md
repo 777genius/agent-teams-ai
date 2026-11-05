@@ -25,6 +25,15 @@ Exact reviewed sources:
   PR revision were incomplete, not an independent final-head approval.
   Neither this sandbox fix nor its CI qualifies a production Team/Task/Message
   writer, OD-035/OD-040, or any M01–M19 target-core replacement.
+  **Follow-up (5 Nov 2026):** [Orchestrator PR #97](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/97)
+  was squash-merged to `main` as [`5a8496ce7119`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/5a8496ce711909e381c5bc817fff5500be9a1761).
+  Its one-file ADR-0103 *synthetic* conformance fixture checks Project-isolated
+  same-request receipts, foreign Task access, and strict CreateTask payload shape.
+  Exact PR HEAD `d575e16158d7` passed
+  [Architecture](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043160740),
+  [Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043161267),
+  and [Dependency Review](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043160684).
+  This fixture does **not** create or qualify a production Team/Task/Message API.
 - Agent Runtime main `4e12b68b751d0b6fbb1e629235f789d01aa910b2`:
   [readiness register](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md)
   accepts an interactive contract but **not** a production Host or the required end-to-end interactive adapter.
@@ -34,6 +43,16 @@ Exact reviewed sources:
   fail-closed PostgreSQL interactive-session `CHECK` validation (exact-head CI and
   independent review). The prior public Host readiness classification does
   **not** change; this is not a new-core runtime adapter or V2 E2E pass.
+  **Further durability follow-up (5 Nov 2026):** [Runtime PR #254](https://github.com/agent-teams-ai/agent-runtime/pull/254)
+  was squash-merged to `main` as [`ab0387c02fe7`](https://github.com/agent-teams-ai/agent-runtime/commit/ab0387c02fe75ed0c9bb456caaad9a6d2723795b).
+  It holds PostgreSQL checked-out client custody through release and preserves
+  operation `UNKNOWN` without replay after a lost COMMIT acknowledgment;
+  a disposable PostgreSQL 18 fixture read back the original committed record.
+  Exact PR HEAD `413f601b4692` passed
+  [full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656175),
+  [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656038),
+  and [Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656582).
+  This **does not** qualify an interactive production Host or any M01–M19 new-core parity.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
