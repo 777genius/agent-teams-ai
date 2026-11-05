@@ -1,6 +1,8 @@
 # OpenCode V2 в новом Host: отдельная qualification lane
 
-Статус: **design + source audit, реализация и native E2E ещё не подтверждены**.
+Статус на 5 ноября 2026: **частичные Linux x64 native TEST E2E подтверждены**,
+но Stage 2 Host integration, model/tool execution, macOS/Windows packaged E2E
+и production rollout **не квалифицированы**.
 Владелец 4 ноября 2026 запросил V2 отдельно от ранее принятого Stage 1.
 Зависимость — [Stage 1](stage-1-legacy-host.md), [Stage 2](stage-2-new-cores.md).
 Это не переключатель по умолчанию и не изменение существующего UI.
@@ -21,6 +23,34 @@
 пригодным механизмом, но только если его custody соответствует
 фактическому Node/Electron/Host, process/cleanup и invariant старого порта.
 Новый транспорт не создаётся только ради более красивой структуры.
+
+### Текущие проверенные native TEST-срезы (5 ноября 2026)
+
+Реальный upstream [OpenCode `v2.0.21`](https://github.com/anomalyco/opencode/tree/8a8bd622a3d7dc29ccf30ec17f84e363ed95ed72)
+запускался только на выделенном Linux x64 AVX2 runner со временными
+HOME/XDG/workspace, тестовой loopback-аутентификацией и pin SHA-256
+фактического ELF. Доказательства принадлежат
+[Provider Draft PR #2](https://github.com/agent-teams-ai/old-provider-implementations/pull/2);
+его результат **не** опубликован как Host/Runtime API.
+
+| Проверенная часть | Native TEST evidence | Ограничение |
+| --- | --- | --- |
+| ELF, PID, Basic Auth, OpenAPI и очистка | [CI 41944555707](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41944555707) | Только Linux x64; `qualified:false` |
+| Session create/read/delete и cold restart | [CI 41945394624](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41945394624) | Без модели и tools |
+| Permission deny/ask/reject и последующий 404 | [CI 41946568366](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41946568366) | Native resolver, не tool invocation |
+| Ordered allow/deny/ask, last-match-wins | [CI 41951065982](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41951065982) | Только тестовые правила |
+| Durable synthetic inbox, retry с тем же ID | [CI 41947094675](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41947094675) | `resume:false`, без model turn |
+| Lost ACK после принятого POST: readback, 0 retries | [CI 41950984060](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41950984060) | Отдельная TEST-owned инъекция |
+| Foreign session/permission отказ, first writer wins | [CI 41950529696](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/41950529696) | Native TEST-only identity |
+
+На уровне Desktop [Host Draft PR #1106](https://github.com/777genius/agent-teams-ai/pull/1106)
+реализует лишь статический V2 candidate/HOLD preflight; на
+[`0477fe8105`](https://github.com/777genius/agent-teams-ai/commit/0477fe81058edbdbed0f3e3858ec48e0df6693aa)
+Fast feedback [SUCCESS](https://github.com/777genius/agent-teams-ai/actions/runs/41951312245),
+но обязательная Full qualification Draft преднамеренно не выдаёт merge certificate.
+Ни один native receipt пока **не** доказывает передачу владения процессом/сессией
+в Host, реальные MCP/tool permissions, V2 model turn, selected Electron package
+или M01–M19 нового Orchestrator/Runtime.
 
 ## 2. Граница и архитектурное решение
 
