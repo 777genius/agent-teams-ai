@@ -1,4 +1,6 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { open, realpath, stat } from 'node:fs/promises';
+import { isAbsolute, normalize, parse, sep } from 'node:path';
 import { posix, win32 } from 'node:path';
 
 /**
@@ -136,4 +138,60 @@ export function preflightOpenCodeV2Selection(
     kind: 'candidate', platform: selection.platform, version: selection.version,
     sourceCommit: delivery.sourceCommit!, archiveSha256: delivery.archive!.sha256!,
   };
+}
+
+
+/**
+ * READ-ONLY V01 binary measurement of a Host-selected native executable.
+ *
+ * Unlike the static selection's caller-supplied observed hash, this digest is
+ * computed from an actual open file descriptor, with path identity checked on
+ * both sides. Callers still MUST independently pin expectedSha256 to a trusted
+ * distribution and bind the subsequently started native CHILD PID to that
+ * executable. Measuring a CLI wrapper never qualifies its spawned engine.
+ *
+ * No process is started, no user configuration is read or modified.
+ */
+export async function measureOpenCodeV2Executable(
+  executablePath: string,
+  expectedSha256: string
+): Promise<{ kind: 'hold'; reason: 'path' | 'read' | 'digest' } |
+  { kind: 'measured'; executableSha256: string }> {
+  if (typeof executablePath !== 'string' || executablePath.length === 0 ||
+      executablePath.length > 8192 || executablePath.includes('\0') ||
+      !isAbsolute(executablePath) || normalize(executablePath) !== executablePath ||
+      executablePath.endsWith(sep) || executablePath === parse(executablePath).root)
+    return { kind: 'hold', reason: 'path' };
+  if (typeof expectedSha256 !== 'string' || !sha256.test(expectedSha256))
+    return { kind: 'hold', reason: 'digest' };
+  try {
+    if (await realpath(executablePath) !== executablePath)
+      return { kind: 'hold', reason: 'path' };
+    const handle = await open(executablePath, 'r');
+    try {
+      const before = await handle.stat({ bigint: true });
+      if (!before.isFile()) return { kind: 'hold', reason: 'path' };
+      const hash = createHash('sha256');
+      for await (const chunk of handle.createReadStream({ autoClose: false }))
+        hash.update(chunk);
+      const after = await handle.stat({ bigint: true });
+      const byPath = await stat(executablePath, { bigint: true });
+      if (before.dev !== after.dev || before.ino !== after.ino ||
+          before.size !== after.size || before.mtimeNs !== after.mtimeNs ||
+          before.ctimeNs !== after.ctimeNs ||
+          before.dev !== byPath.dev || before.ino !== byPath.ino ||
+          await realpath(executablePath) !== executablePath)
+        return { kind: 'hold', reason: 'path' };
+      const observed = hash.digest();
+      if (!timingSafeEqual(Buffer.from(expectedSha256, 'hex'), observed))
+        return { kind: 'hold', reason: 'digest' };
+      return { kind: 'measured', executableSha256: observed.toString('hex') };
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    // A missing, symlinked, replaced or unreadable executable never authorizes
+    // fallback to PATH, a V1 CLI, or a second binary.
+    return { kind: 'hold', reason: 'read' };
+  }
 }
