@@ -242,6 +242,10 @@ test('V2 delivery release and OS identity cannot be borrowed from another tuple'
     { arch: 'x64' },
     { runtimeVersion: '0.0.999' },
     { runtimeVersion: null },
+    { schemaVersion: 2 },
+    { schemaVersion: '1' },
+    { bridgeProtocol: 99 },
+    { bridgeProtocol: '1' },
   ]) {
     const corrupted = {
       ...lock,
@@ -252,6 +256,14 @@ test('V2 delivery release and OS identity cannot be borrowed from another tuple'
     } as unknown as OpenCodeV2RuntimeLock;
     assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
       { kind: 'hold', reason: 'delivery' }, JSON.stringify(changed));
+  }
+  for (const field of ['schemaVersion', 'bridgeProtocol'] as const) {
+    const broken: OpenCodeV2RuntimeLock = structuredClone(lock);
+    const descriptor = broken.opencodeV2Delivery?.['darwin-arm64'];
+    assert.ok(descriptor);
+    delete descriptor[field];
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, broken),
+      { kind: 'hold', reason: 'delivery' }, field);
   }
   for (const version of [undefined, '', '0.0.999']) {
     const corrupted: OpenCodeV2RuntimeLock = { ...lock };
