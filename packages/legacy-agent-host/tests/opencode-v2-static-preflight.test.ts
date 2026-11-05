@@ -216,7 +216,10 @@ test('V2 delivery release and OS identity cannot be borrowed from another tuple'
       { kind: 'hold', reason: 'delivery' }, JSON.stringify(changed));
   }
   for (const version of [undefined, '', '0.0.999']) {
-    assert.deepEqual(preflightOpenCodeV2Selection(selected, { ...lock, version }),
+    const corrupted: OpenCodeV2RuntimeLock = { ...lock };
+    if (version === undefined) delete corrupted.version;
+    else corrupted.version = version;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
       { kind: 'hold', reason: 'delivery' }, String(version));
   }
 });
