@@ -1,6 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { open, realpath, stat } from 'node:fs/promises';
-import { isAbsolute, normalize, parse, sep } from 'node:path';
 import { posix, win32 } from 'node:path';
 
 /**
@@ -157,10 +156,11 @@ export async function measureOpenCodeV2Executable(
   expectedSha256: string
 ): Promise<{ kind: 'hold'; reason: 'path' | 'read' | 'digest' } |
   { kind: 'measured'; executableSha256: string }> {
-  if (typeof executablePath !== 'string' || executablePath.length === 0 ||
-      executablePath.length > 8192 || executablePath.includes('\0') ||
-      !isAbsolute(executablePath) || normalize(executablePath) !== executablePath ||
-      executablePath.endsWith(sep) || executablePath === parse(executablePath).root)
+  const currentTuple = `${process.platform}-${process.arch}`;
+  // Reuse the existing OS-specific canonical guard: a Windows UNC, device
+  // alias or ADS is not an acceptable executable location even with a hash.
+  if (!platforms.has(currentTuple) ||
+      !isCanonicalOpenCodeV2Directory(currentTuple, executablePath))
     return { kind: 'hold', reason: 'path' };
   if (typeof expectedSha256 !== 'string' || !sha256.test(expectedSha256))
     return { kind: 'hold', reason: 'digest' };
