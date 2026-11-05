@@ -82,11 +82,17 @@ export function preflightOpenCodeV2Selection(
     return { kind: 'hold', reason: 'platform' };
   if (!pinnedDriverVersions.has(selection.version))
     return { kind: 'hold', reason: 'driver-version' };
-  if (!lock.opencodeV2?.qualified?.[selection.platform]?.includes(selection.version))
+  // Runtime manifests are JSON, not trustworthy TypeScript objects. String.includes
+  // would otherwise accept a forged "2.0.21" substring as a qualified version.
+  const qualified = lock.opencodeV2?.qualified?.[selection.platform];
+  if (!Array.isArray(qualified) || !qualified.every((value) => typeof value === 'string') ||
+      !qualified.includes(selection.version))
     return { kind: 'hold', reason: 'runtime-version' };
   const delivery = lock.opencodeV2Delivery?.[selection.platform];
-  if (!delivery?.engineVersions?.includes(selection.version) ||
-      !commit.test(delivery.sourceCommit ?? '') || !sha256.test(delivery.archive?.sha256 ?? ''))
+  const delivered = delivery?.engineVersions;
+  if (!Array.isArray(delivered) || !delivered.every((value) => typeof value === 'string') ||
+      !delivered.includes(selection.version) ||
+      !commit.test(delivery?.sourceCommit ?? '') || !sha256.test(delivery?.archive?.sha256 ?? ''))
     return { kind: 'hold', reason: 'delivery' };
   if (selection.nativeReportedVersion !== selection.version)
     return { kind: 'hold', reason: 'native-version' };
@@ -98,7 +104,8 @@ export function preflightOpenCodeV2Selection(
   const port = endpoint.exec(selection.endpoint)?.[1];
   if (!port || Number(port) > 65535 || !isCanonicalOpenCodeV2Directory(selection.platform, selection.directory) ||
       !nativeSession.test(selection.nativeSessionId) ||
-      !selection.sessionBinding?.trim() || !selection.accountBinding?.trim())
+      typeof selection.sessionBinding !== 'string' || !selection.sessionBinding.trim() ||
+      typeof selection.accountBinding !== 'string' || !selection.accountBinding.trim())
     return { kind: 'hold', reason: 'binding' };
   return {
     kind: 'candidate', platform: selection.platform, version: selection.version,
