@@ -24,7 +24,15 @@ The [landing workflow](../.github/workflows/landing.yml) builds and deploys the 
 - Published directory: `landing/.output/public`.
 - Build URLs: `NUXT_APP_BASE_URL=/agent-teams-ai/` and `NUXT_PUBLIC_SITE_URL=https://777genius.github.io/agent-teams-ai`.
 
-The workflow validates generated docs and canonical URLs before uploading the Pages artifact. It does **not** verify where the separate `agentteams.live` or `docs.agentteams.live` domains are hosted. Check their actual DNS/hosting settings before documenting them as GitHub Pages custom domains or changing their canonical URLs.
+The workflow validates generated docs and canonical URLs before uploading the Pages artifact.
+
+## Hetzner production domains
+
+The public **production** landing at `https://agentteams.live` and separate docs at `https://docs.agentteams.live` run on Hetzner (`prod-hel1-01`, Caddy), not on GitHub Pages. This was recorded in the 2026-09-23 cutover receipt in `777genius/platform-infra`.
+
+The [production static build workflow](../.github/workflows/landing-hetzner-release.yml) generates two separate root-path sites with the correct canonical URLs and an exact Git SHA marker. It **only prepares immutable artifacts**; it does not change the live Hetzner server. Publishing requires the reviewed operator command and authenticated SSH described in the private `platform-infra/docs/runbooks/agent-teams-static-deploy.md` runbook.
+
+Do **not** deploy the GitHub Pages `/agent-teams-ai/` build to either production domain.
 
 ## Notes
 
