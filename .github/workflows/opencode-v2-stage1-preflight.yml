@@ -16,6 +16,7 @@ on:
       - packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts
       - packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
       - packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs
+      - packages/legacy-agent-host/tests/opencode-v2-native-receipt-verify.mjs
       - packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts
       - packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
       - packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
@@ -120,24 +121,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s opencode-v2-host-native-instructions.json
-          node --input-type=module <<'NODE'
-          import { readFileSync } from 'node:fs';
-          let verified = false;
-          try {
-            const r = JSON.parse(readFileSync('opencode-v2-host-native-instructions.json', 'utf8'));
-            verified = r.kind === 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS' &&
-              r.version === '2.0.21' && r.cleanup === true &&
-              r.qualified === false && r.productQualified === false &&
-              r.packagedElectronQualified === false && !r.error &&
-              Array.isArray(r.steps) && r.steps.length === 15 &&
-              r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
-              r.restart?.readOnly === true && typeof r.binarySha256 === 'string';
-          } catch { /* Never log raw untrusted TEST receipt fields. */ }
-          if (!verified) {
-            process.stderr.write('native_host_receipt_missing_or_incomplete\\n');
-            process.exitCode = 1;
-          }
-          NODE
+          node packages/legacy-agent-host/tests/opencode-v2-native-receipt-verify.mjs opencode-v2-host-native-instructions.json
       - name: Preserve exact native TEST proof or HOLD receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
