@@ -1,3 +1,4 @@
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -667,6 +668,33 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
   return mismatches;
 }
 
+/**
+ * electron-builder signs the outer .app but embedded command-line Git helpers
+ * live in Contents/Resources. Sign these Mach-O files before the outer app.
+ * The existing signing qualification scans EVERY Mach-O and verifies Team ID.
+ */
+async function signManagedGitBinaries(context) {
+  if (context.electronPlatformName !== 'darwin') return;
+  const identity = context.packager.platformSpecificBuildOptions?.identity;
+  if (!identity || identity === '-') return; // Unsigned packaged PR smoke.
+  const root = path.join(context.appOutDir, 'Agent Teams AI.app', 'Contents', 'Resources', 'git');
+  if (!fs.existsSync(root)) throw new Error('Bundled Git is missing before macOS signing');
+  const files = await walkFiles(root);
+  let count = 0;
+  for (const file of files) {
+    const metadata = await detectBinaryMetadata(file);
+    if (metadata?.format !== 'mach-o') continue;
+    const result = spawnSync('codesign', [
+      '--force', '--options', 'runtime', '--timestamp', '--sign', identity, file,
+    ], { encoding: 'utf8', timeout: 120_000 });
+    if (result.error || result.status !== 0) {
+      throw new Error(`Failed to sign bundled Git ${file}: ${result.stderr || result.error?.message}`);
+    }
+    count += 1;
+  }
+  console.log(`[afterPack] signed ${count} embedded Git Mach-O binaries`);
+}
+
 async function afterPack(context) {
   const targetPlatform = context.electronPlatformName;
   const targetArch = getArchLabel(context.arch);
@@ -687,6 +715,8 @@ async function afterPack(context) {
       `Found incompatible native binaries in ${targetPlatform}-${targetArch} bundle after pruning.\n${details}`
     );
   }
+
+  await signManagedGitBinaries(context);
 
   if (removedPaths.length > 0) {
     console.log(
