@@ -62,11 +62,16 @@ function context(profile = v2Profile(), open = request()): MemberProviderContext
   } as unknown as MemberProviderContext;
 }
 
-function owner(probeOk: boolean) {
-  const calls = { probe: 0, password: 0, stop: 0, stopped: 0 };
+function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
+  const calls = { probe: 0, permissions: 0, password: 0, stop: 0, stopped: 0 };
   const captured: OpenCodeV2OwnedSession = {
+    requiredExternalDirectory: 'deny',
     readPassword() { calls.password++; return 'TEST-only-password'; },
     async probe() { calls.probe++; return probeOk; },
+    async readNativeEffectivePermissions() {
+      calls.permissions++;
+      return [{ action: 'external_directory', resource: '*', effect: effective }];
+    },
     async stopOwned() { calls.stop++; return true; },
     async confirmStopped() { calls.stopped++; return true; },
   };
@@ -107,7 +112,7 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
     assert.throws(() => createOpenCodeV2MemberProvider(
       context(bad as typeof fixture), captured), /separate native profile/);
   }
-  assert.deepEqual(calls, { probe: 0, password: 0, stop: 0, stopped: 0 });
+  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 0, stopped: 0 });
 });
 
 test('V2 private SPI refuses mismatched request before native probe and credentials', async () => {
@@ -120,7 +125,7 @@ test('V2 private SPI refuses mismatched request before native probe and credenti
   assert.equal(calls.probe, 0);
   assert.equal(calls.password, 0);
   assert.equal(await provider.cleanup(), true);
-  assert.deepEqual(calls, { probe: 0, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 1, stopped: 1 });
 });
 
 test('V2 native probe failure HOLDs without submission and physically stops its owner', async () => {
@@ -131,7 +136,7 @@ test('V2 native probe failure HOLDs without submission and physically stops its 
   assert.equal(calls.probe, 1);
   assert.equal(calls.password, 0);
   assert.equal(await provider.cleanup(), true);
-  assert.deepEqual(calls, { probe: 1, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 1, permissions: 0, password: 0, stop: 1, stopped: 1 });
 });
 
 test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revokes readiness', async () => {
@@ -141,10 +146,34 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(opened.driver.sessionRef.length > 0, true);
   assert.equal(provider.isReady(), true);
   assert.equal(calls.probe, 1);
+  assert.equal(calls.permissions, 1);
   assert.equal(calls.password, 0, 'no credentials are read by a simulated readiness probe');
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
   assert.equal(provider.isReady(), false);
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1, 'same TEST owner stopped once');
   assert.equal(calls.stopped, 1);
+});
+
+test('V2 native-effective allow cannot satisfy captured deny, even after a successful native probe', async () => {
+  const { captured, calls } = owner(true, 'allow');
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(provider.isReady(), false);
+  assert.deepEqual(calls, { probe: 1, permissions: 1, password: 0, stop: 1, stopped: 1 });
+});
+
+test('V1 checkpoint identity is rejected before V2 native probe or permission readback', async () => {
+  const { captured, calls } = owner(true);
+  const restoredRequest = { ...request(), checkpointRef: 'cp1-TEST-v1' };
+  const input = context(v2Profile(), restoredRequest);
+  input.readCheckpoint = async () => ({
+    version: 1, engine: 'opencode-v1', nativeSessionId: 'ses_TESTowned', compatibility: 'a'.repeat(64),
+  });
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  await assert.rejects(() => provider.factory.open(restoredRequest), /opencode.driver.checkpoint-incompatible/);
+  assert.equal(provider.isReady(), false);
+  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 0, stopped: 0 });
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1);
 });
