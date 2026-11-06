@@ -331,8 +331,11 @@ try {
   receipt.steps.push('native_cold_restart_session_permissions_and_context_read_only');
   if(!await stopOwned())throw Error('restarted_native_process_tree_cleanup_unconfirmed');
   receipt.steps.push('same_TEST_native_owner_restart_cleanup_confirmed');
-} catch(error) {
-  receipt.error=String(error?.stack||error);
+} catch {
+  // This TEST artifact is publicly downloadable. Native/Node exceptions may
+  // contain runner paths, credentials or raw HTTP payloads; never serialize
+  // their message, cause or stack. The completed step list locates the phase.
+  receipt.error='native_host_test_failed';
   process.exitCode=1;
 } finally {
   try {
@@ -340,8 +343,9 @@ try {
       const ok=await stopOwned();
       if(!ok)throw Error('native_TEST_process_cleanup_unconfirmed');
     }
-  } catch(error) {
-    receipt.error=(receipt.error||'')+' cleanup:'+String(error);
+  } catch {
+    // Cleanup uncertainty stays visible without leaking arbitrary exception text.
+    receipt.cleanupError='native_process_cleanup_unconfirmed';
     process.exitCode=1;
   }
   try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); } catch {}
