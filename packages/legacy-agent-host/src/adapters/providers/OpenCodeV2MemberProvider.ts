@@ -141,13 +141,14 @@ export function createOpenCodeV2MemberProvider(
           return owned.readPassword();
         },
         probe: async (signal) => {
-          if (!current() || signal.aborted) return false;
-          // Stale readiness and its attestation must disappear BEFORE any
-          // asynchronous native permission/readback recheck can fail.
+          if (qualificationRevoked) return false;
+          // Even an already-aborted check, or a temporarily lost Host lease,
+          // invalidates old readiness before any early return.
           ready = false;
           initialEvidence = undefined;
           let accepted = false;
           try {
+            if (!current() || signal.aborted) return false;
             const combined = AbortSignal.any([signal, abort.signal]);
             const valid = await owned.probe(combined);
             if (!valid || combined.aborted || !current()) return false;
