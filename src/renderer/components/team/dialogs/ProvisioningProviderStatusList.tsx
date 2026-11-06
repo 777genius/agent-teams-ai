@@ -1096,8 +1096,7 @@ export function getProvisioningFailureHint(
   );
   const normalizedMessage = message?.trim() ?? '';
   if (failedOpenCodeChecks.some((check) => check.details.some(isOpenCodeProjectAccessDeniedDiagnostic)) ||
-      (!hasFailedNonOpenCodeCheck && failedOpenCodeChecks.length > 0 &&
-        isOpenCodeProjectAccessDeniedDiagnostic(normalizedMessage)))
+      (!hasFailedNonOpenCodeCheck && failedOpenCodeChecks.length > 0 && isOpenCodeProjectAccessDeniedDiagnostic(normalizedMessage)))
     return t?.('provisioning.providerStatus.failureHints.default') ?? 'Resolve the issue above, then reopen this dialog.';
   const hasOpenCodeNodeModulesSymlinkPermissionMessage =
     failedOpenCodeChecks.length > 0 &&
