@@ -36,9 +36,9 @@ import { type TeamProvisioningReevaluateMemberLaunchStatusBoundary } from './Tea
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { nowIso } from './TeamProvisioningRunProgress';
 import {
+  MissingOpenCodeRuntimeConfigIdentityError,
   isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
-  MissingOpenCodeRuntimeConfigIdentityError,
 } from './TeamProvisioningRuntimeRecipientResolution';
 import { type TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
@@ -142,7 +142,8 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
       }
 
       const isCurrentRun = () =>
-        this.runs.get(runId!) === run &&
+        runId !== null &&
+        this.runs.get(runId) === run &&
         this.runTracking.getTrackedRunId(teamName) === runId &&
         !run.cancelRequested &&
         !run.processKilled &&
