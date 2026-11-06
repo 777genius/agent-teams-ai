@@ -288,12 +288,17 @@ export function createOpenCodeV2MemberProvider(
                 try {
                   reply = await source.submit(input);
                 } catch (error) {
-                  await finishOwned();
+                  const stopped = await finishOwned();
+                  if (!stopped) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
                   throw error;
                 }
                 if (!reply.ok && (reply.code === 'dependency-unavailable' ||
-                    reply.code === 'unavailable' || reply.code === 'unknown'))
-                  await finishOwned();
+                    reply.code === 'unavailable' || reply.code === 'unknown')) {
+                  // The failed native driver handoff and its physical process
+                  // custody are separate facts. UNKNOWN cleanup is not a safe
+                  // known-not-sent result for the outer Runtime to reuse.
+                  if (!await finishOwned()) return { ok: false, code: 'unknown' };
+                }
                 return reply;
               },
               observe: () => source.observe(),

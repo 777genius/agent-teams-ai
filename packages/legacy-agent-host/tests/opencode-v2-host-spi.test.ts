@@ -457,6 +457,31 @@ test('native V2 submit preflight failure revokes Host readiness without replay o
   assert.equal(calls.stop, 1, 'no duplicate stop after uncertain native ACK');
 });
 
+test('unknown physical stop after a failed V2 submit cannot claim safe reuse', async () => {
+  const { captured, calls } = owner(true);
+  captured.readPassword = () => { calls.password++; return ''; };
+  captured.stopOwned = async () => { calls.stop++; return false; };
+  captured.confirmStopped = async () => { calls.stopped++; return false; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  const reply = await opened.driver.submit({
+    inputId: 'TEST-uncertain', operationRef: 'TEST-uncertain-op', content: 'TEST no model',
+  });
+  assert.deepEqual(reply, { ok: false, code: 'unknown' },
+    'unknown physical custody may not advertise known-not-sent recovery');
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.deepEqual(await opened.driver.submit({
+    inputId: 'TEST-retry', operationRef: 'TEST-retry-op', content: 'must not send',
+  }), { ok: false, code: 'unknown' });
+  assert.equal(calls.password, 1, 'refused preflight never replays credentials or native POST');
+  assert.equal(calls.stop, 1, 'never resignal the same owned PID after uncertain ACK');
+  assert.equal(await provider.cleanup(), false);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'unknown' });
+  assert.equal(calls.stop, 1);
+});
+
 test('unknown physical cleanup on failed V2 open does not become a retryable success', async () => {
   const { captured, calls } = owner(true);
   captured.stopOwned = async () => { calls.stop++; return false; };
