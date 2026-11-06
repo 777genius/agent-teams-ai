@@ -320,11 +320,14 @@ export function createOpenCodeV2MemberProvider(
                   if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unknown' as const };
                 }
-                // A native POST can ACK while a concurrent re-attestation
-                // fences readiness. The effect may have committed, but it
-                // cannot be reported as an authorized Host handoff or retried.
-                // Do not stop a still-owned PID merely for a pending probe.
-                if (reply.ok && !ready) return { ok: false as const, code: 'unknown' as const };
+                // An ACK during re-attestation can represent an effect that
+                // was already committed while effective policy was unproven.
+                // Quarantine this capture: UNKNOWN delivery must not silently
+                // become eligible for a later dispatch if readiness recovers.
+                if (reply.ok && !ready) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return { ok: false as const, code: 'unknown' as const };
+                }
                 if (!reply.ok && (reply.code === 'dependency-unavailable' ||
                     reply.code === 'unavailable' || reply.code === 'unknown')) {
                   // Input delivery was known-not-sent, but native process
@@ -430,10 +433,12 @@ export function createOpenCodeV2MemberProvider(
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                     return { ok: false as const, code: 'unknown' as const };
                   }
-                  // A successful native permission reply can ACK while
-                  // Host readiness is fenced by concurrent re-attestation.
-                  // Treat the potentially applied effect as UNKNOWN, no replay.
-                  if (result.ok && !ready) return { ok: false as const, code: 'unknown' as const };
+                  // A potentially applied permission during unproven
+                  // re-attestation cannot be reopened for later dispatch.
+                  if (result.ok && !ready) {
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                    return { ok: false as const, code: 'unknown' as const };
+                  }
                   if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return result;
@@ -459,10 +464,12 @@ export function createOpenCodeV2MemberProvider(
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                     return { ok: false as const, code: 'unknown' as const };
                   }
-                  // A successful native interrupt can ACK while
-                  // Host readiness is fenced by concurrent re-attestation.
-                  // Treat the potentially applied effect as UNKNOWN, no replay.
-                  if (result.ok && !ready) return { ok: false as const, code: 'unknown' as const };
+                  // An interrupt ACK during re-attestation can be applied
+                  // without a current policy proof: quarantine this capture.
+                  if (result.ok && !ready) {
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                    return { ok: false as const, code: 'unknown' as const };
+                  }
                   if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return result;
