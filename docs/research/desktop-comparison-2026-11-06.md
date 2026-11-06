@@ -32,5 +32,27 @@ The changes in the related PR target the **website on mobile browsers**, not a m
 5. Hide costly global blurred animated orbs and the full-page scanline overlay on phones, preserving layout and grid.
 6. Defer hydration of below-the-fold sections until they are near the viewport, preserving SSR markup, in-page anchors, and desktop interaction.
 
-Verification needed before merge: landing lint/build and smoke checks on narrow and wide widths, mobile hero without Mux iframe before tap, demo playback after tap, horizontal comparison scrolling and localized labels, screenshot lightbox, and browser console/network checks. Mobile network/CPU improvements are **hypotheses based on source inspection**, not measured Lighthouse results.
-The follow-up CDP harness compares the pinned base and PR via fresh Chromium contexts with consistent network/CPU throttling. A local test server supplies gzip-compressed text responses, approximating rather than exactly reproducing CDN Brotli delivery. The first draft's cache-disabled, uncompressed-Python-server numbers are historical diagnostics, not the final benchmark.
+## Mobile load: measured CDP and Lighthouse E2E
+
+On November 6, 2026, the [final Chromium CDP/Lighthouse run](https://github.com/777genius/agent-teams-ai/actions/runs/42236550959) compared pinned untouched main `7ba6e417c56f1d78300f85985ead1698d4902ae0` against PR commit `50e98a10b3e8c66870442022b94add2aad99ee1a`. Both sources were statically generated with the same Node/Nuxt configuration and served via equivalent localhost gzip servers. The CDP experiment used three *cold browser contexts* per revision, 390x844 mobile viewport, DPR 3, 4x CPU slowdown, 150ms RTT, 1.6Mbit/s down / 750Kbit/s up. Values are medians unless labeled Lighthouse.
+
+| Metric | Main baseline | PR | Interpretation |
+| --- | ---: | ---: | --- |
+| CDP LCP | 4,080 ms | 1,140 ms | -72.1%; LCP candidate changed from remote Mux video background to prioritized robot avatar |
+| CDP FCP | 1,152 ms | 1,024 ms | -11.1% |
+| CDP transfer size | 2,367 KiB | 1,205 KiB | -49.1% |
+| CDP requests | 67 | 63 | Four fewer |
+| CDP JS heap | 10.1 MiB | 9.8 MiB | Small reduction |
+| CDP CLS | 0.00176 | 0.00176 | No change |
+| Lighthouse mobile score | 61/100 | 65/100 | +4 points (single Lighthouse run per revision) |
+| Lighthouse LCP | 8,452 ms | 7,755 ms | -697 ms under Lighthouse's independent mobile throttling |
+| Lighthouse FCP | 4,562 ms | 4,108 ms | -454 ms |
+| Lighthouse TBT | 198 ms | 74 ms | -124 ms |
+| Lighthouse CLS | 0.00175 | 0.00175 | No change |
+
+**Root cause confirmed in CDP Network:** The original `organization-map.png` (~1,086 KiB) was used as a *carousel preview*, causing an unnecessary full-resolution download on initial mobile entry. The preview is now the actual `docs/screenshots/previews/organization-map.webp` (23,268 bytes), while the full-resolution PNG remains available on intentional lightbox use. The final CDP assert confirms that the full-size PNG is **not fetched during entry**. The baseline also requested a 1600px Mux background poster despite mobile video being disabled; mobile now renders a static gradient instead. Hero LCP image is preloaded. Content below the fold hydrates near visibility.
+
+**Behavioral E2E:** On the PR build, mobile poster is displayed without an initial Mux iframe, tapping it mounts the player; horizontal comparison navigation, screenshot lightbox open/close, Russian platform translation and 1440px desktop smoke all passed. No page exceptions, missing assets or unintentional desktop horizontal document scroll were observed. The [workflow run and its archived artifacts](https://github.com/777genius/agent-teams-ai/actions/runs/42236550959) contain raw JSON CDP traces, individual mobile samples, Lighthouse reports, resource breakdown, network logs and screenshots.
+
+**Limitations:** These are headless Chromium lab measurements on an isolated runner, **not** hardware iOS/Android Safari/WebView tests, production Render/CDN timings, or real-user field INP. Lighthouse and CDP LCP use different throttling/methodology and must not be interchanged. The local server uses gzip, not the production CDN's possible Brotli. The Lighthouse score is still 65: render-blocking Google Fonts and unused JS/CSS remain possible follow-up optimizations, requiring separate testing. The first draft's cache-disabled, uncompressed-server measurements were invalid as representative network baselines and are not used here.
+
