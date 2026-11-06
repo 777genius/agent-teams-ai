@@ -346,10 +346,13 @@ export function createOpenCodeV2MemberProvider(
                     ]);
                     // Authority must be checked AFTER awaiting next(): EventFeed
                     // may already have queued a native event before revocation.
-                    if (outcome.kind === 'revoked' || !ready || !current()) {
+                    if (outcome.kind === 'revoked' || !current()) {
                       authorityLost = true;
                       break;
                     }
+                    // A concurrent native recheck can temporarily clear ready.
+                    // Fence the event without treating a still-owned PID as lost.
+                    if (!ready) break;
                     if (outcome.value.done) { exhausted = true; break; }
                     yield outcome.value.value;
                   }
@@ -359,9 +362,20 @@ export function createOpenCodeV2MemberProvider(
                   throw error;
                 } finally {
                   abort.signal.removeEventListener('abort', onAbort);
-                  // A voluntary consumer return is not a native failure.
-                  if ((authorityLost || exhausted) && !await finishOwned())
-                    throw new Error('opencode.v2.owner-cleanup-unknown');
+                  try {
+                    // The pinned EventFeed does not accept cancellation. On
+                    // revocation its pending next() must be woken by closing
+                    // the captured private session, before returning its inner
+                    // iterator. close() uses the existing single-flight owner
+                    // stop/confirmation and never replays a native mutation.
+                    if (authorityLost) await source.close();
+                    // Consumer return occurs between yields, so it needs no
+                    // native process stop. Always release the inner iterator.
+                    await iterator.return?.();
+                  } finally {
+                    if ((authorityLost || exhausted) && !await finishOwned())
+                      throw new Error('opencode.v2.owner-cleanup-unknown');
+                  }
                 }
               },
               respondToInteraction: async (reference, reply) => {
