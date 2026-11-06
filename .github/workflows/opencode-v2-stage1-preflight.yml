@@ -13,6 +13,7 @@ on:
       - packages/legacy-agent-host/src/composition/runtimeProfile.ts
       - packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts
       - packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts
+      - packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
       - packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts
       - packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
       - packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
@@ -64,3 +65,51 @@ jobs:
         env:
           OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
         run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts
+
+  native-host-instructions:
+    name: Native V2.0.21 Host SPI instructions (Ubuntu TEST only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      npm_config_audit: 'false'
+      npm_config_fund: 'false'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install pinned Host workspace dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build Host V2 SPI with real pinned private driver
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Check native TEST proof syntax
+        run: node --check packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      - name: Install exact official V2 CLI in isolated runner prefix, without scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/opencode-v2-host-cli"
+          npm install --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --no-save \
+            --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/cli@2.0.21
+          npm ls --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --depth=0 @opencode/cli
+      - name: Exercise real pinned native server against existing Host Session SPI
+        env:
+          OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
+          OPENCODE_V2_HOST_NATIVE_RECEIPT: ${{ github.workspace }}/opencode-v2-host-native-instructions.json
+        run: node packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      - name: Preserve exact native TEST proof or HOLD receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opencode-v2-stage1-host-native-instructions-ubuntu
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            opencode-v2-host-native-instructions.json
+            ${{ runner.temp }}/opencode-v2-host-cli/package-lock.json
