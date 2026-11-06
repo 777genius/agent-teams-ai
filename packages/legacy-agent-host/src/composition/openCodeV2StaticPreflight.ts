@@ -42,7 +42,7 @@ export interface OpenCodeV2RuntimeLock {
 
 export type OpenCodeV2StaticPreflight =
   | { kind: 'hold'; reason: 'generation' | 'platform' | 'driver-version' | 'runtime-version' |
-      'delivery' | 'native-version' | 'binary-digest' | 'binding' }
+      'delivery' | 'native-version' | 'binary-digest' | 'binding' | 'current-product' }
   | { kind: 'candidate'; platform: string; version: string; sourceCommit: string; archiveSha256: string };
 
 // Exact pinned private factory at agent-teams-ai/old-provider-implementations PR #1,
@@ -138,6 +138,32 @@ export function preflightOpenCodeV2Selection(
     kind: 'candidate', platform: selection.platform, version: selection.version,
     sourceCommit: delivery.sourceCommit!, archiveSha256: delivery.archive!.sha256!,
   };
+}
+
+
+/**
+ * Read-only admission against BOTH the Stage1 capture and the currently
+ * selected product distribution. A Stage1 lock can still qualify 2.0.0 while
+ * the current Desktop product ships only 2.1.4. A synthetic candidate on the
+ * historical lock must never be treated as a product/native launch witness.
+ *
+ * Even a candidate here is NOT V2 process custody, effective permissions,
+ * native Session SPI, packaged E2E or authorization to submit work.
+ */
+export function preflightOpenCodeV2CurrentProduct(
+  selection: Readonly<OpenCodeV2Selection>,
+  stageLock: Readonly<OpenCodeV2RuntimeLock>,
+  productLock: Readonly<OpenCodeV2RuntimeLock>
+): OpenCodeV2StaticPreflight {
+  const stage = preflightOpenCodeV2Selection(selection, stageLock);
+  if (stage.kind === 'hold') return stage;
+  const product = preflightOpenCodeV2Selection(selection, productLock);
+  if (product.kind === 'hold' ||
+      stageLock.version !== productLock.version ||
+      stage.sourceCommit !== product.sourceCommit ||
+      stage.archiveSha256 !== product.archiveSha256)
+    return { kind: 'hold', reason: 'current-product' };
+  return stage;
 }
 
 
