@@ -44,6 +44,8 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'launchTeam',
   // Opening a team repairs crash-stale task intervals only for teams this profile manages.
   'repairStaleTaskActivityIntervalsBeforeSnapshot',
+  // Human message send may explicitly repair a verified OpenCode recipient identity.
+  'resolveRuntimeRecipientProviderIdForUserSend',
   'restartLeadRuntime',
   // Both watchdog passes are admitted only for teams this profile manages.
   'scanOpenCodePromptDeliveryWatchdog',
@@ -117,6 +119,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'repairStaleTaskActivityIntervalsBeforeSnapshot',
   'resolveCrossTeamReplyMetadata',
   'resolveRuntimeRecipientProviderId',
+  'resolveRuntimeRecipientProviderIdForUserSend',
   'respondToToolApproval',
   'restartLeadRuntime',
   'restartMember',

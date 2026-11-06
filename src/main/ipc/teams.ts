@@ -2834,7 +2834,10 @@ async function handleSendMessage(
         : leadName !== null && memberName === leadName;
     const actionMode = payload.actionMode ?? 'do';
 
-    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
+    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderIdForUserSend(
+      tn,
+      memberName
+    );
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
     if (validatedAttachments?.length) {
       const nativeAttachments = selectNativeMessageAttachments(
