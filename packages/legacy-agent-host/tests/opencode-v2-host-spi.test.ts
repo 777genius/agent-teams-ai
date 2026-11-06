@@ -227,6 +227,8 @@ test('native permission drift revokes an already ready V2 SPI member, with no re
   assert.equal(next.ok, false, 'once revoked, restoring policy cannot revive the same capture');
   assert.equal(calls.permissions, 2, 'revoked owner must not perform more native reads');
   assert.equal(calls.context, 1, 'no mutation replay during re-attestation');
+  assert.equal(calls.stop, 1, 'permission drift must stop the original TEST owner immediately');
+  assert.equal(calls.stopped, 1, 'physical cleanup confirmed before exposing HOLD');
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1, 'stop only the original TEST owner once');
@@ -248,6 +250,7 @@ test('native probe loss after initial Host readiness revokes the capture permane
   assert.equal((await opened.driver.checkReadiness()).ok, false);
   assert.equal(calls.probe, 2, 'failed native identity must not be reacquired');
   assert.equal(calls.context, 1);
+  assert.equal(calls.stop, 1, 'lost native identity must stop the owned engine');
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
