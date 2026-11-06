@@ -112,6 +112,32 @@ jobs:
           OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
           OPENCODE_V2_HOST_NATIVE_RECEIPT: ${{ github.workspace }}/opencode-v2-host-native-instructions.json
         run: node packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      # Passing the native runner alone is not evidence: a missing receipt must
+      # fail this job even when the pinned npm lockfile still uploads successfully.
+      # Keep the always() upload below for sanitized failure/HOLD artifacts.
+      - name: Require complete native TEST receipt before success
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s opencode-v2-host-native-instructions.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          let verified = false;
+          try {
+            const r = JSON.parse(readFileSync('opencode-v2-host-native-instructions.json', 'utf8'));
+            verified = r.kind === 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS' &&
+              r.version === '2.0.21' && r.cleanup === true &&
+              r.qualified === false && r.productQualified === false &&
+              r.packagedElectronQualified === false && !r.error &&
+              Array.isArray(r.steps) && r.steps.length === 15 &&
+              r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
+              r.restart?.readOnly === true && typeof r.binarySha256 === 'string';
+          } catch { /* Never log raw untrusted TEST receipt fields. */ }
+          if (!verified) {
+            process.stderr.write('native_host_receipt_missing_or_incomplete\\n');
+            process.exitCode = 1;
+          }
+          NODE
       - name: Preserve exact native TEST proof or HOLD receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
