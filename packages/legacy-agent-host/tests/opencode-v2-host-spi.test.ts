@@ -708,6 +708,40 @@ test('Host seal wakes a suspended native V2 observer without delivering a late e
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
   });
 
+test('idle observer revokes an expired native V2 lease without seal or native events',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    let leaseValid = true;
+    const ctx = { ...context(), canAllocate: () => leaseValid };
+    const provider = createOpenCodeV2MemberProvider(ctx, captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    const pending = observer.next();
+    // Start one genuine idle next() and then remove Host authority WITHOUT
+    // calling isReady(), seal(), or a mutating SPI method. The observer must
+    // notice lease expiration itself rather than wait indefinitely for events.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    leaseValid = false;
+    const expired = Promise.withResolvers<never>();
+    const deadline = setTimeout(() => expired.reject(new Error('idle V2 lease watcher did not wake')),
+      1750);
+    try {
+      const result = await Promise.race([pending, expired.promise]);
+      assert.equal(result.done, true, 'expired Host cannot leak an idle native event');
+    } finally {
+      clearTimeout(deadline);
+      provider.seal();
+    }
+    leaseValid = true;
+    assert.equal(provider.isReady(), false, 'lease restoration cannot revive a retired capture');
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1, 'only the captured TEST-owned process was stopped once');
+    assert.equal(calls.context, 1, 'no initial-context mutation replay');
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  });
+
 test('pending native V2 re-attestation fences concurrent controls without retiring owner',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
