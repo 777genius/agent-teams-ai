@@ -805,11 +805,13 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
           res.end(JSON.stringify(value));
         };
         if (req.method === 'GET' && url.pathname === sessionPath) {
-          json({ data: {
+          // Pinned V2 queue preflight decodes the raw session GET body;
+          // the { data: ... } envelope belongs to prompt POST responses.
+          json({
             id: profile.nativeSessionId, location: { directory: profile.cwd },
             agent: 'TEST-agent', model: { providerID: 'TEST-provider', id: 'TEST-model' },
             time: { created: 1 },
-          } });
+          });
           return;
         }
         if (req.method === 'GET' &&
