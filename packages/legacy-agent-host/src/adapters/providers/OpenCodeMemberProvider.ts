@@ -50,7 +50,10 @@ export function createOpenCodeMemberProvider(
     fetchImpl?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   } = {}
 ): MemberProvider {
-  if (context.profile.provider !== 'opencode') throw new Error('Invalid OpenCode profile');
+  if (context.profile.provider !== 'opencode' || context.profile.nativeGeneration === 'v2' ||
+      (context.profile.protocolRevision !== '1.18.35' && context.profile.protocolRevision !== '1.19.4'))
+    throw new Error('V2 cannot run through the OpenCode V1 provider');
+  const v1ProtocolRevision: '1.18.35' | '1.19.4' = context.profile.protocolRevision;
   const evidence = context.opencodeEvidence;
   const profile = structuredClone(context.profile);
   const extraArgs = captureOpenCodeExtraArgs(profile.extraArgs);
@@ -389,7 +392,7 @@ export function createOpenCodeMemberProvider(
       }
       return {
         endpoint: profile.endpoint,
-        version: profile.protocolRevision,
+        version: v1ProtocolRevision,
         workspacePath: profile.cwd,
         nativeSessionId,
         trustedBinding: bindingKey,
