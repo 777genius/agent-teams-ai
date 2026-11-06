@@ -109,7 +109,9 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
 test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
   const base = runtimeProfileSchema.parse({ members: [v2Profile()] }).members[0]!;
   for (const permissions of ['manual', 'bypass'] as const) {
-    assert.throws(() => applyLaunchConfiguration(base, { permissions }), /launch-option-unsupported/);
+    assert.throws(() => applyLaunchConfiguration(base, { permissions }), (error: unknown) =>
+      error instanceof Error && 'code' in error && error.code === 'invalid' &&
+      'reason' in error && error.reason === 'launch-option-unsupported');
   }
   const selected = applyLaunchConfiguration(base, { model: 'TEST-next-model' });
   assert.equal(selected.provider, 'opencode');
