@@ -1,3 +1,7 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import * as path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -10,10 +14,10 @@ import {
   collectWorkspaceTrustWorkspaces,
   planWorkspaceTrustArgsOnlySafely,
   planWorkspaceTrustFullSafely,
-  resolveWorkspaceTrustGitRoot,
-  type WorkspaceTrustGitRootResolutionPorts,
   type WorkspaceTrustWorkspaceCollectionPorts,
 } from '../TeamProvisioningWorkspaceTrust';
+
+import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from '../TeamProvisioningWorkspaceTrustNodePorts';
 
 import type {
   WorkspaceTrustCoordinator,
@@ -68,15 +72,22 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     expect(result).toEqual(['claude', 'codex', 'gemini', 'opencode']);
   });
 
-  it('resolves git root through injected git and filesystem ports', async () => {
-    const ports: WorkspaceTrustGitRootResolutionPorts = {
-      resolveGitTopLevel: vi.fn(async () => 'relative-root'),
-      resolveFilesystemGitRoot: vi.fn(async () => '/repo'),
-      isAbsolutePath: vi.fn((value) => value.startsWith('/')),
-    };
+  it('resolves repository and worktree roots without spawning Git', async () => {
+    const repo = await mkdtemp(path.join(tmpdir(), 'agent-teams-trust-'));
+    try {
+      const nested = path.join(repo, 'packages', 'app');
+      const worktree = path.join(repo, 'teammate');
+      await mkdir(path.join(repo, '.git'));
+      await mkdir(nested, { recursive: true });
+      await mkdir(worktree);
+      await writeFile(path.join(worktree, '.git'), 'gitdir: ../.git/worktrees/teammate\\n');
+      const ports = createNodeWorkspaceTrustWorkspaceCollectionPorts();
 
-    await expect(resolveWorkspaceTrustGitRoot('/repo/packages/app', ports)).resolves.toBe('/repo');
-    expect(ports.resolveFilesystemGitRoot).toHaveBeenCalledWith('/repo/packages/app');
+      await expect(ports.resolveGitRoot(nested)).resolves.toBe(repo);
+      await expect(ports.resolveGitRoot(worktree)).resolves.toBe(worktree);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
   });
 
   it('collects workspace trust candidates with injected path and git ports', async () => {
