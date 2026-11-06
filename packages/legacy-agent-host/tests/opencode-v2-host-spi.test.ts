@@ -683,6 +683,11 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
       await resume.promise;
       return true;
     };
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    const pendingEvent = observer.next();
+    let observerSettled = false;
+    void pendingEvent.then(() => { observerSettled = true; }, () => { observerSettled = true; });
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const recheck = opened.driver.checkReadiness();
     await entered.promise;
     assert.equal(provider.isReady(), false, 'pending native recheck cannot reuse stale readiness');
@@ -694,7 +699,9 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
       { kind: 'permission', decision: 'allow' }), { ok: false, code: 'unavailable' });
     assert.deepEqual(await opened.driver.interrupt('TEST-foreign-operation'),
       { ok: false, code: 'unavailable' });
-    assert.equal((await opened.driver.observe()[Symbol.asyncIterator]().next()).done, true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(observerSettled, false,
+      'an already-running native observer stays pending through re-attestation');
     assert.equal(calls.stop, 0, 'a pending probe must not stop its still-owned native PID');
     assert.equal(calls.password, 0, 'fenced controls never read native credentials');
 
@@ -703,6 +710,10 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(provider.isReady(), true, 'successful re-attestation restores the same captured owner');
     assert.equal(calls.context, 1, 'no initial-instruction replay');
     assert.equal(calls.stop, 0);
+    assert.equal(observerSettled, false, 'the same observer remains live after re-attestation');
+    provider.seal();
+    assert.equal((await pendingEvent).done, true, 'revocation wakes the retained observer');
+    assert.equal(await provider.cleanup(), true);
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
-    assert.equal(calls.stop, 1, 'only close stops the original native owner');
+    assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
   });

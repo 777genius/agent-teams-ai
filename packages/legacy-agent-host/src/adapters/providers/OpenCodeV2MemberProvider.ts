@@ -97,6 +97,9 @@ export function createOpenCodeV2MemberProvider(
   let pinnedProcessIdentity: Readonly<{ pid: number; startIdentity: string }> | undefined;
   let stopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
+  // Re-attestation may temporarily fence readiness without revoking Host authority.
+  // Existing observers must wait for a definitive result, not drop native events.
+  const pendingReattestations = new Set<Promise<void>>();
   let physicallyStopped = false;
   let initialEvidence: NativeContextEvidence | undefined;
   // Installation may have taken effect even if its ACK was lost. Keep one
@@ -169,6 +172,8 @@ export function createOpenCodeV2MemberProvider(
         },
         probe: async (signal) => {
           if (qualificationRevoked) return false;
+          const reattestation = Promise.withResolvers<void>();
+          pendingReattestations.add(reattestation.promise);
           // Even an already-aborted check, or a temporarily lost Host lease,
           // invalidates old readiness before any early return.
           ready = false;
@@ -255,6 +260,9 @@ export function createOpenCodeV2MemberProvider(
               // Only its captured owner may perform this physical stop.
               if (wasEverReady) await finishOwned();
             }
+          } finally {
+            pendingReattestations.delete(reattestation.promise);
+            reattestation.resolve();
           }
         },
         // D.close() must report physical cleanup. Once shutdown begins,
@@ -329,13 +337,21 @@ export function createOpenCodeV2MemberProvider(
                 if (abort.signal.aborted) onAbort();
                 let exhausted = false;
                 let authorityLost = false;
+                const waitForAttestation = async (): Promise<boolean> => {
+                  while (current()) {
+                    if (ready && pendingReattestations.size === 0) return true;
+                    const checks = [...pendingReattestations];
+                    if (checks.length === 0) return false;
+                    // A temporary recheck fences events but cannot consume or
+                    // terminate the single private EventFeed observer.
+                    await Promise.race([Promise.all(checks), revoked]);
+                  }
+                  return false;
+                };
                 try {
                   for (;;) {
-                    const authorized = current();
-                    if (!ready || !authorized) {
-                      // A concurrent readiness probe is not Host revocation.
-                      // No source iterator.next() has started on this path.
-                      authorityLost = !authorized;
+                    if (!await waitForAttestation()) {
+                      authorityLost = true;
                       break;
                     }
                     // Do not strand a Host observer waiting on EventFeed.next()
@@ -350,10 +366,14 @@ export function createOpenCodeV2MemberProvider(
                       authorityLost = true;
                       break;
                     }
-                    // A concurrent native recheck can temporarily clear ready.
-                    // Fence the event without treating a still-owned PID as lost.
-                    if (!ready) break;
                     if (outcome.value.done) { exhausted = true; break; }
+                    // A native event may arrive while a probe is pending.
+                    // Retain it until the same owned PID, policy, and context
+                    // have been successfully re-attested; never leak on loss.
+                    if (!await waitForAttestation()) {
+                      authorityLost = true;
+                      break;
+                    }
                     yield outcome.value.value;
                   }
                 } catch (error) {
