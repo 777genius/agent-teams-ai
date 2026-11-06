@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isOpenCodeProjectAccessDeniedDiagnostic,
   isOpenCodeWindowsAccessDeniedDiagnostic,
   isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic,
   normalizeOpenCodeWindowsAccessDeniedDiagnostic,
@@ -20,6 +21,16 @@ describe('OpenCode Windows access-denied diagnostics', () => {
     expect(normalizeOpenCodeWindowsAccessDeniedDiagnostic(message)).toBe(
       OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE
     );
+  });
+
+  it.each([
+    'Project folder access denied (EPERM). Grant Agent Teams access to this folder.',
+    'Cannot inspect the project OpenCode config: access denied (EACCES).',
+    'Cannot read the global OpenCode config: access denied (EPERM).',
+  ])('preserves portable permission diagnostics instead of fabricating a Windows cause: %s', (message) => {
+    expect(isOpenCodeProjectAccessDeniedDiagnostic(message)).toBe(true);
+    expect(isOpenCodeWindowsAccessDeniedDiagnostic(message)).toBe(false);
+    expect(normalizeOpenCodeWindowsAccessDeniedDiagnostic(message)).toBeNull();
   });
 
   it('does not match unrelated OpenCode diagnostics', () => {

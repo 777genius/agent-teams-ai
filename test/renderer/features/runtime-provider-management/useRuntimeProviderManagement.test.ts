@@ -2960,7 +2960,7 @@ describe('useRuntimeProviderManagement', () => {
     });
   });
 
-  it('keeps connect action busy until the post-connect refresh finishes', async () => {
+  it('refreshes the view and catalog after a confirmed connection', async () => {
     const disconnectedProvider: RuntimeProviderConnectionDto = {
       ...createOpenAiLocalProvider(),
       state: 'not-connected',
@@ -3009,27 +3009,8 @@ describe('useRuntimeProviderManagement', () => {
         diagnostics: [],
       },
     };
-    let resolveRefreshView: (() => void) | null = null;
-    let resolveRefreshDirectory: (() => void) | null = null;
-    const loadView = vi
-      .fn()
-      .mockResolvedValueOnce(initialViewResponse)
-      .mockImplementation(
-        () =>
-          new Promise<typeof refreshedViewResponse>((resolve) => {
-            resolveRefreshView = () => resolve(refreshedViewResponse);
-          })
-      );
-    const loadProviderDirectory = vi
-      .fn()
-      .mockResolvedValueOnce(directoryResponse)
-      .mockImplementation((input: { summary?: boolean }) =>
-        input.summary
-          ? Promise.resolve(directoryResponse)
-          : new Promise<typeof directoryResponse>((resolve) => {
-              resolveRefreshDirectory = () => resolve(directoryResponse);
-            })
-      );
+    const loadView = vi.fn().mockResolvedValueOnce(initialViewResponse).mockResolvedValue(refreshedViewResponse);
+    const loadProviderDirectory = vi.fn().mockResolvedValue(directoryResponse);
     const loadSetupForm = vi.fn(() =>
       Promise.resolve({
         schemaVersion: 1,
@@ -3095,32 +3076,18 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => {
       actions?.startConnect('openai');
       actions?.setApiKeyValue('sk-good-value');
-      await vi.waitFor(() => {
-        expect(loadSetupForm).toHaveBeenCalled();
-      });
     });
-
-    let submitPromise: ReturnType<RuntimeProviderManagementActions['submitConnect']> | null = null;
-    await act(async () => {
-      submitPromise = actions?.submitConnect('openai') ?? null;
-      await vi.waitFor(() => {
-        expect(connectProvider).toHaveBeenCalled();
-      });
-      await Promise.resolve();
-    });
-
-    expect(state?.savingProviderId).toBe('openai');
-    expect(state?.activeFormProviderId).toBeNull();
-
     await vi.waitFor(() => {
-      expect(resolveRefreshView).toBeTypeOf('function');
-      expect(resolveRefreshDirectory).toBeTypeOf('function');
+      expect(loadSetupForm).toHaveBeenCalled();
     });
+
     await act(async () => {
-      resolveRefreshView?.();
-      resolveRefreshDirectory?.();
-      await submitPromise;
+      expect(await actions?.submitConnect('openai')).toEqual({
+        status: 'connected',
+        verifiedModelId: 'openai/gpt-4.1',
+      });
     });
+    expect(state?.activeFormProviderId).toBeNull();
 
     expect(loadView).toHaveBeenCalledTimes(2);
     expect(

@@ -5,8 +5,9 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { parse } from 'jsonc-parser';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { inspectOpenCodeLocalModelRuntimeReadiness } from './OpenCodeLocalModelRuntimeInspector';
 import { OpenCodeLocalProviderConnector } from './OpenCodeLocalProviderConnector';
 
 describe('OpenCodeLocalProviderConnector safe e2e', () => {
@@ -26,6 +27,84 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     }
     await fs.rm(tempDir, { recursive: true, force: true });
   });
+
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'fails closed with actionable permission details for real unreadable project configs',
+    async () => {
+      for (const location of ['project-directory', 'config-file'] as const) {
+        const projectPath = path.join(tempDir, location);
+        await fs.mkdir(projectPath, { recursive: true });
+        const configPath = path.join(projectPath, 'opencode.json');
+        if (location === 'config-file') {
+          await fs.writeFile(configPath, '{}', 'utf8');
+        }
+        const restrictedPath = location === 'project-directory' ? projectPath : configPath;
+        await fs.chmod(restrictedPath, 0o000);
+
+        const fetchImpl = vi.fn<typeof fetch>();
+        const connector = new OpenCodeLocalProviderConnector({
+          homePath: tempDir,
+          environment: {},
+          fetchImpl,
+        });
+        try {
+          const listed = await connector.listLocalProviders({
+            runtimeId: 'opencode',
+            scope: 'project',
+            projectPath,
+            providerId: 'ollama',
+          });
+          expect(listed.error).toMatchObject({
+            code: 'config-invalid',
+            message: expect.stringContaining('access denied'),
+          });
+          expect(listed.error?.message).toMatch(/EACCES|EPERM/);
+          expect(listed.error?.message).toContain('project folder');
+
+          const inspected = await inspectOpenCodeLocalModelRuntimeReadiness(
+            { projectPath, modelRoute: 'ollama/qwen2.5-coder:7b' },
+            { inventory: connector, fetchImpl }
+          );
+          expect(inspected).toMatchObject({
+            severity: 'blocking',
+            code: 'local_runtime_inspection_failed',
+            message: expect.stringContaining('access denied'),
+          });
+          expect(fetchImpl).not.toHaveBeenCalled();
+        } finally {
+          await fs.chmod(restrictedPath, location === 'project-directory' ? 0o700 : 0o600);
+        }
+      }
+    }
+  );
+
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'diagnoses denied parent directory access before inspecting project OpenCode config candidates',
+    async () => {
+      const parentPath = path.join(tempDir, 'restricted-parent');
+      const projectPath = path.join(parentPath, 'nested-project');
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.chmod(parentPath, 0o000);
+      const connector = new OpenCodeLocalProviderConnector({
+        homePath: tempDir,
+        environment: {},
+      });
+      try {
+        const listed = await connector.listLocalProviders({
+          runtimeId: 'opencode',
+          scope: 'project',
+          projectPath,
+        });
+        expect(listed.error).toMatchObject({
+          code: 'config-invalid',
+          message: expect.stringContaining('Cannot inspect the project OpenCode config'),
+        });
+        expect(listed.error?.message).toMatch(/EACCES|EPERM/);
+      } finally {
+        await fs.chmod(parentPath, 0o700);
+      }
+    }
+  );
 
   it('discovers models over HTTP and preserves existing JSONC while configuring OpenCode', async () => {
     const projectPath = path.join(tempDir, 'sandbox-project');
