@@ -27,6 +27,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'codeql',
     'codex-runtime-smoke',
     'dependency-review',
+    'landing-hetzner-release',
     'opencode-desktop-e2e',
     'opencode-packaged-e2e',
     'prepare-updater-native-inputs',
