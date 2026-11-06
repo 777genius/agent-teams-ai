@@ -5,8 +5,8 @@
  * Performance: max 1000 files, max 1MB/file, 5s timeout via AbortController.
  */
 
+import { createManagedGitEnv, getManagedGitExecutable, MANAGED_GIT_ENV_KEYS } from '@main/utils/managedGit';
 import { isGitInternalPath, isPathWithinRoot } from '@main/utils/pathValidation';
-import { MANAGED_GIT_ENV_KEYS, getManagedGitExecutable, createManagedGitEnv } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
 import { isBinaryFile } from 'isbinaryfile';

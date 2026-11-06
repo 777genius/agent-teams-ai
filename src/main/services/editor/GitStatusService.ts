@@ -6,7 +6,7 @@
  * Results are cached for 5 seconds; invalidated on file watcher events.
  */
 
-import { MANAGED_GIT_ENV_KEYS, getManagedGitExecutable, createManagedGitEnv } from '@main/utils/managedGit';
+import { createManagedGitEnv, getManagedGitExecutable, MANAGED_GIT_ENV_KEYS } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import { simpleGit } from 'simple-git';
 

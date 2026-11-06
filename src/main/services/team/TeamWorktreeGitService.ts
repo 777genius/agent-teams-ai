@@ -1,5 +1,5 @@
-import { execFile } from 'child_process';
 import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
+import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 

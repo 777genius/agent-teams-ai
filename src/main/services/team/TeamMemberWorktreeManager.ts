@@ -1,6 +1,6 @@
+import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { execFile } from 'child_process';
-import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';

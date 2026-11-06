@@ -3,10 +3,9 @@ import { createHash } from 'node:crypto';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-
-import { createManagedGitEnv } from '@main/utils/managedGit';
 import { pathToFileURL } from 'node:url';
 
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { startWorkspaceGatewayNodeServer } from '@terminal-platform/workspace-gateway-node';
 
 import type {

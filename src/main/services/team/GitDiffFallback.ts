@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 
 import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
-
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 

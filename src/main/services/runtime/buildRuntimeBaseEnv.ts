@@ -4,8 +4,8 @@ import { OPENCODE_V2_SUPPORT_ROOT_ENV } from '@features/opencode-runtime-install
 import { getOpenCodeV2SupportRoot } from '@features/opencode-runtime-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import { createManagedGitEnv } from '@main/utils/managedGit';
 import { ensureWindowsSpawnBaseDirEnv } from '@main/utils/cliProcessDefaults';
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { getShellPreferredHome } from '@main/utils/shellEnv';
 
 import { configManager } from '../infrastructure/ConfigManager';
