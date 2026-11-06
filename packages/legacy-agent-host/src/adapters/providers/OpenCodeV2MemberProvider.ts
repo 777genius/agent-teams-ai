@@ -250,19 +250,21 @@ export function createOpenCodeV2MemberProvider(
             accepted = true;
             return true;
           } finally {
-            if (!accepted) {
-              qualificationRevoked = true;
-              ready = false;
-              initialEvidence = undefined;
-              abort.abort();
-              // A previously live member must not leave the loosened native
-              // process running while Host reports an unready session.
-              // Only its captured owner may perform this physical stop.
-              if (wasEverReady) await finishOwned();
+            try {
+              if (!accepted) {
+                qualificationRevoked = true;
+                ready = false;
+                initialEvidence = undefined;
+                abort.abort();
+                // A previously live member must not leave the loosened native
+                // process running while Host reports an unready session.
+                // Only its captured owner may perform this physical stop.
+                if (wasEverReady) await finishOwned();
+              }
+            } finally {
+              pendingReattestations.delete(reattestation.promise);
+              reattestation.resolve();
             }
-          } finally {
-            pendingReattestations.delete(reattestation.promise);
-            reattestation.resolve();
           }
         },
         // D.close() must report physical cleanup. Once shutdown begins,
