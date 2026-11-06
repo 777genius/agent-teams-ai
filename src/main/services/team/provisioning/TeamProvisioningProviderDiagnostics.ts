@@ -20,6 +20,7 @@ import {
 } from '../../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
 import { getAnthropicCompatibleDiagnosticModelOverride } from './TeamProvisioningAnthropicDiagnosticModel';
@@ -68,7 +69,6 @@ export interface SpawnProbeResult {
   stdout: string;
   stderr: string;
 }
-
 export type TeamProvisioningProbeChild = ReturnType<typeof spawn>;
 
 export interface TeamProvisioningProviderDiagnosticsPorts {
@@ -257,9 +257,9 @@ export async function probeProviderRuntimeControlPlane({
   providerArgs: string[];
   ports: Pick<TeamProvisioningProviderDiagnosticsPorts, 'execCli' | 'appendPreflightDebugLog'>;
 }): Promise<{ warning?: string }> {
+  const context = await resolveRuntimeStatusExecutionContext(providerId, cwd);
   const cliCommandLabel = getConfiguredCliCommandLabel();
   const providerLabel = getTeamProviderLabel(providerId);
-
   try {
     const runtimeStatus = await ports.execCli(
       claudePath,
@@ -270,9 +270,10 @@ export async function probeProviderRuntimeControlPlane({
         '--summary',
         '--provider',
         providerId,
+        ...context.projectArgs,
       ]),
       {
-        cwd,
+        cwd: context.cwd ?? cwd,
         env,
         timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
       }
