@@ -36,7 +36,6 @@ import { type TeamProvisioningReevaluateMemberLaunchStatusBoundary } from './Tea
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { nowIso } from './TeamProvisioningRunProgress';
 import {
-  MissingOpenCodeRuntimeConfigIdentityError,
   isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
 } from './TeamProvisioningRuntimeRecipientResolution';
@@ -92,76 +91,13 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     teamName: string,
     memberName: string
   ): Promise<TeamProviderId | undefined> {
-    const sources = {
-      readConfigSnapshot: (candidateTeamName: string) =>
-        this.readConfigSnapshot(candidateTeamName),
-      readMembersMeta: (candidateTeamName: string) =>
-        this.membersMetaStore.getMembers(candidateTeamName),
-    };
-    const resolve = () =>
-      resolveRuntimeRecipientProviderIdHelper({ teamName, memberName }, sources);
-
-    try {
-      return await resolve();
-    } catch (error) {
-      if (!(error instanceof MissingOpenCodeRuntimeConfigIdentityError)) {
-        throw error;
+    return resolveRuntimeRecipientProviderIdHelper(
+      { teamName, memberName },
+      {
+        readConfigSnapshot: (candidateTeamName) => this.readConfigSnapshot(candidateTeamName),
+        readMembersMeta: (candidateTeamName) => this.membersMetaStore.getMembers(candidateTeamName),
       }
-
-      // Only repair a member that this exact active runtime run already owns.
-      // Metadata alone must never turn an unverified recipient into a runtime identity.
-      const runId = this.runTracking.getTrackedRunId(teamName);
-      const run = runId ? this.runs.get(runId) : undefined;
-      const candidates = run?.allEffectiveMembers?.filter(
-        (member) => member.name.trim().toLowerCase() === memberName.trim().toLowerCase()
-      );
-      const member = candidates?.length === 1 ? candidates[0] : undefined;
-      if (
-        !run ||
-        run.teamName !== teamName ||
-        run.cancelRequested ||
-        run.processKilled ||
-        run.progress.state === 'failed' ||
-        member?.providerId !== 'opencode' ||
-        !member.model?.trim()
-      ) {
-        throw error;
-      }
-
-      const metaMatches = (await this.membersMetaStore.getMembers(teamName)).filter(
-        (candidate) => candidate.name.trim().toLowerCase() === memberName.trim().toLowerCase()
-      );
-      const meta = metaMatches.length === 1 ? metaMatches[0] : undefined;
-      if (
-        !meta ||
-        meta.removedAt != null ||
-        meta.providerId !== 'opencode' ||
-        (meta.model?.trim() && meta.model.trim() !== member.model.trim())
-      ) {
-        throw error;
-      }
-
-      const isCurrentRun = () =>
-        runId !== null &&
-        this.runs.get(runId) === run &&
-        this.runTracking.getTrackedRunId(teamName) === runId &&
-        !run.cancelRequested &&
-        !run.processKilled &&
-        run.progress.state !== 'failed';
-      if (!isCurrentRun()) {
-        throw error;
-      }
-
-      const published = await this.compatibilityDelegation.configFacade.materializeLaunchRoster({
-        teamName,
-        members: [member],
-        isCurrentRun,
-      });
-      if (!published) {
-        throw error;
-      }
-      return await resolve();
-    }
+    );
   }
 
   async isOpenCodeRuntimeRecipient(teamName: string, memberName: string): Promise<boolean> {
