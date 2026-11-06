@@ -46,6 +46,11 @@ export function createOpenCodeV2MemberProvider(
       (selected.extraArgs?.length ?? 0) !== 0)
     throw new Error('OpenCode V2 requires a separate native profile and owner');
 
+  // Capture the required product policy ONCE. A mutable owner object must
+  // never turn an original external-directory deny into a later ask.
+  const requiredExternalDirectory = owned.requiredExternalDirectory;
+  if (requiredExternalDirectory !== 'ask' && requiredExternalDirectory !== 'deny')
+    throw new Error('OpenCode V2 requires a captured out-of-project policy');
   // This is the exact trusted Host selection. It is never a renderer/Runtime
   // argument and must not be inferred from model ID or an executable on PATH.
   const profile = structuredClone(selected);
@@ -109,7 +114,7 @@ export function createOpenCodeV2MemberProvider(
           // cannot claim qualification from a scripted TEST receipt.
           const effective = await owned.readNativeEffectivePermissions(signal);
           const policy = preflightOpenCodeV2EffectiveExternalDirectory(
-            effective, owned.requiredExternalDirectory);
+            effective, requiredExternalDirectory);
           ready = policy.kind === 'policy-candidate' && !signal.aborted && current();
           if (ready) context.onProgress();
           return ready;
