@@ -12,6 +12,10 @@ interface TrackedRecipientRun {
   progress: Pick<TeamProvisioningProgress, 'state'>;
 }
 
+function isTerminalProgress(state: TeamProvisioningProgress['state']): boolean {
+  return state === 'failed' || state === 'cancelled' || state === 'disconnected';
+}
+
 export interface OpenCodeRecipientIdentityForUserSendPorts {
   resolveProviderId(teamName: string, memberName: string): Promise<TeamProviderId | undefined>;
   getTrackedRunId(teamName: string): string | null;
@@ -52,7 +56,7 @@ export async function resolveOpenCodeRecipientIdentityForUserSend(
       run.teamName !== teamName ||
       run.cancelRequested ||
       run.processKilled ||
-      run.progress.state === 'failed' ||
+      isTerminalProgress(run.progress.state) ||
       member?.providerId !== 'opencode' ||
       !member.model?.trim()
     ) {
@@ -77,7 +81,7 @@ export async function resolveOpenCodeRecipientIdentityForUserSend(
       ports.getTrackedRunId(teamName) === runId &&
       !run.cancelRequested &&
       !run.processKilled &&
-      run.progress.state !== 'failed';
+      !isTerminalProgress(run.progress.state);
     if (!isCurrentRun()) {
       throw error;
     }
