@@ -8,7 +8,7 @@ import {
 import { resolveRuntimeRecipientProviderIdFromSources } from '../TeamProvisioningRuntimeRecipientResolution';
 
 import type { TeamProvisioningLaunchRosterInput } from '../TeamProvisioningLaunchRosterMaterialization';
-import type { TeamConfig, TeamMember } from '@shared/types';
+import type { TeamConfig, TeamMember, TeamProvisioningProgress } from '@shared/types';
 
 function createHarness() {
   let configRaw = JSON.stringify({
@@ -26,7 +26,7 @@ function createHarness() {
     ],
     cancelRequested: false,
     processKilled: false,
-    progress: { state: 'ready' as const },
+    progress: { state: 'ready' as TeamProvisioningProgress['state'] },
   };
   let trackedRunId: string | null = run.runId;
   const materialize = vi.fn(async (input: TeamProvisioningLaunchRosterInput) =>
@@ -112,7 +112,12 @@ describe('OpenCode explicit user-send identity repair', () => {
   });
 
   it('refuses stopped, cancelled or superseded runtime identity', async () => {
-    for (const cause of ['cancelRequested', 'processKilled', 'superseded', 'cancelledProgress'] as const) {
+    for (const cause of [
+      'cancelRequested',
+      'processKilled',
+      'superseded',
+      'cancelledProgress',
+    ] as const) {
       const h = createHarness();
       if (cause === 'superseded') h.setTrackedRunId('run-2');
       else if (cause === 'cancelledProgress') h.run.progress.state = 'cancelled';
@@ -125,16 +130,29 @@ describe('OpenCode explicit user-send identity repair', () => {
   });
 
   it('refuses mismatched model, removed recipient, or duplicate metadata', async () => {
-    for (const cause of ['model', 'removed', 'duplicate'] as const) {
+    for (const cause of ['model', 'duplicate'] as const) {
       const h = createHarness();
       if (cause === 'model') h.metadata[0].model = 'openai/other-model';
-      if (cause === 'removed') h.metadata[0].removedAt = 123;
       if (cause === 'duplicate') h.metadata.push({ ...h.metadata[0] });
       await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
         'has no authoritative config identity'
       );
       expect(h.materialize).not.toHaveBeenCalled();
     }
+  });
+
+  it('never materializes a removed member', async () => {
+    const h = createHarness();
+    h.metadata[0].removedAt = 123;
+    await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).resolves.toBeUndefined();
+    expect(h.materialize).not.toHaveBeenCalled();
+  });
+
+  it('can repair a metadata-only OpenCode model when its provider is inferred', async () => {
+    const h = createHarness();
+    h.metadata[0].providerId = undefined;
+    await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).resolves.toBe('opencode');
+    expect(h.materialize).toHaveBeenCalledTimes(1);
   });
 
   it('does not hide an existing config/metadata provider conflict', async () => {
