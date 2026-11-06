@@ -136,7 +136,16 @@
       "launchProof": "Statut de lancement des coéquipiers",
       "orgGovernance": "Organisations et vue globale",
       "budgetControls": "Contrôle budgétaire",
-      "price": "Prix"
+      "price": "Prix",
+      "desktopPlatforms": "Plateformes de bureau prises en charge"
+    },
+    "platforms": {
+      "desktopApp": "(application de bureau)",
+      "cliBinaries": "(binaires CLI)",
+      "noNativeDesktop": "Pas d’application de bureau native (panneau auto-hébergé)",
+      "desktopIde": "(IDE de bureau)",
+      "cli": "(CLI)",
+      "wsl2": "via WSL2 (non natif)"
     }
   },
   "screenshots": {

@@ -136,7 +136,16 @@
       "launchProof": "Starea de lansare a coechipierilor",
       "orgGovernance": "Organizații și vedere globală",
       "budgetControls": "Controale de buget",
-      "price": "Preț"
+      "price": "Preț",
+      "desktopPlatforms": "Platforme desktop acceptate"
+    },
+    "platforms": {
+      "desktopApp": "(aplicație desktop)",
+      "cliBinaries": "(binare CLI)",
+      "noNativeDesktop": "Fără aplicație desktop nativă (panou găzduit local)",
+      "desktopIde": "(IDE desktop)",
+      "cli": "(CLI)",
+      "wsl2": "prin WSL2 (nu nativ)"
     }
   },
   "screenshots": {

@@ -136,7 +136,16 @@
       "launchProof": "দলের বন্ধু আরম্ভের অবস্থা",
       "orgGovernance": "সংগঠন ও সামগ্রিক দৃশ্য",
       "budgetControls": "বুদেট নিয়ন্ত্রণ",
-      "price": "মূল্য"
+      "price": "মূল্য",
+      "desktopPlatforms": "সমর্থিত ডেস্কটপ প্ল্যাটফর্ম"
+    },
+    "platforms": {
+      "desktopApp": "(ডেস্কটপ অ্যাপ)",
+      "cliBinaries": "(CLI বাইনারি)",
+      "noNativeDesktop": "নেটিভ ডেস্কটপ অ্যাপ নেই (স্ব-হোস্টেড কন্ট্রোল প্যানেল)",
+      "desktopIde": "(ডেস্কটপ IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2-এর মাধ্যমে (নেটিভ নয়)"
     }
   },
   "screenshots": {

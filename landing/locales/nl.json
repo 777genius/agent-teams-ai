@@ -136,7 +136,16 @@
       "launchProof": "Startstatus teamlid",
       "orgGovernance": "Organisaties en totaaloverzicht",
       "budgetControls": "Budgetbeheer",
-      "price": "Prijs"
+      "price": "Prijs",
+      "desktopPlatforms": "Ondersteunde desktopplatforms"
+    },
+    "platforms": {
+      "desktopApp": "(desktopapp)",
+      "cliBinaries": "(CLI-binaries)",
+      "noNativeDesktop": "Geen native desktopapp (zelfgehost beheerpaneel)",
+      "desktopIde": "(desktop-IDE)",
+      "cli": "(CLI)",
+      "wsl2": "via WSL2 (niet native)"
     }
   },
   "screenshots": {

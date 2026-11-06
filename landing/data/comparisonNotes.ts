@@ -1,4 +1,12 @@
 export const comparisonRuNotes: Record<string, string> = {
+  "Scheduled/event agents + MCP task collaboration; less live peer teamwork": "Агенты по расписанию/событиям и совместная работа с задачами через MCP; меньше живой командной работы",
+  "Review gates + experimental GitHub review bot; no in-app hunk review": "Проверки ревью и экспериментальный GitHub review bot; без ревью хунков в приложении",
+  "Run transcripts + audited cost ledger (estimates possible)": "Транскрипты запусков и проверяемый журнал затрат (возможны оценки)",
+  "Own runtimes + MCP clients; experimental Runner adapters": "Собственные runtime и MCP-клиенты; экспериментальные адаптеры Runner",
+  "Org/group policies and topology; no editable company org map": "Политики организаций/групп и топология; нет редактируемой оргкарты компании",
+  "Claude, Codex, Pi, Oh My Pi + experimental hosted MCP members": "Claude, Codex, Pi, Oh My Pi и экспериментальные внешние MCP-участники",
+  "Runner permission requests, audited policies, typing guard, and stop controls": "Запросы разрешений runtime, аудит политик, защита ввода и остановка",
+  "TUI, tmux, task-following terminal views; optional maintenance web UI": "TUI, tmux, терминальные виды по задачам; опциональный web UI в режиме поддержки",
   'Persistent roles, delegation, owned-work queues, and review handoffs': 'Постоянные роли, делегирование, очередь работ с владельцами и передача на ревью',
   'Native permissions, audited seat policies, typing guard, and stop controls': 'Нативные разрешения, аудит политик агентов, защита ручного ввода и остановка',
   'TUI topology graph, seat state, missions, and activity feed': 'Граф команды в TUI, состояния агентов, миссии и лента активности',

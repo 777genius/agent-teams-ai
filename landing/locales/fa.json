@@ -136,7 +136,16 @@
       "launchProof": "وضعیت راه‌اندازی هم‌تیمی",
       "orgGovernance": "سازمان‌ها و نمای کلی",
       "budgetControls": "کنترل‌های بودجه",
-      "price": "قیمت"
+      "price": "قیمت",
+      "desktopPlatforms": "پلتفرم‌های دسکتاپ پشتیبانی‌شده"
+    },
+    "platforms": {
+      "desktopApp": "(برنامه دسکتاپ)",
+      "cliBinaries": "(فایل‌های اجرایی CLI)",
+      "noNativeDesktop": "بدون برنامه دسکتاپ بومی (پنل خودمیزبان)",
+      "desktopIde": "(IDE دسکتاپ)",
+      "cli": "(CLI)",
+      "wsl2": "از طریق WSL2 (غیربومی)"
     }
   },
   "screenshots": {

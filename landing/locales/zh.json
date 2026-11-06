@@ -136,7 +136,16 @@
       "launchProof": "队友启动状态",
       "orgGovernance": "组织与全局视图",
       "budgetControls": "预算控制",
-      "price": "价格"
+      "price": "价格",
+      "desktopPlatforms": "支持的桌面平台"
+    },
+    "platforms": {
+      "desktopApp": "（桌面应用）",
+      "cliBinaries": "（CLI 可执行文件）",
+      "noNativeDesktop": "无原生桌面应用（自托管控制面板）",
+      "desktopIde": "（桌面 IDE）",
+      "cli": "（CLI）",
+      "wsl2": "通过 WSL2（非原生）"
     }
   },
   "screenshots": {

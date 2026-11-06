@@ -136,7 +136,16 @@
       "launchProof": "టీమ్‌మేట్ లాంచ్ స్థితి",
       "orgGovernance": "సంస్థలు & గ్లోబల్ అవలోకనం",
       "budgetControls": "బడ్జెట్ నియంత్రణలు",
-      "price": "ధర"
+      "price": "ధర",
+      "desktopPlatforms": "మద్దతు ఉన్న డెస్క్‌టాప్ ప్లాట్‌ఫారమ్‌లు"
+    },
+    "platforms": {
+      "desktopApp": "(డెస్క్‌టాప్ యాప్)",
+      "cliBinaries": "(CLI బైనరీలు)",
+      "noNativeDesktop": "నేటివ్ డెస్క్‌టాప్ యాప్ లేదు (స్వీయ హోస్టెడ్ ప్యానెల్)",
+      "desktopIde": "(డెస్క్‌టాప్ IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 ద్వారా (నేటివ్ కాదు)"
     }
   },
   "screenshots": {

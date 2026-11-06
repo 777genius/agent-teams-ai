@@ -136,7 +136,16 @@
       "launchProof": "Teammate launch நிலை",
       "orgGovernance": "அமைப்புகள் மற்றும் முழுப் பார்வை",
       "budgetControls": "Budget கட்டுப்பாடுகள்",
-      "price": "விலை"
+      "price": "விலை",
+      "desktopPlatforms": "ஆதரிக்கப்படும் டெஸ்க்டாப் தளங்கள்"
+    },
+    "platforms": {
+      "desktopApp": "(டெஸ்க்டாப் செயலி)",
+      "cliBinaries": "(CLI நிரல் கோப்புகள்)",
+      "noNativeDesktop": "நேட்டிவ் டெஸ்க்டாப் செயலி இல்லை (சுய ஹோஸ்ட் கட்டுப்பாட்டு தளம்)",
+      "desktopIde": "(டெஸ்க்டாப் IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 வழியாக (நேட்டிவ் அல்ல)"
     }
   },
   "screenshots": {
