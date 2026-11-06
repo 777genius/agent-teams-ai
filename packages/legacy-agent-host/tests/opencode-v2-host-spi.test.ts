@@ -273,6 +273,35 @@ test('lost Host allocation authority during recheck cannot resurrect cached V2 r
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+test('transient authority loss observed without native recheck cannot revive V2 readiness', async () => {
+  for (const lost of ['allocation', 'binding'] as const) {
+    const { captured, calls } = owner(true);
+    const input = context();
+    let allocated = true;
+    let bound = true;
+    input.canAllocate = () => allocated;
+    input.isCurrent = () => bound;
+    const provider = createOpenCodeV2MemberProvider(input, captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    assert.notEqual(provider.initialContextEvidence?.(), undefined);
+
+    if (lost === 'allocation') allocated = false;
+    else bound = false;
+    assert.equal(provider.isReady(), false, 'one observed lapse revokes the capture');
+    allocated = true;
+    bound = true;
+    assert.equal(provider.isReady(), false, 'restored Host authority cannot renew a V2 capture');
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal((await opened.driver.checkReadiness()).ok, false);
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'only the original TEST-owned process is stopped once');
+    assert.equal(calls.stopped, 1, 'physical stop must be confirmed');
+    assert.equal(calls.context, 1, 'no second native instructions installation');
+    assert.equal(calls.permissions, 1, 'revoked owner must not read native policy again');
+  }
+});
+
 test('V2 native-effective allow cannot satisfy captured deny, even after a successful native probe', async () => {
   const { captured, calls } = owner(true, 'allow');
   const provider = createOpenCodeV2MemberProvider(context(), captured);
