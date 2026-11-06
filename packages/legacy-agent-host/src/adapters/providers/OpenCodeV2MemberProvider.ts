@@ -221,6 +221,19 @@ export function createOpenCodeV2MemberProvider(
                 attested.contextDigest !== contextDigest ||
                 attested.generation !== context.endpoint.binding.generation ||
                 attested.configRevision !== context.request.configRevision) return false;
+            // A process or policy may change during the initial native PUT.
+            // Re-attest both after the mutation; never retry a lost PUT ACK.
+            const finalEffective = await owned.readNativeEffectivePermissions(combined);
+            if (preflightOpenCodeV2EffectiveExternalDirectory(
+              finalEffective, requiredExternalDirectory).kind !== 'policy-candidate' ||
+                combined.aborted || !current()) return false;
+            const finalCustody = await owned.readNativeCustody(combined);
+            if (!finalCustody || combined.aborted || !current() ||
+                finalCustody.executablePath !== custody.executablePath ||
+                finalCustody.executableSha256 !== custody.executableSha256 ||
+                finalCustody.version !== custody.version ||
+                finalCustody.pid !== custody.pid ||
+                finalCustody.startIdentity !== custody.startIdentity) return false;
             initialEvidence = {
               kind: 'native-configuration', contextDigest,
               generation: context.endpoint.binding.generation,

@@ -192,7 +192,7 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(opened.driver.sessionRef.length > 0, true);
   assert.equal(provider.isReady(), true);
   assert.equal(calls.probe, 1);
-  assert.equal(calls.permissions, 1);
+  assert.equal(calls.permissions, 2);
   assert.equal(calls.context, 1);
   // A successful first installation is never submitted again by later
   // readiness checks: duplicated native mutations are unsafe after lost ACK.
@@ -246,7 +246,7 @@ test('V2 Host revokes a ready capture when the actual PID/start identity changes
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   const opened = await provider.factory.open(request());
   assert.equal(provider.isReady(), true);
-  assert.equal(reads, 1);
+  assert.equal(reads, 2);
   custody = { ...custody, pid: custody.pid + 1 };
   assert.equal((await opened.driver.checkReadiness()).ok, false);
   assert.equal(provider.isReady(), false);
@@ -254,8 +254,8 @@ test('V2 Host revokes a ready capture when the actual PID/start identity changes
   custody = testNativeCustody();
   assert.equal((await opened.driver.checkReadiness()).ok, false,
     'restoring the old PID cannot renew a revoked capture');
-  assert.equal(reads, 2, 'a revoked process has no further native authority');
-  assert.equal(calls.permissions, 1);
+  assert.equal(reads, 3, 'a revoked process has no further native authority');
+  assert.equal(calls.permissions, 2);
   assert.equal(calls.context, 1, 'no replay of previously acknowledged instructions');
   assert.equal(calls.stop, 1);
   assert.equal(await provider.cleanup(), true);
@@ -284,7 +284,7 @@ test('native permission drift revokes an already ready V2 SPI member, with no re
   effective = 'deny';
   const next = await opened.driver.checkReadiness();
   assert.equal(next.ok, false, 'once revoked, restoring policy cannot revive the same capture');
-  assert.equal(calls.permissions, 2, 'revoked owner must not perform more native reads');
+  assert.equal(calls.permissions, 3, 'revoked owner must not perform more native reads');
   assert.equal(calls.context, 1, 'no mutation replay during re-attestation');
   assert.equal(calls.stop, 1, 'permission drift must stop the original TEST owner immediately');
   assert.equal(calls.stopped, 1, 'physical cleanup confirmed before exposing HOLD');
@@ -357,8 +357,54 @@ test('transient authority loss observed without native recheck cannot revive V2 
     assert.equal(calls.stop, 1, 'only the original TEST-owned process is stopped once');
     assert.equal(calls.stopped, 1, 'physical stop must be confirmed');
     assert.equal(calls.context, 1, 'no second native instructions installation');
-    assert.equal(calls.permissions, 1, 'revoked owner must not read native policy again');
+    assert.equal(calls.permissions, 2, 'revoked owner must not read native policy again');
   }
+});
+
+
+test('policy relaxed during native instructions cannot pass final Host admission', async () => {
+  const { captured, calls } = owner(true);
+  let effect: 'deny' | 'allow' = 'deny';
+  captured.readNativeEffectivePermissions = async () => {
+    calls.permissions++;
+    return [{ action: 'external_directory', resource: '*', effect }];
+  };
+  captured.installAndAttestInitialContext = async (capture) => {
+    calls.context++;
+    effect = 'allow';
+    return { nativeSessionId: capture.nativeSessionId, contextDigest: capture.contextDigest,
+      generation: capture.generation, configRevision: capture.configRevision };
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(calls.permissions, 2, 'post-PUT native policy readback is mandatory');
+  assert.equal(calls.context, 1, 'never replay instruction mutation');
+  assert.equal(calls.stop, 1);
+  assert.equal(await provider.cleanup(), true);
+});
+
+test('PID changed during native instructions cannot inherit initial-context authority', async () => {
+  const { captured, calls } = owner(true);
+  let custody = testNativeCustody();
+  let reads = 0;
+  captured.readNativeCustody = async () => { reads++; return custody; };
+  captured.installAndAttestInitialContext = async (capture) => {
+    calls.context++;
+    custody = { ...custody, pid: custody.pid + 1 };
+    return { nativeSessionId: capture.nativeSessionId, contextDigest: capture.contextDigest,
+      generation: capture.generation, configRevision: capture.configRevision };
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(reads, 2, 'actual native PID must be remeasured after PUT');
+  assert.equal(calls.permissions, 2);
+  assert.equal(calls.context, 1);
+  assert.equal(calls.stop, 1);
+  assert.equal(await provider.cleanup(), true);
 });
 
 test('V2 native-effective allow cannot satisfy captured deny, even after a successful native probe', async () => {

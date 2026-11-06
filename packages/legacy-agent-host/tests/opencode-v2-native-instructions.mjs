@@ -192,6 +192,7 @@ try {
   onProgress:()=>{},readCheckpoint:async()=>undefined};
   let initialPutCount=0;
   let nativeCustodyReads=0;
+  let nativePermissionReads=0;
   const owner={
     requiredExternalDirectory:'deny',
     readPassword:()=>password,
@@ -215,6 +216,7 @@ try {
         pid:child.pid,startIdentity:startTicks,version:observed.data.version};
     },
     async readNativeEffectivePermissions(signal) {
+      nativePermissionReads++;
       const result=await native(sessionPath,'GET',undefined,signal);
       if(result.status!==200||result.data?.data?.id!==nativeSessionId)
         throw Error('native_session_readback_mismatch');
@@ -257,9 +259,10 @@ try {
   const rechecked=await opened.driver.checkReadiness();
   if(rechecked.ok!==true || !provider.isReady() || initialPutCount!==1)
     throw Error('native_host_recheck_replayed_initial_context');
-  if(nativeCustodyReads!==2)
+  if(nativeCustodyReads!==4||nativePermissionReads!==4)
     throw Error('Host_failed_to_remeasure_actual_native_binary_and_PID');
   receipt.nativeCustodyReadbacks=nativeCustodyReads;
+  receipt.nativePermissionReadbacks=nativePermissionReads;
   receipt.steps.push('Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck');
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
   // Seal is synchronous revocation. The exact owner must initiate the real
