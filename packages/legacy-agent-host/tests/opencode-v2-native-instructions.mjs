@@ -243,6 +243,15 @@ try {
   if(rechecked.ok!==true || !provider.isReady() || initialPutCount!==1)
     throw Error('native_host_recheck_replayed_initial_context');
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
+  // Seal is synchronous revocation. The exact owner must initiate the real
+  // native process-group stop before driver.close()/cleanup() are requested.
+  // No shared/user process is touched and no native mutation is replayed.
+  provider.seal();
+  for(let i=0;i<25&&!stopRequested;i++)await delay(20);
+  if(!stopRequested||provider.isReady()||
+     provider.initialContextEvidence?.()!==undefined)
+    throw Error('Host_seal_failed_to_initiate_owned_native_stop');
+  receipt.steps.push('Host_seal_started_real_native_owned_stop_before_close');
   const closed=await opened.driver.close();
   if(closed.cleanup!=='confirmed'||provider.isReady()||
      !await provider.cleanup())throw Error('host_native_stop_not_confirmed');
