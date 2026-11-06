@@ -286,8 +286,11 @@ export function createOpenCodeV2MemberProvider(
               submit: async (input) => {
                 // A leaked session handle must not submit after the Host
                 // revokes its generation/lease or seals the owned process.
-                if (!ready || !current()) return { ok: false as const,
+                if (!ready || !current()) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return { ok: false as const,
                   code: 'unavailable' as const, delivery: 'known-not-sent' as const };
+                }
                 let reply: Awaited<ReturnType<typeof source.submit>>;
                 try {
                   reply = await source.submit(input);
@@ -325,7 +328,10 @@ export function createOpenCodeV2MemberProvider(
               respondToInteraction: async (reference, reply) => {
                 // V2 permission replies are native mutations. Never let a
                 // retained driver handle grant after Host seal/lease loss.
-                if (!ready || !current()) return { ok: false as const, code: 'unavailable' as const };
+                if (!ready || !current()) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return { ok: false as const, code: 'unavailable' as const };
+                }
                 try {
                   const result = await source.respondToInteraction(reference, reply);
                   if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
@@ -337,7 +343,10 @@ export function createOpenCodeV2MemberProvider(
                 }
               },
               interrupt: async (operation) => {
-                if (!ready || !current()) return { ok: false as const, code: 'unavailable' as const };
+                if (!ready || !current()) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return { ok: false as const, code: 'unavailable' as const };
+                }
                 try {
                   const result = await source.interrupt(operation);
                   if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
@@ -349,7 +358,10 @@ export function createOpenCodeV2MemberProvider(
                 }
               },
               checkReadiness: async () => {
-                if (!ready || !current()) return { ok: false as const, code: 'unavailable' as const };
+                if (!ready || !current()) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return { ok: false as const, code: 'unavailable' as const };
+                }
                 try {
                   const result = await source.checkReadiness();
                   if (!result.ok) {
