@@ -61,6 +61,18 @@ function createPortableExecutableBuffer(arch: 'arm64' | 'ia32' | 'x64'): Buffer 
   return buffer;
 }
 
+function createClrManagedGitLibrary(): Buffer {
+  const buffer = Buffer.alloc(512);
+  createPortableExecutableBuffer('ia32').copy(buffer);
+  const optionalHeader = 0x80 + 24;
+  buffer.writeUInt16LE(0xe0, 0x80 + 20); // PE32 optional header
+  buffer.writeUInt16LE(0x10b, optionalHeader);
+  const clrDirectory = optionalHeader + 96 + 14 * 8;
+  buffer.writeUInt32LE(0x2000, clrDirectory); // CLR header RVA
+  buffer.writeUInt32LE(0x48, clrDirectory + 4); // CLR header size
+  return buffer;
+}
+
 function writePortableTreeSitterFixtures(
   graph: string,
   platform: 'linux' | 'darwin' | 'win32',
@@ -195,6 +207,35 @@ describe('electron-builder afterPack', () => {
       format: 'pe',
       archs: new Set(['x64']),
     });
+  });
+
+  it.each([
+    ['darwin', 'arm64'],
+    ['linux', 'x64'],
+    ['win32', 'arm64'],
+  ] as const)('recognizes Git Credential Manager CLR libraries but still rejects native x86 DLLs on %s-%s', async (platform, arch) => {
+    const root = createTempDir();
+    tempDirs.push(root);
+    const gitRoot = platform === 'darwin'
+      ? path.join(root, 'Agent Teams AI.app', 'Contents', 'Resources', 'git')
+      : path.join(root, 'resources', 'git');
+    const helperDir = platform === 'win32'
+      ? path.join(gitRoot, 'clangarm64', 'libexec', 'git-core')
+      : path.join(gitRoot, 'libexec', 'git-core');
+    writeFile(path.join(helperDir, 'Avalonia.Base.dll'), createClrManagedGitLibrary());
+    expect(await validateNativeBinaries(root, platform, arch)).toEqual([]);
+
+    // Native x86 DLLs (no COM descriptor) must never be treated as portable.
+    writeFile(path.join(helperDir, 'native.dll'), createPortableExecutableBuffer('ia32'));
+    const mismatches = await validateNativeBinaries(root, platform, arch);
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0].path).toContain('native.dll');
+    expect(mismatches[0].format).toBe('pe');
+
+    // CLR code elsewhere in an app isn't a blanket architecture exception.
+    writeFile(path.join(root, 'untrusted.dll'), createClrManagedGitLibrary());
+    const next = await validateNativeBinaries(root, platform, arch);
+    expect(next).toHaveLength(2);
   });
 
   it('prunes node-pty prebuilds that do not match the target platform and arch', async () => {

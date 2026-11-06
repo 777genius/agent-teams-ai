@@ -411,8 +411,15 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
 // inherits this allowance through validateNativeBinaries.
 const OPENCODE_CONSOLE_WRAPPER_PATH = 'resources/runtime/opencode-console/opencode.exe';
 
-function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform) {
+function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, clrManaged = false) {
   const normalizedPath = relativePath.split(path.sep).join('/');
+  // Git Credential Manager ships portable CLR assemblies that have an ia32 PE
+  // header even in the macOS/Linux Git distributions. This is not native x86.
+  const managedGitLibrary =
+    /^(?:[^/]+\.app\/Contents\/Resources\/git|resources\/git)\/(?:libexec\/git-core|(?:ucrt64|clangarm64)\/libexec\/git-core)\/[^/]+\.dll$/i.test(normalizedPath);
+  if (managedGitLibrary && clrManaged && format === 'pe' && archs.size === 1 && archs.has('ia32')) {
+    return true;
+  }
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
   const isAllowedIa32Path =
     normalizedPath === ssh2PageantPath ||
@@ -610,7 +617,22 @@ function parsePortableExecutable(buffer) {
             ? 'armv7l'
             : null;
 
-  return arch ? { format: 'pe', archs: new Set([arch]) } : null;
+  if (!arch) return null;
+  // IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR (index 14) identifies CLR assemblies.
+  // A native PE that merely has a .dll extension must never bypass the
+  // existing platform/architecture guard.
+  const optionalHeader = peOffset + 24;
+  const headerSize = buffer.length >= optionalHeader ? buffer.readUInt16LE(peOffset + 20) : 0;
+  const magic = buffer.length >= optionalHeader + 2 ? buffer.readUInt16LE(optionalHeader) : 0;
+  const directoryStart = optionalHeader + (magic === 0x10b ? 96 : magic === 0x20b ? 112 : -1000);
+  const clrOffset = directoryStart + 14 * 8;
+  const isClrManaged =
+    (magic === 0x10b || magic === 0x20b) &&
+    headerSize >= clrOffset - optionalHeader + 8 &&
+    buffer.length >= clrOffset + 8 &&
+    buffer.readUInt32LE(clrOffset) !== 0 &&
+    buffer.readUInt32LE(clrOffset + 4) !== 0;
+  return { format: 'pe', archs: new Set([arch]), ...(isClrManaged ? { clrManaged: true } : {}) };
 }
 
 async function detectBinaryMetadata(filePath) {
@@ -653,7 +675,9 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
     }
 
     if (
-      isKnownAllowedNativeMismatch(relativePath, metadata.format, metadata.archs, targetPlatform)
+      isKnownAllowedNativeMismatch(
+        relativePath, metadata.format, metadata.archs, targetPlatform, metadata.clrManaged
+      )
     ) {
       continue;
     }
