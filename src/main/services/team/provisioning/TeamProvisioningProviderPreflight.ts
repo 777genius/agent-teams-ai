@@ -1,4 +1,5 @@
 import { resolveAnthropicEffortSupport } from '@features/anthropic-runtime-profile/main';
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { execCli } from '@main/utils/childProcess';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
@@ -14,7 +15,6 @@ import * as path from 'path';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
-import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 import { redactJsonLike } from '../TeamLaunchFailureArtifactPack';
 

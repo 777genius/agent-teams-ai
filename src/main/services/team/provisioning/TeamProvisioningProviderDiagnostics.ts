@@ -1,3 +1,4 @@
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { isProcessAlive } from '@main/utils/processHealth';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
@@ -20,7 +21,6 @@ import {
 } from '../../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
-import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
 import { getAnthropicCompatibleDiagnosticModelOverride } from './TeamProvisioningAnthropicDiagnosticModel';

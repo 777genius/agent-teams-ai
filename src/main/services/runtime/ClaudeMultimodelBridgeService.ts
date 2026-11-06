@@ -33,12 +33,12 @@ import {
   type RuntimeExtensionCapabilitiesResponse,
   sanitizeProviderStatusAuthority,
 } from './providerStatusCheckContract';
-import { resolveRuntimeStatusExecutionContext } from './runtimeStatusExecutionContext';
 import {
   extractRuntimeStatusJsonObject as extractJsonObject,
   readRuntimeStatusCommand,
   RuntimeStatusCommandError,
 } from './runtimeStatusCommandDiagnostics';
+import { resolveRuntimeStatusExecutionContext } from './runtimeStatusExecutionContext';
 
 import type {
   CliProviderId,

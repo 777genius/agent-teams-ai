@@ -2,11 +2,12 @@ import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+import { createRuntimeStatusErrorProviderStatus } from '@main/services/runtime/providerStatusCheckContract';
 import {
   resolveRuntimeStatusExecutionContext,
   RuntimeStatusProjectAccessDeniedError,
 } from '@main/services/runtime/runtimeStatusExecutionContext';
+import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('OpenCode status in a macOS File Provider project', () => {
@@ -57,6 +58,17 @@ describe('OpenCode status in a macOS File Provider project', () => {
     })).rejects.toBeInstanceOf(RuntimeStatusProjectAccessDeniedError);
     expect(statProject).toHaveBeenCalledOnce();
     expect(statProject).toHaveBeenCalledWith(project);
+  });
+
+  it('presents a denied CloudStorage directory as a permission error, not an invalid provider', () => {
+    const status = createRuntimeStatusErrorProviderStatus(
+      'opencode',
+      new RuntimeStatusProjectAccessDeniedError('EACCES')
+    );
+    expect(status.statusMessage).toBe('Project folder access denied');
+    expect(status.statusCheckOutcome).toBe('transient_error');
+    expect(status.capabilities.teamLaunch).toBe(false);
+    expect(status.detailMessage).toContain('system privacy settings');
   });
 
   it('fails closed for a root user home', async () => {
