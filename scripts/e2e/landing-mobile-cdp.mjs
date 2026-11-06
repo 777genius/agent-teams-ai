@@ -227,7 +227,9 @@ async function interactionE2E(browser) {
     await page.screenshot({ path: path.join(outputDir, 'pr-mobile-comparison.png'), animations: 'disabled' });
 
     await page.locator('#screenshots').scrollIntoViewIfNeeded();
-    const card = page.locator('.screenshots-section__card').first();
+    // Swiper keeps offscreen slides in the DOM: click the active visible slide,
+    // not .first(), which may be several viewport widths offscreen.
+    const card = page.locator('swiper-slide.swiper-slide-active .screenshots-section__card');
     await card.waitFor({ state: 'visible', timeout: 20000 });
     await card.click();
     await page.locator('.screenshots-lightbox').waitFor({ state: 'visible', timeout: 10000 });

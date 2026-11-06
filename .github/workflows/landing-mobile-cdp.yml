@@ -84,8 +84,10 @@ jobs:
             curl -fsS "http://127.0.0.1:$port/" > /dev/null
           done
 
-          node current/scripts/e2e/landing-mobile-cdp.mjs
+          cdp_exit=0
+          node current/scripts/e2e/landing-mobile-cdp.mjs || cdp_exit=$?
 
+          # Always gather Lighthouse attribution even when interaction E2E fails.
           for revision in baseline pr; do
             if [ "$revision" = baseline ]; then port=4301; else port=4302; fi
             "$CDP_TOOL_ROOT/node_modules/.bin/lighthouse" "http://127.0.0.1:$port/" \
@@ -111,6 +113,7 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n### Lighthouse comparison\n\u0060\u0060\u0060text\n' + summary + '\n\u0060\u0060\u0060\n');
           console.log(summary);
           NODE
+          exit "$cdp_exit"
 
       - name: Upload CDP trace, screenshots and Lighthouse JSON
         uses: actions/upload-artifact@v4
