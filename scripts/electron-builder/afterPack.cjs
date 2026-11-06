@@ -416,8 +416,8 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
   // Git Credential Manager ships portable CLR assemblies that have an ia32 PE
   // header even in the macOS/Linux Git distributions. This is not native x86.
   const managedGitLibrary =
-    /^(?:[^/]+\.app\/Contents\/Resources\/git|resources\/git)\/(?:libexec\/git-core|(?:ucrt64|clangarm64)\/libexec\/git-core)\/[^/]+\.dll$/i.test(normalizedPath);
-  if (managedGitLibrary && clrManaged && format === 'pe' && archs.size === 1 && archs.has('ia32')) {
+    /^(?:[^/]+\.app\/Contents\/Resources\/git|resources\/git)\/(?:libexec\/git-core|(?:ucrt64|clangarm64)\/libexec\/git-core)\/(?:[^/]+\/)*[^/]+\.dll$/i.test(normalizedPath);
+  if (managedGitLibrary && clrManaged && format === 'pe') {
     return true;
   }
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
@@ -701,6 +701,13 @@ async function signManagedGitBinaries(context) {
   if (context.electronPlatformName !== 'darwin') return;
   const identity = context.packager.platformSpecificBuildOptions?.identity;
   if (!identity || identity === '-') return; // Unsigned packaged PR smoke.
+  // Lazily initializes CSC_LINK's temporary signing keychain before afterPack.
+  // This is the same keychain electron-builder uses when it signs the outer app.
+  const keychain = (await context.packager.codeSigningInfo.value)?.keychainFile;
+  const selected = await context.packager.helper.findSigningIdentity(
+    false, false, identity, keychain, context.packager.platformSpecificBuildOptions
+  );
+  if (!selected) throw new Error('No trusted macOS signing identity for bundled Git');
   const root = path.join(context.appOutDir, 'Agent Teams AI.app', 'Contents', 'Resources', 'git');
   if (!fs.existsSync(root)) throw new Error('Bundled Git is missing before macOS signing');
   const files = await walkFiles(root);
@@ -709,7 +716,9 @@ async function signManagedGitBinaries(context) {
     const metadata = await detectBinaryMetadata(file);
     if (metadata?.format !== 'mach-o') continue;
     const result = spawnSync('codesign', [
-      '--force', '--options', 'runtime', '--timestamp', '--sign', identity, file,
+      '--force', '--options', 'runtime', '--timestamp',
+      ...(keychain ? ['--keychain', keychain] : []),
+      '--sign', selected.name, file,
     ], { encoding: 'utf8', timeout: 120_000 });
     if (result.error || result.status !== 0) {
       throw new Error(`Failed to sign bundled Git ${file}: ${result.stderr || result.error?.message}`);

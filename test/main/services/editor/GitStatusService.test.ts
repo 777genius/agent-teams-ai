@@ -4,6 +4,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@main/utils/managedGit', () => ({
+  MANAGED_GIT_ENV_KEYS: ['PATH', 'GIT_EXEC_PATH', 'GIT_CONFIG_SYSTEM', 'GIT_SSL_CAINFO', 'PREFIX'],
+  createManagedGitEnv: (env: NodeJS.ProcessEnv) => ({ ...env }),
+  getManagedGitExecutable: () => 'git',
+}));
+
 // Mock simple-git
 const mockStatus = vi.fn();
 const mockRevparse = vi.fn();

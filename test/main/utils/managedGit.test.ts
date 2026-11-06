@@ -74,8 +74,33 @@ describe('managed Git desktop resolution', () => {
   it('provides Git CA and PREFIX for bundled Linux', async () => {
     const resourcesPath = await fixture('linux-x64');
     const env = createManagedGitEnv({ PATH: '/usr/bin' }, { resourcesPath, platform: 'linux', arch: 'x64' });
-    expect(env.PREFIX).toBe(path.join(resourcesPath, 'git'));
-    expect(env.GIT_SSL_CAINFO).toBe(path.join(resourcesPath, 'git/ssl/cacert.pem'));
+    expect(env.PREFIX).toBeUndefined();
+    expect(env.GIT_SSL_CAINFO).toBeUndefined();
+    const direct = createManagedGitEnv({ PATH: '/usr/bin' }, {
+      resourcesPath, platform: 'linux', arch: 'x64', gitCommand: true,
+    });
+    expect(direct.PREFIX).toBe(path.join(resourcesPath, 'git'));
+  });
+
+  it('prefers the final PATH over stale Path aliases on Windows', async () => {
+    const resourcesPath = await fixture('win32-x64');
+    const env = createManagedGitEnv({
+      Path: 'C:\\stale',
+      PATH: 'C:\\current;C:\\tools',
+    }, { resourcesPath, platform: 'win32', arch: 'x64' });
+    expect(env.PATH).toContain('C:\\current');
+    expect(env.PATH).toContain('C:\\tools');
+    expect(env.PATH).not.toContain('C:\\stale');
+    expect(env.Path).toBeUndefined();
+  });
+
+  it('does not block non-Git launch environments when a packaged runtime is missing', async () => {
+    const resourcesPath = await mkdtemp(path.join(tmpdir(), 'managed-git-missing-env-'));
+    directories.push(resourcesPath);
+    await writeFile(path.join(resourcesPath, 'app.asar'), '');
+    const original = { PATH: '/usr/bin:/bin', HOME: '/Users/test' };
+    expect(createManagedGitEnv(original, { resourcesPath, platform: 'darwin', arch: 'arm64' }))
+      .toEqual(original);
   });
 
   it('never falls back to the macOS installer shim if packaged Git is missing', async () => {

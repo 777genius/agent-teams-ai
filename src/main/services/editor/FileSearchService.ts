@@ -158,7 +158,7 @@ export class FileSearchService {
         allowEnvironment: ['GIT_OPTIONAL_LOCKS', ...MANAGED_GIT_ENV_KEYS],
         timeout: { block: 10_000 },
       }).env('GIT_OPTIONAL_LOCKS', '0');
-      const environment = createManagedGitEnv(process.env);
+      const environment = createManagedGitEnv(process.env, { gitCommand: true });
       for (const key of MANAGED_GIT_ENV_KEYS) {
         if (environment[key]) git.env(key, environment[key]!);
       }

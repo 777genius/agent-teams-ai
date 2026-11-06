@@ -21,6 +21,8 @@ export interface ManagedGitLocationOptions {
   resourcesPath?: string;
   developmentRoot?: string;
   packaged?: boolean;
+  /** Include Linux's process-wide PREFIX only when directly executing Git. */
+  gitCommand?: boolean;
 }
 
 function findRuntime(options: ManagedGitLocationOptions = {}): GitRuntimeLocation {
@@ -67,8 +69,15 @@ export function createManagedGitEnv(
   original: NodeJS.ProcessEnv,
   options: ManagedGitLocationOptions = {}
 ): NodeJS.ProcessEnv {
-  const resolved = findRuntime(options);
   const env = { ...original };
+  let resolved: GitRuntimeLocation;
+  try {
+    resolved = findRuntime(options);
+  } catch {
+    // Ordinary teams/terminals must remain usable when the packaged Git payload
+    // is missing; explicit Git commands still fail via getManagedGitExecutable().
+    return env;
+  }
   if (!resolved.root) return env;
 
   const platform = options.platform ?? process.platform;
@@ -82,7 +91,7 @@ export function createManagedGitEnv(
     : [path.join(root, 'bin')];
 
   // Windows treats PATH/Path as the same variable; avoid duplicate keys.
-  const previousPath = Object.entries(env).find(([key]) => key.toUpperCase() === 'PATH')?.[1];
+  const previousPath = env.PATH ?? Object.entries(env).find(([key]) => key.toUpperCase() === 'PATH')?.[1];
   if (platform === 'win32') {
     for (const key of Object.keys(env)) {
       if (key !== 'PATH' && key.toUpperCase() === 'PATH') delete env[key];
@@ -100,9 +109,9 @@ export function createManagedGitEnv(
   if (!env.GIT_CONFIG_SYSTEM && platform !== 'win32') {
     env.GIT_CONFIG_SYSTEM = path.join(root, 'etc', 'gitconfig');
   }
-  if (platform === 'linux') {
-    env.PREFIX = root;
-    if (!env.GIT_SSL_CAINFO) env.GIT_SSL_CAINFO = path.join(root, 'ssl', 'cacert.pem');
-  }
+  // PREFIX is generic and can redirect make/install/build commands. Set it
+  // only for our direct Git subprocesses, not in agent/terminal environments.
+  // Do not set GIT_SSL_CAINFO: that would override a user's http.sslCAInfo.
+  if (platform === 'linux' && options.gitCommand) env.PREFIX = root;
   return env;
 }

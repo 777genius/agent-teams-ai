@@ -56,7 +56,7 @@ export class GitDiffFallback {
         maxBuffer: GIT_MAX_BUFFER,
         timeout: GIT_TIMEOUT,
         windowsHide: true,
-        env: createManagedGitEnv(process.env),
+        env: createManagedGitEnv(process.env, { gitCommand: true }),
       });
       return stdout;
     } catch {
@@ -78,7 +78,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync(
         getManagedGitExecutable(),
         ['log', '--format=%H', '--before', timestamp, '-1', '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: createManagedGitEnv(process.env) }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: createManagedGitEnv(process.env, { gitCommand: true }) }
       );
       return stdout.trim() || null;
     } catch {
@@ -101,7 +101,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync(
         getManagedGitExecutable(),
         ['diff', fromCommit, toCommit, '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: createManagedGitEnv(process.env) }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: createManagedGitEnv(process.env, { gitCommand: true }) }
       );
       return stdout || null;
     } catch {
@@ -123,7 +123,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync(
         getManagedGitExecutable(),
         ['log', `--max-count=${maxCount}`, '--format=%H|%aI|%s', '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: createManagedGitEnv(process.env) }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: createManagedGitEnv(process.env, { gitCommand: true }) }
       );
 
       return stdout
@@ -152,7 +152,7 @@ export class GitDiffFallback {
         cwd: projectPath,
         timeout: GIT_TIMEOUT,
         windowsHide: true,
-        env: createManagedGitEnv(process.env),
+        env: createManagedGitEnv(process.env, { gitCommand: true }),
       });
       this.gitRepoCache.set(projectPath, true);
       return true;

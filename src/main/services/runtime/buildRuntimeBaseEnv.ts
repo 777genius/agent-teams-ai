@@ -110,7 +110,13 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   // without a valid LOCALAPPDATA those recreate their caches cwd-relative.
   ensureWindowsSpawnBaseDirEnv(env);
   // PATH can be overwritten by caller/provider merges; re-apply managed Git last.
-  Object.assign(env, createManagedGitEnv(env));
+  const gitEnv = createManagedGitEnv(env);
+  if (process.platform === 'win32') {
+    for (const key of Object.keys(env)) {
+      if (key !== 'PATH' && key.toUpperCase() === 'PATH') delete env[key];
+    }
+  }
+  Object.assign(env, gitEnv);
 
   if (!options.providerId) {
     return {

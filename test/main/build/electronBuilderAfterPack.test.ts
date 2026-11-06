@@ -61,9 +61,9 @@ function createPortableExecutableBuffer(arch: 'arm64' | 'ia32' | 'x64'): Buffer 
   return buffer;
 }
 
-function createClrManagedGitLibrary(): Buffer {
+function createClrManagedGitLibrary(arch: 'ia32' | 'arm64' = 'ia32'): Buffer {
   const buffer = Buffer.alloc(512);
-  createPortableExecutableBuffer('ia32').copy(buffer);
+  createPortableExecutableBuffer(arch).copy(buffer);
   const optionalHeader = 0x80 + 24;
   buffer.writeUInt16LE(0xe0, 0x80 + 20); // PE32 optional header
   buffer.writeUInt16LE(0x10b, optionalHeader);
@@ -223,6 +223,8 @@ describe('electron-builder afterPack', () => {
       ? path.join(gitRoot, 'clangarm64', 'libexec', 'git-core')
       : path.join(gitRoot, 'libexec', 'git-core');
     writeFile(path.join(helperDir, 'Avalonia.Base.dll'), createClrManagedGitLibrary());
+    writeFile(path.join(helperDir, 'git-credential-manager.dll'), createClrManagedGitLibrary('arm64'));
+    writeFile(path.join(helperDir, 'ja', 'System.CommandLine.resources.dll'), createClrManagedGitLibrary());
     expect(await validateNativeBinaries(root, platform, arch)).toEqual([]);
 
     // Native x86 DLLs (no COM descriptor) must never be treated as portable.

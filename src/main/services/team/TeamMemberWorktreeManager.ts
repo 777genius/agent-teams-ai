@@ -29,7 +29,7 @@ function execGit(args: string[], cwd: string): Promise<string> {
     execFile(
       getManagedGitExecutable(),
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true, env: createManagedGitEnv(process.env) },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true, env: createManagedGitEnv(process.env, { gitCommand: true }) },
       (error, stdout, stderr) => {
         if (error) {
           const message = String(stderr || error.message || 'git command failed').trim();
