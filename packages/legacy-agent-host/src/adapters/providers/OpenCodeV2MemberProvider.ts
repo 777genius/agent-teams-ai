@@ -340,9 +340,11 @@ export function createOpenCodeV2MemberProvider(
               },
               // An ended private feed means the Session SPI has sealed or
               // closed. Do not keep a previously captured Host admission alive.
-              // Consumer-initiated early iterator return is not evidence of a
-              // native failure, so only natural exhaustion/error retires it.
-              observe: async function* () {
+              // The private EventFeed is permanently single-claim. Even a
+              // consumer cancellation must retire this TEST-owned capture:
+              // otherwise no future observer can receive terminal evidence.
+              observe: () => {
+                const stream = (async function* () {
                 // The private EventFeed deliberately drains buffered events
                 // after end(). That is safe for its own Session semantics, but
                 // must NOT leak events across a revoked Host generation.
@@ -422,14 +424,34 @@ export function createOpenCodeV2MemberProvider(
                     // iterator. close() uses the existing single-flight owner
                     // stop/confirmation and never replays a native mutation.
                     if (authorityLost) await source.close();
-                    // Consumer return occurs between yields, so it needs no
-                    // native process stop. Always release the inner iterator.
+                    // Close the private single-claim feed before returning its
+                    // iterator; an in-flight next() otherwise cannot be canceled.
                     await iterator.return?.();
                   } finally {
                     if ((authorityLost || exhausted) && !await finishOwned())
                       throw new Error('opencode.v2.owner-cleanup-unknown');
                   }
                 }
+                })();
+                return {
+                  next: () => stream.next(),
+                  return: async () => {
+                    // Async-generator return() alone queues behind an
+                    // outstanding next(), and a never-started generator has
+                    // no finally block. Revoke synchronously and close the
+                    // private feed for both cases, without resending a stop.
+                    const stopping = finishOwned();
+                    try {
+                      await source.close();
+                      await stream.return(undefined);
+                    } finally {
+                      if (!await stopping)
+                        throw new Error('opencode.v2.owner-cleanup-unknown');
+                    }
+                    return { done: true as const, value: undefined };
+                  },
+                  [Symbol.asyncIterator]() { return this; },
+                };
               },
               respondToInteraction: async (reference, reply) => {
                 // V2 permission replies are native mutations. Never let a
