@@ -1,5 +1,6 @@
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { execFile } from 'child_process';
+import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,9 +27,9 @@ const GIT_TIMEOUT_MS = 15_000;
 function execGit(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
-      'git',
+      getManagedGitExecutable(),
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true, env: createManagedGitEnv(process.env) },
       (error, stdout, stderr) => {
         if (error) {
           const message = String(stderr || error.message || 'git command failed').trim();
