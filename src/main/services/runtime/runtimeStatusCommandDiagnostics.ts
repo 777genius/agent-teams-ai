@@ -24,7 +24,7 @@ function mayBeProjectAccessFailure(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const message = error instanceof Error ? error.message : '';
   const stderr = (error as { stderr?: unknown }).stderr;
-  return /an unknown error occurred \\(unexpected\\)/i.test(
+  return /an unknown error occurred \(unexpected\)/i.test(
     `${message}\n${typeof stderr === 'string' ? stderr : ''}`
   );
 }
