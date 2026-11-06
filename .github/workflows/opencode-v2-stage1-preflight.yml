@@ -11,6 +11,7 @@ on:
       - packages/legacy-agent-host/package.json
       - packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts
       - packages/legacy-agent-host/src/composition/runtimeProfile.ts
+      - packages/legacy-agent-host/src/composition/launchConfiguration.ts
       - packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts
       - packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts
       - packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
