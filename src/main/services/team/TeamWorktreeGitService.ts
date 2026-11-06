@@ -1,4 +1,5 @@
 import { execFile } from 'child_process';
+import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -9,9 +10,9 @@ const GIT_TIMEOUT_MS = 20_000;
 function execGit(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
-      'git',
+      getManagedGitExecutable(),
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true, env: createManagedGitEnv(process.env) },
       (error, stdout, stderr) => {
         if (error) {
           const message = String(stderr || error.message || 'git command failed').trim();
@@ -30,7 +31,7 @@ function normalizeGitError(error: unknown): string {
 
 function isGitUnavailable(error: unknown): boolean {
   const message = normalizeGitError(error).toLowerCase();
-  return message.includes('enoent') || message.includes('git: command not found');
+  return message.includes('enoent') || message.includes('git: command not found') || message.includes('bundled git');
 }
 
 async function assertUsableDirectory(projectPath: string): Promise<string> {
