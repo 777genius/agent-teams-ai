@@ -26,7 +26,7 @@ function createHarness() {
     ],
     cancelRequested: false,
     processKilled: false,
-    progress: { state: 'running' as const },
+    progress: { state: 'ready' as const },
   };
   let trackedRunId: string | null = run.runId;
   const materialize = vi.fn(async (input: TeamProvisioningLaunchRosterInput) =>
@@ -112,9 +112,10 @@ describe('OpenCode explicit user-send identity repair', () => {
   });
 
   it('refuses stopped, cancelled or superseded runtime identity', async () => {
-    for (const cause of ['cancelRequested', 'processKilled', 'superseded'] as const) {
+    for (const cause of ['cancelRequested', 'processKilled', 'superseded', 'cancelledProgress'] as const) {
       const h = createHarness();
       if (cause === 'superseded') h.setTrackedRunId('run-2');
+      else if (cause === 'cancelledProgress') h.run.progress.state = 'cancelled';
       else h.run[cause] = true;
       await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
         'has no authoritative config identity'
