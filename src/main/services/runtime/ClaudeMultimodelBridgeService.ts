@@ -33,6 +33,7 @@ import {
   type RuntimeExtensionCapabilitiesResponse,
   sanitizeProviderStatusAuthority,
 } from './providerStatusCheckContract';
+import { resolveRuntimeStatusExecutionContext } from './runtimeStatusExecutionContext';
 import {
   extractRuntimeStatusJsonObject as extractJsonObject,
   readRuntimeStatusCommand,
@@ -1224,10 +1225,12 @@ export class ClaudeMultimodelBridgeService {
     connectionIssues: Partial<Record<CliProviderId, string>>,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
+    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');
     }
+    args.push(...context.projectArgs);
     const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
     const parsed = await readRuntimeStatusCommand(
       binaryPath,
@@ -1236,7 +1239,7 @@ export class ClaudeMultimodelBridgeService {
         timeout,
         maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
         env,
-        cwd: getProviderStatusCommandCwd(options.projectPath),
+        cwd: context.cwd,
       },
       extractJsonObject<UnifiedRuntimeStatusResponse>
     );
