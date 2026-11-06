@@ -6,7 +6,6 @@ export const MANAGED_GIT_ENV_KEYS = [
   'PATH',
   'GIT_EXEC_PATH',
   'GIT_CONFIG_SYSTEM',
-  'GIT_TEMPLATE_DIR',
   'GIT_SSL_CAINFO',
   'PREFIX',
 ] as const;
@@ -100,9 +99,6 @@ export function createManagedGitEnv(
 
   if (!env.GIT_CONFIG_SYSTEM && platform !== 'win32') {
     env.GIT_CONFIG_SYSTEM = path.join(root, 'etc', 'gitconfig');
-  }
-  if (!env.GIT_TEMPLATE_DIR && platform !== 'win32') {
-    env.GIT_TEMPLATE_DIR = path.join(root, 'share', 'git-core', 'templates');
   }
   if (platform === 'linux') {
     env.PREFIX = root;
