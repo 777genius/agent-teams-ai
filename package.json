@@ -373,6 +373,13 @@
         ]
       },
       {
+        "from": "resources/git",
+        "to": "git",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
         "from": "resources/terminal-platform",
         "to": "terminal-platform"
       },
