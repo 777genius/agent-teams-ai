@@ -142,6 +142,11 @@ async function coldMobileLoad(browser, variant, iteration) {
   const heap = memory.metrics?.find(metric => metric.name === 'JSHeapUsedSize')?.value ?? null;
   const requestList = [...requests.values()];
   const allUrls = requestList.map(entry => entry.url);
+  const fullOrganizationPngRequested = allUrls.some(url =>
+    /\/screenshots\/organization-map\.png(?:[?#]|$)/.test(url));
+  if (variant.label === 'pr' && fullOrganizationPngRequested) {
+    errors.push('Mobile first load unexpectedly fetched the full 1.1 MB organization-map.png');
+  }
   const hosts = {};
   for (const request of requestList) {
     try {
@@ -166,7 +171,7 @@ async function coldMobileLoad(browser, variant, iteration) {
       try { return !['127.0.0.1', 'localhost'].includes(new URL(url).hostname); }
       catch { return false; }
     }).length,
-    failedRequests, topHosts, largestResources, pageExceptions,
+    failedRequests, fullOrganizationPngRequested, topHosts, largestResources, pageExceptions,
   };
   if (iteration === 1) {
     await page.screenshot({

@@ -120,6 +120,7 @@ export const screenshots: Screenshot[] = [
     height: 1640,
   },
   {
+    // Carousel uses the compressed preview; full PNG loads only on lightbox demand.
     path: 'screenshots/organization-map.png',
     previewPath: 'screenshots/previews/organization-map.webp',
     alt: 'Organization structure map with team and task details',
