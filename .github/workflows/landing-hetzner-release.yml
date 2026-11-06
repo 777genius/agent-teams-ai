@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'landing/**'
+      - 'docs/screenshots/**'
       - 'scripts/announcements/**'
       - 'scripts/ci/transitive-security*'
       - 'scripts/ci/audit-dependencies.mjs'
@@ -16,6 +17,7 @@ on:
   pull_request:
     paths:
       - 'landing/**'
+      - 'docs/screenshots/**'
       - 'scripts/announcements/**'
       - 'scripts/ci/transitive-security*'
       - 'scripts/ci/audit-dependencies.mjs'
