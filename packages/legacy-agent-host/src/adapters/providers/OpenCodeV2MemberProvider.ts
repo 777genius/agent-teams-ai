@@ -1,6 +1,8 @@
 import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { runtimeDigest } from '../../runtime/identity.js';
+import { initialContextDigest } from '../../team-launch/context.js';
+import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 
@@ -23,6 +25,17 @@ export interface OpenCodeV2OwnedSession {
   readNativeEffectivePermissions(signal: AbortSignal): Promise<unknown>;
   /** Captured product policy; V2's permissive default is never inherited. */
   readonly requiredExternalDirectory: 'ask' | 'deny';
+  /**
+   * Install exact launch instructions in THIS native session and read back
+   * identity-bound confirmation. Must not replay a mutation after lost ACK.
+   * Without a real native implementation this contract remains HOLD.
+   */
+  installAndAttestInitialContext(
+    capture: Readonly<{ nativeSessionId: string; instructions: string; contextDigest: string;
+      generation: string; configRevision: string }>,
+    signal: AbortSignal
+  ): Promise<Readonly<{ nativeSessionId: string; contextDigest: string;
+    generation: string; configRevision: string }> | undefined>;
   /** Stop ONLY this capture's process tree, never a user/shared V1 process. */
   stopOwned(): Promise<boolean>;
   /** Confirm physical termination of the same PID/start identity. */
@@ -64,19 +77,33 @@ export function createOpenCodeV2MemberProvider(
   let sealed = false;
   let allocated = false;
   let ready = false;
-  let closing: Promise<boolean> | undefined;
+  let stopAttempt: Promise<boolean> | undefined;
+  let checking: Promise<boolean> | undefined;
+  let physicallyStopped = false;
+  let initialEvidence: NativeContextEvidence | undefined;
+  const contextDigest = initialContextDigest(context.instructions);
+  const abort = new AbortController();
 
   const current = () => !sealed && context.isCurrent() && context.canAllocate();
-  const finishOwned = () => (closing ??= (async () => {
+  const finishOwned = async (): Promise<boolean> => {
     sealed = true;
     ready = false;
-    try {
-      if (!(await owned.stopOwned())) return false;
-      return await owned.confirmStopped();
-    } catch {
-      return false;
-    }
-  })());
+    initialEvidence = undefined;
+    abort.abort();
+    // A stop with an uncertain ACK is never submitted twice. Subsequent
+    // cleanup checks may ONLY read physical status for this same owned PID.
+    stopAttempt ??= Promise.resolve().then(() => owned.stopOwned()).catch(() => false);
+    await stopAttempt;
+    if (physicallyStopped) return true;
+    checking ??= Promise.resolve().then(() => owned.confirmStopped())
+      .catch(() => false)
+      .then((stopped) => {
+        if (stopped) physicallyStopped = true;
+        return stopped;
+      })
+      .finally(() => { checking = undefined; });
+    return checking;
+  };
 
   const factory = createOpenCodeV2DriverFactory({
     capabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'],
@@ -107,17 +134,39 @@ export function createOpenCodeV2MemberProvider(
         },
         probe: async (signal) => {
           if (!current() || signal.aborted) return false;
-          const valid = await owned.probe(signal);
-          if (!valid || signal.aborted || !current()) return false;
+          const combined = AbortSignal.any([signal, abort.signal]);
+          const valid = await owned.probe(combined);
+          if (!valid || combined.aborted || !current()) return false;
           // Source-only candidate plus owner-supplied native readback. The
           // production owner still must prove genuine engine custody and
           // cannot claim qualification from a scripted TEST receipt.
-          const effective = await owned.readNativeEffectivePermissions(signal);
+          const effective = await owned.readNativeEffectivePermissions(combined);
           const policy = preflightOpenCodeV2EffectiveExternalDirectory(
             effective, requiredExternalDirectory);
-          ready = policy.kind === 'policy-candidate' && !signal.aborted && current();
-          if (ready) context.onProgress();
-          return ready;
+          if (policy.kind !== 'policy-candidate' || combined.aborted || !current()) return false;
+          // A native session being reachable is NOT a ready Team member.
+          // Initial role/team/workspace instructions need native readback;
+          // never infer their installation from probe or a local digest.
+          const attested = await owned.installAndAttestInitialContext(Object.freeze({
+            nativeSessionId: profile.nativeSessionId!,
+            instructions: context.instructions,
+            contextDigest,
+            generation: context.endpoint.binding.generation,
+            configRevision: context.request.configRevision,
+          }), combined);
+          if (!attested || combined.aborted || !current() ||
+              attested.nativeSessionId !== profile.nativeSessionId ||
+              attested.contextDigest !== contextDigest ||
+              attested.generation !== context.endpoint.binding.generation ||
+              attested.configRevision !== context.request.configRevision) return false;
+          initialEvidence = {
+            kind: 'native-configuration', contextDigest,
+            generation: context.endpoint.binding.generation,
+            configRevision: context.request.configRevision,
+          };
+          ready = true;
+          context.onProgress();
+          return true;
         },
         // D.close() must report physical cleanup. Once shutdown begins,
         // there is no second submission even after uncertain ACK.
@@ -143,9 +192,12 @@ export function createOpenCodeV2MemberProvider(
       },
     },
     isReady: () => ready && current(),
+    initialContextEvidence: () => ready && current() ? initialEvidence : undefined,
     seal: () => {
       sealed = true;
       ready = false;
+      initialEvidence = undefined;
+      abort.abort();
     },
     cleanup: finishOwned,
   };
