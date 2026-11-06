@@ -137,7 +137,10 @@ const codex = common
 const opencode = common
   .extend({
     provider: z.literal('opencode'),
-    protocolRevision: z.enum(['1.18.35', '1.19.4']),
+    // Explicit trusted generation; absent remains the historical V1 profile.
+    // V2 uses its own adapter, protocol and permission model.
+    protocolRevision: z.enum(['1.18.35', '1.19.4', '2.0.0', '2.0.21']),
+    nativeGeneration: z.literal('v2').optional(),
     mcpPolicyPlugin: z
       .object({ path, sha256: z.string().regex(/^[a-f0-9]{64}$/) })
       .strict()
@@ -201,6 +204,19 @@ export const runtimeProfileSchema = z
       new Set(value.providerTemplates?.map((row) => row.provider)).size ===
       (value.providerTemplates?.length ?? 0),
     'Provider templates must be unique by provider'
+  )
+  .refine(
+    (value) => [...value.members, ...(value.providerTemplates ?? [])].every((member) =>
+      member.provider !== 'opencode' ||
+      (member.nativeGeneration === 'v2'
+        ? (member.protocolRevision === '2.0.0' || member.protocolRevision === '2.0.21') &&
+          !!member.nativeSessionId && member.mcpPolicyPlugin === undefined &&
+          member.capturedMcpServers === undefined &&
+          member.nativeOptions.toolApprovalMode === undefined &&
+          (member.extraArgs?.length ?? 0) === 0
+        : member.protocolRevision === '1.18.35' || member.protocolRevision === '1.19.4')
+    ),
+    'OpenCode V2 requires a distinct captured native generation; V1 plugin/permission/extra args cannot be reused'
   );
 
 export type RuntimeProfile = z.infer<typeof runtimeProfileSchema>;
