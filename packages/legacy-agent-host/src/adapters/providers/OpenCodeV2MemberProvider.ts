@@ -404,10 +404,18 @@ export function createOpenCodeV2MemberProvider(
                     // A native event may arrive while a probe is pending.
                     // Retain it until the same owned PID, policy, and context
                     // have been successfully re-attested; never leak on loss.
-                    if (!await waitForAttestation()) {
-                      authorityLost = true;
-                      break;
+                    // await creates a microtask gap: Host authority or a new
+                    // native re-attestation can change after the prior check.
+                    // Keep this already-read event until the final synchronous
+                    // guard is true; never replay the private feed's next().
+                    for (;;) {
+                      if (!await waitForAttestation() || !current()) {
+                        authorityLost = true;
+                        break;
+                      }
+                      if (ready && pendingReattestations.size === 0) break;
                     }
+                    if (authorityLost) break;
                     yield outcome.value.value;
                   }
                 } catch (error) {
