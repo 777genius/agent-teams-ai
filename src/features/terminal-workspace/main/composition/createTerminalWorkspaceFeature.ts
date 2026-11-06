@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { pathToFileURL } from 'node:url';
 
 import { startWorkspaceGatewayNodeServer } from '@terminal-platform/workspace-gateway-node';
@@ -242,7 +244,7 @@ class TeamTerminalDaemonSupervisor {
       ['--runtime-slug', this.#runtimeSlug, '--session-store', this.#sessionStorePath],
       {
         cwd: resolveDaemonWorkingDirectory(daemonBinaryPath),
-        env: process.env,
+        env: createManagedGitEnv(process.env),
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
       }
