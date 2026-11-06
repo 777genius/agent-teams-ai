@@ -53,10 +53,14 @@ async function coldMobileLoad(browser, variant, iteration) {
     requests.set(entry.requestId, { url: entry.request.url, type: entry.type });
   });
   cdps.on('Network.loadingFinished', entry => {
-    bytes += entry.encodedDataLength || 0;
+    const size = entry.encodedDataLength || 0;
+    bytes += size;
+    const request = requests.get(entry.requestId);
+    if (request) request.bytes = size;
   });
   cdps.on('Network.loadingFailed', () => { failedRequests += 1; });
   await cdps.send('Network.enable');
+  await cdps.send('Performance.enable');
   await cdps.send('Network.setCacheDisabled', { cacheDisabled: true });
   await cdps.send('Network.emulateNetworkConditions', {
     offline: false, latency: 150,
@@ -65,6 +69,13 @@ async function coldMobileLoad(browser, variant, iteration) {
     connectionType: 'cellular4g',
   });
   await cdps.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  const shouldTrace = iteration === 1;
+  if (shouldTrace) {
+    await cdps.send('Tracing.start', {
+      categories: 'devtools.timeline,blink.user_timing,loading,v8',
+      transferMode: 'ReturnAsStream',
+    });
+  }
 
   const pageExceptions = [];
   page.on('pageerror', exception => pageExceptions.push(String(exception)));
@@ -81,7 +92,11 @@ async function coldMobileLoad(browser, variant, iteration) {
     };
     create('largest-contentful-paint', entries => {
       const last = entries.at(-1);
-      if (last) vitals.lcp = last.startTime;
+      if (last) {
+        vitals.lcp = last.startTime;
+        vitals.lcpElement = last.element?.tagName + (last.element?.id ? '#' + last.element.id : '');
+        vitals.lcpUrl = last.url || '';
+      }
     });
     create('layout-shift', entries => {
       for (const item of entries) if (!item.hadRecentInput) vitals.cls += item.value;
@@ -110,6 +125,8 @@ async function coldMobileLoad(browser, variant, iteration) {
     return {
       fcpMs: fcp,
       lcpMs: vitals.lcp,
+      lcpElement: vitals.lcpElement || null,
+      lcpUrl: vitals.lcpUrl || null,
       cls: vitals.cls,
       tbtMs: Math.round(tbt),
       domContentLoadedMs: navigation?.domContentLoadedEventEnd ?? null,
@@ -123,14 +140,24 @@ async function coldMobileLoad(browser, variant, iteration) {
   });
   const memory = await cdps.send('Performance.getMetrics').catch(() => ({ metrics: [] }));
   const heap = memory.metrics?.find(metric => metric.name === 'JSHeapUsedSize')?.value ?? null;
-  const allUrls = [...requests.values()].map(entry => entry.url);
-  const topHosts = Object.entries(allUrls.reduce((totals, url) => {
+  const requestList = [...requests.values()];
+  const allUrls = requestList.map(entry => entry.url);
+  const hosts = {};
+  for (const request of requestList) {
     try {
-      const host = new URL(url).hostname;
-      totals[host] = (totals[host] || 0) + 1;
+      const host = new URL(request.url).hostname;
+      hosts[host] ||= { requests: 0, kb: 0 };
+      hosts[host].requests += 1;
+      hosts[host].kb += Math.round((request.bytes || 0) / 1024);
     } catch { /* Non-HTTP URL. */ }
-    return totals;
-  }, {})).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  }
+  const topHosts = Object.entries(hosts)
+    .sort((a, b) => b[1].kb - a[1].kb)
+    .slice(0, 12);
+  const largestResources = requestList
+    .sort((a, b) => (b.bytes || 0) - (a.bytes || 0))
+    .slice(0, 12)
+    .map(entry => ({ url: entry.url, type: entry.type, kb: Math.round((entry.bytes || 0) / 1024) }));
   const sample = {
     revision: variant.label, iteration, elapsedMs: Date.now() - start,
     ...data, heapMb: heap === null ? null : Math.round(heap / 1048576 * 10) / 10,
@@ -139,13 +166,30 @@ async function coldMobileLoad(browser, variant, iteration) {
       try { return !['127.0.0.1', 'localhost'].includes(new URL(url).hostname); }
       catch { return false; }
     }).length,
-    failedRequests, topHosts, pageExceptions,
+    failedRequests, topHosts, largestResources, pageExceptions,
   };
   if (iteration === 1) {
     await page.screenshot({
       path: path.join(outputDir, variant.label + '-mobile-firstscreen.png'),
       animations: 'disabled',
     });
+  }
+  if (shouldTrace) {
+    const done = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('CDP trace timeout')), 30000);
+      cdps.once('Tracing.tracingComplete', event => { clearTimeout(timeout); resolve(event); });
+    });
+    await cdps.send('Tracing.end');
+    const { stream } = await done;
+    assert(stream, 'CDP trace was not returned as a stream');
+    const chunks = [];
+    for (;;) {
+      const chunk = await cdps.send('IO.read', { handle: stream, size: 1024 * 1024 });
+      chunks.push(chunk.base64Encoded ? Buffer.from(chunk.data, 'base64') : Buffer.from(chunk.data));
+      if (chunk.eof) break;
+    }
+    await cdps.send('IO.close', { handle: stream });
+    fs.writeFileSync(path.join(outputDir, variant.label + '-mobile-cdp-trace.json'), Buffer.concat(chunks));
   }
   records.push(sample);
   await context.close();
