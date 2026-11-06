@@ -656,8 +656,11 @@ function hasCompatibilityPendingDetails(checks: ProvisioningProviderCheck[]): bo
   );
 }
 
-function getDisplayStatusText(check: ProvisioningProviderCheck, t?: TeamTranslator): string {
+export function getDisplayStatusText(check: ProvisioningProviderCheck, t?: TeamTranslator): string {
   const publicDetails = getPublicProvisioningDetails(check.details);
+  if (check.status === 'failed' && check.providerId === 'opencode' &&
+      publicDetails.some(isOpenCodeProjectAccessDeniedDiagnostic))
+    return 'Project folder access denied';
   const modelSummary = getModelDetailSummary(publicDetails, t);
   if (modelSummary) {
     return modelSummary;
@@ -1092,12 +1095,11 @@ export function getProvisioningFailureHint(
     check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
   );
   const normalizedMessage = message?.trim() ?? '';
-  if (
-    failedOpenCodeChecks.some(({ details }) => details.some(isOpenCodeProjectAccessDeniedDiagnostic)) ||
-    (failedOpenCodeChecks.length > 0 && !hasFailedNonOpenCodeCheck &&
-      isOpenCodeProjectAccessDeniedDiagnostic(normalizedMessage))
-  ) return t?.('provisioning.providerStatus.failureHints.default') ??
-    'Resolve the issue above, then reopen this dialog.';
+  if (failedOpenCodeChecks.some((check) =>
+    [...check.details, ...(hasFailedNonOpenCodeCheck ? [] : [normalizedMessage])]
+      .some(isOpenCodeProjectAccessDeniedDiagnostic)))
+    return t?.('provisioning.providerStatus.failureHints.default') ??
+      'Resolve the issue above, then reopen this dialog.';
   const hasOpenCodeNodeModulesSymlinkPermissionMessage =
     failedOpenCodeChecks.length > 0 &&
     (normalizedMessage === OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE ||

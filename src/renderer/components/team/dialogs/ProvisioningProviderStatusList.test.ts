@@ -4,7 +4,28 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { describe, expect, it } from 'vitest';
 
-import { getProvisioningFailureHint } from './ProvisioningProviderStatusList';
+import { getDisplayStatusText, getProvisioningFailureHint } from './ProvisioningProviderStatusList';
+
+describe('getDisplayStatusText', () => {
+  it('prioritizes a verified project access problem over unrelated failed model summaries', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: [
+        'Selected model ollama/qwen2.5-coder:7b is unavailable.',
+        'Project folder access denied (EPERM). Grant Agent Teams access to this folder.',
+      ],
+    })).toBe('Project folder access denied');
+  });
+
+  it('does not mislabel an unverified model failure as a filesystem permission issue', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: ['Selected model ollama/qwen2.5-coder:7b is unavailable.'],
+    })).not.toBe('Project folder access denied');
+  });
+});
 
 describe('getProvisioningFailureHint', () => {
   it('returns the administrator hint for the exact OpenCode node_modules symlink permission failure', () => {
