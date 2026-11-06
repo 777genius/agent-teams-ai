@@ -720,6 +720,23 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
   });
 
+// Pinned private PR #1 uses config.directory.startsWith('/') even on Windows.
+// This is a source-grounded qualification HOLD, not a native Windows test.
+// Do not replace the synthetic late-ACK fixture's path with a Windows drive
+// until the versioned private transport is independently qualified and pinned.
+test('pinned private V2 PR1 refuses Windows native cwd before network access (HOLD)',
+  { skip: process.platform !== 'win32' }, async () => {
+    const fixture = v2Profile();
+    fixture.cwd = String.raw`C:\TEST-only-opencode-v2`;
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(fixture), captured);
+    await assert.rejects(() => provider.factory.open(request()), /opencode.driver.invalid-config/);
+    assert.equal(calls.probe, 0, 'unqualified Windows native path cannot reach a probe');
+    assert.equal(calls.password, 0, 'no native credentials');
+    assert.equal(calls.stop, 1, 'only this TEST-owned capture is retired');
+    assert.equal(await provider.cleanup(), true);
+  });
+
 test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed',
   { timeout: 10000 }, async () => {
     // A disposable localhost peer proves the real pinned private Session SPI
