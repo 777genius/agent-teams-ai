@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TeamProvisioningMemberStatusQueryFacade } from '../TeamProvisioningMemberStatusQueryFacade';
 
+import { materializeTeamProvisioningLaunchRoster } from '../TeamProvisioningLaunchRosterMaterialization';
+
 import type { TeamProvisioningLaunchRosterInput } from '../TeamProvisioningLaunchRosterMaterialization';
 
 import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisioningCompatibilityFacade';
@@ -191,8 +193,7 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
     expect(facade.getTeamAgentRuntimeSnapshotMock).toHaveBeenCalledWith('alpha');
   });
 
-
-  it('repairs a live OpenCode teammate missing from config and delivers to its canonical identity', async () => {
+  it('restores a live OpenCode teammate missing from config before direct-message routing', async () => {
     const facade = new TestMemberStatusQueryFacade();
     const run = createRun();
     run.allEffectiveMembers = [
@@ -200,26 +201,29 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
     ];
     facade.trackRun(run);
 
-    let config = {
+    let configRaw = JSON.stringify({
       name: 'alpha',
       members: [{ name: 'Lead', providerId: 'codex' }],
-    } as TeamConfig;
-    facade.readConfigSnapshotMock.mockImplementation(async () => config);
-    facade.getMembersMock.mockResolvedValue([
+    });
+    const metadata: TeamMember[] = [
       { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
-    ]);
+    ];
+    facade.readConfigSnapshotMock.mockImplementation(async () => JSON.parse(configRaw) as TeamConfig);
+    facade.getMembersMock.mockResolvedValue(metadata);
     facade.materializeLaunchRosterMock.mockImplementation(async (input) => {
       expect(input.teamName).toBe('alpha');
       expect(input.members).toEqual(run.allEffectiveMembers);
       expect(input.isCurrentRun()).toBe(true);
-      config = {
-        ...config,
-        members: [
-          ...config.members,
-          { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
-        ],
-      };
-      return true;
+      return materializeTeamProvisioningLaunchRoster(input, {
+        readConfig: async () => configRaw,
+        readMetaMembers: async () => metadata,
+        writeConfig: async (raw, beforeCommit) => {
+          await beforeCommit();
+          configRaw = raw;
+        },
+        invalidateTeam: vi.fn(),
+        now: () => 123,
+      });
     });
 
     await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).resolves.toBe(
@@ -227,6 +231,14 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
     );
     expect(facade.materializeLaunchRosterMock).toHaveBeenCalledTimes(1);
     expect(facade.readConfigSnapshotMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(configRaw).members).toContainEqual(
+      expect.objectContaining({
+        name: 'Worker',
+        agentId: 'Worker@alpha',
+        providerId: 'opencode',
+        model: 'openai/gpt-test',
+      })
+    );
 
     // Once repaired, another send reads the canonical entry without another config write.
     await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).resolves.toBe(
