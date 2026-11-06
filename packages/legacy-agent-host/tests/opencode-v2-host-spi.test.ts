@@ -726,7 +726,9 @@ test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed
     // can return a successful prompt ACK after Host authority was revoked.
     // This is NOT a model turn or native executable qualification.
     const profile = v2Profile();
-    if (process.platform === 'win32') profile.cwd = 'C:\\TEST-only-opencode-v2';
+    // The pinned private V2 driver PR #1 validates a POSIX lexical directory
+    // even in this Windows synthetic HTTP transport test. Keep the captured
+    // TEST path unchanged on all CI hosts; it is NOT native Windows custody.
     const postSeen = Promise.withResolvers<void>();
     const releaseAck = Promise.withResolvers<void>();
     let postCount = 0;
