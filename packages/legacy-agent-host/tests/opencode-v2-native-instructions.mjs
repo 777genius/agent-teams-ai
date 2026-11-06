@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createOpenCodeV2MemberProvider } from '../dist/adapters/providers/OpenCodeV2MemberProvider.js';
 import { initialContextDigest } from '../dist/team-launch/context.js';
+import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
 
 const version = '2.0.21';
 const pinnedLinuxX64Avx2Digest = 'f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7';
@@ -141,6 +142,31 @@ try {
   if(created.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(nativeSessionId||''))
     throw Error('native_session_create_unconfirmed');
   receipt.steps.push('native_TEST_session_created_no_model_call');
+  // Real native ordering negative: a later allow must defeat an earlier deny
+  // for this disposable second TEST session, and the Host must refuse it.
+  // Never execute a model turn or create out-of-workspace files.
+  const unsafeRules=[
+    {action:'external_directory',resource:'*',effect:'deny'},
+    {action:'external_directory',resource:'*',effect:'allow'},
+  ];
+  const unsafe=await native('/api/session','POST',{
+    location:{directory:workspace}, permissions:unsafeRules,
+  });
+  const unsafeId=unsafe.data?.data?.id;
+  if(unsafe.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(unsafeId||'')||
+     unsafeId===nativeSessionId)throw Error('native_second_TEST_session_missing');
+  const unsafePath='/api/session/'+encodeURIComponent(unsafeId);
+  const unsafeRead=await native(unsafePath);
+  if(unsafeRead.status!==200||unsafeRead.data?.data?.id!==unsafeId||
+     JSON.stringify(unsafeRead.data.data.permissions)!==JSON.stringify(unsafeRules))
+    throw Error('native_ordered_permissions_readback_mismatch');
+  const unsafePolicy=preflightOpenCodeV2EffectiveExternalDirectory(
+    unsafeRead.data.data.permissions,'deny');
+  if(unsafePolicy.kind!=='hold'||unsafePolicy.reason!=='external-directory')
+    throw Error('Host_accepted_native_later_allow_override');
+  const unsafeDelete=await native(unsafePath,'DELETE');
+  if(unsafeDelete.status!==204)throw Error('native_second_TEST_session_delete_failed');
+  receipt.steps.push('real_native_later_allow_override_refused_by_Host');
   const sessionPath='/api/session/'+encodeURIComponent(nativeSessionId);
   const instructions='TEST-only Host role, team and workspace. Do not execute real tools.';
   const context={request:{
