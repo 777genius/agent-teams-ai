@@ -117,6 +117,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'repairStaleTaskActivityIntervalsBeforeSnapshot',
   'resolveCrossTeamReplyMetadata',
   'resolveRuntimeRecipientProviderId',
+  'resolveRuntimeRecipientProviderIdForUserSend',
   'respondToToolApproval',
   'restartLeadRuntime',
   'restartMember',
