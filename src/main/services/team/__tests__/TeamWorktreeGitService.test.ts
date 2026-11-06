@@ -22,7 +22,7 @@ describe('macOS Git availability without installer prompts', () => {
     const directory = await mkdtemp(path.join(tmpdir(), 'agent-teams-git-path-'));
     try {
       const executable = path.join(directory, 'git');
-      await writeFile(executable, '#!/bin/sh\\nexit 0\\n');
+      await writeFile(executable, '#!/bin/sh\nexit 0\n');
       await chmod(executable, 0o755);
       await expect(canUseGitWithoutMacInstallerPrompt('darwin', directory)).resolves.toBe(true);
     } finally {
