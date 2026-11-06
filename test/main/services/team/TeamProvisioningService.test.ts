@@ -28093,6 +28093,11 @@ describe('TeamProvisioningService', () => {
     const worktreeGitDir = path.join(repoDir, '.git', 'worktrees', 'alice');
     fs.mkdirSync(worktreeDir, { recursive: true });
     fs.mkdirSync(worktreeGitDir, { recursive: true });
+    // A real Git repository and linked worktree have HEAD/config metadata.
+    // Empty .git directories are intentionally not promoted to trusted roots.
+    fs.writeFileSync(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    fs.writeFileSync(path.join(repoDir, '.git', 'config'), '[core]\n');
+    fs.writeFileSync(path.join(worktreeGitDir, 'HEAD'), 'ref: refs/heads/main\n');
     fs.writeFileSync(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n', 'utf8');
     fs.writeFileSync(path.join(repoDir, '.git', 'config'), '[core]\n', 'utf8');
     fs.writeFileSync(path.join(worktreeGitDir, 'HEAD'), 'ref: refs/heads/main\n', 'utf8');
