@@ -61,7 +61,7 @@ async function coldMobileLoad(browser, variant, iteration) {
   cdps.on('Network.loadingFailed', () => { failedRequests += 1; });
   await cdps.send('Network.enable');
   await cdps.send('Performance.enable');
-  await cdps.send('Network.setCacheDisabled', { cacheDisabled: true });
+  // Fresh, isolated browser context is cold; retain in-navigation preload coalescing.
   await cdps.send('Network.emulateNetworkConditions', {
     offline: false, latency: 150,
     downloadThroughput: 1600 * 1024 / 8,
@@ -298,7 +298,7 @@ const comparison = Object.fromEntries(urls.map(v => [
 ]));
 const report = { baselineSha: '7ba6e417c56f1d78300f85985ead1698d4902ae0',
   headSha: process.env.GITHUB_SHA || null,
-  mobileNetwork: '150ms latency, 1.6Mbps down, 750Kbps up, 4x CPU',
+  mobileNetwork: '150ms latency, 1.6Mbps down, 750Kbps up, 4x CPU; fresh context; gzip text assets',
   runsPerRevision: 3, comparison, samples: records,
   interaction, desktop, errors };
 fs.writeFileSync(path.join(outputDir, 'cdp-report.json'), JSON.stringify(report, null, 2));

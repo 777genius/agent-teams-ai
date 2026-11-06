@@ -6,6 +6,7 @@ on:
     paths:
       - landing/**
       - scripts/e2e/landing-mobile-cdp.mjs
+      - scripts/e2e/landing-gzip-server.py
       - .github/workflows/landing-mobile-cdp.yml
   workflow_dispatch:
 
@@ -71,9 +72,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$CDP_ARTIFACT_DIR"
-          python3 -m http.server 4301 --bind 127.0.0.1 --directory "$PWD/baseline/landing/.output/public" > "$CDP_ARTIFACT_DIR/baseline-server.log" 2>&1 &
+          python3 current/scripts/e2e/landing-gzip-server.py --port 4301 --directory "$PWD/baseline/landing/.output/public" > "$CDP_ARTIFACT_DIR/baseline-server.log" 2>&1 &
           baseline_pid=$!
-          python3 -m http.server 4302 --bind 127.0.0.1 --directory "$PWD/current/landing/.output/public" > "$CDP_ARTIFACT_DIR/pr-server.log" 2>&1 &
+          python3 current/scripts/e2e/landing-gzip-server.py --port 4302 --directory "$PWD/current/landing/.output/public" > "$CDP_ARTIFACT_DIR/pr-server.log" 2>&1 &
           pr_pid=$!
           trap 'kill "$baseline_pid" "$pr_pid" 2>/dev/null || true' EXIT
           for port in 4301 4302; do
