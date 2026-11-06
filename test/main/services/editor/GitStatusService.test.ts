@@ -95,6 +95,7 @@ describe('GitStatusService', () => {
       expect(vi.mocked(simpleGit)).toHaveBeenCalledWith({
         baseDir: '/Users/test/project',
         binary: 'git',
+        unsafe: { allowUnsafeCustomBinary: true },
         allowEnvironment: [
           'GIT_OPTIONAL_LOCKS',
           'PATH',

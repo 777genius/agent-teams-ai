@@ -51,6 +51,8 @@ export class GitStatusService {
       this.git = simpleGit({
         baseDir: projectRoot,
         binary: getManagedGitExecutable(),
+        // Verified bundled Git lives under an application path that may contain spaces.
+        unsafe: { allowUnsafeCustomBinary: true },
         allowEnvironment: ['GIT_OPTIONAL_LOCKS', ...MANAGED_GIT_ENV_KEYS],
         timeout: { block: GIT_TIMEOUT_MS },
       }).env('GIT_OPTIONAL_LOCKS', '0');

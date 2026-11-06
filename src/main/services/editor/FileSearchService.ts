@@ -158,6 +158,8 @@ export class FileSearchService {
       const git = simpleGit({
         baseDir: projectRoot,
         binary,
+        // Binary is resolved by the app, never supplied by a search query.
+        unsafe: { allowUnsafeCustomBinary: true },
         allowEnvironment: ['GIT_OPTIONAL_LOCKS', ...MANAGED_GIT_ENV_KEYS],
         timeout: { block: 10_000 },
       }).env('GIT_OPTIONAL_LOCKS', '0');
