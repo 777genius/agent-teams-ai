@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   mobile-cdp:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 45
     steps:
       - name: Checkout PR
@@ -50,7 +50,16 @@ jobs:
       - name: Install CDP tooling in isolated temp directory
         run: |
           npm install --ignore-scripts --no-save --prefix "$RUNNER_TEMP/landing-cdp" playwright-core@1.56.1 lighthouse@12
-          google-chrome --version
+          if command -v google-chrome >/dev/null; then
+            echo "CDP_CHROME_PATH=$(command -v google-chrome)" >> "$GITHUB_ENV"
+            google-chrome --version
+          elif command -v chromium >/dev/null; then
+            echo "CDP_CHROME_PATH=$(command -v chromium)" >> "$GITHUB_ENV"
+            chromium --version
+          else
+            "$RUNNER_TEMP/landing-cdp/node_modules/.bin/playwright" install --with-deps chromium
+            echo "CDP_CHROME_PATH=$(node -p "require('$RUNNER_TEMP/landing-cdp/node_modules/playwright-core').chromium.executablePath()")" >> "$GITHUB_ENV"
+          fi
 
       - name: Compare cold mobile loads with Chromium CDP and run interaction E2E
         shell: bash
