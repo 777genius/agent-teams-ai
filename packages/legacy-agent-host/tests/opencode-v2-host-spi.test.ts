@@ -203,6 +203,54 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(calls.stopped, 1);
 });
 
+test('native permission drift revokes an already ready V2 SPI member, with no replay', async () => {
+  const { captured, calls } = owner(true);
+  let effective: 'deny' | 'allow' = 'deny';
+  captured.readNativeEffectivePermissions = async () => {
+    calls.permissions++;
+    return [{ action: 'external_directory', resource: '*', effect: effective }];
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.notEqual(provider.initialContextEvidence?.(), undefined);
+
+  effective = 'allow';
+  const recheck = await opened.driver.checkReadiness();
+  assert.equal(recheck.ok, false, 'the real native permission readback no longer satisfies deny');
+  assert.equal(provider.isReady(), false, 'cached readiness must not survive failed recheck');
+  assert.equal(provider.initialContextEvidence?.(), undefined,
+    'old native instruction evidence must not survive permission drift');
+
+  effective = 'deny';
+  const next = await opened.driver.checkReadiness();
+  assert.equal(next.ok, false, 'once revoked, restoring policy cannot revive the same capture');
+  assert.equal(calls.permissions, 2, 'revoked owner must not perform more native reads');
+  assert.equal(calls.context, 1, 'no mutation replay during re-attestation');
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1, 'stop only the original TEST owner once');
+});
+
+test('native probe loss after initial Host readiness revokes the capture permanently', async () => {
+  const { captured, calls } = owner(true);
+  let available = true;
+  captured.probe = async () => { calls.probe++; return available; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+
+  available = false;
+  assert.equal((await opened.driver.checkReadiness()).ok, false);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  available = true;
+  assert.equal((await opened.driver.checkReadiness()).ok, false);
+  assert.equal(calls.probe, 2, 'failed native identity must not be reacquired');
+  assert.equal(calls.context, 1);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
+
 test('V2 native-effective allow cannot satisfy captured deny, even after a successful native probe', async () => {
   const { captured, calls } = owner(true, 'allow');
   const provider = createOpenCodeV2MemberProvider(context(), captured);
