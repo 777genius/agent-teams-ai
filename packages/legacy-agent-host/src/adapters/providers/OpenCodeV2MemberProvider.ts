@@ -147,44 +147,44 @@ export function createOpenCodeV2MemberProvider(
           initialEvidence = undefined;
           let accepted = false;
           try {
-          const combined = AbortSignal.any([signal, abort.signal]);
-          const valid = await owned.probe(combined);
-          if (!valid || combined.aborted || !current()) return false;
-          // Source-only candidate plus owner-supplied native readback. The
-          // production owner still must prove genuine engine custody and
-          // cannot claim qualification from a scripted TEST receipt.
-          const effective = await owned.readNativeEffectivePermissions(combined);
-          const policy = preflightOpenCodeV2EffectiveExternalDirectory(
-            effective, requiredExternalDirectory);
-          if (policy.kind !== 'policy-candidate' || combined.aborted || !current()) return false;
-          // A native session being reachable is NOT a ready Team member.
-          // Initial role/team/workspace instructions need native readback;
-          // never infer their installation from probe or a local digest.
-          initialContextAttempt ??= Promise.resolve().then(() => {
-            if (combined.aborted || !current()) return undefined;
-            return owned.installAndAttestInitialContext(Object.freeze({
-              nativeSessionId: profile.nativeSessionId!,
-              instructions: context.instructions,
-              contextDigest,
+            const combined = AbortSignal.any([signal, abort.signal]);
+            const valid = await owned.probe(combined);
+            if (!valid || combined.aborted || !current()) return false;
+            // Source-only candidate plus owner-supplied native readback. The
+            // production owner still must prove genuine engine custody and
+            // cannot claim qualification from a scripted TEST receipt.
+            const effective = await owned.readNativeEffectivePermissions(combined);
+            const policy = preflightOpenCodeV2EffectiveExternalDirectory(
+              effective, requiredExternalDirectory);
+            if (policy.kind !== 'policy-candidate' || combined.aborted || !current()) return false;
+            // A native session being reachable is NOT a ready Team member.
+            // Initial role/team/workspace instructions need native readback;
+            // never infer their installation from probe or a local digest.
+            initialContextAttempt ??= Promise.resolve().then(() => {
+              if (combined.aborted || !current()) return undefined;
+              return owned.installAndAttestInitialContext(Object.freeze({
+                nativeSessionId: profile.nativeSessionId!,
+                instructions: context.instructions,
+                contextDigest,
+                generation: context.endpoint.binding.generation,
+                configRevision: context.request.configRevision,
+              }), combined);
+            });
+            const attested = await initialContextAttempt;
+            if (!attested || combined.aborted || !current() ||
+                attested.nativeSessionId !== profile.nativeSessionId ||
+                attested.contextDigest !== contextDigest ||
+                attested.generation !== context.endpoint.binding.generation ||
+                attested.configRevision !== context.request.configRevision) return false;
+            initialEvidence = {
+              kind: 'native-configuration', contextDigest,
               generation: context.endpoint.binding.generation,
               configRevision: context.request.configRevision,
-            }), combined);
-          });
-          const attested = await initialContextAttempt;
-          if (!attested || combined.aborted || !current() ||
-              attested.nativeSessionId !== profile.nativeSessionId ||
-              attested.contextDigest !== contextDigest ||
-              attested.generation !== context.endpoint.binding.generation ||
-              attested.configRevision !== context.request.configRevision) return false;
-          initialEvidence = {
-            kind: 'native-configuration', contextDigest,
-            generation: context.endpoint.binding.generation,
-            configRevision: context.request.configRevision,
-          };
-          ready = true;
-          context.onProgress();
-          accepted = true;
-          return true;
+            };
+            ready = true;
+            context.onProgress();
+            accepted = true;
+            return true;
           } finally {
             if (!accepted) {
               qualificationRevoked = true;
