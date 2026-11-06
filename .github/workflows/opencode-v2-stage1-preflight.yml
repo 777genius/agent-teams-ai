@@ -95,9 +95,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/opencode-v2-host-cli"
-          npm install --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --no-save \
+          (cd "$RUNNER_TEMP/opencode-v2-host-cli" && npm init -y)
+          npm install --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --save-exact \
             --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/cli@2.0.21
           npm ls --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --depth=0 @opencode/cli
+          test -s "$RUNNER_TEMP/opencode-v2-host-cli/package-lock.json"
       - name: Exercise real pinned native server against existing Host Session SPI
         env:
           OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
