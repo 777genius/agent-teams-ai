@@ -1,3 +1,4 @@
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import {
   isPureOpenCodeSoloLanePlan,
   OPEN_CODE_SOLO_MEMBER_NAME,
@@ -618,6 +619,7 @@ export class TeamProvisioningPrepareCoordinator {
     providerArgs: string[] = [],
     limitContext: boolean
   ): Promise<string | null> {
+    const context = await resolveRuntimeStatusExecutionContext(providerId, cwd);
     const { stdout } = await this.ports.execCli(
       claudePath,
       buildProviderControlPlaneCliCommandArgs(providerArgs, [
@@ -626,9 +628,10 @@ export class TeamProvisioningPrepareCoordinator {
         '--json',
         '--provider',
         providerId,
+        ...context.projectArgs,
       ]),
       {
-        cwd,
+        cwd: context.cwd ?? cwd,
         env,
         timeout:
           providerId === 'opencode'
