@@ -9,6 +9,8 @@ const hoisted = vi.hoisted(() => ({ backupsBase: '', teamsBase: '' }));
 vi.mock('@main/utils/pathDecoder', () => ({
   getBackupsBasePath: () => hoisted.backupsBase,
   getTeamsBasePath: () => hoisted.teamsBase,
+  getTasksBasePath: () => path.join(hoisted.backupsBase, 'TEST-tasks'),
+  getAppDataPath: () => path.join(hoisted.backupsBase, 'TEST-app-data'),
 }));
 
 vi.mock('@shared/utils/logger', () => ({
@@ -20,9 +22,9 @@ vi.mock('@shared/utils/logger', () => ({
   }),
 }));
 
-import { TeamPermanentDeletionCoordinator } from '@main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
-import { TeamPermanentDeletionIntentStore } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIntentStore';
-import { TeamPermanentDeletionLock } from '@main/services/team/permanent-deletion/TeamPermanentDeletionLock';
+import { createTeamPermanentDeletionCoordinator } from '@main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
+import { createTeamPermanentDeletionIntentStore } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIntentStore';
+import { createTeamPermanentDeletionLock } from '@main/services/team/permanent-deletion/TeamPermanentDeletionLock';
 
 import type { TeamPermanentDeletionCoordinatorPorts } from '@main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
 import type { TeamPermanentDeletionIntent } from '@main/services/team/permanent-deletion/TeamPermanentDeletionTypes';
@@ -87,7 +89,7 @@ describe('completed permanent deletion tombstones', () => {
   });
 
   it('removes a finished tombstone and keeps every unfinished intent', async () => {
-    const store = new TeamPermanentDeletionIntentStore(new TeamPermanentDeletionLock());
+    const store = createTeamPermanentDeletionIntentStore(createTeamPermanentDeletionLock());
     writeIntentFile(createIntent('finished'));
     writeIntentFile(createIntent('still-preparing', { phase: 'prepared' }));
     writeIntentFile(createIntent('still-deleting', { phase: 'deleting' }));
@@ -108,7 +110,7 @@ describe('completed permanent deletion tombstones', () => {
   });
 
   it('keeps a deleted-phase intent whose cleanup did not complete', async () => {
-    const store = new TeamPermanentDeletionIntentStore(new TeamPermanentDeletionLock());
+    const store = createTeamPermanentDeletionIntentStore(createTeamPermanentDeletionLock());
     // Only the pair (phase 'deleted', cleanup completed) is finished. A
     // 'deleted' phase on its own still owns targets that were never removed.
     const unfinished = createIntent('unfinished', {
@@ -131,7 +133,7 @@ describe('completed permanent deletion tombstones', () => {
   });
 
   it('warns and keeps going when one tombstone cannot be removed', async () => {
-    const store = new TeamPermanentDeletionIntentStore(new TeamPermanentDeletionLock());
+    const store = createTeamPermanentDeletionIntentStore(createTeamPermanentDeletionLock());
     writeIntentFile(createIntent('broken'));
     writeIntentFile(createIntent('fine'));
     await store.loadPermanentDeletionIntents();
@@ -161,7 +163,7 @@ describe('completed permanent deletion tombstones', () => {
       saveRegistryEntry: async () => undefined,
     } as unknown as TeamPermanentDeletionCoordinatorPorts;
 
-    await new TeamPermanentDeletionCoordinator(ports).initialize();
+    await createTeamPermanentDeletionCoordinator(ports).initialize();
 
     // The stale tombstone answered for the team name, so recreating the team
     // and deleting it short-circuited against a fence built for the old

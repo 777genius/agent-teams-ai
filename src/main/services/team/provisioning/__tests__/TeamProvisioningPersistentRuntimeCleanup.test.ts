@@ -261,10 +261,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
   });
 
   it('takes recorded runtime pids from launch discovery when config members carry none', () => {
-    const members = [
-      { name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux' },
-      { name: 'Solo' },
-    ];
+    const members = [{ name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux' }, { name: 'Solo' }];
     const ports = createPorts({
       readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
       readRecordedRuntimePids: vi.fn(() => [51, 52]),

@@ -20,7 +20,8 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   },
 }));
 
-vi.mock('@main/services/infrastructure/codexAppServer', () => ({
+vi.mock('@main/services/infrastructure/codexAppServer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/services/infrastructure/codexAppServer')>()),
   CodexBinaryResolver: {
     clearCache: codexBinaryResolverClearCacheMock,
   },

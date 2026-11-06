@@ -1,0 +1,83 @@
+{
+  "status": "Scoped actual public-D shared-native isolation PASS; production Host remains dedicated",
+  "jobId": "2288f13ba4c88ef2788bf5017a2fa148",
+  "collectorJobId": "dae1b1081299241879e3911fe1e0089c",
+  "managedResults": {
+    "nativeExitCode": 0,
+    "collectorExitCode": 0,
+    "signals": [
+      null,
+      null
+    ],
+    "logsDrained": true,
+    "nativeDispatches": 1,
+    "nativeWaiters": 1,
+    "collectorDispatches": 1,
+    "collectorWaiters": 1
+  },
+  "runRoot": "/Volumes/Transcend/dev/TEST-opencode-shared-api-prep-m2btptfx/operator-tmp/TEST-native-opencode-shared-eI5B9J",
+  "retainedEvidence": "/Volumes/Transcend/dev/TEST-opencode-shared-api-prep-m2btptfx/retained-2288f13ba4c88ef2788bf5017a2fa148",
+  "manifestSha256": "276b5831ddd9165d962edeba8c98d4037a1f8116d677897688670bb982ba2f64",
+  "receiptSha256": "88a5c85bc310658686352d584b25cdb4e7ca74beea8639951d7abe287bebf147",
+  "retainedFiles": 264,
+  "retainedBytes": 41352022,
+  "collectionErrors": [],
+  "qualificationErrors": [],
+  "scope": "One actual OpenCode1.19.4 backing, two actual native sessions through installed public D. Scripted localhost model inference only. A logical close retains whole-backing UNKNOWN; B2 real native input/reply continues; final cleanup only through original held CapturedProcess owner.",
+  "nativeVersion": "1.19.4",
+  "nativeSha256": "417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b",
+  "nodeVersion": "24.21.0",
+  "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+  "providerArchive": "vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerSha256": "dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce",
+  "spiSha256": "2a6e0e2cc61d7513b6de352d5cc7e2dba6ade8749e76fb4558520b1ea99bbf2e",
+  "facts": {
+    "actualNativeServeInstances": 1,
+    "actualNativeSessions": 2,
+    "originalNativeInputs": 3,
+    "modelRequests": 3,
+    "modelFailures": [],
+    "attributedSuccessfulInputs": 3,
+    "aClose": {
+      "logicallyClosed": true,
+      "cleanup": "unknown"
+    },
+    "originalServeAliveAfterAClose": true,
+    "b2NativeReplyAfterAClose": true,
+    "b2RetainsB1HistoryAndExcludesAHistory": true,
+    "closeAttemptsPerActor": [
+      1,
+      1
+    ],
+    "allDriverCloseReceiptsRemainUnknown": true,
+    "finalOriginalCapturedProcessCleanupConfirmed": true,
+    "finalOriginalCapturedProcessCleanupCalls": 1,
+    "originalServeExitCode": null,
+    "originalServeSignalCode": "SIGTERM",
+    "nativeDeleteOrGlobalDisposeRequests": 0
+  },
+  "sourcePins": {
+    "harnessSha256": "40bd6c9f269a6ad3257660b23bd5c0b0f68e7b8b1aa7abd7340ea56992b67c89",
+    "modelSha256": "23b4c1337ed1c8b1f4151c3053a30a985dddd7b453e71a142270e2b36e9c98a1",
+    "helperSha256": "010bf97ac44ea9cb2cda97f02f49e141b65fb7f54a18098298f870fa0b3fa743",
+    "processOwnerSourceSha256": "e6d67c97899c643ca449843ddc3424f0e5e38b5b2daa581e53063a5175fef898",
+    "processOwnerDistSha256": "ef53af2f3fefc3076633e18d02e1e868edf3aa76196173dd32de047104383056"
+  },
+  "distEpochNote": {
+    "rootBuildJobId": "8709cb33c92a27afb4a788b55dbcc65e",
+    "rootBuildResult": "PASS0, parent reported",
+    "timing": "Native proof already completed; Root build was unrelated collection/current-dist epoch only.",
+    "changedProductionBoundary": "RuntimeTeamCoordinator canonical-key fix, not consumed by this public-D/CapturedProcess test.",
+    "capturedProcessRecordedSourceAndDistMatchRetainedAndCurrentBytes": true,
+    "fullHostDistClosureClaim": false
+  },
+  "hostSharedReferenceManagement": "UNSUPPORTED_CURRENT_DEDICATED_HOST_ADAPTER",
+  "fullPlanSharedCustodyClaim": false,
+  "limits": [
+    "No production shared Host pool/reference manager: current Host member adapter owns dedicated servers.",
+    "A.close and B.close remain cleanup unknown; final owned-server cleanup does not rewrite these driver receipts.",
+    "No native A session deletion or forced retry/DELETE after unknown.",
+    "No MCP/Team/bootstrap/Desktop UI proof.",
+    "No full F06/Stage1, Stage2, merge or release claim."
+  ]
+}

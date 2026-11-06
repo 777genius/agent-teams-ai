@@ -58,6 +58,7 @@ import {
   buildRevisionCorrectionText,
   createPendingSendId,
   isPreparedSendAllowed,
+  preparedCrossTeamReplyArgs,
 } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerFooter, MessageComposerInput } from './MessageComposerInput';
@@ -74,11 +75,12 @@ import {
   useComposerDraftAddressRequest,
 } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
-import { useComposerTextarea } from './useComposerTextarea';
+import { useComposerFocus, useComposerTextarea } from './useComposerTextarea';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
 import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
 
+import type { CapturedCrossTeamReply, ComposerCrossTeamSend } from './capturedCrossTeamReply';
 import type { TeamGroupChatDTO } from '@features/team-group-chats/contracts';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
@@ -93,7 +95,6 @@ import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
   AttachmentPayload,
-  CrossTeamSendResult,
   ResolvedTeamMember,
   SendMessageResult,
   TaskRef,
@@ -124,6 +125,7 @@ export interface MemberMessageComposerProps {
   /** Bump this when a chat thread is opened so the composer steals keyboard focus. */
   autoFocusKey?: number;
   draftAddressRequest?: ComposerDraftAddressRequest | null;
+  crossTeamReply?: CapturedCrossTeamReply | null;
   workingDraftSummaries?: readonly ComposerWorkingSummary[];
   onSend: (
     recipient: string,
@@ -134,15 +136,7 @@ export interface MemberMessageComposerProps {
     taskRefs?: TaskRef[],
     messageId?: string
   ) => Promise<SendMessageResult>;
-  onCrossTeamSend?: (
-    toTeam: string,
-    text: string,
-    summary?: string,
-    actionMode?: ActionMode,
-    taskRefs?: TaskRef[],
-    toMember?: string,
-    messageId?: string
-  ) => Promise<CrossTeamSendResult | null>;
+  onCrossTeamSend?: ComposerCrossTeamSend;
   onSubmitIntent?: () => void;
   onDraftMutation?: () => void;
   onRecoveryDestinationChange?: (destination: ComposerDraftDestination | null) => void;
@@ -202,6 +196,7 @@ const MemberMessageComposer = ({
   onSelectAll,
   autoFocusKey,
   draftAddressRequest,
+  crossTeamReply,
   workingDraftSummaries = [],
   onSend,
   onCrossTeamSend,
@@ -227,7 +222,7 @@ const MemberMessageComposer = ({
       (!initialRecipient ||
         members.some((member) => member.name === initialRecipient && isLeadMember(member)))
   );
-  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
+  const composerFocus = useComposerFocus();
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -687,6 +682,7 @@ const MemberMessageComposer = ({
             selectedTeam,
             lockedRecipient,
             crossTeamRecipient,
+            crossTeamReply,
             localRecipient: effectiveRecipient,
             text: outboundText,
             summary: syncedRevision
@@ -725,7 +721,8 @@ const MemberMessageComposer = ({
               preparedRequest.request.actionMode,
               preparedRequest.request.taskRefs,
               preparedRequest.request.toMember,
-              preparedRequest.request.messageId
+              preparedRequest.request.messageId,
+              ...preparedCrossTeamReplyArgs(preparedRequest.request)
             ) ?? Promise.resolve(null))
           : onSend(
               preparedRequest.request.member,
@@ -754,6 +751,7 @@ const MemberMessageComposer = ({
     effectiveRecipient,
     onSend,
     onCrossTeamSend,
+    crossTeamReply,
     selectedTeam,
     crossTeamRecipient,
     activeContextId,
@@ -858,8 +856,6 @@ const MemberMessageComposer = ({
     },
     [canAttach, draftHandlePaste, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
-  const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
-  const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
   const handleRevisionCancel = useMessageComposerRevisionCancel(
     draft,
     onRevisionCancel,
@@ -906,7 +902,7 @@ const MemberMessageComposer = ({
       deduplicated={submissionFeedback.deduplicated}
     />
   ) : null;
-  const shouldShowSavedIndicator = isTextareaFocused && draft.isSaved;
+  const shouldShowSavedIndicator = composerFocus.isTextareaFocused && draft.isSaved;
   const nonCompactFooterRight =
     compactFooterNotice || remaining < 200 || shouldShowSavedIndicator ? (
       <MessageComposerFooter remaining={remaining} showSaved={shouldShowSavedIndicator}>
@@ -920,6 +916,7 @@ const MemberMessageComposer = ({
       className={cn(!isCompactLayout && 'mb-2')}
       style={floatingAdaptiveStyle}
       role="group"
+      onBlurCapture={composerFocus.onBlurCapture}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -1125,8 +1122,8 @@ const MemberMessageComposer = ({
           commandSuggestions={slashCommandSuggestions}
           chips={draft.chips}
           onChipRemove={draft.removeChip}
-          onFocus={handleTextareaFocus}
-          onBlur={handleTextareaBlur}
+          onFocus={composerFocus.onTextareaFocus}
+          onBlur={composerFocus.onTextareaBlur}
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
           onShiftTab={handleCycleActionMode}
@@ -1136,7 +1133,7 @@ const MemberMessageComposer = ({
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
-          showHint={!isCompactLayout && isTextareaFocused}
+          showHint={!isCompactLayout && composerFocus.isComposerFocused}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}

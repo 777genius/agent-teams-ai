@@ -651,7 +651,8 @@ describe('registerRuntimeProviderManagementIpc', () => {
       configureModelLimits: vi.fn(() => Promise.resolve(modelLimitsResponse)),
     };
 
-    registerRuntimeProviderManagementIpc(ipcMain, feature);
+    const captureSender = vi.fn(() => () => true);
+    registerRuntimeProviderManagementIpc(ipcMain, feature, captureSender);
 
     await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_VIEW)?.({}, { runtimeId: 'opencode' });
     await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY)?.(
@@ -668,7 +669,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       query: 'deep',
       filter: 'connectable',
       limit: 10,
-    });
+    }, undefined);
 
     await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM)?.(
       {},
@@ -680,7 +681,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
     expect(feature.loadSetupForm).toHaveBeenCalledWith({
       runtimeId: 'opencode',
       providerId: 'openrouter',
-    });
+    }, undefined);
 
     const genericConnectResponse = await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CONNECT)?.(
       {},
@@ -699,7 +700,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       method: 'api',
       apiKey: 'sk-secret-value',
       metadata: {},
-    });
+    }, undefined);
     expect(JSON.stringify(genericConnectResponse)).not.toContain('sk-secret-value');
 
     const response = await handlers.get(RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY)?.(
@@ -759,6 +760,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       projectPath: '/tmp/test-project',
     });
     expect(clearResponse).toEqual(viewResponse);
+    expect(captureSender).not.toHaveBeenCalled();
   });
 
   it('sanitizes unexpected IPC error messages before returning them to the renderer', async () => {

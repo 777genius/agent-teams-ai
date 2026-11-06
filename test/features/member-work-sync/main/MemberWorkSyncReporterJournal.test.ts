@@ -1,3 +1,4 @@
+import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import { createHash } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -106,6 +107,7 @@ async function setup(kind: 'json' | 'sqlite') {
       ),
   };
   const authority = new MemberWorkSyncStatusAuthority({
+      interruption: internalStorageInterruption,
     identity,
     withPreparedBackend: (id, operation) => store.withPreparedBackend(id, operation),
   });

@@ -1,0 +1,86 @@
+{
+  "status": "bounded-package-closure-delivered; full-fast-environment-pending",
+  "source": {
+    "worktree": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host",
+    "branch": "feat/provider-host-contracts",
+    "base": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+    "head": "dfc1aa5ce1d357b732f66b9294651f96799c140a",
+    "author": "iliya <iliyazelenkog@gmail.com>",
+    "committer": "iliya <iliyazelenkog@gmail.com>",
+    "clean": true
+  },
+  "artifacts": [
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/final/agent-teams-provider-implementations-0.0.0.tgz",
+      "sha256": "93d6ecaf571c3496924cf9c68cc3c2055e1ae4f097fbb62ec132d2a01b06a893"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/final/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "sha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/final/provider-host-contracts-final.bundle",
+      "sha256": "cf4342e127d013421f22056658f73d7c11c39a2ec2921ff5f081f530e7d7d651"
+    }
+  ],
+  "passed": {
+    "node24": "contracts clean/build/strict types/actual packed install+consumer; provider clean/build/strict types/all137 tests incl external packed subprocess consumer",
+    "node26": "same provider137 and contracts checks; legacy curated packed consumer equal14 types, no runtime values",
+    "foundationFull": "0 diagnostics at final head",
+    "foundationNegativeComponents": "source-boundary25 PASS in initial combined run; corrected manifest-copy builtin5 PASS separately; disposable PG guard3 PASS in combined run (no database launched)",
+    "fms": "active0 diagnostics; existing339 tests PASS; exact canonical-forward rejecting fixture3 PASS plus strict TS check",
+    "sdkGrowth": "52 rejecting tests PASS; profile8 preserves releaseEligible=false/pending-authority-qualification",
+    "metadata": "CMS live source census; docs protocol; quality-adoption4; CI types; lint; checkpoint-bound Git conformance/original oracle/inventory focused5 PASS"
+  },
+  "pending": [
+    "pnpm check:fast not PASS: existing Foundation shard aggregate uses Linux Bash mapfile; this Mac has only /bin/bash GNU3.2.57 and no /opt/homebrew/bin/bash. Run unchanged full gate with Bash>=4 on supported Linux; later leaves were not completed end-to-end here.",
+    "pnpm check / CI / release not run; no push, PR, merge or publish authorized."
+  ],
+  "scopeLimits": [
+    "No Host/Team/Runtime/CLI/frontend implementation in this lane.",
+    "No live agents, credentials, external model API or user-project effects.",
+    "No native provider or production qualification claim."
+  ],
+  "evidence": [
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-final-foundation.log",
+      "sha256": "a3bdbd562d993b1b6d204fb88d257a5fc43598b34f29f3d6c4029076f6e37285"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-builtins-final.log",
+      "sha256": "21b9d980099a921d42c51e9af4bab3927041bf39446fd501d2bcf99d806fbf86"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-checkpoint-ci-focused.log",
+      "sha256": "0b08473c134fa801cac3f5c987484fa7ea1b40772a45ec87f7f5921f43f762af"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-checkpoint-fms.log",
+      "sha256": "b068655d198c3f18c40cbe62a758500f1c4a0d20b66ee511232c34dc7b26c91b"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-checkpoint-sdk.log",
+      "sha256": "7e0afdf9bfa3f17fc18262716b69eedf338118e19bb5ddb3a700dbcd0b85e010"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-sdk-tests-3.log",
+      "sha256": "f0c102a4f47366e7b3be4d01b0d8f61bd4f636da08bd19e00a9405cc6d4f878e"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-fms-tests.log",
+      "sha256": "7ab8bea13c93c0e265832f5304f6b6d9cfe9d6ab02a6a8d95e397f34ef38c9de"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-fast-frozen.log",
+      "sha256": "e650aa09b2a06ebf5cbf68174f55586dd070845f2c390093e8a862af3c994b71"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-lint-post-fixture.log",
+      "sha256": "dc027f2ad16f4264d5c7424ce4e0219e217e00abfc1c51e78fcbb88eb020eb2b"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/architecture/sdk-growth/provider-session-contracts-extraction.json",
+      "sha256": "97a0c9c7eac965d6b7f09cab9419fc15f0b7aa9f1d467b4da2e7bc038a55b9a6"
+    }
+  ]
+}

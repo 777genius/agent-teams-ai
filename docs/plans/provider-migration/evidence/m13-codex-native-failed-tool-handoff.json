@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_NATIVE_RECOVERED_FAILED_TOOL_TUPLE_PASS_RETAINED",
+  "scope": "One original explicit Host TaskStart -> actual Codex0.162.0 shell writes dirty final bytes and exits7 -> containing input succeeds -> exact PARTIAL/nonreviewable observations read after owned Stop, no new allocation",
+  "actualRun": {
+    "jobId": "1427081d1905c79606f08bea76dcd4b0",
+    "rawStatus": "PASS",
+    "exitCode": 0,
+    "signal": null,
+    "sourceEpoch": "7ea18705ab0426c4afa32650e3e3c0008679f25382f06d6986c12bc70350c320",
+    "distEpoch": "03543b4fcbaaf5daecd6f23ed80871e314a7b0d4009c968d9be58ade867ff7d1",
+    "providerArchiveSha256": "5ceb4a940bdb4bedab0664d7a4e142bbdc9fc1e18d3e15f0b3d39a4dc6aeb4e7",
+    "nativeVersion": "0.162.0",
+    "nativeSha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "directGitSha256": "4c5ca299b5311572b4f948d11efd7c66dcadf30950fbf260688ee32f4a63f6a4",
+    "diagnosticObserverEnabled": false,
+    "failedFixtureTimeoutMs": 180000,
+    "normalFixtureTimeoutUnchangedMs": 45000
+  },
+  "effects": {
+    "originalInputs": 2,
+    "inputs": "Original no-effect assignment and public human task.start input both terminal succeeded; exact input/delivery/message/operation/member/session/workspace binding verified privately",
+    "modelRequests": 5,
+    "modelFailures": [],
+    "actualNativeFailedShellCalls": 1,
+    "nativeExitCode": 7,
+    "containingNativeInputOutcome": "completed",
+    "ledgerRows": 1,
+    "source": "shell_snapshot",
+    "toolStatus": "failed",
+    "executionSeq": 0,
+    "nativeCaptureProofPresent": false,
+    "reviewableComplete": false,
+    "before": {
+      "sha256": "2680de9293e39eacab7485ce9d1640616572d50d79f1da3f6f9447fc1d710570",
+      "sizeBytes": 48,
+      "blobRef": "2680de9293e39eacab7485ce9d1640616572d50d79f1da3f6f9447fc1d710570.txt"
+    },
+    "after": {
+      "sha256": "413e64cc6dc4734746ad3620ff383cd09f27469a0288d9899678658981ae293d",
+      "sizeBytes": 53,
+      "blobRef": "413e64cc6dc4734746ad3620ff383cd09f27469a0288d9899678658981ae293d.txt"
+    },
+    "nativeAnchors": "Exact original item/thread/turn/window and baseline retained privately; no fabricated attribution",
+    "coldRead": "After original Host closed; no Runtime/SDK allocation or additional inference",
+    "writableOriginalModifiedContent": null,
+    "contentSource": "unavailable",
+    "reviewApplyAttempted": false,
+    "indexAndUnrelatedDirtyPreserved": true,
+    "originalOwnedStop": "Runtime closed/released; original captured native PID/group absent in saved observation; Host exit0/no signal",
+    "sourcePinsUnchanged": true
+  },
+  "retention": {
+    "correctedCollectorJobId": "247d17406ab00f2f165a664dfad3cf17",
+    "correctedCollectorExitCode": 0,
+    "files": 2247,
+    "directories": 184,
+    "bytes": 15076433,
+    "collectionErrors": [],
+    "qualificationErrors": [],
+    "manifestSha256": "bd7463a55dcad2356f0d51f328bae80c593426f0f2f73a318e672efb6e91a91d",
+    "originalRawReceiptSha256": "737dc7a6a669dd1977c1162b4938e3c9807d53d1d3263cc5c3fbf49ea5d69f1a",
+    "originalJobStateSha256": "c364381906f0f7e7dc0daeca8c029b64ebaeaf416f5d85cf7b2973f9d84ae17d",
+    "originalUnqualifiedCollectorJobId": "4908f5fa07e19e0e7321c8fc7714297c",
+    "originalUnqualifiedManifestSha256": "2654a6a5275f610ae011494631f4f9aeb07b83e2267c69306166c272560b2563",
+    "correction": "Raw collector previously omitted empty Git refs directories. Successor retained original directory census, including refs/heads and refs/tags; unchanged git show :dirty.txt oracle now passes. Original raw retention remains unchanged; successful native effects were not repeated.",
+    "originalCollectorSha256": "7e91e04e4e96d14695eb67c79c7491ccd12c6dd4c53153775e3ef36eaa0a2799",
+    "correctedCollectorSha256": "c2378ea61ef1ebd7f8e6bc1e303b711b4ded8a0a50e7b8e524162b322d2f35b6"
+  },
+  "originalFailuresPreserved": [
+    {
+      "jobId": "23c7b32b571d8a7aef176fd4df021a4b",
+      "outcome": "Original60s observer refused; later containing input succeeded but final Git census gap prevented failed-tool evidence qualification."
+    },
+    {
+      "jobId": "448bbbf2f6b165d5978fc6dc9df66168",
+      "outcome": "Original45s driver turn became UNKNOWN; native task_complete effect committed during teardown. Never replayed."
+    }
+  ],
+  "notClaimed": [
+    "Bash/external-writer authorship or exclusive workspace ownership",
+    "Reviewable native success content or review/apply of failed window",
+    "OpenCode failed-tool acceptance",
+    "Desktop Changes UI",
+    "create/delete/rename/multifile/CRLF/binary",
+    "arbitrary user hooks or background coverage",
+    "whole M13",
+    "full Stage1",
+    "Stage2",
+    "original M19 SDK release"
+  ]
+}

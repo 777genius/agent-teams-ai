@@ -2,9 +2,14 @@
  * Plugin domain types — catalog items, installed state, enriched plugins, filters.
  */
 
-import type { InstallScope } from './common';
-
-export type PluginInstallScope = Exclude<InstallScope, 'global'>;
+import type {
+  InstalledPluginEntry,
+  PluginInstallScope,
+} from '@agent-teams/legacy-agent-host/extension-management';
+export type {
+  InstalledPluginEntry,
+  PluginInstallScope,
+} from '@agent-teams/legacy-agent-host/extension-management';
 
 // ── Catalog item (read from marketplace.json) ──────────────────────────────
 
@@ -34,14 +39,6 @@ export interface PluginCatalogItem {
 }
 
 // ── Installed state ────────────────────────────────────────────────────────
-
-export interface InstalledPluginEntry {
-  pluginId: string; // matches PluginCatalogItem.pluginId
-  scope: PluginInstallScope;
-  version?: string;
-  installedAt?: string;
-  installPath?: string;
-}
 
 // ── Enriched (catalog + installed + counts, for renderer) ──────────────────
 

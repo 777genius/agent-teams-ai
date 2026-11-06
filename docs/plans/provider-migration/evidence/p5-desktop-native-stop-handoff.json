@@ -1,0 +1,61 @@
+{
+  "status": "INCOMPLETE native Desktop Stop attempt retained; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-native-stop-attempt1.tar.gz",
+  "archiveSha256": "a7061517995140d796ec2120b0149ee819ede4f822ea4f233d18e5e9cf5f28ab",
+  "originalReceiptSha256": "893d1aa0954830cca0771ac61cc76d87f804f66cce9b83956d87d97ed91d4622",
+  "reconciliationSha256": "53f17b7f1d9fa58ff1026c165b9fa108df64372e054e82069f29766290d9828d",
+  "nativeJobId": "c85c0bb2c12b1e96811626c46c453c13",
+  "readOnlyReconciliationJobId": "b968494e081038f1fc82dc1547dd1cff",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "scope": "Actual isolated Electron dev:mcp/CDP, preload/Main/standalone Host/D/Claude SDK0.3.305. Native init only; no inference inputs/vendor API. Initial native launch is explicit sandbox setup through finite app API, not ordinary Launch controls.",
+  "verifiedFacts": {
+    "nativeBootstrap": "One actual pinned Claude child, aggregate ready1 after API setup; exact Native PID/parent/group retained.",
+    "taskUi": "Ordinary sidebar/Open team/Create Task controls created one canonical Task, and the same ID/product fields survived renderer reload. Original prepared task and Task created by UI remain distinct.",
+    "stop": "One ordinary Stop button click is retained. The test advanced past disappearance of Stop/Stopping controls, then failed in a flat-directory observer. Final original Runtime record is closed/released and the captured native child is absent after guarded Quit.",
+    "legacy": "Final strict sentinel census has zero refused invocations; no legacy nonversion provider action occurred. The allowed --version dependency remains, so fork-free startup is not qualified.",
+    "cleanup": "App exit0, captured Host absent, captured dev process group empty,9222 free. These post-failure facts do not establish the missing pre-Quit Native OS census."
+  },
+  "unproven": "Complete native Stop E2E remains unproven: collector failed before direct OS absence was observed ahead of guarded Quit. The later closed/released record and current PID absence cannot retroactively prove that observation timing.",
+  "repair": {
+    "collector": "readDesktopNativeStopSessions reads the actual two-level Runtime namespace/generation layout. The original receipt remains INCOMPLETE and unmodified; read-only reconciliation performs0 effects.",
+    "futureFailureEvidence": "Capture DOM and native presence before guarded failure Quit; diagnostics cannot prevent captured cleanup.",
+    "preflight": "Earlier job8235f4e46a8bd4abc4ea4c96369d0ab6 failed before app/native launch because require.resolve used an ESM-only provider export. The packaging observer now reads the exact installed package directory and compares every JS byte with the immutable tar. No runtime implementation changed to bypass exports."
+  },
+  "implementation": {
+    "appBoundary": "Finite team.launch.read/start/retry routes share Main/IPC/HTTP validation/projection. Only app launch/roster/attempt/member generation identities are exposed; private host/native/config identities are stripped.",
+    "ordinaryControls": "Existing Team getData/processAlive/aliveList/Stop now use captured Host Launch/Runtime state. Stop captures every member generation before effects, sends one control at a time, preserves unknown outcome after context change, and never invokes legacy stop/kill.",
+    "productOnly": "A no-Runtime Host returns authorized null launch metadata, preserving offline Task UI without fabricated native presence.",
+    "taskDialog": "Canonical legacy semantics ignore startImmediately for an unowned Task; this common running-team dialog default is now accepted. Owned immediate-start remains an explicit remaining capability.",
+    "afterNativeDelta": "After the native attempt, status reads retain healthy members when another read is unavailable. Stop reads the authoritative roster directly so one bad member read cannot block healthy members from stopping. Controlled tests cover this delta; the original native attempt does not qualify the new exact renderer source."
+  },
+  "checks": {
+    "rootAndScripts": "Pinned root TS7 and strict maintained TypeScript harness checks passed.",
+    "frontend46": {
+      "jobId": "3ca9e1fdf9ec6db6709559fc7b3d1b42",
+      "status": "46/46 passed; aggregate job exit1 retained from later file-size check, not relabeled green."
+    },
+    "hostFocused19": {
+      "jobId": "19e1bbb6a72a5daad200ae12f9b4e3dd",
+      "status": "PASS19/19 actual Host/launch tests including product-only null/refusal and restore/recovery."
+    },
+    "currentRenderer19": {
+      "jobId": "08de032a41b02c68a91bf1342c893b28",
+      "status": "PASS19/19 after per-member partial-read/Stop isolation change; overlaps earlier frontend checks, counts are not added."
+    },
+    "lintAndGuards": {
+      "jobId": "0b484db844ec05a9ca60911eb95a0635",
+      "status": "PASS affected fast lint, strict harness types, source size and provisioning guards; caps not raised."
+    },
+    "historicalFullSuite": "Host226/226 belongs to previous source tuple in native-restore handoff, not a new full-suite claim for this Core Host change."
+  },
+  "currentHostTuple": {
+    "source": "ccdf8f7758c2b685454957249aa3b2a5c7c800169694801462abcb316240916f",
+    "dist": "8797b1963e44613e08e5b89048cbc1baa4d1c5d136bf9a302eba5b708a2fa17b"
+  },
+  "archiveLayout": "executed-source is hash-verified against original before-app source pins; current-source contains explicit later hardening/collector fixes. Native TEST roots, original failed jobs, screenshots, receipts, session state, Native logs and immutable D artifacts retained; reproducible node_modules/.npm/Chromium caches excluded.",
+  "next": [
+    "Actual ordinary Composer -> native inference -> MCP reply -> ordinary Stop with pre-Quit physical absence using corrected observers; do not repeat completed Task creation merely to fix observation.",
+    "Ordinary launch/resume settings and full runtime widgets, group/cross-Team/dynamic Team, M13 review/evidence, full10 MCP groups, feeds and P7/P8 remain mandatory.",
+    "Host CMS adoption and previously failed D aggregate gates remain unresolved."
+  ]
+}

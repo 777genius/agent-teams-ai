@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { api } from '@renderer/api';
 import { CreateTaskDialog } from '@renderer/components/team/dialogs/CreateTaskDialog';
 import { useStore } from '@renderer/store';
@@ -66,7 +67,8 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
           owner &&
           teamData?.isAlive &&
           !isTeamProvisioning &&
-          startImmediately !== false
+          startImmediately !== false &&
+          !isHostTeamSelectionKey(teamName)
         ) {
           const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
           try {
@@ -77,8 +79,6 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
         }
 
         closeCreateTaskDialog();
-      } catch {
-        // store already exposes the error
       } finally {
         setSubmitting(false);
       }

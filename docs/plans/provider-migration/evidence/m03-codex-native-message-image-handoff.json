@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_NATIVE_TWO_DM_IMAGE_PASS_RETAINED",
+  "scope": "Actual Codex0.162.0 standalone Host first two-DM fixture: native image pixels/data part for second original DM plus canonical public bytes before/after cold Host; no Desktop UI",
+  "actualRun": {
+    "jobId": "1b0f44263640d6fd44d1957326ee9452",
+    "exitCode": 0,
+    "signal": null,
+    "originalRoot": "/Volumes/Transcend/dev/TEST-codex-native-image-delimiter-cd54ovs4/tmp/TEST-native-codex-host-e6cDZZ",
+    "hostSourceSha256": "7ea18705ab0426c4afa32650e3e3c0008679f25382f06d6986c12bc70350c320",
+    "hostDistSha256": "03543b4fcbaaf5daecd6f23ed80871e314a7b0d4009c968d9be58ade867ff7d1",
+    "providerArchiveSha256": "3eb7ed93a004db6f6148f5ce640901127b9a86e8798b69186cba9a93060a6ca6",
+    "spiArchiveSha256": "2a6e0e2cc61d7513b6de352d5cc7e2dba6ade8749e76fb4558520b1ea99bbf2e",
+    "nativeVersion": "0.162.0",
+    "nativeSha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57"
+  },
+  "effects": {
+    "originalBusinessInputs": 2,
+    "originalInputTerminals": [
+      "succeeded",
+      "succeeded"
+    ],
+    "modelObservations": 11,
+    "modelFailures": [],
+    "image": {
+      "messageId": "fd3f790a-6d1f-5522-8a38-a80dc6822f57",
+      "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+      "byteLength": 71,
+      "nativeByteLength": 71,
+      "nativeSha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+      "exactCanonicalBytes": true,
+      "nativeImageObservations": 3,
+      "knownFixturePixels": "2x1 opaque red/green RGBA",
+      "encoding": "image/png;base64"
+    },
+    "canonicalAttachmentBlobVerified": true,
+    "warmAndColdPublicAttachmentReads": 2,
+    "coldHost": {
+      "newActualHost": true,
+      "runtimeOpenFrames": 0,
+      "publicReadForSameOriginalMessage": true,
+      "pinnedOriginalFixtureAssertsExactWarmColdBytesAndNoModelResubmission": true,
+      "activityGapReason": "incarnation"
+    },
+    "originalStop": {
+      "successfulFrames": 1,
+      "phase": "closed",
+      "custody": "released"
+    },
+    "originalHostExitCodes": [
+      0,
+      0
+    ],
+    "originalHostSignals": [
+      null,
+      null
+    ],
+    "cleanupConfirmed": true,
+    "cleanupLimit": "Original Runtime/Host receipts only; no independent whole-tree native process absence claim"
+  },
+  "retention": {
+    "collectorJobId": "37b24bc236e2fb3807717f9b01c239bb",
+    "collectorExitCode": 0,
+    "files": 2235,
+    "collectionErrors": [],
+    "qualificationErrors": [],
+    "retainedRoot": "/Volumes/Transcend/dev/TEST-native-message-image-retainer-prep-f22z61ix/retained-native-image-codex-1b0f44263640d6fd44d1957326ee9452",
+    "manifestSha256": "76b9882cf1cc0f067a7c5c2c86d07961fee2217f6cf9b16b7080c44bdc121870",
+    "originalRawReceiptSha256": "07dcb05e5fd2cd22804f6c1ceef7ebf0bd0c1b517d84f57896221919975423b7",
+    "originalJobStateSha256": "05e0a5bb3560d9ee1a5d9d19f7b5650eb299fcba19881ccfacde9caf2a4b71ad",
+    "collectorSha256": "2aefb94be010614bb552c2e29cc715cfc8b8c981bed7e542f1fb3383fb80f663",
+    "fixtureImageOracleSha256": "db0260ab11af63d5e056a045b895ebc51396296c507b6643df2596db8771007f"
+  },
+  "originalFailurePreserved": {
+    "jobId": "03c097a7b83ccd14da59c610181d1ec6",
+    "rawStatus": "INCOMPLETE",
+    "collectorJobId": "f0c8d26aab31f0875a8dfc8263e0a2e8",
+    "manifestSha256": "bcb360328f5974a745a4af083dd1b363fb97766a9b1f5fdb4ddc1804894461c8",
+    "cause": "TEST oracle required image as last part; actual Codex0.162 native closing input_text </image> followed it, causing scripted endpoint rejection. Wrapper-aware TEST fix requires original text before sole image and permits only exact optional native delimiter after it. Old failed bytes unchanged; new job is a fresh separate attempt."
+  },
+  "notClaimed": [
+    "Desktop UI or native file picker",
+    "vendor authentication/inference",
+    "OpenCode image/permission acceptance",
+    "independent whole-tree cleanup or original M19 SDK release",
+    "whole M13 or full Stage1",
+    "Stage2",
+    "merge/release"
+  ]
+}

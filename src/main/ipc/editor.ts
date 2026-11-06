@@ -5,7 +5,10 @@
  * Renderer cannot override it — it's set only via `editor:open` with full validation (SEC-5).
  */
 
-import { registerDocumentPreviewHandlers, removeDocumentPreviewHandlers } from '@features/document-preview/main';
+import {
+  registerDocumentPreviewHandlers,
+  removeDocumentPreviewHandlers,
+} from '@features/document-preview/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { isPathWithinRoot } from '@main/utils/pathValidation';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';

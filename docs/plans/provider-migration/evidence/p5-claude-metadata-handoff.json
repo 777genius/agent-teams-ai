@@ -1,0 +1,64 @@
+{
+  "status": "PASS scoped Claude metadata library/Host/Main integration; ordinary Launch/Create/Resume and full stage1 P0-P8/M01-M19 remain INCOMPLETE",
+  "previousGoalTurn": "progress: authoritative existing-UI acceptance and draft-PR plan links were clarified; this turn implements the next missing provider status path",
+  "archive": "docs/plans/provider-migration/evidence/p5-claude-metadata-native-v2.tar.gz",
+  "archiveSha256": "8e9c193d3347ffa57121fce28da86a10b91c4e4831391b2e05d0506b328fd8c5",
+  "archiveBytes": 1747316,
+  "archiveIntegrity": "All958 regular entries extracted and completely hashed; census matches original capture. Installed, packed and producer-compiled Claude metadata JS match. Main source hashes and complete Host source/dist hashes match native receipts.",
+  "hostSource": "98b0054bec1f2b85c93a909a8d0b5933e569d7b11d2d81de507e886f9ab7d11f",
+  "hostDist": "defcc6419d2174d2dc04318b9875850f5618d0fd365fd2acaa63ecd968d823e8",
+  "providerArchive": "vendor/provider-migration/claude-metadata-v2/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "86a4d3a65e3fa7829a951fbc3997d83617a24555f601688eb674ec5caa3ec63a",
+  "implementation": {
+    "provider": "Public ./claude readClaudeMetadata native adapter in the existing cohesive provider-session-implementation feature. Bounded SDK supportedModels/accountInfo read, no model input/tools/MCP/persisted conversation. Captured env/options are copied, cancellation/deadline closes query, private account identity and raw errors are removed, failed SDK close cannot publish success. Session SPI and runtime policy are unchanged.",
+    "host": "Explicit private Claude management profile selects SDK revision, executable digest, cwd, HOME/config namespace and sources. Finite management.claude.metadata requires exact captured profile/config revision. Host checks namespace identity and physical child cleanup before returning. Concurrent reads/unknown cleanup hold only the captured namespace; no Team bootstrap or fork fallback.",
+    "desktop": "Captured claude runtime target and Main status projection feed the existing model/effort consumers. Source claude-sdk stays distinct from vendor API discovery. Canonical launch values and named aliases are retained without duplicate default/opus options; false fast-mode metadata survives. Context/profile changes reject stale data, opaque catalog scope does not grant authority.",
+    "hooks": "SDK settings explicitly set disableAllHooks:true for metadata. Both final native scenarios select user settings containing a SessionStart command aimed at an owned TEST marker; no marker/model request was observed. This is scoped metadata evidence, not a positive qualification of every native hook lifecycle.",
+    "truth": "Credential-source/catalog observations never become authenticated, verified, teamLaunch or oneShot success. Claude auth/model probes and full existing-dialog preparation remain required; those capabilities are not declared complete. No new UI is introduced."
+  },
+  "native": {
+    "jobId": "093097c9697b23cf74b0ce4855494afd",
+    "node": "v24.21.0",
+    "sdkRevision": "0.3.305",
+    "claudeBinarySha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
+    "directReceiptSha256": "90b309f8b98dd337851ac902f584c07197d9573c0bf07e88e3768d348db1d2cc",
+    "mainReceiptSha256": "7cad612158b40aa0891a65e1d59d7ce5c436f9b00680aa2bcf99510a2965631b",
+    "direct": "Actual public D SDK and captured native process:5 metadata rows,0 localhost requests, configured hook marker absent, captured process exited and its group absent before test cleanup.",
+    "main": "Main captured Desktop feature -> actual standalone Host NDJSON -> D/SDK/native Claude.4 deduplicated model options,0 localhost requests, configured hook marker absent, model-only/unknown authentication preserved. Captured Host exit confirmed. This is not an Electron UI/dialog signoff; Main transport alone does not prove provider custody, covered separately by the direct native proof.",
+    "checks": "Root and strict Host/test typechecks passed.1 direct native test and4 frontend tests (native Main plus3 status/effort/race cases) passed; affected lint passed."
+  },
+  "controlledChecks": {
+    "frontendAndHost": {
+      "jobId": "e6fa8954fb0ab89e167a4a34115a5439",
+      "result": "231 Host and166 frontend tests PASS; root/strict Host types and source-size/provisioning guards PASS. Native Main test deliberately skipped in this baseline and executed separately. This aggregate used provider v1; v2 adds only metadata hook disabling and was qualified separately."
+    },
+    "providerMetadataFinal": {
+      "jobId": "fbe50beb024f185c4251ef3ecc686a53",
+      "result": "5 metadata tests, strict producer typecheck/build, scoped oxlint and immutable v2 packing PASS."
+    },
+    "providerRelated": {
+      "jobId": "1b009bc404d5ed8c967f4f9420c922ef",
+      "result": "32 Claude SDK tests PASS; combined command failed only in packed-consumer setup because it was invoked from repository root rather than package cwd. Original failure retained."
+    },
+    "packedConsumer": {
+      "jobId": "2b738c027a558241e9b4ed001c42caa8",
+      "result": "Correct package-cwd isolated packed consumer PASS; strict producer types, FMS active0diagnostics and scoped lint PASS. v1 metadata archive. v2 installed consumer is the actual final Main/native proof above."
+    },
+    "docs": "Producer docs:info/find inspected existing policy; docs:check and docs:protocol:check PASS, including5 frozen-document checks. Existing feature README was extended; no accepted ADR or composition standard was rewritten."
+  },
+  "retainedPredecessor": {
+    "archive": "docs/plans/provider-migration/evidence/p5-claude-metadata-native-v1.tar.gz",
+    "sha256": "cb8a1bbaf283b79b8ad04398069ff1a45af1027329b19a6c8af32c9d184205bc",
+    "scope": "Scoped metadata success before explicit hook hardening; original receipts/logs/source retained, not silently relabeled as v2. Earlier lint/type/consumer invocation failures remain in both collections."
+  },
+  "openOwningGates": {
+    "providerChanged": {
+      "jobId": "ee289687fe6b9f71cffe0a2a41779553",
+      "result": "FAIL in existing Darwin tooling fixtures:223 tests,193 passed,29 failed; canonical /var versus /private/var custody comparisons and fixture-sharding assertion. Root lint and preceding technical checks passed. Not full producer gate success."
+    },
+    "standards": "Current CMS upstream eadd9d391657ae6f508a874dd30e923bdc4054f0 was compared with the retained producer review pin ddf1e0b0053f546f12ca70190b237b4f7e78d09d. Host/successor-wide adoption and exact required gate closure remain pending under their existing owners. Metadata is a fixed native leaf inside the existing adopted FMS feature, not a new Assembly node or blanket exemption.",
+    "node": "Canonical producer Node26.11.1 qualification remains open; this scoped consumer evidence uses the pinned Node24.21.0 compatibility target."
+  },
+  "next": "Implement actual Claude model/auth proof through the existing provider-management owner, then captured prepareProvisioning -> authoritative replaceMembers/settings -> ordinary launchTeam/createTeam -> owner-qualified progress and selected Resume/relaunch. Use only existing dialogs/fields, submit through their existing controls and preserve original command after UNKNOWN. Full remaining P0-P8/M01-M19 is unchanged.",
+  "scopeAndDelivery": "Only stage1. Stage2 future Orchestrator/runtime integration is excluded. Work remains isolated; no commits, pushes, PR creation, main/release merge, rollout or real user project/auth operations were performed. Future PRs stay draft with exact-head links to plan/contracts/matrix."
+}

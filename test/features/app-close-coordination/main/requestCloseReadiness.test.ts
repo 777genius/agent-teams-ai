@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import {
   APP_CLOSE_READINESS_RESPONSE,
   APP_CLOSE_READINESS_STARTED,
+  APP_CLOSE_UI_MOUNT_REQUEST,
 } from '@features/app-close-coordination/contracts';
 import {
   RendererCloseReadinessCoordinator,
@@ -13,9 +14,16 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow, Dialog, IpcMain } from 'electron';
 
 function harness() {
-  const ipc = new EventEmitter();
+  const handlers = new Map<string, (...args: unknown[]) => unknown>();
+  const ipc = Object.assign(new EventEmitter(), {
+    handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
+      handlers.set(channel, handler),
+    removeHandler: (channel: string) => handlers.delete(channel),
+  });
   let requestId = '';
+  const frame = {};
   const sender = {
+    mainFrame: frame,
     isDestroyed: () => false,
     send: (_channel: string, request: { requestId: string }) => {
       requestId = request.requestId;
@@ -28,11 +36,12 @@ function harness() {
     focus: vi.fn(),
   } as unknown as BrowserWindow;
   const coordinator = new RendererCloseReadinessCoordinator(ipc as unknown as IpcMain);
+  handlers.get(APP_CLOSE_UI_MOUNT_REQUEST)?.({ sender, senderFrame: frame });
   const reply = (ok: boolean) =>
     ipc.emit(
       APP_CLOSE_READINESS_RESPONSE,
       { sender },
-      { requestId, ok, blockers: ok ? [] : ['Disk write failed.'] }
+      { requestId, ok, blockers: ok ? [] : ['Disk write failed.'], uiHandlerObserved: true }
     );
   const started = () => ipc.emit(APP_CLOSE_READINESS_STARTED, { sender }, { requestId });
   return { coordinator, window, reply, started };

@@ -40,6 +40,7 @@ describe('desktop group visualization discovery delivery', () => {
         runKey: `run:${name}`,
         protocolVersion: 1,
         provider,
+        ...(provider === 'opencode' ? { isCurrent: async () => true } : {}),
       });
     });
   });

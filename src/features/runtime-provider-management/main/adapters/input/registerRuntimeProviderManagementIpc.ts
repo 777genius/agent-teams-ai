@@ -72,7 +72,7 @@ import type {
   RuntimeProviderManagementTestModelInput,
   RuntimeProviderManagementViewResponse,
 } from '@features/runtime-provider-management/contracts';
-import type { IpcMain } from 'electron';
+import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('Feature:RuntimeProviderManagement:IPC');
 const LOCAL_PROVIDER_PRESET_ID_SET = new Set<string>(RUNTIME_LOCAL_PROVIDER_PRESET_IDS);
@@ -169,8 +169,15 @@ function createUnexpectedRuntimeProviderIpcError(
 
 export function registerRuntimeProviderManagementIpc(
   ipcMain: IpcMain,
-  feature: RuntimeProviderManagementFeatureFacade
+  feature: RuntimeProviderManagementFeatureFacade,
+  captureSender?: (event: IpcMainInvokeEvent) => (() => boolean) | null
 ): void {
+  const authScope = (event: IpcMainInvokeEvent, runtimeId: string) => {
+    if (runtimeId !== 'claude' || !captureSender) return undefined;
+    const isCurrent = captureSender?.(event);
+    if (!isCurrent?.()) throw new Error('Original Claude account sender is unavailable');
+    return { isCurrent };
+  };
   const localProviderError = <
     T extends
       | RuntimeLocalProviderListResponse
@@ -372,17 +379,20 @@ export function registerRuntimeProviderManagementIpc(
       if (!isRuntimeProviderCompanionAction(input.action)) {
         throw new Error('Unsupported runtime provider companion action');
       }
-      return feature.runCompanionAction({ ...companionInput, action: input.action });
+      return feature.runCompanionAction({
+        ...companionInput,
+        action: input.action,
+      });
     }
   );
   ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_VIEW,
     async (
-      _event,
+      event,
       input: RuntimeProviderManagementLoadViewInput
     ): Promise<RuntimeProviderManagementViewResponse> => {
       try {
-        return await feature.loadView(input);
+        return await feature.loadView(input, authScope(event, input.runtimeId));
       } catch (error) {
         const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to load providers');
         logger.error('Failed to load runtime provider management view', message);
@@ -398,11 +408,11 @@ export function registerRuntimeProviderManagementIpc(
   ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
     async (
-      _event,
+      event,
       input: RuntimeProviderManagementLoadDirectoryInput
     ): Promise<RuntimeProviderManagementDirectoryResponse> => {
       try {
-        return await feature.loadProviderDirectory(input);
+        return await feature.loadProviderDirectory(input, authScope(event, input.runtimeId));
       } catch (error) {
         const message = getRuntimeProviderIpcErrorMessage(
           error,
@@ -421,11 +431,11 @@ export function registerRuntimeProviderManagementIpc(
   ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM,
     async (
-      _event,
+      event,
       input: RuntimeProviderManagementLoadSetupFormInput
     ): Promise<RuntimeProviderManagementSetupFormResponse> => {
       try {
-        return await feature.loadSetupForm(input);
+        return await feature.loadSetupForm(input, authScope(event, input.runtimeId));
       } catch (error) {
         const message = getRuntimeProviderIpcErrorMessage(
           error,
@@ -444,11 +454,11 @@ export function registerRuntimeProviderManagementIpc(
   ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
     async (
-      _event,
+      event,
       input: RuntimeProviderManagementConnectInput
     ): Promise<RuntimeProviderManagementProviderResponse> => {
       try {
-        return await feature.connectProvider(input);
+        return await feature.connectProvider(input, authScope(event, input.runtimeId));
       } catch (error) {
         const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to connect provider');
         logger.error(
@@ -490,11 +500,11 @@ export function registerRuntimeProviderManagementIpc(
   ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_FORGET,
     async (
-      _event,
+      event,
       input: RuntimeProviderManagementForgetInput
     ): Promise<RuntimeProviderManagementProviderResponse> => {
       try {
-        return await feature.forgetCredential(input);
+        return await feature.forgetCredential(input, authScope(event, input.runtimeId));
       } catch (error) {
         const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to forget provider');
         logger.error('Failed to forget runtime provider credential', message);
@@ -626,7 +636,10 @@ export function registerRuntimeProviderManagementIpc(
         };
       }
       try {
-        return await feature.clearProjectDefaultModel({ ...input, projectPath });
+        return await feature.clearProjectDefaultModel({
+          ...input,
+          projectPath,
+        });
       } catch (error) {
         const message = getRuntimeProviderIpcErrorMessage(
           error,

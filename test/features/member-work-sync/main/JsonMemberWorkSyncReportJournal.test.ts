@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { JsonMemberWorkSyncReportJournal } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncReportJournal';
 import { buildPendingReportIntentId, JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
-import * as atomicWrite from '@main/utils/atomicWrite';
+import * as atomicWrite from '@agent-teams/task-change-ledger/review-io';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberWorkSyncReportJournalInput } from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalPort';

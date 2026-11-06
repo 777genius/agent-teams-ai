@@ -1,0 +1,41 @@
+{
+  "scope": "Working-tree retained explicit draft member model mapping milestone. Actual SDK checks two isolated member endpoints/workspaces/account scopes with the same saved model/low effort, selecting medium for lead and high for worker, plus concurrent preparations, cold original replay and revoke/regrant renewal. Native test invokes Main application adapter with Desktop feature facade, not Electron dialogs or vendor auth. Not full stage1 or release qualification.",
+  "sourceSha256": "d9b2ef54405541ded22f305724593e3512fa4e7f4c95b0f135e4c33af1cea475",
+  "distSha256": "eab8dc1a09dc8042b21481e370bd97eaf104e5e4867ae9df1da419afc9416cf4",
+  "providerArchive": "vendor/provider-migration/claude-probe-v3/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "localModelRequests": 10,
+  "teamRequests": 7,
+  "leadRequests": 5,
+  "workerRequests": 2,
+  "globalRequests": 3,
+  "checks": [
+    {
+      "id": "82ac3ff7ad4faa507d89fc2b21ea8b6e",
+      "exit": 0,
+      "scope": "Root/strict Host types,235 Host and257 focused frontend tests, scoped lint/guards and actual native two-member model mapping passed."
+    }
+  ],
+  "files": [
+    {
+      "path": "receipt.json",
+      "sha256": "f64b1d23f2be94548a915151014bb04465303768a681d809d823b2b197d0060f"
+    },
+    {
+      "path": "attempt.json",
+      "sha256": "a75d9bb796c8ebd1ecb757d195c83963d9c176da8b07c5f00e3b0ed54b599ce6"
+    },
+    {
+      "path": "executed-native-test.ts",
+      "sha256": "d185c42a2572a0d8cc41bf218e896741dd640e46ee60ea992c3a1fdcfe50a375"
+    },
+    {
+      "path": "jobs/82ac3ff7ad4faa507d89fc2b21ea8b6e/stdout.log",
+      "sha256": "d52ef6230c9529a2c5f0ffc11a1953c605930a39c1bd7d1a9182a1dc7aca1e37"
+    },
+    {
+      "path": "jobs/82ac3ff7ad4faa507d89fc2b21ea8b6e/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    }
+  ]
+}

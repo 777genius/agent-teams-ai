@@ -11,6 +11,7 @@ import {
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
 
+import type { CapturedSkillsCapture } from '../services/extensions/skills/CapturedSkillsCollection';
 import type { SkillsCatalogService } from '../services/extensions/skills/SkillsCatalogService';
 import type { SkillsMutationService } from '../services/extensions/skills/SkillsMutationService';
 import type { SkillsWatcherService } from '../services/extensions/skills/SkillsWatcherService';
@@ -26,6 +27,7 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('IPC:skills');
 
+let captureSkills: CapturedSkillsCapture | undefined;
 let skillsCatalogService: SkillsCatalogService | null = null;
 let skillsMutationService: SkillsMutationService | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
@@ -33,8 +35,10 @@ let skillsWatcherService: SkillsWatcherService | null = null;
 export function initializeSkillsHandlers(
   skillsCatalog?: SkillsCatalogService,
   skillsMutations?: SkillsMutationService,
-  skillsWatcher?: SkillsWatcherService
+  skillsWatcher?: SkillsWatcherService,
+  captured?: CapturedSkillsCapture
 ): void {
+  captureSkills = captured;
   skillsCatalogService = skillsCatalog ?? null;
   skillsMutationService = skillsMutations ?? null;
   skillsWatcherService = skillsWatcher ?? null;
@@ -105,23 +109,35 @@ function getSkillsWatcherService(): SkillsWatcherService {
 }
 
 async function handleSkillsList(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   projectPath?: string
 ): Promise<IpcResult<SkillCatalogItem[]>> {
-  return wrapHandler('skillsList', () =>
-    getSkillsCatalogService().list(typeof projectPath === 'string' ? projectPath : undefined)
-  );
+  return wrapHandler('skillsList', async () => {
+    const captured = await captureSkills?.(
+      event,
+      typeof projectPath === 'string' ? projectPath : undefined
+    );
+    if (captured) return captured.list();
+    return getSkillsCatalogService().list(
+      typeof projectPath === 'string' ? projectPath : undefined
+    );
+  });
 }
 
 async function handleSkillsGetDetail(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   skillId?: string,
   projectPath?: string
 ): Promise<IpcResult<SkillDetail | null>> {
-  return wrapHandler('skillsGetDetail', () => {
+  return wrapHandler('skillsGetDetail', async () => {
     if (typeof skillId !== 'string' || !skillId) {
       throw new Error('skillId is required');
     }
+    const captured = await captureSkills?.(
+      event,
+      typeof projectPath === 'string' ? projectPath : undefined
+    );
+    if (captured) return captured.getDetail(skillId);
     return getSkillsCatalogService().getDetail(
       skillId,
       typeof projectPath === 'string' ? projectPath : undefined
@@ -130,62 +146,83 @@ async function handleSkillsGetDetail(
 }
 
 async function handleSkillsPreviewUpsert(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillUpsertRequest
 ): Promise<IpcResult<SkillReviewPreview>> {
-  return wrapHandler('skillsPreviewUpsert', () => {
+  return wrapHandler('skillsPreviewUpsert', async () => {
     if (!request) throw new Error('request is required');
+    const captured = await captureSkills?.(event, request.projectPath);
+    if (captured) return captured.previewUpsert(request);
     return getSkillsMutationService().previewUpsert(request);
   });
 }
 
 async function handleSkillsApplyUpsert(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillUpsertRequest
 ): Promise<IpcResult<SkillDetail | null>> {
-  return wrapHandler('skillsApplyUpsert', () => {
+  return wrapHandler('skillsApplyUpsert', async () => {
     if (!request) throw new Error('request is required');
+    const captured = await captureSkills?.(event, request.projectPath);
+    if (captured) return captured.applyUpsert(request);
     return getSkillsMutationService().applyUpsert(request);
   });
 }
 
 async function handleSkillsPreviewImport(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillImportRequest
 ): Promise<IpcResult<SkillReviewPreview>> {
-  return wrapHandler('skillsPreviewImport', () => {
+  return wrapHandler('skillsPreviewImport', async () => {
     if (!request) throw new Error('request is required');
+    const captured = await captureSkills?.(event, request.projectPath);
+    if (captured) return captured.previewImport(request);
     return getSkillsMutationService().previewImport(request);
   });
 }
 
 async function handleSkillsApplyImport(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillImportRequest
 ): Promise<IpcResult<SkillDetail | null>> {
-  return wrapHandler('skillsApplyImport', () => {
+  return wrapHandler('skillsApplyImport', async () => {
     if (!request) throw new Error('request is required');
+    const captured = await captureSkills?.(event, request.projectPath);
+    if (captured) return captured.applyImport(request);
     return getSkillsMutationService().applyImport(request);
   });
 }
 
 async function handleSkillsDelete(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillDeleteRequest
 ): Promise<IpcResult<void>> {
-  return wrapHandler('skillsDelete', () => {
+  return wrapHandler('skillsDelete', async () => {
     if (!request) throw new Error('request is required');
+    const captured = await captureSkills?.(event, request.projectPath);
+    if (captured) return captured.deleteSkill(request);
     return getSkillsMutationService().deleteSkill(request);
   });
 }
 
 async function handleSkillsStartWatching(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   projectPath?: string
 ): Promise<IpcResult<string>> {
-  return wrapHandler('skillsStartWatching', () =>
-    getSkillsWatcherService().start(typeof projectPath === 'string' ? projectPath : undefined)
-  );
+  return wrapHandler('skillsStartWatching', async () => {
+    const captured = await captureSkills?.(
+      event,
+      typeof projectPath === 'string' ? projectPath : undefined
+    );
+    if (captured) {
+      return getSkillsWatcherService().startCaptured(captured.watcherRoots(), () =>
+        captured.assertCurrent()
+      );
+    }
+    return getSkillsWatcherService().start(
+      typeof projectPath === 'string' ? projectPath : undefined
+    );
+  });
 }
 
 async function handleSkillsStopWatching(

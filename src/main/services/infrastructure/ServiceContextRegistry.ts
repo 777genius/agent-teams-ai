@@ -28,9 +28,28 @@ const logger = createLogger('Infrastructure:ServiceContextRegistry');
  * Manages a Map of ServiceContext instances and tracks which one is active.
  * Enforces the rule that the 'local' context is permanent and cannot be destroyed.
  */
+export interface ServiceContextSelection {
+  readonly contextId: string;
+  readonly isCurrent: () => boolean;
+}
+
 export class ServiceContextRegistry {
   private contexts = new Map<string, ServiceContext>();
   private activeContextId: string = 'local';
+  private activeSelection = {};
+
+  /** A selection never revives after navigation or physical replacement, even when its ID returns. */
+  captureActiveSelection(): ServiceContextSelection {
+    const context = this.getActive();
+    const token = this.activeSelection;
+    return Object.freeze({
+      contextId: context.id,
+      isCurrent: () =>
+        this.activeSelection === token &&
+        this.activeContextId === context.id &&
+        this.contexts.get(context.id) === context,
+    });
+  }
 
   /**
    * Creates a new ServiceContextRegistry.
@@ -76,6 +95,7 @@ export class ServiceContextRegistry {
       return;
     }
 
+    if (this.activeContextId === contextId) this.activeSelection = {};
     existing.retireDetailReads();
     replacement.retireDetailReads();
     this.contexts.set(contextId, replacement);
@@ -133,6 +153,7 @@ export class ServiceContextRegistry {
 
     logger.info(`Switching context: ${previous.id} → ${current.id}`);
 
+    this.activeSelection = {};
     previous.retireDetailReads();
     current.retireDetailReads();
 
@@ -169,6 +190,8 @@ export class ServiceContextRegistry {
     }
 
     logger.info(`Destroying context: ${contextId}`);
+
+    if (this.activeContextId === contextId) this.activeSelection = {};
 
     // Dispose the context
     context.dispose();
@@ -214,6 +237,7 @@ export class ServiceContextRegistry {
    */
   dispose(): void {
     logger.info('Disposing ServiceContextRegistry and all contexts');
+    this.activeSelection = {};
 
     for (const context of this.contexts.values()) {
       context.dispose();

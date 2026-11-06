@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  classifyAnalyticsError,
-  elapsedMsSince,
-  recordProviderConnectionEnd,
-} from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
 
@@ -26,6 +21,8 @@ import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProvi
 
 import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import { refreshRuntimeProviderConnection } from './refreshRuntimeProviderConnection';
+import * as connectionForm from './runtimeProviderConnectInput';
+import * as connectionTelemetry from './runtimeProviderConnectionTelemetry';
 import {
   getProviderConnectErrorDiagnostics,
   normalizeGitHubDeviceAuthorizationUrl,
@@ -38,13 +35,10 @@ import {
   shouldKeepVisibleDirectoryRows,
 } from './runtimeProviderDirectoryCatalogPolicy';
 import {
-  buildSetupAuthSelector,
   createOAuthOperationId,
-  isProviderConnectCancellation,
   mergeModelPages,
   normalizeProjectContextPath,
   resolveEffectiveDefaultModel,
-  resolveSetupAuthOption,
   withUiTimeout,
 } from './runtimeProviderManagementInternals';
 import {
@@ -97,6 +91,7 @@ interface UseRuntimeProviderManagementOptions {
   preserveViewRequestOnDisable?: boolean;
   searchDirectoryOnQueryChange?: boolean;
   projectPath?: string | null;
+  connectionContextToken?: string;
   initialProviderId?: string | null;
   initialProviderAction?: RuntimeProviderConnectionIntent | 'select' | null;
   bundledRuntimeVersion?: string;
@@ -116,7 +111,6 @@ export type RuntimeProviderChangeKind =
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
 const OAUTH_UI_TIMEOUT_MS = 18 * 60_000;
-
 export interface RuntimeProviderManagementState {
   view: RuntimeProviderManagementViewDto | null;
   providers: readonly RuntimeProviderConnectionDto[];
@@ -474,8 +468,11 @@ export function useRuntimeProviderManagement(
       setErrorDiagnostics(null);
       try {
         const response = await api.runtimeProviderManagement.loadView({
-          runtimeId: options.runtimeId,
-          projectPath: projectContext.path,
+          ...connectionForm.runtimeProviderContext(
+            options.runtimeId,
+            projectContext.path,
+            options.connectionContextToken
+          ),
         });
         if (!requestIsCurrent()) {
           return false;
@@ -514,7 +511,13 @@ export function useRuntimeProviderManagement(
         }
       }
     },
-    [getProjectContextSnapshot, isProjectContextCurrent, options.enabled, options.runtimeId]
+    [
+      getProjectContextSnapshot,
+      isProjectContextCurrent,
+      options.enabled,
+      options.runtimeId,
+      options.connectionContextToken,
+    ]
   );
   const loadDirectoryPage = useCallback(
     async (
@@ -560,9 +563,12 @@ export function useRuntimeProviderManagement(
       setDirectoryErrorDiagnostics(null);
       try {
         const response = await api.runtimeProviderManagement.loadProviderDirectory({
-          runtimeId: options.runtimeId,
+          ...connectionForm.runtimeProviderContext(
+            options.runtimeId,
+            projectContext.path,
+            options.connectionContextToken
+          ),
           ...(summary ? { summary: true } : {}),
-          projectPath: projectContext.path,
           query: query.trim() || null,
           filter,
           limit: options.directoryPageSize ?? 50,
@@ -638,6 +644,7 @@ export function useRuntimeProviderManagement(
       options.directoryPageSize,
       options.runtimeId,
       settledRuntimeRevision,
+      options.connectionContextToken,
     ]
   );
   const loadDirectoryPageRef = useRef(loadDirectoryPage);
@@ -1042,12 +1049,11 @@ export function useRuntimeProviderManagement(
       setErrorDiagnostics(null);
       setSuccessMessage(null);
       setWarningMessage(null);
-      const connectedAuthHint =
-        providerViewRef.current?.providers.find((provider) => provider.providerId === providerId)
-          ?.connectedAuthHint ??
-        directoryEntriesRef.current.find((provider) => provider.providerId === providerId)
-          ?.connectedAuthHint ??
-        null;
+      const connectedAuthHint = connectionForm.runtimeProviderConnectedAuthHint(
+        providerId,
+        providerViewRef.current,
+        directoryEntriesRef.current
+      );
       const projectContext = getProjectContextSnapshot();
       const requestSeq = setupFormRequestSeq.current + 1;
       setupFormRequestSeq.current = requestSeq;
@@ -1056,9 +1062,12 @@ export function useRuntimeProviderManagement(
 
       void withUiTimeout(
         api.runtimeProviderManagement.loadSetupForm({
-          runtimeId: options.runtimeId,
+          ...connectionForm.runtimeProviderContext(
+            options.runtimeId,
+            projectContext.path,
+            options.connectionContextToken
+          ),
           providerId,
-          projectPath: projectContext.path,
         }),
         'Provider setup form load timed out'
       )
@@ -1108,6 +1117,7 @@ export function useRuntimeProviderManagement(
       getProjectContextSnapshot,
       isProjectContextCurrent,
       options.runtimeId,
+      options.connectionContextToken,
     ]
   );
   const startConnect = useCallback(
@@ -1204,29 +1214,22 @@ export function useRuntimeProviderManagement(
 
   const submitConnect = useCallback(
     async (providerId: string): Promise<RuntimeProviderConnectOutcome | null> => {
-      if (!setupForm) {
-        setSetupSubmitError(setupFormError ?? 'Provider setup form is not loaded');
-        setSetupSubmitErrorDiagnostics(setupFormErrorDiagnostics ?? null);
-        return null;
-      }
-      if (!setupForm.supported) {
-        setSetupSubmitError(
-          setupForm.disabledReason ?? 'Provider setup is not supported in the app'
-        );
-        setSetupSubmitErrorDiagnostics(null);
-        return null;
-      }
-      const authOption = resolveSetupAuthOption(setupForm, selectedAuthOptionId);
-      if (authOption && !authOption.supported) {
-        setSetupSubmitError(authOption.disabledReason ?? 'This sign-in method is unavailable');
-        setSetupSubmitErrorDiagnostics(null);
-        return null;
-      }
-      const apiKey = apiKeyValue.trim();
-      const secret = authOption?.secret ?? setupForm.secret;
-      if (secret?.required && !apiKey) {
-        setSetupSubmitError(`${secret.label} is required`);
-        setSetupSubmitErrorDiagnostics(null);
+      const {
+        form,
+        authOption,
+        apiKey,
+        error: formError,
+        diagnostics,
+      } = connectionForm.validateRuntimeProviderConnectForm(
+        setupForm,
+        selectedAuthOptionId,
+        apiKeyValue,
+        setupFormError,
+        setupFormErrorDiagnostics
+      );
+      if (!form || formError) {
+        setSetupSubmitError(formError);
+        setSetupSubmitErrorDiagnostics(diagnostics);
         return null;
       }
 
@@ -1238,46 +1241,42 @@ export function useRuntimeProviderManagement(
       setSuccessMessage(null);
       setWarningMessage(null);
       const projectContext = getProjectContextSnapshot();
-      const method = authOption?.method ?? setupForm.method;
+      const method = authOption?.method ?? form.method;
       const connectionStartedAtMs = Date.now();
       const connectionAttemptIntent = connectionIntent ?? 'unknown';
       const oauthOperationId = method === 'oauth' ? createOAuthOperationId() : null;
-      const recordUnsuccessfulConnection = (error: unknown): boolean => {
-        const cancelled =
-          method === 'oauth' &&
-          ((oauthOperationId !== null &&
-            cancelledOAuthOperationIdsRef.current.has(oauthOperationId)) ||
-            isProviderConnectCancellation(error));
-        recordProviderConnectionEnd({
+      const recordUnsuccessfulConnection = (error: unknown): boolean =>
+        connectionTelemetry.recordRuntimeProviderConnectFailure({
+          error,
           runtime: options.runtimeId,
           provider: providerId,
-          authMethod: method,
-          connectionIntent: connectionAttemptIntent,
-          outcome: cancelled ? 'cancelled' : 'failed',
-          errorClass: cancelled
-            ? 'none'
-            : error == null
-              ? 'unknown'
-              : classifyAnalyticsError(error),
-          durationMs: elapsedMsSince(connectionStartedAtMs),
+          method,
+          previouslyCancelled:
+            oauthOperationId !== null &&
+            cancelledOAuthOperationIdsRef.current.has(oauthOperationId),
+          intent: connectionAttemptIntent,
+          startedAtMs: connectionStartedAtMs,
         });
-        return cancelled;
-      };
       activeOAuthOperationRef.current = oauthOperationId;
       activeOAuthPhaseRef.current = null;
       setOAuthProgress(null);
       try {
         const response = await withUiTimeout(
-          api.runtimeProviderManagement.connectProvider({
-            runtimeId: options.runtimeId,
-            providerId,
-            method,
-            apiKey: apiKey || null,
-            metadata: setupMetadata,
-            ...buildSetupAuthSelector(authOption),
-            ...(oauthOperationId ? { oauthOperationId } : {}),
-            projectPath: projectContext.path,
-          }),
+          api.runtimeProviderManagement.connectProvider(
+            connectionForm.runtimeProviderConnectInput({
+              ...connectionForm.runtimeProviderContext(
+                options.runtimeId,
+                projectContext.path,
+                options.connectionContextToken ?? form.connectionContextToken
+              ),
+              providerId,
+              method,
+              apiKey: apiKey || null,
+              metadata: setupMetadata,
+              authOption,
+              ...(oauthOperationId ? { oauthOperationId } : {}),
+            })
+          ),
           'Provider connect timed out',
           method === 'oauth' ? OAUTH_UI_TIMEOUT_MS : connectTimeoutMs(options.runtimeId) + 10_000
         );
@@ -1288,8 +1287,8 @@ export function useRuntimeProviderManagement(
           }
           setSetupSubmitError(
             cancelled
-              ? formatProviderConnectCancellation(setupForm.displayName)
-              : formatProviderConnectError(setupForm.displayName, response.error)
+              ? formatProviderConnectCancellation(form.displayName)
+              : formatProviderConnectError(form.displayName, response.error)
           );
           setSetupSubmitErrorDiagnostics(
             cancelled ? null : getProviderConnectErrorDiagnostics(response.error)
@@ -1307,20 +1306,19 @@ export function useRuntimeProviderManagement(
           }
           setSetupSubmitError(
             cancelled
-              ? formatProviderConnectCancellation(setupForm.displayName)
-              : `${setupForm.displayName} did not confirm the connection. Your current credential was not changed. Try again or refresh provider status.`
+              ? formatProviderConnectCancellation(form.displayName)
+              : `${form.displayName} did not confirm the connection. Your current credential was not changed. Try again or refresh provider status.`
           );
           setSetupSubmitErrorDiagnostics(null);
           return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
         }
-        recordProviderConnectionEnd({
+        connectionTelemetry.recordRuntimeProviderConnectSuccess({
           runtime: options.runtimeId,
           provider: providerId,
-          authMethod: method,
-          connectionIntent: connectionAttemptIntent,
-          outcome: connectedProvider.verifiedModelId ? 'verified' : 'connected_unverified',
-          errorClass: 'none',
-          durationMs: elapsedMsSince(connectionStartedAtMs),
+          method,
+          intent: connectionAttemptIntent,
+          startedAtMs: connectionStartedAtMs,
+          verifiedModelId: connectedProvider.verifiedModelId,
         });
         if (!isProjectContextCurrent(projectContext)) {
           return null;
@@ -1378,7 +1376,7 @@ export function useRuntimeProviderManagement(
         }
         setSetupSubmitError(
           cancelled
-            ? formatProviderConnectCancellation(setupForm.displayName)
+            ? formatProviderConnectCancellation(form.displayName)
             : connectError instanceof Error
               ? connectError.message
               : 'Failed to connect provider'
@@ -1427,9 +1425,12 @@ export function useRuntimeProviderManagement(
       try {
         const response = await withUiTimeout(
           api.runtimeProviderManagement.forgetCredential({
-            runtimeId: options.runtimeId,
+            ...connectionForm.runtimeProviderContext(
+              options.runtimeId,
+              projectContext.path,
+              options.connectionContextToken
+            ),
             providerId,
-            projectPath: projectContext.path,
           }),
           'Provider forget timed out'
         );

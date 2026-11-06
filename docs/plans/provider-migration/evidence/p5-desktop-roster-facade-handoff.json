@@ -1,0 +1,33 @@
+{
+  "status": "PASS finite Desktop roster API and completed-input handoff correction; ordinary existing-dialog E2E and full stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-desktop-roster-facade-v1/manifest.json",
+  "hostSource": "b4debba646d119b4c59ba5ab0f05d6abe9d68751a979a60728c8464303ebbaf6",
+  "hostDist": "3b5702dcfb54bb68283d7b275735486bc7a6553e2caa70d6267d51e62430af70",
+  "implementation": {
+    "contract": "Browser-safe DTO reuses existing TeamProvisioningMemberInput settings vocabulary. New finite operations are team.roster.read/replace/lookup; no generic RPC, native profile/credential/account/process selectors or new UI.",
+    "capture": "Main validates and deeply captures all teammate options before await, preserves explicit false/off values, rejects unknown private fields, duplicate names, sparse arrays and oversized input. Input settings budget256KiB; output512KiB. Canonical IDs are not trimmed into aliases. Own data only is captured across clone realms.",
+    "routing": "All three operations keep the original captured handle/command. Read and lookup use control capacity; replace uses work. Roster lookup sends empty payload on a finite direct request rather than the generic Task lookup null envelope. It has the same retained owner routing and current context/grant fences.",
+    "projection": "Only revision, product member IDs/names/canonical roles and application settings cross IPC/HTTP. Private grants, delivery/native bindings/environment and owner records are stripped at every level. Original lookup allows authorized durable absence; mutation null or wrong identity is UNKNOWN.",
+    "clients": "The existing preload bridge and authorized HTTP client gain the operations through the finite API. Both preserve original IDs and outcomes without retries. Production unauthenticated HTTP remains denying.",
+    "handoffFix": "Team completed admission has an immutable cached receipt. Roster admission now holds pending Team obligations, then relies on synchronous current Runtime input/custody proof; it does not require the cached Team admission phase to become terminal. This removes a permanent block on configuration after an otherwise completed message and confirmed stop."
+  },
+  "checks": {
+    "jobId": "3f944c80894d383ead540c16bb9b4fa8",
+    "lintJobId": "360df8bb70757880dbcf04c4c30472a3",
+    "host": "254/254 PASS including strict Host test types and actual message admission -> Runtime terminal -> confirmed stop -> saved edit. Test independently observes the Runtime terminal record while the immutable Team admission receipt remains admitted.",
+    "frontend": "178/178 PASS across22 files, including8 new DTO/facade/client cases and real Main facade -> NDJSON Host/Runtime/controller integration for save/original lookup/replay/stale revision after messaging/stop.",
+    "quality": "Root typecheck/build, strict Host test typecheck, affected fast lint, frozen source/provisioning architecture guards and whitespace PASS. Full lint/CI/final delivery and other owning gates remain required.",
+    "sourceBoundary": "Working-tree hashes retained after successful checks and no later production edits. Full Host source/dist and listed Main/client/test surfaces only; not a pre/post immutable full Main dependency closure or release qualification."
+  },
+  "integration": {
+    "scope": "Real Host/Runtime/controller/filesystem/MCP/NDJSON with explicit controlled provider Session, called through the production Main facade. Separate production IPC registration/preload and Fastify HTTP adapter tests use TEST authorization and a controlled router.",
+    "limitations": "No actual Electron sender/dialog, SDK/CLI execution or vendor auth qualification in this slice. Ordinary TeamsAPI replaceMembers is still unsupported. Earlier actual native receipts retain historical tuples; no full stage1/P8/Quit/Relaunch/packaging claim."
+  },
+  "remainingImmediate": [
+    "Persist complete lead/global saved application configuration in the same Team owner. Preserve true configured/default/clear semantics; do not synthesize saved overrides from resolved private Runtime profiles.",
+    "Connect existing getSavedRequest/getData/replaceMembers using the hydrated source revision, stable caller intent and memberSettingsRelaunch CAS, including rename/history behavior. Do not re-read a newer revision and overwrite a stale form silently.",
+    "Fresh trusted native capture/registration with current configuration revision, new session/grants and original run/checkpoint/history associations; then ordinary launch/create/Resume and existing-dialog Electron E2E.",
+    "All other required P0-P8/M01-M19 parity, owning and delivery gates remain required. These implementation steps belong to stage1; stage2 future Orchestrator/runtime integration is excluded."
+  ],
+  "delivery": "Isolated worktree, existing UI only, draft PRs with exact-head plan/contracts/matrix links, no main/release merge. No commit/push/PR/merge in this slice."
+}

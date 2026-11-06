@@ -188,8 +188,8 @@ function releaseLock(lockPath, token) {
   if (lines?.[0] === String(process.pid) && lines[2] === token) unlinkOrMissing(lockPath);
 }
 
-function tryAcquire(lockPath, token) {
-  fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
+function tryAcquire(lockPath, token, createParent) {
+  if (createParent) fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
   const gate = `${lockPath}-transition-v2`;
   const entry = acquireGate(gate, token);
   if (entry === null) return false;
@@ -235,28 +235,40 @@ function sleepSync(ms) {
 
 function resolveLockOptions(options) {
   return {
+    createParent: options.createParent !== false,
     acquireTimeoutMs: options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS,
     retryIntervalMs: options.retryIntervalMs ?? RETRY_INTERVAL_MS,
   };
 }
 
-function withFileLockSync(filePath, fn, options = {}) {
+/** Retain the same owner/token protocol for a captured host's whole lifetime. */
+function acquireFileLockSync(filePath, options = {}) {
   const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
   const token = randomUUID();
 
-  while (!tryAcquire(lockPath, token)) {
+  while (!tryAcquire(lockPath, token, resolvedOptions.createParent)) {
     if (Date.now() >= deadline) {
       throw new Error(`File lock timeout: ${filePath}`);
     }
     sleepSync(Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now())));
   }
 
+  let released = false;
+  return () => {
+    if (released) return;
+    releaseLock(lockPath, token);
+    released = true;
+  };
+}
+
+function withFileLockSync(filePath, fn, options = {}) {
+  const release = acquireFileLockSync(filePath, options);
   try {
     return fn();
   } finally {
-    releaseLock(lockPath, token);
+    release();
   }
 }
 
@@ -267,7 +279,7 @@ async function withFileLock(filePath, fn, options = {}) {
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
   const token = randomUUID();
 
-  while (!tryAcquire(lockPath, token)) {
+  while (!tryAcquire(lockPath, token, resolvedOptions.createParent)) {
     if (Date.now() >= deadline) {
       throw new Error(`File lock timeout: ${filePath}`);
     }
@@ -286,4 +298,4 @@ async function withFileLock(filePath, fn, options = {}) {
   }
 }
 
-module.exports = { withFileLock, withFileLockSync };
+module.exports = { withFileLock, withFileLockSync, acquireFileLockSync };

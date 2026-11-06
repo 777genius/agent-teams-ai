@@ -1,0 +1,59 @@
+{
+  "status": "PASS scoped initial launch configuration, Electron/native conversation and configured mixed native restore; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-launch-configuration-native-v1.tar.gz",
+  "archiveSha256": "ba6ad2c2909f5f6b904dd9086d332930b4eafd2ef2122116888134d859a3647a",
+  "archiveBytes": 37290547,
+  "archiveIntegrity": "All5905 regular entries read completely;14 actual compiled Desktop JS files retained and matched the successful receipt hashes",
+  "source": "4825f0538c76e520c5d0460c93aeec56ca42dbcf2375db65a83c2d1dcb9160c1",
+  "dist": "31fea95e7dff77b529715be9203177251b13903b97876cc26b887846368b6e3e",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "implementation": {
+    "selection": "Finite team.launch.start accepts per-member user options. Composition compiles every selected member before publishing any change. The existing launch record stores the original command/source-roster revision, opaque admitted options and derived configuration before any provider factory can run. No separate configuration registry or input queue is introduced.",
+    "supported": "Model selection uses the captured provider implementation. Claude maps effort/fast/context/permission choices; manual mode clears the old native auto-allow list while required Team tools are composed separately. Codex maps model and manual/bypass approval/sandbox settings. Incompatible provider options refuse before publication/allocation. New Codex permission overrides and OpenCode model overrides have controlled/source evidence only, not positive native override qualification in this slice.",
+    "identity": "Original intent includes source roster revision and normalized member options. Changed, omitted or differently scoped settings cannot replay the same command. Current grants apply even to replay. An unopened queued Runtime input retains its original delivery through configuration selection. Already claimed/allocated Runtime cannot be reconfigured by this path.",
+    "recovery": "Private TeamRuntimeSelection reads options from the same authoritative launch record. Composition checks the captured base digest, rebuilds the same configuration and verifies its selected digest. Selected restore now preserves the current prepared profile rather than resetting it to the descriptor defaults. Ambiguous preparation publication performs no factory effect; reconstruction may continue only the original intent.",
+    "admission": "Configured launch legitimately changes roster revision. Main accepts that response only after matching the admitted original command, source revision and exact member options. The public snapshot returns only admission command/source revision; private configuration hashes, process/account selectors and native identities remain hidden. Plain start/retry retain their exact revision check.",
+    "boundaries": "Team launch core stores provider-opaque JSON; SDK/protocol mapping stays in Host composition/provider adapters. Runtime conversation SPI and provider artifact are unchanged. Executable, account, environment, workspace selection and native identity cannot be supplied through the public configuration payload."
+  },
+  "checks": {
+    "currentJobId": "02c8236f96d5aa1b2d7ec55d4323b8dd",
+    "hostTests": 231,
+    "frontendTests": 108,
+    "status": "Aggregate exit0 on pinned Node24.21: root TS7, strict Host/test and maintained script types, full Host/model-oracle and frontend suites, affected lint,800-line source guard and provisioning guard",
+    "nativeFixtureTypes": "Strict Host test checking also passed after adding the mixed configured-restore scenario; unchanged full unit suites were not repeated for that fixture-only edit.",
+    "coverage": "Actual Team/Runtime/MCP/NDJSON selected configuration; queued-before-launch delivery; journal publication before provider creation; changed/dropped intent conflict; allocated-state refusal; late incompatible provider causes zero partial publication/allocation; Host restart/corrupt config; current grant checks; controlled configured checkpoint/restore; Main admission rejects wrong/missing command/scope/options.",
+    "historical": "Interim19 focused tests passed before final hardening. Job8eb33d62cd16f15c801dab0c3d814eb3 failed strict checking on a Native fixture inference annotation before suites; job0f5d8e0c6f15eb4d4fb457761bd0750e failed one import-sort check. Both were corrected. Earlier ae0c1878fc4f993e81fa7f115431e0ca passed231 Host/107 frontend before admission projection was added. Logs are retained; counts from distinct invocations are not added."
+  },
+  "standaloneNative": {
+    "jobId": "fb3fbd4ff598f9547f18216a3b8b3328",
+    "receiptSha256": "0e1fa0094531feb06a13a112110ffce36cd76a6647f692d7390acc30f7471786",
+    "source": "ed49c1de2ea93626d256cad37c41a8859a71f8db0984b78dd25c875705f2cc81",
+    "dist": "52ae6f8bcb80e275f0eb6efa9ce617b4f667e97796c1011b6e6d2404b86e6501",
+    "facts": "Actual Claude SDK0.3.305/CLI changes descriptor Sonnet to selected Opus/medium. All11 localhost HTTP requests carry the chosen model/effort. Two prepared human inputs perform real MCP/Bash/Task/replies. Stop is closed/released; two Host exits0. Original configured launch/business receipts replay after restart without new inference. This historical tuple precedes the admission-only summary/projection repair."
+  },
+  "desktopNative": {
+    "jobId": "d69e5f179a6d4df72a5e6713e78b9f55",
+    "receiptSha256": "34b6bdfb3946d10ba8490f96d26b38d67cbc02b3814d25b2d19ea6f96dad3488",
+    "facts": "Actual finite IPC configuration -> Main -> Host -> D -> real Claude SDK/CLI. The selected Opus/medium reaches all11 localhost model requests. Ordinary Composer sends two messages, actual MCP/Bash creates/completes a canonical Task, both replies are fully visible and Kanban/sidebar update automatically. Ordinary Stop retires the exact Native child before Quit with closed/released Runtime. App exit0, captured Host absent, TEST group20951 empty; zero refused sentinels, allowed legacy version discovery remains.",
+    "humanCommands": ["f9d055cf-da0f-4e56-81c2-55f9f31d137d", "d214b0fb-42bd-4bad-8ea3-cec677f85540"],
+    "taskId": "503ed490-defa-5b2e-8dcd-d12115c88bcb",
+    "limit": "Launch is explicit sandbox API setup, not ordinary Launch dialog signoff. Runtime model labels/settings UI are not inferred from native HTTP observations."
+  },
+  "mixedConfiguredRestore": {
+    "jobId": "d90336c747bb9fadc881617967221a8e",
+    "receiptSha256": "270e5ff82bf8637cef58aa174db6753d45adde0a64bc51c8864501fb478817d6",
+    "facts": "Actual Claude/Codex/OpenCode aggregate bootstrap, six original human commands, canonical Tasks/MCP/replies/activity, checkpoint/released stop, Host restart and selected restore into new generations. Native history identity is unchanged and later requests contain prior history. All13 Claude requests, including restored work, preserve selected Opus/medium; other providers retain their captured defaults.37 requests total (13/12/12), no oracle failures, all three Host exits0.",
+    "finalStateSha256": "576368860f6c2c212a6c8911d8ec4e12cce65d25e5213f47dd9cae00501fc40c",
+    "finalState": "Read-only reconciliation records all six actual source/restored Runtime files closed/released. Receipt runtime/sourceRuntime fields are earlier observations, not final custody. No mutation was replayed to repair that observation."
+  },
+  "retainedDesktopFailure": {
+    "jobId": "32723975986aa76b402a6f3b557376d1",
+    "receiptSha256": "39e00806b5c7176a8b006d1b6a845a2c0548940ed2573e6c739671a58024fac5",
+    "status": "INCOMPLETE aggregate exit1 retained",
+    "cause": "Host actually published preparation/start and initialized the Native child, but Main treated the changed configured roster revision as a wrong selection and returned UNKNOWN. No human input or model request followed. Admission correlation repairs this response path; the successful scenario used a new sandbox.",
+    "reconciliationSha256": "e6daa71ba2cac601363c54dfc41fe1799ef5ee4985398011304d01d6966c8562",
+    "cleanup": "Original receipt unchanged; read-only canonical observation confirms zero Runtime inputs and final closed/released after Quit. App exit0 and group85120 empty. No successful launch was replayed in that sandbox. Failed compiled Desktop hashes/source remain retained; actual compiled JS bytes are archived for the successful Desktop run."
+  },
+  "provenance": "Four exact source/dist/harness snapshots, four private TEST roots, all original receipts/logs, read-only reconciliations, current successful compiled Desktop JS and immutable D tar are archived. Selected Desktop source hashes matched before/after flow. Reproducible caches/node_modules are excluded; no packaged-binary or vendor auth/model claim.",
+  "remaining": "This path selects initial configuration before allocation. Ordinary Launch/Resume integration still needs saved settings, owner-qualified preflight, roster replacement, retained intent/progress and runtime UI metadata; active/stopped settings changes require explicit new binding/run work. Complete launch fields/extensions/hooks/worktrees/prompt, dynamic/second/group/cross-Team,10 MCP groups,M13 review/evidence, remaining auth/attachments/activity/subagents, partial-owner global lists and P7/P8 remain required. Host CMS adoption, provider owning aggregate gates and canonical Node26.11.1 remain open. No commit/stage/push/merge/release was performed."
+}

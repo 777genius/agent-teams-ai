@@ -1,3 +1,4 @@
+import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   buildPendingReportIntentId,
@@ -314,6 +315,7 @@ describe('SqliteMemberWorkSyncStore', () => {
         const { store, root, gateway } = await makeHarness(kind);
         if (existing) await store.write(makeStatus());
         const authority = new MemberWorkSyncStatusAuthority({
+      interruption: internalStorageInterruption,
           identity: {
             readCurrent: async () => ({ status: 'identified', identityId: 'inc-1' }),
             adoptLegacy: async () => ({ status: 'identified', identityId: 'inc-1' }),

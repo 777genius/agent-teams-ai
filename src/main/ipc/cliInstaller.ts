@@ -32,6 +32,8 @@ import {
   sanitizeProviderStatusAuthority,
 } from '../services/runtime/providerStatusCheckContract';
 
+import { captureDesktopStatusRequest } from './agentBackend';
+
 import type { CliInstallerService } from '../services';
 import type {
   CliInstallationStatus,
@@ -341,6 +343,13 @@ async function handleGetStatus(
 ): Promise<IpcResult<CliInstallationStatus>> {
   try {
     const normalizedOptions = normalizeGetStatusOptions(options);
+    if (service.usesNativeStatus?.()) {
+      const current = captureDesktopStatusRequest(_event);
+      if (!current?.()) return { success: false, error: 'Native status request is not authorized' };
+      const result = await service.getStatus(normalizedOptions);
+      if (!current()) return { success: false, error: 'Native status context changed' };
+      return { success: true, data: projectStatusAuthority(result, readNow()) };
+    }
     const cacheKey = normalizedOptions.providerStatusMode;
     const latestSnapshot = service.getLatestStatusSnapshot();
     const cached = cachedStatus.get(cacheKey);
@@ -441,6 +450,13 @@ async function handleGetProviderStatus(
   try {
     const providerId = normalizeProviderId(rawProviderId);
     const options = normalizeProviderStatusOptions(rawOptions);
+    if (service.usesNativeStatus?.()) {
+      const current = captureDesktopStatusRequest(_event);
+      if (!current?.()) return { success: false, error: 'Native status request is not authorized' };
+      const result = await service.getProviderStatus(providerId, options);
+      if (!current()) return { success: false, error: 'Native status context changed' };
+      return { success: true, data: result ? projectProviderAuthority(result, readNow()) : null };
+    }
     const requestKey = getProviderStatusRequestKey(providerId, options);
     const inFlight = providerStatusInFlight.get(requestKey);
     if (inFlight) {
@@ -502,6 +518,13 @@ async function handleVerifyProviderModels(
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
     const providerId = normalizeProviderId(rawProviderId);
+    if (service.usesNativeStatus?.()) {
+      const current = captureDesktopStatusRequest(_event);
+      if (!current?.()) return { success: false, error: 'Native status request is not authorized' };
+      const result = await service.verifyProviderModels(providerId);
+      if (!current()) return { success: false, error: 'Native status context changed' };
+      return { success: true, data: result ? projectProviderAuthority(result, readNow()) : null };
+    }
     const generation = statusCacheGeneration;
     const currentService = service;
     const status = await runProviderRuntimeRequest(providerId, () =>

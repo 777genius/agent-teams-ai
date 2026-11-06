@@ -655,7 +655,8 @@ function shouldHydrateProviderModelCatalog(
       catalog?.source === 'static-fallback' ||
       (runtimeCatalog?.dynamic === true &&
         runtimeCatalog.source !== 'anthropic-compatible-api' &&
-        catalog?.source !== 'anthropic-models-api')
+        catalog?.source !== 'anthropic-models-api' &&
+        catalog?.source !== 'claude-sdk')
     );
   }
 

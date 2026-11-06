@@ -1,0 +1,29 @@
+{
+  "status": "PASS configured Team settings, saved reads and original-dialog hydration; complete existing-dialog launch/create/resume E2E and full stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-team-saved-settings-v1/manifest.json",
+  "hostSource": "f2822fdd48261f6fbc19846763cfccd6f06e0b8240a7113c3f6c873015f067c9",
+  "hostDist": "e16f0cc136ffbfb1ce167383c4ce0ee529b312b0030c16233df905c534a88b74",
+  "implementation": {
+    "owner": "Complete configured global/lead TeamCreateRequest application choices join the existing Team OwnerState, revision, original receipt and recoverable controller projection. No second settings store. Prompt, presentation, worktree/custom args and allowExperimentalLocalModels are retained; native credentials/executables/environment/account/session selectors are excluded.",
+    "semantics": "Absent savedSettings means not captured. An object with only cwd is a known configuration with no explicit overrides. Omitted outer settings on a teammate-only replace preserves prior settings; supplied settings fully replace them and clear omitted inner options. Explicit false/off, literal prompt/args and default selection survive. Trusted descriptors bootstrap an absent owner once; cold reopen never overwrites choices.",
+    "fences": "Settings participate in both CAS passes, no-op/change detection, receipt revision and stale native capture guard. A settings-only edit requires the same synchronous current Runtime released-custody proof and holds pending Team debt; prior delivery targets/grants detach. Existing command replay and fault recovery retain the original decided settings. Warm/cold current Launch reads return unconfigured for a detached capture; historical files remain preserved.",
+    "desktop": "Main deeply captures/validates the finite settings DTO before await, strips private fields in IPC and authorized HTTP output, and keeps request/output budgets. Product snapshots carry configurationRevision. Existing getSavedRequest reads one owner roster and returns its source revision with configured choices, never resolved Runtime defaults. Existing getData rejects mismatched revisions/names and enriches known teammate choices even when global settings are unknown.",
+    "ui": "Only the original LaunchTeamDialog is adapted. Owner model/effort/defaults win over observed/previous/local values. Existing cwd/prompt/worktree/custom-args/local-model controls hydrate original settings; user edits made during loading win. A keyed prompt view protects owner/user text from late local draft loads and clears with the existing draft. Advanced state and local preference callbacks are a focused sibling hook; no new form or alternate workflow. Final dialog3247 lines meets unchanged cap3247."
+  },
+  "checks": {
+    "frontendJobId": "4834198351010841effb3a263258f73b",
+    "finalJobId": "f34337ae07d142adab3b0c5d13bcca75",
+    "frontend": "267/267 PASS across24 files. Includes actual Main facade -> NDJSON Host/Runtime/controller save/readback after messaging/stop, IPC/authorized HTTP marshalling and original dialog hydration. This receipt precedes final stable-callback dependency correction.",
+    "final": "Root types/build, strict Host test types and256/256 Host tests PASS on final Host source.99/99 original dialog/prefill/Host saved-read tests PASS after stable-callback correction. These99 are a focused recheck, not99 additional unique tests.",
+    "guards": "Affected fast lint, source file size, provisioning architecture and whitespace checks pass. Existing closeDialog exhaustive-deps warning remains; new hydration dependency warning was fixed with stable callbacks. Full lint/CI/other owning delivery gates are still open.",
+    "scope": "Controlled Session NDJSON and React renderer integration checks; no actual Electron CDP Create/Launch/Resume dialog acceptance or real vendor API/auth qualification. No proof that newly saved global settings are applied to a fresh native launch yet.",
+    "sourceBoundary": "Post-check working-tree hashes and copied executed tests/logs in the manifest. Full Host source/dist plus listed Desktop surfaces; not an immutable full pre/post Desktop dependency closure or release qualification. Earlier immutable native receipts remain historical."
+  },
+  "remainingImmediate": [
+    "Connect existing replaceMembers with the source revision actually hydrated into that form, stable caller intent, original lookup and memberSettingsRelaunch CAS. Preserve rename/history semantics; never read a newer revision and silently overwrite a stale form.",
+    "Trusted fresh native capture/registration from current owner choices: explicit current configuration revision, new sessions/grants and preserved original run/checkpoint/history associations. No renderer credentials/environment/executable or inferred cross-member account.",
+    "Connect ordinary launchTeam/createTeam/createConfig and selected Resume/relaunch through existing controls. Verify complete dialog E2E using Electron dev:mcp/CDP in TEST projects with local fixture API; direct API staging does not close dialog acceptance.",
+    "Finish all remaining P0-P8/M01-M19 requirements including review/apply, other lifecycle/auth/settings/provider workflows, packaging/Quit/relaunch and owning/delivery gates. Stage2 future Orchestrator/runtime integration is excluded."
+  ],
+  "delivery": "Isolated worktree; existing UI only; draft PRs must link exact-head plan/contracts/matrix; no main/release merge. No commit, push, PR or merge in this slice."
+}

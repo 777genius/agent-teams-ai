@@ -1,3 +1,7 @@
+const fs = require('fs');
+const path = require('path');
+const { atomicWriteFileSync } = require('./atomicFile.js');
+const kanbanStore = require('./kanbanStore.js');
 const kanban = require('./kanban.js');
 const messages = require('./messages.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
@@ -52,6 +56,7 @@ function getLatestReviewRequestedReviewer(task) {
     if (
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_disapproved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -114,17 +119,18 @@ function closeReviewIntervals(task, timestamp = new Date().toISOString()) {
   return changed;
 }
 
-function resolveKnownActorName(context, value, label) {
+function resolveKnownActorName(context, value, label, allowTrustedUser = false) {
   const actor = typeof value === 'string' && value.trim() ? value.trim() : '';
   if (!actor) return null;
+  if (allowTrustedUser && actor === 'user' && context.allowUserMessageSender === true) return actor;
   return runtimeHelpers.assertExplicitTeamMemberName(context.paths, actor, label, {
     allowLeadAliases: true,
   });
 }
 
-function tryResolveKnownActorName(context, value, label) {
+function tryResolveKnownActorName(context, value, label, allowTrustedUser = false) {
   try {
-    return resolveKnownActorName(context, value, label);
+    return resolveKnownActorName(context, value, label, allowTrustedUser);
   } catch {
     return null;
   }
@@ -140,6 +146,7 @@ function resolveActorIdentityKey(context, value) {
 }
 
 function isLeadActor(context, value) {
+  if (value === 'user' && context.allowUserMessageSender === true) return true;
   const key = normalizeActorKey(value);
   const resolvedKey = resolveActorIdentityKey(context, value);
   const leadKey = normalizeActorKey(runtimeHelpers.inferLeadName(context.paths));
@@ -162,7 +169,7 @@ function assertMatchesAssignedReviewer(context, task, actor, actionName) {
 
 function getReviewStartActor(context, task, flags) {
   if (typeof flags.from === 'string' && flags.from.trim()) {
-    const actor = resolveKnownActorName(context, flags.from, 'review actor');
+    const actor = resolveKnownActorName(context, flags.from, 'review actor', true);
     assertMatchesAssignedReviewer(context, task, actor, 'start review');
     return actor;
   }
@@ -193,6 +200,7 @@ function getLatestReviewStartedActor(task) {
     if (
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_disapproved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -204,11 +212,12 @@ function getLatestReviewStartedActor(task) {
 }
 
 function getReviewDecisionActor(context, task, flags, actionName) {
-  const explicit = resolveKnownActorName(context, flags.from, 'review actor');
+  const explicit = resolveKnownActorName(context, flags.from, 'review actor', true);
   const startedActor = tryResolveKnownActorName(
     context,
     getLatestReviewStartedActor(task),
-    'review actor'
+    'review actor',
+    true
   );
   const assignedReviewer = tryResolveKnownActorName(
     context,
@@ -255,6 +264,7 @@ function getLatestReviewLifecycleEvent(task) {
       e.type === 'review_requested' ||
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_disapproved' ||
       e.type === 'review_started'
     ) {
       return e;
@@ -287,11 +297,7 @@ function startReview(context, taskId, flags = {}) {
       const existingActor =
         typeof latestReviewEvent.actor === 'string' ? latestReviewEvent.actor.trim() : '';
       const existingActorValid = existingActor
-        ? Boolean(
-            runtimeHelpers.resolveExplicitTeamMemberName(context.paths, existingActor, {
-              allowLeadAliases: true,
-            })
-          )
+        ? Boolean(tryResolveKnownActorName(context, existingActor, 'review actor', true))
         : false;
       const assignedReviewer = tryResolveKnownActorName(
         context,
@@ -299,6 +305,7 @@ function startReview(context, taskId, flags = {}) {
         'reviewer'
       );
       const existingMatchesAssigned =
+        isLeadActor(context, existingActor) ||
         !assignedReviewer ||
         (existingActorValid &&
           resolveActorIdentityKey(context, existingActor) ===
@@ -376,6 +383,44 @@ function startReview(context, taskId, flags = {}) {
   });
 }
 
+/** Transport examples vary; review transitions, actors and notifications remain canonical. */
+function reviewToolInstructions(context, task) {
+  if (context.boundTaskTools) {
+    const history = Array.isArray(task.historyEvents) ? task.historyEvents : [];
+    const requested = [...history].reverse().find((event) => event.type === 'review_requested');
+    const cycle = `${task.id}-${requested && requested.id ? requested.id : history.length}`;
+    return (
+      'These tools use your captured Team and actor. Do not supply teamName or from. ' +
+      'Keep each commandId unchanged when checking or retrying its original result; changed intent needs a new ID.\n\n' +
+      'FIRST call review_start to signal you are beginning the review:\n' +
+      JSON.stringify({ commandId: `review-start-${cycle}`, taskId: task.id }) +
+      '\n\n' +
+      'When approved, use MCP tool review_approve:\n' +
+      JSON.stringify({
+        commandId: `review-approve-${cycle}`,
+        taskId: task.id,
+        note: 'Approved',
+        notifyOwner: true,
+      }) +
+      '\n\n' +
+      'If changes are needed, use MCP tool review_request_changes:\n' +
+      JSON.stringify({
+        commandId: `review-changes-${cycle}`,
+        taskId: task.id,
+        comment: 'Describe required changes.',
+      })
+    );
+  }
+  return (
+    `FIRST call review_start to signal you are beginning the review:\n` +
+    `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
+    `When approved, use MCP tool review_approve:\n` +
+    `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n` +
+    `If changes are needed, use MCP tool review_request_changes:\n` +
+    `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..." }`
+  );
+}
+
 function requestReview(context, taskId, flags = {}) {
   const { task, reviewer, from, leadSessionId } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
@@ -386,7 +431,7 @@ function requestReview(context, taskId, flags = {}) {
     }
 
     const nextFrom =
-      resolveKnownActorName(context, flags.from, 'review requester') ||
+      resolveKnownActorName(context, flags.from, 'review requester', true) ||
       resolveKnownActorName(context, 'team-lead', 'review requester');
     const rawReviewer = getReviewer(context, flags);
     const nextReviewer = rawReviewer
@@ -445,12 +490,7 @@ function requestReview(context, taskId, flags = {}) {
         wrapAgentBlock(
           `This request is for the CURRENT review cycle. If you reviewed this task earlier, do not treat this message as a duplicate while the task is still in review; prior approvals become stale after later work.\n\n` +
             `Before declaring it duplicate, call task_get and check the current reviewState/status. If it is still in review for you, continue with the review tools below.\n\n` +
-            `FIRST call review_start to signal you are beginning the review:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
-            `When approved, use MCP tool review_approve:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n` +
-            `If changes are needed, use MCP tool review_request_changes:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..." }`
+            reviewToolInstructions(context, task)
         ),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
@@ -461,6 +501,55 @@ function requestReview(context, taskId, flags = {}) {
   }
 
   return task;
+}
+
+// Explicit human removal of approval; status/work intervals remain completed.
+function disapproveReview(context, taskId, flags = {}) {
+  if (flags.from !== 'user' || context.allowUserMessageSender !== true) {
+    throw new Error('Only the trusted user can remove task approval');
+  }
+  return withTeamBoardLock(context.paths, () => {
+    const task = tasks.getTask(context, taskId);
+    if (task.status !== 'completed' || getEffectiveReviewState(context, task) !== 'approved') {
+      throw new Error(`Task #${task.displayId || task.id} must be completed and approved`);
+    }
+    // This is synchronous rollback under the board lock, not a crash journal.
+    kanbanStore.readKanbanState(context.paths, context.teamName, { strict: true });
+    const taskPath = path.join(context.paths.tasksDir, `${task.id}.json`);
+    const originalTask = fs.readFileSync(taskPath);
+    let originalBoard;
+    try {
+      originalBoard = fs.readFileSync(context.paths.kanbanPath);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+    const timestamp = new Date().toISOString();
+    try {
+      kanbanStore.clearKanban(context.paths, context.teamName, task.id, { nextReviewState: 'none' });
+      return tasks.updateTask(context, task.id, (current) => {
+        closeReviewIntervals(current, timestamp);
+        current.historyEvents = tasks.appendHistoryEvent(current.historyEvents, {
+          type: 'review_disapproved', from: 'approved', to: 'none', actor: 'user', timestamp,
+        });
+        current.reviewState = 'none';
+        return current;
+      });
+    } catch (error) {
+      const rollbackErrors = [];
+      for (const [file, bytes] of [[taskPath, originalTask], [context.paths.kanbanPath, originalBoard]]) {
+        try {
+          if (bytes === undefined) fs.rmSync(file, { force: true });
+          else atomicWriteFileSync(file, bytes);
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
+      }
+      if (rollbackErrors.length) {
+        throw new AggregateError([error, ...rollbackErrors], 'Disapprove failed; approval rollback incomplete');
+      }
+      throw error;
+    }
+  });
 }
 
 function approveReview(context, taskId, flags = {}) {
@@ -536,7 +625,9 @@ function approveReview(context, taskId, flags = {}) {
   try {
     const approvedTask = tasks.getTask(context, taskId);
     const history = Array.isArray(approvedTask.historyEvents) ? approvedTask.historyEvents : [];
-    const approval = [...history].reverse().find((event) => event && event.type === 'review_approved');
+    const approval = [...history]
+      .reverse()
+      .find((event) => event && event.type === 'review_approved');
     tasks.notifyUnblockedOwners(context, approvedTask, { reviewCycleId: approval && approval.id });
   } catch (error) {
     warnNonCritical('[review] dependency approval notification failed', error);
@@ -646,6 +737,7 @@ function requestChanges(context, taskId, flags = {}) {
 
 module.exports = {
   approveReview,
+  disapproveReview,
   requestReview,
   requestChanges,
   startReview,

@@ -18,7 +18,9 @@ export function selectProviderModelDisplayPair(
   current: CliProviderStatus | undefined,
   replacePair: boolean
 ): ProviderModelDisplayPair {
-  if (replacePair && isProviderModelCatalogExactReady(incoming)) {
+  const nativeCatalog =
+    typeof incoming.catalogScope === 'string' && /^[a-f0-9]{64}$/.test(incoming.catalogScope);
+  if ((replacePair || nativeCatalog) && isProviderModelCatalogExactReady(incoming)) {
     const models = incoming.modelCatalog!.models.map((model) => model.launchModel);
     const modelIds = new Set(
       incoming.modelCatalog!.models.flatMap((model) => [model.id, model.launchModel])

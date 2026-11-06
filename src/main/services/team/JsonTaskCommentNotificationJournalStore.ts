@@ -2,6 +2,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { readStoppedImportCommentJson } from './stopped-import/commentFacts';
 import { atomicWriteAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 import { sanitizeTaskCommentNotificationJournalEntries } from './TaskCommentNotificationJournalStore';
@@ -25,6 +26,10 @@ export function getCommentNotificationJournalPath(teamName: string): string {
  * journal would re-notify the lead about every historical comment.
  */
 export class JsonTaskCommentNotificationJournalStore implements TaskCommentNotificationJournalStore {
+  async inspectStoppedImport(teamName: string) {
+    return readStoppedImportCommentJson(getCommentNotificationJournalPath(teamName));
+  }
+
   async exists(teamName: string): Promise<boolean> {
     try {
       await fs.promises.access(getCommentNotificationJournalPath(teamName), fs.constants.F_OK);

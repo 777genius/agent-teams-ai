@@ -1,0 +1,30 @@
+{
+  "status": "scoped-native-pass",
+  "jobId": "7e195a6680fc7c95a088e09f0bd076a3",
+  "providerArchiveSha256": "49448bf6897c008f1692f26730951393d6f9d31c8879ca664cda15f96b2dd46b",
+  "nativeCodexVersion": "0.162.0",
+  "nativeCodexSha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57",
+  "hostSourceSha256": "3fca00bca2b3ac539804150c7f3e04919e8c96c9afbe36f79ae371373f91078f",
+  "hostDistSha256": "36ba481877019a40d6981b72c0b0a8021abd4b57f5f0b8cc0b16626c6f04c5c4",
+  "retainedHandoff": ".artifacts/provider-migration/p6-native-mcp-policy-attempt3/handoff.json",
+  "retainedHandoffSha256": "25df820a80e57aec02d24c6cceec4802b45488dd9b3bbfec94f4783a7c1b11ae",
+  "receiptSha256": "8c4282bc68617af0fb4eaa5f656e7eef1b0ebd40a4bd5ea08b6e7d9c39114af8",
+  "assertions": {
+    "originalInputs": 1,
+    "originalResults": 1,
+    "modelRequests": 1,
+    "capturedTeamMcpSubsetMatches": true,
+    "selectedMcpInitializeListCall": [0, 0, 0],
+    "ambientMcpInitializeListCall": [0, 0, 0],
+    "ambientLoopbackOAuthMetadataGets": 120,
+    "nativeCatalogDriftDelivery": "known-not-sent",
+    "driftDoesNotReplayOriginalOutcome": true,
+    "capturedCleanup": "confirmed"
+  },
+  "limits": [
+    "Local scripted inference and isolated TEST configuration; no real account authorization",
+    "Native built-in tools remain available; no claim of zero HTTP traffic",
+    "Only appOnly for this Codex tuple; inheritLead and OpenCode remain separate qualifications",
+    "No product Task mutation, complete M02/M15 or whole Stage1 completion claim"
+  ]
+}

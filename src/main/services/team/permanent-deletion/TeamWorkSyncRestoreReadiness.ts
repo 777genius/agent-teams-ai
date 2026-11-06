@@ -1,18 +1,8 @@
-import { join } from 'node:path';
-
+import { isTeamWorkSyncRestoreReady as readyPortable } from '@agent-teams/legacy-agent-host/lifecycle';
 import { getBackupsBasePath } from '@main/utils/pathDecoder';
-
-import { readBackupManifestStrict } from '../teamBackupManifest';
-
-/** Called inside the existing lifecycle fence, without waiting for startup itself. */
-export async function isTeamWorkSyncRestoreReady(
+export function isTeamWorkSyncRestoreReady(
   teamName: string,
-  owner: { isInitialized(): boolean; isShuttingDown(): boolean }
+  owner: Parameters<typeof readyPortable>[1]
 ): Promise<boolean> {
-  if (!owner.isInitialized() || owner.isShuttingDown()) return false;
-  const manifest = await readBackupManifestStrict(
-    join(getBackupsBasePath(), 'teams', teamName, 'manifest.json'),
-    teamName
-  );
-  return !manifest?.workSyncRestorePending;
+  return readyPortable(teamName, owner, getBackupsBasePath());
 }

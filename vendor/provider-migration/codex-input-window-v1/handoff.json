@@ -1,0 +1,50 @@
+{
+  "status": "FROZEN_PACKED_CANDIDATE_BOUNDED_GO",
+  "archive": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/codex-input-window/packed-v1/agent-teams-provider-implementations-0.0.0.tgz",
+  "archiveSha256": "b078cdeb0d69cbe64be8a88517b77d14c17292d55bfad761832eb0c632689daf",
+  "archiveIntegrity": "sha512-pV1KEkf7Zs5PKcTlVYPJwM8Pt92I6l6ISAB5SjVm/HMTq1FycJlWMxIbSHUJ+eLLPYDxkRGgW3okPBrEmDD/6g==",
+  "packReceipt": {
+    "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/codex-input-window/packed-v1/pack-receipt.json",
+    "sha256": "4c2e688fc544761572637b3bfb2ce810b10ea025f41f4cc57940cca89f9ce572"
+  },
+  "jobs": {
+    "producer": {
+      "id": "f9ec888fe5e252e3ca72b53fc8e5cb02",
+      "exitCode": 1,
+      "failureStage": "detached declaration config missing SDK/contracts mapping; archive itself retained unchanged"
+    },
+    "finalVerifier": {
+      "id": "753abae40384f46eaa625d02b1802911",
+      "exitCode": 0
+    },
+    "managedJobsRoot": "/Users/belief/.codex/plugins/data/agent-plugins/1c1e9d402d2702d970a503b8b40bb29f94f43144d4dd7f794c2ba39db32ac96b/jobs"
+  },
+  "helpers": [
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/codex-input-window/pack.mts",
+      "sha256": "51cf1f26a67ef55d4a7e0a198a5d94714406fe4064c29ce3aad6c24092361d65"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/codex-input-window/verify-packed.executed.mts",
+      "sha256": "9a5411bd5c46cdf432118ca4a5d33e2d2482015c88626d6efdf64a6df005942b"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.artifacts/codex-input-window/verify-packed.mts",
+      "sha256": "f15a3d4c922bc800614182b40e483ba8f1c694bc599d5ad4c93a917463ce6f27"
+    }
+  ],
+  "helperStrict": "PASS final pack.mts+verify-packed.mts; executed verifier Node24 syntax retained separately (generic arrow trailing comma TS7-only correction after run, no semantic or product change)",
+  "archiveMembers": 189,
+  "generatedMembers": 186,
+  "priorGeneratedMembers": 184,
+  "sourceDelta": "only owned Codex4; all other accepted150-source snapshot entries preserved except expected2 changed sources",
+  "exportsAndDependencies": "byte-equivalent public map/dependency values; capture reachable through CodexDriverConfig; no new root export",
+  "frontendInstall": false,
+  "dependencyInstall": false,
+  "repoDeliveryGates": "check:changed/check:fast/fullcheck and Node26 explicitly unclaimed",
+  "limitations": [
+    "full installed packed consumer",
+    "Host/native capture qualification",
+    "Node26 and root check:changed/check:fast/check"
+  ]
+}

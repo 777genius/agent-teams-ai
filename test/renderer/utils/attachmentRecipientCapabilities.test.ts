@@ -66,7 +66,7 @@ describe('attachmentRecipientCapabilities', () => {
     ).toBeNull();
   });
 
-  it('keeps Codex text native-only for teammates and references for lead/OpenCode', () => {
+  it('routes Codex text by explicit native capability while retaining legacy routing', () => {
     const ready = member({
       providerId: 'codex',
       nativeInboxAttachmentsSupported: true,
@@ -96,9 +96,14 @@ describe('attachmentRecipientCapabilities', () => {
       ).toBeNull();
     }
     const withoutTextCapability = member({ ...ready, nativeInboxTextAttachmentsSupported: false });
-    expect(isReferenceAttachmentForMember(withoutTextCapability, text)).toBe(false);
+    expect(isReferenceAttachmentForMember(withoutTextCapability, text)).toBe(true);
     expect(
       validateAttachmentPayloadsForMember({ member: withoutTextCapability, attachments: [text] })
+    ).toBeNull();
+    const legacy = member({ ...ready, nativeInboxTextAttachmentsSupported: undefined });
+    expect(isReferenceAttachmentForMember(legacy, text)).toBe(false);
+    expect(
+      validateAttachmentPayloadsForMember({ member: legacy, attachments: [text] })
     ).not.toBeNull();
     for (const referenceRecipient of [
       member({ ...ready, name: 'team-lead' }),

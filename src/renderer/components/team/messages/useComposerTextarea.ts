@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { MutableRefObject, Ref } from 'react';
+import type { FocusEvent, MutableRefObject, Ref } from 'react';
 
 export function useComposerTextarea(
   externalTextareaRef: Ref<HTMLTextAreaElement> | undefined,
@@ -38,4 +38,26 @@ export function useComposerTextarea(
   }, [autoFocusKey, focusComposerTextarea]);
 
   return { textareaRef, internalTextareaRef, focusComposerTextarea };
+}
+
+/** Keep the footer stable while pointer or keyboard focus moves to Composer controls. */
+export function useComposerFocus() {
+  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
+  const [isComposerFocused, setIsComposerFocused] = useState(false);
+  const onTextareaFocus = useCallback(() => {
+    setIsTextareaFocused(true);
+    setIsComposerFocused(true);
+  }, []);
+  const onTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
+  const onBlurCapture = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget;
+    if (!(next instanceof Node) || !event.currentTarget.contains(next)) setIsComposerFocused(false);
+  }, []);
+  return {
+    isTextareaFocused,
+    isComposerFocused,
+    onTextareaFocus,
+    onTextareaBlur,
+    onBlurCapture,
+  };
 }

@@ -14,6 +14,7 @@ import path from 'path';
 import { createExtensionsRuntimeAdapter } from '../runtime/ExtensionsRuntimeAdapter';
 
 import type { PluginCatalogService } from '../catalog/PluginCatalogService';
+import type { NativeExtensionMutation } from '../runtime/CapturedNativeExtensions';
 import type { ExtensionsRuntimeAdapter } from '../runtime/ExtensionsRuntimeAdapter';
 import type { OperationResult, PluginInstallRequest } from '@shared/types/extensions';
 
@@ -24,6 +25,8 @@ const QUALIFIED_NAME_RE = /^[\w.-]+@[\w.-]+$/;
 
 /** Allowed scope values (prevent command injection) */
 const VALID_SCOPES = new Set(['local', 'user', 'project']);
+const isNativeScope = (value: string): value is PluginInstallRequest['scope'] =>
+  VALID_SCOPES.has(value);
 
 const INSTALL_TIMEOUT_MS = 120_000; // plugins may clone repos
 const UNINSTALL_TIMEOUT_MS = 30_000;
@@ -38,11 +41,14 @@ export class PluginInstallService {
     private readonly runtimeAdapter: ExtensionsRuntimeAdapter = createExtensionsRuntimeAdapter()
   ) {}
 
-  async install(request: PluginInstallRequest): Promise<OperationResult> {
+  async install(
+    request: PluginInstallRequest,
+    native?: NativeExtensionMutation
+  ): Promise<OperationResult> {
     const { pluginId, scope, projectPath } = request;
 
     // 1. Validate scope
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope !== undefined && !isNativeScope(scope)) {
       return {
         state: 'error',
         error: `Invalid scope: "${scope}". Must be one of: local, user, project.`,
@@ -82,6 +88,8 @@ export class PluginInstallService {
         error: `Invalid plugin identifier: ${qualifiedName}`,
       };
     }
+
+    if (native) return native.execute({ action: 'plugin.install', qualifiedName, scope });
 
     // 5. Build CLI args: claude plugin install [-s scope] <qualifiedName>
     const args = ['plugin', 'install'];
@@ -123,10 +131,11 @@ export class PluginInstallService {
   async uninstall(
     pluginId: string,
     scope?: string,
-    projectPath?: string
+    projectPath?: string,
+    native?: NativeExtensionMutation
   ): Promise<OperationResult> {
     // Validate scope
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope !== undefined && !isNativeScope(scope)) {
       return {
         state: 'error',
         error: `Invalid scope: "${scope}". Must be one of: local, user, project.`,
@@ -164,6 +173,9 @@ export class PluginInstallService {
         error: `Invalid plugin identifier: ${qualifiedName}`,
       };
     }
+
+    if (native)
+      return native.execute({ action: 'plugin.uninstall', qualifiedName, scope: scope ?? 'user' });
 
     const args = ['plugin', 'uninstall'];
     if (scope && scope !== 'user') {

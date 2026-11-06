@@ -1,6 +1,7 @@
 import { atomicWriteSync } from '@main/utils/atomicWrite';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { isTaskReviewDecisionEventType } from '@shared/utils/taskHistory';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -221,8 +222,7 @@ function getActiveReviewStart(
         : null;
     }
     if (
-      event.type === 'review_approved' ||
-      event.type === 'review_changes_requested' ||
+      isTaskReviewDecisionEventType(event.type) ||
       (event.type === 'status_changed' &&
         (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted')) ||
       event.type === 'task_created'

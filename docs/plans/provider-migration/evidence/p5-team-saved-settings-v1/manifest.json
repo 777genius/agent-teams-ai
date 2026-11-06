@@ -1,0 +1,94 @@
+{
+  "scope": "Team-owned configured lead/global settings, original CAS/recovery and trusted bootstrap, Main DTO/IPC/authorized HTTP, ordinary saved reads and existing-dialog hydration. No new UI. Not Electron dialog launch/create/resume acceptance, effective native application of saved settings or full stage1.",
+  "sourceBoundary": "Working-tree hashes captured after checks; full Host source/dist plus listed Main/renderer/test surfaces.267-test receipt precedes final stable-callback dependency correction; final focused original-dialog tests cover that correction. Not a pre/post immutable full Desktop dependency closure or release qualification.",
+  "hostSource": "f2822fdd48261f6fbc19846763cfccd6f06e0b8240a7113c3f6c873015f067c9",
+  "hostDist": "e16f0cc136ffbfb1ce167383c4ce0ee529b312b0030c16233df905c534a88b74",
+  "sources": {
+    "packages/legacy-agent-host/src/team/rosterSchema.ts": "478a1cf9b914b22bd75c84d91f61ec12419f58b1d22910f7e99ea111666e7cd2",
+    "packages/legacy-agent-host/src/team/rosterContracts.ts": "b96de94807cc513b3de5d913e70a9a5e92c56fcb130501f2ab53558df113ad57",
+    "packages/legacy-agent-host/src/team/ownerState.ts": "2a0ea97b37fa94e3d79abbaf8512ffde2a67798d045dc8c4570a36f8e21a7686",
+    "packages/legacy-agent-host/src/team/contracts.ts": "95e9fdeebf98ff8eaa041807e8da5f2f7141048f7c058b9c6e6c6ebefabfbd9d",
+    "packages/legacy-agent-host/src/team/TeamOwner.ts": "0be61e18d2397680d1c0e63a4234870d8e63a101aaf4fbde3deb1443b2172e26",
+    "packages/legacy-agent-host/src/team/TeamRosterTransitions.ts": "a0e28cc7fb18de4f9cd95f85d8f10a51539f76adfd0ca31cb4db181a363ad46d",
+    "packages/legacy-agent-host/src/composition/TeamHost.ts": "5bb84cd113fac55259dce90e0a635b25b4f2fe608da91b18a10c89d8e444471a",
+    "packages/legacy-agent-host/src/composition/teamRoster.ts": "cff88fcde79c7ed9192b3fc1d2a675c1c62cd3e38321a9d23371f24c7244e389",
+    "packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner.ts": "75f9425fde3923655a564f4667e8209b8c3561ff546260bf68e49c5eb1985e52",
+    "src/features/agent-backend/contracts/roster.ts": "9348e70c390351c4f28221ab482a420c947e70456dc68c9760785771f80811d1",
+    "src/features/agent-backend/contracts/teamSnapshot.ts": "c5bda58fa44283e91115858b0803b1c66fdf1ed4ceb35d5a10d03ca00b839723",
+    "src/features/agent-backend/main/adapters/rosterValues.ts": "f002e9872b57431bd04d047aba16ec0ff7e0c8fe09fb1f4f31fb0400d9438392",
+    "src/features/agent-backend/main/adapters/output/projectRoster.ts": "0b94d9f59c06c9b5f2a5d4e4985988d020908695996bf649967916dc688a31e6",
+    "src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts": "82bc7bd01e6307e0b2f6d8566a3f4901e93535681b49390ec84a3950d6654e52",
+    "src/features/agent-backend/renderer/readHostRosterConfiguration.ts": "f9ff99170008696385f6a7f544f214edf5683259761931f90de6591a35d86f58",
+    "src/features/agent-backend/renderer/projectHostSavedTeamRequest.ts": "3cc26ab63bfbb04dd1e09bbe1817276c82b489209fb63ac0a85af21d61665917",
+    "src/features/agent-backend/renderer/createHostTeamsApi.ts": "76832fccc89cb57887ca9dd5ea2f340fd7d3f6f234ce9dae27b49967f968a35b",
+    "src/renderer/components/team/dialogs/launchDialogPrefill.ts": "3737f912c831488727607ec8930d05114672a4cb04de4c9e00059fa3fdc077de",
+    "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx": "e8939cee7029b71fb4d9c7a9d1f93c1fcccc69d798ff138175bd8a8c034e0d6f",
+    "src/renderer/components/team/dialogs/useLaunchDialogAdvancedSettings.ts": "6b21b53b86482ae0c52a20eccc22b7a2a6004622914634baa95a6e583d4bb6a0",
+    "scripts/legacy-agent-host/desktop-proof-sources.ts": "6daad38be781d3a0047cb98930eea4f00dd5f2eb5035b47768f299d5a40f227a",
+    "packages/legacy-agent-host/tests/team-roster.test.ts": "51bcff5158110c59faa81923a1943f0410e01e687717af58dfb403a88fc7f104",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "8bff0a0f54900166e6c228070e6d83786234ae7f0c0c7ef9a019114070fa53e2",
+    "test/features/agent-backend/hostRosterFacade.test.ts": "af12e94570e3df02c51ee68e9c1433e687ce360fd7399381ef35eba47c31838b",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts": "03912fd801e5575a9e5e9920c0c2d2b68a160d2235a0a6a57e91a200595bf763",
+    "test/features/agent-backend/hostTeamLaunch.test.ts": "86bcce064949bfb163fb4cd217681f82ea1bff4b447faa17b1b46ca6932095c8",
+    "test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts": "2c7c45296e1e0e23bf402330e8a4ddd17b7e839a715a81d5612c05c74f96e109"
+  },
+  "checks": [
+    {
+      "id": "4834198351010841effb3a263258f73b",
+      "scope": "267 frontend tests across24 files including actual Main->NDJSON save/readback, IPC/authorized HTTP field capture, existing dialog hydration. Before final stable-callback dependency correction."
+    },
+    {
+      "id": "f34337ae07d142adab3b0c5d13bcca75",
+      "scope": "Final root types/build, strict Host types and256 Host tests; original dialog/prefill/Host launch tests, focused fast lint and frozen source/provisioning guards."
+    }
+  ],
+  "files": [
+    {
+      "path": "jobs/4834198351010841effb3a263258f73b/stdout.log",
+      "sha256": "d849c74ea6d344261361b4c55fd3f89db1417bc97ae544239f9460ea650ea896"
+    },
+    {
+      "path": "jobs/4834198351010841effb3a263258f73b/stderr.log",
+      "sha256": "73d50d7902ee000a4e136ac6b617b0090d4194d15b63f11d0baafcab2360276c"
+    },
+    {
+      "path": "jobs/f34337ae07d142adab3b0c5d13bcca75/stdout.log",
+      "sha256": "8b1f77ce489e907d2b6adfc5b0d2d49e4a659214bfc7823446cf2ec0ddce2b71"
+    },
+    {
+      "path": "jobs/f34337ae07d142adab3b0c5d13bcca75/stderr.log",
+      "sha256": "a9c75ca74ca07a6887da78903253a4edd5c503a6055be928ff97391e931b6864"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/team-roster.test.ts",
+      "sha256": "51bcff5158110c59faa81923a1943f0410e01e687717af58dfb403a88fc7f104"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "sha256": "8bff0a0f54900166e6c228070e6d83786234ae7f0c0c7ef9a019114070fa53e2"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/hostRosterFacade.test.ts",
+      "sha256": "af12e94570e3df02c51ee68e9c1433e687ce360fd7399381ef35eba47c31838b"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "sha256": "03912fd801e5575a9e5e9920c0c2d2b68a160d2235a0a6a57e91a200595bf763"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/hostTeamLaunch.test.ts",
+      "sha256": "86bcce064949bfb163fb4cd217681f82ea1bff4b447faa17b1b46ca6932095c8"
+    },
+    {
+      "path": "executed-tests/test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts",
+      "sha256": "2c7c45296e1e0e23bf402330e8a4ddd17b7e839a715a81d5612c05c74f96e109"
+    }
+  ],
+  "predecessors": [
+    "af969850344c756cd63a0e1157e4f8cc stopped at exact-optional TeamMember.settings types before tests; schema-compatible optional type fixed",
+    "b48bcb2947dea2ac5e9f2ec60ce35fae stopped at an overly broad type predicate before tests; UI discriminator returns boolean",
+    "b26e0d797e96232920351d454a22974c passed256 Host, failed2 frontend: obsolete native-config read fixture and warm stale selection; fixed without raising timeout or weakening assertions",
+    "897c7d8b20847e85e41b007bbe916472 stopped at corruption-fixture exact-optional cast before tests; nonnullable test cast fixed",
+    "a284a735724a1e8ebd3eabdafe0bb848 passed256 Host before final scoped style normalization"
+  ]
+}

@@ -13,11 +13,17 @@ import type { TeamProvisioningLeadInboxRelayCompatibilityOptions } from './TeamP
 
 /** Production clock belongs to the relay adapter, outside service composition. */
 export function withLeadInboxRelayClock(
-  ports: Omit<TeamProvisioningLeadInboxRelayCompatibilityOptions, 'nowMs' | 'setTimeout' | 'clearTimeout'>
+  ports: Omit<
+    TeamProvisioningLeadInboxRelayCompatibilityOptions,
+    'nowMs' | 'setTimeout' | 'clearTimeout'
+  >
 ): TeamProvisioningLeadInboxRelayCompatibilityOptions {
-  return { ...ports, nowMs: () => Date.now(),
+  return {
+    ...ports,
+    nowMs: () => Date.now(),
     setTimeout: (callback, ms) => setTimeout(callback, ms),
-    clearTimeout: (handle) => clearTimeout(handle) };
+    clearTimeout: (handle) => clearTimeout(handle),
+  };
 }
 
 export interface TeamProvisioningLeadInboxRelayPortsFactoryLogger {

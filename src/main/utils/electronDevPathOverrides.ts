@@ -82,6 +82,9 @@ export function applyElectronDevPathOverrides(
       : null;
   if (appliedUserDataDir) {
     app.setPath?.('userData', appliedUserDataDir);
+    const logsDir = path.join(appliedUserDataDir, 'logs');
+    if (ensureDirectory(logsDir, warnings, AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV))
+      app.setPath?.('logs', logsDir);
     setAppDataBasePath(appliedUserDataDir);
   }
 

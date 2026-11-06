@@ -1,0 +1,221 @@
+{
+  "status": "focused-tests-and-canonical-build-types-guards-pass; production-frozen",
+  "scope": "Stage1 M03/M04 imported Task source-message attachment read and existing UI API handoff; no attachment writes or native effects.",
+  "capturedAtUtc": "2026-10-23T01:33:32.714523+00:00",
+  "sourcePins": {
+    "packages/legacy-agent-host/src/attachments/contracts.ts": "7b04f08858f2bafe28eda362aa7a748525933af4303c1ed7519b4a6b0c4042e0",
+    "packages/legacy-agent-host/src/attachments/importedMessageReference.ts": "5f2dac63ddcb408ef20b30c768118f7cdc2a6cf92ab4ef92d838880b564b4336",
+    "packages/legacy-agent-host/src/attachments/readImportedTaskAttachment.ts": "82aee9677f6277b2b1367220a29e1c6a720ce0561d1bd6568aafe07af5f22c94",
+    "packages/legacy-agent-host/src/composition/createTeamAttachmentComposition.ts": "f033018e6d1c63a326694fd9ca0a2e95516027f6630ee3751960afbf0146d5e4",
+    "packages/legacy-agent-host/src/stopped-team-import/FileStoppedTeamImport.ts": "28ca0e73c8243e27cd78d0ed74f1735e137235d4fae21aceab84ed95c162f9a5",
+    "packages/legacy-agent-host/tests/imported-message-attachments.test.ts": "1c51ae697c7f82f0b51b37789a6adf0bb0119c7b87b7a3d5f7a8751f66b24526",
+    "src/features/agent-backend/contracts/attachments.ts": "8fab87fb60ca2bf711458a8076beb3ff0785001f2271e32caba46bc7d71bbfa7",
+    "src/features/agent-backend/contracts/operations.ts": "3ac9a49e1d2b9947e0a6a224a2316b41f66cba95fc011bcb4c09e70d7c135bdd",
+    "src/features/agent-backend/main/adapters/input/validateBackendOperation.ts": "c2b5d845140634d75d68e714e8205c3079371067241b7a1f6252b2c6718e29cf",
+    "src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts": "e23d5274bf374c5ed097ad4456844b0d35ad3173db27cdebbc3283366e127d13",
+    "src/features/agent-backend/main/adapters/output/projectSourceMessage.ts": "8ec826774935caf16aaecc4e79e21aae6867dd7122aeb09d657ac25a34d0e607",
+    "src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts": "e73178f777779d6aa904272c3a7c5eb8a631d61992367d3a183d68d9c0d163bc",
+    "src/features/agent-backend/main/adapters/output/projectBackendResult.ts": "e1ccca32781e56f17a14ffc44c7463a8e8f087285d0656a2a0a618152b9bb62f",
+    "src/features/agent-backend/renderer/createHostTaskAttachmentRead.ts": "803f2362fbf919cd3cf954d5a28eebb23723c8429dee57173d2fc040fcf9b713",
+    "src/features/agent-backend/renderer/createHostMessageAttachmentRead.ts": "17f329bdfce472808fed91948662dab9c9471efb5a951a440d9cee5cd2266664",
+    "src/features/agent-backend/renderer/createHostTeamsApi.ts": "cb79ea041a988cb755c8383767f8676289708fb10a4460b0bbe571a139bd3a65",
+    "src/renderer/components/team/attachments/AttachmentDisplay.tsx": "b965415e25a7dee6c03c0240794934ff436e5c5ed2a80fd82c00c0e3aff28b52",
+    "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.tsx": "d703d17f38340b636cbbcc9bea0169130b7d364001d00c108a30aabb5323be25",
+    "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.test.tsx": "15a2a0959345dac05b4b0619c6f829ffcec6e81a503a34ca6c7bd2dde23d7aec",
+    "test/features/agent-backend/hostMessageAttachmentRead.test.ts": "0dd52b20312d2f7f8c8cc9c4dc25fa739a7ee39afe25cb0c364470d5a6a3a017",
+    "test/renderer/components/team/attachments/AttachmentDisplay.test.tsx": "c665f1804e2962d53bb08878a47cd282d00d8dff8fafa25e2774e78b6d598792"
+  },
+  "sourcePinProvenance": "SHA-256 read from frozen current files after focused execution; these are handoff pins, not retrospectively captured per-run execution pins. Root canonical cced5fb7e4f2e494e999a3400b186d32 subsequently passed build/types/guards for this integrated tree.",
+  "newProductionFiles": [
+    "packages/legacy-agent-host/src/attachments/importedMessageReference.ts",
+    "src/features/agent-backend/main/adapters/output/projectSourceMessage.ts",
+    "src/features/agent-backend/renderer/createHostMessageAttachmentRead.ts"
+  ],
+  "proofSourceList": {
+    "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+    "sha256": "b2ba918de6dc21058fa43ed54d19a01ce7915c84ccd1608a1a1008410c6cb53d",
+    "allTouchedProductionPathsPresent": true,
+    "writer": "Root; this lane did not modify the proof source list"
+  },
+  "runtime": {
+    "executable": "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+    "nodeVersion": "24.21.0",
+    "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "sourceTests": "Existing installed tsx import; no install or dist build"
+  },
+  "behavior": {
+    "uniqueCount": 44,
+    "passed": 44,
+    "counting": "Final current-source Host8 plus final Main/renderer36. Earlier6/7-source runs and final overlapping Main6 rerun are not added.",
+    "hostSource": {
+      "argv": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "--import",
+        "tsx",
+        "--test",
+        "packages/legacy-agent-host/tests/imported-message-attachments.test.ts"
+      ],
+      "sessionId": 58692,
+      "toolChunk": "114d00",
+      "exitCode": 0,
+      "passed": 8,
+      "assertions": [
+        "Exact immutable source-message metadata and bounded chunk bytes",
+        "Wrong Team/Task/original message or changed source snapshot refused",
+        "Original-map digest, physical bytes and current authority required",
+        "Traversal, symlink and unretained blob path refused",
+        "Strict finite payload/offset/continuation digest checks",
+        "Duplicate/capped census refuses instead of truncating",
+        "Actual filesystem Team owner route rejects wrong owner/scope/principal/stale lease",
+        "Current-source shared reader preserves Task and comment attachment reads"
+      ]
+    },
+    "mainRenderer": {
+      "argv": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/features/agent-backend/hostMessageAttachmentRead.test.ts",
+        "test/features/agent-backend/hostTaskAttachmentRead.test.ts",
+        "test/features/agent-backend/importedTaskAttachments.test.ts",
+        "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.test.tsx",
+        "test/renderer/components/team/attachments/AttachmentDisplay.test.tsx",
+        "--maxWorkers=1"
+      ],
+      "sessionId": 60732,
+      "toolChunk": "eb9a41",
+      "exitCode": 0,
+      "passed": 36,
+      "byFile": {
+        "test/features/agent-backend/hostMessageAttachmentRead.test.ts": 6,
+        "test/features/agent-backend/hostTaskAttachmentRead.test.ts": 5,
+        "test/features/agent-backend/importedTaskAttachments.test.ts": 6,
+        "src/renderer/components/team/kanban/KanbanTaskAttachmentMosaic.test.tsx": 17,
+        "test/renderer/components/team/attachments/AttachmentDisplay.test.tsx": 2
+      },
+      "assertions": [
+        "Opaque namespace/Task/source provenance and path-free projection",
+        "Bounded metadata/chunks and final reconstructed SHA-256",
+        "Same-sized valid-base64 tampering refused",
+        "Stale authority after metadata or bytes refuses partial results",
+        "Finite validated control routes; malformed/reference/census negatives",
+        "Kanban and AttachmentDisplay use unified API with ambient legacy IPC poisoned",
+        "Existing file tile downloads exact verified bytes without private path"
+      ],
+      "distBoundary": "Existing hostTaskAttachmentRead and importedTaskAttachments tests import prior stable Host dist; new current-source Host8 separately exercises the changed source reader/composition. Root canonical build later refreshed dist."
+    },
+    "overlappingFinalCompatibilityRerun": {
+      "argv": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/features/agent-backend/hostMessageAttachmentRead.test.ts",
+        "--maxWorkers=1"
+      ],
+      "sessionId": 11824,
+      "toolChunk": "ca06d6",
+      "exitCode": 0,
+      "passed": 6,
+      "additionalCount": 0,
+      "meaning": "Final projection safely omits attachment affordance for a valid legacy task that retains only sourceMessageId without a source snapshot."
+    }
+  },
+  "checks": {
+    "rootTypes": {
+      "argv": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit"
+      ],
+      "sessionId": 87192,
+      "toolChunk": "a59551",
+      "exitCode": 0
+    },
+    "finalHostTestTypes": {
+      "argv": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "-p",
+        "packages/legacy-agent-host/tsconfig.test.json",
+        "--noEmit"
+      ],
+      "toolChunk": "13ecae",
+      "exitCode": 0
+    },
+    "formatter": {
+      "argvPrefix": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "node_modules/prettier/bin/prettier.cjs",
+        "--check"
+      ],
+      "appendFiles": "sourcePins keys in recorded order",
+      "sessionId": 15245,
+      "toolChunk": "5a2893",
+      "exitCode": 0
+    },
+    "fastLint": {
+      "argvPrefix": [
+        "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.fast.config.js"
+      ],
+      "appendFiles": "sourcePins keys in recorded order",
+      "sessionId": 15245,
+      "toolChunk": "5a2893",
+      "exitCode": 0,
+      "warnings": 0
+    },
+    "diffWhitespace": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "sessionId": 79450,
+      "toolChunk": "35dde8",
+      "exitCode": 0
+    },
+    "rootCanonical": {
+      "jobId": "cced5fb7e4f2e494e999a3400b186d32",
+      "result": "PASS build, all types and guards",
+      "provenance": "Parent Root reported completed canonical job; no duplicate run from this lane"
+    }
+  },
+  "logProvenance": "Session IDs/chunks and assertions transcribed from retained tool outputs. Original raw focused stdout was not separately redirected to disk. No duplicate behavior runs were performed for documentation.",
+  "boundaries": {
+    "routes": [
+      "message.attachments.read -> team.message.attachments.read",
+      "message.attachment.read -> team.message.attachment.read"
+    ],
+    "identity": "im1:<explicitTaskId>:sha256([canonicalTeamName,taskId,originalSourceMessageId]); exact owner/scope/principal Team fence independently required. No Task search by source ID or message text.",
+    "authority": "Current Task source snapshot must match the immutable original imported Task map; private callback selects exact published imported Team. Current writer/read authority checked before/after IO.",
+    "transport": "Public metadata contains no filePath; no renderer filesystem/digest/path selector. Same installed import byte reader enforces plain ancestors and immutable blob path/hash.",
+    "limits": {
+      "chunkBytes": 393216,
+      "maxFileBytes": 20971520,
+      "maxMessageAttachments": 64,
+      "maxAggregateMessageBytes": 20971520,
+      "maxChunkIterationsPerFile": 55,
+      "finalBytesHash": "SHA-256 verified via WebCrypto before return"
+    },
+    "noMutation": "No source-message archive rewriting, new store/journal/framework, upload/delete/write, native message search, legacy fallback, Team launch, app run, install, commit or push.",
+    "caps": {
+      "TeamHostLines": 799,
+      "TeamHostTouched": false,
+      "FileStoppedTeamImportLines": 715,
+      "attachmentCompositionLines": 96
+    },
+    "ui": "Original Kanban and source-message attachment controls retained; existing non-image file tile downloads verified bytes when Host deliberately omits private path."
+  },
+  "nativeQualification": {
+    "attachmentElectronAcceptance": "NOT CLAIMED; future actual thumbnail/lightbox/download acceptance remains separate from component tests.",
+    "rootReviewE2eAtRequest": {
+      "jobId": "c8215f2774f5f643353d7b2f643b440c",
+      "state": "RUNNING as reported by Root; no result inferred",
+      "observerSession": 62446
+    },
+    "coldNativeCustody": "Unchanged; no generic launched/cold legacy native-release claim."
+  },
+  "freeze": "All selected production/dist source writes remain stopped. This documentation-only handoff did not rerun behavior or modify loaded sources."
+}

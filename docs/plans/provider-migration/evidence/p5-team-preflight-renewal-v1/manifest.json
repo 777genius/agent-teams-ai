@@ -1,0 +1,39 @@
+{
+  "scope": "Working-tree retained model-preflight intent/renewal milestone. Actual SDK checks one shared successor for two concurrent explicit preparations, cold original associations and fresh proof after revoke/regrant. Native test invokes Main application adapter with Desktop feature facade, not Electron dialogs or vendor auth. Not full stage1 or release qualification.",
+  "sourceSha256": "2b524a3cd57efaaec2dc96bdd31b1bd660d451af67b87c49b2bfbf5fba67f990",
+  "distSha256": "a212dd98558225c755a6f8addda95180bab6ed8ddd681720d75b4e5050b04591",
+  "providerArchive": "vendor/provider-migration/claude-probe-v3/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "localModelRequests": 8,
+  "teamRequests": 5,
+  "globalRequests": 3,
+  "checks": [
+    {
+      "id": "7db7b1bb905b76260dea220560392ebc",
+      "exit": 0,
+      "scope": "Final root/Host/test types,235 Host and540 frontend/IPC tests, scoped lint/guards and actual native combined case passed."
+    }
+  ],
+  "files": [
+    {
+      "path": "receipt.json",
+      "sha256": "c810a57dd7e7158956f7eae611f546befb68fead7ebc0d9aca192398c5c39f87"
+    },
+    {
+      "path": "attempt.json",
+      "sha256": "54967c69a2018f7a896b2494b3124a1bbc7e0c41168e406951e87becd1747071"
+    },
+    {
+      "path": "executed-native-test.ts",
+      "sha256": "05ce2ea509e04f7971fb2865364fe962fefaaff727ce8c4db9cf995ab3b7453c"
+    },
+    {
+      "path": "jobs/7db7b1bb905b76260dea220560392ebc/stdout.log",
+      "sha256": "a1030ea1bfeec6d6486ba0ba2cc11ff507aa564b7d6370abca2308363d418b2e"
+    },
+    {
+      "path": "jobs/7db7b1bb905b76260dea220560392ebc/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    }
+  ]
+}

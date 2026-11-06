@@ -78,25 +78,28 @@ export function createDesktopExternalAgentConnection(
     revokeAuthority = deps.mcp.appContext.bind(identity, deps.httpEnabled);
   };
   bindAuthority();
-  const revokeEnvironment = configureDesktopMcpEnvironment(() => {
-    const controlUrl = deps.getControlUrl();
-    if (stopping || !context.isOpen || !deps.isLocalContext() || !controlUrl) {
-      throw new Error('Desktop MCP control context is unavailable');
-    }
-    // This factory is invoked only for a new owned child, never for discovery reads.
-    boundControlUrl = controlUrl;
-    return Object.freeze({
-      [BOUND_CONTROL_URL_ENV]: controlUrl,
-      [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
-      AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
-      CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
-      AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
-      CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
-        deps.userDataPath,
-        deps.getRoot()
-      ),
-    });
-  }, () => !stopping && context.isOpen && deps.isLocalContext() && !!deps.getControlUrl());
+  const revokeEnvironment = configureDesktopMcpEnvironment(
+    () => {
+      const controlUrl = deps.getControlUrl();
+      if (stopping || !context.isOpen || !deps.isLocalContext() || !controlUrl) {
+        throw new Error('Desktop MCP control context is unavailable');
+      }
+      // This factory is invoked only for a new owned child, never for discovery reads.
+      boundControlUrl = controlUrl;
+      return Object.freeze({
+        [BOUND_CONTROL_URL_ENV]: controlUrl,
+        [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
+        CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
+        AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
+          deps.userDataPath,
+          deps.getRoot()
+        ),
+      });
+    },
+    () => !stopping && context.isOpen && deps.isLocalContext() && !!deps.getControlUrl()
+  );
   const connection = new ExternalAgentConnection({
     ...deps,
     context,

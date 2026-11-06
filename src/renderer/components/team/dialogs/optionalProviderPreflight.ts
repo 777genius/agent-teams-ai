@@ -13,6 +13,15 @@ import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 type OptionalProviderPreflightState = 'idle' | 'loading' | 'ready' | 'failed';
 
+export function advanceRequest(
+  sequences: Map<TeamProviderId, number>,
+  providerId: TeamProviderId
+): number {
+  const next = (sequences.get(providerId) ?? 0) + 1;
+  sequences.set(providerId, next);
+  return next;
+}
+
 /** Aggregate progress must not restart badges for providers whose own work settled. */
 export function getPendingProviderPreflightIds(
   state: OptionalProviderPreflightState,
@@ -200,6 +209,7 @@ export function canSkipProviderPreflight(
  */
 export function createProviderSubmissionFence() {
   let busy = false;
+  let preparationId = crypto.randomUUID();
   const diagnostics = new Map<
     string,
     {
@@ -209,6 +219,16 @@ export function createProviderSubmissionFence() {
     }
   >();
   return {
+    get preparationId() {
+      return preparationId;
+    },
+    /** A new explicit dialog/settings action; renders and submitted work retain the original. */
+    refreshPreparation(generation?: { current: number }): void {
+      if (!busy) {
+        if (generation) generation.current += 1;
+        preparationId = crypto.randomUUID();
+      }
+    },
     get busy() {
       return busy;
     },
@@ -226,7 +246,7 @@ export function createProviderSubmissionFence() {
       identity: Pick<ProviderPreparePlan, 'cacheKey' | 'requestSignature'>,
       input: Parameters<typeof runProviderPrepareDiagnostics>[0]
     ): Promise<ProviderPrepareDiagnosticsResult> {
-      const key = JSON.stringify([identity.cacheKey, identity.requestSignature]);
+      const key = JSON.stringify([preparationId, identity.cacheKey, identity.requestSignature]);
       const run = () => runProviderPrepareDiagnostics(input);
       for (const [entryKey, entry] of diagnostics)
         if (entry.expiresAt <= Date.now()) diagnostics.delete(entryKey);

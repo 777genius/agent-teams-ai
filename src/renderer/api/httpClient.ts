@@ -5,6 +5,7 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
+import { createAgentBackendHttpClient } from '@features/agent-backend/renderer';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -53,6 +54,7 @@ import {
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
+import { createAgentBackendReviewHttpTransport } from './createAgentBackendReviewHttpTransport';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -73,7 +75,7 @@ import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
-  RuntimeProviderManagementRuntimeId,
+  RuntimeProviderModelTestRuntimeId,
 } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
@@ -211,8 +213,8 @@ function createBrowserCompanionStatus(
   };
 }
 
-function createBrowserRuntimeProviderError(
-  runtimeId: RuntimeProviderManagementRuntimeId,
+function createBrowserRuntimeProviderError<T extends RuntimeProviderModelTestRuntimeId>(
+  runtimeId: T,
   code: 'runtime-unhealthy' | 'unsupported-action'
 ) {
   return {
@@ -231,6 +233,15 @@ function gatewayUnavailable(): never {
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  agentBackend = createAgentBackendHttpClient(
+    (route, request) => this.post(route, request),
+    (route) => this.get(route),
+    createAgentBackendReviewHttpTransport(
+      () => this.baseUrl,
+      (route, request) => this.post<void>(route, request)
+    ),
+    (route, request) => this.post(route, request)
+  );
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -353,6 +364,7 @@ export class HttpAPIClient implements ElectronAPI {
 
   private async parseJson<T>(res: Response, reviveDates = true): Promise<T> {
     const text = await res.text();
+    if (res.ok && res.status === 204) return undefined as T;
     if (!res.ok) {
       const parsed = JSON.parse(text) as { error?: string };
       throw new Error(parsed.error ?? `HTTP ${res.status}`);

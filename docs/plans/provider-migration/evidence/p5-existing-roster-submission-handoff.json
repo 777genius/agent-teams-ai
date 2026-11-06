@@ -1,0 +1,24 @@
+{
+  "status": "PASS original-dialog roster submission and owner CAS; full Electron Launch/Create/Resume E2E and stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-existing-roster-submission-v1/manifest.json",
+  "hostSource": "bea259be92195b5c5f2ac2977b173ed4d5a7652b206f094682d872d20955e507",
+  "hostDist": "71467a82bdf3893b7adc1f2a307de46f78b389a65ad5ba14ed0fc3a6ad5ffb19",
+  "implementation": {
+    "ui": "Only original LaunchTeamDialog and existing relaunch flow. The first hydrated owner revision is pinned while the dialog is open. Original roster command ID and exact payload survive model-preflight renewal and UNKNOWN; changed payload requires reopening. Configured model remains distinct from effective launch model. Existing settings and presentation fields are retained.",
+    "adapter": "Ordinary replaceMembers captures original input before await, uses the original handle without rereading newer settings, invalidates shared product read fences, and performs one readonly verified lookup after unknown/malformed save response. No new effect command is generated. Scope change drops late results; no legacy fallback.",
+    "owner": "Existing roster transition validates opaque owner-issued version tokens for all active members, target canonical identity/kind, original Team revision and selected model/effort. The settings intent cannot change membership. Original receipt/replay/recovery remain authoritative. Lookup may require the exact original normalized replacement fingerprint; absence is not success.",
+    "review": "Read-only critic identified command renewal after preflight invalidation. Fixed by freezing the first roster command independently of preparation ID; both unchanged retry and edited retry are exercised through original dialog buttons. Regular member agentType is explicit, so descriptive team-lead role cannot alter canonical target kind."
+  },
+  "checks": {
+    "host": "260/260 Host tests and strict test types passed in d75169d2d8dac60e6d5e7a043c3c0e91; Host source did not change afterward. That job later failed one Main undefined-lookup test, fixed and rechecked.",
+    "finalJobId": "539eaca1804cb64d23a97e3f3bfd482b",
+    "final": "Root typecheck/build,129/129 tests across7 frontend files, scoped fast lint, frozen source/provisioning guards and whitespace passed. Includes original React dialog submissions and real Main->NDJSON owner with lost acknowledgement recovery and no second effect command.",
+    "limitations": "One pre-existing closeDialog hook dependency warning remains. Full lint/CI and other owning gates remain open. Tests use React integration and controlled provider/NDJSON; they do not close actual Electron CDP dialogue acceptance or native SDK/real auth qualification. See manifest for exact sources/logs and earlier failed checks."
+  },
+  "remainingImmediate": [
+    "Trusted fresh native capture from current saved revision, new sessions/bindings/grants, and preservation of historical run/checkpoint associations. No renderer-supplied native process/account selectors.",
+    "Ordinary launchTeam/createTeam/createConfig and selected Resume/relaunch, then full Electron dev:mcp/CDP acceptance through existing UI with TEST roots/local API.",
+    "All other P0-P8/M01-M19 requirements including review/apply, lifecycle/auth/providers/packaging/Quit and owning gates. Stage2 future Orchestrator/runtime is excluded."
+  ],
+  "delivery": "Isolated worktree. No new UI. Draft PR descriptions must link exact-head plan/contracts/matrix. No commit/push/PR/merge performed in this slice."
+}

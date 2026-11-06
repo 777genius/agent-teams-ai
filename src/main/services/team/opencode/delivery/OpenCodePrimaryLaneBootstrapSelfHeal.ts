@@ -268,6 +268,13 @@ export class OpenCodePrimaryLaneBootstrapSelfHealTracker {
     return `${teamName.trim().toLowerCase()}\u0000${runId ?? ''}`;
   }
 
+  hasPendingForStoppedImport(teamName: string): boolean {
+    const prefix = `${teamName.trim().toLowerCase()}\0`;
+    return [...this.entries].some(
+      ([key, entry]) => key.startsWith(prefix) && (entry.deciding || entry.inFlight !== null)
+    );
+  }
+
   reset(teamName: string, runId: string | null): void {
     this.entries.delete(this.keyOf(teamName, runId));
   }

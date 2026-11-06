@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import ts from 'typescript';
 import { transformWithEsbuild } from 'vite';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -8,9 +9,13 @@ import { describe, expect, it, vi } from 'vitest';
 async function inboxHarness(kind: 'inbox' | 'sent' = 'inbox') {
   const source = readFileSync('src/main/index.ts', 'utf8');
   const functionName = kind === 'inbox' ? 'notifyNewInboxMessages' : 'notifyNewSentMessages';
-  const start = source.indexOf(`async function ${functionName}(`);
-  const end = source.indexOf(kind === 'inbox' ? '\n/**' : '\nprocess.on(', start);
-  const { code } = await transformWithEsbuild(source.slice(start, end), 'inbox.ts');
+  const file = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = file.statements.find(
+    (node): node is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(node) && node.name?.text === functionName
+  );
+  expect(declaration).toBeDefined();
+  const { code } = await transformWithEsbuild(declaration!.getText(file), 'inbox.ts');
   let messages: Record<string, unknown>[] = [];
   const addTeamNotification = vi.fn(() => Promise.resolve(undefined));
   const dependencies = {

@@ -1,0 +1,44 @@
+--- a/packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts
+@@ -38,7 +38,7 @@
+   return value as Record<string, unknown>;
+ };
+ 
+-/** Captures one technical server for management; never allocates a conversation session. */
++/** Captures one management server; only the explicit no-tool model probe creates a session. */
+ export class OpenCodeManagementHost {
+   private readonly profile: OpenCodeManagementProfile;
+   private readonly custody: CapturedProcessPort;
+--- a/packages/legacy-agent-host/src/management/commandRecords.ts
++++ b/packages/legacy-agent-host/src/management/commandRecords.ts
+@@ -80,7 +80,7 @@
+       ? value.resourceHeld && !value.ok
+       : value.phase === 'completed'
+         ? !value.resourceHeld
+-        : !value.ok
++        : !value.ok && (value.phase !== 'cancelled' || !value.resourceHeld)
+   );
+ export type StoredModelProbe = z.infer<typeof storedModelProbeSchema>;
+ 
+--- a/packages/legacy-agent-host/dist/adapters/providers/OpenCodeManagementHost.js
++++ b/packages/legacy-agent-host/dist/adapters/providers/OpenCodeManagementHost.js
+@@ -18,7 +18,7 @@
+         throw new OpenCodeManagementError('invalid-profile');
+     return value;
+ };
+-/** Captures one technical server for management; never allocates a conversation session. */
++/** Captures one management server; only the explicit no-tool model probe creates a session. */
+ export class OpenCodeManagementHost {
+     authority;
+     profile;
+--- a/packages/legacy-agent-host/dist/management/commandRecords.js
++++ b/packages/legacy-agent-host/dist/management/commandRecords.js
+@@ -71,7 +71,7 @@
+     ? value.resourceHeld && !value.ok
+     : value.phase === 'completed'
+         ? !value.resourceHeld
+-        : !value.ok);
++        : !value.ok && (value.phase !== 'cancelled' || !value.resourceHeld));
+ export const storedManagementCommandSchema = z.union([
+     storedCredentialCommandSchema,
+     storedOAuthCommandSchema,

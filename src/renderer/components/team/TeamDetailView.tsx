@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   assertMemberSettingsRelaunchRoster,
@@ -115,6 +116,7 @@ import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { useStoppedTeamLaunchDialog } from './dialogs/useStoppedTeamLaunchDialog';
 import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
@@ -131,7 +133,6 @@ import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
-import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { InboxMessage } from '@shared/types';
 import type { ComponentProps, CSSProperties } from 'react';
@@ -1328,15 +1329,14 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
-  const [launchDialogState, setLaunchDialogState] = useState<{
-    open: boolean;
-    mode: TeamLaunchDialogMode;
-    memberSettingsDraft?: MemberSettingsRelaunchDraft;
-    baselineMembers?: ResolvedTeamMember[];
-  }>({
-    open: false,
-    mode: 'launch',
-  });
+  const {
+    launchDialogState,
+    setLaunchDialogState,
+    launchTarget,
+    openLaunchDialog,
+    closeLaunchDialog,
+    handleRestartTeam,
+  } = useStoppedTeamLaunchDialog(teamName);
   const [editorOpen, setEditorOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -2088,25 +2088,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSendDialogOpen(true);
   }, []);
 
-  const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
-    setLaunchDialogState({ open: true, mode });
-  }, []);
-
-  const closeLaunchDialog = useCallback(() => {
-    setLaunchDialogState((prev) => ({ ...prev, open: false }));
-  }, []);
-
-  const handleRestartTeam = useCallback(() => {
-    openLaunchDialog('relaunch');
-  }, [openLaunchDialog]);
-
-  const handleLaunchDialogSubmit = useCallback(
-    async (request: TeamLaunchRequest): Promise<void> => {
-      await launchTeam(request);
-    },
-    [launchTeam]
-  );
-
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
     const { memberSettingsDraft, baselineMembers } = launchDialogState;
     if (!memberSettingsDraft || !baselineMembers) return;
@@ -2124,6 +2105,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       request: TeamLaunchRequest,
       nextMembers: TeamCreateRequest['members'],
       memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+      rosterMetadata?: Parameters<typeof executeTeamRelaunch>[0]['rosterMetadata'],
       onMembersSaved?: () => void
     ): Promise<void> => {
       await executeTeamRelaunch({
@@ -2132,6 +2114,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         request,
         members: nextMembers,
         memberSettingsRelaunch,
+        rosterMetadata,
         onMembersSaved,
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
@@ -2159,6 +2142,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             throw error;
           }
         },
+        stopRun: api.teams.cancelProvisioning,
         replaceMembers: (nextTeamName, nextRequest) =>
           api.teams.replaceMembers(nextTeamName, nextRequest),
         launchTeam,
@@ -2184,7 +2168,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         baselineMembers: membersWithLiveBranches,
       });
     },
-    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches]
+    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches, setLaunchDialogState]
   );
   const handleRestartMember = useCallback(
     async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
@@ -2478,14 +2462,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     (taskId: string) => {
       void (async () => {
         try {
-          await updateKanban(teamName, taskId, { op: 'remove' });
-          await updateTaskStatus(teamName, taskId, 'completed');
+          await updateKanban(teamName, taskId, { op: 'disapprove' });
         } catch {
           // error via store
         }
       })();
     },
-    [teamName, updateKanban, updateTaskStatus]
+    [teamName, updateKanban]
   );
 
   const handleStartTask = useCallback(
@@ -2496,7 +2479,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             const task = taskMapRef.current.get(taskId);
             try {
-              if (result.notifiedOwner && task?.owner) {
+              if (result.notifiedOwner && task?.owner && !isHostTeamSelectionKey(teamName)) {
                 await api.teams.processSend(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
@@ -2555,8 +2538,8 @@ export const TeamDetailView = memo(function TeamDetailView({
             }
           }
 
-          // Also notify team lead so they can reassign/coordinate
-          if (data?.isAlive) {
+          // Legacy stdin coordination is separate from the canonical Host owner message.
+          if (data?.isAlive && !isHostTeamSelectionKey(teamName)) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
               await api.teams.processSend(
@@ -2647,7 +2630,14 @@ export const TeamDetailView = memo(function TeamDetailView({
     try {
       await createTeamTask(teamName, request);
 
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
+      if (
+        prompt &&
+        owner &&
+        data?.isAlive &&
+        !isTeamProvisioning &&
+        startImmediately !== false &&
+        !isHostTeamSelectionKey(teamName)
+      ) {
         const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
         try {
           await api.teams.processSend(teamName, msg);
@@ -3095,7 +3085,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </div>
               </div>
 
-              {!data.isAlive && !isTeamProvisioning ? (
+              {data.isAlive === false && !isTeamProvisioning ? (
                 <TeamOfflineStatusBanner
                   teamName={teamName}
                   onLaunch={() => openLaunchDialog('launch')}
@@ -3723,14 +3713,18 @@ export const TeamDetailView = memo(function TeamDetailView({
           <LaunchTeamDialog
             mode={launchDialogState.mode}
             open={launchDialogOpen}
-            teamName={teamName}
-            members={isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches}
-            defaultProjectPath={launchDialogDefaultProjectPath}
+            teamName={launchTarget?.teamName ?? teamName}
+            members={
+              launchTarget?.members ??
+              (isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches)
+            }
+            runtimeRunId={useStore.getState().currentProvisioningRunIdByTeam?.[teamName]}
+            defaultProjectPath={launchTarget?.cwd ?? launchDialogDefaultProjectPath}
             provisioningError={provisioningError}
             clearProvisioningError={clearProvisioningError}
             activeTeams={isDraftTeamView ? undefined : activeTeamsForLaunch}
             onClose={closeLaunchDialog}
-            onLaunch={handleLaunchDialogSubmit}
+            onLaunch={launchTeam}
             onRelaunch={handleRelaunchDialogSubmit}
             memberSettingsDraft={launchDialogState.memberSettingsDraft}
             validateMemberSettings={validateMemberSettingsRelaunch}

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "scope": "Stage1 normal foreground-background SDK registration and Human Stop only; no Desktop/Host crash/cold survival qualification",
+  "kernel": {
+    "jobId": "13d97c632a7c3de7c3dd357174315ea8",
+    "exitCode": 0,
+    "qualification": "PASS",
+    "addonSha256": "94527432929c60a6c3cd30cad7a9e737ed0830ead35e6a579769152995ffeb47",
+    "manifestSha256": "17cc2429f59a5261dfd65c2af414ed307f669bc271a2bb5f51c131be05cd2278"
+  },
+  "normalSdk": {
+    "jobId": "ead7e05fbaf471cdb57452c6dd6cbd1b",
+    "exitCode": 0,
+    "durationMs": 18194,
+    "scopedQualification": "PASS",
+    "originalReportedStatus": "NORMAL_REGISTER_HEALTH_HUMAN_STOP_RECORDED_NOT_COLD_PARITY",
+    "facts": {
+      "v2LiveAncestryMcpRegistration": true,
+      "actualDifferentTargetSid": true,
+      "targetNotOwnSidLeader": true,
+      "originalInputTerminal": "succeeded",
+      "bothNonceHealthBeforeStop": true,
+      "originalHumanStopState": {
+        "phase": "completed",
+        "native": "observed-absent",
+        "signalAccepted": true
+      },
+      "neighborNonceHealthAfterStop": true,
+      "ownerCleanup": "completed",
+      "bothOriginalServiceLifecycleClosed": true,
+      "naturalTTLClaimed": false
+    },
+    "nativeEffectCounts": {
+      "Bash": 2,
+      "processRegister": 1,
+      "HumanTerminate": 1,
+      "ownerDispose": 1
+    },
+    "notificationAcks": [
+      {
+        "role": "primary",
+        "status": "completed",
+        "textOnly": true
+      }
+    ],
+    "modelFailures": [],
+    "finalPins": {
+      "count": 267,
+      "allMatch": true
+    }
+  },
+  "priorAttemptDisclosure": {
+    "jobId": "49747bd5cc91c8fd028fd5c19ca1ceda",
+    "overallOracle": "NOT_FULL_PASS_POST_TERMINAL_MODEL_FAILURES",
+    "originalRetainedUnchanged": true
+  },
+  "retentionRecovery": {
+    "originalEnospcPreserved": true,
+    "onlyOwnDuplicateCopiesReplacedWithImmutableQualifiedHardlinks": true,
+    "sharedInodesNeverChmodOrWritten": true
+  },
+  "remaining": "Observe original Host-SIGKILL/SDK-EOF using original identities only in separately authorized fresh run; if service exits with CLI EOF cleanup, record absent and do not force survival."
+}

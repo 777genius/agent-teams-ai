@@ -1,6 +1,7 @@
 import { KeyedMutex } from '@features/internal-storage/main';
-import { TeamPermanentDeletionIdentity } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIdentity';
-import { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
+import { createTeamPermanentDeletionIdentity } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIdentity';
+import { createTeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
+import type { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
 
 /**
  * Production `TeamWorkSyncIdentityAccess` over `config.json` `_backupIdentityId`.
@@ -9,8 +10,8 @@ import { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deleti
 export function createSandboxWorkSyncIdentity(): TeamWorkSyncIdentityAccess {
   const fence = new KeyedMutex();
   const deleting = new Set<string>();
-  const owner = new TeamPermanentDeletionIdentity((teamName) => deleting.has(teamName));
-  return new TeamWorkSyncIdentityAccess({
+  const owner = createTeamPermanentDeletionIdentity((teamName) => deleting.has(teamName));
+  return createTeamWorkSyncIdentityAccess({
     withFence: (teamName, operation) => fence.run(teamName, operation),
     isFenced: async (teamName) => deleting.has(teamName),
     observePriorIdentity: async () => 'absent',

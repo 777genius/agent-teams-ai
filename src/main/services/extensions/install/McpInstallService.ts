@@ -17,6 +17,7 @@ import path from 'path';
 import { createExtensionsRuntimeAdapter } from '../runtime/ExtensionsRuntimeAdapter';
 
 import type { McpCatalogAggregator } from '../catalog/McpCatalogAggregator';
+import type { NativeExtensionMutation } from '../runtime/CapturedNativeExtensions';
 import type { ExtensionsRuntimeAdapter } from '../runtime/ExtensionsRuntimeAdapter';
 import type {
   McpCustomInstallRequest,
@@ -31,6 +32,8 @@ const SERVER_NAME_RE = /^[\w.-]{1,100}$/;
 
 /** Allowed scope values (prevent command injection) */
 const VALID_SCOPES = new Set(['local', 'user', 'project', 'global']);
+const isNativeScope = (value: string): value is McpCustomInstallRequest['scope'] =>
+  VALID_SCOPES.has(value);
 
 /** Env var key must be safe shell identifier */
 const ENV_KEY_RE = /^[A-Z_][A-Z0-9_]{0,100}$/i;
@@ -50,7 +53,10 @@ export class McpInstallService {
     private readonly runtimeAdapter: ExtensionsRuntimeAdapter = createExtensionsRuntimeAdapter()
   ) {}
 
-  async install(request: McpInstallRequest): Promise<OperationResult> {
+  async install(
+    request: McpInstallRequest,
+    native?: NativeExtensionMutation
+  ): Promise<OperationResult> {
     const { registryId, serverName, scope, projectPath, envValues, headers } = request;
 
     // 1. Validate server name
@@ -62,7 +68,7 @@ export class McpInstallService {
     }
 
     // 2. Validate scope
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope !== undefined && !isNativeScope(scope)) {
       return {
         state: 'error',
         error: `Invalid scope: "${scope}". Must be one of: local, user, project, global.`,
@@ -119,6 +125,18 @@ export class McpInstallService {
         error: `MCP server "${server.name}" does not have an automatic install spec. Manual setup required.`,
       };
     }
+
+    if (native)
+      return native.execute({
+        action: 'mcp.install',
+        serverName,
+        scope,
+        installSpec: server.installSpec,
+        envValues,
+        headers: headers
+          .filter((row) => row.key && row.value)
+          .map(({ key, value }) => ({ key, value })),
+      });
 
     // 7. Build CLI args based on install spec type
     const args: string[] = ['mcp', 'add'];
@@ -215,7 +233,10 @@ export class McpInstallService {
   /**
    * Install a custom MCP server — user provides installSpec directly (bypasses registry).
    */
-  async installCustom(request: McpCustomInstallRequest): Promise<OperationResult> {
+  async installCustom(
+    request: McpCustomInstallRequest,
+    native?: NativeExtensionMutation
+  ): Promise<OperationResult> {
     const { serverName, scope, projectPath, installSpec, envValues, headers } = request;
 
     // Validate inputs (same rules as registry install)
@@ -226,7 +247,7 @@ export class McpInstallService {
       };
     }
 
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope !== undefined && !isNativeScope(scope)) {
       return { state: 'error', error: `Invalid scope: "${scope}".` };
     }
 
@@ -249,6 +270,18 @@ export class McpInstallService {
     if (projectPath && !path.isAbsolute(projectPath)) {
       return { state: 'error', error: 'projectPath must be an absolute path' };
     }
+
+    if (native)
+      return native.execute({
+        action: 'mcp.install',
+        serverName,
+        scope,
+        installSpec,
+        envValues,
+        headers: headers
+          .filter((row) => row.key && row.value)
+          .map(({ key, value }) => ({ key, value })),
+      });
 
     // Build CLI args from provided installSpec
     const args: string[] = ['mcp', 'add'];
@@ -327,7 +360,12 @@ export class McpInstallService {
     }
   }
 
-  async uninstall(name: string, scope?: string, projectPath?: string): Promise<OperationResult> {
+  async uninstall(
+    name: string,
+    scope?: string,
+    projectPath?: string,
+    native?: NativeExtensionMutation
+  ): Promise<OperationResult> {
     if (!SERVER_NAME_RE.test(name)) {
       return {
         state: 'error',
@@ -335,7 +373,7 @@ export class McpInstallService {
       };
     }
 
-    if (scope && !VALID_SCOPES.has(scope)) {
+    if (scope !== undefined && !isNativeScope(scope)) {
       return {
         state: 'error',
         error: `Invalid scope: "${scope}". Must be one of: local, user, project, global.`,
@@ -355,6 +393,9 @@ export class McpInstallService {
         error: 'projectPath must be an absolute path',
       };
     }
+
+    if (native)
+      return native.execute({ action: 'mcp.uninstall', serverName: name, scope: scope ?? 'local' });
 
     const args = ['mcp', 'remove'];
     if (scope && scope !== 'local') {

@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { MemberFullStats } from '@shared/types';
+import type { MemberStatsResult } from '@shared/types';
 
 export function useMemberStats(
   teamName: string,
   memberName: string | null
-): { stats: MemberFullStats | null; loading: boolean; error: string | null } {
-  const [stats, setStats] = useState<MemberFullStats | null>(null);
+): { stats: MemberStatsResult | null; loading: boolean; error: string | null } {
+  const [stats, setStats] = useState<MemberStatsResult | null>(null);
   const [loading, setLoading] = useState(memberName !== null);
   const [error, setError] = useState<string | null>(null);
 

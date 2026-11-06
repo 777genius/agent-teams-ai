@@ -19,12 +19,14 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import type { FileLineStats, MemberFullStats } from '@shared/types';
+import { HostMemberStats } from './HostMemberStats';
+
+import type { FileLineStats, MemberFullStats, MemberStatsResult } from '@shared/types';
 
 interface MemberStatsTabProps {
   teamName: string;
   memberName: string;
-  prefetchedStats?: MemberFullStats | null;
+  prefetchedStats?: MemberStatsResult | null;
   prefetchedLoading?: boolean;
   prefetchedError?: string | null;
   onFileClick?: (filePath: string) => void;
@@ -43,17 +45,9 @@ export const MemberStatsTab = ({
   const { t } = useAppTranslation('team');
   const usePrefetched = prefetchedStats !== undefined;
 
-  const [localStats, setLocalStats] = useState<MemberFullStats | null>(null);
+  const [localStats, setLocalStats] = useState<MemberStatsResult | null>(null);
   const [localLoading, setLocalLoading] = useState(!usePrefetched);
   const [localError, setLocalError] = useState<string | null>(null);
-  const tokenUsageRequest = useMemo(() => ({ teamName }), [teamName]);
-  const tokenUsage = useTokenUsageSnapshot({
-    request: tokenUsageRequest,
-    pollIntervalMs: 15_000,
-  });
-  const memberKiroSummary = tokenUsage.snapshot?.byAgent.find(
-    (item) => item.agentName?.trim().toLowerCase() === memberName.trim().toLowerCase()
-  )?.summary;
 
   useEffect(() => {
     if (usePrefetched) return;
@@ -109,14 +103,14 @@ export const MemberStatsTab = ({
     );
   }
 
+  if ('kind' in stats) return <HostMemberStats stats={stats} />;
+
   const totalTokens = stats.inputTokens + stats.outputTokens;
   const totalToolCalls = Object.values(stats.toolUsage).reduce((sum, c) => sum + c, 0);
 
   return (
     <div className="max-h-[400px] space-y-3 overflow-y-auto pr-1">
-      {memberKiroSummary && (memberKiroSummary.kiroCreditEventCount ?? 0) > 0 ? (
-        <KiroCreditsSummary summary={memberKiroSummary} />
-      ) : null}
+      <LegacyKiroUsage teamName={teamName} memberName={memberName} />
       <SummaryCards stats={stats} totalTokens={totalTokens} totalToolCalls={totalToolCalls} />
       <ToolUsageBars toolUsage={stats.toolUsage} />
       <FilesTouchedSection
@@ -128,6 +122,20 @@ export const MemberStatsTab = ({
       <StatsFooter stats={stats} />
     </div>
   );
+};
+
+const LegacyKiroUsage = ({ teamName, memberName }: { teamName: string; memberName: string }) => {
+  const tokenUsageRequest = useMemo(() => ({ teamName }), [teamName]);
+  const tokenUsage = useTokenUsageSnapshot({
+    request: tokenUsageRequest,
+    pollIntervalMs: 15_000,
+  });
+  const memberKiroSummary = tokenUsage.snapshot?.byAgent.find(
+    (item) => item.agentName?.trim().toLowerCase() === memberName.trim().toLowerCase()
+  )?.summary;
+  return memberKiroSummary && (memberKiroSummary.kiroCreditEventCount ?? 0) > 0 ? (
+    <KiroCreditsSummary summary={memberKiroSummary} />
+  ) : null;
 };
 
 const KIRO_USAGE_URL = 'https://app.kiro.dev/account/usage';

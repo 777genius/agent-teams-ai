@@ -208,7 +208,7 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 <p>
   <a href="https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS"><img src="docs/assets/sponsor-fluxion.png" alt="Sponsor: Fluxion AI - one gateway to the world's leading AI models. $3 signup credit" /></a>
 
-  
+
   <a href="#partnerships"><img src="docs/assets/sponsor-become.png" alt="Become a sponsor - partner with or sponsor Agent Teams" width="26%" /></a>
 </p>
 

@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_ORDINARY_CLAUDE_NATIVE_REVIEW_WARM_COLD_PASS_RETAINED",
+  "scope": "Existing Launch/Task Start and Changes UI, two actual foreground Edits, five conservative partial failed/post-hook/Write/background observations, Keep/Reject/Undo/Redo/history/renderer reload, then separate Host/app cold readback without native allocation or input",
+  "warm": {
+    "jobId": "57c4772f0cd966ac51788de8a17172c4",
+    "collectorJobId": "809a18509b197cc45fcc8452a3d455cd",
+    "rawStatus": "PASS",
+    "mode": "native-review-ui",
+    "receiptSha256": "1d1be18ddd852b7f404f6d6587b378262727343ef9ddf9f889d56e5017d46583",
+    "retention": {
+      "path": "/Volumes/Transcend/dev/TEST-native-review-ordinary-180-cDlYvZYo/retained-warm/manifest.json",
+      "sha256": "723c1902208eacfa87d7d5610c19c2a8e230857b8c52f4022d8f0b5b5c37b999",
+      "files": 2614,
+      "collectionErrors": 0,
+      "qualificationErrors": 0
+    },
+    "originalRuntimeInputs": 2,
+    "localModelObservations": 10,
+    "localModelProbes": 1,
+    "modelFailures": [],
+    "providerArchiveSha256": "5ceb4a940bdb4bedab0664d7a4e142bbdc9fc1e18d3e15f0b3d39a4dc6aeb4e7"
+  },
+  "cold": {
+    "attempt": "RO0002",
+    "jobId": "4bd123abe593433c35a2a185c77688f7",
+    "rawStatus": "PASS",
+    "mode": "native-review-readback-ui",
+    "receiptSha256": "31b82a83c26acbc70af0cdd4b81377d13c71283d52f6e611605a95e308924117",
+    "originalWarmReceiptSha256": "1d1be18ddd852b7f404f6d6587b378262727343ef9ddf9f889d56e5017d46583",
+    "retention": {
+      "path": "/Volumes/Transcend/dev/TEST-native-review-cold-cache-ro0002-prep-1la02v7f/retained-RO0002/manifest.json",
+      "sha256": "eb0a10abc7533b31a30fa1c2f7a9f1f7d76db8856bd7c80d3066a7114690d513",
+      "files": 5242,
+      "collectionErrors": 0,
+      "qualificationErrors": 0,
+      "priorWarmRetentionCopiedAndPinned": true
+    },
+    "nativeAllocations": 0,
+    "nativeInputsReplayed": 0,
+    "runtimeRecordUnchanged": true,
+    "nativeEventsUnchanged": true,
+    "reviewDecisionsUnchanged": true,
+    "issuerSupplement": {
+      "path": "/Volumes/Transcend/dev/TEST-native-review-cold-cache-ro0002-prep-1la02v7f/overlay/run-desktop-launch-ro0002.ts",
+      "sha256": "7b0b9674571117a70de678f98d729a89d3aa2cfbe254fc68f9ae45d11bfa767d",
+      "retainedPath": "collection-source/actual-native-review-readback-RO0002-issuer.ts",
+      "standard6159IsReferenceOnly": true
+    }
+  },
+  "nativeEvidence": {
+    "taskId": "d04279cb-c869-593e-8639-f622e3b01c6f",
+    "canonicalRows": 7,
+    "qualifiedForegroundEdits": {
+      "file": "native-review.ts",
+      "toolUseIds": [
+        "native_review_work_1",
+        "native_review_work_2"
+      ],
+      "proofKind": "edit-input-v1",
+      "beforeDirtySha256": "a89ab864a85df801ae6cc018a1e9dd28a73525d5972c4dce5a3d1a7b948c6ddb",
+      "afterNativeSha256": "840efa4065a34dec605e833e4d24e61ab3b1cae982973abbd548e710f9b1f635"
+    },
+    "partialObservations": [
+      {
+        "file": "native-review-failed.txt",
+        "toolUseId": "native_review_work_3",
+        "toolStatus": "failed"
+      },
+      {
+        "file": "native-review-failure-hook-side.txt",
+        "toolUseId": "native_review_work_3",
+        "toolStatus": "failed"
+      },
+      {
+        "file": "native-review-hook-side.txt",
+        "toolUseId": "native_review_work_4",
+        "toolStatus": "succeeded"
+      },
+      {
+        "file": "native-review-write.txt",
+        "toolUseId": "native_review_work_4",
+        "toolStatus": "succeeded"
+      },
+      {
+        "file": "native-review-background.txt",
+        "toolUseId": "native_review_work_5",
+        "toolStatus": "succeeded"
+      }
+    ],
+    "partialStatus": "PARTIAL_OR_GAP",
+    "requiredTuple": "positive-failed-post-hook-and-background",
+    "originalFailedBashPostToolUseFailureObserved": true,
+    "originalWritePostToolUseObserved": true,
+    "background": {
+      "toolUseId": "native_review_work_5",
+      "nativeTaskRef": "bqf5chz2r",
+      "nativeRunRef": "0mvnysm9l-777fe4b1",
+      "registrationAndTerminalMatch": true,
+      "terminalOutcome": "succeeded",
+      "eventualOutcome": "observed-native-completion"
+    },
+    "partialRowsHaveNativeCaptureProof": false,
+    "partialRowsReviewableComplete": false,
+    "partialWritableOriginalModifiedContent": null,
+    "unsafePromotion": false
+  },
+  "existingReviewUi": {
+    "actions": [
+      "Keep first hunk",
+      "Reject second hunk",
+      "Undo",
+      "Redo",
+      "History",
+      "renderer reload",
+      "separate Host/app cold readback"
+    ],
+    "persistedUndoEntries": 2,
+    "persistedRedoEntries": 0,
+    "logicalCacheKeys": 6,
+    "qualifiedTwoHunkContextOnly": "native-review.ts",
+    "partialCacheEntriesRemainEmpty": 5,
+    "mixedDiskSha256WarmAndCold": "e468e9675096badd808ec43a94667e12254939bba2ebaef49dbff257f1da3dc6",
+    "warningsVisibleWarmAndCold": true,
+    "originalEventsUnchanged": true
+  },
+  "verification": {
+    "manifestAndSelectedReceiptHashesVerified": true,
+    "originalJobStatesExitZeroAndLogsDrained": true,
+    "selectedRetainedFilesVerified": 11,
+    "uniqueWarmBeforeFinalBlobsVerified": 12,
+    "allSevenCanonicalJournalRowsEqualWarmReceipt": true,
+    "sourcePinRowsMatched": {
+      "warm": 1291,
+      "cold": 1291
+    },
+    "defaultColdArtifactsPreserved": true,
+    "allRetainedFilesIndependentlyRehashedByThisPreparation": false
+  },
+  "historicalFailure": {
+    "jobId": "6b1577db2f1a0a2ef17d63ac39dafe5a",
+    "rawStatus": "INCOMPLETE",
+    "reason": "Old TEST persistence oracle assumed one context-cache key instead of the six exact warm keys. Source correction preserves keyset/partial emptiness; RO0002 uses new artifact names.",
+    "defaultColdReceiptSha256": "d6cb684d031981d768b036e54971a619604bcb1a145090d7512de3fedf468f7e",
+    "originalRawFailureUnchanged": true,
+    "nativeWorkReplayedToFixCollectorOrReadback": false
+  },
+  "limits": {
+    "nativeCleanupClaim": false,
+    "currentHostDistIsRecordedExecutionProof": false,
+    "fullM13": false,
+    "fullStage1": false,
+    "vendorModelAuthenticationOrInference": false,
+    "arbitraryToolHookBackgroundOrExternalWriterAuthorship": false,
+    "Stage2": false,
+    "originalM19SdkHoldReleased": false,
+    "futureEditsInheritThisPass": false
+  },
+  "rawRows": "Complete rows, blob digests, original native identities and source/bundle pins stay in the hash-pinned retentions; they are not duplicated here."
+}

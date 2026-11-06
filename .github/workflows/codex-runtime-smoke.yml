@@ -33,6 +33,9 @@ on:
       - 'tsconfig*.json'
       - 'scripts/tsconfig/**'
 
+permissions:
+  contents: read
+
 # Canonical run supersession; see docs/ci-qualification.md#run-supersession.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
@@ -70,6 +73,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Smoke Codex app-managed runtime install
         run: pnpm smoke:codex-runtime-install

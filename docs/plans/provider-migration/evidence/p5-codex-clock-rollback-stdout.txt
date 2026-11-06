@@ -1,0 +1,16 @@
+✔ credential mutation persists before native action and replay/restart returns the receipt without secrets or redispatch (38.370333ms)
+✔ one credential namespace serializes native writers; uncertain writer blocks new IDs after restart (35.645916ms)
+✔ publication loss never resubmits a completed native effect; a confirmed settled writer permits a separate later intent (112.156375ms)
+✔ late native reply after writer revocation does not publish over the retained claim (29.887291ms)
+✔ corrupt, public or symlinked credential receipts refuse recovery without resetting state (166.647709ms)
+✔ credential refresh is admitted once and a changed original selection cannot publish success (38.297625ms)
+✔ unsupported credential actions reject before a journal claim or a native call (1.674459ms)
+✔ refresh reuse is durable across aliases/restarts, never extends rotation age, and logout or a different namespace cannot reuse it (227.334834ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1316.045584

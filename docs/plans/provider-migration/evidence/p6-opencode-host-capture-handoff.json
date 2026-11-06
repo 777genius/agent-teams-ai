@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS_SOURCE_AND_COMPILED_FIXTURES_NATIVE_PENDING",
+  "scope": "Optional Host OpenCode V1 input-window capture consumer; existing Task/agent journals, readers and review content only",
+  "sourceFrozen": true,
+  "frozenCheckpointMatched": true,
+  "installedProducerPair": "Root verified c42b provider + 2a6e contracts; 191 + 12 exact files",
+  "rootCanonicalBuild": "dfac3490 (ledger\u2192Host, Root owned)",
+  "proofContract": {
+    "kind": "opencode-update-patch-v1",
+    "native": [
+      "nativeSessionId",
+      "nativeInputId",
+      "windowRef"
+    ],
+    "tools": [
+      "messageId",
+      "partId",
+      "callId"
+    ],
+    "eventToolUseId": "last actual edit callId",
+    "causalToolName": "opencode.fileChange",
+    "executionSeq": 0,
+    "coverage": "partial"
+  },
+  "qualifiedProfile": [
+    "Completed native read observations within captured workspace are allowed without authored event identity.",
+    "Completed native edit tools on one existing LF UTF8 text path only.",
+    "Original Runtime session/input/op and persisted Team cause are rebound across snapshot awaits; whole-input overlap, authority/config/root changes fail closed.",
+    "Native filediff patch headers/path/counts and edit arguments must agree; exact unique patch chain applies to captured dirty before bytes and reverses exactly; final observed bytes and selected changed-file census must agree.",
+    "Transcript/timestamp order never supplies execution sequence; multi-edit overlap/unknown intervals are negative guards only."
+  ],
+  "limits": [
+    "Unknown native tools, background/global interval finality, ignored before-images, binary/newline/rename/create/delete/multi-file ambiguity and incomplete census remain GAP.",
+    "Missing/late/aborted/duplicate/conflicting windows cannot promote an absent baseline; active/seen memory uses existing bounded limits.",
+    "Native qualified partial event does not establish external writer exclusivity or complete M13."
+  ],
+  "checks": {
+    "compiledFixtures": {
+      "jobId": "52f13cf1dbf38a4535e7013a495db8a8",
+      "exitCode": 0,
+      "passed": 65,
+      "failed": 0,
+      "files": [
+        "packages/legacy-agent-host/tests/opencode-input-evidence.test.ts",
+        "packages/legacy-agent-host/tests/opencode-update-patch.test.ts",
+        "packages/legacy-agent-host/tests/codex-input-evidence.test.ts",
+        "packages/legacy-agent-host/tests/codex-update-patch.test.ts"
+      ]
+    },
+    "sourceAndTestTypes": "PASS",
+    "fastLint": "PASS",
+    "jobIds": {
+      "oldPairTypeRefusal": "96913761e7e1317e5cc0241c1e17fa3e",
+      "HostSourceNoEmit": "75152349581a4f4fae74625bc705380a",
+      "ledgerSourceNoEmit": "852a65994b49d859a96447d7f1bec884",
+      "HostTestNoEmit": "5b8fa41f1981b70cd6c72dd556c7b408",
+      "sourceFastLint": "45211e7aafc4cc6f76798d73dc640008",
+      "finalTestFastLint": "60119d27d323f4c28d31c489f6e1ce1e",
+      "compiledOpenCodeAndCodex65": "52f13cf1dbf38a4535e7013a495db8a8"
+    }
+  },
+  "sharedExtraction": {
+    "CodexEntry": "exactCodexUpdatePatch.ts retains prior export as alias",
+    "core": "exactTextUpdatePatch.ts owns unchanged pure exact algorithm",
+    "comparison": {
+      "byteEqual": false,
+      "syntaxTreeEqualAfterFunctionRename": true,
+      "beforeSha256": "8daf40619e38647106cf03255e6b3bab5c87465772e66b31ad923ca5a1f73d33",
+      "afterRenamedSha256": "37548918541e98b13b54372d4512a7c517048e571b665165e53ddc7ecaa70fdf",
+      "method": "TypeScript AST kind/ordered-child/leaf-token comparison; trivia, positions and syntactically optional arrow parentheses/trailing commas ignored"
+    },
+    "originalCandidateBytesEqualAfterFunctionRename": false
+  },
+  "sourcePins": [
+    {
+      "path": "packages/legacy-agent-host/src/evidence/OpenCodeInputEvidenceWriter.ts",
+      "sha256": "3f71588c8952fdb7bf8c228336faa61a2fa53a0e02a6fd656ebc5dda209964f0",
+      "bytes": 12045
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/opencodeCaptureContracts.ts",
+      "sha256": "1b8b87dd8b9e016c0631ce31da3d665e2143289c08fc4dcbd987fe1dfef16a0c",
+      "bytes": 2019
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/qualifyOpenCodeFileChange.ts",
+      "sha256": "5d976144a98c6069587ea91c4b2dfcd2632ac6c7ee84da7390569a2027dc4618",
+      "bytes": 7319
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/exactOpenCodeUpdatePatch.ts",
+      "sha256": "6254b56441153f8de77b9fe35e07638da52bb93708e17418316d5a672c6a690f",
+      "bytes": 1060
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/exactTextUpdatePatch.ts",
+      "sha256": "f6c864a8ff8c41afeec61c1b2cd21d62ac19e528b9dd535e2654545a51f91ff1",
+      "bytes": 3261
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/exactCodexUpdatePatch.ts",
+      "sha256": "b087ca685ab3351583c6624af933a2cd4716298a35d704bb1c839f33feddf16d",
+      "bytes": 101
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/captureContracts.ts",
+      "sha256": "c0d040bc915c127b00f08ff88ed67c7be5aead8aaf7a67b3ea2dc7004c974fd5",
+      "bytes": 2246
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createOpenCodeEvidenceCapture.ts",
+      "sha256": "82c395f5ae1dc792a1c4a95b987f79bad5e635c6db988156a80b5a5e60609390",
+      "bytes": 3443
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createMemberEvidenceCapture.ts",
+      "sha256": "8a24823b9464366cf1eb42590323b330408fb959ac14a92545da1903f2f9fe67",
+      "bytes": 793
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "sha256": "c38a273233b2adbe24c9e2ef3e61a6e1f056572c92489a2f891a0843028fcd3d",
+      "bytes": 1347
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "sha256": "c43818fbcb2a3b95f8806b02373943ab9371fc5f1d108227876f2e6af956c7a7",
+      "bytes": 15630
+    },
+    {
+      "path": "packages/task-change-ledger/src/nativeCaptureProof.ts",
+      "sha256": "9fe474015f6085c1760003bf24df5b62d441920ec744787a28dd891b80989220",
+      "bytes": 5807
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-input-evidence.test.ts",
+      "sha256": "f054e575a8b03dc529543094ef34a0b24a0503c9f42c2fb1aca11466334a01f1",
+      "bytes": 20154
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-update-patch.test.ts",
+      "sha256": "0e64c16cf3f4188cf241bafc5b9f5ea0e884a0df13bcefc58e044010ff2b844f",
+      "bytes": 3038
+    }
+  ],
+  "compiledPins": [
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/OpenCodeInputEvidenceWriter.js",
+      "sha256": "27882d8aa4551ad3fe9bbf045f66e3b013fc0849b23a68f48811baa3cef9fe35"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/OpenCodeInputEvidenceWriter.d.ts",
+      "sha256": "2bb59a9e0d2abf10f0610b01b66757aa738f541699535b2fe9779b2ede7b4595"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/opencodeCaptureContracts.js",
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/opencodeCaptureContracts.d.ts",
+      "sha256": "984d27dc30a3e6f90cdea5b1ba9486f711ede4c4fefddf2658fb4f1844885d9f"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/qualifyOpenCodeFileChange.js",
+      "sha256": "33e7d85fa472b6b41fe042b96bb695e5bd540bf460f6d4ccdd456f0783444e72"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/qualifyOpenCodeFileChange.d.ts",
+      "sha256": "2bc1e94dbe0707b68a430b5b929aa76529046ac9965a01066e73963ed4d55f57"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/exactOpenCodeUpdatePatch.js",
+      "sha256": "63ff71164d993653acab4c8f2e9a50d740787e9b229ecfd42b5c5c6d1b44ca3f"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/exactOpenCodeUpdatePatch.d.ts",
+      "sha256": "58a2d3bd7499b9e369a6ed9cc365c82cea13753eaeae2729daea65dd7b7ab3cf"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/exactTextUpdatePatch.js",
+      "sha256": "997dd0fe10635ce777e269f18079d9b821c1ef996e18e794c30b276ae4052c68"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/exactTextUpdatePatch.d.ts",
+      "sha256": "f182eaf576e7e8f223d44a7adabbd2ee96ffb35dd7cf0d0e458cdf6343e828fd"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/exactCodexUpdatePatch.js",
+      "sha256": "b087ca685ab3351583c6624af933a2cd4716298a35d704bb1c839f33feddf16d"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/exactCodexUpdatePatch.d.ts",
+      "sha256": "b087ca685ab3351583c6624af933a2cd4716298a35d704bb1c839f33feddf16d"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/captureContracts.js",
+      "sha256": "45d1a64695262e3210fef9a392e943ea9ebfc971e9ea76fcaf4ec2014699c5b9"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/evidence/captureContracts.d.ts",
+      "sha256": "1c28e832a66b16131504cf37f48315ce4012bbf8d0ea41b4e71a8f634d2641a5"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createOpenCodeEvidenceCapture.js",
+      "sha256": "b2f5bd46660c0cd790ad61f3ed3227669f16f901034fa4af33b6dd60ae7ed560"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createOpenCodeEvidenceCapture.d.ts",
+      "sha256": "c684068ba2df28a90765857ef3407a05e352477844874d22a44baf89f4b56f33"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createMemberEvidenceCapture.js",
+      "sha256": "ca29c054cc4d8fbc417ea35ddff91e93b43b17258e089a1b8d94e682556cdbec"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createMemberEvidenceCapture.d.ts",
+      "sha256": "9ff42921a0f33ccf45f33df1c211c53ba2da69afc61fa556221cecb6225a6257"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/adapters/providers/MemberProvider.js",
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/adapters/providers/MemberProvider.d.ts",
+      "sha256": "29388795fe0267f70d6d7e0a7f581545ef1a0ce94ed4ab18ce20df7f1d2b9941"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMemberProvider.js",
+      "sha256": "d23f45159449c33392c041dd42bf237d2be0b82a5968dde43e0971a838655b07"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/adapters/providers/OpenCodeMemberProvider.d.ts",
+      "sha256": "315551d7b038f3e0190e25f0651e21ee6aae8d588a34b0fc84a67e51d93afbe5"
+    },
+    {
+      "path": "packages/task-change-ledger/dist/nativeCaptureProof.js",
+      "sha256": "94588c5bfaa7a54cd3a4607a1e919e30300e3675939190db80af81335039a463"
+    },
+    {
+      "path": "packages/task-change-ledger/dist/nativeCaptureProof.d.ts",
+      "sha256": "4d1aa150832020cf25c69b5d54e6556e5be695c24ff14faffdb4b4ca9019ac6d"
+    }
+  ],
+  "notPerformed": [
+    "No build/install/app/native/vendor/replay by this worker.",
+    "No renderer/workspace authority additions or second journal.",
+    "Actual OpenCode Host native qualification and full Stage1 remain open."
+  ]
+}

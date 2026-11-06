@@ -1,3 +1,37 @@
+/** Validate before the tolerant projection can discard evidence used by automatic work selection. */
+function validateSafetyState(value, teamName) {
+  const record = (item) =>
+    item !== null && typeof item === 'object' && !Array.isArray(item);
+  const invalid = () => {
+    throw new Error('Kanban safety state is corrupt');
+  };
+  if (!record(value) || !record(value.tasks)) return invalid();
+  if (
+    value.teamName !== undefined &&
+    (typeof value.teamName !== 'string' ||
+      value.teamName.trim().toLowerCase() !== teamName.trim().toLowerCase())
+  )
+    return invalid();
+  if (
+    value.reviewers !== undefined &&
+    (!Array.isArray(value.reviewers) ||
+      value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
+  )
+    return invalid();
+  for (const [taskId, task] of Object.entries(value.tasks)) {
+    if (
+      !taskId.trim() ||
+      !record(task) ||
+      (task.column !== 'review' && task.column !== 'approved') ||
+      typeof task.movedAt !== 'string' ||
+      !Number.isFinite(Date.parse(task.movedAt)) ||
+      (task.reviewer !== undefined && task.reviewer !== null && typeof task.reviewer !== 'string')
+    )
+      return invalid();
+  }
+}
+
+
 const fs = require('fs');
 const taskStore = require('./taskStore.js');
 const { writeJsonFileSync } = require('./atomicFile.js');
@@ -59,8 +93,23 @@ function sanitizeState(teamName, rawState) {
   };
 }
 
-function readKanbanState(paths, teamName) {
-  return sanitizeState(teamName, readJson(paths.kanbanPath, getDefaultState(teamName)));
+function readKanbanState(paths, teamName, options = {}) {
+  if (!options.strict) return sanitizeState(teamName, readJson(paths.kanbanPath, getDefaultState(teamName)));
+  let observed = false;
+  let raw;
+  try {
+    const stat = fs.statSync(paths.kanbanPath);
+    observed = true;
+    if (!stat.isFile() || stat.size > 512 * 1024) throw new Error('Kanban safety state is unavailable');
+    raw = fs.readFileSync(paths.kanbanPath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT' && !observed) return getDefaultState(teamName);
+    throw new Error('Kanban safety state is unavailable');
+  }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { throw new Error('Kanban safety state is corrupt'); }
+  validateSafetyState(parsed, teamName);
+  return sanitizeState(teamName, parsed);
 }
 
 function writeKanbanState(paths, teamName, state) {
@@ -196,6 +245,7 @@ function garbageCollect(paths, teamName, validTaskIds) {
 }
 
 module.exports = {
+  validateSafetyState,
   clearKanban,
   garbageCollect,
   readKanbanState,

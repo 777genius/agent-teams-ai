@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "scope": "Stage1 scoped kernel and actual SDK normal registration/Human Stop evidence; no complete M19, Desktop or crash/cold qualification",
+  "kernel": {
+    "jobId": "13d97c632a7c3de7c3dd357174315ea8",
+    "exitCode": 0,
+    "qualification": "PASS",
+    "addonSha256": "94527432929c60a6c3cd30cad7a9e737ed0830ead35e6a579769152995ffeb47",
+    "manifestSha256": "17cc2429f59a5261dfd65c2af414ed307f669bc271a2bb5f51c131be05cd2278",
+    "retentionManifestSha256": "8e4745cb0f21098bd50d032778b6a3e0f22c76d39c50408cb15d667c4eb292de",
+    "coverage": [
+      "v1 same-session compatibility",
+      "v2 original live-ancestry capture",
+      "foreign root and late-orphan refusal",
+      "same-token SID drift unknown and signal refusal",
+      "saved target stop with peer alive",
+      "all original targets absent after finite lifetime"
+    ]
+  },
+  "normalSdk": {
+    "jobId": "49747bd5cc91c8fd028fd5c19ca1ceda",
+    "exitCode": 0,
+    "durationMs": 15172,
+    "overallOracle": "NOT_FULL_PASS_POST_TERMINAL_MODEL_FAILURES",
+    "originalReportedStatus": "NORMAL_REGISTER_HEALTH_HUMAN_STOP_RECORDED_NOT_COLD_PARITY",
+    "concreteFacts": {
+      "v2LiveAncestryMcpRegistration": true,
+      "actualTargetSidDifferentFromRoot": true,
+      "targetNotOwnSessionLeader": true,
+      "completedSameLiveCanTerminate": true,
+      "bothOriginalNonceHealthBeforeStop": true,
+      "oneOriginalHumanStopAccepted": true,
+      "sameOriginalStopReceiptObservedAbsent": true,
+      "signalAccepted": true,
+      "neighborNonceHealthAfterPrimaryStop": true,
+      "ownerDispose": "completed",
+      "bothOriginalServiceLifecycleClosed": true,
+      "lifecycleCloseReason": "SIGTERM",
+      "naturalTtlExitClaimed": false
+    },
+    "nativeEffectCounts": {
+      "Bash": 2,
+      "processRegister": 1,
+      "HumanTerminate": 1,
+      "ownerDispose": 1
+    },
+    "finalPins": {
+      "count": 266,
+      "allMatch": true
+    },
+    "postTerminal": {
+      "modelFailures": 2,
+      "first": "Original primary task completion notification, after primary Stop and original input terminal",
+      "second": "CLI request with unchanged message history/no added tail after first400; thinking protocol changed; consistent with compatibility fallback/retry",
+      "neighbor": "Killed notification queued during owner close; no observed model request for it",
+      "duplicateHostInputOrRepeatedNativeActionObserved": false
+    },
+    "retentionManifestSha256": "cc8f4ac3e8dcfb7f47dcba074fa6e8561e419169c4be4b671608dba4753a5d1a"
+  },
+  "minimalFixtureCorrection": {
+    "scope": "Proposal only; no operator edits/replay performed",
+    "allow": "At most one text-only acknowledgment per exact original native task notification after original terminal, checked against original task ID, tool-use ID and status; persist newest tail",
+    "refuse": "Unknown/duplicate notification, human input, extra tool action or registration retry",
+    "resultGuard": "Overall oracle must include zero model failures"
+  },
+  "nextCrashColdScope": "Only after separately authorized original Host-SIGKILL/SDK-EOF observation using original captured identities. If service exits with native CLI EOF cleanup, record absent and scope cold control accordingly. Do not force survival, ignore SIGTERM or change undocumented CLI settings."
+}

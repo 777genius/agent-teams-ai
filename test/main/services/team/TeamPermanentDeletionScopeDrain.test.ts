@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { TeamPermanentDeletionLock } from '@main/services/team/permanent-deletion/TeamPermanentDeletionLock';
+import { createTeamPermanentDeletionLock } from '@main/services/team/permanent-deletion/TeamPermanentDeletionLock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ root: '' }));
@@ -20,8 +20,8 @@ describe('lifecycle physical scope drain', () => {
 
   it('holds another owner behind pending work after heartbeat failure and lease expiry', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-    const firstOwner = new TeamPermanentDeletionLock();
-    const secondOwner = new TeamPermanentDeletionLock();
+    const firstOwner = createTeamPermanentDeletionLock();
+    const secondOwner = createTeamPermanentDeletionLock();
     const heartbeat = vi
       .spyOn(
         firstOwner as unknown as {

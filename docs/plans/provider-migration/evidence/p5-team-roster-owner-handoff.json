@@ -1,0 +1,34 @@
+{
+  "status": "PASS Team-owned saved roster prerequisite; ordinary Desktop roster/launch and full stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-team-roster-owner-v1/manifest.json",
+  "hostSource": "cecb4af0d59b45eea5940053b523c63567f06ef4bf07d582c990a92a5769b9be",
+  "hostDist": "891cb85cbcc5ac2cfd03a547a16df79b5042f0bfdb6389efb9beefb4962d50b7",
+  "implementation": {
+    "owner": "TeamRosterTransitions is a cohesive use case of the existing Team owner using the same authority fence/state, not a second Team/runtime owner. Finite read/replace/original lookup methods are available over the captured Host NDJSON envelope.",
+    "settings": "Complete teammate replacement preserves the existing lead, saves role/workflow/isolation/cwd/provider/backend/model/all8 effort/fast-mode/MCP settings, and clears omitted overrides. Descriptive role is preserved in product settings while controller projection uses canonical lead/member authority.",
+    "identity": "Expected revision and current read/admin grants precede admission. Monotonic product roster version distinguishes a return to previous values. Existing names retain product IDs; restored removed names retain their product identity but never revive old grants or native targets. New members get a deterministic command-qualified ID. Cross-operation command reuse conflicts; opaque command IDs are not trimmed.",
+    "publication": "Decision, membership/grant transitions and original receipt publish atomically in Team state. A captured config preimage/desired projection is recovered idempotently before subsequent policy. Foreign config bytes hold recovery instead of being overwritten. Replay returns original command/revision without rerunning membership policy.",
+    "runtime": "Changes require synchronous proof of unopened or closed/released resources outside the Team lock, then current authority/revision is rechecked before publication. Async proof is rejected. Live/pending/unknown custody and unresolved Task/delivery obligations hold without a roster receipt. Confirmed edits detach prior delivery targets and revoke bound/removed agent grants; they never allocate or stop providers.",
+    "cold": "A stale static runtime descriptor cannot silently apply old settings or allocate a replacement. Changed Teams are excluded from static native composition after restart; product reads/mutations remain usable while Launch configuration is explicitly unconfigured. Runtime/launch journals and product Task/inbox bytes are not deleted.",
+    "bounds": "Private Team state1MiB,1024 roster receipts and1024 removed members. Exhaustion holds before publication without deleting outcomes. This slice does not add retention/GC or claim unbounded history capacity."
+  },
+  "checks": {
+    "jobId": "1d9f42a8cb19092f9256e3ab802d1f21",
+    "host": "254/254 PASS including strict Host test types,13 saved-roster cases and3 real NDJSON controlled-provider scenarios.",
+    "frontend": "170/170 PASS across21 existing backend/renderer adapter files, including original Team/model/progress/routing and real NDJSON Main facade regression.",
+    "faults": "Lost state-admission, config-projection and state-completion acknowledgement recover exact decided settings/IDs/receipt; foreign projection and malformed persisted settings hold.",
+    "runtimeCases": "No allocation on saved edits, stale private capture rejected, product API/replacement works after cold restart, live edit refused, confirmed stop permits the same original intent, unknown cleanup preserves original roster and grants.",
+    "quality": "Root typecheck/build, strict Host test typecheck, affected Host fast lint, source caps/provisioning architecture guards and whitespace PASS. Caps not raised. Full lint, CI/final delivery and other owning gates remain required.",
+    "sourceBoundary": "Working-tree source hashes retained after the successful managed checks, with no later production edits. Full Host source/dist, listed files, executed tests and logs only; not a pre/post immutable full Main dependency closure or release qualification."
+  },
+  "integration": {
+    "scope": "Actual Team/Runtime/controller/filesystem/MCP and NDJSON with an explicit controlled Session at the provider boundary. No real user project or vendor auth/native executable used.",
+    "limitations": "No actual SDK/CLI or Electron dialog qualification of saved-roster edits. No ordinary Desktop facade/replaceMembers mapping yet. No full historical Runtime UI/restore or fresh capture qualification. Earlier native receipts remain historical tuples."
+  },
+  "remainingImmediate": [
+    "Expose saved roster DTOs and finite validated operations through Desktop Main/preload/renderer; map the existing replaceMembers/getSavedRequest/getData contracts, including memberSettingsRelaunch CAS semantics and explicit rename/history behavior.",
+    "Implement fresh trusted per-member native capture and owner registration under current product revision, with new runtime identity/grants, full lead/global configuration and preserved original run/checkpoint/history associations. Do not infer private accounts from renderer data or silently reuse stale profiles.",
+    "Wire ordinary launchTeam submission/progress and existing Create/Launch/Resume E2E; all other P0-P8/M01-M19 parity and delivery gates remain required."
+  ],
+  "scopeAndDelivery": "All remaining work above is stage1. Stage2 future Orchestrator/runtime excluded. Existing UI only, isolated worktree, draft PRs with exact-head plan/contracts/matrix links, no main/release merge. No commit/push/PR/merge in this slice."
+}

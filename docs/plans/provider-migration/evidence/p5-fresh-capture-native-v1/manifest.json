@@ -1,0 +1,15 @@
+{
+  "status": "PASS scoped actual Claude SDK/CLI fresh-capture proof; full Stage1 and original-dialog Electron acceptance remain INCOMPLETE",
+  "jobId": "c41141a6b07b731607da31b5ea836c58",
+  "hostSourceSha256": "4c72076353898389b67a9b4e0c640babc2f8c4406c422f019d8273917a367979",
+  "hostDistSha256": "8464ae4f1287b9cb3f1a647085b68a9e4ef6ce1be632e21a5a2a92d3e5a2f944",
+  "sourceBoundary": "Receipt pins the full local Host source/dist and provider/native artifacts at execution. Selected working-tree checks and retained logs; this directory is not a full immutable source/dependency closure or release artifact.",
+  "checks": "Production typecheck passed in preceding e017be4aab621b2da7ebc886a061fb4c; final scripts/helper types,278 Host tests, scoped fast lint and source/diff guards passed in this job. One existing no-unsafe-finally harness warning remains. Native proof then passed1/1 in26.9s.",
+  "scope": "Saved roster intent -> new registered capture and generated principal -> canonical first prompt -> actual SDK0.3.305/CLI -> localhost scripted inference -> native MCP task lifecycle/comment/message plus Bash exit7 and file effect. Exact model/effort, one input, hot/cold original replay without duplicate allocation/inference, and physical cleanup confirmed.",
+  "excluded": ["Original Electron Launch/Create/Resume controls", "real vendor inference/authentication", "all advanced settings/new member recipes", "full P0-P8/M01-M19 and owning gates", "Stage2 future Orchestrator/runtime"],
+  "files": [
+    { "path": "receipt.json", "sha256": "ad5a1f36ae0bc50cb1bb14f3e9e89cb2c10252bc6d868002d4492f19afeed93b" },
+    { "path": "checks.stdout.log", "sha256": "4a0ab035b5ed7beb628e886eaf6ee04410538bae4c4aa03e240caddeb685fc88" },
+    { "path": "checks.stderr.log", "sha256": "7311e50367ce10901846ada99b8ba9e049b72b8e7df4a2e58eb4593057b1419b" }
+  ]
+}

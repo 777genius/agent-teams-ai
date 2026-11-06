@@ -1,0 +1,27 @@
+{
+  "status": "GAP: actual Claude Bash service registration lacks proven native custody",
+  "jobId": "5de2d38a7683e8486ae16dc46cdcbc91",
+  "exitCode": 1,
+  "tuple": "Darwin arm64 24G90; Node24.21.0; Claude SDK0.3.305 / CLI2.1.305; actual TeamHost/RPC/provider/MCP with localhost inference",
+  "finding": {
+    "originalClaudeRootCaptured": true,
+    "targetAuditAccessSucceeded": true,
+    "descendantCaptureRefusal": "foreign-session:1",
+    "meaning": "Actual native Bash service runs outside the captured CLI root OS session. A reported PID, logical SDK session_id or successful tool result does not prove physical ownership."
+  },
+  "cleanup": {
+    "actualHostDispose": "completed",
+    "bothServices": "natural TTL closed at2026-10-23T22:42:34Z",
+    "extraSignals": 0,
+    "originalIntentReplayed": false
+  },
+  "provenance": {
+    "finalPins": "38/38 identical despite the reported concurrent deterministic Host build",
+    "nativeArtifactManifestSha256": "ae2ebdc8c0deddbee0cb4cdd84f79dda95bef6b800f142ad82a729caaabf0f99",
+    "nativeBinarySha256": "97b532768ff8554111dcfbdf0642fd7649a3a28583819f26559bb7c2b4710e59",
+    "rawRetention": ".artifacts/provider-migration/m19-native-lineage-diagnostic/raw-retention.json"
+  },
+  "correction": "Only the known process:hold refusal is projected as typed HOLD; unexpected adapter failures remain opaque. No ownership, input, generation or grant check is weakened.",
+  "remaining": "Qualify an authorized owned service-launch mechanism through existing Processes UI and cold original-token stop. The original Bash-register attempt remains failed. Arbitrary Host execution has not been added: current automatic team-tool approvals and missing effective native sandbox/environment proof need an explicit safe contract first.",
+  "excluded": ["Full M19 acceptance", "whole process-tree supervision", "vendor authentication", "other OS tuples", "Stage2", "merge/release"]
+}

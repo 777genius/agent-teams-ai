@@ -264,6 +264,11 @@ export abstract class TeamProvisioningServiceFacadeDelegates extends TeamProvisi
     this.transientRunState.resetTeamScopedTransientStateForNewRun(teamName);
   }
 
+  /** Existing operation fence, exposed only for the stopped source reader. */
+  withStoppedTeamImportFence<T>(teamName: string, read: () => Promise<T>): Promise<T> {
+    return this.transientRunState.withTeamLock(teamName.trim().toLowerCase(), read);
+  }
+
   protected async withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
     return this.transientRunState.withTeamLock(teamName, fn);
   }

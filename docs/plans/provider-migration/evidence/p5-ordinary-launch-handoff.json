@@ -1,0 +1,33 @@
+{
+  "status": "PASS scoped non-native integration; full Stage1 and existing Electron Launch/Create/Resume E2E remain INCOMPLETE",
+  "sourceBoundary": "Local working-tree checks, not immutable packaged/native/Electron acceptance. Job logs are retained under the managed jobs root; final exact-head CI remains required.",
+  "implementation": {
+    "capture": "Original confirmed roster command selects saved Team settings. Trusted private recipes compile new sessions, bindings and grants without native allocation. Registration uses the existing atomic Team state; immutable source lives in the existing launch record. Replay/cold restore retain original identities and current launch ID fences stale captures with equal configuration revisions.",
+    "ordinaryLaunch": "Existing LaunchTeamDialog forwards the original roster and launch intents through ordinary TeamsAPI, finite Main validation/projection and NDJSON Host. Initial prompt is a canonical Team message committed after launch admission and before native open. Lost launch ACK replays the same capture/admission without duplicate provider allocation or prompt delivery.",
+    "history": "Retained runs use team-qualified keys. Explicit historical run/generation reads preserve original data; current control authority is separate. Runtime release checks inspect original captured custody even after product edits detach bindings.",
+    "relaunch": "The original dialog retains original run, member-settings intent/baseline and completed stop/save steps. Stop uses cancelProvisioning(originalRunId). An uncertain launch retry does not stop the replacement or save again; uncertain roster recovery reuses the original owner request. Local continuation is excluded from persisted DTOs.",
+    "review": "Read-only critic findings on same-revision stale capture, lead cwd precedence, historical read gates, cross-team run IDs and uncertain relaunch/member-token recovery were corrected and covered by regression scenarios. Final followup reported no new findings."
+  },
+  "checks": {
+    "host": {
+      "jobId": "ea1a9df564a53d7b65929e0dfac79dca",
+      "result": "Production typecheck and all276 Host tests passed. The job later failed the new Main/NDJSON fixture because its sealed flag was shared across provider sessions; that fixture was corrected."
+    },
+    "frontend": {
+      "jobId": "15ef4ff557271e88d66f50d34c88cc05",
+      "result": "Final production typecheck/build passed. Five frontend suites passed all124 tests, including78 original LaunchTeamDialog tests and11 relaunch-flow tests. The activity suite had7/8 passing; its mock observation iterator ended after one result, unlike a persistent conversation. Only that fixture was changed afterward."
+    },
+    "finalAffected": {
+      "jobId": "01d928d3a1613997ae7d4ff5b8ea801d",
+      "result": "Corrected actual Main->NDJSON activity/ordinary-launch suite passed8/8. Scoped fast lint, frozen source-size/provisioning guards and git diff --check passed. Across the final compatible checks,132 distinct frontend tests passed; repeated tests are not added together."
+    },
+    "limits": "Controlled provider/NDJSON and React original controls only. No native SDK or Electron dialog qualification in this slice. Full lint/CI and other owning gates remain open. Earlier typecheck/fixture failures remain in their original managed job logs."
+  },
+  "remainingImmediate": [
+    "Actual SDK/CLI plus localhost API launch from the original Electron Launch dialog through dev:mcp/CDP, including native settings, prompt, progress, message/task and stop; no real vendor auth qualification without TEST access.",
+    "Trusted recipes for new members/provider selections; worktree/custom arguments/additional MCP policies and all required existing settings. Current explicit compiler refusals are implementation gaps, not accepted feature removal.",
+    "Ordinary Create/default-owner and selected Resume/relaunch workflows; full existing-dialog acceptance after reload and errors.",
+    "All remaining P0-P8/M01-M19 including review/apply, provider/auth/lifecycle/packaging/Quit and owning gates. Stage2 future Orchestrator/runtime remains excluded."
+  ],
+  "delivery": "Only isolated worktree. Existing UI only. Every draft PR must link exact-head plan/contracts/matrix. No commit, push, PR or merge performed in this slice."
+}

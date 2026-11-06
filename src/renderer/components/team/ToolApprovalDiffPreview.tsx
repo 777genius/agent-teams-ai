@@ -5,6 +5,8 @@ import { computeDiffLineStats, DiffViewer } from '@renderer/components/chat/view
 import { useToolApprovalDiff } from '@renderer/hooks/useToolApprovalDiff';
 import { AlertTriangle, ChevronDown, ChevronRight, FileDiff, Loader2 } from 'lucide-react';
 
+import type { ToolApprovalReadScope } from '@shared/types/team';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -13,6 +15,7 @@ interface ToolApprovalDiffPreviewProps {
   toolName: string;
   toolInput: Record<string, unknown>;
   requestId: string;
+  approvalScope?: ToolApprovalReadScope;
   onExpandedChange?: (expanded: boolean) => void;
 }
 
@@ -58,11 +61,12 @@ export const ToolApprovalDiffPreview: React.FC<ToolApprovalDiffPreviewProps> = (
   toolName,
   toolInput,
   requestId,
+  approvalScope,
   onExpandedChange,
 }) => {
   const { t } = useAppTranslation('team');
   const [expanded, setExpanded] = useState(loadExpandedPref);
-  const diff = useToolApprovalDiff(toolName, toolInput, requestId, expanded);
+  const diff = useToolApprovalDiff(toolName, toolInput, requestId, expanded, approvalScope);
 
   // Stats from actual diff data (after IPC), using the same algorithm as DiffViewer
   const diffStats = useMemo(() => {

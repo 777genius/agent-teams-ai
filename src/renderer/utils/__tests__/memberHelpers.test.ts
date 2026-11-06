@@ -123,6 +123,73 @@ describe('member identity visuals', () => {
 });
 
 describe('member runtime presentation', () => {
+  it.each([undefined, 'codex-native'] as const)(
+    'uses Host ownership without inventing %s process liveness and leaves legacy Codex unchanged',
+    (providerBackendId) => {
+      const host = createMember({ runtimeOwner: 'captured-host', providerBackendId });
+      const options = {
+        member: host,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+        spawnStatus: undefined,
+        spawnLaunchState: undefined,
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: undefined,
+        runtimeAdvisory: undefined,
+      };
+      expect(buildMemberLaunchPresentation(options).launchVisualState).toBeNull();
+      expect(shouldDisplayMemberCurrentTask({ member: host, isTeamAlive: true })).toBe(true);
+      const legacy = { ...host, runtimeOwner: undefined };
+      expect(buildMemberLaunchPresentation({ ...options, member: legacy }).launchVisualState).toBe(
+        'stale_runtime'
+      );
+      expect(shouldDisplayMemberCurrentTask({ member: legacy, isTeamAlive: true })).toBe(false);
+      expect(shouldDisplayMemberCurrentTask({ member: host, isTeamAlive: false })).toBe(false);
+      expect(buildMemberLaunchPresentation({ ...options, isTeamAlive: false }).presenceLabel).toBe(
+        'offline'
+      );
+      const removed = { ...host, removedAt: Date.now() };
+      expect(shouldDisplayMemberCurrentTask({ member: removed, isTeamAlive: true })).toBe(false);
+    }
+  );
+
+  it.each(['runtime_process', 'not_found'] as const)(
+    'keeps explicit %s offline evidence visible for Host-owned members',
+    (livenessKind) => {
+      const member = createMember({ runtimeOwner: 'captured-host', providerBackendId: undefined });
+      const runtimeEntry = createLiveRuntime({ alive: false, livenessKind });
+      const options = {
+        member,
+        runtimeEntry,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+        spawnStatus: undefined,
+        spawnLaunchState: undefined,
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: undefined,
+        runtimeAdvisory: undefined,
+      };
+      expect(buildMemberLaunchPresentation(options).launchVisualState).toBe('stale_runtime');
+      expect(shouldDisplayMemberCurrentTask({ member, runtimeEntry, isTeamAlive: true })).toBe(
+        false
+      );
+      expect(
+        buildMemberLaunchPresentation({
+          ...options,
+          runtimeEntry: undefined,
+          spawnStatus: 'online',
+          spawnRuntimeAlive: false,
+        }).launchVisualState
+      ).toBe('stale_runtime');
+      expect(
+        buildMemberLaunchPresentation({ ...options, spawnStatus: 'error' }).launchVisualState
+      ).toBe('error');
+      expect(
+        buildMemberLaunchPresentation({ ...options, spawnStatus: 'skipped' }).launchVisualState
+      ).toBe('skipped');
+    }
+  );
+
   it('labels Kiro quota failures as Kiro rather than the OpenCode transport', () => {
     const advisory = {
       kind: 'api_error' as const,

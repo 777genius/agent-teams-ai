@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { ProcessesSection } from '@renderer/components/team/ProcessesSection';
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@features/localization/renderer', () => ({
@@ -41,12 +42,14 @@ describe('ProcessesSection', () => {
   it('does not treat leftover live process rows as running after Stop', async () => {
     await act(async () => {
       root.render(
-        <ProcessesSection
-          teamName="mixed-v2150"
-          members={[]}
-          processes={[processRow]}
-          isTeamAlive={false}
-        />
+        <TooltipProvider>
+          <ProcessesSection
+            teamName="mixed-v2150"
+            members={[]}
+            processes={[processRow]}
+            isTeamAlive={false}
+          />
+        </TooltipProvider>
       );
     });
 
@@ -58,12 +61,14 @@ describe('ProcessesSection', () => {
   it('keeps kill available while the team is actually alive', async () => {
     await act(async () => {
       root.render(
-        <ProcessesSection
-          teamName="mixed-v2150"
-          members={[]}
-          processes={[processRow]}
-          isTeamAlive={true}
-        />
+        <TooltipProvider>
+          <ProcessesSection
+            teamName="mixed-v2150"
+            members={[]}
+            processes={[processRow]}
+            isTeamAlive={true}
+          />
+        </TooltipProvider>
       );
     });
 

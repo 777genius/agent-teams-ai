@@ -30,7 +30,7 @@ import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
 import type {
-  MemberLogSummary,
+  LegacyMemberLogSummary,
   MemberSessionLogSummary,
   MemberSubagentLogSummary,
 } from '@shared/types';
@@ -259,12 +259,12 @@ export class TeamMemberLogsFinder {
     teamName: string,
     memberName: string,
     mtimeSinceMs?: number | null
-  ): Promise<MemberLogSummary[]> {
+  ): Promise<LegacyMemberLogSummary[]> {
     const discovery = await this.discoverMemberFiles(teamName, memberName);
     if (!discovery) return [];
 
     const { projectDir, projectId, config, sessionIds, knownMembers, isLeadMember } = discovery;
-    const results: MemberLogSummary[] = [];
+    const results: LegacyMemberLogSummary[] = [];
 
     const leadMemberName =
       config.members?.find((m) => isLeadMemberCheck(m))?.name?.trim() || 'team-lead';
@@ -283,7 +283,7 @@ export class TeamMemberLogsFinder {
 
     // ── Collect and parallel-scan subagent files ──
     const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
-    const settled = Array<MemberLogSummary | null>(candidates.length).fill(null);
+    const settled = Array<LegacyMemberLogSummary | null>(candidates.length).fill(null);
     let nextIdx = 0;
 
     const scanWorker = async (): Promise<void> => {
@@ -419,7 +419,7 @@ export class TeamMemberLogsFinder {
       intervals?: { startedAt: string; completedAt?: string }[];
       since?: string;
     }
-  ): Promise<MemberLogSummary[]> {
+  ): Promise<LegacyMemberLogSummary[]> {
     const t0 = performance.now();
 
     const discovery = await this.discoverProjectSessions(teamName);
@@ -434,7 +434,7 @@ export class TeamMemberLogsFinder {
 
     const sinceMs = this.deriveSinceMs(options);
     const { projectDir, projectId, config, sessionIds, knownMembers } = discovery;
-    const results: MemberLogSummary[] = [];
+    const results: LegacyMemberLogSummary[] = [];
     const leadMemberName =
       config.members?.find((m) => isLeadMemberCheck(m))?.name?.trim() || 'team-lead';
 
@@ -459,7 +459,7 @@ export class TeamMemberLogsFinder {
     const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
 
     // ── Parallel scan with concurrency limit ──
-    const settled = Array<MemberLogSummary | null>(candidates.length).fill(null);
+    const settled = Array<LegacyMemberLogSummary | null>(candidates.length).fill(null);
     let nextIdx = 0;
     let mentionHits = 0;
 
@@ -473,7 +473,7 @@ export class TeamMemberLogsFinder {
           mentionHits++;
           const summary =
             c.kind === 'subagent'
-              ? await (async (): Promise<MemberLogSummary | null> => {
+              ? await (async (): Promise<LegacyMemberLogSummary | null> => {
                   const attribution = await this.attributeSubagent(c.filePath, knownMembers);
                   if (!attribution) return null;
                   return this.parseSubagentSummary(
@@ -486,7 +486,7 @@ export class TeamMemberLogsFinder {
                     attribution
                   );
                 })()
-              : await (async (): Promise<MemberLogSummary | null> => {
+              : await (async (): Promise<LegacyMemberLogSummary | null> => {
                   const attribution = await this.attributeMemberSession(
                     c.filePath,
                     teamName,
@@ -615,7 +615,7 @@ export class TeamMemberLogsFinder {
     const preDedupCount = results.length;
     {
       const subagentsByKey = new Map<string, MemberSubagentLogSummary>();
-      const nonSubagent: MemberLogSummary[] = [];
+      const nonSubagent: LegacyMemberLogSummary[] = [];
       for (const r of results) {
         if (r.kind !== 'subagent') {
           nonSubagent.push(r);
@@ -654,7 +654,7 @@ export class TeamMemberLogsFinder {
 
   /**
    * Fast path for change extraction: returns task-related JSONL file refs directly without
-   * building full MemberLogSummary metadata for every matched log.
+   * building full LegacyMemberLogSummary metadata for every matched log.
    */
   async findLogFileRefsForTask(
     teamName: string,
@@ -2115,7 +2115,7 @@ export class TeamMemberLogsFinder {
     projectId: string,
     sessionId: string,
     memberName: string
-  ): Promise<MemberLogSummary | null> {
+  ): Promise<LegacyMemberLogSummary | null> {
     try {
       await fs.access(jsonlPath);
     } catch {

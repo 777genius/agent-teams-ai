@@ -52,6 +52,48 @@ describe('preload electronAPI queued user message wiring', () => {
     vi.restoreAllMocks();
   });
 
+  it('retains explicit provisioning context on the wire while preserving old seven-argument calls', async () => {
+    const api = await loadElectronAPI();
+    const result = { ready: false, message: 'Captured preflight pending' };
+    mocks.ipcRenderer.invoke.mockResolvedValue({ success: true, data: result });
+    const context = { kind: 'team' as const, teamName: 'host-team:TEST-original' };
+    const checks = [{ providerId: 'anthropic' as const, model: 'opus', effort: 'medium' as const }];
+    expect(
+      await api.teams.prepareProvisioning(
+        '/TEST/workspace',
+        'anthropic',
+        ['anthropic'],
+        ['opus'],
+        false,
+        'deep',
+        checks,
+        context
+      )
+    ).toEqual(result);
+    expect(mocks.ipcRenderer.invoke).toHaveBeenLastCalledWith(
+      'team:prepareProvisioning',
+      '/TEST/workspace',
+      'anthropic',
+      ['anthropic'],
+      ['opus'],
+      false,
+      'deep',
+      checks,
+      context
+    );
+    await api.teams.prepareProvisioning('/TEST/workspace', 'anthropic');
+    expect(mocks.ipcRenderer.invoke).toHaveBeenLastCalledWith(
+      'team:prepareProvisioning',
+      '/TEST/workspace',
+      'anthropic',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+  });
+
   it('wires the queued message listing to its team IPC channel', async () => {
     const electronAPI = await loadElectronAPI();
     const snapshot = {

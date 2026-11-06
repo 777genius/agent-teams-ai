@@ -1,10 +1,12 @@
 import { getCommentNotificationJournalPath } from '@main/services/team/JsonTaskCommentNotificationJournalStore';
+import { unknownStoppedImportCommentFacts } from '@main/services/team/stopped-import/commentFacts';
 import { sanitizeTaskCommentNotificationJournalEntries } from '@main/services/team/TaskCommentNotificationJournalStore';
 
 import { KeyedMutex } from '../../core/application/KeyedMutex';
 import { InternalStorageJsonReplica } from '../infrastructure/InternalStorageJsonReplica';
 
 import type { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 import type {
   TaskCommentNotificationJournalEntry,
   TaskCommentNotificationJournalMutation,
@@ -22,6 +24,10 @@ export class BackendSelectingTaskCommentNotificationJournalStore implements Task
     initialized: boolean;
     entries: TaskCommentNotificationJournalEntry[];
   }> | null;
+  private sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
+  setLegacySourceWriteAdmission(policy: LegacySourceWriteAdmissionPolicy | undefined): void {
+    this.sourceWriteAdmission = policy;
+  }
   private readonly mutex = new KeyedMutex();
   private readonly sqlitePreparedTeams = new Set<string>();
   private readonly jsonHydratedTeams = new Set<string>();
@@ -51,7 +57,8 @@ export class BackendSelectingTaskCommentNotificationJournalStore implements Task
               sanitizeTaskCommentNotificationJournalEntries(
                 (value as { entries: unknown[] }).entries
               ).length === (value as { entries: unknown[] }).entries.length
-            )
+            ),
+          (teamName) => this.sourceWriteAdmission?.current(teamName)
         )
       : null;
   }
@@ -126,6 +133,22 @@ export class BackendSelectingTaskCommentNotificationJournalStore implements Task
       }
       return result;
     });
+  }
+
+  async inspectStoppedImport(teamName: string) {
+    // Normal first-store access may open/migrate the app-owned database. Resolve
+    // that shared decision before reading; never prepare this team's store here
+    // (the ordinary run path imports JSON and hydrates/writes replicas).
+    await this.selector.select('sqlite', 'json-fallback');
+    const info = this.selector.getBackendInfo(),
+      kind = this.selector.getBackendKind();
+    if (kind === 'sqlite' && info?.integrity === 'ok')
+      return (
+        this.sqliteStore.inspectStoppedImport?.(teamName) ?? unknownStoppedImportCommentFacts()
+      );
+    if (kind === 'json-fallback' && (!this.replica || this.jsonHydratedTeams.has(teamName)))
+      return this.jsonStore.inspectStoppedImport?.(teamName) ?? unknownStoppedImportCommentFacts();
+    return unknownStoppedImportCommentFacts();
   }
 
   async exists(teamName: string): Promise<boolean> {

@@ -50,9 +50,14 @@ describe('applyElectronDevPathOverrides', () => {
         name: 'userData',
         value: userDataDir,
       },
+      {
+        name: 'logs',
+        value: path.join(userDataDir, 'logs'),
+      },
     ]);
     expect(getClaudeBasePath()).toBe(claudeRoot);
     expect(fs.existsSync(userDataDir)).toBe(true);
+    expect(fs.statSync(path.join(userDataDir, 'logs')).isDirectory()).toBe(true);
     expect(fs.existsSync(claudeRoot)).toBe(true);
   });
 

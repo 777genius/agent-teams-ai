@@ -5,12 +5,15 @@
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('fs/promises', () => ({
-  access: vi.fn(),
-  readdir: vi.fn(),
-  readFile: vi.fn(),
-  stat: vi.fn(),
-}));
+vi.mock('fs/promises', () => {
+  const mockedFs = {
+    access: vi.fn(),
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+    stat: vi.fn(),
+  };
+  return { ...mockedFs, default: mockedFs };
+});
 
 vi.mock('isbinaryfile', () => ({
   isBinaryFile: vi.fn(),

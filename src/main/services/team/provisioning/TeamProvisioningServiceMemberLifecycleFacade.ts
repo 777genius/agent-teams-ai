@@ -167,6 +167,30 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     return true;
   }
 
+  readStoppedTeamImportLifecycleFacts(teamName: string): Readonly<Record<string, number>> {
+    const key = teamName.trim().toLowerCase();
+    return {
+      restart: [...this.openCodeAggregatePrimaryRestartByTeam.values()].filter(
+        (entry) => entry.teamName === teamName
+      ).length,
+      adapterStop: [...this.openCodeRuntimeAdapterStopInFlightByTeam.values()].filter(
+        (entry) => entry.teamName === teamName
+      ).length,
+      lifecycle: [...this.memberLifecycleOperations.keys()].filter((entry) =>
+        entry.startsWith(`${key}\0`)
+      ).length,
+      lifecycleCompletion: [...this.memberLifecycleCompletionByKey.values()].filter(
+        (entry) => entry.teamKey === key
+      ).length,
+      prepared: Number(this.preparedOpenCodeRuntimeLaunchMembersByTeam.has(teamName)),
+      retry: Number(this.failedOpenCodeSecondaryRetryInFlightByTeam.has(teamName)),
+      pendingTimers: this.pendingTimeouts.size,
+      unattributedCredentialCleanup: Number(
+        this.staleAnthropicApiKeyHelperCleanupRetryOwner.hasPendingCleanup()
+      ),
+    };
+  }
+
   private readonly staleAnthropicApiKeyHelperCleanupRetryOwner =
     createStaleAnthropicTeamApiKeyHelperCleanupRetryOwner({
       baseClaudeDir: getClaudeBasePath(),

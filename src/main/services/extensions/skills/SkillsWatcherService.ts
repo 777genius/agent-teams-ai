@@ -4,6 +4,7 @@ import { watch } from 'chokidar';
 
 import { SkillRootsResolver } from './SkillRootsResolver';
 
+import type { ResolvedSkillRoot } from './SkillRootsResolver';
 import type { SkillWatcherEvent } from '@shared/types/extensions';
 import type { FSWatcher } from 'chokidar';
 
@@ -12,7 +13,10 @@ const WATCHER_DEBOUNCE_MS = 250;
 
 export class SkillsWatcherService {
   private watcher: FSWatcher | null = null;
-  private subscriptions = new Map<string, string | null>();
+  private subscriptions = new Map<
+    string,
+    { projectPath: string | null; captured?: { roots: ResolvedSkillRoot[]; assertCurrent(): void } }
+  >();
   private pendingEvents = new Map<string, SkillWatcherEvent>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private emitChange: ((event: SkillWatcherEvent) => void) | null = null;
@@ -26,9 +30,40 @@ export class SkillsWatcherService {
 
   async start(projectPath?: string): Promise<string> {
     const watchId = `skills-watch-${++this.nextWatchId}`;
-    this.subscriptions.set(watchId, projectPath ?? null);
+    this.subscriptions.set(watchId, { projectPath: projectPath ?? null });
     await this.rebuildWatcher();
     return watchId;
+  }
+
+  async startCaptured(roots: ResolvedSkillRoot[], assertCurrent: () => void): Promise<string> {
+    assertCurrent();
+    const watchId = `skills-watch-${++this.nextWatchId}`;
+    this.subscriptions.set(watchId, {
+      projectPath: null,
+      captured: { roots: structuredClone(roots), assertCurrent },
+    });
+    await this.rebuildWatcher();
+    try {
+      assertCurrent();
+    } catch (error) {
+      await this.stop(watchId);
+      throw error;
+    }
+    return watchId;
+  }
+
+  private rootsFor(subscription: {
+    projectPath: string | null;
+    captured?: { roots: ResolvedSkillRoot[]; assertCurrent(): void };
+  }): ResolvedSkillRoot[] {
+    if (!subscription.captured)
+      return this.rootsResolver.resolve(subscription.projectPath ?? undefined);
+    try {
+      subscription.captured.assertCurrent();
+      return subscription.captured.roots;
+    } catch {
+      return [];
+    }
   }
 
   async stop(watchId: string): Promise<void> {
@@ -49,8 +84,8 @@ export class SkillsWatcherService {
 
     const roots = [
       ...new Set(
-        [...this.subscriptions.values()].flatMap((projectPath) =>
-          this.rootsResolver.resolve(projectPath ?? undefined).map((root) => root.rootPath)
+        [...this.subscriptions.values()].flatMap((subscription) =>
+          this.rootsFor(subscription).map((root) => root.rootPath)
         )
       ),
     ];
@@ -77,7 +112,17 @@ export class SkillsWatcherService {
         this.flushTimer = null;
         if (this.emitChange) {
           for (const event of this.pendingEvents.values()) {
-            this.emitChange(event);
+            if (
+              [...this.subscriptions.values()].some((subscription) =>
+                this.rootsFor(subscription).some(
+                  (root) =>
+                    root.scope === event.scope &&
+                    root.projectRoot === event.projectPath &&
+                    isPathWithinRoot(event.path, root.rootPath)
+                )
+              )
+            )
+              this.emitChange(event);
           }
         }
         this.pendingEvents.clear();
@@ -101,14 +146,15 @@ export class SkillsWatcherService {
     const matchedProjectPaths = new Set<string | null>();
     let matchedUserRoot = false;
 
-    for (const projectPath of this.subscriptions.values()) {
-      const roots = this.rootsResolver.resolve(projectPath ?? undefined);
+    for (const subscription of this.subscriptions.values()) {
+      const projectPath = subscription.projectPath;
+      const roots = this.rootsFor(subscription);
       for (const root of roots) {
         if (!isPathWithinRoot(filePath, root.rootPath)) continue;
         if (root.scope === 'user') {
           matchedUserRoot = true;
         } else {
-          matchedProjectPaths.add(projectPath ?? null);
+          matchedProjectPaths.add(root.projectRoot ?? projectPath ?? null);
         }
       }
     }

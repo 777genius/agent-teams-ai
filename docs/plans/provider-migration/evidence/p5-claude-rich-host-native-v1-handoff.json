@@ -1,0 +1,30 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-claude-rich-host-native-v1.tar.gz",
+  "archiveSha256": "12b72025cce31eecb7830a53813f95d5ad58e5d7b5763a141a0f0e396dc00f9f",
+  "receiptSha256": "61cdd342775d049e71be8134e0be74f06505b3fe60ad0327ce4e1e7d4badd87e",
+  "status": "PASS",
+  "pins": {
+    "source": "867b7977b9395c2550c8e008e92239d73606d86ee91337921a449dfd9d7982b7",
+    "dist": "14b462ef1a104fb1abd77c1cccc475dfc37145697b9cd6c8ff2e59c998e3faa2",
+    "provider": "64df7bcfed0e7e58d709cf79ab3723677461fd5ab1a76cc96fe96e7cdc85346b",
+    "artifact": "vendor/provider-migration/opencode-idle-v1/agent-teams-provider-implementations-0.0.0.tgz",
+    "native": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-darwin-arm64@0.3.305/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+      "sha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f"
+    },
+    "controller": "78b0fde82e011523caaae6d6d71b3a8e3483a3cc8a704ae9ad7679df98796449",
+    "harness": "f41850aac5615df652815c1f3b96758900ca05e108b32d20caec3db093a766e7",
+    "model": "2faa91f697c2ace687e61153aacf92fc3cf9ecf2459b75932e39f5ba796c14cb"
+  },
+  "scope": "Prepared rich human messages through standalone Host stdio + RuntimeTeamCoordinator + public D + actual Claude native/MCP, canonical visible replies, single member",
+  "excluded": [
+    "Desktop UI",
+    "mixed providers",
+    "whole P4",
+    "aggregate team bootstrap",
+    "real authentication",
+    "uncontrolled real-model compliance",
+    "positive native history restore",
+    "full Stage1"
+  ]
+}

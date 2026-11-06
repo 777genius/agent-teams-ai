@@ -6,19 +6,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('fs', () => ({
-  promises: {
-    mkdir: vi.fn(),
-    writeFile: vi.fn(),
-    open: vi.fn(),
-    lstat: vi.fn(),
-    link: vi.fn(),
-    readdir: vi.fn(),
-    rename: vi.fn(),
-    copyFile: vi.fn(),
-    unlink: vi.fn(),
-  },
-}));
+vi.mock('fs', () => {
+  const mockedFs = {
+    promises: {
+      mkdir: vi.fn(),
+      writeFile: vi.fn(),
+      open: vi.fn(),
+      lstat: vi.fn(),
+      link: vi.fn(),
+      readdir: vi.fn(),
+      rename: vi.fn(),
+      copyFile: vi.fn(),
+      unlink: vi.fn(),
+    },
+  };
+  return { ...mockedFs, default: mockedFs };
+});
 
 import {
   atomicCreateAsync,

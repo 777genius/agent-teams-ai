@@ -1,0 +1,93 @@
+{
+  "scope": "Existing LaunchTeamDialog ordinary roster submit, source revision/original command preservation across refreshed model preflight and uncertainty; owner member-settings CAS; verified read-only original lookup. No new UI.",
+  "sourceBoundary": "Post-check working-tree source hashes and full Host source/dist; retained managed checks/logs. Host260 proof precedes only Main expected:undefined fix and Desktop import ordering. Not an immutable pre/post full Desktop closure, native SDK or Electron dialog acceptance.",
+  "hostSource": "bea259be92195b5c5f2ac2977b173ed4d5a7652b206f094682d872d20955e507",
+  "hostDist": "71467a82bdf3893b7adc1f2a307de46f78b389a65ad5ba14ed0fc3a6ad5ffb19",
+  "sources": {
+    "packages/legacy-agent-host/src/team/memberSettingsRelaunch.ts": "d8baad8a46f2dc6f243be59342b1858b3dde216fb2eb4354206aa81aed98cffd",
+    "packages/legacy-agent-host/src/team/TeamRosterTransitions.ts": "774b9be1f51b86bcc64accd68c48097577e2d185f3dd879d9f307bad67755b5e",
+    "packages/legacy-agent-host/src/team/rosterContracts.ts": "bf49babba220852903348aad6e9545a5d26c26d9ac9f151ded0089aad4d91b8e",
+    "packages/legacy-agent-host/src/team/rosterSchema.ts": "5eed3d7351fca107006b253387113262217e3e608bcc05ed98578b9efa91bb18",
+    "packages/legacy-agent-host/src/team/TeamOwner.ts": "cbdc0474aa83ed218f286c13c814e7283ad01efd38dc12ea8cb2c270c99d0346",
+    "packages/legacy-agent-host/src/composition/TeamHost.ts": "a5c4b645c3e602c7cccd1b239cc591cde61d7cdcbaf4da7129c521a581a945d7",
+    "packages/legacy-agent-host/tests/team-roster.test.ts": "12d21bf862a22f4ffc401bb470ec540fd153a487f2231a88c945b41cce0a17fc",
+    "src/features/agent-backend/contracts/roster.ts": "cd2d82478de310b2ceb42d55853a62aed6f1efb0a04681435d82f6338c2383da",
+    "src/features/agent-backend/contracts/operations.ts": "90b8174a573ef7729319e3145b2c0de47afbde6bdba5c1b6d5a3e7107d151fc9",
+    "src/features/agent-backend/main/adapters/rosterValues.ts": "df4e6c75e11c03a4f64ab7784e3168b2dc0ccbcb2f2d440169d753abb89ae612",
+    "src/features/agent-backend/main/adapters/output/projectRoster.ts": "cdcb8ab54efbaa5d31943d8acb2f6cfa5def0f17f3e9fe8f3316a66db3e89f17",
+    "src/features/agent-backend/main/adapters/input/validateBackendOperation.ts": "fcbfb2caf1a8613a900d943542ba6fabdec428d84774a523c0a30ceebc3c9190",
+    "src/features/agent-backend/renderer/createHostTeamRoster.ts": "f8aa324adb6a89c90dfcdadc08013590df0378197123d01e86cb436510f2011d",
+    "src/features/agent-backend/renderer/createHostTeamsApi.ts": "2f40a867202bf2c4399eca3ef463c55bc6f1e35b126a9bfa9c73fcd5687821ec",
+    "src/features/team-provisioning/renderer/utils/memberSettingsPresentation.ts": "21270f9e9e5140d0a641cdd129664fbf3d8af142758f89abddc4e4c88c5d4d8d",
+    "src/shared/types/team.ts": "1f1fc4f66e33ff92ae34086d1e141d278d8971fa9d217a4138697ab08d84200f",
+    "src/renderer/components/team/TeamDetailView.tsx": "6318eb4aa3b7ee8490c3905df7330070f85714999479a8aabf9b41971c294912",
+    "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx": "602ec2f730a440b3e799bdd8035b28bd2966535640d108a1d43e045b85322d90",
+    "src/renderer/components/team/dialogs/LaunchTeamDialog.types.ts": "91f8e5e29cee93ebca5b58282ebe99aa377240097ceb2a23885136f95276bd9d",
+    "src/renderer/components/team/dialogs/useLaunchDialogRosterSubmission.ts": "25c8f1698180f35d3ca2b4d755d27df35f2e12a480742281ffcc18c976019a06",
+    "src/renderer/components/team/dialogs/teamRelaunchFlow.ts": "1ee9f42fab50a34164bdb7522d612e4ea3981689e9df1da1acf46edc7b0a008b",
+    "test/features/agent-backend/hostRosterFacade.test.ts": "e92608d31653088fe6580ea6662cdcffff64fa9a27d17d7a01e80081c3e8e5dc",
+    "test/features/agent-backend/hostTeamRoster.test.ts": "f5886ffa1094252aa45948f7af71251db0645aa098fb6ceb3edf9aa680860a43",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts": "f8cb1d9accc12f45470987d4b112be4aa6050855c463ef0f349f5d3c54c975d4",
+    "test/features/agent-backend/hostTeamLaunch.test.ts": "2f541284d20b69e69563971cd1ace1f45b04bbc9416ec8840b5d1240e0d3d788",
+    "test/features/agent-backend/hostTeamsRead.test.ts": "25ef5f4b17d3b124e30cf47b5b15fceb218e64df77f2ac29ccf7f85e593280fc",
+    "test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts": "30569fa2a4cf64e380291979c59dcb32d44fce031bbf678254f9c3a18ad9d6f9",
+    "test/renderer/components/team/dialogs/teamRelaunchFlow.test.ts": "ae73e748776b2e746c6ff558a69435309c3a522e5034d5891b5473725feac05c",
+    "scripts/legacy-agent-host/desktop-proof-sources.ts": "f720164a44f1a9b304b90905fa413772de4b87c38a929bce8b0f7cb38ed53402"
+  },
+  "checks": [
+    {
+      "id": "d75169d2d8dac60e6d5e7a043c3c0e91",
+      "exit": 1,
+      "scope": "Root types and260 Host tests passed.128/129 frontend passed; strict lookup expected:undefined test found a Main validation defect, fixed next. No Host code changed afterward."
+    },
+    {
+      "id": "4f5780fe52c737852e29b239c202de7b",
+      "exit": 1,
+      "scope": "Root types and17 lookup/actual Main->NDJSON tests passed after fix. Scoped lint found two import-order errors, subsequently fixed."
+    },
+    {
+      "id": "539eaca1804cb64d23a97e3f3bfd482b",
+      "exit": 0,
+      "scope": "Final root types/build,129 frontend tests across7 files, scoped fast lint and frozen source/provisioning/whitespace guards."
+    }
+  ],
+  "files": [
+    {
+      "path": "jobs/d75169d2d8dac60e6d5e7a043c3c0e91/state.json",
+      "sha256": "e325e349f68f7b88cd3c165b56104510d739c4816fd759af63318a2b33cbb9f9"
+    },
+    {
+      "path": "jobs/d75169d2d8dac60e6d5e7a043c3c0e91/stdout.log",
+      "sha256": "eea30c12cf277e822c7505dbf3670ce88a9cd73127335f4bf55152fe5ec150da"
+    },
+    {
+      "path": "jobs/d75169d2d8dac60e6d5e7a043c3c0e91/stderr.log",
+      "sha256": "8d00abf7c6bbd6f1baa7e2dd8e59b81ec4cce297222adf034be48cc1dbe988b9"
+    },
+    {
+      "path": "jobs/4f5780fe52c737852e29b239c202de7b/state.json",
+      "sha256": "c7721c5876f1dd44c7350d81e2c7b8302b21af34890adb8f4110b4ad18951df4"
+    },
+    {
+      "path": "jobs/4f5780fe52c737852e29b239c202de7b/stdout.log",
+      "sha256": "da8ce926b9744d37dd770ea784ed2a18ff7b4467fe01bcf9113295a047f4c45c"
+    },
+    {
+      "path": "jobs/4f5780fe52c737852e29b239c202de7b/stderr.log",
+      "sha256": "1a84fefe5d4d6ca43c8cc1f744e65ff40b7a312dfaca3eeed6aa207d6b2697d9"
+    },
+    {
+      "path": "jobs/539eaca1804cb64d23a97e3f3bfd482b/state.json",
+      "sha256": "d95dfb7b1823eec8485ba613743fc4b63d81ba46720308dc06bc9dfab1e1391f"
+    },
+    {
+      "path": "jobs/539eaca1804cb64d23a97e3f3bfd482b/stdout.log",
+      "sha256": "35fbb2cd7280c644d8ec3967058b914a18e61fcc817db7e3dc1d3b88a1982100"
+    },
+    {
+      "path": "jobs/539eaca1804cb64d23a97e3f3bfd482b/stderr.log",
+      "sha256": "1a84fefe5d4d6ca43c8cc1f744e65ff40b7a312dfaca3eeed6aa207d6b2697d9"
+    }
+  ],
+  "remaining": "Fresh native capture/registration, ordinary launchTeam/createTeam/createConfig and selected Resume/relaunch CDP workflows; all remaining P0-P8/M01-M19 including review/apply, provider/auth/lifecycle/packaging/Quit/owning gates. Stage2 excluded. Draft only, no merge."
+}

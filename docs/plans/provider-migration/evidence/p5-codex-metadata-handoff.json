@@ -1,0 +1,89 @@
+{
+  "status": "INCOMPLETE",
+  "globalGoalUnchanged": true,
+  "progressClassification": "Progress: finite native Codex metadata in provider-implementations, captured Host/profile routing, Desktop native account/model/status readers, strict Electron Task control/reload proof without nonversion sentinel calls.",
+  "archive": {
+    "archive": "docs/plans/provider-migration/evidence/p5-codex-metadata-and-desktop-attempt13-v1.tar.gz",
+    "sha256": "ba3f541caae16b2229b0744afccf83aae8d20e7d7aad405820cbecefaf2b9f2f",
+    "bytes": 1792144,
+    "files": 740,
+    "nativeReceiptSha256": "cb4581f90b4cddbf7b866a56fa074b261281fd714023ed9b528056a119f487ce",
+    "desktopReceiptSha256": "8c2881a17d5488f92ae1730d69d85381b618b88d1f45b8504667ddeefb3eab77"
+  },
+  "currentTuple": {
+    "source": "9905f13bebb899f5ae65505aab858ff6efbcf667788971012166c54150a4b026",
+    "dist": "563a52c2313524ef34400102897ff3ea16b7c221468d48126dd569ac976040cf",
+    "provider": "61835dbe4e64a5a26a77a4aecc09736bb5af5839010598fe42c1f539ed71111c"
+  },
+  "nativeCodex": {
+    "status": "PASS",
+    "executableVersion": "0.162.0",
+    "models": 11,
+    "inferenceRequests": 0,
+    "conversationStoreEntries": 0,
+    "hostExitCode": 0,
+    "realCredentialsQualified": false,
+    "authMutationsQualified": false
+  },
+  "desktopAttempt13": {
+    "status": "PASS",
+    "mode": "pnpm dev:mcp / ordinary Task UI",
+    "taskId": "cf1fca41-8047-57a4-8ae2-2af2dd6e8e79",
+    "sameCanonicalTaskAfterReload": true,
+    "nonversionSentinelCalls": 0,
+    "versionPreflightStillPresent": true,
+    "testRoot": "/private/var/folders/7b/ydmc_b0n251bc4hss4tz8y880000gn/T/TEST-desktop-backend-hokxrF",
+    "cleanup": "Host absent after guarded close; dev wrapper then narrowly SIGTERM-cleaned, process group empty, port9222 free. Not packaged Quit/Relaunch or provider-session shutdown qualification.",
+    "knownUiGap": "Two automatic Codex refresh calls requesting includeRateLimits currently return explicit not-integrated. This is retained in the app log; Task proof does not qualify account/rate-limit UI parity."
+  },
+  "checks": {
+    "providerPackage": {
+      "tests": 179,
+      "status": "PASS on tested production JS; v2 has identical87 JS files, public declarations/packed consumer separately checked",
+      "node": "24.21.0 compatibility; canonical26.11.1 not tested"
+    },
+    "foundation": "Full installed Foundation check and rejecting boundary/quality/adoption suites PASS after curated entrypoint repair",
+    "fms": "active profile zero diagnostics",
+    "hostTopLevelTests": 218,
+    "additionalMetadataCustodyTests": 2,
+    "frontendTests": "19 existing focused tests plus separate3 current Codex tests PASS",
+    "rootTS7": "PASS",
+    "hostStrict": "PASS",
+    "smokeScriptsStrict": "PASS",
+    "sourceSizeGuard": "PASS, no cap increases",
+    "provisioningGuard": "PASS",
+    "fastGate": "Not green: real test:ci retry on Node24.21 and physical TMPDIR had288 pass,1 failed,1 skip. Failure is fixture coverage aggregation at foundation-fixture-sharding.test.ts:219. Earlier direct file retry was non-authoritative because fixtures register through contracts.test.ts. Remaining chained SDK/fast commands did not run. No gates were disabled."
+  },
+  "remaining": "Full P0-P8/M01-M19 remains. Captured account/quota reads now work, including automatic includeRateLimits refresh. Next: original-profile forced token refresh/login/logout and preferred-auth settings; Claude status/account; ordinary Team launch/default/limit consumption, dynamic teams/full tool groups, mixed providers/recovery/review/settings, packaged Quit/Relaunch and OS packaging. Resolve the actual whole-fast fixture aggregate failure without weakening its gate.",
+  "activation": "Only isolated worktrees and TEST state; no production checkout edits, commit/push/merge or release activation.",
+  "cleanup": "All Native/Electron jobs are terminal and their owned processes retired. No pending app cleanup or live managed job.",
+  "latestQuotaExtension": {
+    "archive": "docs/plans/provider-migration/evidence/p5-codex-quota-and-desktop-read-v1.tar.gz",
+    "archiveSha256": "745d0420740724d1b3b214b59b9714a4ce2e91c035c731549b525f23149e4646",
+    "hostSourceSha256": "9905f13bebb899f5ae65505aab858ff6efbcf667788971012166c54150a4b026",
+    "hostDistSha256": "563a52c2313524ef34400102897ff3ea16b7c221468d48126dd569ac976040cf",
+    "providerSha256": "61835dbe4e64a5a26a77a4aecc09736bb5af5839010598fe42c1f539ed71111c",
+    "nativeReceiptSha256": "93803d3568ed8a0ef9d4b08bc42b305e768a9a3bd43310b21e21308b3893a117",
+    "desktopReceiptSha256": "800ab0a6d95b9c2dcad5c01f6732c5ff888def4b462a887af398235181d518be",
+    "status": "Scoped PASS; full goal INCOMPLETE",
+    "native": "Codex0.162.0 no-auth TEST profile,11 models, zero inference and sessions; quota snapshot absent honestly for missing ChatGPT account. Authenticated zero quota is separate real-wire synthetic proof.",
+    "desktop": "Existing refreshCodexAccountSnapshot includeRateLimits:true,forceRefreshToken:false through actual Electron renderer/preload/Main/Host/D/native. No Task/business mutations replayed. Strict sentinel nonversion0, automatic refresh handler errors0; test group empty and port9222 free.",
+    "checks": {
+      "D_package_tests": 180,
+      "D_foundation": "PASS",
+      "D_FMS": "active,0 diagnostics",
+      "D_lint": "PASS",
+      "host_metadata_custody_tests": 3,
+      "frontend_current_Codex_tests": 4,
+      "rootTS7": "PASS",
+      "hostStrict": "PASS",
+      "smokeScriptsStrict": "PASS",
+      "affectedFastLint": "PASS",
+      "sourceSizeGuard": "PASS",
+      "provisioningGuard": "PASS"
+    },
+    "wholeFastGate": "Not green: real test:ci retry on Node24.21 and physical TMPDIR had288 pass,1 failed,1 skip. Failure is fixture coverage aggregation at foundation-fixture-sharding.test.ts:219. Earlier direct file retry was non-authoritative because fixtures register through contracts.test.ts. Remaining chained SDK/fast commands did not run. No gates were disabled.",
+    "pending": "Vendor quotas; forced refresh/login/logout; preferred-auth product settings, full ordinary account UI; full P0-P8/M01-M19 acceptance remains.",
+    "wholeFastGateEnvironment": "Read-only diagnosis: local bash is GNU3.2.57 and a direct mapfile probe returns127. The failing fixture executes the CI aggregate, which uses mapfile. This explains a local toolchain gap candidate; no claim that the complete gate passed, and no system tooling was installed or gate changed."
+  }
+}

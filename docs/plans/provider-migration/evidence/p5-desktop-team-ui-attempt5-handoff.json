@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt5.tar.gz",
+  "archiveSha256": "8d1bae93d3678e71862f05f93b2e80941f588076d4f9435d521e52c526634a8d",
+  "manifestSha256": "f1ae7ac1c1d2866545ab758b0f9bab3cf0425098d080bf37259edd9b4735084c",
+  "receiptSha256": "e798c87ac96297ca3a4cb6072072dd04955a23138ba5f53395cf5e3add8e7aec",
+  "fileCount": 22,
+  "stage": "/private/tmp/TEST-p5-desktop-ui-attempt5-4lkrfibh",
+  "sourceMismatchesAtCollection": [],
+  "result": "INCOMPLETE: two navigation clicks, no Task dialog/business command. Original cleanup debt preserved; separate root identity-scoped forced cleanup proof included."
+}

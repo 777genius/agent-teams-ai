@@ -159,40 +159,45 @@ export class RuntimeTurnSettledIngestor {
           continue;
         }
 
-        const accepted = this.deps.reconcileQueue.enqueueRuntimeTurnSettled({
-          teamName: resolution.teamName,
-          memberName: resolution.memberName,
-          event: normalized.event,
-        });
-        if (!accepted) {
-          summary.failed += 1;
-          this.deps.logger?.warn('runtime turn settled reconcile enqueue rejected', {
-            filePath: payload.filePath,
-            provider: payload.provider,
+        const finish = async () => {
+          resolution.sourceExecution?.assertCurrent();
+          const accepted = this.deps.reconcileQueue.enqueueRuntimeTurnSettled({
             teamName: resolution.teamName,
             memberName: resolution.memberName,
+            event: normalized.event,
           });
-          continue;
-        }
-        summary.enqueued += 1;
-        await this.deps.eventStore.markProcessed(payload, {
-          event: normalized.event,
-          teamName: resolution.teamName,
-          memberName: resolution.memberName,
-          outcome: 'enqueued',
-          processedAt,
-        });
-        await appendMemberWorkSyncAudit(this.deps, {
-          teamName: resolution.teamName,
-          memberName: resolution.memberName,
-          event: 'turn_settled_resolved',
-          source: 'runtime_turn_settled_ingestor',
-          reason: normalized.event.provider,
-          metadata: {
-            sourceId: normalized.event.sourceId,
-            provider: normalized.event.provider,
-          },
-        });
+          if (!accepted) {
+            summary.failed += 1;
+            this.deps.logger?.warn('runtime turn settled reconcile enqueue rejected', {
+              filePath: payload.filePath,
+              provider: payload.provider,
+              teamName: resolution.teamName,
+              memberName: resolution.memberName,
+            });
+            return;
+          }
+          summary.enqueued += 1;
+          await this.deps.eventStore.markProcessed(payload, {
+            event: normalized.event,
+            teamName: resolution.teamName,
+            memberName: resolution.memberName,
+            outcome: 'enqueued',
+            processedAt,
+          });
+          await appendMemberWorkSyncAudit(this.deps, {
+            teamName: resolution.teamName,
+            memberName: resolution.memberName,
+            event: 'turn_settled_resolved',
+            source: 'runtime_turn_settled_ingestor',
+            reason: normalized.event.provider,
+            metadata: {
+              sourceId: normalized.event.sourceId,
+              provider: normalized.event.provider,
+            },
+          });
+        };
+        if (resolution.sourceExecution) await resolution.sourceExecution.run(finish);
+        else await finish();
       } catch (error) {
         summary.failed += 1;
         this.deps.logger?.warn('runtime turn settled ingest failed', {

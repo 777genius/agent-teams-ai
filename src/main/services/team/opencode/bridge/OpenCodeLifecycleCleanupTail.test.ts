@@ -305,6 +305,27 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     expect(steps).toEqual(['host-process-fallback']);
   });
 
+  it('keeps independently fenced fallback/maintenance but skips an uncreated sweep host on proven empty inputs', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      registryMaintenanceSkipped: true,
+      ports: createPorts(),
+    });
+    expect(steps).toEqual([
+      'host-process-fallback',
+      'startup-lock-purge',
+      'cursor-agent-tree-sweep',
+    ]);
+    expect(cleanupManagedOpenCodeServeProcesses).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'orphaned',
+        startedBeforeMs: APP_STARTED_AT_MS,
+      })
+    );
+  });
+
   it('reports the kill count as a durable sweep result and the rest as warnings', async () => {
     vi.clearAllMocks();
     recordSteps();

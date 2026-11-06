@@ -27,6 +27,7 @@ interface StartupCleanupPorts {
   createBudget?: () => OpenCodeStartupCleanupBudget;
   waitMs?: (ms: number) => Promise<void>;
   maintenance?: (canAdmit: () => boolean) => Promise<void>;
+  nativeMaintenanceRequired?: () => Promise<boolean>;
 }
 
 let startupAdmissionsStopped = false;
@@ -228,6 +229,11 @@ export class OpenCodeWindowsStartupCleanup {
 
   private async run(): Promise<void> {
     try {
+      if (this.stopped) return;
+      if (this.ports.nativeMaintenanceRequired && !(await this.ports.nativeMaintenanceRequired())) {
+        this.coverage = this.scanPartial ? 'partial' : 'complete';
+        return;
+      }
       if (this.stopped) return;
       if (!this.bridge || this.budget.remainingMs() < 5_000) {
         this.ports.logWarning(

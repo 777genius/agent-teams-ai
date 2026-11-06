@@ -8,6 +8,11 @@ import {
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
+import {
+  getOwnedUnixProcessGroup,
+  recordOwnedUnixProcessGroup,
+  recordVerifiedCliProcessRelease,
+} from './cliProcessCustody';
 import { withCliProcessDefaults } from './cliProcessDefaults';
 import { classifyCliSpawnError } from './cliWorkingDirectory';
 import {
@@ -540,14 +545,6 @@ function spawnWindowsShellFallback(
 
 const activeCliProcesses = new Set<ChildProcess>();
 
-interface OwnedUnixProcessGroup {
-  processGroupId: number | null;
-  rootProcessGroupId: number;
-  rootStartIdentity: string | null;
-}
-
-const ownedUnixProcessGroups = new WeakMap<ChildProcess, OwnedUnixProcessGroup>();
-
 export function untrackCliProcess(child: ChildProcess | null): void {
   if (child) {
     activeCliProcesses.delete(child);
@@ -559,11 +556,7 @@ function trackCliProcess<T extends ChildProcess>(child: T): T {
   if (process.platform !== 'win32' && child.pid) {
     const rootIdentity = tryReadUnixProcessTable()?.get(child.pid);
     if (rootIdentity) {
-      ownedUnixProcessGroups.set(child, {
-        processGroupId: rootIdentity.processGroupId === child.pid ? child.pid : null,
-        rootProcessGroupId: rootIdentity.processGroupId,
-        rootStartIdentity: rootIdentity.startIdentity,
-      });
+      recordOwnedUnixProcessGroup(child, rootIdentity);
     }
   }
   const cleanup = (): void => {
@@ -839,6 +832,7 @@ export async function killProcessTreeAndWait(
     }
   }
   await waitForUnixProcessIdentitiesToExit(remainingIdentities, childPid);
+  recordVerifiedCliProcessRelease(child, identities);
   activeCliProcesses.delete(child);
 }
 
@@ -886,7 +880,7 @@ function getOwnedUnixProcessTreeIdentities(
   parentPid: number
 ): UnixProcessIdentity[] {
   const processes = readUnixProcessTable(parentPid);
-  const ownedGroup = ownedUnixProcessGroups.get(child);
+  const ownedGroup = getOwnedUnixProcessGroup(child);
   const root = processes.get(parentPid);
   let roots = root ? [root] : [];
   if (ownedGroup) {

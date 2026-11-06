@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "status": "bounded-native-stop-release-and-cold-reconciliation-complete",
+  "productionFrozen": true,
+  "implementation": {
+    "journal": "Existing launch-freshness.json and launch-stopped.json only",
+    "authority": "Before-await original ChildProcess group/birth + original run/session + original Team inode/native census; private in-memory capability; exact existing Unix wait acknowledgement; current stop epoch at publication",
+    "failure": "Unknown native stop or unconfirmed receipt retains original custody and import HOLD; same-run Stop continuation uses original capture; no new generation",
+    "source": "Readonly proof reader remains under existing source owner fences and full source digest; exact native identity/inode mismatch HOLD"
+  },
+  "checks": {
+    "canonicalTypecheck": {
+      "command": "pinned node node_modules/@typescript/native/bin/tsc --noEmit",
+      "exitCode": 0,
+      "session": 86803
+    },
+    "artifactTypecheck": {
+      "exitCode": 0,
+      "session": 19620
+    },
+    "focusedUnits": {
+      "passed": 52,
+      "suites": {
+        "TeamLaunchStateStore": 25,
+        "TeamProvisioningStopFlowPortsFactory": 6,
+        "legacyStoppedImportSource": 11,
+        "LegacyNativeStopRelease": 10
+      },
+      "evidence": [
+        "933449",
+        "1b9b48",
+        "901ccb"
+      ]
+    },
+    "lint": "Exact-file fast ESLint passed after three import-sort-only fixes",
+    "diffCheck": "passed"
+  },
+  "native": {
+    "jobId": "400405a94327e332721acea7931ee45a",
+    "exitCode": 1,
+    "result": "Actual spawnCli target and unrelated sentinel. Existing Stop flow killed only target, exact root birth/group verified absent, private store proof confirmed before run cleanup. Sentinel exact birth/group survived target Stop. Export then held because TEST caller supplied only2 of6 required roots; failure retained.",
+    "assertionProvenance": "These assertions precede failing line97 in retained executed test; original receipt and exact stopped native proof retained. No whole-job PASS claim.",
+    "cleanup": "Both exact child handles stopped in finally through existing killProcessTreeAndWait; PID and group absence confirmed; cleanupConfirmed=true."
+  },
+  "coldContinuation": {
+    "jobId": "a60ae1ea80281c22844bde49cee3b8b7",
+    "exitCode": 0,
+    "testsPassed": 1,
+    "nativeReplay": false,
+    "result": "Same exact retained native proof cold-read and validated against same Team inode/native census; all6 captured roots; export and detached parse PASS; missing optional roots explicit already-missing gaps; wrong Team and stale native session HOLD."
+  },
+  "limitations": [
+    "Only bounded complete-inventory solo Unix Claude CLI variant. OpenCode/tmux/Windows/secondary members/missing capture/separate unqualified bootstrap artifacts remain HOLD.",
+    "Native proof used fixture ports for unrelated helper lanes and empty source-owner facts. It is not a full Desktop stop UI/provider integration proof.",
+    "No new native launches or Stop replay during cold reconciliation; original native attempt remains exit1 due TEST envelope error.",
+    "Cold proof trusts existing source-owned private records and current owner/file fences; it never adopts original native session IDs.",
+    "Shipping/fork checkouts unchanged; no app, real provider, install, user project, commit or broad process kill."
+  ],
+  "archive": "docs/plans/provider-migration/evidence/m16-native-stop-v1",
+  "manifestSha256": "e4034105e0486d440c01902a7d56350cd7d346b7b040b00f64fa8c79f192e5b0",
+  "sourcePins": {
+    "src/main/utils/cliProcessCustody.ts": "d5b5bc9e36bbf1698b8811ad38e183360d7808d5212dcf91873b713ca4922851",
+    "src/main/utils/childProcess.ts": "392132b10485aa9c4f121fc3af8955bb745fc59df086ea65fb5887e6c1534a69",
+    "src/main/utils/unixProcessTable.ts": "6d8e5ece844cd34caf48e1154fb2f256e8af9e0556501270e97708ec68aa7d8f",
+    "src/main/utils/cliProcessDefaults.ts": "824296d3bec61a3dbf84f9e704f61207e1dfba78f1d55efecd78a7decabba15b",
+    "src/main/services/team/TeamLaunchStateStore.ts": "42e8e5328eaf6c06527274b12101394836a2da25b3f701096bf38139f2965189",
+    "src/main/services/team/TeamLaunchFreshness.ts": "80d98a03ebd7f8f5d131e77c47b1c278e0c83d0a8698dd66cc29d5ba78f85f4f",
+    "src/main/services/team/LegacySavedTeamNativeIdentity.ts": "ccf7062d767c817b7de5d7a794a90fb6a2cdb5938b5241b4499dcc4dd9ee23fe",
+    "src/main/services/team/provisioning/LegacyNativeStopCensus.ts": "dbd671d4e2ff40996c96b8516cebde115184d5d6ed9f0e5df823f95a4f56a29e",
+    "src/main/services/team/provisioning/LegacyNativeStopRelease.ts": "fb22a74e59889ab0df565628b19679cecec729908d8015d17719c90a29012fe0",
+    "src/main/services/team/provisioning/LegacyNativeStopPublication.ts": "372e69bb9f05421e02b95142b780a79d24f9a3a6cbe8ff610cb02034b1999b42",
+    "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts": "48f78693e371bebe527602facfd1be7e26d9abb01b604823dbfeda2e77eaff9a",
+    "src/main/services/team/provisioning/TeamProvisioningStopFlowPortsFactory.ts": "86bc8e04fdf6db49faa5153def1f1f67c673707ff4ceb10e83f7cafdbdf88ace",
+    "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts": "3aed005956a68e4c57dd48b1b4abe82d97d1c042304f76ddb92e981ae0208289",
+    "src/main/services/team/provisioning/TeamProvisioningRunProgress.ts": "0df530b4da7cb68c4e15f6142dc8ad349419f4f701328fab30c6f9729fe51764",
+    "src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts": "0038dd8c53c82ed29e247fc79da5bb8f1a9871182fabf2ac7d3cb324a3941b2d",
+    "packages/legacy-agent-host/src/stopped-team-import/contracts.ts": "fa5f43adf4b981b70b106d1eb98774416f59324e6cc3d42e2df43c2565cca40c",
+    "packages/legacy-agent-host/src/stopped-team-import/snapshot.ts": "d451c9743106569a7a19861eb04c704fddaf79e749c036be10da6677d37d5885",
+    "test/main/services/team/LegacyNativeStopRelease.test.ts": "51c962a8e152c75fda03d0983b5ce91ba3e3833ed08a6ccfc3739b7eed2c55b7",
+    "test/features/agent-backend/legacyStoppedImportSource.test.ts": "b68405396ba86b2089b61e525307322a30af038778505a37725fae601d67a9f6",
+    "src/main/services/team/provisioning/__tests__/TeamProvisioningStopFlowPortsFactory.test.ts": "d4516d2157192b85f10d7e73fb793d03fee6c79501a5511c31945790b2456604"
+  }
+}

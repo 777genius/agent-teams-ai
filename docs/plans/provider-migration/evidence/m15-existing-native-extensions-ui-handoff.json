@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "scope": "Existing Settings Advanced → Extensions; ordinary Plugin install/uninstall and Add Custom MCP config/diagnose/list/uninstall through actual pinned native CLI",
+  "originalJobId": "7e27cfbb4eac1cc284f5fbade219f056",
+  "retentionJobId": "29ed62f1d32dc9231c3c4ae076e8a4ab",
+  "retainedRoot": "/Volumes/Transcend/dev/TEST-provider-typed-quality-v2-successor-p5j5t_wr/helpers/extensions-mixed/retained-native-extensions-ui-7e27cfbb4eac1cc284f5fbade219f056",
+  "retentionSha256": "3ac5795e9cc2167073bcfdf5e0584dcb2ec7d2e5bf83c900e54db5ceb17cdd8e",
+  "retainedFiles": 2562,
+  "completedNativeMutationCount": 4,
+  "nativeExecutableSha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
+  "reloadObserved": true,
+  "neighborUnchanged": true,
+  "mcpMetadataFixture": {
+    "id": "test.local/native-extension-config-only",
+    "name": "test-native-extension-config-only",
+    "synthetic": true,
+    "sourceField": "schema-required display value only",
+    "claim": "catalog metadata only; native state and operation outcomes untouched"
+  },
+  "nativeInventory": [
+    {
+      "name": "test-native-extension-config-only",
+      "scope": "user",
+      "targetKey": "http:http://127.0.0.1:9/TEST-native-extension-config-only"
+    },
+    {
+      "name": "test-native-extension-config-only",
+      "scope": "user",
+      "targetKey": "http:http://127.0.0.1:9/TEST-native-extension-config-only"
+    }
+  ],
+  "cleanup": {
+    "processGroup": 41229,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no provider sessions were configured"
+  },
+  "writerReleased": true,
+  "excluded": [
+    "vendor inference",
+    "new disable controls",
+    "real user projects/config",
+    "UI lost-ACK transport injection",
+    "second actual workspace context",
+    "live MCP registry catalog/search qualification"
+  ],
+  "sourceHead": "86942ae39 (production606ed; TEST Check Status label updated)",
+  "qualification": "Existing Plugin install/uninstall and custom MCP install/diagnose/native inventory/uninstall. TEST catalog metadata supplies only a row for the existing detail dialog; native state and outcomes remain actual CLI. No live registry/auth/inference or full Stage1 claim."
+}

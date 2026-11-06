@@ -6,6 +6,7 @@ export {
   isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
+export { CapturedClaudeAuthenticationPanel } from './CapturedClaudeAuthenticationPanel';
 export type { OpenCodeCatalogFailure } from './hooks/catalogFailure';
 export type {
   OpenCodeAttachmentDeclaration,

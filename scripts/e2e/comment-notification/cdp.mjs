@@ -48,24 +48,30 @@ export class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0)
+      throw new RangeError('positive CDP observation budget required');
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
 
-  async evaluate(expression) {
-    const response = await this.send('Runtime.evaluate', {
-      expression,
-      awaitPromise: true,
-      returnByValue: true,
-    });
+  async evaluate(expression, timeoutMs) {
+    const response = await this.send(
+      'Runtime.evaluate',
+      {
+        expression,
+        awaitPromise: true,
+        returnByValue: true,
+      },
+      timeoutMs
+    );
     if (response.exceptionDetails) {
       throw new Error(
         response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'

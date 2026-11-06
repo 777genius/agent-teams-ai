@@ -133,6 +133,13 @@ export function areInboxMessagesEquivalentForRender(
   if (prev.groupDeliverySummary?.recordedAt !== next.groupDeliverySummary?.recordedAt) return false;
   if (prev.relayOfMessageId !== next.relayOfMessageId) return false;
   if (prev.source !== next.source) return false;
+  if (
+    prev.conversationId !== next.conversationId ||
+    prev.replyToConversationId !== next.replyToConversationId
+  )
+    return false;
+  if (JSON.stringify(prev.crossTeamNavigation) !== JSON.stringify(next.crossTeamNavigation))
+    return false;
   if (prev.leadSessionId !== next.leadSessionId) return false;
   if (prev.toolSummary !== next.toolSummary) return false;
   if (prev.messageKind !== next.messageKind) return false;

@@ -1,0 +1,153 @@
+{
+  "head": "d408b1191fe912942e40f3848b93c2466f2e20af",
+  "run": 40754124612,
+  "sourceJobSummary": {
+    "success": 9,
+    "failure": 2,
+    "rawAuditScope": "Mixed, Taskboard, Codex Resume, H3 only"
+  },
+  "artifactZipDigests": {
+    "12847498588": "5e9631ed560b8caaa10c3d811f719730fd5fdf4dcb3f7b6bf852cde95004e3ec",
+    "12846518330": "813d7b790f971c57384fde6d7becd9f8c1452e472c57c8a59bb0bdefc4c5ab5a",
+    "12846669136": "6330e6b4ba7c8094b8212dd26752b3d45deae62d4385dfe316a5725ba4029aff"
+  },
+  "ui": {
+    "mixed": {
+      "status": "INCOMPLETE",
+      "receiptSha256": "edcbf0b3ad7dfedaf310df2fb32b88e22c1df94ef66bcdd49bc479b4819ce905",
+      "failure": "pre-Restart direct child census 4 !== 3",
+      "fourthChildProvenance": "OpenCode management profile endpoint49358; runtime endpoint49357; no Restart clicked",
+      "pins": 1413,
+      "immutableGitMatch": true,
+      "sourceBeforeAfterEqual": true,
+      "capturedHostObserved": false
+    },
+    "taskboard": {
+      "status": "INCOMPLETE",
+      "receiptSha256": "0144ede4351a71ae660cb1b8a0879e73e7cc8c264b6c244a05e9ec05d28f4819",
+      "failure": "same settled empty comment input before typing",
+      "afterImageOwnerSettled": true,
+      "afterFocusOwnerNull": true,
+      "originalTextareaStillFocused": true,
+      "pins": 1413,
+      "immutableGitMatch": true,
+      "sourceBeforeAfterEqual": true,
+      "capturedHostObserved": false
+    },
+    "codexResume": {
+      "status": "PASS",
+      "receiptSha256": "a5fa7f9ef06021c5816118e9438c0866b68832e328ffd983a3b0d0fe9435668e",
+      "pins": 1413,
+      "immutableGitMatch": true,
+      "sourceBeforeAfterEqual": true,
+      "capturedHostAbsent": true
+    }
+  },
+  "h3": {
+    "status": "PASS",
+    "receiptSha256": "a76e8d1a3f17ba9a1d4da2af8a26dfb627a2e2d12f8531dbc958f0c482f17269",
+    "cleanupConfirmed": true,
+    "restoreSelections": [
+      "alice",
+      "bob",
+      "carol"
+    ],
+    "hostFacts": [
+      {
+        "pid": 7921,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "pid": 7976,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "pid": 8008,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelObservationCounts": [
+      12,
+      12,
+      12
+    ],
+    "modelFailureCounts": [
+      0,
+      0,
+      0
+    ],
+    "harnessSha256": "6ca1ed67bd4e1b3eaaf480bf8af216ff9d3cee87f536951fe57cb251d04f3e04",
+    "harnessImmutableGitMatch": true,
+    "hostSourceTreeSha256": "226129eb1873a50db84de204ac8156299ba0fc145df414b25c96f64d628e515c",
+    "hostSourceTreeImmutableGitMatch": true,
+    "checkpoints": [
+      {
+        "file": "store/runtime-checkpoints/cp1-63e85aec72b8bde4ce3b61d7f281cefa097f90ee9686277f900b87ea19363348.json",
+        "sha256": "73d19d65d35d23a68bda6b46ae266d2d8e9c8a50de136e2193a7764014a8b2a1",
+        "digestMatched": true
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-3e58d16b9f076a2cc3099e35fe050ce6f44a3bb2b96c081910131d92c368450b.json",
+        "sha256": "8e968f4ccba37378270f675cfac5c55345a3a7c0a379f81f095c2fc4aebb3b5e",
+        "digestMatched": true
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-07851ac211c35eeb26d4ed3bc5f4d83ea2de7895749850c05a77e765eb19e12a.json",
+        "sha256": "53714dc0f37a3f28ad7fb4f918d48c1f15ba74cca433d4ba67cb4c10ad13af1e",
+        "digestMatched": true
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-68552280f92b66bc889fd1f89b5798d103e85f1207018ec20025344e897c2d8e.json",
+        "sha256": "d3c4ecc91907d8d3a07ff273efd9bf4eda809ed182507438819f1731311e3dca",
+        "digestMatched": true
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-d6ea55ad2ef1d12186e796f42bf2ae4c30feefcf72c883199af89f1941f076a8.json",
+        "sha256": "ee739bfd71bd08f2b6d0e2fac971f4976a6497e41b098be778959406d5c14c1e",
+        "digestMatched": true
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-057198ed2a3039d599b100ab64793991ca383376ea196e7b183bb2a58e1b36fb.json",
+        "sha256": "9d80fadd7bfea5c3d5b77341b7116aa14317a01ce58367bbb84946b8a88c172e",
+        "digestMatched": true
+      }
+    ],
+    "nativeIdentityProof": {
+      "alice": {
+        "checkpointCount": 2,
+        "historyAandBNativeIdentityEqual": true,
+        "selectedIdentityDigestMatched": true
+      },
+      "bob": {
+        "checkpointCount": 2,
+        "historyAandBNativeIdentityEqual": true,
+        "selectedIdentityDigestMatched": true
+      },
+      "carol": {
+        "checkpointCount": 2,
+        "historyAandBNativeIdentityEqual": true,
+        "selectedIdentityDigestMatched": true
+      }
+    },
+    "closedSealedReleasedSessionCount": 6,
+    "limits": [
+      "Own-ref macOS24G624/arm64/Node24.21 only",
+      "No real-provider authentication claim",
+      "No new packed qualification claim",
+      "Historical M19 root911 remains HOLD"
+    ]
+  },
+  "taskboardFix": {
+    "scope": "TEST only; wait for original post-focus readiness before one original insertion",
+    "regression": "Original harness transient owner-null, rebound selector, unfocused then settled original; exactly one click/upload/insertion",
+    "redLog": "taskboard-readiness-red.log",
+    "greenLog": "taskboard-readiness-green.log",
+    "localRuntime": "Node24.22.1 Linux; no native equivalence claimed"
+  }
+}

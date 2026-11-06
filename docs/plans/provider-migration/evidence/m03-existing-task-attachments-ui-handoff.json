@@ -1,0 +1,80 @@
+{
+  "status": "PASS",
+  "scope": "Offline existing Task image/comment attachment UI, renderer reload, comment download and Task image removal",
+  "jobId": "40d23d3dd3b221fdece4739130f96324",
+  "retainerJobId": "bf8e0a92fa57e44eb73850519966775e",
+  "retainedRoot": "/Volumes/Transcend/dev/TEST-task-board-attachments-retained-40d23d3dd3b221fdece4739130f96324",
+  "rawReceiptSha256": "2acc240b47b63c1b921221b9f3d987e83a922000b461cd1ff781f16a7499a69c",
+  "retentionSha256": "b08160a3d184db1269e61c5e121919c92659af24dfc3517c52b457ab3b77c2e6",
+  "manifestFilesVerified": 2655,
+  "sourcePins": 1207,
+  "electronBundlePins": 14,
+  "taskId": "0e183e3c-009a-5710-99d0-00fd3e22dcbc",
+  "independentCanonicalVerification": {
+    "completedOriginalCommands": {
+      "task.attachment.add": "54bbb8d0-7947-42a9-bbf9-36d22521345c",
+      "task.comment": "c07a983a-31b1-4136-816e-bcbf9fbd717e",
+      "task.attachment.remove": "3951781b-8968-4b95-8562-916ae0dd6bf2"
+    },
+    "taskImageRemoved": true,
+    "commentAttachmentPreserved": true,
+    "imagePayload": {
+      "artifactId": "4f6e0f6ea766553a1391bb034a3d9bf054c55971d38ce74ad5f4287feba7276a",
+      "mimeType": "image/png",
+      "byteLength": 71,
+      "digest": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+    },
+    "commentPayload": {
+      "artifactId": "d079c7a75f09c137d37854be1131473d773a7308965d103851ece06bb459fc11",
+      "mimeType": "text/plain",
+      "byteLength": 39,
+      "digest": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b"
+    },
+    "downloadBytes": 39,
+    "downloadSha256": "73fb26db42b2bc7dc47e44d4ea9d74c32827870be2693efc1cb80e4d398a7b1b",
+    "reloadImageDimensions": [
+      2,
+      1
+    ]
+  },
+  "downloadPolicy": {
+    "method": "Page.setDownloadBehavior",
+    "acknowledged": true,
+    "scope": "captured TEST renderer context via current Page target"
+  },
+  "cleanup": {
+    "processGroup": 86328,
+    "groupEmpty": true,
+    "appExitCode": 0,
+    "capturedHostAbsent": true,
+    "writerReleased": true
+  },
+  "notQualified": [
+    "native provider image delivery",
+    "chat attachments",
+    "native file picker",
+    "cold application restart",
+    "attachment size boundaries",
+    "blob garbage collection",
+    "full Stage1 M03 or M04",
+    "natural application Quit",
+    "independent visual signoff"
+  ],
+  "priorFailedRunsPreserved": [
+    "b5f7cc8b455ff67948fa1121b597d017",
+    "a669643cbaabfafbcea6968358595446",
+    "d254da897c866061d7ed2cff77346e25"
+  ],
+  "rootVisualReview": {
+    "status": "PASS_SCOPED_TWO_SCREENSHOTS",
+    "screenshots": [
+      "ui-task-board-attachments-reloaded.png",
+      "ui-task-board-attachment-removed.png"
+    ],
+    "observed": [
+      "Existing TaskDetailDialog shows decoded image and attachment count1 after reload",
+      "Removal leaves count0 and original Comments section/count2; no alternate UI"
+    ],
+    "fullVisualSignoffClaim": false
+  }
+}

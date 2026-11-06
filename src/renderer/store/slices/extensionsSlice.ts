@@ -1,5 +1,5 @@
 /**
- * Extensions slice — global catalog caches shared across all Extensions tabs.
+ * Extensions slice — context-bound catalog caches shared across Extensions tabs.
  * Per-tab UI state lives in useExtensionsTabState() hook, NOT here.
  */
 
@@ -14,6 +14,25 @@ import {
 } from '@shared/utils/extensionNormalizers';
 import { isProjectScopedMcpScope } from '@shared/utils/mcpScopes';
 
+import { captureContextScopedRequestEpoch } from '../utils/contextScopedRequestEpoch';
+import {
+  captureExtensionsContext,
+  extensionInitialState,
+  getPluginCatalogKey,
+  getSkillsCatalogKey,
+} from '../utils/extensionsContext';
+import {
+  buildPluginIdSet,
+  clearMcpProjectScopedOperationState,
+  clearMcpProjectScopedSuccessResetTimers,
+  clearMcpSuccessResetTimer,
+  clearPluginOperationState,
+  clearPluginSuccessResetTimer,
+  clearPluginSuccessResetTimers,
+  getCustomMcpOperationKey,
+  scheduleMcpSuccessReset,
+  schedulePluginSuccessReset,
+} from '../utils/extensionsOperationState';
 import { findPaneByTabId, updatePane } from '../utils/paneHelpers';
 
 import type { AppState } from '../types';
@@ -147,199 +166,14 @@ export interface ExtensionsSlice {
 
 let pluginFetchInFlight: { key: string; promise: Promise<void>; token: symbol } | null = null;
 let pluginCatalogRequestSeq = 0;
-const pluginSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const mcpSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const mcpDiagnosticsInFlightByKey = new Map<string, Promise<void>>();
 let skillsCatalogRequestSeq = 0;
 let skillsDetailRequestSeq = 0;
 const latestSkillsCatalogRequestByKey = new Map<string, number>();
 const latestSkillsDetailRequestById = new Map<string, number>();
 
-const USER_SKILLS_CATALOG_KEY = '__user__';
-
 function hasAnyLoading(loadingMap: Record<string, boolean>): boolean {
   return Object.values(loadingMap).some(Boolean);
-}
-
-function getPluginCatalogKey(projectPath?: string): string {
-  return projectPath ?? '__user__';
-}
-
-function buildPluginIdSet(catalog: EnrichedPlugin[]): Set<string> {
-  return new Set(catalog.map((plugin) => plugin.pluginId));
-}
-
-function isPluginOperationKeyForPlugin(operationKey: string, pluginId: string): boolean {
-  return operationKey.startsWith(`plugin:${pluginId}:`);
-}
-
-function clearPluginOperationState(
-  pluginIds: Set<string>,
-  pluginInstallProgress: Record<string, ExtensionOperationState>,
-  installErrors: Record<string, string>
-): {
-  pluginInstallProgress: Record<string, ExtensionOperationState>;
-  installErrors: Record<string, string>;
-} {
-  if (pluginIds.size === 0) {
-    return { pluginInstallProgress, installErrors };
-  }
-
-  const nextPluginInstallProgress = { ...pluginInstallProgress };
-  const nextInstallErrors = { ...installErrors };
-  const pluginIdsList = Array.from(pluginIds);
-
-  for (const operationKey of Object.keys(nextPluginInstallProgress)) {
-    if (pluginIdsList.some((pluginId) => isPluginOperationKeyForPlugin(operationKey, pluginId))) {
-      delete nextPluginInstallProgress[operationKey];
-    }
-  }
-
-  for (const operationKey of Object.keys(nextInstallErrors)) {
-    if (pluginIdsList.some((pluginId) => isPluginOperationKeyForPlugin(operationKey, pluginId))) {
-      delete nextInstallErrors[operationKey];
-    }
-  }
-
-  return {
-    pluginInstallProgress: nextPluginInstallProgress,
-    installErrors: nextInstallErrors,
-  };
-}
-
-function clearPluginSuccessResetTimer(operationKey: string): void {
-  const timer = pluginSuccessResetTimers.get(operationKey);
-  if (!timer) {
-    return;
-  }
-
-  clearTimeout(timer);
-  pluginSuccessResetTimers.delete(operationKey);
-}
-
-function clearPluginSuccessResetTimers(pluginIds: Set<string>): void {
-  const pluginIdsList = Array.from(pluginIds);
-  for (const operationKey of Array.from(pluginSuccessResetTimers.keys())) {
-    if (pluginIdsList.some((pluginId) => isPluginOperationKeyForPlugin(operationKey, pluginId))) {
-      clearPluginSuccessResetTimer(operationKey);
-    }
-  }
-}
-
-function schedulePluginSuccessReset(
-  operationKey: string,
-  set: Parameters<StateCreator<AppState, [], [], ExtensionsSlice>>[0]
-): void {
-  clearPluginSuccessResetTimer(operationKey);
-  const timer = setTimeout(() => {
-    pluginSuccessResetTimers.delete(operationKey);
-    set((prev) => {
-      if (prev.pluginInstallProgress[operationKey] !== 'success') {
-        return {};
-      }
-
-      return {
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'idle' },
-      };
-    });
-  }, SUCCESS_DISPLAY_MS);
-  pluginSuccessResetTimers.set(operationKey, timer);
-}
-
-function getCustomMcpOperationKey(
-  serverName: string,
-  scope: InstallScope,
-  projectPath?: string | null
-): string {
-  if (scope === 'project' || scope === 'local') {
-    return `mcp-custom:${serverName}:${scope}:${getMcpProjectStateKey(projectPath)}`;
-  }
-  return `mcp-custom:${serverName}:${scope}`;
-}
-
-function isProjectScopedMcpOperationKey(operationKey: string): boolean {
-  return (
-    operationKey.includes(':project:') ||
-    operationKey.endsWith(':project') ||
-    operationKey.includes(':local:') ||
-    operationKey.endsWith(':local')
-  );
-}
-
-function clearMcpSuccessResetTimer(operationKey: string): void {
-  const timer = mcpSuccessResetTimers.get(operationKey);
-  if (!timer) {
-    return;
-  }
-
-  clearTimeout(timer);
-  mcpSuccessResetTimers.delete(operationKey);
-}
-
-function scheduleMcpSuccessReset(
-  operationKey: string,
-  set: Parameters<StateCreator<AppState, [], [], ExtensionsSlice>>[0]
-): void {
-  clearMcpSuccessResetTimer(operationKey);
-  const timer = setTimeout(() => {
-    mcpSuccessResetTimers.delete(operationKey);
-    set((prev) => {
-      if (prev.mcpInstallProgress[operationKey] !== 'success') {
-        return {};
-      }
-
-      return {
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'idle' },
-      };
-    });
-  }, SUCCESS_DISPLAY_MS);
-  mcpSuccessResetTimers.set(operationKey, timer);
-}
-
-function clearMcpProjectScopedOperationState(
-  mcpInstallProgress: Record<string, ExtensionOperationState>,
-  installErrors: Record<string, string>
-): {
-  mcpInstallProgress: Record<string, ExtensionOperationState>;
-  installErrors: Record<string, string>;
-} {
-  const nextMcpInstallProgress = { ...mcpInstallProgress };
-  const nextInstallErrors = { ...installErrors };
-
-  for (const operationKey of Object.keys(nextMcpInstallProgress)) {
-    if (
-      (operationKey.startsWith('mcp:') || operationKey.startsWith('mcp-custom:')) &&
-      isProjectScopedMcpOperationKey(operationKey)
-    ) {
-      delete nextMcpInstallProgress[operationKey];
-    }
-  }
-
-  for (const operationKey of Object.keys(nextInstallErrors)) {
-    if (
-      (operationKey.startsWith('mcp:') || operationKey.startsWith('mcp-custom:')) &&
-      isProjectScopedMcpOperationKey(operationKey)
-    ) {
-      delete nextInstallErrors[operationKey];
-    }
-  }
-
-  return {
-    mcpInstallProgress: nextMcpInstallProgress,
-    installErrors: nextInstallErrors,
-  };
-}
-
-function clearMcpProjectScopedSuccessResetTimers(): void {
-  for (const operationKey of Array.from(mcpSuccessResetTimers.keys())) {
-    if (isProjectScopedMcpOperationKey(operationKey)) {
-      clearMcpSuccessResetTimer(operationKey);
-    }
-  }
-}
-
-function getSkillsCatalogKey(projectPath?: string): string {
-  return projectPath ?? USER_SKILLS_CATALOG_KEY;
 }
 
 function upsertApiKeyEntry(entries: ApiKeyEntry[], entry: ApiKeyEntry): ApiKeyEntry[] {
@@ -347,8 +181,6 @@ function upsertApiKeyEntry(entries: ApiKeyEntry[], entry: ApiKeyEntry): ApiKeyEn
   return [entry, ...nextEntries];
 }
 
-/** Duration to show "success" state before returning to idle */
-const SUCCESS_DISPLAY_MS = 2_000;
 const PROJECT_SCOPE_REQUIRED_MESSAGE =
   'Project- and local-scoped plugins require an active project in the Extensions tab.';
 
@@ -372,59 +204,15 @@ function getExtensionActionCliStatusState(
 }
 
 export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSlice> = (
-  set,
-  get
+  setStore,
+  getStore
 ) => ({
-  // ── Initial state ──
-  pluginCatalog: [],
-  pluginCatalogLoading: false,
-  pluginCatalogError: null,
-  pluginCatalogProjectPath: null,
-  pluginReadmes: {},
-  pluginReadmeLoading: {},
-
-  mcpBrowseCatalog: [],
-  mcpBrowseNextCursor: undefined,
-  mcpBrowseLoading: false,
-  mcpBrowseError: null,
-  mcpInstalledServers: [],
-  mcpInstalledServersByProjectPath: {},
-  mcpInstalledProjectPath: null,
-  mcpDiagnostics: {},
-  mcpDiagnosticsByProjectPath: {},
-  mcpDiagnosticsLoading: false,
-  mcpDiagnosticsLoadingByProjectPath: {},
-  mcpDiagnosticsError: null,
-  mcpDiagnosticsErrorByProjectPath: {},
-  mcpDiagnosticsLastCheckedAt: null,
-  mcpDiagnosticsLastCheckedAtByProjectPath: {},
-
-  pluginInstallProgress: {},
-  mcpInstallProgress: {},
-  installErrors: {},
-
-  apiKeys: [],
-  apiKeysLoading: false,
-  apiKeysError: null,
-  apiKeySaving: false,
-  apiKeyStorageStatus: null,
-
-  skillsUserCatalog: [],
-  skillsProjectCatalogByProjectPath: {},
-  skillsCatalogLoadingByProjectPath: {},
-  skillsCatalogErrorByProjectPath: {},
-  skillsLoading: false,
-  skillsError: null,
-  skillsDetailsById: {},
-  skillsDetailLoadingById: {},
-  skillsDetailErrorById: {},
-  skillsMutationLoading: false,
-  skillsMutationError: null,
-
-  mcpGitHubStars: {},
+  ...extensionInitialState(),
 
   // ── Plugin catalog fetch ──
   fetchPluginCatalog: async (projectPath?: string, forceRefresh?: boolean) => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.plugins) return;
     const requestKey = getPluginCatalogKey(projectPath);
 
@@ -469,6 +257,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
           };
         });
       } catch (err) {
+        if (!isCurrent()) return;
         set((prev) => {
           if (requestSeq !== pluginCatalogRequestSeq) {
             return {};
@@ -507,6 +296,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── Plugin README fetch ──
   fetchPluginReadme: (pluginId: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get } = captureExtensionsContext(setStore, getStore);
     if (!api.plugins) return;
     const state = get();
     const cachedReadme = state.pluginReadmes[pluginId];
@@ -539,6 +330,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── MCP browse ──
   mcpBrowse: async (cursor?: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.mcpRegistry) return;
 
     set({ mcpBrowseLoading: true, mcpBrowseError: null });
@@ -562,6 +355,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         };
       });
     } catch (err) {
+      if (!isCurrent()) return;
       set({
         mcpBrowseLoading: false,
         mcpBrowseError: err instanceof Error ? err.message : 'Failed to browse MCP servers',
@@ -571,6 +365,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── MCP installed fetch ──
   mcpFetchInstalled: async (projectPath?: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.mcpRegistry) return;
 
     try {
@@ -602,16 +398,20 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         };
       });
     } catch {
+      if (!isCurrent()) return;
       // Silently fail — installed state is supplementary
     }
   },
 
   runMcpDiagnostics: async (projectPath?: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     const mcpRegistry = api.mcpRegistry;
     if (!mcpRegistry) return;
     const projectStateKey = getMcpProjectStateKey(projectPath);
 
-    const existing = mcpDiagnosticsInFlightByKey.get(projectStateKey);
+    const contextRequestKey = `${captureContextScopedRequestEpoch()}:${projectStateKey}`;
+    const existing = mcpDiagnosticsInFlightByKey.get(contextRequestKey);
     if (existing) {
       await existing;
       return;
@@ -655,6 +455,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
           },
         });
       } catch (err) {
+        if (!isCurrent()) return;
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to check MCP server health';
         set({
@@ -670,15 +471,17 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
           },
         });
       } finally {
-        mcpDiagnosticsInFlightByKey.delete(projectStateKey);
+        mcpDiagnosticsInFlightByKey.delete(contextRequestKey);
       }
     })();
 
-    mcpDiagnosticsInFlightByKey.set(projectStateKey, promise);
+    mcpDiagnosticsInFlightByKey.set(contextRequestKey, promise);
     await promise;
   },
 
   fetchSkillsCatalog: async (projectPath?: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) return;
 
     const requestKey = getSkillsCatalogKey(projectPath);
@@ -729,6 +532,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
           : prev.skillsProjectCatalogByProjectPath,
       }));
     } catch (err) {
+      if (!isCurrent()) return;
       if (latestSkillsCatalogRequestByKey.get(requestKey) !== requestId) {
         return;
       }
@@ -753,6 +557,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   fetchSkillDetail: async (skillId: string, projectPath?: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) return;
 
     const requestId = ++skillsDetailRequestSeq;
@@ -775,6 +581,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         skillsDetailErrorById: { ...prev.skillsDetailErrorById, [skillId]: null },
       }));
     } catch (err) {
+      if (!isCurrent()) return;
       if (latestSkillsDetailRequestById.get(skillId) !== requestId) {
         return;
       }
@@ -789,6 +596,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   previewSkillUpsert: async (request: SkillUpsertRequest) => {
+    if (getStore().isContextSwitching) throw new Error('Extensions context changed');
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) {
       throw new Error('Skills API is not available');
     }
@@ -799,6 +608,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       set({ skillsMutationLoading: false });
       return preview;
     } catch (err) {
+      if (!isCurrent()) throw err;
       const message = err instanceof Error ? err.message : 'Failed to review skill changes';
       set({ skillsMutationLoading: false, skillsMutationError: message });
       throw err;
@@ -806,6 +616,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   applySkillUpsert: async (request: SkillUpsertRequest) => {
+    if (getStore().isContextSwitching) return null;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) {
       throw new Error('Skills API is not available');
     }
@@ -822,6 +634,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }));
       return detail;
     } catch (err) {
+      if (!isCurrent()) return null;
       const message = err instanceof Error ? err.message : 'Failed to save skill';
       set({ skillsMutationLoading: false, skillsMutationError: message });
       throw err;
@@ -829,6 +642,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   previewSkillImport: async (request: SkillImportRequest) => {
+    if (getStore().isContextSwitching) throw new Error('Extensions context changed');
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) {
       throw new Error('Skills API is not available');
     }
@@ -839,6 +654,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       set({ skillsMutationLoading: false });
       return preview;
     } catch (err) {
+      if (!isCurrent()) throw err;
       const message = err instanceof Error ? err.message : 'Failed to review import changes';
       set({ skillsMutationLoading: false, skillsMutationError: message });
       throw err;
@@ -846,6 +662,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   applySkillImport: async (request: SkillImportRequest) => {
+    if (getStore().isContextSwitching) return null;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) {
       throw new Error('Skills API is not available');
     }
@@ -862,6 +680,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }));
       return detail;
     } catch (err) {
+      if (!isCurrent()) return null;
       const message = err instanceof Error ? err.message : 'Failed to import skill';
       set({ skillsMutationLoading: false, skillsMutationError: message });
       throw err;
@@ -869,6 +688,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   deleteSkill: async (request: SkillDeleteRequest) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.skills) {
       throw new Error('Skills API is not available');
     }
@@ -886,6 +707,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         };
       });
     } catch (err) {
+      if (!isCurrent()) return;
       const message = err instanceof Error ? err.message : 'Failed to delete skill';
       set({ skillsMutationLoading: false, skillsMutationError: message });
       throw err;
@@ -894,6 +716,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── Plugin install ──
   installPlugin: async (request: PluginInstallRequest) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.plugins) return;
 
     const catalogProjectPathAtOperationStart = get().pluginCatalogProjectPath ?? undefined;
@@ -916,6 +740,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       try {
         await refreshConfiguredCliStatus(preflightState);
       } catch {
+        if (!isCurrent()) return;
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
       }
     }
@@ -972,6 +797,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
       schedulePluginSuccessReset(operationKey, set);
     } catch (err) {
+      if (!isCurrent()) return;
       clearPluginSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
@@ -983,6 +809,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── Plugin uninstall ──
   uninstallPlugin: async (pluginId: string, scope?: PluginInstallScope, projectPath?: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.plugins) return;
 
     const catalogProjectPathAtOperationStart = get().pluginCatalogProjectPath ?? undefined;
@@ -1006,6 +834,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       try {
         await refreshConfiguredCliStatus(preflightState);
       } catch {
+        if (!isCurrent()) return;
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing uninstall error below.
       }
     }
@@ -1054,6 +883,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
       schedulePluginSuccessReset(operationKey, set);
     } catch (err) {
+      if (!isCurrent()) return;
       clearPluginSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Uninstall failed';
       set((prev) => ({
@@ -1065,6 +895,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── MCP install ──
   installMcpServer: async (request: McpInstallRequest) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     const operationKey = getMcpOperationKey(request.registryId, request.scope, request.projectPath);
     if (!api.mcpRegistry) {
       clearMcpSuccessResetTimer(operationKey);
@@ -1083,6 +915,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       try {
         await refreshConfiguredCliStatus(preflightState);
       } catch {
+        if (!isCurrent()) return;
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
       }
     }
@@ -1130,6 +963,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
       scheduleMcpSuccessReset(operationKey, set);
     } catch (err) {
+      if (!isCurrent()) return;
       clearMcpSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
@@ -1141,6 +975,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── MCP custom install ──
   installCustomMcpServer: async (request: McpCustomInstallRequest) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     const operationScope = request.scope;
     const progressKey = getCustomMcpOperationKey(
       request.serverName,
@@ -1157,6 +993,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         try {
           await refreshConfiguredCliStatus(preflightState);
         } catch {
+          if (!isCurrent()) return;
           // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
         }
       }
@@ -1191,6 +1028,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
       scheduleMcpSuccessReset(progressKey, set);
     } catch (err) {
+      if (!isCurrent()) return;
       clearMcpSuccessResetTimer(progressKey);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
@@ -1208,6 +1046,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     scope?: string,
     projectPath?: string
   ) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     const operationScope: InstallScope =
       scope === 'global' || scope === 'user' || isProjectScopedMcpScope(scope) ? scope : 'user';
     const operationKey = getMcpOperationKey(registryId, operationScope, projectPath);
@@ -1225,6 +1065,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       try {
         await refreshConfiguredCliStatus(preflightState);
       } catch {
+        if (!isCurrent()) return;
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing uninstall error below.
       }
     }
@@ -1272,6 +1113,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
       scheduleMcpSuccessReset(operationKey, set);
     } catch (err) {
+      if (!isCurrent()) return;
       clearMcpSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Uninstall failed';
       set((prev) => ({
@@ -1283,6 +1125,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── API Keys fetch ──
   fetchApiKeys: async () => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.apiKeys) return;
 
     set({ apiKeysLoading: true, apiKeysError: null });
@@ -1290,6 +1134,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       const keys = await api.apiKeys.list();
       set({ apiKeys: keys, apiKeysLoading: false });
     } catch (err) {
+      if (!isCurrent()) return;
       set({
         apiKeysLoading: false,
         apiKeysError: err instanceof Error ? err.message : 'Failed to load API keys',
@@ -1298,17 +1143,22 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   },
 
   fetchApiKeyStorageStatus: async () => {
+    if (getStore().isContextSwitching) return;
+    const { set, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.apiKeys) return;
     try {
       const status = await api.apiKeys.getStorageStatus();
       set({ apiKeyStorageStatus: status });
     } catch {
+      if (!isCurrent()) return;
       // Non-critical — UI will just not show the info icon
     }
   },
 
   // ── API Key save ──
   saveApiKey: async (request: ApiKeySaveRequest) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.apiKeys) return;
 
     set({ apiKeySaving: true, apiKeysError: null });
@@ -1320,6 +1170,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         const keys = await api.apiKeys.list();
         set({ apiKeys: keys });
       } catch (listError) {
+        if (!isCurrent()) return;
         warnings.push(
           listError instanceof Error
             ? `API key saved, but failed to refresh key list. ${listError.message}`
@@ -1337,6 +1188,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }
       set({ apiKeySaving: false, apiKeysError: warnings.length > 0 ? warnings.join(' ') : null });
     } catch (err) {
+      if (!isCurrent()) return;
       set({
         apiKeySaving: false,
         apiKeysError: err instanceof Error ? err.message : 'Failed to save API key',
@@ -1347,6 +1199,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── API Key delete ──
   deleteApiKey: async (id: string) => {
+    if (getStore().isContextSwitching) return;
+    const { set, get, isCurrent } = captureExtensionsContext(setStore, getStore);
     if (!api.apiKeys) return;
 
     try {
@@ -1362,6 +1216,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
           : null,
       });
     } catch (err) {
+      if (!isCurrent()) return;
       set({
         apiKeysError: err instanceof Error ? err.message : 'Failed to delete API key',
       });
@@ -1371,7 +1226,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── Tab opener ──
   openExtensionsTab: () => {
-    const state = get();
+    const state = getStore();
     const currentProjectId = state.selectedProjectId ?? state.activeProjectId ?? undefined;
     const focusedPane = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
     const existingTab = focusedPane?.tabs.find((tab) => tab.type === 'extensions');
@@ -1380,7 +1235,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       if (existingTab.projectId !== currentProjectId) {
         const pane = findPaneByTabId(state.paneLayout, existingTab.id);
         if (pane) {
-          set({
+          setStore({
             paneLayout: updatePane(state.paneLayout, {
               ...pane,
               tabs: pane.tabs.map((t) =>
@@ -1403,6 +1258,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── GitHub Stars (fire-and-forget) ──
   fetchMcpGitHubStars: (repositoryUrls: string[]) => {
+    if (getStore().isContextSwitching) return;
+    const { set } = captureExtensionsContext(setStore, getStore);
     if (!api.mcpRegistry || repositoryUrls.length === 0) return;
     void api.mcpRegistry
       .githubStars(repositoryUrls)
