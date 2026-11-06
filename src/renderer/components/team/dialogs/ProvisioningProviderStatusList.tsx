@@ -659,7 +659,7 @@ function hasCompatibilityPendingDetails(checks: ProvisioningProviderCheck[]): bo
 export function getDisplayStatusText(check: ProvisioningProviderCheck, t?: TeamTranslator): string {
   const publicDetails = getPublicProvisioningDetails(check.details);
   if (check.status === 'failed' && check.providerId === 'opencode' &&
-      publicDetails.some(isOpenCodeProjectAccessDeniedDiagnostic))
+      publicDetails.some((detail) => /project folder access denied|project OpenCode config: access denied/i.test(detail)))
     return 'Project folder access denied';
   const modelSummary = getModelDetailSummary(publicDetails, t);
   if (modelSummary) {
@@ -1095,8 +1095,8 @@ export function getProvisioningFailureHint(
     check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
   );
   const normalizedMessage = message?.trim() ?? '';
-  if (failedOpenCodeChecks.some((check) => check.details.some(isOpenCodeProjectAccessDeniedDiagnostic)) ||
-      (!hasFailedNonOpenCodeCheck && failedOpenCodeChecks.length > 0 && isOpenCodeProjectAccessDeniedDiagnostic(normalizedMessage)))
+  if (!hasFailedNonOpenCodeCheck &&
+      failedOpenCodeChecks.some((check) => [...check.details, normalizedMessage].some(isOpenCodeProjectAccessDeniedDiagnostic)))
     return t?.('provisioning.providerStatus.failureHints.default') ?? 'Resolve the issue above, then reopen this dialog.';
   const hasOpenCodeNodeModulesSymlinkPermissionMessage =
     failedOpenCodeChecks.length > 0 &&

@@ -18,6 +18,24 @@ describe('getDisplayStatusText', () => {
     })).toBe('Project folder access denied');
   });
 
+  it('does not call a global or home config permission issue a project-folder failure', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: [
+        'Cannot inspect the user home directory for the global OpenCode config: access denied (EACCES).',
+      ],
+    })).not.toBe('Project folder access denied');
+  });
+
+  it('recognizes project-config permission errors without the project-folder prefix', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: ['Cannot inspect the project OpenCode config: access denied (EPERM).'],
+    })).toBe('Project folder access denied');
+  });
+
   it('does not mislabel an unverified model failure as a filesystem permission issue', () => {
     expect(getDisplayStatusText({
       providerId: 'opencode',
@@ -66,6 +84,16 @@ describe('getProvisioningFailureHint', () => {
         },
       ])
     ).toBe('Resolve the issue above, then reopen this dialog.');
+  });
+
+  it('does not mask another failed provider with an OpenCode project-access hint', () => {
+    expect(getProvisioningFailureHint(
+      'Project folder access denied (EPERM)',
+      [
+        { providerId: 'opencode', status: 'failed', details: ['Project folder access denied (EPERM)'] },
+        { providerId: 'anthropic', status: 'failed', details: ['Not authenticated'] },
+      ]
+    )).toBe('Authenticate the required provider in its configured runtime, then reopen this dialog.');
   });
 
   it('keeps non-OpenCode access-denied details on the generic CLI hint', () => {
