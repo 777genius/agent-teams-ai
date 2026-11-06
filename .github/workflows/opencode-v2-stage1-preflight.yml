@@ -23,6 +23,11 @@ on:
       - scripts/ci/install-dependencies-with-retry.mjs
       - .github/workflows/opencode-v2-stage1-preflight.yml
 
+# Canonical PR supersession; never cancel main/tag/manual evidence.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
 permissions:
   contents: read
 
