@@ -107,19 +107,29 @@ Observation**. Agent Runtime separately owns provider output, technical event
 origin and parent/child subagent provenance. Neither owner's partial feed
 satisfies both contracts or qualifies the Stage 2 Desktop Activity E2E.
 
-**Existing upstream sandbox implementation (not current-main or production):**
+**Upstream sandbox implementation (not production target qualification):**
 [Orchestrator PR #85](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/85)
-contains a real Execution Observation PostgreSQL Activity writer, scoped
-runtime binding, read cursors and native PostgreSQL restart/RLS/disconnect tests.
-At exact PR HEAD [`ce32a195`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/ce32a19582a0a9f0f27df1d8a7f17d7facea6fa6),
-a further release-time UNKNOWN guard and same-source reconciliation **test case**
-were committed; that new test has **no confirmed exact-head E2E execution**.
-The PR remains unmerged and conflicts with current Orchestrator `main`;
-its older trusted Docs workflow failed. Preserve its single intended M11 owner
-instead of implementing a duplicate Activity writer. Reconcile accepted
-GetModular/docs/current main and qualify real PostgreSQL, authorization and
-complete Runtime subagent provenance before changing M11 from
-`requires new capability` or declaring any Stage 2 Desktop PASS.
+HEAD [`07c13f00`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/07c13f00cc9f9a9ba554fb2d30ccf50a525ecd0e)
+contains a real Execution Observation PostgreSQL Activity writer, scoped runtime
+binding, read cursors, and native PostgreSQL restart/RLS/disconnect tests.
+Its stacked [Draft PR #98](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/98)
+HEAD [`fde0a320`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/fde0a320647e3b355094673e83c582c8c3d65839)
+preserves release-time UNKNOWN/same-source reconciliation. On that stacked
+candidate the [native PostgreSQL 16 test matrix](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266274)
+passed 14/14 on each of Node 24 and 26, and all four
+[Architecture jobs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266589)
+passed. These results qualify the **bounded sandbox regression only**, not an
+unmodified `#85` merge into current `main`, production Team/Runtime API or Desktop.
+The [trusted Docs Protocol](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209267123)
+still fails closed: `@agent-teams/repository-mutation` has both physical
+`0.2.2` and `0.4.0` resolutions because the older Docs cohort and Foundation
+`2.1.0` disagree. Do not remove a required dependency or bypass cohort
+authority to claim green. `#85` remains unmerged/nonmergeable against
+Orchestrator `main` `a34587b3`; the stacked PRs remain Draft.
+Preserve the single intended M11 Activity writer, reconcile the **whole**
+qualified Docs cohort and current-main source first, then prove complete
+Runtime provider/subagent provenance, authority and Desktop native/packed
+E2E before changing M11 from `requires new capability`.
 
 **Consumer classification:** the existing Desktop `AgentBackendApi`, selected
 `BackendHandle`, and retained-handle routing are **exact-compatible at the
