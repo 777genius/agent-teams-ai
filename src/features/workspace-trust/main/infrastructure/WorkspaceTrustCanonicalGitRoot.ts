@@ -21,7 +21,7 @@ async function readTrimmedFileOrNull(filePath: string): Promise<string | null> {
 function validHead(head: string | null): boolean {
   return Boolean(
     head &&
-    (/^ref: refs\/(?:heads|tags)\/[a-zA-Z0-9][^\r\n]*$/.test(head) ||
+    (/^ref: refs\/(?:heads|tags)\/[^\s][^\r\n]*$/.test(head) ||
       /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(head))
   );
 }
@@ -51,7 +51,11 @@ async function isValidGitMarker(root: string): Promise<boolean> {
     // Worktrees must link back to this exact .git file; do not borrow another
     // repository's metadata as a source of trust for sibling directories.
     if (commonDir) {
-      const [actual, expected] = await Promise.all([realpathOrNull(backlink ?? ''), realpathOrNull(marker)]);
+      if (!backlink) return false;
+      const [actual, expected] = await Promise.all([
+        realpathOrNull(path.resolve(gitDir, backlink)),
+        realpathOrNull(marker),
+      ]);
       return Boolean(actual && expected && actual === expected);
     }
     // Submodules may legitimately use .git files pointing to a module gitdir.
@@ -119,7 +123,7 @@ export async function resolveWorkspaceTrustCanonicalGitRoot(gitRoot: string): Pr
   }
 
   const [backlink, realGitRoot] = await Promise.all([
-    realpathOrNull(gitdirBacklink),
+    realpathOrNull(path.resolve(worktreeGitDir, gitdirBacklink)),
     realpathOrNull(normalizedGitRoot),
   ]);
   if (!backlink || !realGitRoot || backlink !== path.join(realGitRoot, '.git')) {

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
@@ -87,13 +87,15 @@ describe('TeamProvisioningWorkspaceTrust', () => {
       await writeFile(path.join(gitWorktreeDir, 'gitdir'), `${path.join(worktree, '.git')}\n`);
       await writeFile(path.join(worktree, '.git'), 'gitdir: ../.git/worktrees/teammate\n');
       const ports = createNodeWorkspaceTrustWorkspaceCollectionPorts();
+      const canonicalRepo = await realpath(repo);
+      const canonicalWorktree = await realpath(worktree);
 
-      await expect(ports.resolveGitRoot(nested)).resolves.toBe(repo);
-      await expect(ports.resolveGitRoot(worktree)).resolves.toBe(worktree);
+      await expect(ports.resolveGitRoot(nested)).resolves.toBe(canonicalRepo);
+      await expect(ports.resolveGitRoot(worktree)).resolves.toBe(canonicalWorktree);
       if (process.platform !== 'win32') {
         const nestedLink = path.join(repo, 'linked-project');
         await symlink(nested, nestedLink);
-        await expect(ports.resolveGitRoot(nestedLink)).resolves.toBe(repo);
+        await expect(ports.resolveGitRoot(nestedLink)).resolves.toBe(canonicalRepo);
       }
     } finally {
       await rm(repo, { recursive: true, force: true });

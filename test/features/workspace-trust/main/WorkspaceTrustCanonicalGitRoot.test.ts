@@ -19,6 +19,7 @@ async function createSyntheticWorktree(input: {
   repoDir: string;
   worktreeDir: string;
   name: string;
+  relativeBacklink?: boolean;
 }): Promise<void> {
   const worktreeGitDir = path.join(input.repoDir, '.git', 'worktrees', input.name);
   await fs.mkdir(input.worktreeDir, { recursive: true });
@@ -26,9 +27,10 @@ async function createSyntheticWorktree(input: {
   await fs.writeFile(path.join(worktreeGitDir, 'HEAD'), 'ref: refs/heads/main\n');
   await fs.writeFile(path.join(input.worktreeDir, '.git'), `gitdir: ${worktreeGitDir}\n`, 'utf8');
   await fs.writeFile(path.join(worktreeGitDir, 'commondir'), '../..\n', 'utf8');
+  const backlink = path.join(input.worktreeDir, '.git');
   await fs.writeFile(
     path.join(worktreeGitDir, 'gitdir'),
-    `${path.join(input.worktreeDir, '.git')}\n`,
+    `${input.relativeBacklink ? path.relative(worktreeGitDir, backlink) : backlink}\n`,
     'utf8'
   );
 }
@@ -51,6 +53,20 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+  });
+
+  it('accepts valid symbolic HEAD names beginning with underscore, Unicode or dot', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'repo');
+    const nested = path.join(repo, 'nested');
+    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await fs.mkdir(nested);
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
+
+    for (const branch of ['_feature', 'фича', '.invalid']) {
+      await fs.writeFile(path.join(repo, '.git', 'HEAD'), `ref: refs/heads/${branch}\n`);
+      await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+    }
   });
 
   it('preserves the original filesystem spelling for decomposed unicode paths', async () => {
@@ -108,6 +124,21 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice' });
 
+    await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
+  });
+
+  it('resolves worktree-relative backlinks from git metadata, not process cwd', async () => {
+    const dir = await makeTmpDir();
+    const repoDir = path.join(dir, 'repo');
+    const worktreeDir = path.join(dir, 'worktrees', 'alice');
+    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
+    await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice', relativeBacklink: true });
+    const nested = path.join(worktreeDir, 'nested');
+    await fs.mkdir(nested);
+
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(worktreeDir);
     await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
   });
 
