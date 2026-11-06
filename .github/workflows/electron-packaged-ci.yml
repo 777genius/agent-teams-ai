@@ -132,6 +132,8 @@ jobs:
           done
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify managed Git pins and archive path safety
+        run: node --test scripts/stage-managed-git.test.mjs
       - name: Typecheck packaged CI policy with pinned compiler
         run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
       - name: Assert Electron binary was provisioned during install
