@@ -89,9 +89,33 @@ jobs:
           ! find "$release" -type l | grep -q .
           grep -Fq 'OpenRig' "$release/landing/index.html"
           grep -Fq 'Supported desktop platforms' "$release/landing/index.html"
-          grep -Fq 'https://agentteams.live' "$release/landing/index.html"
-          grep -Fq 'https://docs.agentteams.live' "$release/docs/index.html"
-          grep -Fq 'https://docs.agentteams.live' "$release/landing/docs/index.html"
+          python3 - "$release" <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import sys
+
+          class Canonical(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+              def handle_starttag(self, tag, attrs):
+                  a = dict(attrs)
+                  if tag == "link" and a.get("rel") == "canonical":
+                      self.urls.append(a.get("href"))
+
+          root = Path(sys.argv[1])
+          expected = {
+              "landing/index.html": "https://agentteams.live/",
+              "docs/index.html": "https://docs.agentteams.live/",
+              "landing/docs/index.html": "https://docs.agentteams.live/",
+          }
+          for path, url in expected.items():
+              parser = Canonical()
+              parser.feed((root / path).read_text())
+              if parser.urls != [url]:
+                  raise SystemExit(f"{path}: unexpected canonical: {parser.urls!r}")
+          print("Exact production canonical URLs verified")
+          PY
           tar -C "$release" -czf "$RUNNER_TEMP/agent-teams-static.tar.gz" landing docs
           cd "$RUNNER_TEMP"
           sha256sum agent-teams-static.tar.gz > agent-teams-static.tar.gz.sha256
