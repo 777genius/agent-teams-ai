@@ -164,6 +164,10 @@ async function publishLaunchRoster(
       throw new Error(ROSTER_CONFLICT_MESSAGE);
     }
     const currentRaw = await ports.readConfig();
+    // Stop/relaunch can invalidate the run while the final config read is pending.
+    if (!input.isCurrentRun()) {
+      throw new Error(ROSTER_CONFLICT_MESSAGE);
+    }
     if (currentRaw !== raw) {
       const currentConfig = currentRaw ? (JSON.parse(currentRaw) as Record<string, unknown>) : null;
       if (

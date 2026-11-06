@@ -106,6 +106,22 @@ describe('TeamProvisioningLaunchRosterMaterialization', () => {
     expect(ports.invalidateTeam).not.toHaveBeenCalled();
   });
 
+  it('refuses an atomic write when Stop wins during the final config read', async () => {
+    const { state, input, ports } = createHarness();
+    const read = ports.readConfig;
+    let reads = 0;
+    ports.readConfig = async () => {
+      const raw = await read();
+      if (++reads === 2) state.current = false;
+      return raw;
+    };
+    await expect(materializeTeamProvisioningLaunchRoster(input, ports)).rejects.toThrow(
+      'roster changed before config commit'
+    );
+    expect(JSON.parse(state.raw).members).toHaveLength(2);
+    expect(ports.invalidateTeam).not.toHaveBeenCalled();
+  });
+
   it('does not read or write for an already cancelled or superseded run', async () => {
     const { state, input, ports } = createHarness();
     state.current = false;
