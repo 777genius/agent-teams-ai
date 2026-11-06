@@ -33,6 +33,20 @@ describe('getProvisioningFailureHint', () => {
     );
   });
 
+  it('does not advise Windows administrator privileges for confirmed macOS project access denial', () => {
+    expect(
+      getProvisioningFailureHint(null, [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          details: [
+            'Project folder access denied (EPERM). Grant Agent Teams access in system privacy settings.',
+          ],
+        },
+      ])
+    ).toBe('Resolve the issue above, then reopen this dialog.');
+  });
+
   it('keeps non-OpenCode access-denied details on the generic CLI hint', () => {
     expect(
       getProvisioningFailureHint(null, [

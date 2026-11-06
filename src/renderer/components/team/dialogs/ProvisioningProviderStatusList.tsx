@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import {
+  isOpenCodeProjectAccessDeniedDiagnostic,
   isOpenCodeWindowsAccessDeniedDiagnostic,
   isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic,
   OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
@@ -1091,6 +1092,21 @@ export function getProvisioningFailureHint(
     check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
   );
   const normalizedMessage = message?.trim() ?? '';
+  const hasProjectAccessDenied =
+    failedOpenCodeChecks.some((check) =>
+      check.details.some(isOpenCodeProjectAccessDeniedDiagnostic)
+    ) ||
+    (failedOpenCodeChecks.length > 0 &&
+      !hasFailedNonOpenCodeCheck &&
+      isOpenCodeProjectAccessDeniedDiagnostic(normalizedMessage));
+  if (hasProjectAccessDenied) {
+    // The precise next action is already in the failed check details.
+    // Do not replace it with Windows administrator or missing-CLI guidance.
+    return (
+      t?.('provisioning.providerStatus.failureHints.default') ??
+      'Resolve the issue above, then reopen this dialog.'
+    );
+  }
   const hasOpenCodeNodeModulesSymlinkPermissionMessage =
     failedOpenCodeChecks.length > 0 &&
     (normalizedMessage === OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE ||

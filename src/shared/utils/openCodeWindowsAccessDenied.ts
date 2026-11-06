@@ -4,6 +4,16 @@ export const OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE =
 export const OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE =
   'Windows blocked OpenCode from creating the managed node_modules symlink. Run Agent Teams AI as Administrator, then retry launch.';
 
+const PROJECT_ACCESS_DENIED_PATTERN =
+  /\bproject folder access denied \((?:EPERM|EACCES)\)|\bcannot (?:read|inspect) the (?:project|global) opencode config: access denied \((?:EPERM|EACCES)\)/i;
+
+/** A verified project/config permission failure needs cross-platform guidance, never a Windows-only hint. */
+export function isOpenCodeProjectAccessDeniedDiagnostic(
+  value: string | null | undefined
+): boolean {
+  return typeof value === 'string' && PROJECT_ACCESS_DENIED_PATTERN.test(value);
+}
+
 const OPENCODE_WINDOWS_ACCESS_DENIED_PATTERN =
   /\b(?:EPERM|EACCES)\b|access is denied|permission denied|operation not permitted/i;
 
@@ -38,7 +48,7 @@ export function isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic(
 
 export function isOpenCodeWindowsAccessDeniedDiagnostic(value: string | null | undefined): boolean {
   const trimmed = value?.trim();
-  if (!trimmed) {
+  if (!trimmed || isOpenCodeProjectAccessDeniedDiagnostic(trimmed)) {
     return false;
   }
   return (
