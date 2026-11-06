@@ -352,6 +352,21 @@ export function createOpenCodeV2MemberProvider(
                 const onAbort = () => wakeRevocation();
                 abort.signal.addEventListener('abort', onAbort, { once: true });
                 if (abort.signal.aborted) onAbort();
+                // Host allocation/lease authority can be revoked without a
+                // native event or an explicit seal() call. The private feed
+                // offers no cancellation subscription, so monitor only while
+                // an observer is active; an idle next() must not stay live.
+                const leaseWatch = setInterval(() => {
+                  try {
+                    if (!current()) wakeRevocation();
+                  } catch {
+                    // A broken authority provider is not affirmative custody.
+                    qualificationRevoked = true;
+                    abort.abort();
+                    void finishOwned();
+                  }
+                }, 250);
+                leaseWatch.unref();
                 let exhausted = false;
                 let authorityLost = false;
                 const waitForAttestation = async (): Promise<boolean> => {
@@ -398,6 +413,7 @@ export function createOpenCodeV2MemberProvider(
                     throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
                   throw error;
                 } finally {
+                  clearInterval(leaseWatch);
                   abort.signal.removeEventListener('abort', onAbort);
                   try {
                     // The pinned EventFeed does not accept cancellation. On
