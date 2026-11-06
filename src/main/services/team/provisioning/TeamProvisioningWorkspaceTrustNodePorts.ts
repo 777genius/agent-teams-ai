@@ -11,7 +11,8 @@ export function createNodeWorkspaceTrustWorkspaceCollectionPorts(): WorkspaceTru
   return {
     getHomeDir,
     realpath: async (value) => fs.promises.realpath(value).catch(() => null),
-    resolveGitRoot: resolveWorkspaceTrustFilesystemGitRoot,
+    resolveGitRoot: async (cwd) =>
+      resolveWorkspaceTrustFilesystemGitRoot(await fs.promises.realpath(cwd).catch(() => cwd)),
     resolveCanonicalGitRoot: resolveWorkspaceTrustCanonicalGitRoot,
     platform: process.platform === 'win32' ? 'win32' : 'posix',
   };
