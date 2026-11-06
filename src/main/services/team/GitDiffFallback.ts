@@ -1,5 +1,7 @@
 import * as path from 'node:path';
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
+
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
@@ -48,6 +50,7 @@ export class GitDiffFallback {
     commitHash: string
   ): Promise<string | null> {
     try {
+      if (!(await canUseGitWithoutMacInstallerPrompt())) return null;
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
       const { stdout } = await execFileAsync('git', ['show', `${commitHash}:${relativePath}`], {
@@ -71,6 +74,7 @@ export class GitDiffFallback {
     timestamp: string
   ): Promise<string | null> {
     try {
+      if (!(await canUseGitWithoutMacInstallerPrompt())) return null;
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
       const { stdout } = await execFileAsync(
@@ -94,6 +98,7 @@ export class GitDiffFallback {
     toCommit: string = 'HEAD'
   ): Promise<string | null> {
     try {
+      if (!(await canUseGitWithoutMacInstallerPrompt())) return null;
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
       const { stdout } = await execFileAsync(
@@ -116,6 +121,7 @@ export class GitDiffFallback {
     maxCount: number = 20
   ): Promise<{ hash: string; timestamp: string; message: string }[]> {
     try {
+      if (!(await canUseGitWithoutMacInstallerPrompt())) return [];
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return [];
       const { stdout } = await execFileAsync(
@@ -146,6 +152,7 @@ export class GitDiffFallback {
     if (cached !== undefined) return cached;
 
     try {
+      if (!(await canUseGitWithoutMacInstallerPrompt())) return false;
       await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {
         cwd: projectPath,
         timeout: GIT_TIMEOUT,
