@@ -61,8 +61,16 @@ async function isValidGitMarker(root: string): Promise<boolean> {
     // Submodules may legitimately use .git files pointing to a module gitdir.
     // A real submodule config identifies its worktree; arbitrary gitdir files do not.
     const config = await readTrimmedFileOrNull(path.join(gitDir, 'config'));
-    const worktree = /(?:^|\n)\s*worktree\s*=\s*([^\r\n]+)/m.exec(config ?? '')?.[1]?.trim();
-    if (!worktree) return false;
+    const coreConfig = /(?:^|\n)\s*\[core\]\s*([^]*?)(?=\n\s*\[|$)/i.exec(config ?? '')?.[1];
+    const rawWorktree = /(?:^|\n)\s*worktree\s*=\s*([^\r\n]+)/im
+      .exec(coreConfig ?? '')?.[1]?.trim();
+    if (!rawWorktree) return false;
+    // Git quotes core.worktree paths containing '#' or ';'. Decode the
+    // ordinary quoted-path escapes instead of treating quotes as path bytes.
+    const worktree =
+      rawWorktree.startsWith('"') && rawWorktree.endsWith('"')
+        ? rawWorktree.slice(1, -1).replace(/\\([\\"])/g, '$1')
+        : rawWorktree;
     return path.resolve(gitDir, worktree) === root;
   } catch {
     return false;

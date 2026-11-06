@@ -115,6 +115,26 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await expect(resolveWorkspaceTrustFilesystemGitRoot(missingDir)).resolves.toBeNull();
   });
 
+  it('recognizes quoted core.worktree paths in a real-style submodule', async () => {
+    const root = await makeTmpDir();
+    const superproject = path.join(root, 'repo');
+    const submodule = path.join(superproject, 'app#1');
+    const nested = path.join(submodule, 'src');
+    const submoduleGitDir = path.join(superproject, '.git', 'modules', 'app#1');
+    await fs.mkdir(path.join(superproject, '.git'), { recursive: true });
+    await fs.writeFile(path.join(superproject, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(superproject, '.git', 'config'), '[core]\n');
+    await fs.mkdir(nested, { recursive: true });
+    await fs.mkdir(submoduleGitDir, { recursive: true });
+    await fs.writeFile(path.join(submodule, '.git'), 'gitdir: ../.git/modules/app#1\n');
+    await fs.writeFile(path.join(submoduleGitDir, 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(
+      path.join(submoduleGitDir, 'config'),
+      '[core]\n\tworktree = "../../../app#1"\n'
+    );
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(submodule);
+  });
+
   it('resolves a valid git worktree to the canonical repository root', async () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
