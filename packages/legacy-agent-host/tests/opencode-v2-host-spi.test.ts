@@ -775,129 +775,117 @@ test('pinned private V2 PR1 refuses Windows native cwd before network access (HO
   });
 
 test('late native prompt ACK stays UNKNOWN during re-attestation and after Host seal',
-  { timeout: 10000 }, async () => {
-    // A disposable localhost peer proves the real pinned private Session SPI
-    // can return a successful prompt ACK after Host authority was revoked.
-    // This is NOT a model turn or native executable qualification.
-    const profile = v2Profile();
-    // The pinned private V2 driver PR #1 validates a POSIX lexical directory
-    // even in this Windows synthetic HTTP transport test. Keep the captured
-    // TEST path unchanged on all CI hosts; it is NOT native Windows custody.
-    let postSeen = Promise.withResolvers<void>();
-    let releaseAck = Promise.withResolvers<void>();
-    const recheckEntered = Promise.withResolvers<void>();
-    const completeRecheck = Promise.withResolvers<void>();
-    let postCount = 0;
-    const sessionPath = '/api/session/' + profile.nativeSessionId;
-    const server = createServer((req, res) => {
-      const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-      const json = (value: unknown) => {
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify(value));
-      };
-      if (req.method === 'GET' && url.pathname === sessionPath) {
-        json({ data: {
-          id: profile.nativeSessionId, location: { directory: profile.cwd },
-          agent: 'TEST-agent', model: { providerID: 'TEST-provider', id: 'TEST-model' },
-          time: { created: 1 },
-        } });
-        return;
-      }
-      if (req.method === 'GET' &&
-          url.pathname === '/api/experimental/session/' + profile.nativeSessionId + '/log') {
-        res.setHeader('content-type', 'text/event-stream');
-        res.end([
-          {
-            id: 'evt_created', type: 'session.created',
-            durable: { aggregateID: profile.nativeSessionId, seq: 0 },
-            data: { sessionID: profile.nativeSessionId },
-            location: { directory: profile.cwd },
-          },
-          { type: 'log.synced', aggregateID: profile.nativeSessionId, seq: 0 },
-        ].map(value => 'data: ' + JSON.stringify(value) + '\n\n').join(''));
-        return;
-      }
-      if (req.method === 'POST' && url.pathname === sessionPath + '/prompt') {
-        let body = '';
-        req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', () => {
-          const input = JSON.parse(body) as { id: string; text: string };
-          postCount++;
-          const ack = releaseAck;
-          postSeen.resolve();
-          void ack.promise.then(() => json({ data: {
-            id: input.id, sessionID: profile.nativeSessionId, type: 'user',
-            delivery: 'queue', time: { created: 1 }, payload: { text: input.text },
-          } }));
+  { timeout: 15000 }, async () => {
+    // Two independent disposable peers: an active turn in the first case must
+    // not contaminate or stall the second case's private single-turn queue.
+    for (const mode of ['recheck', 'seal'] as const) {
+      const profile = v2Profile();
+      const postSeen = Promise.withResolvers<void>();
+      const releaseAck = Promise.withResolvers<void>();
+      const recheckEntered = Promise.withResolvers<void>();
+      const completeRecheck = Promise.withResolvers<void>();
+      let postCount = 0;
+      const sessionPath = '/api/session/' + profile.nativeSessionId;
+      const server = createServer((req, res) => {
+        const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+        const json = (value: unknown) => {
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify(value));
+        };
+        if (req.method === 'GET' && url.pathname === sessionPath) {
+          json({ data: {
+            id: profile.nativeSessionId, location: { directory: profile.cwd },
+            agent: 'TEST-agent', model: { providerID: 'TEST-provider', id: 'TEST-model' },
+            time: { created: 1 },
+          } });
+          return;
+        }
+        if (req.method === 'GET' &&
+            url.pathname === '/api/experimental/session/' + profile.nativeSessionId + '/log') {
+          res.setHeader('content-type', 'text/event-stream');
+          res.end([
+            {
+              id: 'evt_created', type: 'session.created',
+              durable: { aggregateID: profile.nativeSessionId, seq: 0 },
+              data: { sessionID: profile.nativeSessionId },
+              location: { directory: profile.cwd },
+            },
+            { type: 'log.synced', aggregateID: profile.nativeSessionId, seq: 0 },
+          ].map(value => 'data: ' + JSON.stringify(value) + '\n\n').join(''));
+          return;
+        }
+        if (req.method === 'POST' && url.pathname === sessionPath + '/prompt') {
+          let body = '';
+          req.on('data', chunk => { body += chunk.toString(); });
+          req.on('end', () => {
+            const input = JSON.parse(body) as { id: string; text: string };
+            postCount++;
+            postSeen.resolve();
+            void releaseAck.promise.then(() => json({ data: {
+              id: input.id, sessionID: profile.nativeSessionId, type: 'user',
+              delivery: 'queue', time: { created: 1 }, payload: { text: input.text },
+            } }));
+          });
+          return;
+        }
+        res.writeHead(404); res.end();
+      });
+      server.listen(0, '127.0.0.1');
+      await once(server, 'listening');
+      const address = server.address();
+      assert.ok(address && typeof address !== 'string');
+      profile.endpoint = 'http://127.0.0.1:' + address.port;
+      let opened: Awaited<ReturnType<ReturnType<typeof createOpenCodeV2MemberProvider>['factory']['open']>> | undefined;
+      const { captured, calls } = owner(true);
+      try {
+        const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+        opened = await provider.factory.open(request());
+        assert.equal(provider.isReady(), true);
+        const pending = opened.driver.submit({
+          inputId: 'TEST-late-' + mode, operationRef: 'TEST-late-' + mode + '-op',
+          content: 'TEST only; no model',
         });
-        return;
+        // The pinned driver probes before its POST. Only block the separate
+        // re-attestation AFTER the TEST HTTP peer has received the mutation.
+        await postSeen.promise;
+        if (mode === 'recheck') {
+          captured.probe = async () => {
+            calls.probe++;
+            recheckEntered.resolve();
+            await completeRecheck.promise;
+            return true;
+          };
+          const recheck = opened.driver.checkReadiness();
+          await recheckEntered.promise;
+          assert.equal(provider.isReady(), false);
+          releaseAck.resolve();
+          assert.deepEqual(await pending, { ok: false, code: 'unknown' },
+            'committed native POST cannot be acknowledged while Host readiness is fenced');
+          assert.equal(postCount, 1, 'no second native POST after uncertain ACK');
+          assert.equal(calls.stop, 0, 're-attestation alone cannot stop an owned PID');
+          provider.seal();
+          completeRecheck.resolve();
+          assert.equal((await recheck).ok, false, 'seal revokes the suspended native probe');
+        } else {
+          provider.seal();
+          releaseAck.resolve();
+          assert.deepEqual(await pending, { ok: false, code: 'unknown' },
+            'post-seal native ACK is neither authorized nor known-not-sent');
+        }
+        assert.equal(postCount, 1, 'each TEST case sends exactly one native POST');
+        assert.equal(provider.isReady(), false);
+        assert.equal(calls.stop, 1, 'only the captured TEST-owned process is stopped');
+        assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+        assert.equal(await provider.cleanup(), true);
+        assert.equal(calls.stop, 1, 'stop is single-flight after uncertain ACK');
+      } finally {
+        completeRecheck.resolve();
+        releaseAck.resolve();
+        await opened?.driver.close();
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) => {
+          server.close(error => error ? reject(error) : resolve());
+        });
       }
-      res.writeHead(404); res.end();
-    });
-    server.listen(0, '127.0.0.1');
-    await once(server, 'listening');
-    const address = server.address();
-    assert.ok(address && typeof address !== 'string');
-    profile.endpoint = 'http://127.0.0.1:' + address.port;
-    let opened: Awaited<ReturnType<ReturnType<typeof createOpenCodeV2MemberProvider>['factory']['open']>> | undefined;
-    const { captured, calls } = owner(true);
-    try {
-      const provider = createOpenCodeV2MemberProvider(context(profile), captured);
-      opened = await provider.factory.open(request());
-      assert.equal(provider.isReady(), true);
-      // First prove a successful native POST ACK cannot be admitted during
-      // a transient re-attestation even while the Host still owns its PID.
-      const duringRecheck = opened.driver.submit({
-        inputId: 'TEST-late-recheck', operationRef: 'TEST-recheck-op',
-        content: 'TEST recheck; no model',
-      });
-      // The private SPI runs its own probe before starting the native POST.
-      // Hook only AFTER the server has received that POST, so this test
-      // actually exercises the in-flight ACK and not preflight cancellation.
-      await postSeen.promise;
-      captured.probe = async () => {
-        calls.probe++;
-        recheckEntered.resolve();
-        await completeRecheck.promise;
-        return true;
-      };
-      const recheck = opened.driver.checkReadiness();
-      await recheckEntered.promise;
-      assert.equal(provider.isReady(), false, 'native re-attestation fences readiness');
-      releaseAck.resolve();
-      assert.deepEqual(await duringRecheck, { ok: false, code: 'unknown' },
-        'POST may have committed, but Host must not acknowledge it while fenced');
-      assert.equal(postCount, 1, 'the first native POST is never replayed');
-      assert.equal(calls.stop, 0, 'a temporary re-attestation must not stop a valid owner');
-      completeRecheck.resolve();
-      assert.equal((await recheck).ok, true);
-      assert.equal(provider.isReady(), true, 'successful readback restores this same owner');
-
-      // Then retain the original post-seal case with a DISTINCT input.
-      postSeen = Promise.withResolvers<void>();
-      releaseAck = Promise.withResolvers<void>();
-      const pending = opened.driver.submit({
-        inputId: 'TEST-late-seal', operationRef: 'TEST-seal-op', content: 'TEST seal; no model',
-      });
-      await postSeen.promise;
-      provider.seal();
-      releaseAck.resolve();
-      const reply = await pending;
-      assert.deepEqual(reply, { ok: false, code: 'unknown' },
-        'a post-seal ACK is not an authorized handoff or known-not-sent');
-      assert.equal(postCount, 2, 'exactly one POST for each distinct input; zero replay');
-      assert.equal(provider.isReady(), false);
-      assert.equal(calls.stop, 1, 'only one TEST-owned stop signal');
-      assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
-      assert.equal(await provider.cleanup(), true);
-      assert.equal(calls.stop, 1);
-    } finally {
-      completeRecheck.resolve();
-      releaseAck.resolve();
-      await opened?.driver.close();
-      server.closeAllConnections();
-      await new Promise<void>((resolve, reject) => {
-        server.close(error => error ? reject(error) : resolve());
-      });
     }
   });
