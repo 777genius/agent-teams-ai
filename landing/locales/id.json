@@ -136,7 +136,8 @@
       "launchProof": "Status peluncuran rekan tim",
       "orgGovernance": "Organisasi & Gambaran Global",
       "budgetControls": "Kontrol anggaran",
-      "price": "Harga"
+      "price": "Harga",
+      "desktopPlatforms": "Platform desktop yang didukung"
     }
   },
   "screenshots": {

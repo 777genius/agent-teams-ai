@@ -136,7 +136,8 @@
       "launchProof": "Agent readiness and recovery",
       "orgGovernance": "Organizations & Global Overview",
       "budgetControls": "Budget controls",
-      "price": "Price"
+      "price": "Price",
+      "desktopPlatforms": "Supported desktop platforms"
     }
   },
   "screenshots": {

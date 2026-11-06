@@ -136,7 +136,8 @@
       "launchProof": "チームメイトの起動状態",
       "orgGovernance": "組織と全体ビュー",
       "budgetControls": "予算管理",
-      "price": "価格"
+      "price": "価格",
+      "desktopPlatforms": "対応デスクトップOS"
     }
   },
   "screenshots": {

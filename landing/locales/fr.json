@@ -136,7 +136,8 @@
       "launchProof": "Statut de lancement des coéquipiers",
       "orgGovernance": "Organisations et vue globale",
       "budgetControls": "Contrôle budgétaire",
-      "price": "Prix"
+      "price": "Prix",
+      "desktopPlatforms": "Plateformes de bureau prises en charge"
     }
   },
   "screenshots": {

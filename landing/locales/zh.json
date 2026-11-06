@@ -136,7 +136,8 @@
       "launchProof": "队友启动状态",
       "orgGovernance": "组织与全局视图",
       "budgetControls": "预算控制",
-      "price": "价格"
+      "price": "价格",
+      "desktopPlatforms": "支持的桌面平台"
     }
   },
   "screenshots": {

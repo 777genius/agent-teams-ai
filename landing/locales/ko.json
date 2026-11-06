@@ -136,7 +136,8 @@
       "launchProof": "팀원 실행 상태",
       "orgGovernance": "조직 및 전체 개요",
       "budgetControls": "예산 관리",
-      "price": "가격"
+      "price": "가격",
+      "desktopPlatforms": "지원 데스크톱 운영체제"
     }
   },
   "screenshots": {

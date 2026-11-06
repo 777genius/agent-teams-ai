@@ -136,7 +136,8 @@
       "launchProof": "Estado de inicio de compañeros",
       "orgGovernance": "Organizaciones y vista global",
       "budgetControls": "Controles de presupuesto",
-      "price": "Precio"
+      "price": "Precio",
+      "desktopPlatforms": "Plataformas de escritorio compatibles"
     }
   },
   "screenshots": {

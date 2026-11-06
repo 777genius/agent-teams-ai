@@ -136,7 +136,8 @@
       "launchProof": "Startstatus der Teammitglieder",
       "orgGovernance": "Organisationen & Gesamtübersicht",
       "budgetControls": "Budgetkontrollen",
-      "price": "Preis"
+      "price": "Preis",
+      "desktopPlatforms": "Unterstützte Desktop-Plattformen"
     }
   },
   "screenshots": {
