@@ -34,23 +34,26 @@ const muxPosterUrl = computed(() => {
     `https://image.mux.com/${encodeURIComponent(muxPlaybackId.value)}/thumbnail.webp`,
   );
   url.searchParams.set('time', muxThumbnailTime);
-  url.searchParams.set('width', '900');
+  url.searchParams.set('width', isMobileViewport.value ? '480' : '900');
   url.searchParams.set('fit_mode', 'preserve');
   return url.toString();
 });
 const isLoaded = ref(false);
 const hasError = ref(false);
 const isMobileViewport = ref(false);
+// Avoid creating a Mux iframe before checking whether this is a phone.
+const viewportReady = ref(false);
 const playerActivated = ref(false);
 const shouldShowMobilePoster = computed(
   () =>
     Boolean(muxPlayerUrl.value) &&
     !hasError.value &&
+    viewportReady.value &&
     isMobileViewport.value &&
     !playerActivated.value,
 );
 const shouldShowPlayer = computed(
-  () => Boolean(muxPlayerUrl.value) && !hasError.value && !shouldShowMobilePoster.value,
+  () => Boolean(muxPlayerUrl.value) && !hasError.value && viewportReady.value && !shouldShowMobilePoster.value,
 );
 
 let loadFallbackTimer: ReturnType<typeof setTimeout> | null = null;
@@ -78,14 +81,20 @@ function syncMobileViewport() {
 }
 
 function activatePlayer() {
+  isLoaded.value = false;
   playerActivated.value = true;
+  clearLoadFallback();
+  loadFallbackTimer = setTimeout(markLoaded, 2500);
 }
 
 onMounted(() => {
   mobileQuery = window.matchMedia('(max-width: 700px)');
   syncMobileViewport();
+  viewportReady.value = true;
   mobileQuery.addEventListener('change', syncMobileViewport);
-  loadFallbackTimer = setTimeout(markLoaded, 2500);
+  if (shouldShowPlayer.value) {
+    loadFallbackTimer = setTimeout(markLoaded, 2500);
+  }
 });
 
 onUnmounted(() => {

@@ -131,6 +131,18 @@
   50% { transform: translate(25px, -15px); }
 }
 
+/* Avoid seven huge animated blur layers and full-page scanline repaints on phones. */
+@media (max-width: 767px) {
+  .page-bg__orb,
+  .page-bg__scanline {
+    display: none;
+  }
+
+  .page-bg__grid {
+    background-size: 48px 48px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-bg__orb {
     animation: none !important;

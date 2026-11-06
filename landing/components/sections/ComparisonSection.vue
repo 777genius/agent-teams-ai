@@ -45,8 +45,8 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Факты Agent Teams проверены по локальному исходному коду 22 сентября 2026; источники остальных конкурентов проверены 22 сентября 2026; OpenRig v0.6.5 проверен 6 октября 2026:'
-    : 'Agent Teams product facts checked in local source on September 22, 2026; other competitor sources checked on September 22, 2026; OpenRig v0.6.5 checked on October 6, 2026:'
+    ? 'Исследование обновлено 6 ноября 2026: Agent Teams v2.18.6, Gas Town v1.2.1, Paperclip v2026.1023.0, OpenRig v0.7.8; Cursor и Claude Code — официальная документация. Экспериментальные функции отмечены отдельно. Источники:'
+    : 'Research refreshed November 6, 2026: Agent Teams v2.18.6, Gas Town v1.2.1, Paperclip v2026.1023.0, OpenRig v0.7.8; Cursor and Claude Code official docs. Experimental features are marked separately. Sources:'
 ))
 
 const autonomyRatingNote = computed(() => (
@@ -56,6 +56,14 @@ const autonomyRatingNote = computed(() => (
 ))
 
 const ruSourceLabels: Record<string, string> = {
+  'Agent Teams v2.18.6 release': 'релиз Agent Teams v2.18.6',
+  'Gas Town v1.2.1 release and desktop binaries': 'релиз Gas Town v1.2.1 и бинарники для десктопных ОС',
+  'Paperclip v2026.1023.0 release': 'релиз Paperclip v2026.1023.0',
+  'OpenRig v0.7.8 release': 'релиз OpenRig v0.7.8',
+  'OpenRig supported platforms': 'поддерживаемые платформы OpenRig',
+  'Cursor desktop downloads': 'десктопные версии Cursor',
+  'Claude Code supported platforms': 'поддерживаемые платформы Claude Code',
+  'Updated research November 6, 2026': 'исследование от 6 ноября 2026',
   'Agent Teams organizations feature': 'фича организаций Agent Teams',
   'Agent Teams mixed-provider team lanes': 'mixed-provider команды Agent Teams',
   'Agent Teams cross-team messaging': 'межкомандные сообщения Agent Teams',
@@ -119,12 +127,20 @@ const competitors = [
 ]
 
 const sourceLinks = [
-  { label: 'OpenRig v0.6.5 README', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/README.md' },
+  { label: 'Updated research November 6, 2026', href: 'https://github.com/777genius/agent-teams-ai/blob/main/docs/research/desktop-comparison-2026-11-06.md' },
+  { label: 'Agent Teams v2.18.6 release', href: 'https://github.com/777genius/agent-teams-ai/releases/tag/v2.18.6' },
+  { label: 'Gas Town v1.2.1 release and desktop binaries', href: 'https://github.com/gastownhall/gastown/releases/tag/v1.2.1' },
+  { label: 'Paperclip v2026.1023.0 release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.1023.0' },
+  { label: 'OpenRig v0.7.8 release', href: 'https://github.com/mvschwarz/openrig/releases/tag/v0.7.8' },
+  { label: 'OpenRig supported platforms', href: 'https://github.com/mvschwarz/openrig/blob/main/docs/reference/getting-started.md' },
+  { label: 'Cursor desktop downloads', href: 'https://cursor.com/download' },
+  { label: 'Claude Code supported platforms', href: 'https://code.claude.com/docs/en/setup' },
+  { label: 'OpenRig v0.6.5 README (historical baseline)', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/README.md' },
   { label: 'OpenRig coordination and queue', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/coordination-primitive.md' },
   { label: 'OpenRig snapshot and restore', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/lifecycle-snapshot-restore.md' },
   { label: 'OpenRig workspace model', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/workspace-primitive.md' },
   { label: 'OpenRig basic web editor', href: 'https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/packages/ui/src/components/files/FilesWorkspace.tsx' },
-  { label: 'OpenRig comparison evidence', href: 'https://github.com/777genius/agent-teams-ai/blob/main/docs/research/openrig-comparison-2026-10-06.md' },
+  { label: 'OpenRig v0.6.5 comparison evidence (historical)', href: 'https://github.com/777genius/agent-teams-ai/blob/main/docs/research/openrig-comparison-2026-10-06.md' },
 
   { label: 'Agent Teams organizations feature', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md' },
   { label: 'Agent Teams mixed-provider team lanes', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts' },
@@ -177,7 +193,7 @@ const sourceLinks = [
     label: 'Paperclip work products',
     href: 'https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts',
   },
-  { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.916.1' },
+  { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.1023.0' },
   { label: 'Cursor terminal', href: 'https://cursor.com/docs/agent/tools/terminal' },
   { label: 'Cursor Cloud Agents', href: 'https://cursor.com/docs/cloud-agent' },
   { label: 'Cursor Agent Review', href: 'https://cursor.com/docs/agent/agent-review' },
@@ -196,7 +212,7 @@ const sourceLinks = [
   { label: 'Claude Code workflows', href: 'https://code.claude.com/docs/en/workflows' },
   { label: 'Claude Code costs', href: 'https://code.claude.com/docs/en/costs' },
   { label: 'Claude pricing', href: 'https://claude.com/pricing' },
-  { label: 'Claude Code release', href: 'https://github.com/anthropics/claude-code/releases/tag/v2.1.278' },
+  { label: 'Claude Code release', href: 'https://github.com/anthropics/claude-code/releases/tag/v2.1.318' },
 ]
 
 onMounted(() => {
@@ -847,6 +863,10 @@ function getPowerLabel(power: number): string {
 .comparison-table__cell--text .comparison-table__cell-content {
   color: #8892b0;
   background: rgba(255, 255, 255, 0.04);
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
 }
 
 /* Highlight column — our product */
