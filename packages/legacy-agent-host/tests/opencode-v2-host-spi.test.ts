@@ -382,6 +382,24 @@ test('cleanup retries only read-only physical confirmation after uncertain stop 
   assert.equal(provider.initialContextEvidence?.(), undefined);
 });
 
+test('sealing a ready V2 capture initiates its own physical stop before explicit cleanup', async () => {
+  const { captured, calls } = owner(true);
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+
+  provider.seal();
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(calls.stop, 1, 'seal itself must initiate the TEST-owned stop');
+
+  assert.equal(await provider.cleanup(), true);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  assert.equal(calls.stop, 1, 'cleanup and close cannot replay a stop with an unknown ACK');
+  assert.equal(calls.stopped, 1);
+});
+
 test('sealing aborts an in-flight V2 native probe before permission or context installation', async () => {
   const { captured, calls } = owner(true);
   const entered = Promise.withResolvers<void>();
