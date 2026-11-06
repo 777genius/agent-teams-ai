@@ -81,6 +81,9 @@ export function createOpenCodeV2MemberProvider(
   let checking: Promise<boolean> | undefined;
   let physicallyStopped = false;
   let initialEvidence: NativeContextEvidence | undefined;
+  // Installation may have taken effect even if its ACK was lost. Keep one
+  // attempt for this owned session and never replay the native mutation.
+  let initialContextAttempt: ReturnType<OpenCodeV2OwnedSession['installAndAttestInitialContext']> | undefined;
   const contextDigest = initialContextDigest(context.instructions);
   const abort = new AbortController();
 
@@ -147,13 +150,17 @@ export function createOpenCodeV2MemberProvider(
           // A native session being reachable is NOT a ready Team member.
           // Initial role/team/workspace instructions need native readback;
           // never infer their installation from probe or a local digest.
-          const attested = await owned.installAndAttestInitialContext(Object.freeze({
-            nativeSessionId: profile.nativeSessionId!,
-            instructions: context.instructions,
-            contextDigest,
-            generation: context.endpoint.binding.generation,
-            configRevision: context.request.configRevision,
-          }), combined);
+          initialContextAttempt ??= Promise.resolve().then(() => {
+            if (combined.aborted || !current()) return undefined;
+            return owned.installAndAttestInitialContext(Object.freeze({
+              nativeSessionId: profile.nativeSessionId!,
+              instructions: context.instructions,
+              contextDigest,
+              generation: context.endpoint.binding.generation,
+              configRevision: context.request.configRevision,
+            }), combined);
+          });
+          const attested = await initialContextAttempt;
           if (!attested || combined.aborted || !current() ||
               attested.nativeSessionId !== profile.nativeSessionId ||
               attested.contextDigest !== contextDigest ||
