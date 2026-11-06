@@ -4,7 +4,6 @@ import {
 } from '@features/workspace-trust/main';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
-import * as path from 'path';
 
 import type { WorkspaceTrustWorkspaceCollectionPorts } from './TeamProvisioningWorkspaceTrust';
 
