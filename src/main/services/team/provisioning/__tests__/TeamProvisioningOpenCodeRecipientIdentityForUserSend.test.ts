@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { materializeTeamProvisioningLaunchRoster } from '../TeamProvisioningLaunchRosterMaterialization';
+import {
+  materializeTeamProvisioningLaunchRoster,
+  type TeamProvisioningLaunchRosterInput,
+} from '../TeamProvisioningLaunchRosterMaterialization';
 import {
   resolveOpenCodeRecipientIdentityForUserSend,
   type OpenCodeRecipientIdentityForUserSendPorts,
 } from '../TeamProvisioningOpenCodeRecipientIdentityForUserSend';
 import { resolveRuntimeRecipientProviderIdFromSources } from '../TeamProvisioningRuntimeRecipientResolution';
 
-import type { TeamProvisioningLaunchRosterInput } from '../TeamProvisioningLaunchRosterMaterialization';
 import type { TeamConfig, TeamMember, TeamProvisioningProgress } from '@shared/types';
 
 function createHarness() {
