@@ -433,25 +433,25 @@ export function createOpenCodeV2MemberProvider(
                   }
                 }
                 })();
-                return {
-                  next: () => stream.next(),
-                  return: async () => {
-                    // Async-generator return() alone queues behind an
-                    // outstanding next(), and a never-started generator has
-                    // no finally block. Revoke synchronously and close the
-                    // private feed for both cases, without resending a stop.
-                    const stopping = finishOwned();
-                    try {
-                      await source.close();
-                      await stream.return(undefined);
-                    } finally {
-                      if (!await stopping)
-                        throw new Error('opencode.v2.owner-cleanup-unknown');
-                    }
-                    return { done: true as const, value: undefined };
-                  },
-                  [Symbol.asyncIterator]() { return this; },
+                // Retain the native async-generator iterator's exact
+                // AsyncIterator<Event> type (including its own next/throw).
+                // Wrap only return(), never create a second EventFeed claim.
+                const underlyingReturn = stream.return.bind(stream);
+                stream.return = async () => {
+                  // Generator return alone queues behind a pending next() and
+                  // never executes finally when the generator was not started.
+                  // Retire the captured owner and wake the private feed first.
+                  const stopping = finishOwned();
+                  try {
+                    await source.close();
+                    await underlyingReturn(undefined);
+                  } finally {
+                    if (!await stopping)
+                      throw new Error('opencode.v2.owner-cleanup-unknown');
+                  }
+                  return { done: true as const, value: undefined };
                 };
+                return stream;
               },
               respondToInteraction: async (reference, reply) => {
                 // V2 permission replies are native mutations. Never let a
