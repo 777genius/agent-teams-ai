@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import path from 'node:path';
 
 import lock from '../managed-git.lock.json' with { type: 'json' };
 import { gitExecutable, validateArchiveEntries } from './stage-managed-git.mjs';
@@ -23,7 +24,8 @@ test('archive path validator rejects traversal and absolute names', () => {
 });
 
 test('packaged Git entrypoints match Dugite Native native layouts', () => {
-  assert.equal(gitExecutable('darwin-arm64', '/bundle'), '/bundle/bin/git');
-  assert.equal(gitExecutable('linux-x64', '/bundle'), '/bundle/bin/git');
-  assert.ok(gitExecutable('win32-x64', '/bundle').endsWith('cmd/git.exe') || gitExecutable('win32-x64', '/bundle').endsWith('cmd\\git.exe'));
+  assert.equal(gitExecutable('darwin-arm64', '/bundle'), path.join('/bundle', 'bin', 'git'));
+  assert.equal(gitExecutable('linux-x64', '/bundle'), path.join('/bundle', 'bin', 'git'));
+  assert.equal(gitExecutable('win32-x64', '/bundle'), path.join('/bundle', 'cmd', 'git.exe'));
+  assert.equal(gitExecutable('win32-arm64', '/bundle'), path.join('/bundle', 'cmd', 'git.exe'));
 });
