@@ -1,3 +1,5 @@
+import { inferTeamProviderIdFromModel, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+
 import { MissingOpenCodeRuntimeConfigIdentityError } from './TeamProvisioningRuntimeRecipientResolution';
 
 import type { TeamProvisioningLaunchRosterInput } from './TeamProvisioningLaunchRosterMaterialization';
@@ -70,7 +72,8 @@ export async function resolveOpenCodeRecipientIdentityForUserSend(
     if (
       !meta ||
       meta.removedAt != null ||
-      meta.providerId !== 'opencode' ||
+      (normalizeOptionalTeamProviderId(meta.providerId) ??
+        inferTeamProviderIdFromModel(meta.model)) !== 'opencode' ||
       (meta.model?.trim() && meta.model.trim() !== member.model.trim())
     ) {
       throw error;
