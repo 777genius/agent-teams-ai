@@ -98,6 +98,13 @@ async function verifyDurableRecipient(
       current.bootstrapConfirmed === true &&
       current.hardFailure === false &&
       (await ports.resolveActiveLaneRunId(teamName, laneId)) === runId &&
+      (await ports.hasCommittedRecipientSession({
+        teamName,
+        memberName,
+        laneId,
+        runId,
+        runtimeSessionId: sessionId,
+      })) &&
       isCurrentRun()
     );
   };
@@ -119,6 +126,13 @@ export interface OpenCodeRecipientIdentityForUserSendPorts {
   isTeamStopped(teamName: string): Promise<boolean>;
   isRuntimeReachable(teamName: string): boolean;
   resolveActiveLaneRunId(teamName: string, laneId: string): Promise<string | null>;
+  hasCommittedRecipientSession(input: {
+    teamName: string;
+    memberName: string;
+    laneId: string;
+    runId: string;
+    runtimeSessionId: string;
+  }): Promise<boolean>;
   getStopEpoch(teamName: string): string;
   materializeLaunchRoster(input: TeamProvisioningLaunchRosterInput): Promise<boolean>;
 }

@@ -6,6 +6,7 @@ import {
   restartLeadRuntime,
 } from './provisioning/TeamProvisioningLeadRuntimeRestart';
 import { hasLiveOpenCodeMcpConsumers } from './provisioning/TeamProvisioningMcpConsumerQuery';
+import { hasCommittedOpenCodeRuntimeBootstrapSessionEvidence } from './provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from './provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { resolveOpenCodeRecipientIdentityForUserSend } from './provisioning/TeamProvisioningOpenCodeRecipientIdentityForUserSend';
 import { killTeamProcessAndWait } from './provisioning/TeamProvisioningRunProgress';
@@ -138,6 +139,11 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
         isRuntimeReachable: (name) => this.runTracking.canDeliverToOpenCodeRuntimeForTeam(name),
         resolveActiveLaneRunId: (name, lane) =>
           this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(name, lane),
+        hasCommittedRecipientSession: (input) =>
+          hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
+            input,
+            this.bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
+          ),
         getStopEpoch: (name) =>
           `${this.stopAllTeamsGeneration}:${this.getStopTeamGeneration(name)}`,
         materializeLaunchRoster: (input) =>

@@ -94,6 +94,7 @@ function createHarness() {
     isTeamStopped: vi.fn(async () => false),
     isRuntimeReachable: vi.fn(() => true),
     resolveActiveLaneRunId: vi.fn(async () => 'lane-run-1'),
+    hasCommittedRecipientSession: vi.fn(async () => true),
     getStopEpoch: vi.fn(() => '0'),
     materializeLaunchRoster: materialize,
   };
@@ -260,6 +261,7 @@ describe('OpenCode explicit user-send identity repair', () => {
       'unconfirmed',
       'missing-session',
       'stale-lane',
+      'uncommitted-session',
       'duplicate-expected',
     ] as const) {
       const h = createHarness();
@@ -276,6 +278,8 @@ describe('OpenCode explicit user-send identity repair', () => {
       if (cause === 'missing-session') snapshot.members.Worker.runtimeSessionId = undefined;
       if (cause === 'stale-lane')
         vi.mocked(h.ports.resolveActiveLaneRunId).mockResolvedValue('old-run');
+      if (cause === 'uncommitted-session')
+        vi.mocked(h.ports.hasCommittedRecipientSession).mockResolvedValue(false);
       if (cause === 'duplicate-expected') snapshot.expectedMembers.push('worker');
 
       await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
@@ -295,6 +299,19 @@ describe('OpenCode explicit user-send identity repair', () => {
       snapshot.members.Worker.runtimeSessionId = 'replacement-session';
       return materialize(input);
     };
+    await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
+      'roster changed before config commit'
+    );
+    expect(h.resolve).toThrow('has no authoritative config identity');
+  });
+
+  it('refuses stale durable recipient when the committed session vanishes before write', async () => {
+    const h = createHarness();
+    h.setTrackedRunId(null);
+    vi.mocked(h.ports.hasCommittedRecipientSession)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+
     await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
       'roster changed before config commit'
     );
