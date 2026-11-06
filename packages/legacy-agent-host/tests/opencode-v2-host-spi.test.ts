@@ -577,3 +577,52 @@ test('sealing aborts an in-flight V2 native probe before permission or context i
   assert.deepEqual(calls, { probe: 1, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
   assert.equal(await provider.cleanup(), true);
 });
+
+test('retained V2 driver handle cannot mutate or checkpoint after Host seal', async () => {
+  const { captured, calls } = owner(true);
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+
+  provider.seal();
+  assert.deepEqual(await opened.driver.submit({
+    inputId: 'TEST-after-seal', operationRef: 'TEST-no-post', content: 'must not send',
+  }), { ok: false, code: 'unavailable', delivery: 'known-not-sent' });
+  assert.deepEqual(await opened.driver.respondToInteraction('perTEST-foreign',
+    { kind: 'permission', decision: 'allow' }), { ok: false, code: 'unavailable' });
+  assert.deepEqual(await opened.driver.interrupt('TEST-foreign-operation'),
+    { ok: false, code: 'unavailable' });
+  assert.deepEqual(await opened.driver.checkReadiness(), { ok: false, code: 'unavailable' });
+  assert.deepEqual(opened.driver.checkpoint(), { ok: false, code: 'unavailable' });
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(calls.password, 0, 'revoked driver never reads native credentials');
+  assert.equal(calls.context, 1, 'no native instructions replay');
+  assert.equal(calls.stop, 1, 'only the captured TEST-owned process is stopped');
+  assert.equal(await provider.cleanup(), true);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
+
+test('retained V2 controls surface UNKNOWN process custody, never re-signal', async () => {
+  const { captured, calls } = owner(true);
+  captured.stopOwned = async () => { calls.stop++; return false; };
+  captured.confirmStopped = async () => { calls.stopped++; return false; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  provider.seal();
+
+  await assert.rejects(() => opened.driver.submit({
+    inputId: 'TEST-unknown-stop', operationRef: 'TEST-no-retry', content: 'must not send',
+  }), /opencode.v2.owner-cleanup-unknown/);
+  await assert.rejects(() => opened.driver.respondToInteraction('perTEST-foreign',
+    { kind: 'permission', decision: 'allow' }), /opencode.v2.owner-cleanup-unknown/);
+  await assert.rejects(() => opened.driver.interrupt('TEST-foreign-operation'),
+    /opencode.v2.owner-cleanup-unknown/);
+  await assert.rejects(() => opened.driver.checkReadiness(),
+    /opencode.v2.owner-cleanup-unknown/);
+  assert.deepEqual(opened.driver.checkpoint(), { ok: false, code: 'unavailable' });
+  assert.equal(calls.stop, 1, 'unknown ACK never causes a second physical stop');
+  assert.equal(calls.password, 0);
+  assert.equal(await provider.cleanup(), false);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'unknown' });
+});
