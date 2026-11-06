@@ -403,6 +403,20 @@ export abstract class TeamProvisioningServiceFacadeDelegates extends TeamProvisi
     run: ProvisioningRun,
     lane: MixedSecondaryRuntimeLaneState
   ): Promise<void> {
+    // Live-added OpenCode teammates do not pass through the initial launch roster
+    // publisher. Register their config identity before the runtime can receive mail.
+    const isCurrentRun = () =>
+      this.compatibilityDelegation.runs.get(run.runId) === run &&
+      this.runTracking.getTrackedRunId(run.teamName) === run.runId &&
+      !run.cancelRequested &&
+      !run.processKilled &&
+      run.progress.state !== 'failed';
+    const published = await this.compatibilityDelegation.configFacade.materializeLaunchRoster({
+      teamName: run.teamName,
+      members: [lane.member],
+      isCurrentRun,
+    });
+    if (!published) return;
     await this.mixedSecondaryLaneWiring.launchSingleMixedSecondaryLane(run, lane);
   }
 
