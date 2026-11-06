@@ -98,3 +98,7 @@ Digests independently match both [upstream release](https://github.com/desktop/d
 ### Scope guard
 
 The change is app-owning Git only. To achieve full clean-OS usability **agent subprocess environment inheritance** matters equally, but Git running on an unrelated SSH machine is not controlled. PR must not claim completion if an external provider directly executes the Apple system shim.
+
+### Review correction: Git templates and hooks
+
+CodeRabbit correctly identified that even a default `GIT_TEMPLATE_DIR` overrides `init.templateDir` from a user's Git configuration. We therefore do **not** set `GIT_TEMPLATE_DIR` globally. Git will honor user config and its compiled default. Packaged `git init` tests must verify the default templates remain functional; only then can a targeted optional fallback be considered (not a blanket environment override).
