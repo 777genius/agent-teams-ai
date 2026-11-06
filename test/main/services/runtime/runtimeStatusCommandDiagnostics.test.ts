@@ -112,6 +112,34 @@ describe('runtime status command diagnostics', () => {
     expect(status.detailMessage).not.toContain('secret-directory-error');
   });
 
+  it('prioritizes verified project access denial over an unrelated CLI timeout classification', async () => {
+    execMock.mockRejectedValue(
+      Object.assign(new Error('Command timed out after 30000ms'), {
+        code: 'ETIMEDOUT',
+        stderr: 'error: An unknown error occurred (Unexpected)',
+      })
+    );
+    const error = await readRuntimeStatusCommand(
+      binaryPath,
+      args,
+      { cwd },
+      extractRuntimeStatusJsonObject,
+      async () => {
+        throw Object.assign(new Error('permission check failed'), { code: 'EACCES' });
+      }
+    ).catch((caught: unknown) => caught);
+    const status = createRuntimeStatusErrorProviderStatus('opencode', error);
+    expect(status).toMatchObject({
+      statusMessage: 'Project folder access denied',
+      statusCheckErrorCode: 'unavailable',
+      capabilities: { teamLaunch: false },
+    });
+    expect(status.detailMessage).toContain('Project folder access denied (EACCES)');
+    expect(status.detailMessage).not.toContain(
+      'OpenCode is taking longer than expected to load provider status.'
+    );
+  });
+
   it('does not assume a project permission failure from Bun Unexpected alone', async () => {
     execMock.mockRejectedValue(
       Object.assign(new Error('Command failed'), {

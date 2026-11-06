@@ -5,7 +5,7 @@ export const OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE =
   'Windows blocked OpenCode from creating the managed node_modules symlink. Run Agent Teams AI as Administrator, then retry launch.';
 
 const PROJECT_ACCESS_DENIED_PATTERN =
-  /\bproject folder access denied \((?:EPERM|EACCES)\)|\bcannot (?:read|inspect) the (?:project|global) opencode config: access denied \((?:EPERM|EACCES)\)/i;
+  /\bproject folder access denied \((?:EPERM|EACCES)\)|\bcannot (?:read|inspect) the (?:project|global) opencode config: access denied \((?:EPERM|EACCES)\)|\bcannot inspect the user home directory for the global opencode config: access denied \((?:EPERM|EACCES)\)/i;
 
 /** A verified project/config permission failure needs cross-platform guidance, never a Windows-only hint. */
 export function isOpenCodeProjectAccessDeniedDiagnostic(

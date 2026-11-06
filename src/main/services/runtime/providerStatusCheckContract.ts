@@ -189,7 +189,9 @@ export function createPendingProviderStatus(providerId: CliProviderId): CliProvi
 
 export function getProviderStatusCheckErrorCode(error: unknown): CliProviderStatusCheckErrorCode {
   if (error instanceof RuntimeStatusCommandError) {
-    return getProviderStatusCheckErrorCode(error.cause);
+    return error.projectAccessDenied
+      ? 'unavailable'
+      : getProviderStatusCheckErrorCode(error.cause);
   }
   if (isWorkingDirectoryMissingError(error)) {
     return 'project_missing';
@@ -235,8 +237,10 @@ export function createRuntimeStatusErrorProviderStatus(
       : isOpenCodeTimeout
         ? 'OpenCode is still loading'
         : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
-    detailMessage: isOpenCodeTimeout
-      ? [
+    detailMessage: projectAccessDenied
+      ? getRuntimeStatusErrorDetails(error)
+      : isOpenCodeTimeout
+        ? [
           'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
           error instanceof RuntimeStatusCommandError ? getRuntimeStatusErrorDetails(error) : null,
         ]

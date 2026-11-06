@@ -244,7 +244,7 @@ async function readOpenCodeGlobalConfigTarget(
     throw new LocalProviderOperationError(
       'config-invalid',
       code === 'EPERM' || code === 'EACCES'
-        ? describeOpenCodeConfigReadFailure(error, 'global', 'inspect')
+        ? `Cannot inspect the user home directory for the global OpenCode config: access denied (${code}). Check permissions for the user home directory.`
         : 'The user home directory is not available for the global OpenCode config.'
     );
   }

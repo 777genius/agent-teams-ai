@@ -78,6 +78,34 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
     }
   );
 
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'diagnoses denied parent directory access before inspecting project OpenCode config candidates',
+    async () => {
+      const parentPath = path.join(tempDir, 'restricted-parent');
+      const projectPath = path.join(parentPath, 'nested-project');
+      await fs.mkdir(projectPath, { recursive: true });
+      await fs.chmod(parentPath, 0o000);
+      const connector = new OpenCodeLocalProviderConnector({
+        homePath: tempDir,
+        environment: {},
+      });
+      try {
+        const listed = await connector.listLocalProviders({
+          runtimeId: 'opencode',
+          scope: 'project',
+          projectPath,
+        });
+        expect(listed.error).toMatchObject({
+          code: 'config-invalid',
+          message: expect.stringContaining('Cannot inspect the project OpenCode config'),
+        });
+        expect(listed.error?.message).toMatch(/EACCES|EPERM/);
+      } finally {
+        await fs.chmod(parentPath, 0o700);
+      }
+    }
+  );
+
   it('discovers models over HTTP and preserves existing JSONC while configuring OpenCode', async () => {
     const projectPath = path.join(tempDir, 'sandbox-project');
     await fs.mkdir(projectPath, { recursive: true });
