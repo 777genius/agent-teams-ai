@@ -4,6 +4,8 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
+
 export interface TeamMemberWorktreeRequest {
   teamName: string;
   memberName: string;
@@ -99,6 +101,9 @@ export class TeamMemberWorktreeManager {
   async ensureMemberWorktree(
     request: TeamMemberWorktreeRequest
   ): Promise<TeamMemberWorktreeResolution> {
+    if (!(await canUseGitWithoutMacInstallerPrompt())) {
+      throw new Error('Git is required for worktree isolation but is not installed on this Mac.');
+    }
     const baseRepoPath = await this.resolveBaseRepoPath(request.baseCwd);
     const repoHash = shortHash(baseRepoPath);
     const projectSlug = slugify(path.basename(baseRepoPath));
