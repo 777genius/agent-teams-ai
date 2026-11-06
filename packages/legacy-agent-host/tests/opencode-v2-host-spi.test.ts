@@ -630,3 +630,41 @@ test('retained V2 controls surface UNKNOWN process custody, never re-signal', as
   }, /opencode.v2.owner-cleanup-unknown/,
   'natural observation exhaustion must not mask UNKNOWN process custody');
 });
+
+test('buffered private V2 terminal never escapes a revoked Host observer', async () => {
+  const { captured, calls } = owner(true);
+  captured.readPassword = () => { calls.password++; return ''; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.deepEqual(await opened.driver.submit({
+    inputId: 'TEST-buffered-failure', operationRef: 'TEST-buffered-op',
+    content: 'TEST preflight only; no model',
+  }), { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' });
+  assert.equal(provider.isReady(), false);
+  // Private EventFeed.finishWith deliberately retains a diagnostic frame.
+  // Host must suppress it once the captured generation has been retired.
+  const received = await opened.driver.observe()[Symbol.asyncIterator]().next();
+  assert.equal(received.done, true, 'revoked Host cannot expose buffered native diagnostic');
+  assert.equal(calls.stop, 1);
+  assert.equal(calls.password, 1);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
+
+test('Host seal wakes a suspended native V2 observer without delivering a late event',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const iterator = opened.driver.observe()[Symbol.asyncIterator]();
+    const next = iterator.next();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    provider.seal();
+    const result = await next;
+    assert.equal(result.done, true, 'revocation resolves even when private feed has no events');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1);
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  });
