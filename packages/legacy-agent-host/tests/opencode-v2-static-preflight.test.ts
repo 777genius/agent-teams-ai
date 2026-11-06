@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import type { OpenCodeV2RuntimeLock, OpenCodeV2Selection } from '../src/composition/openCodeV2StaticPreflight.ts';
 
 const sourceMode = process.env.LEGACY_PROVIDER_SOURCE_TEST === '1';
-const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, preflightOpenCodeV2CurrentProduct, measureOpenCodeV2Executable }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
+const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, preflightOpenCodeV2CurrentProduct, measureOpenCodeV2Executable, preflightOpenCodeV2EffectiveExternalDirectory }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
   await import(sourceMode
     ? '../src/composition/openCodeV2StaticPreflight.ts'
     : '../dist/composition/openCodeV2StaticPreflight.js');
@@ -433,4 +433,62 @@ process.stdout.write(JSON.stringify(proof));`;
   assert.ifError(child.error);
   assert.equal(child.status, 0, child.stderr);
   assert.deepEqual(JSON.parse(child.stdout), { kind: 'hold', reason: 'path' });
+});
+
+
+test('V2.2 effective external-directory permission requires a FINAL universal guard', () => {
+  const base = [{ action: '*', resource: '*', effect: 'allow' }];
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(base, 'ask'),
+    { kind: 'hold', reason: 'external-directory' },
+    'V2 default allows external_directory; cannot inherit V1 ask semantics');
+  const ask = [...base, { action: 'external_directory', resource: '*', effect: 'ask' }];
+  const deny = [...base, { action: 'external_directory', resource: '*', effect: 'deny' }];
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(ask, 'ask'),
+    { kind: 'policy-candidate', effect: 'ask' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(deny, 'ask'),
+    { kind: 'policy-candidate', effect: 'deny' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(deny, 'deny'),
+    { kind: 'policy-candidate', effect: 'deny' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(ask, 'deny'),
+    { kind: 'hold', reason: 'external-directory' },
+    'a captured deny must not be weakened to ask');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(ask, 'unknown' as 'ask'),
+    { kind: 'hold', reason: 'rules' });
+});
+
+test('V2.2 later agent/wildcard rules cannot override captured external-directory ask/deny', () => {
+  const defaultRules = [{ action: '*', resource: '*', effect: 'allow' }];
+  for (const guard of ['ask', 'deny'] as const) {
+    for (const tail of [
+      { action: 'external_directory', resource: '/TEST/other/*', effect: 'allow' },
+      { action: '*', resource: '*', effect: 'allow' },
+      { action: 'external_directory', resource: '*', effect: 'allow' },
+    ]) {
+      assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([
+        ...defaultRules, { action: 'external_directory', resource: '*', effect: guard }, tail,
+      ], guard), { kind: 'hold', reason: 'external-directory' });
+    }
+  }
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([
+    ...defaultRules,
+    { action: 'external_directory', resource: '/TEST/other/*', effect: 'allow' },
+    { action: 'external_directory', resource: '*', effect: 'deny' },
+  ], 'deny'), { kind: 'policy-candidate', effect: 'deny' },
+  'a final broad deny supersedes earlier narrow grants under last-match-wins');
+});
+
+test('V2.2 rejects unnormalized and V1-shaped permission captures without native effects', () => {
+  const last = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const invalid: unknown[] = [
+    null, undefined, {}, 'external_directory', [], new Array(1025).fill(last),
+    [{ permission: { external_directory: 'deny' } }],
+    [{ ...last, effect: 'always' }],
+    [{ ...last, action: 1 }],
+    [{ ...last, resource: '' }],
+    [{ ...last, source: 'unverified-user-config' }],
+    [null, last],
+  ];
+  for (const rules of invalid)
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+      { kind: 'hold', reason: 'rules' }, JSON.stringify(rules)?.slice(0, 200));
 });
