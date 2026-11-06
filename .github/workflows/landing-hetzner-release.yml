@@ -1,0 +1,106 @@
+name: Build Hetzner landing and docs release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - 'scripts/announcements/**'
+      - 'scripts/ci/transitive-security*'
+      - 'scripts/ci/audit-dependencies.mjs'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/landing-hetzner-release.yml'
+  pull_request:
+    paths:
+      - 'landing/**'
+      - 'scripts/announcements/**'
+      - 'scripts/ci/transitive-security*'
+      - 'scripts/ci/audit-dependencies.mjs'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/landing-hetzner-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hetzner-static-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Exact-SHA production-domain static artifacts
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - name: Install root announcement dependencies
+        run: pnpm install --filter agent-teams-ai --prod --frozen-lockfile --ignore-scripts
+      - name: Install landing dependencies
+        working-directory: landing
+        run: npm ci
+      - name: Audit landing dependencies
+        working-directory: landing
+        run: node ../scripts/ci/audit-dependencies.mjs --npm
+      - name: Generate landing for production apex
+        working-directory: landing
+        env:
+          NUXT_APP_BASE_URL: /
+          NUXT_PUBLIC_SITE_URL: https://agentteams.live
+          NUXT_PUBLIC_LANDING_SITE_URL: https://agentteams.live
+          NUXT_PUBLIC_DOCS_SITE_URL: https://docs.agentteams.live
+          NUXT_PUBLIC_ROBOTS: index, follow
+        run: npm run generate
+      - name: Generate separate production docs site
+        working-directory: landing
+        env:
+          NUXT_APP_BASE_URL: /
+          NUXT_PUBLIC_SITE_URL: https://agentteams.live
+          VITEPRESS_BASE: /
+          VITEPRESS_SITE_URL: https://docs.agentteams.live
+          VITEPRESS_LANDING_SITE_URL: https://agentteams.live
+        run: npm run docs:build
+      - name: Package and verify isolated immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$RUNNER_TEMP/agent-teams-static"
+          mkdir -p "$release/landing" "$release/docs"
+          cp -a landing/.output/public/. "$release/landing/"
+          cp -a landing/product-docs/.vitepress/dist/. "$release/docs/"
+          printf '%s' "$GITHUB_SHA" > "$release/landing/deployment-sha.txt"
+          printf '%s' "$GITHUB_SHA" > "$release/docs/deployment-sha.txt"
+          test ! -e "$release/landing/agent-teams-ai/index.html"
+          test -f "$release/landing/index.html"
+          test -f "$release/docs/index.html"
+          test -f "$release/docs/guide/installation.html"
+          ! find "$release" -type l | grep -q .
+          grep -Fq 'OpenRig' "$release/landing/index.html"
+          grep -Fq 'Supported desktop platforms' "$release/landing/index.html"
+          grep -Fq 'https://agentteams.live' "$release/landing/index.html"
+          grep -Fq 'https://docs.agentteams.live' "$release/docs/index.html"
+          grep -Fq 'https://docs.agentteams.live' "$release/landing/docs/index.html"
+          tar -C "$release" -czf "$RUNNER_TEMP/agent-teams-static.tar.gz" landing docs
+          cd "$RUNNER_TEMP"
+          sha256sum agent-teams-static.tar.gz > agent-teams-static.tar.gz.sha256
+          cat agent-teams-static.tar.gz.sha256
+      - uses: actions/upload-artifact@v5
+        with:
+          name: agent-teams-hetzner-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/agent-teams-static.tar.gz
+            ${{ runner.temp }}/agent-teams-static.tar.gz.sha256
