@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { createServer } from 'node:http';
 import { test } from 'node:test';
 import type { MemberProviderContext } from '../src/adapters/providers/MemberProvider.ts';
 import type { OpenCodeV2OwnedSession } from '../src/adapters/providers/OpenCodeV2MemberProvider.ts';
@@ -716,4 +718,95 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(await provider.cleanup(), true);
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
     assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
+  });
+
+test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed',
+  { timeout: 10000 }, async () => {
+    // A disposable localhost peer proves the real pinned private Session SPI
+    // can return a successful prompt ACK after Host authority was revoked.
+    // This is NOT a model turn or native executable qualification.
+    const profile = v2Profile();
+    if (process.platform === 'win32') profile.cwd = 'C:\\TEST-only-opencode-v2';
+    const postSeen = Promise.withResolvers<void>();
+    const releaseAck = Promise.withResolvers<void>();
+    let postCount = 0;
+    const sessionPath = '/api/session/' + profile.nativeSessionId;
+    const server = createServer((req, res) => {
+      const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+      const json = (value: unknown) => {
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify(value));
+      };
+      if (req.method === 'GET' && url.pathname === sessionPath) {
+        json({ data: {
+          id: profile.nativeSessionId, location: { directory: profile.cwd },
+          agent: 'TEST-agent', model: { providerID: 'TEST-provider', id: 'TEST-model' },
+          time: { created: 1 },
+        } });
+        return;
+      }
+      if (req.method === 'GET' &&
+          url.pathname === '/api/experimental/session/' + profile.nativeSessionId + '/log') {
+        res.setHeader('content-type', 'text/event-stream');
+        res.end([
+          {
+            id: 'evt_created', type: 'session.created',
+            durable: { aggregateID: profile.nativeSessionId, seq: 0 },
+            data: { sessionID: profile.nativeSessionId },
+            location: { directory: profile.cwd },
+          },
+          { type: 'log.synced', aggregateID: profile.nativeSessionId, seq: 0 },
+        ].map(value => 'data: ' + JSON.stringify(value) + '\n\n').join(''));
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === sessionPath + '/prompt') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+          const input = JSON.parse(body) as { id: string; text: string };
+          postCount++;
+          postSeen.resolve();
+          void releaseAck.promise.then(() => json({ data: {
+            id: input.id, sessionID: profile.nativeSessionId, type: 'user',
+            delivery: 'queue', time: { created: 1 }, payload: { text: input.text },
+          } }));
+        });
+        return;
+      }
+      res.writeHead(404); res.end();
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    let opened: Awaited<ReturnType<ReturnType<typeof createOpenCodeV2MemberProvider>['factory']['open']>> | undefined;
+    const { captured, calls } = owner(true);
+    try {
+      const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+      opened = await provider.factory.open(request());
+      assert.equal(provider.isReady(), true);
+      const pending = opened.driver.submit({
+        inputId: 'TEST-late-ack', operationRef: 'TEST-late-ack-op', content: 'TEST only; no model',
+      });
+      await postSeen.promise;
+      provider.seal();
+      releaseAck.resolve();
+      const reply = await pending;
+      assert.deepEqual(reply, { ok: false, code: 'unknown' },
+        'a post-seal ACK is not an authorized handoff or known-not-sent');
+      assert.equal(postCount, 1, 'no second native POST after uncertain ACK');
+      assert.equal(provider.isReady(), false);
+      assert.equal(calls.stop, 1, 'only one TEST-owned stop signal');
+      assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+      assert.equal(await provider.cleanup(), true);
+      assert.equal(calls.stop, 1);
+    } finally {
+      releaseAck.resolve();
+      await opened?.driver.close();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => {
+        server.close(error => error ? reject(error) : resolve());
+      });
+    }
   });
