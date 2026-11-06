@@ -668,3 +668,41 @@ test('Host seal wakes a suspended native V2 observer without delivering a late e
     assert.equal(await provider.cleanup(), true);
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
   });
+
+test('pending native V2 re-attestation fences concurrent controls without retiring owner',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    const entered = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    captured.probe = async () => {
+      calls.probe++;
+      entered.resolve();
+      await resume.promise;
+      return true;
+    };
+    const recheck = opened.driver.checkReadiness();
+    await entered.promise;
+    assert.equal(provider.isReady(), false, 'pending native recheck cannot reuse stale readiness');
+
+    assert.deepEqual(await opened.driver.submit({
+      inputId: 'TEST-overlap', operationRef: 'TEST-overlap-op', content: 'TEST only; no model',
+    }), { ok: false, code: 'unavailable', delivery: 'known-not-sent' });
+    assert.deepEqual(await opened.driver.respondToInteraction('perTEST-foreign',
+      { kind: 'permission', decision: 'allow' }), { ok: false, code: 'unavailable' });
+    assert.deepEqual(await opened.driver.interrupt('TEST-foreign-operation'),
+      { ok: false, code: 'unavailable' });
+    assert.equal((await opened.driver.observe()[Symbol.asyncIterator]().next()).done, true);
+    assert.equal(calls.stop, 0, 'a pending probe must not stop its still-owned native PID');
+    assert.equal(calls.password, 0, 'fenced controls never read native credentials');
+
+    resume.resolve();
+    assert.equal((await recheck).ok, true);
+    assert.equal(provider.isReady(), true, 'successful re-attestation restores the same captured owner');
+    assert.equal(calls.context, 1, 'no initial-instruction replay');
+    assert.equal(calls.stop, 0);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+    assert.equal(calls.stop, 1, 'only close stops the original native owner');
+  });

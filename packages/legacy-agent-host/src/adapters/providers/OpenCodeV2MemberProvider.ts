@@ -286,8 +286,12 @@ export function createOpenCodeV2MemberProvider(
               submit: async (input) => {
                 // A leaked session handle must not submit after the Host
                 // revokes its generation/lease or seals the owned process.
-                if (!ready || !current()) {
-                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                const authorized = current();
+                if (!ready || !authorized) {
+                  // A concurrent native re-attestation makes ready transiently false.
+                  // Fence this operation, but never stop a healthy owned PID unless
+                  // its actual Host authority has been revoked.
+                  if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const,
                   code: 'unavailable' as const, delivery: 'known-not-sent' as const };
                 }
@@ -327,7 +331,13 @@ export function createOpenCodeV2MemberProvider(
                 let authorityLost = false;
                 try {
                   for (;;) {
-                    if (!ready || !current()) { authorityLost = true; break; }
+                    const authorized = current();
+                    if (!ready || !authorized) {
+                      // A concurrent readiness probe is not Host revocation.
+                      // No source iterator.next() has started on this path.
+                      authorityLost = !authorized;
+                      break;
+                    }
                     // Do not strand a Host observer waiting on EventFeed.next()
                     // when seal/lease loss occurs with no further native event.
                     const outcome = await Promise.race([
@@ -357,8 +367,12 @@ export function createOpenCodeV2MemberProvider(
               respondToInteraction: async (reference, reply) => {
                 // V2 permission replies are native mutations. Never let a
                 // retained driver handle grant after Host seal/lease loss.
-                if (!ready || !current()) {
-                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                const authorized = current();
+                if (!ready || !authorized) {
+                  // A concurrent native re-attestation makes ready transiently false.
+                  // Fence this operation, but never stop a healthy owned PID unless
+                  // its actual Host authority has been revoked.
+                  if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unavailable' as const };
                 }
                 try {
@@ -372,8 +386,12 @@ export function createOpenCodeV2MemberProvider(
                 }
               },
               interrupt: async (operation) => {
-                if (!ready || !current()) {
-                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                const authorized = current();
+                if (!ready || !authorized) {
+                  // A concurrent native re-attestation makes ready transiently false.
+                  // Fence this operation, but never stop a healthy owned PID unless
+                  // its actual Host authority has been revoked.
+                  if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unavailable' as const };
                 }
                 try {
@@ -387,8 +405,12 @@ export function createOpenCodeV2MemberProvider(
                 }
               },
               checkReadiness: async () => {
-                if (!ready || !current()) {
-                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                const authorized = current();
+                if (!ready || !authorized) {
+                  // A concurrent native re-attestation makes ready transiently false.
+                  // Fence this operation, but never stop a healthy owned PID unless
+                  // its actual Host authority has been revoked.
+                  if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unavailable' as const };
                 }
                 try {
