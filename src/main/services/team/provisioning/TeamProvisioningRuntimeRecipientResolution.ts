@@ -19,6 +19,13 @@ export interface RuntimeRecipientProviderSourcePorts {
   readMembersMeta(teamName: string): Promise<readonly TeamMember[]>;
 }
 
+export class MissingOpenCodeRuntimeConfigIdentityError extends Error {
+  constructor(memberName: string) {
+    super(`OpenCode runtime recipient ${memberName} has no authoritative config identity`);
+    this.name = 'MissingOpenCodeRuntimeConfigIdentityError';
+  }
+}
+
 export function getOpenCodeRuntimeAdapter(
   registry: OpenCodeRuntimeAdapterRegistryPort | null | undefined
 ): TeamLaunchRuntimeAdapter | null {
@@ -111,8 +118,8 @@ export function resolveRuntimeRecipientProviderIdFromSources(input: {
     );
   }
   if (!configMember && metaProviderId === 'opencode') {
-    throw new Error(
-      `OpenCode runtime recipient ${metaMember?.name ?? normalizedMemberName} has no authoritative config identity`
+    throw new MissingOpenCodeRuntimeConfigIdentityError(
+      metaMember?.name ?? normalizedMemberName
     );
   }
 
