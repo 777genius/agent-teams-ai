@@ -77,15 +77,15 @@ describe('TeamProvisioningWorkspaceTrust', () => {
       const nested = path.join(repo, 'packages', 'app');
       const worktree = path.join(repo, 'teammate');
       await mkdir(path.join(repo, '.git', 'worktrees', 'teammate'), { recursive: true });
-      await writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\\n');
-      await writeFile(path.join(repo, '.git', 'config'), '[core]\\n');
+      await writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+      await writeFile(path.join(repo, '.git', 'config'), '[core]\n');
       await mkdir(nested, { recursive: true });
       await mkdir(worktree);
       const gitWorktreeDir = path.join(repo, '.git', 'worktrees', 'teammate');
-      await writeFile(path.join(gitWorktreeDir, 'HEAD'), 'ref: refs/heads/main\\n');
-      await writeFile(path.join(gitWorktreeDir, 'commondir'), '../..\\n');
-      await writeFile(path.join(gitWorktreeDir, 'gitdir'), `${path.join(worktree, '.git')}\\n`);
-      await writeFile(path.join(worktree, '.git'), 'gitdir: ../.git/worktrees/teammate\\n');
+      await writeFile(path.join(gitWorktreeDir, 'HEAD'), 'ref: refs/heads/main\n');
+      await writeFile(path.join(gitWorktreeDir, 'commondir'), '../..\n');
+      await writeFile(path.join(gitWorktreeDir, 'gitdir'), `${path.join(worktree, '.git')}\n`);
+      await writeFile(path.join(worktree, '.git'), 'gitdir: ../.git/worktrees/teammate\n');
       const ports = createNodeWorkspaceTrustWorkspaceCollectionPorts();
 
       await expect(ports.resolveGitRoot(nested)).resolves.toBe(repo);

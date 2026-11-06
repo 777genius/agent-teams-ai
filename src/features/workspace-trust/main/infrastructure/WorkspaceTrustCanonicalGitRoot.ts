@@ -19,7 +19,11 @@ async function readTrimmedFileOrNull(filePath: string): Promise<string | null> {
 }
 
 function validHead(head: string | null): boolean {
-  return Boolean(head && (/^ref: refs\/(heads|tags)\/[a-zA-Z0-9][^\\r\\n]*$/.test(head) || /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(head)));
+  return Boolean(
+    head &&
+    (/^ref: refs\/(?:heads|tags)\/[a-zA-Z0-9][^\r\n]*$/.test(head) ||
+      /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(head))
+  );
 }
 
 async function isValidGitMarker(root: string): Promise<boolean> {
@@ -97,13 +101,13 @@ export async function resolveWorkspaceTrustCanonicalGitRoot(gitRoot: string): Pr
 
   const worktreeGitDir = path
     .resolve(normalizedGitRoot, gitFileContent.slice('gitdir:'.length).trim())
-    .normalize('NFC');
+    ;
   const commonDirRaw = await readTrimmedFileOrNull(path.join(worktreeGitDir, 'commondir'));
   if (!commonDirRaw) {
     return normalizedGitRoot;
   }
 
-  const commonDir = path.resolve(worktreeGitDir, commonDirRaw).normalize('NFC');
+  const commonDir = path.resolve(worktreeGitDir, commonDirRaw);
   // Guard against a repo borrowing another trusted repo's worktree metadata.
   if (path.resolve(path.dirname(worktreeGitDir)) !== path.join(commonDir, 'worktrees')) {
     return normalizedGitRoot;
