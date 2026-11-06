@@ -155,6 +155,11 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(calls.probe, 1);
   assert.equal(calls.permissions, 1);
   assert.equal(calls.context, 1);
+  // A successful first installation is never submitted again by later
+  // readiness checks: duplicated native mutations are unsafe after lost ACK.
+  await opened.driver.checkReadiness();
+  await opened.driver.checkReadiness();
+  assert.equal(calls.context, 1, 're-probe must not replay native instruction installation');
   assert.deepEqual(provider.initialContextEvidence?.(), {
     kind: 'native-configuration',
     contextDigest: (await import('node:crypto')).createHash('sha256')
