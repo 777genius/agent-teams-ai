@@ -193,3 +193,14 @@ test('unknown physical cleanup on failed V2 open does not become a retryable suc
   await assert.rejects(() => provider.factory.open(request()), /opencode.v2.owner-cleanup-unknown/);
   assert.equal(calls.stop, 1, 'unknown owner must not be signalled twice');
 });
+
+test('mutable owner cannot downgrade an already captured deny to ask', async () => {
+  const { captured, calls } = owner(true, 'ask');
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  // A subsequent owner revision is not allowed to change the captured product
+  // security boundary for an already selected native generation.
+  (captured as { requiredExternalDirectory: 'ask' | 'deny' }).requiredExternalDirectory = 'ask';
+  await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(provider.isReady(), false);
+  assert.deepEqual(calls, { probe: 1, permissions: 1, password: 0, stop: 1, stopped: 1 });
+});
