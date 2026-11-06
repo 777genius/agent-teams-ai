@@ -33,6 +33,8 @@ jobs:
           path: baseline
           persist-credentials: false
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: current/package.json
       - uses: actions/setup-node@v6
         with:
           node-version: 24.16.0
