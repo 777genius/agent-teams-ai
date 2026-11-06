@@ -284,6 +284,10 @@ export function createOpenCodeV2MemberProvider(
               // become unavailable. Only retire on terminal transport failure,
               // never on validation/backpressure/stale-input replies.
               submit: async (input) => {
+                // A leaked session handle must not submit after the Host
+                // revokes its generation/lease or seals the owned process.
+                if (!ready || !current()) return { ok: false as const,
+                  code: 'unavailable' as const, delivery: 'known-not-sent' as const };
                 let reply: Awaited<ReturnType<typeof source.submit>>;
                 try {
                   reply = await source.submit(input);
@@ -302,12 +306,68 @@ export function createOpenCodeV2MemberProvider(
                 }
                 return reply;
               },
-              observe: () => source.observe(),
-              respondToInteraction: (reference, reply) => source.respondToInteraction(reference, reply),
-              interrupt: (operation) => source.interrupt(operation),
-              checkReadiness: () => source.checkReadiness(),
-              checkpoint: () => source.checkpoint(),
-              close: () => source.close(),
+              // An ended private feed means the Session SPI has sealed or
+              // closed. Do not keep a previously captured Host admission alive.
+              // Consumer-initiated early iterator return is not evidence of a
+              // native failure, so only natural exhaustion/error retires it.
+              observe: async function* () {
+                let exhausted = false;
+                try {
+                  for await (const event of source.observe()) yield event;
+                  exhausted = true;
+                } catch (error) {
+                  await finishOwned();
+                  throw error;
+                } finally {
+                  if (exhausted) await finishOwned();
+                }
+              },
+              respondToInteraction: async (reference, reply) => {
+                // V2 permission replies are native mutations. Never let a
+                // retained driver handle grant after Host seal/lease loss.
+                if (!ready || !current()) return { ok: false as const, code: 'unavailable' as const };
+                try {
+                  const result = await source.respondToInteraction(reference, reply);
+                  if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return result;
+                } catch (error) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
+                  throw error;
+                }
+              },
+              interrupt: async (operation) => {
+                if (!ready || !current()) return { ok: false as const, code: 'unavailable' as const };
+                try {
+                  const result = await source.interrupt(operation);
+                  if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return result;
+                } catch (error) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
+                  throw error;
+                }
+              },
+              checkReadiness: async () => {
+                if (!ready || !current()) return { ok: false as const, code: 'unavailable' as const };
+                try {
+                  const result = await source.checkReadiness();
+                  if (!result.ok) {
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  }
+                  return result;
+                } catch (error) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
+                  throw error;
+                }
+              },
+              checkpoint: () => ready && current() ? source.checkpoint() :
+                { ok: false as const, code: 'unavailable' as const },
+              close: () => {
+                ready = false;
+                initialEvidence = undefined;
+                return source.close();
+              },
             },
           };
         } catch (error) {
