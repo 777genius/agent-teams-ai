@@ -6,6 +6,7 @@
  */
 
 import { isGitInternalPath, isPathWithinRoot } from '@main/utils/pathValidation';
+import { getManagedGitExecutable, createManagedGitEnv } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
 import { isBinaryFile } from 'isbinaryfile';
@@ -153,9 +154,11 @@ export class FileSearchService {
     try {
       const git = simpleGit({
         baseDir: projectRoot,
+        binary: getManagedGitExecutable(),
         allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
         timeout: { block: 10_000 },
       }).env('GIT_OPTIONAL_LOCKS', '0');
+      git.env(createManagedGitEnv(process.env));
 
       // Include tracked + untracked (excluding ignored) for better UX.
       // Use -z for safe parsing of filenames.
