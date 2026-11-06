@@ -27,7 +27,7 @@ The changes in the related PR target the **website on mobile browsers**, not a m
 
 1. Keep the SSR-visible hero and its video placeholder while determining the mobile breakpoint, without constructing the Mux player iframe on a mobile first render. Playback remains available on an explicit tap.
 2. Use a reduced-width video thumbnail on phones.
-3. On widths <=767px, remove the unnecessary 1600px video-poster background (background video and WebGL canvas were already disabled at <=700px); keep a static CSS gradient.
+3. On widths <=767px, remove the unnecessary 1600px video-poster background (background video and WebGL canvas are disabled at <=767px); keep a static CSS gradient.
 4. Hide costly global blurred animated orbs and the full-page scanline overlay on phones, preserving layout and grid.
 5. Defer hydration of below-the-fold sections until they are near the viewport, preserving SSR markup, in-page anchors, and desktop interaction.
 

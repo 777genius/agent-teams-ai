@@ -64,6 +64,8 @@ const ruSourceLabels: Record<string, string> = {
   'Cursor desktop downloads': 'десктопные версии Cursor',
   'Claude Code supported platforms': 'поддерживаемые платформы Claude Code',
   'Updated research November 6, 2026': 'исследование от 6 ноября 2026',
+  'OpenRig v0.6.5 README (historical baseline)': 'OpenRig v0.6.5 README (историческая база)',
+  'OpenRig v0.6.5 comparison evidence (historical)': 'историческое сравнение OpenRig v0.6.5',
   'Agent Teams organizations feature': 'фича организаций Agent Teams',
   'Agent Teams mixed-provider team lanes': 'mixed-provider команды Agent Teams',
   'Agent Teams cross-team messaging': 'межкомандные сообщения Agent Teams',

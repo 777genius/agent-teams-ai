@@ -247,7 +247,7 @@ function syncMotionState() {
 
 onMounted(() => {
   motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mobileQuery = window.matchMedia("(max-width: 700px)");
+  mobileQuery = window.matchMedia("(max-width: 767px)");
   motionQuery.addEventListener("change", syncMotionState);
   mobileQuery.addEventListener("change", syncMotionState);
 

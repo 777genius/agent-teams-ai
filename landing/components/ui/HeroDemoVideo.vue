@@ -88,7 +88,7 @@ function activatePlayer() {
 }
 
 onMounted(() => {
-  mobileQuery = window.matchMedia('(max-width: 700px)');
+  mobileQuery = window.matchMedia('(max-width: 767px)');
   syncMobileViewport();
   viewportReady.value = true;
   mobileQuery.addEventListener('change', syncMobileViewport);
