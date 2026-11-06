@@ -313,6 +313,13 @@ export function createOpenCodeV2MemberProvider(
                   if (!stopped) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
                   throw error;
                 }
+                // Native mutation may have been ACKed after Host seal or lease loss.
+                // Never expose a successful handoff from a revoked generation,
+                // and never claim known-not-sent or replay that uncertain POST.
+                if (!current()) {
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                  return { ok: false as const, code: 'unknown' as const };
+                }
                 if (!reply.ok && (reply.code === 'dependency-unavailable' ||
                     reply.code === 'unavailable' || reply.code === 'unknown')) {
                   // Input delivery was known-not-sent, but native process
@@ -413,6 +420,11 @@ export function createOpenCodeV2MemberProvider(
                 }
                 try {
                   const result = await source.respondToInteraction(reference, reply);
+                  // A late permission ACK cannot grant after Host authority loss.
+                  if (!current()) {
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                    return { ok: false as const, code: 'unknown' as const };
+                  }
                   if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return result;
@@ -432,6 +444,12 @@ export function createOpenCodeV2MemberProvider(
                 }
                 try {
                   const result = await source.interrupt(operation);
+                  // Interrupt may already have reached the native engine.
+                  // A post-seal response is UNKNOWN, not safe to resend.
+                  if (!current()) {
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                    return { ok: false as const, code: 'unknown' as const };
+                  }
                   if (!result.ok && (result.code === 'unknown' || result.code === 'unavailable'))
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return result;
