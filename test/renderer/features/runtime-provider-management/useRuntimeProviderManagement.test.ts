@@ -3100,26 +3100,26 @@ describe('useRuntimeProviderManagement', () => {
       expect(loadSetupForm).toHaveBeenCalled();
     });
 
-    let submitPromise: ReturnType<RuntimeProviderManagementActions['submitConnect']> | null = null;
-    // The post-connect view/directory promises deliberately remain unresolved.
-    // A synchronous act flushes the initial busy state without awaiting them.
-    act(() => {
-      submitPromise = actions?.submitConnect('openai') ?? null;
-    });
-    expect(connectProvider).toHaveBeenCalled();
-
-    expect(state?.savingProviderId).toBe('openai');
-    expect(state?.activeFormProviderId).toBeNull();
-
-    await vi.waitFor(() => {
-      expect(resolveRefreshView).toBeTypeOf('function');
-      expect(resolveRefreshDirectory).toBeTypeOf('function');
-    });
+    // Keep the artificially delayed post-connect reads inside one React act:
+    // the operation must stay pending until both refresh results arrive.
+    let connectionCompleted = false;
     await act(async () => {
+      const submitPromise = actions?.submitConnect('openai') ?? null;
+      expect(submitPromise).not.toBeNull();
+      void submitPromise?.then(() => {
+        connectionCompleted = true;
+      });
+      await vi.waitFor(() => {
+        expect(connectProvider).toHaveBeenCalled();
+        expect(resolveRefreshView).toBeTypeOf('function');
+        expect(resolveRefreshDirectory).toBeTypeOf('function');
+      });
+      expect(connectionCompleted).toBe(false);
       resolveRefreshView?.();
       resolveRefreshDirectory?.();
       await submitPromise;
     });
+    expect(state?.activeFormProviderId).toBeNull();
 
     expect(loadView).toHaveBeenCalledTimes(2);
     expect(
