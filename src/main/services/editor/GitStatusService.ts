@@ -56,7 +56,7 @@ export class GitStatusService {
       }).env('GIT_OPTIONAL_LOCKS', '0');
       const environment = createManagedGitEnv(process.env, { gitCommand: true });
       for (const key of MANAGED_GIT_ENV_KEYS) {
-        if (environment[key]) this.git.env(key, environment[key]!);
+        if (environment[key]) this.git.env(key, environment[key]);
       }
     } catch {
       this.git = null;

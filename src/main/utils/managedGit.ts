@@ -32,7 +32,7 @@ function findRuntime(options: ManagedGitLocationOptions = {}): GitRuntimeLocatio
   const packaged =
     options.packaged ?? Boolean(resourcesPath && existsSync(path.join(resourcesPath, 'app.asar')));
   const root = packaged
-    ? path.join(resourcesPath!, 'git')
+    ? path.join(resourcesPath, 'git')
     : path.join(options.developmentRoot ?? process.cwd(), 'resources', 'git');
   const executable = path.join(root, platform === 'win32' ? 'cmd/git.exe' : 'bin/git');
 

@@ -710,7 +710,7 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
  */
 async function signManagedGitBinaries(context) {
   if (context.electronPlatformName !== 'darwin') return;
-  const identity = context.packager.platformSpecificBuildOptions?.identity;
+  const identity = context.packager?.platformSpecificBuildOptions?.identity;
   if (!identity || identity === '-') return; // Unsigned packaged PR smoke.
   // Lazily initializes CSC_LINK's temporary signing keychain before afterPack.
   // This is the same keychain electron-builder uses when it signs the outer app.

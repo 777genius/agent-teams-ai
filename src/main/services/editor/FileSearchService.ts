@@ -163,7 +163,7 @@ export class FileSearchService {
       }).env('GIT_OPTIONAL_LOCKS', '0');
       const environment = createManagedGitEnv(process.env, { gitCommand: true });
       for (const key of MANAGED_GIT_ENV_KEYS) {
-        if (environment[key]) git.env(key, environment[key]!);
+        if (environment[key]) git.env(key, environment[key]);
       }
 
       // Include tracked + untracked (excluding ignored) for better UX.
