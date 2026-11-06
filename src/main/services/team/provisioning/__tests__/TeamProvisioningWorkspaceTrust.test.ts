@@ -18,7 +18,6 @@ import {
 } from '../TeamProvisioningWorkspaceTrust';
 
 import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from '../TeamProvisioningWorkspaceTrustNodePorts';
-
 import type {
   WorkspaceTrustCoordinator,
   WorkspaceTrustFeatureFlags,
@@ -80,7 +79,7 @@ describe('TeamProvisioningWorkspaceTrust', () => {
       await mkdir(path.join(repo, '.git'));
       await mkdir(nested, { recursive: true });
       await mkdir(worktree);
-      await writeFile(path.join(worktree, '.git'), 'gitdir: ../.git/worktrees/teammate\\n');
+      await writeFile(path.join(worktree, '.git'), 'gitdir: ../.git/worktrees/teammate\n');
       const ports = createNodeWorkspaceTrustWorkspaceCollectionPorts();
 
       await expect(ports.resolveGitRoot(nested)).resolves.toBe(repo);
