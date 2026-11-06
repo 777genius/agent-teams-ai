@@ -244,6 +244,10 @@ export function createOpenCodeV2MemberProvider(
       ready = false;
       initialEvidence = undefined;
       abort.abort();
+      // Sealing revokes native custody immediately, even if the caller has
+      // not yet reached its asynchronous cleanup phase. finishOwned retains
+      // the single-stop/physical-confirmation discipline.
+      void finishOwned();
     },
     cleanup: finishOwned,
   };
