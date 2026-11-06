@@ -3,7 +3,6 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { access, lstat, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
@@ -92,7 +91,7 @@ export async function stageManagedGit(platform, { root = stagingRoot } = {}) {
     }
   }
 
-  const scratch = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-managed-git-'));
+  const scratch = await mkdtemp(path.join(repoRoot, 'resources', '.managed-git-staging-'));
   const archive = path.join(scratch, 'archive.tar.gz');
   const unpacked = path.join(scratch, 'git');
   const url = `https://github.com/${lock.repository}/releases/download/${lock.tag}/${asset.filename}`;
