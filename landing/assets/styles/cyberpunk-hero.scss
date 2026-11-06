@@ -2042,14 +2042,6 @@
     opacity: 0.58;
   }
 
-  /* The video is disabled on mobile; don't request its 1600px Mux poster. */
-  .cyber-hero__monterey-video {
-    background: var(--cyber-monterey-bg);
-    filter: none;
-    transform: none;
-    will-change: auto;
-  }
-
   .cyber-hero__monterey-canvas {
     display: none;
   }
