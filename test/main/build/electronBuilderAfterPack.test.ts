@@ -240,6 +240,39 @@ describe('electron-builder afterPack', () => {
     expect(next).toHaveLength(2);
   });
 
+  it('accepts portable CLR DLLs when verifying an installed macOS app directly', async () => {
+    const release = createTempDir();
+    tempDirs.push(release);
+    const app = path.join(release, 'Agent Teams AI.app');
+    writeFile(
+      path.join(app, 'Contents', 'Resources', 'git', 'libexec', 'git-core', 'Avalonia.Base.dll'),
+      createClrManagedGitLibrary()
+    );
+    expect(await validateNativeBinaries(app, 'darwin', 'arm64')).toEqual([]);
+  });
+
+  it('accepts only pinned Git-for-Windows CLR DLLs and the known 32-bit MSYS helper', async () => {
+    const release = createTempDir();
+    tempDirs.push(release);
+    const git = path.join(release, 'resources', 'git');
+    writeFile(
+      path.join(git, 'ucrt64', 'bin', 'Avalonia.Base.dll'),
+      createClrManagedGitLibrary()
+    );
+    writeFile(
+      path.join(git, 'usr', 'libexec', 'getprocaddr32.exe'),
+      createPortableExecutableBuffer('ia32')
+    );
+    expect(await validateNativeBinaries(release, 'win32', 'x64')).toEqual([]);
+    writeFile(
+      path.join(git, 'usr', 'libexec', 'unapproved32.exe'),
+      createPortableExecutableBuffer('ia32')
+    );
+    const mismatches = await validateNativeBinaries(release, 'win32', 'x64');
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0].path).toContain('unapproved32.exe');
+  });
+
   it('prunes node-pty prebuilds that do not match the target platform and arch', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);

@@ -416,7 +416,7 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
   // Git Credential Manager ships portable CLR assemblies that have an ia32 PE
   // header even in the macOS/Linux Git distributions. This is not native x86.
   const managedGitLibrary =
-    /^(?:[^/]+\.app\/Contents\/Resources\/git|resources\/git)\/(?:libexec\/git-core|(?:ucrt64|clangarm64)\/libexec\/git-core)\/(?:[^/]+\/)*[^/]+\.dll$/i.test(normalizedPath);
+    /^(?:(?:[^/]+\.app\/)?Contents\/Resources\/git|resources\/git)\/(?:libexec\/git-core|(?:ucrt64|clangarm64)\/(?:libexec\/git-core|bin))\/(?:[^/]+\/)*[^/]+\.dll$/i.test(normalizedPath);
   if (managedGitLibrary && clrManaged && format === 'pe') {
     return true;
   }
@@ -424,7 +424,9 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
   const isAllowedIa32Path =
     normalizedPath === ssh2PageantPath ||
     normalizedPath.endsWith(`/${ssh2PageantPath}`) ||
-    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH;
+    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
+    // Git for Windows contains this one 32-bit MSYS helper even in 64-bit archives.
+    normalizedPath === 'resources/git/usr/libexec/getprocaddr32.exe';
 
   return (
     targetPlatform === 'win32' &&
