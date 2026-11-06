@@ -625,4 +625,8 @@ test('retained V2 controls surface UNKNOWN process custody, never re-signal', as
   assert.equal(calls.password, 0);
   assert.equal(await provider.cleanup(), false);
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'unknown' });
+  await assert.rejects(async () => {
+    for await (const _event of opened.driver.observe()) { /* Drain sealed feed. */ }
+  }, /opencode.v2.owner-cleanup-unknown/,
+  'natural observation exhaustion must not mask UNKNOWN process custody');
 });
