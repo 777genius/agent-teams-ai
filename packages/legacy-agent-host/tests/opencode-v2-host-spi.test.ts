@@ -124,6 +124,7 @@ test('V2 private SPI refuses mismatched request before native probe and credenti
   assert.equal(provider.isReady(), false);
   assert.equal(calls.probe, 0);
   assert.equal(calls.password, 0);
+  assert.equal(calls.stop, 1, 'failed open retires owned process immediately');
   assert.equal(await provider.cleanup(), true);
   assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 1, stopped: 1 });
 });
@@ -173,7 +174,22 @@ test('V1 checkpoint identity is rejected before V2 native probe or permission re
   const provider = createOpenCodeV2MemberProvider(input, captured);
   await assert.rejects(() => provider.factory.open(restoredRequest), /opencode.driver.checkpoint-incompatible/);
   assert.equal(provider.isReady(), false);
-  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 0, stopped: 0 });
+  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 1, stopped: 1 });
   assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1, 'failed restore must not repeatedly signal an owner');
+});
+
+test('unknown physical cleanup on failed V2 open does not become a retryable success', async () => {
+  const { captured, calls } = owner(true);
+  captured.stopOwned = async () => { calls.stop++; return false; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(
+    () => provider.factory.open({ ...request(), configRevision: 'forged' }),
+    /opencode.v2.owner-cleanup-unknown/
+  );
+  assert.equal(await provider.cleanup(), false);
   assert.equal(calls.stop, 1);
+  assert.equal(calls.probe, 0);
+  await assert.rejects(() => provider.factory.open(request()), /opencode.v2.owner-cleanup-unknown/);
+  assert.equal(calls.stop, 1, 'unknown owner must not be signalled twice');
 });
