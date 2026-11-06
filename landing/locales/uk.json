@@ -138,6 +138,14 @@
       "budgetControls": "Контроль бюджету",
       "price": "Ціна",
       "desktopPlatforms": "Підтримувані настільні платформи"
+    },
+    "platforms": {
+      "desktopApp": "(настільний застосунок)",
+      "cliBinaries": "(бінарні файли CLI)",
+      "noNativeDesktop": "Немає нативного настільного застосунку (самостійно розгорнута панель)",
+      "desktopIde": "(настільна IDE)",
+      "cli": "(CLI)",
+      "wsl2": "через WSL2 (не нативно)"
     }
   },
   "screenshots": {

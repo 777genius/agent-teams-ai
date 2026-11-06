@@ -138,6 +138,14 @@
       "budgetControls": "Kiểm soát ngân sách",
       "price": "Giá",
       "desktopPlatforms": "Nền tảng máy tính được hỗ trợ"
+    },
+    "platforms": {
+      "desktopApp": "(ứng dụng máy tính)",
+      "cliBinaries": "(tệp nhị phân CLI)",
+      "noNativeDesktop": "Không có ứng dụng máy tính gốc (bảng điều khiển tự lưu trữ)",
+      "desktopIde": "(IDE máy tính)",
+      "cli": "(CLI)",
+      "wsl2": "qua WSL2 (không trực tiếp)"
     }
   },
   "screenshots": {

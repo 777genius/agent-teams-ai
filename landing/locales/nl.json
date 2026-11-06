@@ -138,6 +138,14 @@
       "budgetControls": "Budgetbeheer",
       "price": "Prijs",
       "desktopPlatforms": "Ondersteunde desktopplatforms"
+    },
+    "platforms": {
+      "desktopApp": "(desktopapp)",
+      "cliBinaries": "(CLI-binaries)",
+      "noNativeDesktop": "Geen native desktopapp (zelfgehost beheerpaneel)",
+      "desktopIde": "(desktop-IDE)",
+      "cli": "(CLI)",
+      "wsl2": "via WSL2 (niet native)"
     }
   },
   "screenshots": {

@@ -138,6 +138,14 @@
       "budgetControls": "Vidhibiti vya bajeti",
       "price": "Bei",
       "desktopPlatforms": "Majukwaa ya kompyuta yanayotumika"
+    },
+    "platforms": {
+      "desktopApp": "(programu ya desktop)",
+      "cliBinaries": "(faili za CLI)",
+      "noNativeDesktop": "Hakuna programu asilia ya desktop (paneli inayohudumiwa binafsi)",
+      "desktopIde": "(IDE ya desktop)",
+      "cli": "(CLI)",
+      "wsl2": "kupitia WSL2 (si ya asili)"
     }
   },
   "screenshots": {

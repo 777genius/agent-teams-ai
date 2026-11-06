@@ -138,6 +138,14 @@
       "budgetControls": "การควบคุมงบประมาณ",
       "price": "ราคา",
       "desktopPlatforms": "แพลตฟอร์มเดสก์ท็อปที่รองรับ"
+    },
+    "platforms": {
+      "desktopApp": "(แอปเดสก์ท็อป)",
+      "cliBinaries": "(ไบนารี CLI)",
+      "noNativeDesktop": "ไม่มีแอปเดสก์ท็อปแบบเนทีฟ (แผงควบคุมโฮสต์เอง)",
+      "desktopIde": "(IDE เดสก์ท็อป)",
+      "cli": "(CLI)",
+      "wsl2": "ผ่าน WSL2 (ไม่ใช่เนทีฟ)"
     }
   },
   "screenshots": {
