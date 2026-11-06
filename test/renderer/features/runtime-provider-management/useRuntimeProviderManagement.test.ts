@@ -3095,18 +3095,17 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => {
       actions?.startConnect('openai');
       actions?.setApiKeyValue('sk-good-value');
-      await vi.waitFor(() => {
-        expect(loadSetupForm).toHaveBeenCalled();
-      });
+    });
+    await vi.waitFor(() => {
+      expect(loadSetupForm).toHaveBeenCalled();
     });
 
     let submitPromise: ReturnType<RuntimeProviderManagementActions['submitConnect']> | null = null;
     await act(async () => {
       submitPromise = actions?.submitConnect('openai') ?? null;
-      await vi.waitFor(() => {
-        expect(connectProvider).toHaveBeenCalled();
-      });
-      await Promise.resolve();
+    });
+    await vi.waitFor(() => {
+      expect(connectProvider).toHaveBeenCalled();
     });
 
     expect(state?.savingProviderId).toBe('openai');
