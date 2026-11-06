@@ -1548,6 +1548,10 @@ describe('ipc teams handlers', () => {
       success: false,
       error: 'OpenCode runtime recipient bob has no authoritative config identity',
     });
+    expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain(
+      'OpenCode runtime recipient bob has no authoritative config identity'
+    );
+    vi.mocked(console.error).mockClear();
     expect(resolveForSend).toHaveBeenCalledWith('my-team', 'bob');
     expect(service.sendMessage).not.toHaveBeenCalled();
     expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
