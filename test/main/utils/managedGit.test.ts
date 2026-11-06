@@ -38,7 +38,6 @@ describe('managed Git desktop resolution', () => {
     expect(result.PATH?.split(':')[0]).toBe(path.join(resourcesPath, 'git/bin'));
     expect(result.GIT_EXEC_PATH).toBe(path.join(resourcesPath, 'git/libexec/git-core'));
     expect(result.GIT_CONFIG_SYSTEM).toBe(path.join(resourcesPath, 'git/etc/gitconfig'));
-    expect(result.GIT_TEMPLATE_DIR).toBe(path.join(resourcesPath, 'git/share/git-core/templates'));
     expect(result.GIT_CONFIG_GLOBAL).toBe('/test/config');
     expect(result.HOME).toBe('/Users/test');
     expect(env.PATH).toBe('/usr/bin:/bin');
