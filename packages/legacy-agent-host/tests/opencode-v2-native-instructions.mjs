@@ -191,6 +191,7 @@ try {
   instructions,isCurrent:()=>true,canAllocate:()=>true,
   onProgress:()=>{},readCheckpoint:async()=>undefined};
   let initialPutCount=0;
+  let nativeCustodyReads=0;
   const owner={
     requiredExternalDirectory:'deny',
     readPassword:()=>password,
@@ -198,6 +199,20 @@ try {
       const result=await native('/api/info','GET',undefined,signal);
       return result.status===200&&result.data?.pid===child.pid&&
         startIdentity(child.pid)===startTicks;
+    },
+    async readNativeCustody(signal) {
+      // The CLI wrapper's PID or npm/release archive digest is insufficient:
+      // every Host readiness check must measure the actual running ELF and
+      // bind the same TEST-owned PID and /proc start-ticks identity.
+      const observed=await native('/api/info','GET',undefined,signal);
+      if(observed.status!==200||observed.data?.pid!==child.pid||
+         observed.data?.version!==version||startIdentity(child.pid)!==startTicks)
+        return undefined;
+      const measuredPath=realpathSync('/proc/'+child.pid+'/exe');
+      const measuredSha256=digest(readFileSync('/proc/'+child.pid+'/exe'));
+      nativeCustodyReads++;
+      return {executablePath:measuredPath,executableSha256:measuredSha256,
+        pid:child.pid,startIdentity:startTicks,version:observed.data.version};
     },
     async readNativeEffectivePermissions(signal) {
       const result=await native(sessionPath,'GET',undefined,signal);
@@ -242,6 +257,10 @@ try {
   const rechecked=await opened.driver.checkReadiness();
   if(rechecked.ok!==true || !provider.isReady() || initialPutCount!==1)
     throw Error('native_host_recheck_replayed_initial_context');
+  if(nativeCustodyReads!==2)
+    throw Error('Host_failed_to_remeasure_actual_native_binary_and_PID');
+  receipt.nativeCustodyReadbacks=nativeCustodyReads;
+  receipt.steps.push('Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck');
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
   // Seal is synchronous revocation. The exact owner must initiate the real
   // native process-group stop before driver.close()/cleanup() are requested.
