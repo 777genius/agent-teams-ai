@@ -79,6 +79,75 @@ describe('runtime status command diagnostics', () => {
     }
   );
 
+  it('identifies denied project access only after an independent filesystem check', async () => {
+    execMock.mockRejectedValue(
+      Object.assign(new Error('Command failed'), {
+        code: 1,
+        stderr: 'error: An unknown error occurred (Unexpected)',
+      })
+    );
+    const checkAccess = vi.fn(async () => {
+      throw Object.assign(new Error('secret-directory-error'), { code: 'EPERM' });
+    });
+    const error = await readRuntimeStatusCommand(
+      binaryPath,
+      args,
+      { cwd },
+      extractRuntimeStatusJsonObject,
+      checkAccess
+    ).catch((caught: unknown) => caught);
+    const status = createRuntimeStatusErrorProviderStatus('opencode', error);
+
+    expect(checkAccess).toHaveBeenCalledExactlyOnceWith(cwd);
+    expect(status).toMatchObject({
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'unavailable',
+      statusMessage: 'Project folder access denied',
+      capabilities: { teamLaunch: false },
+    });
+    expect(status.detailMessage).toContain('Project folder access denied (EPERM)');
+    expect(status.detailMessage).toContain('system privacy settings');
+    expect(status.detailMessage).toContain('stderr: error: An unknown error occurred (Unexpected)');
+    expect(status.detailMessage).not.toContain('secret-directory-error');
+  });
+
+  it('does not assume a project permission failure from Bun Unexpected alone', async () => {
+    execMock.mockRejectedValue(
+      Object.assign(new Error('Command failed'), {
+        code: 1,
+        stderr: 'error: An unknown error occurred (Unexpected)',
+      })
+    );
+    const checkAccess = vi.fn(async () => undefined);
+    const error = await readRuntimeStatusCommand(
+      binaryPath,
+      args,
+      { cwd },
+      extractRuntimeStatusJsonObject,
+      checkAccess
+    ).catch((caught: unknown) => caught);
+    const status = createRuntimeStatusErrorProviderStatus('opencode', error);
+
+    expect(checkAccess).toHaveBeenCalledExactlyOnceWith(cwd);
+    expect(status.statusMessage).not.toBe('Project folder access denied');
+    expect(status.detailMessage).toContain('(Unexpected)');
+    expect(status.capabilities.teamLaunch).toBe(false);
+  });
+
+  it('does not scan the project filesystem after unrelated CLI failures', async () => {
+    execMock.mockRejectedValue(Object.assign(new Error('Command failed'), { code: 7 }));
+    const checkAccess = vi.fn(async () => undefined);
+    await readRuntimeStatusCommand(
+      binaryPath,
+      args,
+      { cwd },
+      extractRuntimeStatusJsonObject,
+      checkAccess
+    ).catch(() => undefined);
+    expect(checkAccess).not.toHaveBeenCalled();
+  });
+
   it('keeps timeout classification, recovery copy and safe failure evidence', async () => {
     execMock.mockRejectedValue(
       Object.assign(new Error('Command timed out after 30000ms'), {

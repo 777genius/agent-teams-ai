@@ -212,6 +212,8 @@ export function createRuntimeStatusErrorProviderStatus(
   const message = error instanceof Error ? error.message : String(error);
   const errorCode = getProviderStatusCheckErrorCode(error);
   const isOpenCodeTimeout = providerId === 'opencode' && errorCode === 'timeout';
+  const projectAccessDenied =
+    error instanceof RuntimeStatusCommandError && error.projectAccessDenied !== null;
   if (errorCode === 'project_missing') {
     const projectPath = isWorkingDirectoryMissingError(error) ? error.cwd : message;
     return {
@@ -228,9 +230,11 @@ export function createRuntimeStatusErrorProviderStatus(
     verificationState: 'error',
     statusCheckOutcome: 'transient_error',
     statusCheckErrorCode: errorCode,
-    statusMessage: isOpenCodeTimeout
-      ? 'OpenCode is still loading'
-      : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+    statusMessage: projectAccessDenied
+      ? 'Project folder access denied'
+      : isOpenCodeTimeout
+        ? 'OpenCode is still loading'
+        : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
     detailMessage: isOpenCodeTimeout
       ? [
           'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
