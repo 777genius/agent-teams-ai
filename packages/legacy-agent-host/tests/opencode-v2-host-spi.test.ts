@@ -249,3 +249,25 @@ test('cleanup retries only read-only physical confirmation after uncertain stop 
   assert.equal(provider.isReady(), false);
   assert.equal(provider.initialContextEvidence?.(), undefined);
 });
+
+test('sealing aborts an in-flight V2 native probe before permission or context installation', async () => {
+  const { captured, calls } = owner(true);
+  const entered = Promise.withResolvers<void>();
+  captured.probe = async (signal) => {
+    calls.probe++;
+    entered.resolve();
+    return new Promise<boolean>((resolve) => {
+      if (signal.aborted) return resolve(false);
+      signal.addEventListener('abort', () => resolve(false), { once: true });
+    });
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opening = provider.factory.open(request());
+  await entered.promise;
+  provider.seal();
+  await assert.rejects(opening, /opencode.driver.dependency-unavailable/);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.deepEqual(calls, { probe: 1, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
+  assert.equal(await provider.cleanup(), true);
+});
