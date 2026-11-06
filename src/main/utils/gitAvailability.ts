@@ -18,6 +18,7 @@ export async function canUseGitWithoutMacInstallerPrompt(
     const candidate = path.join(directory, 'git');
     try {
       await fs.promises.access(candidate, fs.constants.X_OK);
+      if (!(await fs.promises.stat(candidate)).isFile()) continue;
     } catch {
       continue;
     }

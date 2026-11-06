@@ -18,8 +18,51 @@ async function readTrimmedFileOrNull(filePath: string): Promise<string | null> {
   }
 }
 
+function validHead(head: string | null): boolean {
+  return Boolean(head && (/^ref: refs\/(heads|tags)\/[a-zA-Z0-9][^\\r\\n]*$/.test(head) || /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(head)));
+}
+
+async function isValidGitMarker(root: string): Promise<boolean> {
+  const marker = path.join(root, '.git');
+  try {
+    const stat = await fs.lstat(marker);
+    if (stat.isDirectory()) {
+      const [head, config] = await Promise.all([
+        readTrimmedFileOrNull(path.join(marker, 'HEAD')),
+        readTrimmedFileOrNull(path.join(marker, 'config')),
+      ]);
+      return validHead(head) && Boolean(config?.includes('[core]'));
+    }
+    if (!stat.isFile()) return false;
+    const contents = await readTrimmedFileOrNull(marker);
+    const match = /^gitdir:\s*(.+)$/.exec(contents ?? '');
+    if (!match || /[\r\n]/.test(match[1])) return false;
+    const gitDir = path.resolve(root, match[1]);
+    const [head, backlink, commonDir] = await Promise.all([
+      readTrimmedFileOrNull(path.join(gitDir, 'HEAD')),
+      readTrimmedFileOrNull(path.join(gitDir, 'gitdir')),
+      readTrimmedFileOrNull(path.join(gitDir, 'commondir')),
+    ]);
+    if (!validHead(head)) return false;
+    // Worktrees must link back to this exact .git file; do not borrow another
+    // repository's metadata as a source of trust for sibling directories.
+    if (commonDir) {
+      const [actual, expected] = await Promise.all([realpathOrNull(backlink ?? ''), realpathOrNull(marker)]);
+      return Boolean(actual && expected && actual === expected);
+    }
+    // Submodules may legitimately use .git files pointing to a module gitdir.
+    // A real submodule config identifies its worktree; arbitrary gitdir files do not.
+    const config = await readTrimmedFileOrNull(path.join(gitDir, 'config'));
+    const worktree = /(?:^|\n)\s*worktree\s*=\s*([^\r\n]+)/m.exec(config ?? '')?.[1]?.trim();
+    if (!worktree) return false;
+    return path.resolve(gitDir, worktree) === root;
+  } catch {
+    return false;
+  }
+}
+
 export async function resolveWorkspaceTrustFilesystemGitRoot(cwd: string): Promise<string | null> {
-  let current = path.resolve(cwd).normalize('NFC');
+  let current = path.resolve(cwd);
   const root = path.parse(current).root;
   try {
     const cwdStat = await fs.stat(current);
@@ -31,14 +74,7 @@ export async function resolveWorkspaceTrustFilesystemGitRoot(cwd: string): Promi
   }
 
   while (true) {
-    try {
-      const stat = await fs.stat(path.join(current, '.git'));
-      if (stat.isDirectory() || stat.isFile()) {
-        return current;
-      }
-    } catch {
-      // Keep walking until the filesystem root.
-    }
+    if (await isValidGitMarker(current)) return current;
 
     if (current === root) {
       return null;
@@ -53,7 +89,7 @@ export async function resolveWorkspaceTrustFilesystemGitRoot(cwd: string): Promi
 }
 
 export async function resolveWorkspaceTrustCanonicalGitRoot(gitRoot: string): Promise<string> {
-  const normalizedGitRoot = path.resolve(gitRoot).normalize('NFC');
+  const normalizedGitRoot = path.resolve(gitRoot);
   const gitFileContent = await readTrimmedFileOrNull(path.join(normalizedGitRoot, '.git'));
   if (!gitFileContent?.startsWith('gitdir:')) {
     return normalizedGitRoot;

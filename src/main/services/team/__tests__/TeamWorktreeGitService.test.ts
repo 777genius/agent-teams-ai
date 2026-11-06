@@ -29,6 +29,16 @@ describe('macOS Git availability without installer prompts', () => {
     }
   });
 
+  it('ignores an executable-looking directory in PATH instead of falling through to Apple shim', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'agent-teams-git-dir-'));
+    try {
+      await (await import('node:fs/promises')).mkdir(path.join(directory, 'git'));
+      await expect(canUseGitWithoutMacInstallerPrompt('darwin', directory)).resolves.toBe(false);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('preserves existing Git behavior on other platforms', async () => {
     await expect(canUseGitWithoutMacInstallerPrompt('linux', '')).resolves.toBe(true);
     await expect(canUseGitWithoutMacInstallerPrompt('win32', '')).resolves.toBe(true);
