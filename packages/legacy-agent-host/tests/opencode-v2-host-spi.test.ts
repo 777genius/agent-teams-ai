@@ -774,7 +774,7 @@ test('pinned private V2 PR1 refuses Windows native cwd before network access (HO
     assert.equal(await provider.cleanup(), true);
   });
 
-test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed',
+test('late native prompt ACK stays UNKNOWN during re-attestation and after Host seal',
   { timeout: 10000 }, async () => {
     // A disposable localhost peer proves the real pinned private Session SPI
     // can return a successful prompt ACK after Host authority was revoked.
@@ -783,8 +783,10 @@ test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed
     // The pinned private V2 driver PR #1 validates a POSIX lexical directory
     // even in this Windows synthetic HTTP transport test. Keep the captured
     // TEST path unchanged on all CI hosts; it is NOT native Windows custody.
-    const postSeen = Promise.withResolvers<void>();
-    const releaseAck = Promise.withResolvers<void>();
+    let postSeen = Promise.withResolvers<void>();
+    let releaseAck = Promise.withResolvers<void>();
+    const recheckEntered = Promise.withResolvers<void>();
+    const completeRecheck = Promise.withResolvers<void>();
     let postCount = 0;
     const sessionPath = '/api/session/' + profile.nativeSessionId;
     const server = createServer((req, res) => {
@@ -821,8 +823,9 @@ test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed
         req.on('end', () => {
           const input = JSON.parse(body) as { id: string; text: string };
           postCount++;
+          const ack = releaseAck;
           postSeen.resolve();
-          void releaseAck.promise.then(() => json({ data: {
+          void ack.promise.then(() => json({ data: {
             id: input.id, sessionID: profile.nativeSessionId, type: 'user',
             delivery: 'queue', time: { created: 1 }, payload: { text: input.text },
           } }));
@@ -842,8 +845,36 @@ test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed
       const provider = createOpenCodeV2MemberProvider(context(profile), captured);
       opened = await provider.factory.open(request());
       assert.equal(provider.isReady(), true);
+      // First prove a successful native POST ACK cannot be admitted during
+      // a transient re-attestation even while the Host still owns its PID.
+      captured.probe = async () => {
+        calls.probe++;
+        recheckEntered.resolve();
+        await completeRecheck.promise;
+        return true;
+      };
+      const duringRecheck = opened.driver.submit({
+        inputId: 'TEST-late-recheck', operationRef: 'TEST-recheck-op',
+        content: 'TEST recheck; no model',
+      });
+      await postSeen.promise;
+      const recheck = opened.driver.checkReadiness();
+      await recheckEntered.promise;
+      assert.equal(provider.isReady(), false, 'native re-attestation fences readiness');
+      releaseAck.resolve();
+      assert.deepEqual(await duringRecheck, { ok: false, code: 'unknown' },
+        'POST may have committed, but Host must not acknowledge it while fenced');
+      assert.equal(postCount, 1, 'the first native POST is never replayed');
+      assert.equal(calls.stop, 0, 'a temporary re-attestation must not stop a valid owner');
+      completeRecheck.resolve();
+      assert.equal((await recheck).ok, true);
+      assert.equal(provider.isReady(), true, 'successful readback restores this same owner');
+
+      // Then retain the original post-seal case with a DISTINCT input.
+      postSeen = Promise.withResolvers<void>();
+      releaseAck = Promise.withResolvers<void>();
       const pending = opened.driver.submit({
-        inputId: 'TEST-late-ack', operationRef: 'TEST-late-ack-op', content: 'TEST only; no model',
+        inputId: 'TEST-late-seal', operationRef: 'TEST-seal-op', content: 'TEST seal; no model',
       });
       await postSeen.promise;
       provider.seal();
@@ -851,13 +882,14 @@ test('late native prompt ACK after Host seal stays UNKNOWN and is never replayed
       const reply = await pending;
       assert.deepEqual(reply, { ok: false, code: 'unknown' },
         'a post-seal ACK is not an authorized handoff or known-not-sent');
-      assert.equal(postCount, 1, 'no second native POST after uncertain ACK');
+      assert.equal(postCount, 2, 'exactly one POST for each distinct input; zero replay');
       assert.equal(provider.isReady(), false);
       assert.equal(calls.stop, 1, 'only one TEST-owned stop signal');
       assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
       assert.equal(await provider.cleanup(), true);
       assert.equal(calls.stop, 1);
     } finally {
+      completeRecheck.resolve();
       releaseAck.resolve();
       await opened?.driver.close();
       server.closeAllConnections();
