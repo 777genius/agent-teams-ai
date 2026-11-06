@@ -6,7 +6,7 @@
  * Results are cached for 5 seconds; invalidated on file watcher events.
  */
 
-import { getManagedGitExecutable, createManagedGitEnv } from '@main/utils/managedGit';
+import { MANAGED_GIT_ENV_KEYS, getManagedGitExecutable, createManagedGitEnv } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import { simpleGit } from 'simple-git';
 
@@ -50,10 +50,13 @@ export class GitStatusService {
       this.git = simpleGit({
         baseDir: projectRoot,
         binary: getManagedGitExecutable(),
-        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
+        allowEnvironment: ['GIT_OPTIONAL_LOCKS', ...MANAGED_GIT_ENV_KEYS],
         timeout: { block: GIT_TIMEOUT_MS },
       }).env('GIT_OPTIONAL_LOCKS', '0');
-      this.git.env(createManagedGitEnv(process.env));
+      const environment = createManagedGitEnv(process.env);
+      for (const key of MANAGED_GIT_ENV_KEYS) {
+        if (environment[key]) this.git.env(key, environment[key]!);
+      }
     } catch {
       this.git = null;
     }
