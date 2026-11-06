@@ -25,6 +25,17 @@ Exact reviewed sources:
   PR revision were incomplete, not an independent final-head approval.
   Neither this sandbox fix nor its CI qualifies a production Team/Task/Message
   writer, OD-035/OD-040, or any M01–M19 target-core replacement.
+  **Authoritative gate refresh (6 Nov 2026):** Orchestrator
+  [`main=a34587b313e6`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/a34587b313e656eeb43d755b4a4f08c40dff2116)
+  now has owner-accepted [ADR-0116](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/a34587b313e656eeb43d755b4a4f08c40dff2116/docs/decisions/0116-native-temporal-for-fully-local-durable-workflows.md):
+  **OD-035 is resolved** (full native Temporal with PostgreSQL), not an open
+  engine-selection fork. [OD-021](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/a34587b313e656eeb43d755b4a4f08c40dff2116/docs/open-decisions/OD-021-local-supervisor-lifecycle-and-distribution.md)
+  and [OD-040](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/a34587b313e656eeb43d755b4a4f08c40dff2116/docs/open-decisions/OD-040-fully-local-package-materialization.md)
+  remain open, and all five broad production implementation gates remain
+  `In review`. Accepted engine choice is **not** implemented/qualified Host,
+  native packaging, owner-approved materialization or Desktop M01–M19 parity;
+  see the factual [Issue #96 gate correction](https://github.com/agent-teams-ai/agent-teams-orchestrator/issues/96#issuecomment-6684998577).
+
   **Follow-up (5 Nov 2026):** [Orchestrator PR #97](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/97)
   was squash-merged to `main` as [`5a8496ce7119`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/5a8496ce711909e381c5bc817fff5500be9a1761).
   Its one-file ADR-0103 *synthetic* conformance fixture checks Project-isolated
