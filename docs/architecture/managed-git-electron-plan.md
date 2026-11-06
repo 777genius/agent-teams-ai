@@ -67,3 +67,34 @@ Replacing `simple-git`, rewriting Git in JS/Rust, implementing Git GUI, auto-ins
 - [ ] License/third-party source obligations published
 - [ ] Independent code review and required current-HEAD CI green
 - [ ] Final app release validated; only then merge
+
+## Architecture critic 1 — reviewed 2026-11-06
+
+- **Found:** use of the Dugite JS `postinstall` can introduce unexpected network access. **Decision:** stage `dugite-native` directly in deterministic release tooling; retain `simple-git`.
+- **Found:** Git's helper executables, templates, CA bundle and Windows MSYS DLLs cannot be reproduced by copying `git.exe` alone. **Decision:** embed the whole native runtime and derive subprocess environment from upstream `dugite/lib/git-environment.ts`; do not alter `HOME`, global Git config or SSH user policy.
+- **Found:** `PATH` may be overwritten after `buildEnrichedEnv` by later team env merges, and PTY has independent env. **Decision:** inject after the final env merge (alongside initial enrichment for direct CLI paths); test both cases.
+- **Found:** a silently missing/corrupt packaged Git is much worse than a clear error. **Decision:** fail packaged validation and return a clear in-app error; no automatic `/usr/bin/git` fallback.
+
+## Release/E2E critic 2 — reviewed 2026-11-06
+
+- **Found:** compressed `darwin-arm64` tar.gz is actually about 63.5 MB, not the smaller LZMA estimate. **Decision:** track **measured** installer delta; resist optimizing before correctness.
+- **Found:** the trusted signing workflow only runs on `release/macos-signing`, while normal PR packaged CI builds unsigned macOS bundles. **Decision:** PR E2E proves five unsigned packaged builds, but signed/notarized macOS is an explicit **post-merge trusted-release qualification**, not something falsely claimed by a PR run.
+- **Found:** Windows `ucrt64` and `clangarm64` layout diverges from older builds; macOS Git LFS 3.8.x assumes macOS 13+. **Decision:** use upstream Git 2.56.0 bundle, native platform-specific path mapping, existing macOS minimum 13.
+- **Found:** tar extraction with symlinks may escape staging. **Decision:** verify every archive name and post-extraction symlink target before install; stage only an isolated temp dir.
+- **Found:** bundled Git includes GPLv2 Git and separately licensed LFS/GCM; the MIT license of Dugite JS does **not** cover those binaries. **Decision:** add third-party notices and gate publication on a documented source-compliance procedure.
+
+### Pinned upstream asset digests (GitHub Desktop Dugite Native v2.56.0-2)
+
+| Target | Tarball SHA-256 |
+| --- | --- |
+| darwin-arm64 | `1110de343de11cc6f469b782b60f36217b9199b5e06875dd65baa26dd60563c7` |
+| darwin-x64 | `52cc663281e1ec2f1d76ba781193ca4847e62dbbf767f6c99ec9ec5b978a7659` |
+| win32-arm64 | `1834e7817589f25f97ae0f309ef4733578a6b8dbd438ed29f898d075e6ead4c2` |
+| win32-x64 | `f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14` |
+| linux-x64 | `1efd8ce0516b670b6b6d0f49ecaf395ceb8cf7fff3f5857259763d97a1238df9` |
+
+Digests independently match both [upstream release](https://github.com/desktop/dugite-native/releases/tag/v2.56.0-2) and [Dugite's embedded-git manifest](https://github.com/desktop/dugite/blob/main/script/embedded-git.json). Do not use `latest`.
+
+### Scope guard
+
+The change is app-owning Git only. To achieve full clean-OS usability **agent subprocess environment inheritance** matters equally, but Git running on an unrelated SSH machine is not controlled. PR must not claim completion if an external provider directly executes the Apple system shim.
