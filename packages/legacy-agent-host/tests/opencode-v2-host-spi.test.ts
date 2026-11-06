@@ -66,12 +66,23 @@ function context(profile = v2Profile(), open = request()): MemberProviderContext
   } as unknown as MemberProviderContext;
 }
 
+function testNativeCustody() {
+  return {
+    executablePath: v2Profile().executable.path,
+    executableSha256: v2Profile().executable.sha256,
+    pid: 17001,
+    startIdentity: 'TEST-start-1',
+    version: '2.0.21',
+  };
+}
+
 function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
   const calls = { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 };
   const captured: OpenCodeV2OwnedSession = {
     requiredExternalDirectory: 'deny',
     readPassword() { calls.password++; return 'TEST-only-password'; },
     async probe() { calls.probe++; return probeOk; },
+    async readNativeCustody() { return testNativeCustody(); },
     async readNativeEffectivePermissions() {
       calls.permissions++;
       return [{ action: 'external_directory', resource: '*', effect: effective }];
@@ -201,6 +212,54 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1, 'same TEST owner stopped once');
   assert.equal(calls.stopped, 1);
+});
+
+test('actual native custody must match captured executable, digest, protocol and physical PID', async () => {
+  const original = testNativeCustody();
+  for (const bad of [
+    { ...original, executablePath: '/TEST-only-opencode-v2/npm-wrapper' },
+    { ...original, executableSha256: 'b'.repeat(64) },
+    { ...original, version: '2.1.4' },
+    { ...original, pid: 0 },
+    { ...original, pid: Number.NaN },
+    { ...original, startIdentity: '' },
+  ]) {
+    const { captured, calls } = owner(true);
+    captured.readNativeCustody = async () => bad;
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+    assert.equal(provider.isReady(), false);
+    assert.equal(calls.probe, 1);
+    assert.equal(calls.permissions, 0, 'no permission read before actual native custody');
+    assert.equal(calls.context, 0, 'no native instruction mutation with a wrong process');
+    assert.equal(calls.password, 0);
+    assert.equal(calls.stop, 1, 'only the TEST owner retires its own capture');
+    assert.equal(await provider.cleanup(), true);
+  }
+});
+
+test('V2 Host revokes a ready capture when the actual PID/start identity changes', async () => {
+  const { captured, calls } = owner(true);
+  let custody = testNativeCustody();
+  let reads = 0;
+  captured.readNativeCustody = async () => { reads++; return custody; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.equal(reads, 1);
+  custody = { ...custody, pid: custody.pid + 1 };
+  assert.equal((await opened.driver.checkReadiness()).ok, false);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  custody = testNativeCustody();
+  assert.equal((await opened.driver.checkReadiness()).ok, false,
+    'restoring the old PID cannot renew a revoked capture');
+  assert.equal(reads, 2, 'a revoked process has no further native authority');
+  assert.equal(calls.permissions, 1);
+  assert.equal(calls.context, 1, 'no replay of previously acknowledged instructions');
+  assert.equal(calls.stop, 1);
+  assert.equal(await provider.cleanup(), true);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
 test('native permission drift revokes an already ready V2 SPI member, with no replay', async () => {
