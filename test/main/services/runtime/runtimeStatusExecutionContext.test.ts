@@ -3,8 +3,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
-import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
-import { describe, expect, it } from 'vitest';
+import {
+  resolveRuntimeStatusExecutionContext,
+  RuntimeStatusProjectAccessDeniedError,
+} from '@main/services/runtime/runtimeStatusExecutionContext';
+import { describe, expect, it, vi } from 'vitest';
 
 describe('OpenCode status in a macOS File Provider project', () => {
   it('uses a safe process cwd without changing the selected project, including spaces', async () => {
@@ -44,6 +47,18 @@ describe('OpenCode status in a macOS File Provider project', () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+  it('preserves macOS project-permission errors before spawning Bun', async () => {
+    const project = '/Users/TEST/Library/CloudStorage/Drive/My Portfolio';
+    const statProject = vi.fn(async () => {
+      throw Object.assign(new Error('private File Provider path'), { code: 'EPERM' });
+    });
+    await expect(resolveRuntimeStatusExecutionContext('opencode', project, {
+      platform: 'darwin', homePath: '/Users/TEST', statProject,
+    })).rejects.toBeInstanceOf(RuntimeStatusProjectAccessDeniedError);
+    expect(statProject).toHaveBeenCalledOnce();
+    expect(statProject).toHaveBeenCalledWith(project);
+  });
+
   it('fails closed for a root user home', async () => {
     const project = await mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-project-'));
     try {

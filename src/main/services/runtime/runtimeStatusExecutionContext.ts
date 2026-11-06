@@ -1,8 +1,15 @@
+import { stat } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { stat } from 'node:fs/promises';
 
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+
+export class RuntimeStatusProjectAccessDeniedError extends Error {
+  constructor(readonly denial: 'EPERM' | 'EACCES') {
+    super(`Project folder access denied (${denial}). Grant Agent Teams access to the project folder in system privacy settings or choose another project.`);
+    this.name = 'RuntimeStatusProjectAccessDeniedError';
+  }
+}
 
 /**
  * Bun 1.4.2 cannot reliably realpath() a macOS File Provider directory as its cwd.
@@ -11,7 +18,7 @@ import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 export async function resolveRuntimeStatusExecutionContext(
   providerId: string,
   projectCwd: string | undefined,
-  options: { platform?: NodeJS.Platform; homePath?: string } = {}
+  options: { platform?: NodeJS.Platform; homePath?: string; statProject?: typeof stat } = {}
 ): Promise<{ cwd: string | undefined; projectArgs: string[] }> {
   if (providerId !== 'opencode' || (options.platform ?? process.platform) !== 'darwin' ||
       !projectCwd || !path.isAbsolute(projectCwd)) {
@@ -23,13 +30,16 @@ export async function resolveRuntimeStatusExecutionContext(
   }
   // Preserve missing-project detection formerly supplied by spawn(cwd).
   try {
-    const info = await stat(projectPath);
+    const info = await (options.statProject ?? stat)(projectPath);
     if (!info.isDirectory()) throw new WorkingDirectoryMissingError(projectPath);
   } catch (error) {
     if (error instanceof WorkingDirectoryMissingError) throw error;
     const code = (error as NodeJS.ErrnoException).code;
     if (code === 'ENOENT' || code === 'ENOTDIR') {
       throw new WorkingDirectoryMissingError(projectPath, { cause: error });
+    }
+    if (code === 'EPERM' || code === 'EACCES') {
+      throw new RuntimeStatusProjectAccessDeniedError(code);
     }
     throw error;
   }

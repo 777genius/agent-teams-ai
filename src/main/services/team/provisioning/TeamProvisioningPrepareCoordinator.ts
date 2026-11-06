@@ -1,10 +1,10 @@
-import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import {
   isPureOpenCodeSoloLanePlan,
   OPEN_CODE_SOLO_MEMBER_NAME,
   OPEN_CODE_SOLO_MEMBER_ROLE,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';

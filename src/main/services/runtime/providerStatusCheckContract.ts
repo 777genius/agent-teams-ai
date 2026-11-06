@@ -1,3 +1,4 @@
+import { RuntimeStatusProjectAccessDeniedError } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { isWorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE } from '@shared/types/cliInstaller';
 import {
@@ -215,7 +216,8 @@ export function createRuntimeStatusErrorProviderStatus(
   const errorCode = getProviderStatusCheckErrorCode(error);
   const isOpenCodeTimeout = providerId === 'opencode' && errorCode === 'timeout';
   const projectAccessDenied =
-    error instanceof RuntimeStatusCommandError && error.projectAccessDenied !== null;
+    error instanceof RuntimeStatusProjectAccessDeniedError ||
+    (error instanceof RuntimeStatusCommandError && error.projectAccessDenied !== null);
   if (errorCode === 'project_missing') {
     const projectPath = isWorkingDirectoryMissingError(error) ? error.cwd : message;
     return {
