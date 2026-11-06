@@ -19,15 +19,18 @@ async function createSyntheticWorktree(input: {
   repoDir: string;
   worktreeDir: string;
   name: string;
+  relativeBacklink?: boolean;
 }): Promise<void> {
   const worktreeGitDir = path.join(input.repoDir, '.git', 'worktrees', input.name);
   await fs.mkdir(input.worktreeDir, { recursive: true });
   await fs.mkdir(worktreeGitDir, { recursive: true });
+  await fs.writeFile(path.join(worktreeGitDir, 'HEAD'), 'ref: refs/heads/main\n');
   await fs.writeFile(path.join(input.worktreeDir, '.git'), `gitdir: ${worktreeGitDir}\n`, 'utf8');
   await fs.writeFile(path.join(worktreeGitDir, 'commondir'), '../..\n', 'utf8');
+  const backlink = path.join(input.worktreeDir, '.git');
   await fs.writeFile(
     path.join(worktreeGitDir, 'gitdir'),
-    `${path.join(input.worktreeDir, '.git')}\n`,
+    `${input.relativeBacklink ? path.relative(worktreeGitDir, backlink) : backlink}\n`,
     'utf8'
   );
 }
@@ -40,11 +43,62 @@ afterEach(async () => {
 });
 
 describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
+  it('rejects forged or malformed Git markers before elevating a parent to a trust root', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'parent');
+    const nested = path.join(repo, 'nested');
+    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await fs.mkdir(nested);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
+    await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+  });
+
+  it('accepts valid symbolic HEAD names beginning with underscore, Unicode or dot', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'repo');
+    const nested = path.join(repo, 'nested');
+    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await fs.mkdir(nested);
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
+
+    for (const branch of ['_feature', 'фича', '.invalid']) {
+      await fs.writeFile(path.join(repo, '.git', 'HEAD'), `ref: refs/heads/${branch}\n`);
+      await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+    }
+  });
+
+  it('preserves the original filesystem spelling for decomposed unicode paths', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'Cafe\u0301');
+    const nested = path.join(repo, 'nested');
+    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
+    await fs.mkdir(nested);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+  });
+
+  it('rejects forged .git pointers to another repository', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'parent');
+    const nested = path.join(repo, 'nested');
+    const foreign = path.join(dir, 'foreign-git');
+    await fs.mkdir(nested, { recursive: true });
+    await fs.mkdir(foreign, { recursive: true });
+    await fs.writeFile(path.join(foreign, 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repo, '.git'), `gitdir: ${foreign}\n`);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
+  });
+
   it('finds a git root from nested paths without spawning git', async () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
     const nestedDir = path.join(repoDir, 'packages', 'app');
     await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await fs.mkdir(nestedDir, { recursive: true });
 
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nestedDir)).resolves.toBe(repoDir);
@@ -55,8 +109,30 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const repoDir = path.join(dir, 'repo');
     const missingDir = path.join(repoDir, 'packages', 'missing');
     await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
 
     await expect(resolveWorkspaceTrustFilesystemGitRoot(missingDir)).resolves.toBeNull();
+  });
+
+  it('recognizes quoted core.worktree paths in a real-style submodule', async () => {
+    const root = await makeTmpDir();
+    const superproject = path.join(root, 'repo');
+    const submodule = path.join(superproject, 'app#1');
+    const nested = path.join(submodule, 'src');
+    const submoduleGitDir = path.join(superproject, '.git', 'modules', 'app#1');
+    await fs.mkdir(path.join(superproject, '.git'), { recursive: true });
+    await fs.writeFile(path.join(superproject, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(superproject, '.git', 'config'), '[core]\n');
+    await fs.mkdir(nested, { recursive: true });
+    await fs.mkdir(submoduleGitDir, { recursive: true });
+    await fs.writeFile(path.join(submodule, '.git'), 'gitdir: ../.git/modules/app#1\n');
+    await fs.writeFile(path.join(submoduleGitDir, 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(
+      path.join(submoduleGitDir, 'config'),
+      '[core]\n\tworktree = "../../../app#1"\n'
+    );
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(submodule);
   });
 
   it('resolves a valid git worktree to the canonical repository root', async () => {
@@ -64,8 +140,25 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const repoDir = path.join(dir, 'repo');
     const worktreeDir = path.join(dir, 'worktrees', 'alice');
     await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice' });
 
+    await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
+  });
+
+  it('resolves worktree-relative backlinks from git metadata, not process cwd', async () => {
+    const dir = await makeTmpDir();
+    const repoDir = path.join(dir, 'repo');
+    const worktreeDir = path.join(dir, 'worktrees', 'alice');
+    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
+    await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice', relativeBacklink: true });
+    const nested = path.join(worktreeDir, 'nested');
+    await fs.mkdir(nested);
+
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(worktreeDir);
     await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
   });
 

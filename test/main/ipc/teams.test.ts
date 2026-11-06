@@ -769,6 +769,10 @@ describe('ipc teams handlers', () => {
       relayLeadInboxMessages: teamHandlerMocks.relayLeadInboxMessages,
       getOpenCodeRuntimeDeliveryStatus: teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus,
       resolveRuntimeRecipientProviderId: teamHandlerMocks.resolveRuntimeRecipientProviderId,
+      resolveRuntimeRecipientProviderIdForUserSend: vi.fn(
+        (teamName: string, memberName: string) =>
+          teamHandlerMocks.resolveRuntimeRecipientProviderId(teamName, memberName)
+      ),
       getLiveLeadProcessMessages: teamHandlerMocks.getLiveLeadProcessMessages,
       getCurrentLeadSessionId: teamHandlerMocks.getCurrentLeadSessionId,
       pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
@@ -1526,6 +1530,57 @@ describe('ipc teams handlers', () => {
       }
     }
   );
+
+  it('rejects an unreachable OpenCode recipient before writing a user message', async () => {
+    const resolveForSend = teamHandlerApis.messaging.resolveRuntimeRecipientProviderIdForUserSend;
+    resolveForSend.mockRejectedValueOnce(
+      new Error('OpenCode runtime recipient bob has no authoritative config identity')
+    );
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'ти де?',
+    })) as { success: boolean; error?: string };
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'OpenCode runtime recipient bob has no authoritative config identity',
+    });
+    expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain(
+      'OpenCode runtime recipient bob has no authoritative config identity'
+    );
+    vi.mocked(console.error).mockClear();
+    expect(resolveForSend).toHaveBeenCalledWith('my-team', 'bob');
+    expect(service.sendMessage).not.toHaveBeenCalled();
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
+    expect(teamHandlerMocks.relayOpenCodeMemberInboxMessages).not.toHaveBeenCalled();
+  });
+
+  it('uses the explicit recipient command before delivering an OpenCode direct message', async () => {
+    const resolveForSend = teamHandlerApis.messaging.resolveRuntimeRecipientProviderIdForUserSend;
+    resolveForSend.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 1,
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: { delivered: true, accepted: true },
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'ти де?',
+    })) as { success: boolean; data?: SendMessageResult };
+
+    expect(result.success).toBe(true);
+    expect(resolveForSend).toHaveBeenCalledWith('my-team', 'bob');
+    expect(service.sendRuntimeRecipientMessage).toHaveBeenCalled();
+    expect(teamHandlerMocks.relayOpenCodeMemberInboxMessages).toHaveBeenCalled();
+  });
 
   it('returns success false on invalid sendMessage args', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);

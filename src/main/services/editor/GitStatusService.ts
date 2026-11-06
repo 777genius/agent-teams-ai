@@ -6,6 +6,7 @@
  * Results are cached for 5 seconds; invalidated on file watcher events.
  */
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { createManagedGitEnv, getManagedGitExecutable, MANAGED_GIT_ENV_KEYS } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import { simpleGit } from 'simple-git';
@@ -123,6 +124,10 @@ export class GitStatusService {
     }
 
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+        this.setCacheResult(notGitResult);
+        return notGitResult;
+      }
       const t0 = performance.now();
       // `--untracked-files=no` is a major performance win for large repos with many untracked files.
       // Most editors treat untracked as a separate concern; showing them can overwhelm the UI.

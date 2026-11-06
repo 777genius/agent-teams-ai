@@ -273,6 +273,35 @@ describe('electron-builder afterPack', () => {
     expect(mismatches[0].path).toContain('unapproved32.exe');
   });
 
+  it('allows only bundled MSYS2 x64 helper binaries on Windows ARM64', async () => {
+    const root = createTempDir();
+    tempDirs.push(root);
+    writeFile(
+      path.join(root, 'resources', 'git', 'usr', 'bin', 'diff3.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(root, 'resources', 'git', 'usr', 'lib', 'ssh', 'ssh-keysign.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(root, 'resources', 'git', 'clangarm64', 'bin', 'wrong.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(root, 'resources', 'foreign-helper.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    const mismatches = await validateNativeBinaries(root, 'win32', 'arm64');
+    expect(mismatches).toHaveLength(2);
+    expect(mismatches.map((item: { path: string }) => item.path)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('wrong.exe'),
+        expect.stringContaining('foreign-helper.exe'),
+      ])
+    );
+  });
+
   it('prunes node-pty prebuilds that do not match the target platform and arch', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);

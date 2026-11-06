@@ -411,7 +411,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
 // inherits this allowance through validateNativeBinaries.
 const OPENCODE_CONSOLE_WRAPPER_PATH = 'resources/runtime/opencode-console/opencode.exe';
 
-function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, clrManaged = false) {
+function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, clrManaged = false, targetArch = null) {
   const normalizedPath = relativePath.split(path.sep).join('/');
   // Git Credential Manager ships portable CLR assemblies that have an ia32 PE
   // header even in the macOS/Linux Git distributions. This is not native x86.
@@ -420,6 +420,15 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
   if (managedGitLibrary && clrManaged && format === 'pe') {
     return true;
   }
+  // Dugite's pinned Windows ARM64 distribution intentionally ships x64 MSYS2
+  // command-line helpers in usr/. Do not relax the architecture guard elsewhere.
+  if (
+    targetPlatform === 'win32' &&
+    targetArch === 'arm64' &&
+    /^resources\/git\/usr\/(?:bin|lib|libexec)\/(?:[^/]+\/)*[^/]+\.(?:exe|dll)$/i.test(normalizedPath) &&
+    format === 'pe' && archs.size === 1 && archs.has('x64')
+  ) return true;
+
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
   const isAllowedIa32Path =
     normalizedPath === ssh2PageantPath ||
@@ -678,7 +687,7 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
 
     if (
       isKnownAllowedNativeMismatch(
-        relativePath, metadata.format, metadata.archs, targetPlatform, metadata.clrManaged
+        relativePath, metadata.format, metadata.archs, targetPlatform, metadata.clrManaged, targetArch
       )
     ) {
       continue;

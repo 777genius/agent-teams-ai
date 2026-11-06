@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -49,6 +50,7 @@ export class GitDiffFallback {
     commitHash: string
   ): Promise<string | null> {
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) return null;
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
       const { stdout } = await execFileAsync(getManagedGitExecutable(), ['show', `${commitHash}:${relativePath}`], {
@@ -73,6 +75,7 @@ export class GitDiffFallback {
     timestamp: string
   ): Promise<string | null> {
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) return null;
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
       const { stdout } = await execFileAsync(
@@ -96,6 +99,7 @@ export class GitDiffFallback {
     toCommit: string = 'HEAD'
   ): Promise<string | null> {
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) return null;
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
       const { stdout } = await execFileAsync(
@@ -118,6 +122,7 @@ export class GitDiffFallback {
     maxCount: number = 20
   ): Promise<{ hash: string; timestamp: string; message: string }[]> {
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) return [];
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return [];
       const { stdout } = await execFileAsync(
@@ -148,6 +153,7 @@ export class GitDiffFallback {
     if (cached !== undefined) return cached;
 
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) return false;
       await execFileAsync(getManagedGitExecutable(), ['rev-parse', '--is-inside-work-tree'], {
         cwd: projectPath,
         timeout: GIT_TIMEOUT,

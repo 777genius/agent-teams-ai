@@ -4,7 +4,46 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { describe, expect, it } from 'vitest';
 
-import { getProvisioningFailureHint } from './ProvisioningProviderStatusList';
+import { getDisplayStatusText, getProvisioningFailureHint } from './ProvisioningProviderStatusList';
+
+describe('getDisplayStatusText', () => {
+  it('prioritizes a verified project access problem over unrelated failed model summaries', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: [
+        'Selected model ollama/qwen2.5-coder:7b is unavailable.',
+        'Project folder access denied (EPERM). Grant Agent Teams access to this folder.',
+      ],
+    })).toBe('Project folder access denied');
+  });
+
+  it('does not call a global or home config permission issue a project-folder failure', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: [
+        'Cannot inspect the user home directory for the global OpenCode config: access denied (EACCES).',
+      ],
+    })).not.toBe('Project folder access denied');
+  });
+
+  it('recognizes project-config permission errors without the project-folder prefix', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: ['Cannot inspect the project OpenCode config: access denied (EPERM).'],
+    })).toBe('Project folder access denied');
+  });
+
+  it('does not mislabel an unverified model failure as a filesystem permission issue', () => {
+    expect(getDisplayStatusText({
+      providerId: 'opencode',
+      status: 'failed',
+      details: ['Selected model ollama/qwen2.5-coder:7b is unavailable.'],
+    })).not.toBe('Project folder access denied');
+  });
+});
 
 describe('getProvisioningFailureHint', () => {
   it('returns the administrator hint for the exact OpenCode node_modules symlink permission failure', () => {
@@ -31,6 +70,30 @@ describe('getProvisioningFailureHint', () => {
     ).toBe(
       'Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.'
     );
+  });
+
+  it('does not advise Windows administrator privileges for confirmed macOS project access denial', () => {
+    expect(
+      getProvisioningFailureHint(null, [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          details: [
+            'Project folder access denied (EPERM). Grant Agent Teams access in system privacy settings.',
+          ],
+        },
+      ])
+    ).toBe('Resolve the issue above, then reopen this dialog.');
+  });
+
+  it('does not mask another failed provider with an OpenCode project-access hint', () => {
+    expect(getProvisioningFailureHint(
+      'Project folder access denied (EPERM)',
+      [
+        { providerId: 'opencode', status: 'failed', details: ['Project folder access denied (EPERM)'] },
+        { providerId: 'anthropic', status: 'failed', details: ['Not authenticated'] },
+      ]
+    )).toBe('Authenticate the required provider in its configured runtime, then reopen this dialog.');
   });
 
   it('keeps non-OpenCode access-denied details on the generic CLI hint', () => {

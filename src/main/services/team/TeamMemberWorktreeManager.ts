@@ -1,3 +1,4 @@
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { execFile } from 'child_process';
@@ -100,6 +101,9 @@ export class TeamMemberWorktreeManager {
   async ensureMemberWorktree(
     request: TeamMemberWorktreeRequest
   ): Promise<TeamMemberWorktreeResolution> {
+    if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+      throw new Error('Git is required for worktree isolation but is not installed on this Mac.');
+    }
     const baseRepoPath = await this.resolveBaseRepoPath(request.baseCwd);
     const repoHash = shortHash(baseRepoPath);
     const projectSlug = slugify(path.basename(baseRepoPath));
