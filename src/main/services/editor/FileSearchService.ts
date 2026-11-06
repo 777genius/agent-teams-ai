@@ -5,6 +5,7 @@
  * Performance: max 1000 files, max 1MB/file, 5s timeout via AbortController.
  */
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { isGitInternalPath, isPathWithinRoot } from '@main/utils/pathValidation';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
@@ -151,6 +152,7 @@ export class FileSearchService {
     }
 
     try {
+      if (!(await canUseGitWithoutMacInstallerPrompt())) return null;
       const git = simpleGit({
         baseDir: projectRoot,
         allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
