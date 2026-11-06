@@ -1095,11 +1095,10 @@ export function getProvisioningFailureHint(
     check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
   );
   const normalizedMessage = message?.trim() ?? '';
-  if (failedOpenCodeChecks.some((check) =>
-    [...check.details, ...(hasFailedNonOpenCodeCheck ? [] : [normalizedMessage])]
-      .some(isOpenCodeProjectAccessDeniedDiagnostic)))
-    return t?.('provisioning.providerStatus.failureHints.default') ??
-      'Resolve the issue above, then reopen this dialog.';
+  if (failedOpenCodeChecks.some((check) => check.details.some(isOpenCodeProjectAccessDeniedDiagnostic)) ||
+      (!hasFailedNonOpenCodeCheck && failedOpenCodeChecks.length > 0 &&
+        isOpenCodeProjectAccessDeniedDiagnostic(normalizedMessage)))
+    return t?.('provisioning.providerStatus.failureHints.default') ?? 'Resolve the issue above, then reopen this dialog.';
   const hasOpenCodeNodeModulesSymlinkPermissionMessage =
     failedOpenCodeChecks.length > 0 &&
     (normalizedMessage === OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE ||
