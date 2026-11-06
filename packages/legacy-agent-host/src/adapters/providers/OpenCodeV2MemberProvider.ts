@@ -319,10 +319,12 @@ export function createOpenCodeV2MemberProvider(
                   for await (const event of source.observe()) yield event;
                   exhausted = true;
                 } catch (error) {
-                  await finishOwned();
+                  if (!await finishOwned())
+                    throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
                   throw error;
                 } finally {
-                  if (exhausted) await finishOwned();
+                  if (exhausted && !await finishOwned())
+                    throw new Error('opencode.v2.owner-cleanup-unknown');
                 }
               },
               respondToInteraction: async (reference, reply) => {
