@@ -24,12 +24,12 @@ export function createComparisonRows(
       // Desktop operating systems only. CLI tools are labelled as such so
       // they are not mistaken for installable graphical desktop apps.
       feature: t('comparison.features.desktopPlatforms'),
-      us: { status: 'text', note: note('macOS · Windows · Linux (desktop app)') },
-      gastown: { status: 'text', note: note('macOS · Windows · Linux (CLI binaries)') },
-      paperclip: { status: 'text', note: note('No native desktop app (self-hosted control plane)') },
-      cursor: { status: 'text', note: note('macOS · Windows · Linux (desktop IDE)') },
-      claudeCli: { status: 'text', note: note('macOS · Windows · Linux (CLI)') },
-      openrig: { status: 'text', note: note('macOS · Linux; Windows via WSL2 (not native)') },
+      us: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.desktopApp')}` },
+      gastown: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.cliBinaries')}` },
+      paperclip: { status: 'text', note: t('comparison.platforms.noNativeDesktop') },
+      cursor: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.desktopIde')}` },
+      claudeCli: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.cli')}` },
+      openrig: { status: 'text', note: `macOS · Linux; Windows ${t('comparison.platforms.wsl2')}` },
     },
     {
       feature: t('comparison.features.teamAutonomy'),
@@ -125,7 +125,7 @@ export function createComparisonRows(
       feature: t('comparison.features.sessionAnalysis'),
       us: { status: 'yes', note: note('Agent messages, tool calls, timeline, token use, and cost') },
       gastown: { status: 'partial', note: note('Session recall, feed, metrics') },
-      paperclip: { status: 'partial', note: note('Run transcripts + exact cost ledger') },
+      paperclip: { status: 'partial', note: note('Run transcripts + audited cost ledger (estimates possible)') },
       cursor: { status: 'partial', note: note('Agent chat, diffs, artifacts, and cloud diagnostics') },
       claudeCli: { status: 'partial', note: note('Transcripts, background logs, /usage, and /insights') },
       openrig: { status: 'yes', note: note('Activity feed, transcripts, queue audit, and runtime-dependent telemetry') },

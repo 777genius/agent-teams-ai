@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { mdiPlay } from '@mdi/js';
 
 const { t } = useI18n();
@@ -44,13 +44,16 @@ const isMobileViewport = ref(false);
 // Avoid creating a Mux iframe before checking whether this is a phone.
 const viewportReady = ref(false);
 const playerActivated = ref(false);
+// Preserve an already-running desktop player when the viewport narrows.
+const playerPreviouslyMounted = ref(false);
 const shouldShowMobilePoster = computed(
   () =>
     Boolean(muxPlayerUrl.value) &&
     !hasError.value &&
     viewportReady.value &&
     isMobileViewport.value &&
-    !playerActivated.value,
+    !playerActivated.value &&
+    !playerPreviouslyMounted.value,
 );
 const shouldShowPlayer = computed(
   () => Boolean(muxPlayerUrl.value) && !hasError.value && viewportReady.value && !shouldShowMobilePoster.value,
@@ -81,20 +84,28 @@ function syncMobileViewport() {
 }
 
 function activatePlayer() {
-  isLoaded.value = false;
   playerActivated.value = true;
-  clearLoadFallback();
-  loadFallbackTimer = setTimeout(markLoaded, 2500);
 }
+
+// One lifecycle for every iframe mount, including transitions between breakpoints.
+// Clearing the timer prevents a detached player from marking a new one loaded.
+watch(
+  shouldShowPlayer,
+  (visible) => {
+    clearLoadFallback();
+    isLoaded.value = false;
+    if (!visible) return;
+    playerPreviouslyMounted.value = true;
+    loadFallbackTimer = setTimeout(markLoaded, 2500);
+  },
+  { flush: 'sync' },
+);
 
 onMounted(() => {
   mobileQuery = window.matchMedia('(max-width: 767px)');
   syncMobileViewport();
   viewportReady.value = true;
   mobileQuery.addEventListener('change', syncMobileViewport);
-  if (shouldShowPlayer.value) {
-    loadFallbackTimer = setTimeout(markLoaded, 2500);
-  }
 });
 
 onUnmounted(() => {
