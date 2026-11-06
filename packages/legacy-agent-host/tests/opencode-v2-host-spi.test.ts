@@ -254,6 +254,25 @@ test('native probe loss after initial Host readiness revokes the capture permane
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+test('lost Host allocation authority during recheck cannot resurrect cached V2 readiness', async () => {
+  const { captured, calls } = owner(true);
+  const input = context();
+  let canAllocate = true;
+  input.canAllocate = () => canAllocate;
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+
+  canAllocate = false;
+  assert.equal((await opened.driver.checkReadiness()).ok, false);
+  canAllocate = true;
+  assert.equal(provider.isReady(), false, 'stale attestation cannot revive when Host lease returns');
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(calls.stop, 1, 'lost allocation stops the original TEST-owned process');
+  assert.equal(calls.context, 1, 'initial native instructions are never replayed');
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
+
 test('V2 native-effective allow cannot satisfy captured deny, even after a successful native probe', async () => {
   const { captured, calls } = owner(true, 'allow');
   const provider = createOpenCodeV2MemberProvider(context(), captured);
