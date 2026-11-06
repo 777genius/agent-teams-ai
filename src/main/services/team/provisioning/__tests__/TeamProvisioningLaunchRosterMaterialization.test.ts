@@ -96,6 +96,16 @@ describe('TeamProvisioningLaunchRosterMaterialization', () => {
     expect(ports.writeConfig).not.toHaveBeenCalled();
   });
 
+  it('refuses a durable repair when launch authority changes at atomic commit', async () => {
+    const { state, input, ports } = createHarness();
+    input.beforeCommit = vi.fn(async () => false);
+    await expect(materializeTeamProvisioningLaunchRoster(input, ports)).rejects.toThrow(
+      'roster changed before config commit'
+    );
+    expect(JSON.parse(state.raw).members).toHaveLength(2);
+    expect(ports.invalidateTeam).not.toHaveBeenCalled();
+  });
+
   it('does not read or write for an already cancelled or superseded run', async () => {
     const { state, input, ports } = createHarness();
     state.current = false;
