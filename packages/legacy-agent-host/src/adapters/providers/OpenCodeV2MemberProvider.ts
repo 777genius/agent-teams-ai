@@ -19,6 +19,19 @@ export interface OpenCodeV2OwnedSession {
   readPassword(): string;
   probe(signal: AbortSignal): Promise<boolean>;
   /**
+   * Fresh readback from the ACTUAL running native executable, not the npm
+   * wrapper, an archive digest, or a cached profile. The owner must measure
+   * the process's executable bytes and PID/start identity on every probe.
+   * Missing or changed evidence makes this capture permanently unready.
+   */
+  readNativeCustody(signal: AbortSignal): Promise<Readonly<{
+    executablePath: string;
+    executableSha256: string;
+    pid: number;
+    startIdentity: string;
+    version: string;
+  }> | undefined>;
+  /**
    * Read back the fully assembled rules from THIS owned native engine, not a
    * user config fragment. The owner must prove the same PID/start identity.
    */
@@ -81,6 +94,7 @@ export function createOpenCodeV2MemberProvider(
   // reconfiguration cannot silently restore previously granted authority.
   let qualificationRevoked = false;
   let wasEverReady = false;
+  let pinnedProcessIdentity: Readonly<{ pid: number; startIdentity: string }> | undefined;
   let stopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
   let physicallyStopped = false;
@@ -165,6 +179,22 @@ export function createOpenCodeV2MemberProvider(
             const combined = AbortSignal.any([signal, abort.signal]);
             const valid = await owned.probe(combined);
             if (!valid || combined.aborted || !current()) return false;
+            // This is an independently captured, immutable Host process pin.
+            // A loopback HTTP success or a wrapper/package hash is not native
+            // custody. Even identical bytes in a restarted PID cannot inherit
+            // the old member's authority without a new Host capture.
+            const custody = await owned.readNativeCustody(combined);
+            if (!custody || combined.aborted || !current() ||
+                custody.executablePath !== profile.executable.path ||
+                custody.executableSha256 !== profile.executable.sha256 ||
+                custody.version !== profile.protocolRevision ||
+                !Number.isSafeInteger(custody.pid) || custody.pid <= 0 ||
+                typeof custody.startIdentity !== 'string' ||
+                !/^[A-Za-z0-9._:-]{1,128}$/.test(custody.startIdentity) ||
+                (pinnedProcessIdentity !== undefined &&
+                  (custody.pid !== pinnedProcessIdentity.pid ||
+                   custody.startIdentity !== pinnedProcessIdentity.startIdentity))) return false;
+            pinnedProcessIdentity ??= { pid: custody.pid, startIdentity: custody.startIdentity };
             // Source-only candidate plus owner-supplied native readback. The
             // production owner still must prove genuine engine custody and
             // cannot claim qualification from a scripted TEST receipt.
