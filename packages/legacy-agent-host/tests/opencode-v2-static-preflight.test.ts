@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import type { OpenCodeV2RuntimeLock, OpenCodeV2Selection } from '../src/composition/openCodeV2StaticPreflight.ts';
 
 const sourceMode = process.env.LEGACY_PROVIDER_SOURCE_TEST === '1';
-const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, measureOpenCodeV2Executable }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
+const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, preflightOpenCodeV2CurrentProduct, measureOpenCodeV2Executable }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
   await import(sourceMode
     ? '../src/composition/openCodeV2StaticPreflight.ts'
     : '../dist/composition/openCodeV2StaticPreflight.js');
@@ -92,6 +92,38 @@ test('a current-main 2.1.4-only runtime lock cannot activate an older private V2
       ...selected, platform, version: '2.1.4', nativeReportedVersion: '2.1.4',
     }, mainV2Only), { kind: 'hold', reason: 'driver-version' }, platform);
   }
+});
+
+test('V2 static candidate must match the current product release and exact delivery', () => {
+  assert.equal(preflightOpenCodeV2Selection(selected, lock).kind, 'candidate');
+  assert.equal(preflightOpenCodeV2CurrentProduct(selected, lock, lock).kind, 'candidate');
+  const staleRelease: OpenCodeV2RuntimeLock = { ...lock, version: '0.0.157' };
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, staleRelease),
+    { kind: 'hold', reason: 'current-product' });
+
+  const replacedBinary: OpenCodeV2RuntimeLock = structuredClone(lock);
+  replacedBinary.opencodeV2Delivery!['darwin-arm64']!.archive!.sha256 = 'b'.repeat(64);
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, replacedBinary),
+    { kind: 'hold', reason: 'current-product' });
+  const changedSource: OpenCodeV2RuntimeLock = structuredClone(lock);
+  changedSource.opencodeV2Delivery!['darwin-arm64']!.sourceCommit = 'b'.repeat(40);
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, changedSource),
+    { kind: 'hold', reason: 'current-product' });
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock,
+    {} as OpenCodeV2RuntimeLock), { kind: 'hold', reason: 'current-product' });
+});
+
+test('V2 current-main live checkout never inherits historical Stage1 candidate', (t) => {
+  // CI checks out actual main into a separate read-only directory; no network
+  // lookup in a test, no history rewrites and no local user configuration.
+  const currentProductPath = process.env.OPENCODE_V2_CURRENT_PRODUCT_LOCK;
+  if (!currentProductPath) { t.skip('real-main manifest supplied by dedicated Actions job'); return; }
+  const productLock = JSON.parse(readFileSync(currentProductPath, 'utf8')) as OpenCodeV2RuntimeLock;
+  assert.equal(typeof productLock.version, 'string');
+  assert.notEqual(productLock.version, lock.version,
+    'Stage1 historical lock caught up with main: requalify the native matrix');
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, productLock),
+    { kind: 'hold', reason: 'current-product' });
 });
 
 test('no implicit V1 promotion, forged binary, endpoint, identity or missing native proof', () => {
