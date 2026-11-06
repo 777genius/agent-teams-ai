@@ -147,6 +147,7 @@ describe('OpenCode explicit user-send identity repair', () => {
   it('refuses metadata-only identities without a currently tracked runtime', async () => {
     const h = createHarness();
     h.setTrackedRunId(null);
+    h.setPersistedLaunch(null);
     await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
       'has no authoritative config identity'
     );

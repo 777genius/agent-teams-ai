@@ -1582,6 +1582,33 @@ describe('ipc teams handlers', () => {
     expect(teamHandlerMocks.relayOpenCodeMemberInboxMessages).toHaveBeenCalled();
   });
 
+  it('keeps a user message queued, not delivered, if OpenCode stops after recipient resolution', async () => {
+    const resolveForSend = teamHandlerApis.messaging.resolveRuntimeRecipientProviderIdForUserSend;
+    resolveForSend.mockResolvedValueOnce('opencode');
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      relayed: 0,
+      attempted: 1,
+      delivered: 0,
+      failed: 1,
+      lastDelivery: { delivered: false, reason: 'opencode_runtime_not_active' },
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'bob',
+      text: 'hello after stop',
+    })) as { success: boolean; data?: SendMessageResult };
+
+    expect(result.success).toBe(true);
+    expect(service.sendRuntimeRecipientMessage).toHaveBeenCalledOnce();
+    expect(result.data?.runtimeDelivery).toMatchObject({
+      providerId: 'opencode',
+      delivered: false,
+      reason: 'opencode_runtime_not_active',
+    });
+  });
+
   it('returns success false on invalid sendMessage args', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
