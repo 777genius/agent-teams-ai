@@ -430,6 +430,33 @@ test('V1 checkpoint identity is rejected before V2 native probe or permission re
   assert.equal(calls.stop, 1, 'failed restore must not repeatedly signal an owner');
 });
 
+test('native V2 submit preflight failure revokes Host readiness without replay or second owner stop', async () => {
+  const { captured, calls } = owner(true);
+  // Deterministic credential failure before any fetch. This exercises the
+  // real private V2 Session SPI queue, not a fabricated submit response.
+  captured.readPassword = () => { calls.password++; return ''; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.notEqual(provider.initialContextEvidence?.(), undefined);
+
+  const first = await opened.driver.submit({
+    inputId: 'TEST-not-sent', operationRef: 'TEST-preflight-op', content: 'TEST only; do not run a model',
+  });
+  assert.deepEqual(first, { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' });
+  assert.equal(provider.isReady(), false, 'a sealed private V2 driver cannot leave Host ready');
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(calls.password, 1, 'no credential or native mutation retry');
+  assert.equal(calls.stop, 1, 'retire only the original captured native owner');
+  assert.deepEqual(await opened.driver.submit({
+    inputId: 'TEST-no-retry', operationRef: 'TEST-next-op', content: 'must not be submitted',
+  }), { ok: false, code: 'unavailable', delivery: 'known-not-sent' });
+  assert.equal(calls.password, 1);
+  assert.equal(await provider.cleanup(), true);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  assert.equal(calls.stop, 1, 'no duplicate stop after uncertain native ACK');
+});
+
 test('unknown physical cleanup on failed V2 open does not become a retryable success', async () => {
   const { captured, calls } = owner(true);
   captured.stopOwned = async () => { calls.stop++; return false; };

@@ -272,7 +272,38 @@ export function createOpenCodeV2MemberProvider(
     factory: {
       async open(request) {
         try {
-          return await factory.open(request);
+          const opened = await factory.open(request);
+          const source = opened.driver;
+          return {
+            ...opened,
+            driver: {
+              sessionRef: source.sessionRef,
+              // A preflight failure inside the private V2 turn driver seals its
+              // own session, but does not call Host.seal(). Do not leave the
+              // Host reporting an authorized native process after its SPI has
+              // become unavailable. Only retire on terminal transport failure,
+              // never on validation/backpressure/stale-input replies.
+              submit: async (input) => {
+                let reply: Awaited<ReturnType<typeof source.submit>>;
+                try {
+                  reply = await source.submit(input);
+                } catch (error) {
+                  await finishOwned();
+                  throw error;
+                }
+                if (!reply.ok && (reply.code === 'dependency-unavailable' ||
+                    reply.code === 'unavailable' || reply.code === 'unknown'))
+                  await finishOwned();
+                return reply;
+              },
+              observe: () => source.observe(),
+              respondToInteraction: (reference, reply) => source.respondToInteraction(reference, reply),
+              interrupt: (operation) => source.interrupt(operation),
+              checkReadiness: () => source.checkReadiness(),
+              checkpoint: () => source.checkpoint(),
+              close: () => source.close(),
+            },
+          };
         } catch (error) {
           const stopped = await finishOwned();
           if (!stopped) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
