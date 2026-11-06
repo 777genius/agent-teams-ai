@@ -4,6 +4,7 @@ import { OPENCODE_V2_SUPPORT_ROOT_ENV } from '@features/opencode-runtime-install
 import { getOpenCodeV2SupportRoot } from '@features/opencode-runtime-installer/main';
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { ensureWindowsSpawnBaseDirEnv } from '@main/utils/cliProcessDefaults';
 import { getShellPreferredHome } from '@main/utils/shellEnv';
 
@@ -108,6 +109,8 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   // embedded terminal) hand this env directly to powershell/cmd children —
   // without a valid LOCALAPPDATA those recreate their caches cwd-relative.
   ensureWindowsSpawnBaseDirEnv(env);
+  // PATH can be overwritten by caller/provider merges; re-apply managed Git last.
+  Object.assign(env, createManagedGitEnv(env));
 
   if (!options.providerId) {
     return {
