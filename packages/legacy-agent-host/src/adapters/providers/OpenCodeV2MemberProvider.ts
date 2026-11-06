@@ -122,7 +122,21 @@ export function createOpenCodeV2MemberProvider(
   });
 
   return {
-    factory,
+    // The standard Host retains the provider after constructing it, but a
+    // failed D.open may reject before it returns a driver/close receipt.
+    // Retire this capture immediately; the outer Runtime must not assume the
+    // original failed allocation is free to retry or reuse a V1 session.
+    factory: {
+      async open(request) {
+        try {
+          return await factory.open(request);
+        } catch (error) {
+          const stopped = await finishOwned();
+          if (!stopped) throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
+          throw error;
+        }
+      },
+    },
     isReady: () => ready && current(),
     seal: () => {
       sealed = true;
