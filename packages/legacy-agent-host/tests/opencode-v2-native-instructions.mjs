@@ -231,6 +231,13 @@ try {
      provider.initialContextEvidence?.()?.contextDigest!==initialContextDigest(instructions)||
      initialPutCount!==1)throw Error('host_spi_context_evidence_missing');
   receipt.steps.push('Host_existing_Session_SPI_ready_with_real_native_attestation');
+  // Re-enter the REAL Host SPI after the native instructions PUT. The same
+  // owned session may be probed again, but the mutation must never be sent
+  // again (especially after an uncertain first ACK).
+  const rechecked=await opened.driver.checkReadiness();
+  if(rechecked.ok!==true || !provider.isReady() || initialPutCount!==1)
+    throw Error('native_host_recheck_replayed_initial_context');
+  receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
   const closed=await opened.driver.close();
   if(closed.cleanup!=='confirmed'||provider.isReady()||
      !await provider.cleanup())throw Error('host_native_stop_not_confirmed');
