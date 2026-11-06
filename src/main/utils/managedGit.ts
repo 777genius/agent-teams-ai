@@ -36,7 +36,7 @@ function findRuntime(options: ManagedGitLocationOptions = {}): GitRuntimeLocatio
   const executable = path.join(root, platform === 'win32' ? 'cmd/git.exe' : 'bin/git');
 
   try {
-    const info = JSON.parse(readFileSync(path.join(root, '.managed-git.json'), 'utf8')) as {
+    const info = JSON.parse(readFileSync(path.join(root, 'MANAGED_GIT.json'), 'utf8')) as {
       platform?: string;
       sha256?: string;
     };
