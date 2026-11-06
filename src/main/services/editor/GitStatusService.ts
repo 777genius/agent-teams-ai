@@ -6,6 +6,7 @@
  * Results are cached for 5 seconds; invalidated on file watcher events.
  */
 
+import { getManagedGitExecutable, createManagedGitEnv } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import { simpleGit } from 'simple-git';
 
@@ -45,11 +46,17 @@ export class GitStatusService {
   init(projectRoot: string): void {
     this.projectRoot = projectRoot;
     this.notAGitRepo = false;
-    this.git = simpleGit({
-      baseDir: projectRoot,
-      allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
-      timeout: { block: GIT_TIMEOUT_MS },
-    }).env('GIT_OPTIONAL_LOCKS', '0');
+    try {
+      this.git = simpleGit({
+        baseDir: projectRoot,
+        binary: getManagedGitExecutable(),
+        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
+        timeout: { block: GIT_TIMEOUT_MS },
+      }).env('GIT_OPTIONAL_LOCKS', '0');
+      this.git.env(createManagedGitEnv(process.env));
+    } catch {
+      this.git = null;
+    }
     this.invalidateCache();
   }
 
