@@ -4,6 +4,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const mockGitAvailable = vi.hoisted(() => vi.fn(async () => true));
+
+vi.mock('@main/utils/gitAvailability', () => ({
+  canUseGitWithoutMacInstallerPrompt: mockGitAvailable,
+}));
+
 // Mock simple-git
 const mockStatus = vi.fn();
 const mockRevparse = vi.fn();
@@ -73,6 +79,7 @@ describe('GitStatusService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    mockGitAvailable.mockResolvedValue(true);
     service = new GitStatusService();
   });
 
@@ -90,6 +97,16 @@ describe('GitStatusService', () => {
   });
 
   describe('getStatus', () => {
+    it('skips background Git status when macOS Git is an unavailable installer shim', async () => {
+      mockGitAvailable.mockResolvedValue(false);
+      service.init('/Users/test/project');
+
+      const result = await service.getStatus();
+
+      expect(result).toEqual({ files: [], isGitRepo: false, branch: null });
+      expect(mockStatus).not.toHaveBeenCalled();
+    });
+
     it('returns empty non-repo result when not initialized', async () => {
       const result = await service.getStatus();
 
