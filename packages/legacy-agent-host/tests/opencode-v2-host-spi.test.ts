@@ -690,6 +690,60 @@ test('buffered private V2 terminal never escapes a revoked Host observer', async
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+test('consumer cancel before first V2 observation retires the unclaimable native session',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    const cancelled = await observer.return?.();
+    assert.equal(cancelled?.done, true);
+    assert.equal((await observer.next()).done, true);
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1, 'cancel must stop only the captured TEST owner');
+    assert.equal(calls.stopped, 1);
+    assert.equal(calls.password, 0, 'no native request is allowed after cancel');
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+    assert.equal(calls.stop, 1, 'no duplicate stop signal');
+  });
+
+test('consumer cancel wakes a suspended native V2 next without Host seal',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    const pendingNext = observer.next();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const pendingCancel = observer.return?.();
+    assert.equal((await pendingNext).done, true, 'pending next must be released');
+    assert.equal((await pendingCancel)?.done, true);
+    assert.equal(provider.isReady(), false);
+    assert.equal(calls.stop, 1, 'the same owned process is stopped once');
+    assert.equal(calls.stopped, 1);
+    assert.equal(calls.password, 0);
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  });
+
+test('consumer observer cancel reports uncertain physical native cleanup',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    captured.stopOwned = async () => { calls.stop++; return false; };
+    captured.confirmStopped = async () => { calls.stopped++; return false; };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    await assert.rejects(async () => { await observer.return?.(); },
+      /opencode.v2.owner-cleanup-unknown/);
+    assert.equal(provider.isReady(), false);
+    assert.equal(calls.stop, 1, 'uncertain ACK must never be replayed');
+    assert.equal(await provider.cleanup(), false);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'unknown' });
+  });
+
 test('Host seal wakes a suspended native V2 observer without delivering a late event',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
