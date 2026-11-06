@@ -847,17 +847,20 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
       assert.equal(provider.isReady(), true);
       // First prove a successful native POST ACK cannot be admitted during
       // a transient re-attestation even while the Host still owns its PID.
+      const duringRecheck = opened.driver.submit({
+        inputId: 'TEST-late-recheck', operationRef: 'TEST-recheck-op',
+        content: 'TEST recheck; no model',
+      });
+      // The private SPI runs its own probe before starting the native POST.
+      // Hook only AFTER the server has received that POST, so this test
+      // actually exercises the in-flight ACK and not preflight cancellation.
+      await postSeen.promise;
       captured.probe = async () => {
         calls.probe++;
         recheckEntered.resolve();
         await completeRecheck.promise;
         return true;
       };
-      const duringRecheck = opened.driver.submit({
-        inputId: 'TEST-late-recheck', operationRef: 'TEST-recheck-op',
-        content: 'TEST recheck; no model',
-      });
-      await postSeen.promise;
       const recheck = opened.driver.checkReadiness();
       await recheckEntered.promise;
       assert.equal(provider.isReady(), false, 'native re-attestation fences readiness');
