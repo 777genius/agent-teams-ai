@@ -80,6 +80,7 @@ export function createOpenCodeV2MemberProvider(
   // A failed re-attestation permanently revokes this native capture. A later
   // reconfiguration cannot silently restore previously granted authority.
   let qualificationRevoked = false;
+  let wasEverReady = false;
   let stopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
   let physicallyStopped = false;
@@ -183,6 +184,7 @@ export function createOpenCodeV2MemberProvider(
             };
             ready = true;
             context.onProgress();
+            wasEverReady = true;
             accepted = true;
             return true;
           } finally {
@@ -191,6 +193,10 @@ export function createOpenCodeV2MemberProvider(
               ready = false;
               initialEvidence = undefined;
               abort.abort();
+              // A previously live member must not leave the loosened native
+              // process running while Host reports an unready session.
+              // Only its captured owner may perform this physical stop.
+              if (wasEverReady) await finishOwned();
             }
           }
         },
