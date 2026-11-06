@@ -28093,6 +28093,9 @@ describe('TeamProvisioningService', () => {
     const worktreeGitDir = path.join(repoDir, '.git', 'worktrees', 'alice');
     fs.mkdirSync(worktreeDir, { recursive: true });
     fs.mkdirSync(worktreeGitDir, { recursive: true });
+    fs.writeFileSync(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n', 'utf8');
+    fs.writeFileSync(path.join(repoDir, '.git', 'config'), '[core]\n', 'utf8');
+    fs.writeFileSync(path.join(worktreeGitDir, 'HEAD'), 'ref: refs/heads/main\n', 'utf8');
     fs.writeFileSync(path.join(worktreeDir, '.git'), `gitdir: ${worktreeGitDir}\n`, 'utf8');
     fs.writeFileSync(path.join(worktreeGitDir, 'commondir'), '../..\n', 'utf8');
     fs.writeFileSync(
