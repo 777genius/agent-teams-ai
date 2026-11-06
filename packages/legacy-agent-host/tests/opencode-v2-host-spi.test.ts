@@ -14,6 +14,9 @@ const { createOpenCodeV2MemberProvider } = await import(sourceMode
 const { createOpenCodeMemberProvider } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeMemberProvider.ts'
   : '../dist/adapters/providers/OpenCodeMemberProvider.js');
+const { applyLaunchConfiguration } = await import(sourceMode
+  ? '../src/composition/launchConfiguration.ts'
+  : '../dist/composition/launchConfiguration.js');
 
 function v2Profile() {
   return {
@@ -101,6 +104,29 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
   assert.equal(runtimeProfileSchema.safeParse({ members: [
     { ...valid, nativeGeneration: undefined, protocolRevision: '1.19.4', nativeSessionId: undefined },
   ] }).success, true, 'unchanged V1 default remains valid');
+});
+
+test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
+  const base = runtimeProfileSchema.parse({ members: [v2Profile()] }).members[0]!;
+  for (const permissions of ['manual', 'bypass'] as const) {
+    assert.throws(() => applyLaunchConfiguration(base, { permissions }), /launch-option-unsupported/);
+  }
+  const selected = applyLaunchConfiguration(base, { model: 'TEST-next-model' });
+  assert.equal(selected.provider, 'opencode');
+  if (selected.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+  assert.equal(selected.model, 'TEST-next-model');
+  assert.equal(selected.nativeOptions.toolApprovalMode, undefined,
+    'V2 model choice must not inject V1 approval semantics');
+
+  const v1 = runtimeProfileSchema.parse({ members: [{
+    ...v2Profile(), nativeGeneration: undefined, protocolRevision: '1.19.4',
+    nativeSessionId: undefined,
+  }] }).members[0]!;
+  const legacyChoice = applyLaunchConfiguration(v1, { permissions: 'manual' });
+  assert.equal(legacyChoice.provider, 'opencode');
+  if (legacyChoice.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+  assert.equal(legacyChoice.nativeOptions.toolApprovalMode, 'manual',
+    'historical V1 launch choices remain unchanged');
 });
 
 test('V1 factory refuses a generation-selected V2 member before starting a server', () => {
