@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TeamProvisioningMemberStatusQueryFacade } from '../TeamProvisioningMemberStatusQueryFacade';
 
+import type { TeamProvisioningLaunchRosterInput } from '../TeamProvisioningLaunchRosterMaterialization';
+
 import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisioningCompatibilityFacade';
 import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisioningMemberLifecycleCompatibilityFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
@@ -11,6 +13,7 @@ import type {
   MemberSpawnStatusEntry,
   TeamAgentRuntimeSnapshot,
   TeamConfig,
+  TeamMember,
   TeamProvisioningProgress,
 } from '@shared/types';
 
@@ -20,7 +23,10 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
       members: [{ name: 'Worker', providerId: 'opencode' }],
     } as TeamConfig;
   });
-  readonly getMembersMock = vi.fn(async () => []);
+  readonly getMembersMock = vi.fn(async () => [] as TeamMember[]);
+  readonly materializeLaunchRosterMock = vi.fn<
+    (input: TeamProvisioningLaunchRosterInput) => Promise<boolean>
+  >(async () => true);
   readonly getTeamAgentRuntimeSnapshotMock = vi.fn(async () => {
     return { teamName: 'alpha' } as unknown as TeamAgentRuntimeSnapshot;
   });
@@ -40,6 +46,7 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
   protected readonly compatibilityDelegation = {
     configFacade: {
       readConfigSnapshot: this.readConfigSnapshotMock,
+      materializeLaunchRoster: this.materializeLaunchRosterMock,
     },
   } as unknown as TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
   protected readonly memberLifecycleFacade = {
@@ -87,6 +94,10 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
     reevaluateMemberLaunchStatus: this.reevaluateMemberLaunchStatusMock,
   };
   protected readonly pendingTimeouts = new Map<string, NodeJS.Timeout>();
+
+  trackRun(run: ProvisioningRun): void {
+    this.runs.set(run.runId, run);
+  }
 
   getGraceKey(run: ProvisioningRun, memberName: string): string {
     return this.getMemberLaunchGraceKey(run, memberName);
@@ -178,6 +189,123 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
     expect(facade.readConfigSnapshotMock).toHaveBeenCalledWith('alpha');
     expect(facade.getMembersMock).toHaveBeenCalledWith('alpha');
     expect(facade.getTeamAgentRuntimeSnapshotMock).toHaveBeenCalledWith('alpha');
+  });
+
+
+  it('repairs a live OpenCode teammate missing from config and delivers to its canonical identity', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const run = createRun();
+    run.allEffectiveMembers = [
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ];
+    facade.trackRun(run);
+
+    let config = {
+      name: 'alpha',
+      members: [{ name: 'Lead', providerId: 'codex' }],
+    } as TeamConfig;
+    facade.readConfigSnapshotMock.mockImplementation(async () => config);
+    facade.getMembersMock.mockResolvedValue([
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ]);
+    facade.materializeLaunchRosterMock.mockImplementation(async (input) => {
+      expect(input.teamName).toBe('alpha');
+      expect(input.members).toEqual(run.allEffectiveMembers);
+      expect(input.isCurrentRun()).toBe(true);
+      config = {
+        ...config,
+        members: [
+          ...config.members,
+          { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+        ],
+      };
+      return true;
+    });
+
+    await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).resolves.toBe(
+      'opencode'
+    );
+    expect(facade.materializeLaunchRosterMock).toHaveBeenCalledTimes(1);
+    expect(facade.readConfigSnapshotMock).toHaveBeenCalledTimes(2);
+
+    // Once repaired, another send reads the canonical entry without another config write.
+    await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).resolves.toBe(
+      'opencode'
+    );
+    expect(facade.materializeLaunchRosterMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not repair an untracked or stale runtime member using metadata alone', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    facade.readConfigSnapshotMock.mockResolvedValue({
+      name: 'alpha',
+      members: [{ name: 'Lead', providerId: 'codex' }],
+    } as TeamConfig);
+    facade.getMembersMock.mockResolvedValue([
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ]);
+
+    await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).rejects.toThrow(
+      'has no authoritative config identity'
+    );
+    expect(facade.materializeLaunchRosterMock).not.toHaveBeenCalled();
+
+    const run = createRun();
+    run.allEffectiveMembers = [
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ];
+    run.cancelRequested = true;
+    facade.trackRun(run);
+    await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).rejects.toThrow(
+      'has no authoritative config identity'
+    );
+    expect(facade.materializeLaunchRosterMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses to materialize a recipient whose metadata disagrees with its tracked runtime', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const run = createRun();
+    run.allEffectiveMembers = [
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ];
+    facade.trackRun(run);
+    facade.readConfigSnapshotMock.mockResolvedValue({
+      name: 'alpha',
+      members: [{ name: 'Lead', providerId: 'codex' }],
+    } as TeamConfig);
+    facade.getMembersMock.mockResolvedValue([
+      { name: 'Worker', providerId: 'opencode', model: 'openai/other-model' },
+    ]);
+
+    await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).rejects.toThrow(
+      'has no authoritative config identity'
+    );
+    expect(facade.materializeLaunchRosterMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves fail-closed identity if publication loses the current run', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const run = createRun();
+    run.allEffectiveMembers = [
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ];
+    facade.trackRun(run);
+    facade.readConfigSnapshotMock.mockResolvedValue({
+      name: 'alpha',
+      members: [{ name: 'Lead', providerId: 'codex' }],
+    } as TeamConfig);
+    facade.getMembersMock.mockResolvedValue([
+      { name: 'Worker', providerId: 'opencode', model: 'openai/gpt-test' },
+    ]);
+    facade.materializeLaunchRosterMock.mockImplementation(async (input) => {
+      run.cancelRequested = true;
+      expect(input.isCurrentRun()).toBe(false);
+      return false;
+    });
+
+    await expect(facade.resolveRuntimeRecipientProviderId('alpha', 'Worker')).rejects.toThrow(
+      'has no authoritative config identity'
+    );
   });
 
   it('keeps member launch grace timers scoped to member status handling', () => {
