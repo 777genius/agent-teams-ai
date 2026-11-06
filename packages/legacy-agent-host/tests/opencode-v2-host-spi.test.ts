@@ -54,7 +54,8 @@ function context(profile = v2Profile(), open = request()): MemberProviderContext
   return {
     profile: profile as MemberProviderContext['profile'],
     request: open,
-    endpoint: { binding: { backendId: 'test-backend', teamId: 'test-team', runId: 'test-run' } },
+    endpoint: { binding: { backendId: 'test-backend', teamId: 'test-team', runId: 'test-run', memberId: 'test-member', generation: 'test-generation' } },
+    instructions: 'TEST-only role, team and workspace instructions',
     isCurrent: () => true,
     canAllocate: () => true,
     onProgress: () => {},
@@ -63,7 +64,7 @@ function context(profile = v2Profile(), open = request()): MemberProviderContext
 }
 
 function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
-  const calls = { probe: 0, permissions: 0, password: 0, stop: 0, stopped: 0 };
+  const calls = { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 };
   const captured: OpenCodeV2OwnedSession = {
     requiredExternalDirectory: 'deny',
     readPassword() { calls.password++; return 'TEST-only-password'; },
@@ -71,6 +72,11 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
     async readNativeEffectivePermissions() {
       calls.permissions++;
       return [{ action: 'external_directory', resource: '*', effect: effective }];
+    },
+    async installAndAttestInitialContext(capture) {
+      calls.context++;
+      return { nativeSessionId: capture.nativeSessionId, contextDigest: capture.contextDigest,
+        generation: capture.generation, configRevision: capture.configRevision };
     },
     async stopOwned() { calls.stop++; return true; },
     async confirmStopped() { calls.stopped++; return true; },
@@ -112,7 +118,7 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
     assert.throws(() => createOpenCodeV2MemberProvider(
       context(bad as typeof fixture), captured), /separate native profile/);
   }
-  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 0, stopped: 0 });
+  assert.deepEqual(calls, { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 });
 });
 
 test('V2 private SPI refuses mismatched request before native probe and credentials', async () => {
@@ -126,7 +132,7 @@ test('V2 private SPI refuses mismatched request before native probe and credenti
   assert.equal(calls.password, 0);
   assert.equal(calls.stop, 1, 'failed open retires owned process immediately');
   assert.equal(await provider.cleanup(), true);
-  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 0, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
 });
 
 test('V2 native probe failure HOLDs without submission and physically stops its owner', async () => {
@@ -137,7 +143,7 @@ test('V2 native probe failure HOLDs without submission and physically stops its 
   assert.equal(calls.probe, 1);
   assert.equal(calls.password, 0);
   assert.equal(await provider.cleanup(), true);
-  assert.deepEqual(calls, { probe: 1, permissions: 0, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 1, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
 });
 
 test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revokes readiness', async () => {
@@ -148,9 +154,17 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(provider.isReady(), true);
   assert.equal(calls.probe, 1);
   assert.equal(calls.permissions, 1);
+  assert.equal(calls.context, 1);
+  assert.deepEqual(provider.initialContextEvidence?.(), {
+    kind: 'native-configuration',
+    contextDigest: (await import('node:crypto')).createHash('sha256')
+      .update('TEST-only role, team and workspace instructions').digest('hex'),
+    generation: 'test-generation', configRevision: 'test-revision',
+  });
   assert.equal(calls.password, 0, 'no credentials are read by a simulated readiness probe');
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
   assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1, 'same TEST owner stopped once');
   assert.equal(calls.stopped, 1);
@@ -161,7 +175,7 @@ test('V2 native-effective allow cannot satisfy captured deny, even after a succe
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
   assert.equal(provider.isReady(), false);
-  assert.deepEqual(calls, { probe: 1, permissions: 1, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 1, permissions: 1, context: 0, password: 0, stop: 1, stopped: 1 });
 });
 
 test('V1 checkpoint identity is rejected before V2 native probe or permission readback', async () => {
@@ -174,7 +188,7 @@ test('V1 checkpoint identity is rejected before V2 native probe or permission re
   const provider = createOpenCodeV2MemberProvider(input, captured);
   await assert.rejects(() => provider.factory.open(restoredRequest), /opencode.driver.checkpoint-incompatible/);
   assert.equal(provider.isReady(), false);
-  assert.deepEqual(calls, { probe: 0, permissions: 0, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 0, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1, 'failed restore must not repeatedly signal an owner');
 });
@@ -182,6 +196,7 @@ test('V1 checkpoint identity is rejected before V2 native probe or permission re
 test('unknown physical cleanup on failed V2 open does not become a retryable success', async () => {
   const { captured, calls } = owner(true);
   captured.stopOwned = async () => { calls.stop++; return false; };
+  captured.confirmStopped = async () => { calls.stopped++; return false; };
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   await assert.rejects(
     () => provider.factory.open({ ...request(), configRevision: 'forged' }),
@@ -202,5 +217,35 @@ test('mutable owner cannot downgrade an already captured deny to ask', async () 
   (captured as { requiredExternalDirectory: 'ask' | 'deny' }).requiredExternalDirectory = 'ask';
   await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
   assert.equal(provider.isReady(), false);
-  assert.deepEqual(calls, { probe: 1, permissions: 1, password: 0, stop: 1, stopped: 1 });
+  assert.deepEqual(calls, { probe: 1, permissions: 1, context: 0, password: 0, stop: 1, stopped: 1 });
+});
+
+test('native instructions are not treated as installed when identity attestation is wrong', async () => {
+  const { captured, calls } = owner(true);
+  captured.installAndAttestInitialContext = async (capture) => {
+    calls.context++;
+    return { nativeSessionId: capture.nativeSessionId,
+      contextDigest: '0'.repeat(64),
+      generation: capture.generation, configRevision: capture.configRevision };
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.deepEqual(calls, { probe: 1, permissions: 1, context: 1, password: 0, stop: 1, stopped: 1 });
+});
+
+test('cleanup retries only read-only physical confirmation after uncertain stop ACK', async () => {
+  const { captured, calls } = owner(true);
+  captured.stopOwned = async () => { calls.stop++; return false; };
+  captured.confirmStopped = async () => { calls.stopped++; return calls.stopped > 1; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open({ ...request(), configRevision: 'forged' }),
+    /opencode.v2.owner-cleanup-unknown/);
+  assert.equal(await provider.cleanup(), true, 'later physical readback may confirm exit');
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1, 'never replay an uncertain stop');
+  assert.equal(calls.stopped, 2);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
 });
