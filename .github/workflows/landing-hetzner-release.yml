@@ -119,6 +119,32 @@ jobs:
               if parser.urls != [url]:
                   raise SystemExit(f"{path}: unexpected canonical: {parser.urls!r}")
           print("Exact production canonical URLs verified")
+
+          class CardLinks(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.hrefs = []
+              def handle_starttag(self, tag, attrs):
+                  a = dict(attrs)
+                  if tag == "a" and "docs-card" in (a.get("class") or "").split():
+                      self.hrefs.append(a.get("href"))
+
+          links = 0
+          docs = root / "docs"
+          for index in [docs / "index.html", *sorted(docs.glob("??/index.html"))]:
+              parser = CardLinks()
+              parser.feed(index.read_text())
+              for href in parser.hrefs:
+                  if not href or not href.startswith("/") or ".." in href.split("/"):
+                      raise SystemExit(f"{index}: invalid docs card link {href!r}")
+                  path = href.split("#", 1)[0].split("?", 1)[0]
+                  target = docs / (path.lstrip("/") + ("index.html" if path.endswith("/") else ".html"))
+                  if not target.is_file():
+                      raise SystemExit(f"{index}: missing docs card target {href!r}")
+                  links += 1
+          if links == 0:
+              raise SystemExit("No generated docs card links found")
+          print(f"Verified {links} generated docs card links")
           PY
           tar -C "$release" -czf "$RUNNER_TEMP/agent-teams-static.tar.gz" landing docs
           cd "$RUNNER_TEMP"
