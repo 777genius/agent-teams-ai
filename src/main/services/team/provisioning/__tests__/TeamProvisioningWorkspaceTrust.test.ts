@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
@@ -84,6 +84,11 @@ describe('TeamProvisioningWorkspaceTrust', () => {
 
       await expect(ports.resolveGitRoot(nested)).resolves.toBe(repo);
       await expect(ports.resolveGitRoot(worktree)).resolves.toBe(worktree);
+      if (process.platform !== 'win32') {
+        const nestedLink = path.join(repo, 'linked-project');
+        await symlink(nested, nestedLink);
+        await expect(ports.resolveGitRoot(nestedLink)).resolves.toBe(repo);
+      }
     } finally {
       await rm(repo, { recursive: true, force: true });
     }
