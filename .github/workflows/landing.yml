@@ -101,3 +101,47 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  smoke:
+    name: Live GitHub Pages smoke
+    needs: deploy
+    if: github.event_name != 'pull_request'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - name: Verify public landing HTML after deployment
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL --connect-timeout 10 --max-time 20 \
+                -H 'Cache-Control: no-cache' \
+                "https://777genius.github.io/agent-teams-ai/?verify=${GITHUB_SHA}" \
+                -o /tmp/landing-live.html \
+                && grep -Fq 'OpenRig' /tmp/landing-live.html \
+                && grep -Fq 'Supported desktop platforms' /tmp/landing-live.html; then
+              echo "Live Pages HTML verified: current comparison and desktop platforms."
+              exit 0
+            fi
+            if [ "$attempt" -lt 6 ]; then sleep 10; fi
+          done
+          echo "::error::Live Pages HTML is missing the current comparison after deployment."
+          exit 1
+
+      - name: Inspect custom-domain routing (informational)
+        run: |
+          node --input-type=module <<'NODE'
+          import { resolve4 } from 'node:dns/promises';
+          for (const host of ['agentteams.live', 'docs.agentteams.live']) {
+            try {
+              console.log(`${host} A records: ${(await resolve4(host)).join(', ')}`);
+            } catch (error) {
+              console.log(`${host} DNS lookup failed: ${error.code}`);
+            }
+          }
+          try {
+            const response = await fetch('https://agentteams.live/', { signal: AbortSignal.timeout(15000) });
+            const html = await response.text();
+            console.log(`agentteams.live HTTP ${response.status}; OpenRig=${html.includes('OpenRig')}; desktopPlatforms=${html.includes('Supported desktop platforms')}`);
+          } catch (error) {
+            console.log(`agentteams.live HTTP inspection unavailable: ${error.message}`);
+          }
+          NODE
