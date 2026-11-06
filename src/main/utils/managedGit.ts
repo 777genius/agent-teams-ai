@@ -1,6 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+/** Environment entries required by the portable Git helpers (not user credentials). */
+export const MANAGED_GIT_ENV_KEYS = [
+  'PATH',
+  'GIT_EXEC_PATH',
+  'GIT_CONFIG_SYSTEM',
+  'GIT_TEMPLATE_DIR',
+  'GIT_SSL_CAINFO',
+  'PREFIX',
+] as const;
+
 interface GitRuntimeLocation {
   executable: string;
   root: string | null;
