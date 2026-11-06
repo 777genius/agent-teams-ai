@@ -11,6 +11,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - '.node-version'
       - '.github/workflows/landing-hetzner-release.yml'
   pull_request:
     paths:
@@ -21,6 +22,7 @@ on:
       - 'pnpm-workspace.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - '.node-version'
       - '.github/workflows/landing-hetzner-release.yml'
   workflow_dispatch:
 
