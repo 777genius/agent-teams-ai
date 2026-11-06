@@ -239,3 +239,45 @@ export async function measureOpenCodeV2Executable(
     return { kind: 'hold', reason: 'read' };
   }
 }
+
+
+/**
+ * V2.2 source-only guard for the fully assembled, ordered NATIVE-effective
+ * permissions (base + global + agent). Never pass a user config fragment here:
+ * that omits higher-priority rules. This does not prove that the native engine
+ * actually loaded these rules, that saved approvals behave correctly, or that
+ * the Host owns its permission responder. Native deny/ask E2E is still required.
+ *
+ * Last-match-wins makes an earlier `external_directory: ask` insufficient:
+ * agent rules (or an action='*' wildcard) can allow external access later.
+ * Requiring a FINAL universal external_directory rule deliberately rejects
+ * narrower exceptions until their complete effective scope has native proof.
+ */
+export function preflightOpenCodeV2EffectiveExternalDirectory(
+  effectivePermissions: unknown,
+  required: 'ask' | 'deny'
+): { kind: 'hold'; reason: 'rules' | 'external-directory' } |
+  { kind: 'policy-candidate'; effect: 'ask' | 'deny' } {
+  if (required !== 'ask' && required !== 'deny')
+    return { kind: 'hold', reason: 'rules' };
+  if (!Array.isArray(effectivePermissions) ||
+      effectivePermissions.length === 0 || effectivePermissions.length > 1024)
+    return { kind: 'hold', reason: 'rules' };
+  for (const rule of effectivePermissions) {
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
+        Object.keys(rule).length !== 3 ||
+        !['action', 'resource', 'effect'].every((key) => Object.hasOwn(rule, key)) ||
+        typeof rule.action !== 'string' || !rule.action || rule.action.length > 256 ||
+        typeof rule.resource !== 'string' || !rule.resource || rule.resource.length > 8192 ||
+        !['allow', 'ask', 'deny'].includes(rule.effect))
+      return { kind: 'hold', reason: 'rules' };
+  }
+  const last = effectivePermissions[effectivePermissions.length - 1];
+  // An earlier broad guard may be overridden by an agent-specific rule,
+  // including wildcards. Reject instead of trying to duplicate V2's matcher.
+  if (last.action !== 'external_directory' || last.resource !== '*' ||
+      (last.effect !== 'ask' && last.effect !== 'deny') ||
+      (required === 'deny' && last.effect !== 'deny'))
+    return { kind: 'hold', reason: 'external-directory' };
+  return { kind: 'policy-candidate', effect: last.effect };
+}
