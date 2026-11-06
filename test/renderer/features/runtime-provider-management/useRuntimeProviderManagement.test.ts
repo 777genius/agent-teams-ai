@@ -3101,12 +3101,12 @@ describe('useRuntimeProviderManagement', () => {
     });
 
     let submitPromise: ReturnType<RuntimeProviderManagementActions['submitConnect']> | null = null;
-    await act(async () => {
+    // The post-connect view/directory promises deliberately remain unresolved.
+    // A synchronous act flushes the initial busy state without awaiting them.
+    act(() => {
       submitPromise = actions?.submitConnect('openai') ?? null;
     });
-    await vi.waitFor(() => {
-      expect(connectProvider).toHaveBeenCalled();
-    });
+    expect(connectProvider).toHaveBeenCalled();
 
     expect(state?.savingProviderId).toBe('openai');
     expect(state?.activeFormProviderId).toBeNull();
