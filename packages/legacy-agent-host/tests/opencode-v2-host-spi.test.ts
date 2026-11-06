@@ -465,16 +465,15 @@ test('unknown physical stop after a failed V2 submit cannot claim safe reuse', a
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   const opened = await provider.factory.open(request());
   assert.equal(provider.isReady(), true);
-  const reply = await opened.driver.submit({
+  await assert.rejects(() => opened.driver.submit({
     inputId: 'TEST-uncertain', operationRef: 'TEST-uncertain-op', content: 'TEST no model',
-  });
-  assert.deepEqual(reply, { ok: false, code: 'unknown' },
-    'unknown physical custody may not advertise known-not-sent recovery');
+  }), /opencode.v2.owner-cleanup-unknown/,
+  'unknown physical custody must be a distinct failure from known-not-sent input');
   assert.equal(provider.isReady(), false);
   assert.equal(provider.initialContextEvidence?.(), undefined);
-  assert.deepEqual(await opened.driver.submit({
+  await assert.rejects(() => opened.driver.submit({
     inputId: 'TEST-retry', operationRef: 'TEST-retry-op', content: 'must not send',
-  }), { ok: false, code: 'unknown' });
+  }), /opencode.v2.owner-cleanup-unknown/);
   assert.equal(calls.password, 1, 'refused preflight never replays credentials or native POST');
   assert.equal(calls.stop, 1, 'never resignal the same owned PID after uncertain ACK');
   assert.equal(await provider.cleanup(), false);

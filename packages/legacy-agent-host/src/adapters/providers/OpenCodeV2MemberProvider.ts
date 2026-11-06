@@ -294,10 +294,11 @@ export function createOpenCodeV2MemberProvider(
                 }
                 if (!reply.ok && (reply.code === 'dependency-unavailable' ||
                     reply.code === 'unavailable' || reply.code === 'unknown')) {
-                  // The failed native driver handoff and its physical process
-                  // custody are separate facts. UNKNOWN cleanup is not a safe
-                  // known-not-sent result for the outer Runtime to reuse.
-                  if (!await finishOwned()) return { ok: false, code: 'unknown' };
+                  // Input delivery was known-not-sent, but native process
+                  // termination is a separate UNKNOWN fact. Surface that
+                  // custody failure explicitly instead of falsifying the
+                  // input result, and never repeat the physical stop signal.
+                  if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                 }
                 return reply;
               },
