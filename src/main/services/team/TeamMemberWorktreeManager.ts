@@ -1,10 +1,9 @@
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { execFile } from 'child_process';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-
-import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 
 export interface TeamMemberWorktreeRequest {
   teamName: string;

@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 
 import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
-
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 

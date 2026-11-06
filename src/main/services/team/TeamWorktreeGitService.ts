@@ -1,8 +1,7 @@
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-
-import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 
 import type { TeamWorktreeGitStatus } from '@shared/types';
 
