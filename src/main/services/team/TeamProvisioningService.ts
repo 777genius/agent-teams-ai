@@ -132,6 +132,14 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
         getTrackedRunId: (name) => this.runTracking.getTrackedRunId(name),
         getRun: (runId) => this.runs.get(runId),
         readMetaMembers: (name) => this.membersMetaStore.getMembers(name),
+        readPersistedLaunchState: (name) => this.launchStateStore.read(name),
+        isTeamOwned: (name) => this.profileOwnership.isManagedByThisProfile(name),
+        isTeamStopped: (name) => this.launchStateStore.isStopped(name),
+        isRuntimeReachable: (name) => this.runTracking.canDeliverToOpenCodeRuntimeForTeam(name),
+        resolveActiveLaneRunId: (name, lane) =>
+          this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(name, lane),
+        getStopEpoch: (name) =>
+          `${this.stopAllTeamsGeneration}:${this.getStopTeamGeneration(name)}`,
         materializeLaunchRoster: (input) =>
           this.compatibilityDelegation.configFacade.materializeLaunchRoster(input),
       }
