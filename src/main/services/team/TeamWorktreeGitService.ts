@@ -1,3 +1,4 @@
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -69,6 +70,14 @@ export class TeamWorktreeGitService {
       cwd = await assertUsableDirectory(projectPath);
     } catch (error) {
       return blockedStatus(projectPath.trim(), 'invalid_project_path', normalizeGitError(error));
+    }
+
+    if (!(await canUseGitWithoutMacInstallerPrompt())) {
+      return blockedStatus(
+        cwd,
+        'git_unavailable',
+        'Git is required only for worktree isolation. Install Git to enable it.'
+      );
     }
 
     let rootPath: string;

@@ -40,12 +40,6 @@ export interface WorkspaceTrustPlanningLogger {
   warn(message: string): void;
 }
 
-export interface WorkspaceTrustGitRootResolutionPorts {
-  resolveGitTopLevel(cwd: string): Promise<string | null>;
-  resolveFilesystemGitRoot(cwd: string): Promise<string | null>;
-  isAbsolutePath(value: string): boolean;
-}
-
 export interface WorkspaceTrustWorkspaceCollectionPorts {
   getHomeDir(): string;
   realpath(value: string): Promise<string | null>;
@@ -144,20 +138,6 @@ export function collectWorkspaceTrustProviders(input: {
   }
   const providerOrder: WorkspaceTrustProvider[] = ['claude', 'codex', 'gemini', 'opencode'];
   return providerOrder.filter((provider) => providers.has(provider));
-}
-
-export async function resolveWorkspaceTrustGitRoot(
-  cwd: string,
-  ports: WorkspaceTrustGitRootResolutionPorts
-): Promise<string | null> {
-  const normalizedCwd = cwd.trim();
-  if (!normalizedCwd) {
-    return null;
-  }
-  const gitRoot = (await ports.resolveGitTopLevel(normalizedCwd))?.trim() ?? null;
-  return gitRoot && ports.isAbsolutePath(gitRoot)
-    ? gitRoot
-    : ports.resolveFilesystemGitRoot(normalizedCwd);
 }
 
 export async function collectWorkspaceTrustWorkspaces(input: {
