@@ -4,7 +4,7 @@ import * as path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { canUseGitWithoutMacInstallerPrompt } from '../TeamWorktreeGitService';
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 
 describe('macOS Git availability without installer prompts', () => {
   it('does not probe Git when macOS PATH contains no executable', async () => {
