@@ -877,8 +877,10 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
           assert.equal(calls.stop, 0, 're-attestation alone cannot stop an owned PID');
           provider.seal();
           completeRecheck.resolve();
-          assert.equal((await within(recheck, 'sealed re-attestation')).ok, false,
-            'seal revokes the suspended native probe');
+          const sealedReadback = await within(recheck, 'sealed re-attestation');
+          assert.ok(sealedReadback && typeof sealedReadback === 'object' && 'ok' in sealedReadback,
+            'the private Session SPI must return a structured readiness result');
+          assert.equal(sealedReadback.ok, false, 'seal revokes the suspended native probe');
         } else {
           provider.seal();
           releaseAck.resolve();
