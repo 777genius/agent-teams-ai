@@ -80,7 +80,7 @@ export async function stageManagedGit(platform, { root = stagingRoot } = {}) {
   if (!asset || !/^[a-f0-9]{64}$/.test(asset.sha256)) {
     throw new Error(`No pinned Git runtime for target ${platform}`);
   }
-  const markerPath = path.join(root, '.managed-git.json');
+  const markerPath = path.join(root, 'MANAGED_GIT.json');
   const marker = await readFile(markerPath, 'utf8').then(JSON.parse).catch(() => null);
   if (marker?.platform === platform && marker?.sha256 === asset.sha256) {
     try {
@@ -105,7 +105,7 @@ export async function stageManagedGit(platform, { root = stagingRoot } = {}) {
     tar(['-xzf', archive, '-C', unpacked]);
     await validateLinks(unpacked);
     await access(gitExecutable(platform, unpacked));
-    await writeFile(path.join(unpacked, '.managed-git.json'), JSON.stringify({
+    await writeFile(path.join(unpacked, 'MANAGED_GIT.json'), JSON.stringify({
       platform,
       tag: lock.tag,
       sha256: asset.sha256,
