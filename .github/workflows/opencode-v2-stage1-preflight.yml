@@ -15,6 +15,7 @@ on:
       - packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts
       - packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts
       - packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      - packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs
       - packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts
       - packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
       - packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
@@ -65,7 +66,7 @@ jobs:
       - name: Execute V2 static preflight, current-main lock and FIFO negatives
         env:
           OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
-        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs
 
   native-host-instructions:
     name: Native V2.0.21 Host SPI instructions (Ubuntu TEST only)

@@ -348,7 +348,11 @@ try {
     receipt.cleanupError='native_process_cleanup_unconfirmed';
     process.exitCode=1;
   }
-  try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); } catch {}
+  // No process allocation means there is no child tree to clean up.
+  // This makes pre-allocation failures clean without inventing PID custody.
+  if (!child?.pid) receipt.cleanup=true;
+  try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
+  catch { process.exitCode=1; } // A missing proof receipt must fail the job.
   if(receipt.cleanup)rmSync(root,{recursive:true,force:true});
 }
-if(process.exitCode)throw Error('native Host V2.0.21 TEST proof failed; inspect receipt');
+if(process.exitCode)process.stderr.write('native_host_test_failed; inspect sanitized receipt\n');
