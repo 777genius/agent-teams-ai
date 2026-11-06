@@ -1,6 +1,7 @@
 import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { runtimeDigest } from '../../runtime/identity.js';
+import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 
 /**
@@ -15,6 +16,13 @@ import type { MemberProvider, MemberProviderContext } from './MemberProvider.js'
 export interface OpenCodeV2OwnedSession {
   readPassword(): string;
   probe(signal: AbortSignal): Promise<boolean>;
+  /**
+   * Read back the fully assembled rules from THIS owned native engine, not a
+   * user config fragment. The owner must prove the same PID/start identity.
+   */
+  readNativeEffectivePermissions(signal: AbortSignal): Promise<unknown>;
+  /** Captured product policy; V2's permissive default is never inherited. */
+  readonly requiredExternalDirectory: 'ask' | 'deny';
   /** Stop ONLY this capture's process tree, never a user/shared V1 process. */
   stopOwned(): Promise<boolean>;
   /** Confirm physical termination of the same PID/start identity. */
@@ -95,7 +103,14 @@ export function createOpenCodeV2MemberProvider(
         probe: async (signal) => {
           if (!current() || signal.aborted) return false;
           const valid = await owned.probe(signal);
-          ready = valid && !signal.aborted && current();
+          if (!valid || signal.aborted || !current()) return false;
+          // Source-only candidate plus owner-supplied native readback. The
+          // production owner still must prove genuine engine custody and
+          // cannot claim qualification from a scripted TEST receipt.
+          const effective = await owned.readNativeEffectivePermissions(signal);
+          const policy = preflightOpenCodeV2EffectiveExternalDirectory(
+            effective, owned.requiredExternalDirectory);
+          ready = policy.kind === 'policy-candidate' && !signal.aborted && current();
           if (ready) context.onProgress();
           return ready;
         },
