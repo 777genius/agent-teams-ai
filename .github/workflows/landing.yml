@@ -81,7 +81,7 @@ jobs:
         run: npm run verify:agent-discovery
 
       - name: Stamp generated deployment revision
-        run: printf '%s\\n' "$GITHUB_SHA" > landing/.output/public/deployment-sha.txt
+        run: printf %s "$GITHUB_SHA" > landing/.output/public/deployment-sha.txt
 
       - uses: actions/configure-pages@v6
         if: github.event_name != 'pull_request'
