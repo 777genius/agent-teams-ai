@@ -138,6 +138,14 @@
       "budgetControls": "بجٹ کنٹرول",
       "price": "قیمت",
       "desktopPlatforms": "معاونت یافتہ ڈیسک ٹاپ پلیٹ فارمز"
+    },
+    "platforms": {
+      "desktopApp": "(ڈیسک ٹاپ ایپ)",
+      "cliBinaries": "(CLI بائنریز)",
+      "noNativeDesktop": "مقامی ڈیسک ٹاپ ایپ موجود نہیں (خود میزبان پینل)",
+      "desktopIde": "(ڈیسک ٹاپ IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 کے ذریعے (مقامی نہیں)"
     }
   },
   "screenshots": {

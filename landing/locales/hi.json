@@ -138,6 +138,14 @@
       "budgetControls": "बजट नियंत्रण",
       "price": "कीमत",
       "desktopPlatforms": "समर्थित डेस्कटॉप प्लेटफ़ॉर्म"
+    },
+    "platforms": {
+      "desktopApp": "(डेस्कटॉप ऐप)",
+      "cliBinaries": "(CLI बाइनरी)",
+      "noNativeDesktop": "मूल डेस्कटॉप ऐप नहीं (स्वयं होस्ट किया गया पैनल)",
+      "desktopIde": "(डेस्कटॉप IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 के माध्यम से (मूल रूप से नहीं)"
     }
   },
   "screenshots": {

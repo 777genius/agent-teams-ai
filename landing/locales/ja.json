@@ -138,6 +138,14 @@
       "budgetControls": "予算管理",
       "price": "価格",
       "desktopPlatforms": "対応デスクトップOS"
+    },
+    "platforms": {
+      "desktopApp": "（デスクトップアプリ）",
+      "cliBinaries": "（CLI バイナリ）",
+      "noNativeDesktop": "ネイティブデスクトップアプリなし（セルフホスト型管理画面）",
+      "desktopIde": "（デスクトップ IDE）",
+      "cli": "（CLI）",
+      "wsl2": "WSL2 経由（ネイティブ非対応）"
     }
   },
   "screenshots": {

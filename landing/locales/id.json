@@ -138,6 +138,14 @@
       "budgetControls": "Kontrol anggaran",
       "price": "Harga",
       "desktopPlatforms": "Platform desktop yang didukung"
+    },
+    "platforms": {
+      "desktopApp": "(aplikasi desktop)",
+      "cliBinaries": "(biner CLI)",
+      "noNativeDesktop": "Tidak ada aplikasi desktop native (panel swakelola)",
+      "desktopIde": "(IDE desktop)",
+      "cli": "(CLI)",
+      "wsl2": "melalui WSL2 (tidak native)"
     }
   },
   "screenshots": {

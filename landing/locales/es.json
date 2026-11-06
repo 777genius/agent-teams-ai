@@ -138,6 +138,14 @@
       "budgetControls": "Controles de presupuesto",
       "price": "Precio",
       "desktopPlatforms": "Plataformas de escritorio compatibles"
+    },
+    "platforms": {
+      "desktopApp": "(aplicación de escritorio)",
+      "cliBinaries": "(binarios CLI)",
+      "noNativeDesktop": "Sin aplicación de escritorio nativa (panel autoalojado)",
+      "desktopIde": "(IDE de escritorio)",
+      "cli": "(CLI)",
+      "wsl2": "mediante WSL2 (no nativo)"
     }
   },
   "screenshots": {

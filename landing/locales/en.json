@@ -138,6 +138,14 @@
       "budgetControls": "Budget controls",
       "price": "Price",
       "desktopPlatforms": "Supported desktop platforms"
+    },
+    "platforms": {
+      "desktopApp": "(desktop app)",
+      "cliBinaries": "(CLI binaries)",
+      "noNativeDesktop": "No native desktop app (self-hosted control plane)",
+      "desktopIde": "(desktop IDE)",
+      "cli": "(CLI)",
+      "wsl2": "via WSL2 (not native)"
     }
   },
   "screenshots": {
