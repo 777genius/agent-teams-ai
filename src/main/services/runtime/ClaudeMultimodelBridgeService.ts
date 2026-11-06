@@ -1241,7 +1241,9 @@ export class ClaudeMultimodelBridgeService {
         env,
         cwd: context.cwd,
       },
-      extractJsonObject<UnifiedRuntimeStatusResponse>
+      extractJsonObject<UnifiedRuntimeStatusResponse>,
+      undefined,
+      getProviderStatusCommandCwd(options.projectPath)
     );
     const mappedProvider = this.applyConnectionIssue(
       this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
