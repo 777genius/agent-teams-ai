@@ -776,6 +776,18 @@ test('pinned private V2 PR1 refuses Windows native cwd before network access (HO
 
 test('late native prompt ACK stays UNKNOWN during re-attestation and after Host seal',
   { timeout: 15000 }, async () => {
+    // An outer node:test timeout alone cannot release unresolved promises or
+    // close live peers. Bound each synthetic HTTP/re-attestation handshake.
+    const within = async <T>(work: Promise<T>, stage: string): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([work, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('TEST handshake timeout: ' + stage)), 5000);
+        })]);
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+    };
     // Two independent disposable peers: an active turn in the first case must
     // not contaminate or stall the second case's private single-turn queue.
     for (const mode of ['recheck', 'seal'] as const) {
@@ -847,7 +859,7 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
         });
         // The pinned driver probes before its POST. Only block the separate
         // re-attestation AFTER the TEST HTTP peer has received the mutation.
-        await postSeen.promise;
+        await within(postSeen.promise, mode + ' POST received');
         if (mode === 'recheck') {
           captured.probe = async () => {
             calls.probe++;
@@ -856,20 +868,21 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
             return true;
           };
           const recheck = opened.driver.checkReadiness();
-          await recheckEntered.promise;
+          await within(recheckEntered.promise, 're-attestation started');
           assert.equal(provider.isReady(), false);
           releaseAck.resolve();
-          assert.deepEqual(await pending, { ok: false, code: 'unknown' },
+          assert.deepEqual(await within(pending, 'recheck native ACK'), { ok: false, code: 'unknown' },
             'committed native POST cannot be acknowledged while Host readiness is fenced');
           assert.equal(postCount, 1, 'no second native POST after uncertain ACK');
           assert.equal(calls.stop, 0, 're-attestation alone cannot stop an owned PID');
           provider.seal();
           completeRecheck.resolve();
-          assert.equal((await recheck).ok, false, 'seal revokes the suspended native probe');
+          assert.equal((await within(recheck, 'sealed re-attestation')).ok, false,
+            'seal revokes the suspended native probe');
         } else {
           provider.seal();
           releaseAck.resolve();
-          assert.deepEqual(await pending, { ok: false, code: 'unknown' },
+          assert.deepEqual(await within(pending, 'sealed native ACK'), { ok: false, code: 'unknown' },
             'post-seal native ACK is neither authorized nor known-not-sent');
         }
         assert.equal(postCount, 1, 'each TEST case sends exactly one native POST');
