@@ -91,8 +91,21 @@ export function createOpenCodeV2MemberProvider(
   const contextDigest = initialContextDigest(context.instructions);
   const abort = new AbortController();
 
-  const current = () => !sealed && !qualificationRevoked &&
-    context.isCurrent() && context.canAllocate();
+  const current = () => {
+    if (sealed || qualificationRevoked) return false;
+    if (context.isCurrent() && context.canAllocate()) return true;
+    // A temporarily lost Host authority is not a renewable V2 lease.
+    // Latch revocation even if allocation becomes available again before
+    // the next asynchronous native readiness check.
+    qualificationRevoked = true;
+    ready = false;
+    initialEvidence = undefined;
+    abort.abort();
+    // This is the captured TEST-owned process only. finishOwned deduplicates
+    // the stop attempt and allows read-only confirmation after an unknown ACK.
+    void finishOwned();
+    return false;
+  };
   const finishOwned = async (): Promise<boolean> => {
     sealed = true;
     ready = false;
