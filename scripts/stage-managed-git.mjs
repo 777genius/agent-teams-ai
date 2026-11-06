@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { access, lstat, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { access, lstat, mkdtemp, readFile, readlink, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
@@ -63,7 +63,8 @@ async function validateLinks(root) {
       const candidate = path.join(directory, entry.name);
       const metadata = await lstat(candidate);
       if (metadata.isSymbolicLink()) {
-        const target = await import('node:fs/promises').then((fs) => fs.realpath(candidate));
+        // Check relative target path even when the linked helper is intentionally absent.
+        const target = path.resolve(path.dirname(candidate), await readlink(candidate));
         const relative = path.relative(root, target);
         if (relative.startsWith('..') || path.isAbsolute(relative)) {
           throw new Error(`Git archive symlink leaves its staging directory: ${candidate}`);
