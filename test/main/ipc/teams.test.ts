@@ -769,6 +769,8 @@ describe('ipc teams handlers', () => {
       relayLeadInboxMessages: teamHandlerMocks.relayLeadInboxMessages,
       getOpenCodeRuntimeDeliveryStatus: teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus,
       resolveRuntimeRecipientProviderId: teamHandlerMocks.resolveRuntimeRecipientProviderId,
+      resolveRuntimeRecipientProviderIdForUserSend:
+        teamHandlerMocks.resolveRuntimeRecipientProviderId,
       getLiveLeadProcessMessages: teamHandlerMocks.getLiveLeadProcessMessages,
       getCurrentLeadSessionId: teamHandlerMocks.getCurrentLeadSessionId,
       pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
