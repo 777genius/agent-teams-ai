@@ -274,6 +274,27 @@ try {
      provider.initialContextEvidence?.()!==undefined)
     throw Error('Host_seal_failed_to_initiate_owned_native_stop');
   receipt.steps.push('Host_seal_started_real_native_owned_stop_before_close');
+  // With an actual native engine behind the compiled Host SPI, a retained
+  // driver handle cannot bypass the sealed owner's permission/interrupt/submit
+  // controls or recover a checkpoint. No model/provider credentials are used.
+  const refusedSubmit=await opened.driver.submit({
+    inputId:'TEST-sealed-no-post',operationRef:'TEST-sealed-op',
+    content:'TEST only; MUST NOT send to native engine',
+  });
+  if(refusedSubmit.ok!==false||refusedSubmit.code!=='unavailable'||
+     refusedSubmit.delivery!=='known-not-sent')
+    throw Error('sealed_Host_reused_native_submit');
+  const refusedGrant=await opened.driver.respondToInteraction('perTEST-foreign',
+    {kind:'permission',decision:'allow'});
+  const refusedInterrupt=await opened.driver.interrupt('TEST-foreign-operation');
+  const refusedReadiness=await opened.driver.checkReadiness();
+  const refusedCheckpoint=opened.driver.checkpoint();
+  if([refusedGrant,refusedInterrupt,refusedReadiness,refusedCheckpoint]
+      .some(reply=>reply.ok!==false||reply.code!=='unavailable')||
+     initialPutCount!==1||nativeCustodyReads!==4||nativePermissionReads!==4)
+    throw Error('sealed_Host_reused_native_control_or_readiness');
+  receipt.steps.push('real_native_seal_refused_retained_SPI_mutations_and_checkpoint');
+
   const closed=await opened.driver.close();
   if(closed.cleanup!=='confirmed'||provider.isReady()||
      !await provider.cleanup())throw Error('host_native_stop_not_confirmed');
