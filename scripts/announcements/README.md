@@ -29,7 +29,7 @@ pnpm announcements:check --base <available-base-sha>
 pnpm announcements:generate
 ```
 
-The check fails if the Git base is absent/unavailable. CI checks PR source at the actual head SHA against the PR base, and `main` pushes against the previous pushed SHA. It runs without path skips, including generator/workflow changes, so a deployment cannot mistake a skipped content job for a passing validation. Require `announcements-content-check` in branch protection. Do not bypass it with a force push or manual deploy. Workflow dispatch without a base intentionally fails; use a normal PR/push for publication.
+The check fails if the Git base is absent/unavailable. CI checks PR source at the actual head SHA against the PR base, and `main` pushes against the previous pushed SHA. It runs without path skips, including generator/workflow changes, so a deployment cannot mistake a skipped content job for a passing validation. Require `announcements-content-check` in PR branch protection. The Pages workflow currently runs independently of the `main` push check, so a successful Pages job alone does not prove the deployed commit passed this validation. Do not bypass the check with a force push or manual deploy. Workflow dispatch without a base intentionally fails; use a normal PR/push for publication.
 
 `generateAnnouncements({ sourceDir, outputDir, repoDir, baseRef, checkOnly })` is also exported by `generate.mjs` for isolated fixtures. CLI overrides: `--source`, `--output`, `--repo`, `--base`, `--check`. `--check` validates without writing and always requires a base. The generator only replaces its dedicated output directory after all sources pass validation.
 
@@ -41,7 +41,7 @@ The [GitHub Pages workflow](../../.github/workflows/landing.yml) runs `npm run g
 
 Before enabling production announcements on **any** host:
 
-- Require the `announcements-content-check` CI job to pass on the **exact** revision being deployed. It must not be skipped; enforce it through branch protection.
+- Confirm `announcements-content-check` passed on the **exact deployed `main` commit** before enabling production announcements. PR branch protection alone is insufficient: the current Pages workflow does not wait for that push check. Treat failed or skipped checks as unqualified deployments.
 - Verify all announcement URLs under the actual deployment base. Missing or withdrawn announcement paths must return HTTP 404, never a catch-all `index.html` response.
 - Check GET/HEAD responses for appropriate content types, caching and `X-Content-Type-Options: nosniff` on the target host. GitHub Pages does not provide configurable arbitrary response headers; do not assume a committed `_headers` file configures it.
 - Confirm the public feed returns JSON, a content URL returns Markdown matching its recorded SHA-256, and asset URLs are served successfully.
