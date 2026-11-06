@@ -876,7 +876,11 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
           assert.deepEqual(await within(pending, 'recheck native ACK'), { ok: false, code: 'unknown' },
             'committed native POST cannot be acknowledged while Host readiness is fenced');
           assert.equal(postCount, 1, 'no second native POST after uncertain ACK');
-          assert.equal(calls.stop, 0, 're-attestation alone cannot stop an owned PID');
+          // The original native POST is uncertain after its ACK raced the
+          // policy probe. Quarantine this capture before any further dispatch.
+          // A probe by itself must not stop the PID; an uncertain mutation does.
+          assert.equal(calls.stop, 1, 'uncertain native handoff retires only its TEST-owned PID');
+          assert.equal(provider.isReady(), false, 'no renewed readiness after UNKNOWN delivery');
           provider.seal();
           completeRecheck.resolve();
           const sealedReadback = await within(recheck, 'sealed re-attestation');
