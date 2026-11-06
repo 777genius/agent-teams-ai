@@ -77,6 +77,9 @@ export function createOpenCodeV2MemberProvider(
   let sealed = false;
   let allocated = false;
   let ready = false;
+  // A failed re-attestation permanently revokes this native capture. A later
+  // reconfiguration cannot silently restore previously granted authority.
+  let qualificationRevoked = false;
   let stopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
   let physicallyStopped = false;
@@ -87,7 +90,8 @@ export function createOpenCodeV2MemberProvider(
   const contextDigest = initialContextDigest(context.instructions);
   const abort = new AbortController();
 
-  const current = () => !sealed && context.isCurrent() && context.canAllocate();
+  const current = () => !sealed && !qualificationRevoked &&
+    context.isCurrent() && context.canAllocate();
   const finishOwned = async (): Promise<boolean> => {
     sealed = true;
     ready = false;
@@ -137,6 +141,12 @@ export function createOpenCodeV2MemberProvider(
         },
         probe: async (signal) => {
           if (!current() || signal.aborted) return false;
+          // Stale readiness and its attestation must disappear BEFORE any
+          // asynchronous native permission/readback recheck can fail.
+          ready = false;
+          initialEvidence = undefined;
+          let accepted = false;
+          try {
           const combined = AbortSignal.any([signal, abort.signal]);
           const valid = await owned.probe(combined);
           if (!valid || combined.aborted || !current()) return false;
@@ -173,7 +183,16 @@ export function createOpenCodeV2MemberProvider(
           };
           ready = true;
           context.onProgress();
+          accepted = true;
           return true;
+          } finally {
+            if (!accepted) {
+              qualificationRevoked = true;
+              ready = false;
+              initialEvidence = undefined;
+              abort.abort();
+            }
+          }
         },
         // D.close() must report physical cleanup. Once shutdown begins,
         // there is no second submission even after uncertain ACK.
