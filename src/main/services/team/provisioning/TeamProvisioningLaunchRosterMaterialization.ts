@@ -156,11 +156,14 @@ async function publishLaunchRoster(
   }
 
   await ports.writeConfig(nextRaw, async () => {
-    const currentRaw = await ports.readConfig();
-    const currentMeta = await ports.readMetaMembers();
-    if (!input.isCurrentRun() || (input.beforeCommit && !(await input.beforeCommit())) || hasRemovedMember(currentMeta)) {
+    if (!input.isCurrentRun() || (input.beforeCommit && !(await input.beforeCommit()))) {
       throw new Error(ROSTER_CONFLICT_MESSAGE);
     }
+    const currentMeta = await ports.readMetaMembers();
+    if (!input.isCurrentRun() || hasRemovedMember(currentMeta)) {
+      throw new Error(ROSTER_CONFLICT_MESSAGE);
+    }
+    const currentRaw = await ports.readConfig();
     if (currentRaw !== raw) {
       const currentConfig = currentRaw ? (JSON.parse(currentRaw) as Record<string, unknown>) : null;
       if (

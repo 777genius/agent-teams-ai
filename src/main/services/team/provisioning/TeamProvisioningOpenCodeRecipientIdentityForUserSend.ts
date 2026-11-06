@@ -14,11 +14,11 @@ interface TrackedRecipientRun {
   progress: Pick<TeamProvisioningProgress, 'state'>;
 }
 
-type DurableRecipient = {
+interface DurableRecipient {
   member: TeamCreateRequest['members'][number];
   isCurrentRun(): boolean;
   beforeCommit(): Promise<boolean>;
-};
+}
 
 function findPersistedRecipient(
   snapshot: PersistedTeamLaunchSnapshot | null,
@@ -42,6 +42,7 @@ async function verifyDurableRecipient(
   meta: TeamMember,
   ports: OpenCodeRecipientIdentityForUserSendPorts
 ): Promise<DurableRecipient | null> {
+  const stopEpoch = ports.getStopEpoch(teamName);
   if (
     !meta.model?.trim() ||
     !(await ports.isTeamOwned(teamName)) ||
@@ -70,7 +71,6 @@ async function verifyDurableRecipient(
     return null;
   }
 
-  const stopEpoch = ports.getStopEpoch(teamName);
   const isCurrentRun = () =>
     ports.getTrackedRunId(teamName) === null &&
     ports.getStopEpoch(teamName) === stopEpoch &&

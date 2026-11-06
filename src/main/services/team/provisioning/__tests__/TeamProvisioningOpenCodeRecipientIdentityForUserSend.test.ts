@@ -307,10 +307,14 @@ describe('OpenCode explicit user-send identity repair', () => {
     let epoch = '0';
     vi.mocked(h.ports.getStopEpoch).mockImplementation(() => epoch);
     const materialize = h.ports.materializeLaunchRoster;
-    h.ports.materializeLaunchRoster = async (input) => {
-      epoch = '1';
-      return materialize(input);
-    };
+    h.ports.materializeLaunchRoster = (input) =>
+      materialize({
+        ...input,
+        beforeCommit: async () => {
+          epoch = '1';
+          return (await input.beforeCommit?.()) ?? true;
+        },
+      });
     await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
       'roster changed before config commit'
     );
