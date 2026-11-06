@@ -34,6 +34,19 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v6
+      # Read the actual moving Desktop product lock separately from this
+      # historical Stage1 stacked checkout. The test requires both releases
+      # to agree before returning even a static read-only candidate.
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          path: .current-product-lock
+          persist-credentials: false
+          sparse-checkout: runtime.lock.json
+          sparse-checkout-cone-mode: false
+      - name: Record exact current product commit
+        shell: bash
+        run: git -C .current-product-lock rev-parse HEAD
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -45,5 +58,7 @@ jobs:
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Typecheck Host TEST contracts
         run: pnpm --filter @agent-teams/legacy-agent-host typecheck:test
-      - name: Execute V2 static preflight and FIFO negative tests
+      - name: Execute V2 static preflight, current-main lock and FIFO negatives
+        env:
+          OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
         run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
