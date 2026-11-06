@@ -136,7 +136,8 @@
       "launchProof": "Status pelancaran rakan pasukan",
       "orgGovernance": "Organisasi & Gambaran Global",
       "budgetControls": "Kawalan belanjawan",
-      "price": "Harga"
+      "price": "Harga",
+      "desktopPlatforms": "Platform desktop yang disokong"
     }
   },
   "screenshots": {

@@ -136,7 +136,8 @@
       "launchProof": "Status uruchomienia członka zespołu",
       "orgGovernance": "Organizacje i widok globalny",
       "budgetControls": "Kontrola budżetu",
-      "price": "Cena"
+      "price": "Cena",
+      "desktopPlatforms": "Obsługiwane platformy komputerowe"
     }
   },
   "screenshots": {

@@ -136,7 +136,8 @@
       "launchProof": "Статус запуску учасників",
       "orgGovernance": "Організації та загальний огляд",
       "budgetControls": "Контроль бюджету",
-      "price": "Ціна"
+      "price": "Ціна",
+      "desktopPlatforms": "Підтримувані настільні платформи"
     }
   },
   "screenshots": {
