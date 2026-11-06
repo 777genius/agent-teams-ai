@@ -113,19 +113,29 @@ HEAD [`07c13f00`](https://github.com/agent-teams-ai/agent-teams-orchestrator/com
 contains a real Execution Observation PostgreSQL Activity writer, scoped runtime
 binding, read cursors, and native PostgreSQL restart/RLS/disconnect tests.
 Its stacked [Draft PR #98](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/98)
-HEAD [`fde0a320`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/fde0a320647e3b355094673e83c582c8c3d65839)
-preserves release-time UNKNOWN/same-source reconciliation. On that stacked
-candidate the [native PostgreSQL 16 test matrix](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266274)
-passed 14/14 on each of Node 24 and 26, and all four
-[Architecture jobs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266589)
-passed. These results qualify the **bounded sandbox regression only**, not an
-unmodified `#85` merge into current `main`, production Team/Runtime API or Desktop.
-The [trusted Docs Protocol](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209267123)
-still fails closed: `@agent-teams/repository-mutation` has both physical
-`0.2.2` and `0.4.0` resolutions because the older Docs cohort and Foundation
-`2.1.0` disagree. Do not remove a required dependency or bypass cohort
-authority to claim green. `#85` remains unmerged/nonmergeable against
-Orchestrator `main` `a34587b3`; the stacked PRs remain Draft.
+HEAD [`c2099ff5`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/c2099ff572cb29af07fc0993751aea9dcafb63d8)
+preserves release-time UNKNOWN and same-source reconciliation. The earlier
+[PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266274)
+(14/14 on Node 24 and 26) tested a **synthetic merge tree** `19ab5e20`,
+not direct HEAD `fde0a320`; do not relabel it exact-head evidence.
+The later [native PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42235338210)
+checked out the **actual PR head** `c2099ff572cb29af07fc0993751aea9dcafb63d8`
+and independently passed 14/14 on each of Node 24/26 with zero failures/skips.
+All four [Architecture jobs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42235338328)
+also passed on that revision. These prove **bounded sandbox regression**
+only, not an integrated #85/main merge, production Team/Runtime owner API
+or Desktop M01–M19 parity. The [mandatory trusted Docs Protocol](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42235338999)
+still **failed** because the lock includes two physical
+`@agent-teams/repository-mutation` resolutions (`0.2.2` / `0.4.0`).
+The central [Docs Cohort qualification issue #415](https://github.com/agent-teams-ai/.github/issues/415)
+tracks a compatible five-package closure; published package-version candidates
+are not themselves a qualified Cohort. Reverting the EF `2.1.0` pin alone
+is not proven compatible with the PR's schema-v3 protobuf source-coverage gate.
+The stacked-base commit-identity check also fails until integration against
+the live default branch. The parent #85 is nonmergeable against current
+Orchestrator `main=a34587b3`; 19 files were touched by both branches since
+the parent's recorded base (not a claim of 19 textual conflict hunks).
+Independent final-head review and CodeQL are not confirmed.
 Preserve the single intended M11 Activity writer, reconcile the **whole**
 qualified Docs cohort and current-main source first, then prove complete
 Runtime provider/subagent provenance, authority and Desktop native/packed
