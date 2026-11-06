@@ -469,6 +469,16 @@ export function createOpenCodeV2MemberProvider(
                 }
                 try {
                   const result = await source.checkReadiness();
+                  // A native readiness ACK is not a renewed Host lease: the
+                  // generation can be revoked while the private check awaits.
+                  // Recheck Host authority before exposing any successful ACK.
+                  if (!current()) {
+                    if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
+                    return { ok: false as const, code: 'unavailable' as const };
+                  }
+                  // A concurrent native re-attestation may have fenced this
+                  // handle without revoking its captured process.
+                  if (!ready) return { ok: false as const, code: 'unavailable' as const };
                   if (!result.ok) {
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   }

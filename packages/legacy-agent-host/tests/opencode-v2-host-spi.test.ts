@@ -580,6 +580,43 @@ test('sealing aborts an in-flight V2 native probe before permission or context i
   assert.equal(await provider.cleanup(), true);
 });
 
+test('late native readiness ACK cannot restore revoked Host authority or hide UNKNOWN cleanup',
+  { timeout: 3000 }, async () => {
+    for (const stopConfirmed of [true, false]) {
+      const { captured, calls } = owner(true);
+      let hostCurrent = true;
+      let progress = 0;
+      const host = {
+        ...context(),
+        isCurrent: () => hostCurrent,
+        // The final native probe has already completed, but the Host lease
+        // can expire before the private Session SPI returns its ACK.
+        onProgress: () => { if (++progress === 2) hostCurrent = false; },
+      };
+      captured.confirmStopped = async () => { calls.stopped++; return stopConfirmed; };
+      const provider = createOpenCodeV2MemberProvider(host, captured);
+      const opened = await provider.factory.open(request());
+      assert.equal(progress, 1);
+      assert.equal(provider.isReady(), true);
+      const pending = opened.driver.checkReadiness();
+      if (stopConfirmed) {
+        assert.deepEqual(await pending, { ok: false, code: 'unavailable' },
+          'the completed native probe cannot renew a revoked Host lease');
+        assert.equal(await provider.cleanup(), true);
+      } else {
+        await assert.rejects(pending, /opencode.v2.owner-cleanup-unknown/,
+          'uncertain physical teardown cannot appear as healthy readiness');
+        assert.equal(await provider.cleanup(), false);
+      }
+      assert.equal(progress, 2, 'the second native probe really completed');
+      assert.equal(provider.isReady(), false);
+      assert.equal(provider.initialContextEvidence?.(), undefined);
+      assert.equal(calls.stop, 1, 'never repeat an uncertain stop ACK');
+      assert.equal(calls.password, 0, 'no native credentials accessed');
+      assert.equal(calls.context, 1, 'never replay native instructions');
+    }
+  });
+
 test('retained V2 driver handle cannot mutate or checkpoint after Host seal', async () => {
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(), captured);
