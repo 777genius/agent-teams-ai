@@ -68,6 +68,20 @@ Exact reviewed sources:
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
 
+**Implementation-route precision (6 Nov 2026, current Runtime main):**
+[Runtime `f990acc26e1b`](https://github.com/agent-teams-ai/agent-runtime/commit/f990acc26e1b8071ae22d0b87a2ddd3672be8e2e)
+[readiness](https://github.com/agent-teams-ai/agent-runtime/blob/f990acc26e1b8071ae22d0b87a2ddd3672be8e2e/docs/architecture/readiness.md)
+registers one narrowly **implementation-qualified** Docker/Linux Codex enforced-network-route
+tuple (`@openai/codex@0.153.4`, Linux x64) for *Contained Agent Turn V1*.
+That registration is not a runnable or deployment-qualified interactive Host:
+no kernel route is installed by the registry row, no live credentialed turn is
+proved, and the `ids`, `resolver` and `evidence` broker-session ports still
+lack production owners, so the composition root cannot mint the required
+route-enforcement capability. Every unqualified tuple fails closed; Claude
+explicitly refuses while its broker seam is absent. The one registered tuple
+must **not** change S2.1/M02/M04/M06–M09/M15/M17–M19 from
+`requires new capability` or authorize an adapter or owner cutover.
+
 Classification vocabulary: **exact-compatible** means actual unchanged behavior at the
 specified Stage 1 boundary, **translated** means a proven semantic adapter could
 preserve it without new product rules, **requires new capability** means no currently
@@ -113,8 +127,17 @@ HEAD [`07c13f00`](https://github.com/agent-teams-ai/agent-teams-orchestrator/com
 contains a real Execution Observation PostgreSQL Activity writer, scoped runtime
 binding, read cursors, and native PostgreSQL restart/RLS/disconnect tests.
 Its stacked [Draft PR #98](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/98)
-HEAD [`c2099ff5`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/c2099ff572cb29af07fc0993751aea9dcafb63d8)
-preserves release-time UNKNOWN and same-source reconciliation. The earlier
+HEAD [`7e82c79d`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/7e82c79dbc0584367b963389d7bfcd6c3cba9459)
+preserves release-time UNKNOWN and same-source reconciliation.
+Its [later dual-source native PostgreSQL 16 run #42270503091](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42270503091)
+completed **56/56 PASS**: Node 24 and 26 each checked the direct PR HEAD
+(`7e82c79d`) and the separately verified two-parent synthetic merge
+(`605b4bd2`), 14 tests per matrix job with zero failures/skips.
+[Architecture #42270503012](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42270503012)
+completed 4/4 SUCCESS on the same branch revision.
+These are **sandbox-only**, not real Team/Runtime/Desktop production qualifications;
+trusted Docs failed on the incompatible physical package closure, and the
+required independent exact-head reviews remain incomplete. The earlier
 [PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266274)
 (14/14 on Node 24 and 26) tested a **synthetic merge tree** `19ab5e20`,
 not direct HEAD `fde0a320`; do not relabel it exact-head evidence.
