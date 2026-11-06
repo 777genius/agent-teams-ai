@@ -314,16 +314,43 @@ export function createOpenCodeV2MemberProvider(
               // Consumer-initiated early iterator return is not evidence of a
               // native failure, so only natural exhaustion/error retires it.
               observe: async function* () {
+                // The private EventFeed deliberately drains buffered events
+                // after end(). That is safe for its own Session semantics, but
+                // must NOT leak events across a revoked Host generation.
+                const iterator = source.observe()[Symbol.asyncIterator]();
+                let wakeRevocation!: () => void;
+                const revoked = new Promise<void>((resolve) => { wakeRevocation = resolve; });
+                const onAbort = () => wakeRevocation();
+                abort.signal.addEventListener('abort', onAbort, { once: true });
+                if (abort.signal.aborted) onAbort();
                 let exhausted = false;
+                let authorityLost = false;
                 try {
-                  for await (const event of source.observe()) yield event;
-                  exhausted = true;
+                  for (;;) {
+                    if (!ready || !current()) { authorityLost = true; break; }
+                    // Do not strand a Host observer waiting on EventFeed.next()
+                    // when seal/lease loss occurs with no further native event.
+                    const outcome = await Promise.race([
+                      iterator.next().then(value => ({ kind: 'event' as const, value })),
+                      revoked.then(() => ({ kind: 'revoked' as const })),
+                    ]);
+                    // Authority must be checked AFTER awaiting next(): EventFeed
+                    // may already have queued a native event before revocation.
+                    if (outcome.kind === 'revoked' || !ready || !current()) {
+                      authorityLost = true;
+                      break;
+                    }
+                    if (outcome.value.done) { exhausted = true; break; }
+                    yield outcome.value.value;
+                  }
                 } catch (error) {
                   if (!await finishOwned())
                     throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
                   throw error;
                 } finally {
-                  if (exhausted && !await finishOwned())
+                  abort.signal.removeEventListener('abort', onAbort);
+                  // A voluntary consumer return is not a native failure.
+                  if ((authorityLost || exhausted) && !await finishOwned())
                     throw new Error('opencode.v2.owner-cleanup-unknown');
                 }
               },
