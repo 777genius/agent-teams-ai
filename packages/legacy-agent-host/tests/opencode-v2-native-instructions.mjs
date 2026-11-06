@@ -132,6 +132,11 @@ try {
   }
   if(info?.pid!==child.pid||info.version!==version)throw Error('native_server_pid_or_version');
   receipt.steps.push('native_loopback_authenticated_identity');
+  // A TEST-native server must not accidentally expose its management API
+  // without authentication, including after the same isolated HOME restarts.
+  const unauthenticated=await fetch(endpoint+'/api/info',{redirect:'error',signal:AbortSignal.timeout(4000)});
+  if(unauthenticated.status!==401)throw Error('native_loopback_auth_not_enforced');
+  receipt.steps.push('native_loopback_unauthenticated_request_rejected');
   const permissionRules=[{action:'external_directory',resource:'*',effect:'deny'}];
   const created=await native('/api/session','POST',{
     location:{directory:workspace},
@@ -242,6 +247,59 @@ try {
   if(closed.cleanup!=='confirmed'||provider.isReady()||
      !await provider.cleanup())throw Error('host_native_stop_not_confirmed');
   receipt.steps.push('same_TEST_native_owner_closed_without_replay');
+  // Cold restart is a new TEST-owned process, never a silent reuse of the
+  // previous PID/start identity. Verify read-only native session/instructions
+  // recovery without resubmitting any mutation or launching a model turn.
+  const priorPid=child.pid, priorStartTicks=startTicks;
+  if(present(priorPid)||present(-priorPid))
+    throw Error('prior_native_process_tree_still_alive');
+  child=undefined;
+  startTicks=undefined;
+  stopRequested=false;
+  receipt.cleanup=false;
+  const resumedPort=await port();
+  child=spawn(binary,['serve','--hostname','127.0.0.1','--port',String(resumedPort)],
+    {cwd:workspace,env,detached:true,stdio:'ignore'});
+  await once(child,'spawn');
+  if(!child.pid)throw Error('restarted_native_pid_missing');
+  startTicks=startIdentity(child.pid);
+  if(!startTicks ||
+     (child.pid===priorPid&&startTicks===priorStartTicks) ||
+     digest(readFileSync('/proc/'+child.pid+'/exe'))!==hash)
+    throw Error('restarted_actual_engine_identity_mismatch');
+  endpoint='http://127.0.0.1:'+resumedPort;
+  let resumedInfo;
+  for(let i=0;i<70;i++) {
+    try {
+      const result=await native('/api/info');
+      if(result.status===200){resumedInfo=result.data;break;}
+    } catch { /* Read-only restart readiness, never retry a mutation. */ }
+    await delay(150);
+  }
+  if(resumedInfo?.pid!==child.pid||resumedInfo.version!==version)
+    throw Error('restarted_native_server_identity_unconfirmed');
+  const resumedUnauthenticated=await fetch(endpoint+'/api/info',
+    {redirect:'error',signal:AbortSignal.timeout(4000)});
+  if(resumedUnauthenticated.status!==401)
+    throw Error('restarted_native_loopback_auth_not_enforced');
+  const resumed=await native(sessionPath);
+  if(resumed.status!==200||resumed.data?.data?.id!==nativeSessionId||
+     JSON.stringify(resumed.data.data.permissions)!==JSON.stringify(permissionRules))
+    throw Error('native_cold_restart_session_permission_mismatch');
+  const restoredInstructions=await native('/api/experimental/session/'+
+    encodeURIComponent(nativeSessionId)+'/instructions/entries');
+  if(restoredInstructions.status!==200||
+     !Array.isArray(restoredInstructions.data?.data)||
+     restoredInstructions.data.data.filter(x=>x?.key==='host-context').length!==1||
+     JSON.stringify(restoredInstructions.data.data.find(x=>x?.key==='host-context')?.value)!==
+       JSON.stringify({instructions,digest:initialContextDigest(instructions)})||
+     initialPutCount!==1)
+    throw Error('native_cold_restart_instructions_missing_or_replayed');
+  receipt.restart={priorPid,priorStartTicks,pid:child.pid,
+    startTicks,actualBinarySha256:hash,readOnly:true};
+  receipt.steps.push('native_cold_restart_session_permissions_and_context_read_only');
+  if(!await stopOwned())throw Error('restarted_native_process_tree_cleanup_unconfirmed');
+  receipt.steps.push('same_TEST_native_owner_restart_cleanup_confirmed');
 } catch(error) {
   receipt.error=String(error?.stack||error);
   process.exitCode=1;
