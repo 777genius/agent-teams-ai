@@ -124,7 +124,7 @@ export class SmartScheduleDispatcher {
           teamLaunchRequest(saved, schedule.launchConfig.prompt.trim())
         );
         if (result.launchStatus === 'already_running' || result.alreadyRunning) {
-          return this.dispatchToLiveTeam(schedule, runId, isCancelled);
+          return await this.dispatchToLiveTeam(schedule, runId, isCancelled);
         }
         if (result.launchStatus === 'already_launching' || result.alreadyLaunching) {
           return skipped('Another team launch is already underway');
@@ -134,7 +134,7 @@ export class SmartScheduleDispatcher {
           summary: 'Team launch requested with scheduled instructions; bootstrap/work not yet verified',
         };
       }
-      return this.dispatchToLiveTeam(schedule, runId, isCancelled);
+      return await this.dispatchToLiveTeam(schedule, runId, isCancelled);
     } finally {
       this.dispatchingTeams.delete(team);
     }
