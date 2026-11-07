@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -308,15 +308,30 @@ describe('strict JSON report journal', () => {
       intent: { recordedAt: input.receivedAt, journal: { firstRecordedAt: input.receivedAt } },
     });
     expect(write.mock.calls.every(([path]) => path !== reportsPath)).toBe(true);
-    expect(sync).toHaveBeenCalledWith(reportsPath, true);
+    if (process.platform === 'win32') expect(sync).toHaveBeenCalledWith(reportsPath, true);
+    else expect(sync).not.toHaveBeenCalled();
     expect(await readFile(reportsPath, 'utf8')).toBe(journalBytes);
   });
-  it('returns commit_unknown if a retry cannot sync the existing journal file', async () => {
-    expect((await journal.ensure(input)).state).toBe('present');
-    vi.spyOn(durableFileSync, 'syncFile').mockRejectedValueOnce(new Error('fsync failed'));
-    expect((await journal.ensure(input)).state).toBe('commit_unknown');
-    expect((await journal.read(input)).state).toBe('present');
-  });
+  it.skipIf(process.platform !== 'win32')(
+    'returns commit_unknown if a Windows retry cannot sync the existing journal file',
+    async () => {
+      expect((await journal.ensure(input)).state).toBe('present');
+      vi.spyOn(durableFileSync, 'syncFile').mockRejectedValueOnce(new Error('fsync failed'));
+      expect((await journal.ensure(input)).state).toBe('commit_unknown');
+      expect((await journal.read(input)).state).toBe('present');
+    }
+  );
+  it.skipIf(process.platform === 'win32')(
+    'can prove an unchanged read-only journal on Unix without rewriting it',
+    async () => {
+      expect((await journal.ensure(input)).state).toBe('present');
+      const reportsPath = paths.getMemberReportsPath(input.teamName, input.memberName);
+      const before = await readFile(reportsPath, 'utf8');
+      await chmod(reportsPath, 0o444);
+      expect((await journal.ensure(input)).state).toBe('present');
+      expect(await readFile(reportsPath, 'utf8')).toBe(before);
+    }
+  );
   it('keeps commit_unknown when a later durability proof itself fails', async () => {
     const originalWrite = atomicWrite.atomicWriteAsync;
     const reportsPath = paths.getMemberReportsPath(input.teamName, input.memberName);

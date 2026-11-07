@@ -114,7 +114,19 @@ describe('TeamInboxReader', () => {
   });
 
   it('still reads messages from an inbox with an invalid member name', async () => {
-    hoisted.dirs.set(inboxDir, ['--------------------------.json']);
+    hoisted.dirs.set(inboxDir, ['alice.json', '--------------------------.json']);
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'bob',
+          text: 'regular inbox message',
+          timestamp: '2026-10-25T12:05:06.888Z',
+          read: false,
+          messageId: 'm-alice-inbox',
+        },
+      ])
+    );
     hoisted.files.set(
       '/mock/teams/my-team/inboxes/--------------------------.json',
       JSON.stringify([
@@ -129,6 +141,7 @@ describe('TeamInboxReader', () => {
     );
     expect((await reader.getMessages('my-team')).map((message) => message.messageId)).toEqual([
       'm-dash-inbox',
+      'm-alice-inbox',
     ]);
   });
 

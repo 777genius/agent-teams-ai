@@ -1,3 +1,4 @@
+import { open } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -191,8 +192,19 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                     if (dir === dirname(this.paths.getTeamRootDir(input.teamName))) break;
                     if (dirname(dir) === dir) break;
                   }
-                  if (provingExisting) await syncFile(path, true);
-                  else
+                  if (provingExisting) {
+                    if (process.platform === 'win32') {
+                      await syncFile(path, true);
+                    } else {
+                      // Unix can durably prove an unchanged, readable journal without write access.
+                      const handle = await open(path, 'r');
+                      try {
+                        await handle.sync();
+                      } finally {
+                        await handle.close();
+                      }
+                    }
+                  } else
                     await atomicWriteAsync(path, `${JSON.stringify(file, null, 2)}\n`, {
                       durability: 'strict',
                       syncDirectory: true,
