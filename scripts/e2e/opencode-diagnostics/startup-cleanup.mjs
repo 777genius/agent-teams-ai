@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, readdir, lstat, writeFile, rename, open } from 'node:fs/promises';
 import path from 'node:path';
 
-import { enterProviderSettings } from './catalog.mjs';
-
 export const cleanupScenario = 'startup-cleanup';
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -254,9 +252,6 @@ export async function verifyStartupCleanup({ root, evaluate, send }) {
     evidence.attemptDeadlines = [first.request.body.deadlineUnixMs];
     await count(1);
     await observe('pending', first.requestId);
-    // The dashboard now shows only a passive count. Use the same real UI
-    // navigation as the other OpenCode desktop E2E cases before opening Manage.
-    await enterProviderSettings(evaluate, send);
     const manage = `(() => { const label = [...document.querySelectorAll('span')].find(s => s.textContent.trim() === 'OpenCode (200+ providers)' && s.classList.contains('truncate'));
       const row = label?.closest('div.grid'); return [...(row?.querySelectorAll('button') || [])].find(b => b.textContent.trim() === 'Manage'); })()`;
     await poll(async () => {
