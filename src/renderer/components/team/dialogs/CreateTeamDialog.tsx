@@ -2026,7 +2026,6 @@ export const CreateTeamDialog = ({
     if (teamColor) summary.push(t('create.optional.summary.color', { color: teamColor }));
     return summary;
   }, [description, t, teamColor]);
-
   const handleSyncModelsWithLeadChange = useCallback(
     (checked: boolean): void => {
       setSyncModelsWithLead(checked);
@@ -2035,11 +2034,9 @@ export const CreateTeamDialog = ({
         setMembers(members.map(clearMemberModelOverrides));
         return;
       }
-
       if (getStoredCreateTeamMemberRuntimePreferences().length === 0) {
         return;
       }
-
       const nextMembers = applyStoredCreateTeamMemberRuntimePreferences(members);
       const hasRuntimeChanges = nextMembers.some((member, index) => {
         const previousMember = members[index];
@@ -2055,7 +2052,6 @@ export const CreateTeamDialog = ({
     },
     [members, persistCurrentMemberRuntimePreferences, setMembers, setSyncModelsWithLead]
   );
-
   const activeError =
     localError ?? modelValidationError ?? provisioningErrorsByTeam[request.teamName] ?? null;
   const effectivePrepare = useMemo(
@@ -2245,6 +2241,8 @@ export const CreateTeamDialog = ({
           if (presentation === 'page' &&
               !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
           await resetFormState();
+          if (presentation === 'page' &&
+              !isCreateTeamDraftGenerationCurrent(createGenerationRef.current + 1)) return;
           onOpenTeam(request.teamName, configOnlyCwd);
           onClose();
         } catch (error) {
@@ -2274,6 +2272,8 @@ export const CreateTeamDialog = ({
         if (presentation === 'page' &&
             !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
         await resetFormState();
+        if (presentation === 'page' &&
+            !isCreateTeamDraftGenerationCurrent(createGenerationRef.current + 1)) return;
         onOpenTeam(request.teamName, effectiveCwd || undefined);
         onClose();
       } catch (error) {
