@@ -1,3 +1,4 @@
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   Select,
@@ -15,8 +16,11 @@ import type { TeamProviderId } from '@shared/types';
 
 export const TeamTemplatePicker = ({
   onApply,
+  confirmBeforeApply = false,
 }: {
   onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
+  /** Creation has an editable roster; replacing it requires an explicit decision. */
+  confirmBeforeApply?: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
@@ -24,7 +28,21 @@ export const TeamTemplatePicker = ({
       value=""
       onValueChange={(id) => {
         const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
-        if (template) onApply(applyTeamTemplate(template));
+        if (!template) return;
+        if (!confirmBeforeApply) {
+          onApply(applyTeamTemplate(template));
+          return;
+        }
+        void (async () => {
+          const accepted = await confirm({
+            title: t('templates.confirmTitle', { defaultValue: 'Apply team template?' }),
+            message: t('templates.confirmMessage', {
+              defaultValue: 'This replaces your current team description, prompt and teammates. Continue?',
+            }),
+            confirmLabel: t('templates.confirmAction', { defaultValue: 'Apply template' }),
+          });
+          if (accepted) onApply(applyTeamTemplate(template));
+        })();
       }}
     >
       <SelectTrigger aria-label={t('templates.label')}>
