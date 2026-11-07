@@ -78,6 +78,20 @@ Exact reviewed sources:
   confirmed receipt. #258 stays Draft; the selected Docker/Linux Codex route
   registry tuple is **not** production broker-session composition or Desktop
   S2.1/M01–M19 parity.
+  **Real Host adapter receiver conformance (7 Nov 2026, subsequent Runtime Draft #258 HEAD):**
+  [`5c501608cbe9`](https://github.com/agent-teams-ai/agent-runtime/commit/5c501608cbe93daf07a1dff692d89b22f50d9adb)
+  exercised the actual private-state `NodeHttpEgressBoundaryIds` owner through the
+  retained authenticated HTTP broker session and completed one disposable request.
+  Exact-head [Agent Execution AE1](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641144/job/128481709781)
+  recorded the added test `passed` (1,457 PASS / 0 FAIL / 21 SKIP).
+  [Full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641144)
+  completed SUCCESS (19 executed jobs, one policy SKIP);
+  [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641049)
+  and [trusted Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641319)
+  also completed SUCCESS. This is a real **adapter receiver** exercised inside
+  disposable broker fixtures, **not** a production owner-bound Host,
+  credentialed native turn, independent review, CodeQL, or Desktop S2.1 parity.
+  [Exact-head PR evidence](https://github.com/agent-teams-ai/agent-runtime/pull/258#issuecomment-6711079632).
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
