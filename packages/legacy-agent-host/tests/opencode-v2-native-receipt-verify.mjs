@@ -10,6 +10,7 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "native_loopback_authenticated_identity",
   "native_loopback_unauthenticated_request_rejected",
   "native_TEST_session_created_no_model_call",
+  "native_TEST_session_workspace_and_permissions_attested",
   "real_native_later_allow_override_refused_by_Host",
   "real_native_ordered_ask_readback_without_tool_execution",
   "actual_native_instruction_put_and_readback",

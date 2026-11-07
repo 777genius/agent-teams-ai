@@ -12,6 +12,7 @@ import { createOpenCodeV2MemberProvider } from '../dist/adapters/providers/OpenC
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
+import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard.mjs';
 
 const version = '2.0.21';
 const pinnedLinuxX64Avx2Digest = 'f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7';
@@ -184,6 +185,13 @@ try {
   if(created.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(nativeSessionId||''))
     throw Error('native_session_create_unconfirmed');
   receipt.steps.push('native_TEST_session_created_no_model_call');
+  // Fail before Host readiness if the server created/returned a session in
+  // another workspace or under different effective rules. Session ID alone
+  // is not ownership or external-directory policy proof.
+  const ownedSnapshot=await native('/api/session/'+encodeURIComponent(nativeSessionId));
+  if(!isOwnedNativeSessionSnapshot(ownedSnapshot,nativeSessionId,workspace,permissionRules))
+    throw Error('native_TEST_session_workspace_or_permission_mismatch');
+  receipt.steps.push('native_TEST_session_workspace_and_permissions_attested');
   // Real native ordering negative: a later allow must defeat an earlier deny
   // for this disposable second TEST session, and the Host must refuse it.
   // Never execute a model turn or create out-of-workspace files.
@@ -284,7 +292,7 @@ try {
     async readNativeEffectivePermissions(signal) {
       nativePermissionReads++;
       const result=await native(sessionPath,'GET',undefined,signal);
-      if(result.status!==200||result.data?.data?.id!==nativeSessionId)
+      if(!isOwnedNativeSessionSnapshot(result,nativeSessionId,workspace,permissionRules))
         throw Error('native_session_readback_mismatch');
       return result.data.data.permissions;
     },
@@ -409,8 +417,7 @@ try {
   if(resumedUnauthenticated.status!==401)
     throw Error('restarted_native_loopback_auth_not_enforced');
   const resumed=await native(sessionPath);
-  if(resumed.status!==200||resumed.data?.data?.id!==nativeSessionId||
-     JSON.stringify(resumed.data.data.permissions)!==JSON.stringify(permissionRules))
+  if(!isOwnedNativeSessionSnapshot(resumed,nativeSessionId,workspace,permissionRules))
     throw Error('native_cold_restart_session_permission_mismatch');
   const restoredInstructions=await native('/api/experimental/session/'+
     encodeURIComponent(nativeSessionId)+'/instructions/entries');

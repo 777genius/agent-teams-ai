@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { isCompleteNativeHostReceipt, REQUIRED_NATIVE_HOST_STEPS } from './opencode-v2-native-receipt-verify.mjs';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
+import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard.mjs';
 
 test('a failed native Host proof publishes only sanitized diagnostics and no raw paths', () => {
   const root = mkdtempSync(join(tmpdir(), 'TEST-v2-host-failure-receipt-'));
@@ -62,6 +63,7 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
   const mutations = [
     r => { r.steps.pop(); },
     r => { r.steps.splice(r.steps.indexOf('real_native_ordered_ask_readback_without_tool_execution'), 1); },
+    r => { r.steps.splice(r.steps.indexOf('native_TEST_session_workspace_and_permissions_attested'), 1); },
     r => { r.steps.splice(r.steps.indexOf('real_native_fresh_session_durable_log_cursor_read_only'), 1); },
     r => { delete r.nativeLogReadback; },
     r => { r.nativeLogReadback.synced = false; },
@@ -137,6 +139,32 @@ test('receipt verifier CLI refuses lockfile-only artifacts with sanitized diagno
       assert.equal(result.stderr, 'native_host_receipt_missing_or_incomplete\n');
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('native V2 captured session readback cannot drift workspace or ordered permissions', () => {
+  const session = 'ses_TEST123', workspace = '/TEST/workspace';
+  const rules = [
+    { action: 'external_directory', resource: '*', effect: 'deny' },
+    { action: 'shell', resource: '*', effect: 'ask' },
+  ];
+  const valid = { status: 200, data: { data: {
+    id: session, location: { directory: workspace }, permissions: rules,
+  } } };
+  assert.equal(isOwnedNativeSessionSnapshot(valid, session, workspace, rules), true);
+  const invalid = [
+    { ...valid, status: 401 },
+    { ...valid, data: { data: { ...valid.data.data, id: 'ses_FOREIGN' } } },
+    { ...valid, data: { data: { ...valid.data.data, location: undefined } } },
+    { ...valid, data: { data: { ...valid.data.data,
+      location: { directory: '/OTHER/workspace' } } } },
+    { ...valid, data: { data: { ...valid.data.data, permissions: [...rules].reverse() } } },
+    { ...valid, data: { data: { ...valid.data.data,
+      permissions: [{ ...rules[0], effect: 'allow' }, rules[1]] } } },
+    { ...valid, data: { data: { ...valid.data.data, permissions: undefined } } },
+  ];
+  for (const reply of invalid)
+    assert.equal(isOwnedNativeSessionSnapshot(reply, session, workspace, rules), false);
+  assert.equal(isOwnedNativeSessionSnapshot(valid, session, '/OTHER/workspace', rules), false);
 });
 
 test('native durable SSE proof accepts a bounded, owned and ordered history prefix', () => {
