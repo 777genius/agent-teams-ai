@@ -49,6 +49,11 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
+import {
+  currentCreateTeamDraftGeneration,
+  isCreateTeamDraftGenerationCurrent,
+} from '@renderer/services/createTeamDraftGeneration';
+import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -96,6 +101,7 @@ import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
@@ -288,6 +294,7 @@ export const CreateTeamDialog = ({
   onCreate,
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
+  const createGenerationRef = useRef(currentCreateTeamDraftGeneration());
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -546,7 +553,7 @@ export const CreateTeamDialog = ({
     setConflictDismissed(false);
   };
 
-  const resetFormState = (): void => {
+  const resetFormState = async (): Promise<void> => {
     gatewayBindings.releaseRetained();
     clearDraft();
     lastAutoDescriptionRef.current = null;
@@ -554,6 +561,7 @@ export const CreateTeamDialog = ({
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
     resetUIState();
+    await resetCreateTeamDraft();
   };
 
   const persistCurrentMemberRuntimePreferences = useCallback(
@@ -1401,6 +1409,7 @@ export const CreateTeamDialog = ({
     }
 
     if (initialData) {
+      if (!consumeTeamCopySeedOnce(initialData)) return;
       const nextSyncModelsWithLead =
         initialData.syncModelsWithLead ??
         !initialData.members.some(
@@ -2221,6 +2230,8 @@ export const CreateTeamDialog = ({
               extraCliArgs: request.extraCliArgs,
             })
           );
+          if (presentation === 'page' &&
+              !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
           await assignCreatedTeamToOrganization({
             placement: selectedOrganizationPlacement,
             teamName: request.teamName,
@@ -2232,8 +2243,10 @@ export const CreateTeamDialog = ({
             }),
             acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
           });
+          if (presentation === 'page' &&
+              !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
+          await resetFormState();
           onOpenTeam(request.teamName, configOnlyCwd);
-          resetFormState();
           onClose();
         } catch (error) {
           optionalPreflight.resumeInterruptedProviderPreflight(
@@ -2260,8 +2273,10 @@ export const CreateTeamDialog = ({
         await gatewayBindings.run(() =>
           onCreate(request, selectedOrganizationPlacement ?? undefined)
         );
+        if (presentation === 'page' &&
+            !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
+        await resetFormState();
         onOpenTeam(request.teamName, effectiveCwd || undefined);
-        resetFormState();
         onClose();
       } catch (error) {
         optionalPreflight.resumeInterruptedProviderPreflight(
@@ -2294,7 +2309,6 @@ export const CreateTeamDialog = ({
       return rest;
     });
   };
-
   const rosterHeaderTop = useMemo(
     () => (
       <div className="flex items-center gap-2">
@@ -2313,7 +2327,6 @@ export const CreateTeamDialog = ({
     ),
     [setSoloTeam, soloTeam, t]
   );
-
   const rosterHeaderBottom = useMemo(
     () =>
       showRosterTeammateRuntimeCompatibility ||
@@ -2426,7 +2439,6 @@ export const CreateTeamDialog = ({
             {t('create.localOnly')}
           </p>
         ) : null}
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
             <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
@@ -2464,7 +2476,6 @@ export const CreateTeamDialog = ({
               </p>
             ) : null}
           </div>
-
           <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
               onApply={(draft) => {
@@ -2540,7 +2551,6 @@ export const CreateTeamDialog = ({
               headerBottom={rosterHeaderBottom}
             />
           </div>
-
           <div
             className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
             style={{
@@ -2572,7 +2582,6 @@ export const CreateTeamDialog = ({
                 </p>
               </div>
             </div>
-
             {launchTeam ? (
               <div className="mt-4 space-y-4">
                 <ProjectPathSelector
@@ -2588,7 +2597,6 @@ export const CreateTeamDialog = ({
                   fieldError={fieldErrors.cwd}
                   customFolder={customProjectFolder}
                 />
-
                 <OptionalSettingsSection
                   title={t('create.optional.launchSettingsTitle')}
                   description={t('create.optional.launchSettingsDescription')}
@@ -2641,7 +2649,6 @@ export const CreateTeamDialog = ({
                         ) : null}
                       </div>
                     ) : null}
-
                     <div className="space-y-1.5">
                       <Label htmlFor="team-prompt" className="label-optional">
                         {t('create.fields.prompt')}
@@ -2670,13 +2677,11 @@ export const CreateTeamDialog = ({
                         }
                       />
                     </div>
-
                     <SkipPermissionsCheckbox
                       id="create-skip-permissions"
                       checked={skipPermissions}
                       onCheckedChange={setSkipPermissions}
                     />
-
                     <AdvancedCliSection
                       teamName={advancedKey}
                       internalArgs={internalArgs}
@@ -2692,7 +2697,6 @@ export const CreateTeamDialog = ({
               </div>
             ) : null}
           </div>
-
           <div className="md:col-span-2">
             <OptionalSettingsSection
               title={t('create.optional.teamDetailsTitle')}
@@ -2736,7 +2740,6 @@ export const CreateTeamDialog = ({
                       ) : null}
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
                       <div className="space-y-0.5">
@@ -2775,7 +2778,6 @@ export const CreateTeamDialog = ({
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="space-y-1.5">
                       <div className="space-y-0.5">
                         <Label className="text-xs">
@@ -2838,7 +2840,6 @@ export const CreateTeamDialog = ({
                     </span>
                   ) : null}
                 </div>
-
                 <div className="space-y-1.5">
                   <Label className="label-optional">{t('create.fields.color')}</Label>
                   <div className="flex flex-wrap gap-2">
