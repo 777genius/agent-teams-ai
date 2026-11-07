@@ -2534,27 +2534,29 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         ] ?? null)
       : null
   );
-  const openCodeSourcesLoading =
-    openCodeCatalogLoading ||
-    (sourceDiscovery
-      ? sourceDiscovery.loading || sourceDiscovery.authoritativePending
-      : openCodeCatalogScopeKey
+  const openCodeSourcesLoading = sourceDiscovery
+    ? sourceDiscovery.loading || sourceDiscovery.authoritativePending
+    : openCodeCatalogLoading ||
+      (openCodeCatalogScopeKey
         ? scopedOpenCodeStatus?.statusCheckOutcome === 'pending'
         : cliProviderStatusLoading.opencode === true) ||
-    (cliStatusLoading && !openCodePassiveProviderStatus);
+      (cliStatusLoading && !openCodePassiveProviderStatus);
   const passiveStatusFailed =
     openCodePassiveProviderStatus?.statusCheckOutcome === 'transient_error';
   const passiveCatalogFailed =
     openCodePassiveProviderStatus?.modelCatalogRefreshState === 'error';
-  const sourceFailureKind =
-    sourceDiscovery?.error ? 'directory' :
-    openCodeCatalogRefreshFailed ||
-    (!sourceDiscovery?.loaded && passiveCatalogFailed) ? 'catalog' :
-    !sourceDiscovery?.loaded && passiveStatusFailed ? 'status' : null;
-  const openCodeSourcesUnavailable =
-    openCodeCatalogUnavailable ||
-    Boolean(sourceDiscovery?.error) ||
-    (!openCodeSourcesLoading && sourceFailureKind !== null);
+  const sourceFailureKind = sourceDiscovery?.error
+    ? 'directory'
+    : sourceDiscovery?.loaded
+      ? null
+      : passiveStatusFailed
+        ? 'status'
+        : openCodeCatalogRefreshFailed || passiveCatalogFailed
+          ? 'catalog'
+          : null;
+  const openCodeSourcesUnavailable = sourceDiscovery
+    ? Boolean(sourceDiscovery.error)
+    : openCodeCatalogUnavailable || (!openCodeSourcesLoading && sourceFailureKind !== null);
   const retryOpenCodeCatalogRefresh = (): void => {
     openCodeScopedCatalog.refresh();
     invalidateCliProviderModelCatalog?.();
