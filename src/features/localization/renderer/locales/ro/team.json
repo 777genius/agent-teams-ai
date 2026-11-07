@@ -2435,7 +2435,10 @@
       "hiddenCount": "{{count}} ascunse",
       "trash": "Coș de gunoi",
       "gridView": "Vizualizare grilă",
-      "columnsView": "Vizualizare coloane"
+      "columnsView": "Vizualizare coloane",
+      "tableView": "Vizualizare tabel",
+      "configureColumns": "Alege coloanele",
+      "resizeColumn": "Redimensionează {{column}}"
     },
     "trash": {
       "title": "Coș de gunoi",

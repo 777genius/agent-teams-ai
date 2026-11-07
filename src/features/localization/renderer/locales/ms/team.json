@@ -2435,7 +2435,10 @@
       "hiddenCount": "{{count}} tersembunyi",
       "trash": "Tong Sampah",
       "gridView": "Paparan grid",
-      "columnsView": "Paparan lajur"
+      "columnsView": "Paparan lajur",
+      "tableView": "Paparan jadual",
+      "configureColumns": "Pilih lajur",
+      "resizeColumn": "Ubah lebar {{column}}"
     },
     "trash": {
       "title": "Tong Sampah",

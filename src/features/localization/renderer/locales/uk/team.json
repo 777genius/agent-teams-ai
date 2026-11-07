@@ -2465,7 +2465,10 @@
       "hiddenCount": "{{count}} приховано",
       "trash": "Кошик",
       "gridView": "Перегляд сіткою",
-      "columnsView": "Перегляд стовпцями"
+      "columnsView": "Перегляд стовпцями",
+      "tableView": "Таблиця",
+      "configureColumns": "Налаштувати стовпці",
+      "resizeColumn": "Змінити ширину: {{column}}"
     },
     "trash": {
       "title": "Кошик",

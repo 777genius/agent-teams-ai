@@ -2573,7 +2573,10 @@
       "hiddenCount": "Скрыто: {{count}}",
       "trash": "Корзина",
       "gridView": "Вид сеткой",
-      "columnsView": "Вид колонками"
+      "columnsView": "Вид колонками",
+      "tableView": "Таблица",
+      "configureColumns": "Настроить столбцы",
+      "resizeColumn": "Изменить ширину: {{column}}"
     },
     "trash": {
       "title": "Корзина",

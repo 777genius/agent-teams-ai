@@ -2435,7 +2435,10 @@
       "hiddenCount": "{{count}} gizli",
       "trash": "Çöp",
       "gridView": "Izgara görünümü",
-      "columnsView": "Sütun görünümü"
+      "columnsView": "Sütun görünümü",
+      "tableView": "Tablo görünümü",
+      "configureColumns": "Sütunları seç",
+      "resizeColumn": "{{column}} sütununu yeniden boyutlandır"
     },
     "trash": {
       "title": "Çöp",

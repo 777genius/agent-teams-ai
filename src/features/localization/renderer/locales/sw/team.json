@@ -2437,7 +2437,10 @@
       "hiddenCount": "{{count}} zimefichwa",
       "trash": "Tupio",
       "gridView": "Mwonekano wa gridi",
-      "columnsView": "Mwonekano wa safu"
+      "columnsView": "Mwonekano wa safu",
+      "tableView": "Mwonekano wa jedwali",
+      "configureColumns": "Chagua safu wima",
+      "resizeColumn": "Badilisha upana wa {{column}}"
     },
     "trash": {
       "title": "Tupio",

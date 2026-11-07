@@ -2631,7 +2631,10 @@
       "hiddenCount": "{{count}} hidden",
       "trash": "Trash",
       "gridView": "Grid view",
-      "columnsView": "Columns view"
+      "columnsView": "Columns view",
+      "tableView": "Table view",
+      "configureColumns": "Choose columns",
+      "resizeColumn": "Resize {{column}}"
     },
     "trash": {
       "title": "Trash",

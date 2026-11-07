@@ -2435,7 +2435,10 @@
       "hiddenCount": "{{count}} 숨겨진",
       "trash": "정보 수집",
       "gridView": "그리드 뷰",
-      "columnsView": "칼럼 보기"
+      "columnsView": "칼럼 보기",
+      "tableView": "표 보기",
+      "configureColumns": "열 선택",
+      "resizeColumn": "{{column}} 너비 조절"
     },
     "trash": {
       "title": "정보 수집",

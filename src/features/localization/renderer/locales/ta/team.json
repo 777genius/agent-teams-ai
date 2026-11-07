@@ -2435,7 +2435,10 @@
       "hiddenCount": "{{count}} மறைக்கப்பட்டது",
       "trash": "Trash",
       "gridView": "Grid view",
-      "columnsView": "Columns view"
+      "columnsView": "Columns view",
+      "tableView": "அட்டவணைக் காட்சி",
+      "configureColumns": "நெடுவரிசைகளைத் தேர்ந்தெடுக்கவும்",
+      "resizeColumn": "{{column}} அகலத்தை மாற்று"
     },
     "trash": {
       "title": "Trash",
