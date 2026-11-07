@@ -57,7 +57,8 @@ function isCompleteDirectory(
       directory.totalCount !== undefined &&
       directory.totalCount !== null &&
       directory.totalCount === directory.entries.length &&
-      directory.nextCursor == null
+      directory.nextCursor == null &&
+      directory.entries.every((entry) => entry.state !== 'error')
   );
 }
 

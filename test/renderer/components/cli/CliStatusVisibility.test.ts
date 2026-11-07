@@ -3011,14 +3011,18 @@ describe('CLI status visibility during completed install state', () => {
 
     try {
       await act(async () => {
-        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: false }));
         await Promise.resolve();
       });
 
+      await act(async () => {
+        vi.advanceTimersByTime(60_000);
+        await Promise.resolve();
+      });
       expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
 
       await act(async () => {
-        vi.advanceTimersByTime(60_000);
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
         await Promise.resolve();
       });
 

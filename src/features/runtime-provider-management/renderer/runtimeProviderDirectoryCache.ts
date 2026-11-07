@@ -261,6 +261,17 @@ export function publishRuntimeProviderDirectoryCache({
   notifyScope(scopeKey);
 }
 
+/** Retain cached entries but withdraw exact-count authority when a confirmed
+ * credential mutation cannot be reconciled with the runtime directory. */
+export function markRuntimeProviderDirectoryScopeUnverified(projectPath?: string | null): void {
+  const scopeKey = getScopeKey(projectPath);
+  const current = snapshotsByScope.get(scopeKey);
+  if (!current?.authoritative) return;
+  touchScope(scopeKey, { ...current, authoritative: false });
+  mergedFallbackByScope.clear();
+  notifyScope(scopeKey);
+}
+
 export function useRuntimeProviderDirectoryCache(
   projectPath?: string | null
 ): RuntimeProviderDirectoryCacheSnapshot | null {

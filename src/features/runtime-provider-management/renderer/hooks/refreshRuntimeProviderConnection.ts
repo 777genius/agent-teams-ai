@@ -1,7 +1,7 @@
 import { api } from '@renderer/api';
 
 import {
-  invalidateRuntimeProviderDirectoryCache,
+  markRuntimeProviderDirectoryScopeUnverified,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
 
@@ -41,14 +41,11 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
       }),
       'Provider metadata refresh timed out'
     );
-    if (
-      response.error ||
-      !response.directory ||
-      response.directory.entries.length === 0 ||
-      !input.isContextCurrent() ||
-      !input.isRuntimeRevisionCurrent()
-    )
+    if (!input.isContextCurrent() || !input.isRuntimeRevisionCurrent()) return false;
+    if (response.error || !response.directory || response.directory.entries.length === 0) {
+      markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
       return false;
+    }
     publishRuntimeProviderDirectoryCache({
       projectPath: input.projectPath,
       entries: response.directory.entries.map(presentDirectoryEntry),
@@ -58,6 +55,9 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
     });
     return true;
   } catch {
+    if (input.isContextCurrent() && input.isRuntimeRevisionCurrent()) {
+      markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
+    }
     return false;
   }
 }
@@ -67,9 +67,6 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
 export async function refreshRuntimeProviderConnection(
   input: ConnectionRefreshInput
 ): Promise<'refreshed' | 'warning' | 'stale'> {
-  // Called only after confirmed writes: stale connected counts must disappear
-  // even when the next directory read fails.
-  invalidateRuntimeProviderDirectoryCache();
   const sharedDirectoryRefresh = refreshSharedDirectory(input);
   try {
     const externalRefreshResult = await input.refreshExternal();
@@ -87,6 +84,9 @@ export async function refreshRuntimeProviderConnection(
       ? 'warning'
       : 'refreshed';
   } catch {
-    return input.isContextCurrent() ? 'warning' : 'stale';
+    await sharedDirectoryRefresh;
+    if (!input.isContextCurrent()) return 'stale';
+    markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
+    return 'warning';
   }
 }

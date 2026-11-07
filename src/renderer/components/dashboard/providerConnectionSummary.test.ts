@@ -140,6 +140,19 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     }).openCodeConnected).toBeNull();
   });
 
+  it('does not claim an exact count when one cached directory entry has unresolved status', () => {
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: {
+        ...globalDirectory,
+        entries: [
+          { providerId: 'openrouter', state: 'error' as const },
+          ...globalDirectory.entries.slice(1),
+        ],
+      },
+    }).openCodeConnected).toBeNull();
+  });
+
   it('deduplicates case-folded OpenCode ids and excludes the OpenCode host entry', () => {
     expect(getDashboardConnectionSummary({
       ...input,
