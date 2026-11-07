@@ -4,6 +4,15 @@ import { del, get, keys, set } from 'idb-keyval';
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const DRAFT_KEY_PREFIX = 'draft:';
 
+// Only in-progress team creation fields are retained until explicit creation/discard.
+// Other drafts retain the existing 24-hour policy.
+const RETAINED_CREATE_KEYS = new Set([
+  'createTeam:description',
+  'createTeam:prompt',
+  'createTeam:prompt:chips',
+]);
+const isRetainedCreateKey = (key: string): boolean => RETAINED_CREATE_KEYS.has(key);
+
 interface StoredDraft {
   value: string;
   timestamp: number;
@@ -32,7 +41,7 @@ function fallbackLoad(key: string): string | null {
   const fullKey = `${DRAFT_KEY_PREFIX}${key}`;
   const stored = fallbackStore.get(fullKey);
   if (!stored) return null;
-  if (Date.now() - stored.timestamp > DRAFT_TTL_MS) {
+  if (!isRetainedCreateKey(key) && Date.now() - stored.timestamp > DRAFT_TTL_MS) {
     fallbackStore.delete(fullKey);
     return null;
   }
@@ -46,7 +55,11 @@ function fallbackDelete(key: string): void {
 function fallbackCleanupExpired(): void {
   const now = Date.now();
   for (const [fullKey, stored] of fallbackStore.entries()) {
-    if (!isLegacyComposerDraftStorageKey(fullKey) && now - stored.timestamp > DRAFT_TTL_MS) {
+    if (
+      !isLegacyComposerDraftStorageKey(fullKey) &&
+      !isRetainedCreateKey(fullKey.slice(DRAFT_KEY_PREFIX.length)) &&
+      now - stored.timestamp > DRAFT_TTL_MS
+    ) {
       fallbackStore.delete(fullKey);
     }
   }
@@ -72,7 +85,7 @@ async function loadDraft(key: string): Promise<string | null> {
     const stored = await get<StoredDraft>(`${DRAFT_KEY_PREFIX}${key}`);
     if (!stored) return null;
     const age = Date.now() - stored.timestamp;
-    if (age > DRAFT_TTL_MS) {
+    if (!isRetainedCreateKey(key) && age > DRAFT_TTL_MS) {
       void deleteDraft(key);
       return null;
     }
@@ -107,7 +120,8 @@ async function cleanupExpired(): Promise<void> {
       (k): k is IDBValidKey & string =>
         typeof k === 'string' &&
         k.startsWith(DRAFT_KEY_PREFIX) &&
-        !isLegacyComposerDraftStorageKey(k)
+        !isLegacyComposerDraftStorageKey(k) &&
+        !isRetainedCreateKey(k.slice(DRAFT_KEY_PREFIX.length))
     );
     const now = Date.now();
     for (const fullKey of draftKeys) {
