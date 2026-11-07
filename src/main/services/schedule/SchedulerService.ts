@@ -10,6 +10,7 @@ import { createLogger } from '@shared/utils/logger';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
+import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
@@ -195,7 +196,7 @@ export class SchedulerService {
     };
 
     // Compute nextRunAt before saving
-    schedule.nextRunAt = this.computeNextRunAt(schedule) ?? undefined;
+    schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
 
     await this.repository.saveSchedule(schedule);
     this.createCronJob(schedule);
@@ -239,7 +240,7 @@ export class SchedulerService {
     if (cronChanged || patch.warmUpMinutes !== undefined) {
       this.removeCronJob(id);
       if (updated.status === 'active') {
-        updated.nextRunAt = this.computeNextRunAt(updated) ?? undefined;
+        updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
         this.createCronJob(updated);
       }
     }
@@ -327,7 +328,7 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
 
-    updated.nextRunAt = this.computeNextRunAt(updated) ?? undefined;
+    updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
     this.createCronJob(updated);
 
     await this.repository.saveSchedule(updated);
@@ -802,7 +803,7 @@ export class SchedulerService {
     if (!fresh) return;
 
     const now = new Date().toISOString();
-    const nextRunAt = this.computeNextRunAt(fresh);
+    const nextRunAt = computeScheduleNextRunAt(fresh);
 
     const updated: Schedule = {
       ...fresh,
@@ -828,19 +829,6 @@ export class SchedulerService {
   // Helpers
   // ===========================================================================
 
-  private computeNextRunAt(schedule: Schedule): string | null {
-    try {
-      const job = new Cron(schedule.cronExpression, {
-        timezone: schedule.timezone,
-        paused: true,
-      });
-      const next = job.nextRun();
-      job.stop();
-      return next?.toISOString() ?? null;
-    } catch {
-      return null;
-    }
-  }
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);
