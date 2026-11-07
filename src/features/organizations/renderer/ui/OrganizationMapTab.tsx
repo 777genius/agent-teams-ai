@@ -65,8 +65,8 @@ export const OrganizationMapTab = ({
       if (saved?.teamName.trim()) {
         const accepted = await confirm({
           title: t('create.title.create'),
-          message: t('create.draft.replaceConfirmation'),
-          confirmLabel: t('create.draft.replace'),
+          message: t('create.draft.replaceConfirmation', { defaultValue: 'Copying this team will replace your unfinished draft. Continue?' }),
+          confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
           variant: 'danger',
         });
         if (!accepted) return;
