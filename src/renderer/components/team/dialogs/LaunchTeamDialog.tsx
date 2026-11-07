@@ -2573,52 +2573,24 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               Schedule-only: Schedule configuration section
               ═══════════════════════════════════════════════════════════════════ */}
           {isSchedule ? (
-            <div
-              className="rounded-lg border border-[var(--color-border-emphasis)] shadow-sm"
-              style={{
-                backgroundColor: isLight
-                  ? 'color-mix(in srgb, var(--color-surface-overlay) 24%, white 76%)'
-                  : 'var(--color-surface-overlay)',
-              }}
-            >
-              <button
-                type="button"
-                className="flex w-full items-center gap-1.5 px-3 py-2 text-left"
-                onClick={() => setSchedExpanded((v) => !v)}
-              >
-                {schedExpanded ? (
-                  <ChevronDown className="size-3.5 shrink-0 text-[var(--color-text-muted)]" />
-                ) : (
-                  <ChevronRight className="size-3.5 shrink-0 text-[var(--color-text-muted)]" />
-                )}
-                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-                  {t('launch.schedule.title')}
-                </span>
-                {!schedExpanded && (schedLabel || cronExpression) ? (
-                  <span className="ml-auto truncate text-[11px] text-[var(--color-text-muted)] opacity-70">
-                    {schedLabel || cronExpression}
-                  </span>
-                ) : null}
-              </button>
-
-              {schedExpanded ? (
-                <SmartScheduleFields
-                  mode={scheduleExecutionMode}
-                  onModeChange={setScheduleExecutionMode}
-                  targetMember={scheduleTargetMember}
-                  onTargetMemberChange={setScheduleTargetMember}
-                  team={teamByName[effectiveTeamName]}
-                  label={schedLabel}
-                  onLabelChange={setSchedLabel}
-                  cronExpression={cronExpression}
-                  onCronExpressionChange={setCronExpression}
-                  timezone={timezone}
-                  onTimezoneChange={setTimezone}
-                  warmUpMinutes={warmUpMinutes}
-                  onWarmUpMinutesChange={setWarmUpMinutes}
-                />
-              ) : null}
-            </div>
+            <SmartScheduleFields
+              isLight={isLight}
+              expanded={schedExpanded}
+              onToggle={() => setSchedExpanded((value) => !value)}
+              mode={scheduleExecutionMode}
+              onModeChange={setScheduleExecutionMode}
+              targetMember={scheduleTargetMember}
+              onTargetMemberChange={setScheduleTargetMember}
+              team={teamByName[effectiveTeamName]}
+              label={schedLabel}
+              onLabelChange={setSchedLabel}
+              cronExpression={cronExpression}
+              onCronExpressionChange={setCronExpression}
+              timezone={timezone}
+              onTimezoneChange={setTimezone}
+              warmUpMinutes={warmUpMinutes}
+              onWarmUpMinutesChange={setWarmUpMinutes}
+            />
           ) : null}
 
           {/* ═══════════════════════════════════════════════════════════════════
