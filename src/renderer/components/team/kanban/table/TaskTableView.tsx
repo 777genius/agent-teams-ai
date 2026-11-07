@@ -139,10 +139,12 @@ export const TaskTableView = memo(function TaskTableView({
   const visibleColumnCount = table.getVisibleLeafColumns().length;
   const naturalTableWidth = table.getTotalSize();
   const taskColumn = table.getColumn('task');
-  const defaultTaskWidth = taskColumn.columnDef.size ?? taskColumn.getSize();
-  const otherColumnsWidth = naturalTableWidth - taskColumn.getSize();
+  const defaultTaskWidth = taskColumn?.columnDef.size ?? taskColumn?.getSize() ?? 0;
+  const otherColumnsWidth = naturalTableWidth - (taskColumn?.getSize() ?? 0);
   // Size the empty-space fill from the default task width, not its user-resized width.
-  const taskExtraWidth = Math.max(0, scrollerWidth - otherColumnsWidth - defaultTaskWidth);
+  const taskExtraWidth = taskColumn
+    ? Math.max(0, scrollerWidth - otherColumnsWidth - defaultTaskWidth)
+    : 0;
 
   return (
     <section
