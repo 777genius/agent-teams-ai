@@ -11,6 +11,8 @@ export const AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV = 'AGENT_TEAMS_ELECTRON_CLAUDE
 export interface ElectronDevPathOverrideApp {
   setPath?(name: string, value: string): void;
   getPath?(name: string): string;
+  getName?(): string;
+  commandLine?: { hasSwitch(name: string): boolean };
 }
 
 export interface ElectronDevPathOverrideResult {
@@ -90,12 +92,27 @@ function pathsOverlap(first: string, second: string): boolean {
 function regularElectronProfilePaths(app: ElectronDevPathOverrideApp): [string, string][] {
   if (!app.getPath) return [];
   const getPath = app.getPath.bind(app);
-  const userDataPath = getPath('userData');
+  // Chromium applies --user-data-dir before any JavaScript, so getPath('userData')
+  // can already be the isolated test root. Do not mistake it for the regular profile.
+  const cliSelected =
+    app.commandLine?.hasSwitch('user-data-dir') === true ||
+    process.argv.some((arg) => arg === '--user-data-dir' || arg.startsWith('--user-data-dir='));
+  const userDataPath =
+    cliSelected && app.getName
+      ? path.join(getPath('appData'), app.getName())
+      : getPath('userData');
+  const otherPaths: [string, string][] = cliSelected
+    ? [
+        ['sessionData', userDataPath],
+        ['logs', path.join(userDataPath, 'logs')],
+        ['crashDumps', path.join(userDataPath, 'crashes')],
+      ]
+    : ['sessionData', 'logs', 'crashDumps'].map(
+        (name): [string, string] => [name, getPath(name)]
+      );
   return [
     ['userData', userDataPath],
-    ...['sessionData', 'logs', 'crashDumps'].map(
-      (name): [string, string] => [name, getPath(name)]
-    ),
+    ...otherPaths,
     ...getLegacyElectronUserDataCandidates(userDataPath).map(
       (candidate): [string, string] => ['legacy userData', candidate]
     ),

@@ -69,6 +69,42 @@ describe('applyElectronDevPathOverrides', () => {
     expect(fs.existsSync(claudeRoot)).toBe(true);
   });
 
+  it('allows an isolated profile already selected by Electron CLI while guarding the normal profile', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-cli-profile-'));
+    tempDirs.push(tempRoot);
+    const appData = path.join(tempRoot, 'application-data');
+    const normal = path.join(appData, 'Agent Teams AI');
+    const isolated = path.join(tempRoot, 'isolated-user-data');
+    const setPath = vi.fn();
+    const app = {
+      setPath,
+      getName: () => 'Agent Teams AI',
+      commandLine: { hasSwitch: (name: string) => name === 'user-data-dir' },
+      getPath: (name: string) => {
+        if (name === 'appData') return appData;
+        if (name === 'userData' || name === 'sessionData') return isolated;
+        if (name === 'logs') return path.join(isolated, 'logs');
+        if (name === 'crashDumps') return path.join(isolated, 'crashes');
+        throw new Error(`Unexpected Electron path ${name}`);
+      },
+    };
+    expect(
+      applyElectronDevPathOverrides(app, {
+        [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
+      }).userDataDir
+    ).toBe(isolated);
+    expect(setPath).toHaveBeenCalledTimes(4);
+    expect(fs.existsSync(normal)).toBe(false);
+    setPath.mockClear();
+    expect(() =>
+      applyElectronDevPathOverrides(app, {
+        [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: normal,
+      })
+    ).toThrow(/overlaps regular userData/);
+    expect(setPath).not.toHaveBeenCalled();
+    expect(fs.existsSync(normal)).toBe(false);
+  });
+
   it('fails closed for an explicit relative userData path', () => {
     const setPathCalls: Array<{ name: string; value: string }> = [];
     expect(() =>
