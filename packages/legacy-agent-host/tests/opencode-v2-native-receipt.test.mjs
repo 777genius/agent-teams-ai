@@ -149,11 +149,23 @@ test('native durable SSE proof accepts a bounded, owned and ordered history pref
   });
   assert.deepEqual(parseOwnedDurableLog(frame(sync(0)),id,dir),
     {watermark:0,eventCount:0}, 'stock V2 fresh log is sync-only, never a model turn');
+  assert.deepEqual(parseOwnedDurableLog(frame(event(0))+frame(sync(0)),id,dir),
+    {watermark:0,eventCount:1}, 'nonempty native prefix may end at the exact sync watermark');
   assert.deepEqual(parseOwnedDurableLog(': heartbeat\n\n'+frame(event(0))+
     frame(event(2,'session.updated'))+frame(sync(3)),id,dir),
     {watermark:3,eventCount:2}, 'filtered native bus positions may have gaps');
   assert.deepEqual(parseOwnedDurableLog(frame(sync(0)).replaceAll('\n','\r\n'),id,dir),
     {watermark:0,eventCount:0});
+});
+
+test('native durable SSE proof enforces frame-count budget with a distinct error', () => {
+  const id = 'ses_TEST123', dir = '/TEST/workspace';
+  const sync = 'data: '+JSON.stringify({type:'log.synced',aggregateID:id,seq:0})+'\\n\\n';
+  const keepAlive = ': keepalive\\n\\n';
+  assert.deepEqual(parseOwnedDurableLog(keepAlive.repeat(4096)+sync,id,dir),
+    {watermark:0,eventCount:0}, 'the 4098-frame upper boundary is accepted');
+  assert.throws(() => parseOwnedDurableLog(keepAlive.repeat(4097)+sync,id,dir),
+    /native_durable_log_limit_exceeded/, 'overflow cannot masquerade as wrong identity');
 });
 
 test('native durable SSE proof rejects foreign, incomplete and reordered events', () => {
