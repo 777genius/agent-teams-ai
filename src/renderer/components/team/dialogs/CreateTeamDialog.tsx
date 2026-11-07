@@ -297,6 +297,14 @@ export const CreateTeamDialog = ({
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
   const createGenerationRef = useRef(currentCreateTeamDraftGeneration());
+  const creationPageMountedRef = useRef(true);
+  useEffect(() => {
+    creationPageMountedRef.current = true;
+    return () => { creationPageMountedRef.current = false; };
+  }, []);
+  const stillOwnsCreatePage = (generation: number): boolean =>
+    presentation !== 'page' ||
+    (creationPageMountedRef.current && isCreateTeamDraftGenerationCurrent(generation));
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -494,7 +502,6 @@ export const CreateTeamDialog = ({
       cancelled = true;
     };
   }, [draftLoaded, initialOrganizationPlacement, open, restoredFromStorage, setOrganizationPlacementEnabled, setOrganizationPlacementOrganizationId, setOrganizationPlacementParentId]);
-  // Re-read localStorage when advancedKey changes
   useEffect(() => {
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
@@ -1987,7 +1994,6 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     skipPermissions,
   ]);
-
   const launchOptionalSummary = useMemo(() => {
     const summary: string[] = [];
     if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
@@ -2019,7 +2025,6 @@ export const CreateTeamDialog = ({
     worktreeEnabled,
     worktreeName,
   ]);
-
   const teamDetailsSummary = useMemo(() => {
     const summary: string[] = [];
     if (description.trim()) summary.push(t('create.optional.summary.description'));
@@ -2225,8 +2230,7 @@ export const CreateTeamDialog = ({
               extraCliArgs: request.extraCliArgs,
             })
           );
-          if (presentation === 'page' &&
-              !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
+          if (!stillOwnsCreatePage(createGenerationRef.current)) return;
           await assignCreatedTeamToOrganization({
             placement: selectedOrganizationPlacement,
             teamName: request.teamName,
@@ -2238,11 +2242,9 @@ export const CreateTeamDialog = ({
             }),
             acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
           });
-          if (presentation === 'page' &&
-              !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
+          if (!stillOwnsCreatePage(createGenerationRef.current)) return;
           await resetFormState();
-          if (presentation === 'page' &&
-              !isCreateTeamDraftGenerationCurrent(createGenerationRef.current + 1)) return;
+          if (!stillOwnsCreatePage(createGenerationRef.current + 1)) return;
           onOpenTeam(request.teamName, configOnlyCwd);
           onClose();
         } catch (error) {
@@ -2269,11 +2271,9 @@ export const CreateTeamDialog = ({
         await gatewayBindings.run(() =>
           onCreate(request, selectedOrganizationPlacement ?? undefined)
         );
-        if (presentation === 'page' &&
-            !isCreateTeamDraftGenerationCurrent(createGenerationRef.current)) return;
+        if (!stillOwnsCreatePage(createGenerationRef.current)) return;
         await resetFormState();
-        if (presentation === 'page' &&
-            !isCreateTeamDraftGenerationCurrent(createGenerationRef.current + 1)) return;
+        if (!stillOwnsCreatePage(createGenerationRef.current + 1)) return;
         onOpenTeam(request.teamName, effectiveCwd || undefined);
         onClose();
       } catch (error) {
