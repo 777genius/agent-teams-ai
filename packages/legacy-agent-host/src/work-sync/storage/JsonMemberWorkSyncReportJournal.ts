@@ -200,7 +200,9 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                   }
                   this.assertCurrent?.();
                   if (provingExisting) {
-                    const handle = await open(path, 'r');
+                    // Windows requires a writable file handle for a strict durability proof.
+                    // The same journal bytes remain immutable; a failed fsync is UNKNOWN.
+                    const handle = await open(path, process.platform === 'win32' ? 'r+' : 'r');
                     try {
                       await handle.sync();
                     } finally {
