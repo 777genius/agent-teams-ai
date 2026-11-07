@@ -1511,7 +1511,17 @@
       "searchTeams": "Szukaj zespołów...",
       "selectTeam": "Wybierz zespół...",
       "team": "Zespół",
-      "title": "Harmonogram"
+      "title": "Harmonogram",
+      "execution": "Wykonanie",
+      "legacyNotice": "Istniejący harmonogram jednorazowy: zapisanie nie zmieni jego działania.",
+      "upgradeSmart": "Przełącz na inteligentny harmonogram",
+      "oneAgent": "Jeden agent",
+      "wholeTeam": "Cały zespół",
+      "target": "Wykonawca, gdy zespół działa",
+      "leadDefault": "Lider zespołu (domyślnie)",
+      "agentDescription": "Gdy zespół nie działa, uruchamia osobnego agenta; gdy działa, przydziela zadanie.",
+      "teamDescription": "Gdy zespół nie działa, uruchamia go; gdy działa, przydziela zadanie liderowi. Używa zapisanych ustawień.",
+      "teamPathMissing": "Zapisz folder projektu zespołu przed zaplanowaniem uruchomienia."
     },
     "title": {
       "createSchedule": "Utwórz harmonogram",
@@ -2134,7 +2144,9 @@
       "completed": "Ukończone",
       "failed": "Niepowodzenie",
       "interrupted": "Przerwane",
-      "cancelled": "Anulowane"
+      "cancelled": "Anulowane",
+      "dispatched": "Przekazano",
+      "skipped": "Pominięto"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} ukrytych",
       "trash": "Kosz",
       "gridView": "Widok siatki",
-      "columnsView": "Widok kolumn"
+      "columnsView": "Widok kolumn",
+      "tableView": "Widok tabeli",
+      "configureColumns": "Wybierz kolumny",
+      "resizeColumn": "Zmień szerokość: {{column}}"
     },
     "trash": {
       "title": "Kosz",

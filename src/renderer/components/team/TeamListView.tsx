@@ -1266,10 +1266,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   );
 
   const renderContent = (): React.JSX.Element => {
-    if (teamsLoading) {
-      return <TeamListSkeleton label={t('list.loading')} />;
-    }
-
     if (teamsError) {
       return (
         <div className="flex size-full items-center justify-center p-6">
@@ -1554,8 +1550,14 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="size-full overflow-auto p-4">
-        {renderHeader()}
-        {renderContent()}
+        {teamsLoading && teamsWithProvisioning.length === 0 ? (
+          <TeamListSkeleton label={t('list.loading')} />
+        ) : (
+          <>
+            {renderHeader()}
+            {renderContent()}
+          </>
+        )}
         {createDialogElement}
         {importDialogElement}
         {launchDialogElement}

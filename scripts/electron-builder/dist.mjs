@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { verifyMacSigningPreflight } from './mac-signing-preflight.mts';
+import { stageManagedGit } from '../stage-managed-git.mjs';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -10,6 +11,7 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  resolveManagedGitTarget,
   runElectronBuilderOnce,
   runWithPackagingRetry,
   runWithNativeDependencyRestore,
@@ -19,6 +21,7 @@ export {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  resolveManagedGitTarget,
   runWithPackagingRetry,
   runWithNativeDependencyRestore,
 };
@@ -92,6 +95,7 @@ export async function main(argv, {
   env = process.env,
   guard = runRendererBundleGuard,
   packageInvocation = runElectronBuilderInvocation,
+  stageGit = stageManagedGit,
 } = {}) {
   const invocations = buildElectronBuilderInvocations(argv, platform, arch);
 
@@ -112,6 +116,8 @@ export async function main(argv, {
   await guard();
 
   for (const invocation of invocations) {
+    // Run after the source build, before copying extraResources/signing the app.
+    await stageGit(resolveManagedGitTarget(invocation.args, platform, arch));
     await packageInvocation(invocation);
   }
 }

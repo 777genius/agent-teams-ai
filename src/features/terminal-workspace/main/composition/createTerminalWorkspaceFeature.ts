@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { startWorkspaceGatewayNodeServer } from '@terminal-platform/workspace-gateway-node';
 
 import type {
@@ -242,7 +243,7 @@ class TeamTerminalDaemonSupervisor {
       ['--runtime-slug', this.#runtimeSlug, '--session-store', this.#sessionStorePath],
       {
         cwd: resolveDaemonWorkingDirectory(daemonBinaryPath),
-        env: process.env,
+        env: createManagedGitEnv(process.env),
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
       }

@@ -149,6 +149,50 @@ export async function clickControl(evaluate, send, expression, preparePoint) {
     await send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });
 }
 
+/**
+ * Follow the real Dashboard -> Settings -> Providers route before using the
+ * existing provider controls. Idempotent for subsequent fixture scenarios.
+ */
+export async function enterProviderSettings(evaluate, send) {
+  const page = `document.querySelector('[data-testid="provider-settings-page"]')`;
+  const dashboardButton = `document.querySelector('[data-testid="dashboard-manage-providers"]')`;
+  let clicked = false;
+  // First app launch includes native service startup before React mounts.
+  for (let attempt = 0; attempt < 480; attempt++) {
+    if (await evaluate(`Boolean(${page}?.getClientRects().length)`)) return;
+    // A CSS-visible button can still sit under the boot splash, so a mouse
+    // event would hit the splash and silently lose the one allowed click.
+    const buttonReady = await evaluate(`(() => {
+      const button = ${dashboardButton};
+      if (document.getElementById('splash') || !button?.isConnected || button.disabled) return false;
+      // Hit-testing an off-screen element always fails; scroll before checking
+      // which element actually owns the prospective native mouse event.
+      button.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const rect = button.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === button || button.contains(hit);
+    })()`);
+    if (!clicked && buttonReady) {
+      assert(
+        !(await evaluate(`Boolean(document.querySelector('[data-testid="runtime-manage-opencode"]')?.getClientRects().length)`)),
+        'Dashboard still mounts the full provider management UI'
+      );
+      await clickControl(evaluate, send, dashboardButton);
+      clicked = true;
+    }
+    await pause(250);
+  }
+  const diagnostic = await evaluate(`(async () => ({
+    splash: Boolean(document.getElementById('splash')),
+    text: document.body.innerText.slice(0, 450),
+    dashboardAction: Boolean(${dashboardButton}),
+    settingsPage: Boolean(${page}),
+    startup: await window.electronAPI?.startup?.getStatus?.()
+  }))()`);
+  assert.fail(`Providers page did not become visible: ${JSON.stringify(diagnostic).slice(0, 1500)}`);
+}
+
 export function correlateReport(copied, logs) {
   const ids = [
     ...new Set([...copied.matchAll(/reportId[:=]\s*(oc-[a-f0-9]{32})/g)].map((m) => m[1])),

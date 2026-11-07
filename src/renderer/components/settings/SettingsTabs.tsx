@@ -8,13 +8,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { Bell, Info, Network, Settings, Wrench } from 'lucide-react';
+import { Bell, Info, Network, Plug, Settings, Wrench } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
 export type SettingsSection =
   | 'general'
   | 'connection'
+  | 'providers'
   | 'gatewayProviders'
   | 'notifications'
   | 'advanced';
@@ -27,12 +28,14 @@ interface SettingsTabsProps {
 type TabLabelKey =
   | 'tabs.advanced.label'
   | 'tabs.gatewayProviders.label'
+  | 'runtimeProvider.tabs.providers'
   | 'tabs.general.label'
   | 'tabs.notifications.label';
 
 type TabDescriptionKey =
   | 'tabs.advanced.description'
   | 'tabs.gatewayProviders.description'
+  | 'providerRuntime.description'
   | 'tabs.general.description'
   | 'tabs.notifications.description';
 
@@ -57,6 +60,13 @@ const tabs: TabConfig[] = [
     labelKey: 'tabs.notifications.label',
     icon: Bell,
     descriptionKey: 'tabs.notifications.description',
+  },
+  {
+    id: 'providers',
+    labelKey: 'runtimeProvider.tabs.providers',
+    icon: Plug,
+    descriptionKey: 'providerRuntime.description',
+    electronOnly: true,
   },
   {
     id: 'gatewayProviders',
@@ -86,8 +96,8 @@ export const SettingsTabs = ({
 
   return (
     <TooltipProvider>
-      <div className="border-b border-border pb-0">
-        <div className="inline-flex h-9 items-center gap-1 rounded-t-lg bg-[var(--color-surface-raised)] p-1 text-[var(--color-text-muted)]">
+      <div className="min-w-0 border-b border-border pb-0">
+        <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-t-lg bg-[var(--color-surface-raised)] p-1 text-[var(--color-text-muted)]">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
