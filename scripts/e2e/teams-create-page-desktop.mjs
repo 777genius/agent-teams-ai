@@ -607,6 +607,13 @@ async function main() {
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'restored creation draft for config-only save');
+    // The fixture has no project-list entries. Choose the disposable path
+    // through the real UI rather than relying on the app's config-only fallback.
+    await cdp.click(createButtonExpression('Custom path'));
+    await cdp.fill(
+      '[data-testid=create-team-page] input[aria-label="Custom working directory"]',
+      fixture.projectPath
+    );
     const launchChecked = await cdp.evaluate(
       "document.querySelector('#launch-team')?.getAttribute('data-state') === 'checked'"
     );
