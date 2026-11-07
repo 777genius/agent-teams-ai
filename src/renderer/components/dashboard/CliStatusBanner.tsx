@@ -1535,9 +1535,10 @@ const InstalledBanner = ({
 
 interface CliStatusBannerProps {
   isDashboardActive?: boolean;
-  isPaneVisible?: boolean;
 }
-export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = true }: CliStatusBannerProps): React.JSX.Element | null => {
+export const CliStatusBanner = ({
+  isDashboardActive = false,
+}: CliStatusBannerProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const isElectron = useMemo(() => isElectronMode(), []);
@@ -2085,7 +2086,6 @@ export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = tru
       <>
         {providerOnboardingRequest ? (
           <RuntimeProviderOnboardingDialog
-            visible={isPaneVisible}
             open
             onOpenChange={(open) => {
               if (!open) {
@@ -2113,7 +2113,7 @@ export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = tru
           />
         ) : null}
         <CodexRuntimeUpdateDialog
-          open={codexRuntimeDialogOpen && isPaneVisible}
+          open={codexRuntimeDialogOpen}
           onOpenChange={setCodexRuntimeDialogOpen}
           status={codexRuntimeStatus}
           loading={codexRuntimeStatusLoading}
@@ -2123,7 +2123,6 @@ export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = tru
         {manageDialogOpen && (
           <Suspense fallback={null}>
             <ProviderRuntimeSettingsDialog
-              visible={isPaneVisible}
               open={manageDialogOpen}
               onOpenChange={handleManageDialogOpenChange}
               providers={visibleCliProviders}
@@ -2149,7 +2148,6 @@ export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = tru
         {providerTerminal && renderCliStatus.binaryPath && (
           <Suspense fallback={null}>
             <TerminalModal
-              visible={isPaneVisible}
               title={`${getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled)} ${
                 providerTerminal.action === 'login'
                   ? t('cliStatus.labels.loginTitle')
@@ -2764,7 +2762,6 @@ export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = tru
         {showLoginTerminal && renderCliStatus.binaryPath && (
           <Suspense fallback={null}>
             <TerminalModal
-              visible={isPaneVisible}
               title={t('cliStatus.labels.runtimeLoginTitle', {
                 runtime: getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled),
               })}

@@ -8,8 +8,6 @@ import { CheckCircle, Terminal, X, XCircle } from 'lucide-react';
 import { EmbeddedTerminal } from './EmbeddedTerminal';
 
 interface TerminalModalProps {
-  /** Hide the portal without unmounting its running terminal process. */
-  visible?: boolean;
   /** Modal title */
   title?: string;
   /** Command to run */
@@ -33,7 +31,6 @@ interface TerminalModalProps {
 }
 
 export function TerminalModal({
-  visible = true,
   title,
   command,
   args,
@@ -45,7 +42,7 @@ export function TerminalModal({
   successMessage,
   failureMessage,
 }: TerminalModalProps): React.JSX.Element {
-  useOverlayOccupancy(visible);
+  useOverlayOccupancy(true);
 
   const { t } = useAppTranslation('common');
   const [exited, setExited] = useState<number | null>(null);
@@ -68,18 +65,18 @@ export function TerminalModal({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
-      if (visible && e.key === 'Escape') {
+      if (e.key === 'Escape') {
         e.stopPropagation();
         onClose();
       }
     },
-    [onClose, visible]
+    [onClose]
   );
 
   // Focus trap — focus dialog on mount
   useEffect(() => {
-    if (visible) dialogRef.current?.focus();
-  }, [visible]);
+    dialogRef.current?.focus();
+  }, []);
 
   // Countdown timer for auto-close
   useEffect(() => {
@@ -102,16 +99,14 @@ export function TerminalModal({
   return ReactDOM.createPortal(
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- modal backdrop handles Escape
     <div
-      className={`fixed inset-0 z-50 items-center justify-center bg-black/60 ${visible ? 'flex' : 'hidden'}`}
-      aria-hidden={!visible || undefined}
-      inert={!visible || undefined}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onKeyDown={handleKeyDown}
     >
       <div
         ref={dialogRef}
         role="dialog"
         aria-label={resolvedTitle}
-        aria-modal={visible}
+        aria-modal="true"
         tabIndex={-1}
         className="flex h-[60vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border-emphasis bg-surface shadow-2xl outline-none"
       >

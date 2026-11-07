@@ -21,7 +21,6 @@ import type { JSX } from 'react';
 
 interface RuntimeProviderOnboardingDialogProps {
   readonly open: boolean;
-  readonly visible?: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly mode: RuntimeProviderOnboardingMode;
   readonly providerId?: string | null;
@@ -37,7 +36,6 @@ interface RuntimeProviderOnboardingDialogProps {
 
 export const RuntimeProviderOnboardingDialog = ({
   open,
-  visible = true,
   onOpenChange,
   mode,
   providerId = null,
@@ -77,10 +75,8 @@ export const RuntimeProviderOnboardingDialog = ({
 
   return (
     <Dialog
-      modal={false}
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!visible) return;
         if (!nextOpen && blockingCredentialWrite) {
           return;
         }
@@ -91,8 +87,6 @@ export const RuntimeProviderOnboardingDialog = ({
       }}
     >
       <DialogContent
-        portalHidden={!visible}
-        nonModalBackdrop
         closeDisabled={blockingCredentialWrite}
         className="max-h-[min(88vh,820px)] max-w-2xl overflow-y-auto"
         onEscapeKeyDown={(event) => {
