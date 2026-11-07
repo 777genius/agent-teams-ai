@@ -263,6 +263,8 @@ export function parseCreateMembers(
 
 export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) throw new TeamRequestValidationError(bootstrapError);
   const providerId = payload.providerId == null ? undefined : parseProviderId(payload.providerId);
   const prompt = assertOptionalString(payload.prompt, 'prompt');
   const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
@@ -290,6 +292,7 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
     ...(prompt && {
       prompt,
     }),
+    ...(payload.bootstrapOnly === true ? { bootstrapOnly: true as const } : {}),
     ...(model && {
       model,
     }),
@@ -417,6 +420,9 @@ export function parseDraftLaunchCreateRequest(
   body: unknown
 ): TeamCreateRequest {
   const payload = getObjectPayload(body);
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) throw new TeamRequestValidationError(bootstrapError);
+  if (payload.bootstrapOnly) throw new TeamRequestValidationError('Finish team setup first');
   normalizeRuntimeSelectionVersion(payload.runtimeSelectionVersion);
   const teamName = Object.hasOwn(payload, 'teamName')
     ? assertProvisioningTeamName(payload.teamName)
