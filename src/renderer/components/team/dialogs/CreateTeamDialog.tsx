@@ -278,7 +278,7 @@ function isCurrentPrepareGeneration(ref: { current: number }, generation: number
 
 export const CreateTeamDialog = ({
   open,
-  presentation = 'dialog',
+  presentation = 'dialog', active = true,
   canCreate,
   provisioningErrorsByTeam,
   clearProvisioningError,
@@ -2376,7 +2376,7 @@ export const CreateTeamDialog = ({
       : t('create.actions.create');
   const providerSettingsOverlay = (
     <ProvisioningProviderRuntimeSettingsDialog
-      openProviderId={providerSettingsProviderId}
+      openProviderId={active ? providerSettingsProviderId : null}
       onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
       providers={effectiveCliStatus?.providers ?? []}
       projectPath={effectiveCwd || null}
