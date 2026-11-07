@@ -539,7 +539,11 @@ jobs:
 
   stage1-desktop:
     name: Stage 1 source Desktop (${{ matrix.label }})
-    if: github.event_name == 'workflow_dispatch' && inputs.stage1_desktop
+    # Run the original native/UI acceptance on ready Stage1 integration PRs too.
+    # Draft and unrelated PRs do not allocate the eleven macOS proof jobs.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.draft == false)
     runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
     timeout-minutes: 45
     strategy:
@@ -934,7 +938,10 @@ jobs:
 
   stage1-process-qualification:
     name: Stage 1 current-tuple process and packed qualification
-    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification
+    # Original P7/positive-M19 receipt must bind the new merged integration tree.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.draft == false)
     runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
     timeout-minutes: 45
     env:
