@@ -150,7 +150,17 @@ function markIdbUnavailable(): void {
 // Core API
 // ---------------------------------------------------------------------------
 
+// IndexedDB set/del are asynchronous. Serialize mutations so a late debounced
+// save cannot resurrect a draft that was cleared after successful creation.
+let pendingMutation: Promise<void> = Promise.resolve();
+function serializeMutation(operation: () => Promise<void>): Promise<void> {
+  const next = pendingMutation.then(operation);
+  pendingMutation = next.catch(() => undefined);
+  return next;
+}
+
 async function saveSnapshot(snapshot: CreateTeamDraftSnapshot): Promise<void> {
+  return serializeMutation(async () => {
   if (idbUnavailable) {
     fallbackStore.set(STORAGE_KEY, snapshot);
     return;
@@ -161,9 +171,11 @@ async function saveSnapshot(snapshot: CreateTeamDraftSnapshot): Promise<void> {
     markIdbUnavailable();
     fallbackStore.set(STORAGE_KEY, snapshot);
   }
+  });
 }
 
 async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
+  await pendingMutation;
   if (idbUnavailable) {
     return fallbackStore.get(STORAGE_KEY) ?? null;
   }
@@ -181,6 +193,7 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
 }
 
 async function deleteSnapshot(): Promise<void> {
+  return serializeMutation(async () => {
   if (idbUnavailable) {
     fallbackStore.delete(STORAGE_KEY);
     return;
@@ -191,6 +204,7 @@ async function deleteSnapshot(): Promise<void> {
     markIdbUnavailable();
     fallbackStore.delete(STORAGE_KEY);
   }
+  });
 }
 
 // ---------------------------------------------------------------------------
