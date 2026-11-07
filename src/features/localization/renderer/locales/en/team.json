@@ -229,6 +229,7 @@
       "groupOrRootLabel": "Group or root",
       "groupOrRootHelp": "Choose a group, or keep the organization root.",
       "groupOrRootPlaceholder": "Root or group",
+      "invalidSelection": "Choose a valid organization and destination before creating the team.",
       "kind": {
         "root": "Root",
         "group": "Group"

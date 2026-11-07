@@ -1610,8 +1610,6 @@ export const CreateTeamDialog = ({
     restoredFromStorage,
     setSelectedProjectPath,
   ]);
-  // Ephemeral paths are cleared; a deleted project stays selected so the picker can
-  // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
     if (open && cwdMode === 'project' && isEphemeralProjectPath(selectedProjectPath)) {
       setSelectedProjectPath('');
@@ -2078,9 +2076,7 @@ export const CreateTeamDialog = ({
   const activePlacementOrganization =
     organizationPlacementOrganizations.find(
       (organization) => organization.id === organizationPlacementOrganizationId
-    ) ??
-    organizationPlacementOrganizations[0] ??
-    null;
+    ) ?? (organizationPlacementEnabled ? null : organizationPlacementOrganizations[0] ?? null);
   const organizationPlacementParentOptions = useMemo(
     () =>
       getOrganizationPlacementUnitOptions(
@@ -2092,9 +2088,7 @@ export const CreateTeamDialog = ({
   const activePlacementParent =
     organizationPlacementParentOptions.find(
       (option) => option.unit.id === organizationPlacementParentId
-    )?.unit ??
-    organizationPlacementParentOptions[0]?.unit ??
-    null;
+    )?.unit ?? (organizationPlacementEnabled ? null : organizationPlacementParentOptions[0]?.unit ?? null);
   const selectedOrganizationPlacement = useMemo<OrganizationPlacementSelection | null>(() => {
     if (!organizationPlacementEnabled || !activePlacementOrganization || !activePlacementParent) {
       return null;
@@ -2141,6 +2135,10 @@ export const CreateTeamDialog = ({
   const handleSubmit = (): void => {
     if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
+    if (organizationPlacementEnabled && !selectedOrganizationPlacement) {
+      setLocalError(t('create.organizationPlacement.invalidSelection'));
+      return;
+    }
     if (launchTeam && !launchPreflightSelectionReady) return;
     if (submissionFence.busy || isSubmitting) return;
     if (prepareState === 'loading' && !canSkipPreflight()) return;
@@ -2719,7 +2717,7 @@ export const CreateTeamDialog = ({
                       checked={organizationPlacementEnabled}
                       disabled={
                         organizationStructureLoading ||
-                        organizationPlacementOrganizations.length === 0
+                        (!organizationPlacementEnabled && organizationPlacementOrganizations.length === 0)
                       }
                       onCheckedChange={(checked) =>
                         setOrganizationPlacementEnabled(checked === true)
