@@ -2032,7 +2032,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }
       if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
     } else if (!teamByName[effectiveTeamName]?.projectPath && !schedule?.launchConfig.cwd) {
-      errors.push('The team needs a saved project folder before scheduling a launch');
+      errors.push(t('launch.schedule.teamPathMissing'));
     }
     if (isSchedule) {
       if (!effectiveTeamName) errors.push('Team is required');
@@ -2050,6 +2050,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     isTeamSchedule,
     teamByName,
     schedule?.launchConfig.cwd,
+    t,
     effectiveTeamName,
     promptDraft.value,
     cronExpression,
@@ -2603,16 +2604,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               {schedExpanded ? (
                 <div className="space-y-3 border-t border-[var(--color-border)] px-3 pb-3 pt-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Execution</Label>
+                    <Label className="text-xs">{t('launch.schedule.execution')}</Label>
                     {scheduleExecutionMode === 'legacy' ? (
                       <div className="rounded border border-[var(--color-border)] p-2 text-xs text-[var(--color-text-secondary)]">
-                        Existing one-shot schedule — unchanged when you save.
+                        {t('launch.schedule.legacyNotice')}
                         <button
                           type="button"
                           className="ml-2 underline"
                           onClick={() => setScheduleExecutionMode('agent')}
                         >
-                          Switch to smart scheduling
+                          {t('launch.schedule.upgradeSmart')}
                         </button>
                       </div>
                     ) : (
@@ -2629,21 +2630,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                             }`}
                             onClick={() => setScheduleExecutionMode(mode)}
                           >
-                            {mode === 'agent' ? 'One agent' : 'Whole team'}
+                            {mode === 'agent' ? t('launch.schedule.oneAgent') : t('launch.schedule.wholeTeam')}
                           </button>
                         ))}
                       </div>
                     )}
                     {scheduleExecutionMode === 'agent' ? (
                       <>
-                        <Label htmlFor="schedule-member" className="text-xs">Target when team is running</Label>
+                        <Label htmlFor="schedule-member" className="text-xs">{t('launch.schedule.target')}</Label>
                         <select
                           id="schedule-member"
                           className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-xs text-[var(--color-text)]"
                           value={scheduleTargetMember}
                           onChange={(event) => setScheduleTargetMember(event.target.value)}
                         >
-                          <option value="">Team lead (default)</option>
+                          <option value="">{t('launch.schedule.leadDefault')}</option>
                           {(teamByName[effectiveTeamName]?.members ?? [])
                             .filter((member) => member.name !== teamByName[effectiveTeamName]?.leadName)
                             .map((member) => (
@@ -2651,12 +2652,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                             ))}
                         </select>
                         <p className="text-[11px] text-[var(--color-text-muted)]">
-                          When the team is off, runs an isolated one-shot agent. When running, creates an assigned task.
+                          {t('launch.schedule.agentDescription')}
                         </p>
                       </>
                     ) : scheduleExecutionMode === 'team' ? (
                       <p className="text-[11px] text-[var(--color-text-muted)]">
-                        Starts the saved team if stopped; otherwise creates a task for its lead. Uses the team's saved provider and project settings.
+                        {t('launch.schedule.teamDescription')}
                       </p>
                     ) : null}
                   </div>
