@@ -121,7 +121,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await fs.mkdir(forged);
     await fs.writeFile(
       path.join(forged, '.git'),
-      `gitdir: ${path.join(repository, '.git', 'worktrees', 'alice')}\\n`
+      `gitdir: ${path.join(repository, '.git', 'worktrees', 'alice')}\n`
     );
     // A managed git rev-parse call can accept this foreign pointer, but it
     // must not override the failed backlink validation.

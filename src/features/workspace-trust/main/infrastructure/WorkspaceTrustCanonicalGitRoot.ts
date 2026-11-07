@@ -85,11 +85,11 @@ async function isValidGitMarker(root: string): Promise<boolean> {
 async function isStandaloneGitFile(root: string): Promise<boolean> {
   const marker = path.join(root, '.git');
   const content = await readTrimmedFileOrNull(marker);
-  const match = /^gitdir:\\s*(.+)$/.exec(content ?? '');
-  if (!match || /[\\r\\n]/.test(match[1])) return false;
+  const match = /^gitdir:\s*(.+)$/.exec(content ?? '');
+  if (!match || /[\r\n]/.test(match[1])) return false;
   const gitDir = path.resolve(root, match[1]);
   const config = await readTrimmedFileOrNull(path.join(gitDir, 'config'));
-  if (!config || /(?:^|\\n)\\s*worktree\\s*=/im.test(config)) return false;
+  if (!config || /(?:^|\n)\s*worktree\s*=/im.test(config)) return false;
   for (const name of ['commondir', 'gitdir']) {
     try {
       await fs.lstat(path.join(gitDir, name));
