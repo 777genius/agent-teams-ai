@@ -1037,6 +1037,13 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
   const handleCreateDialogClose = useCallback(() => {
     closeTeamsCreationPage(tabId);
   }, [closeTeamsCreationPage, tabId]);
+  const handleCreateBack = useCallback(() => {
+    closeTeamsCreationPage(tabId);
+    const originId = createSeed?.originTabId;
+    if (originId && useStore.getState().getAllPaneTabs().some((tab) => tab.id === originId)) {
+      useStore.getState().setActiveTab(originId);
+    }
+  }, [closeTeamsCreationPage, createSeed?.originTabId, tabId]);
 
   const handleCreateSubmit = useCallback(
     async (request: TeamCreateRequest, placement?: OrganizationPlacementSelection) => {
@@ -1094,6 +1101,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
         defaultProjectPath={createTeamDefaultProjectPath}
         forceDefaultProjectSelection={copyData == null && navigationProjectPath != null}
         onClose={handleCreateDialogClose}
+        onBack={handleCreateBack}
         onCreate={handleCreateSubmit}
         onOpenTeam={openTeamTab}
       />
