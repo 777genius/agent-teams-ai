@@ -3902,6 +3902,7 @@ export default interface Resources {
     },
     "create": {
       "actions": {
+        "backToTeams": "Back to teams",
         "create": "Create",
         "creating": "Creating...",
         "openExisting": "Open Existing Team",
@@ -3922,6 +3923,11 @@ export default interface Resources {
       "description": {
         "copy": "Create a new team based on an existing one.",
         "create": "Set up your team and choose how it starts."
+      },
+      "draft": {
+        "continue": "Continue creating",
+        "replace": "Replace draft",
+        "replaceConfirmation": "You have an unfinished team draft. Starting this action will replace it. Continue?"
       },
       "errors": {
         "createConfigFailed": "Failed to create team config",
@@ -3966,6 +3972,7 @@ export default interface Resources {
         "groupOrRootHelp": "Choose a group, or keep the organization root.",
         "groupOrRootLabel": "Group or root",
         "groupOrRootPlaceholder": "Root or group",
+        "invalidSelection": "Choose a valid organization and destination before creating the team.",
         "kind": {
           "group": "Group",
           "root": "Root"
@@ -3978,6 +3985,11 @@ export default interface Resources {
       "placeholders": {
         "description": "Brief description of the team purpose",
         "prompt": "Instructions for the team lead during provisioning..."
+      },
+      "placementFailure": {
+        "acknowledge": "Got it",
+        "message": "Team {{teamName}} was created. Assign it from the Organization Map; do not create it again.",
+        "title": "Team created, but not added to the organization"
       },
       "prepare": {
         "checkingProviders": "Checking selected providers...",
