@@ -125,7 +125,9 @@ import {
   getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
+import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -642,8 +644,9 @@ export const CreateTeamDialog = ({
       effectiveCwd,
       open && launchPreflightSelectionReady && selectedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled =
-    open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
+  const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
+    open, launchTeam, multimodelEnabled, selectedMemberProviders
+  );
   useEffect(() => {
     if (open && dialogTeamNameKey) {
       clearProvisioningError?.(dialogTeamNameKey);
@@ -2122,11 +2125,9 @@ export const CreateTeamDialog = ({
     const norm = normalizePath(effectiveCwd);
     return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
   }, [activeTeams, effectiveCwd, launchTeam]);
-
   useEffect(() => {
     setConflictDismissed(false);
   }, [conflictingTeam?.teamName, effectiveCwd]);
-
   const handleSubmit = (): void => {
     if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
@@ -2185,7 +2186,6 @@ export const CreateTeamDialog = ({
     setLocalError(null);
     submittedTeamNameRef.current = request.teamName;
     setIsSubmitting(true);
-
     if (!launchTeam) {
       void (async () => {
         try {
@@ -2263,7 +2263,6 @@ export const CreateTeamDialog = ({
       })();
       return;
     }
-
     void (async () => {
       try {
         if (!syncModelsWithLead) {
@@ -2292,7 +2291,6 @@ export const CreateTeamDialog = ({
       }
     })();
   };
-
   const handleTeamNameChange = (value: string): void => {
     setTeamName(value);
     setFieldErrors((prev) => {
@@ -2384,6 +2382,7 @@ export const CreateTeamDialog = ({
     />
   );
   return (
+    <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled} projectPath={effectiveCwd}>
     <CreateTeamSurface
       presentation={presentation}
       open={open}
@@ -3105,5 +3104,6 @@ export const CreateTeamDialog = ({
           </div>
         </DialogFooter>
     </CreateTeamSurface>
+    </OpenCodeSourceDirectoryProvider>
   );
 };
