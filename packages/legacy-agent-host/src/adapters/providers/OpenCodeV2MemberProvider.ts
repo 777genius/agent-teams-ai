@@ -468,6 +468,21 @@ export function createOpenCodeV2MemberProvider(
                   }
                   return { done: true as const, value: undefined };
                 };
+                // A consumer can also abandon the single-claim feed with
+                // throw(). Like return(), this queues behind a pending next()
+                // or skips generator finally if observation never started.
+                // Wake the private feed and retire only the captured owner.
+                const underlyingThrow = stream.throw.bind(stream);
+                stream.throw = async (error) => {
+                  const stopping = finishOwned();
+                  try {
+                    await source.close();
+                    return await underlyingThrow(error);
+                  } finally {
+                    if (!await stopping)
+                      throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
+                  }
+                };
                 return stream;
               },
               respondToInteraction: async (reference, reply) => {
