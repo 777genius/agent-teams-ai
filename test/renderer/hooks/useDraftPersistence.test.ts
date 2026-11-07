@@ -219,7 +219,7 @@ describe('draft hydration ordering', () => {
       await act(async () => {
         root.unmount();
       });
-      expect(save).toHaveBeenCalledWith('sandbox:prompt-hydration', 'Freshly typed request');
+      expect(save).toHaveBeenCalledWith('sandbox:prompt-hydration', 'Freshly typed request', undefined);
     } finally {
       await act(async () => {
         root.unmount();
