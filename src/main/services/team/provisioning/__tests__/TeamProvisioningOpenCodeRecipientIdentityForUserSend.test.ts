@@ -333,7 +333,7 @@ describe('OpenCode explicit user-send identity repair', () => {
       await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
         'roster changed before config commit'
       );
-      expect(h.resolve).toThrow('has no authoritative config identity');
+      expect(h.getConfig().members).toHaveLength(1);
     }
   );
 
