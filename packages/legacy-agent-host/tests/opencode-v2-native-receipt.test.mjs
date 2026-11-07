@@ -160,8 +160,8 @@ test('native durable SSE proof accepts a bounded, owned and ordered history pref
 
 test('native durable SSE proof enforces frame-count budget with a distinct error', () => {
   const id = 'ses_TEST123', dir = '/TEST/workspace';
-  const sync = 'data: '+JSON.stringify({type:'log.synced',aggregateID:id,seq:0})+'\\n\\n';
-  const keepAlive = ': keepalive\\n\\n';
+  const sync = 'data: '+JSON.stringify({type:'log.synced',aggregateID:id,seq:0})+'\n\n';
+  const keepAlive = ': keepalive\n\n';
   assert.deepEqual(parseOwnedDurableLog(keepAlive.repeat(4096)+sync,id,dir),
     {watermark:0,eventCount:0}, 'the 4098-frame upper boundary is accepted');
   assert.throws(() => parseOwnedDurableLog(keepAlive.repeat(4097)+sync,id,dir),
