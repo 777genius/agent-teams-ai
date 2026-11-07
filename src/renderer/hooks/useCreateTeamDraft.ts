@@ -63,6 +63,12 @@ export interface UseCreateTeamDraftResult {
   setLaunchTeam: (v: boolean) => void;
   teamColor: string;
   setTeamColor: (v: string) => void;
+  organizationPlacementEnabled: boolean;
+  setOrganizationPlacementEnabled: (v: boolean) => void;
+  organizationPlacementOrganizationId: string;
+  setOrganizationPlacementOrganizationId: (v: string) => void;
+  organizationPlacementParentId: string;
+  setOrganizationPlacementParentId: (v: string) => void;
 
   /** `true` after the initial IndexedDB load completes. */
   isLoaded: boolean;
@@ -157,6 +163,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const [soloTeam, setSoloTeamState] = useState(false);
   const [launchTeam, setLaunchTeamState] = useState(true);
   const [teamColor, setTeamColorState] = useState('');
+  const [organizationPlacementEnabled, setOrganizationPlacementEnabledState] = useState(false);
+  const [organizationPlacementOrganizationId, setOrganizationPlacementOrganizationIdState] = useState('');
+  const [organizationPlacementParentId, setOrganizationPlacementParentIdState] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [restoredFromStorage, setRestoredFromStorage] = useState(false);
 
@@ -171,6 +180,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const soloTeamRef = useRef(false);
   const launchTeamRef = useRef(true);
   const teamColorRef = useRef('');
+  const organizationPlacementEnabledRef = useRef(false);
+  const organizationPlacementOrganizationIdRef = useRef('');
+  const organizationPlacementParentIdRef = useRef('');
   const mountedRef = useRef(true);
   const userTouchedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -201,6 +213,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       soloTeam: soloTeamRef.current,
       launchTeam: launchTeamRef.current,
       teamColor: teamColorRef.current,
+      organizationPlacementEnabled: organizationPlacementEnabledRef.current,
+      organizationPlacementOrganizationId: organizationPlacementOrganizationIdRef.current,
+      organizationPlacementParentId: organizationPlacementParentIdRef.current,
       updatedAt: Date.now(),
     };
   }, []);
@@ -275,6 +290,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     soloTeamRef.current = snap.soloTeam;
     launchTeamRef.current = snap.launchTeam;
     teamColorRef.current = snap.teamColor;
+    organizationPlacementEnabledRef.current = snap.organizationPlacementEnabled === true;
+    organizationPlacementOrganizationIdRef.current = snap.organizationPlacementOrganizationId ?? '';
+    organizationPlacementParentIdRef.current = snap.organizationPlacementParentId ?? '';
 
     setTeamNameState(snap.teamName);
     setMembersState(deserialized);
@@ -286,6 +304,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setSoloTeamState(snap.soloTeam);
     setLaunchTeamState(snap.launchTeam);
     setTeamColorState(snap.teamColor);
+    setOrganizationPlacementEnabledState(snap.organizationPlacementEnabled === true);
+    setOrganizationPlacementOrganizationIdState(snap.organizationPlacementOrganizationId ?? '');
+    setOrganizationPlacementParentIdState(snap.organizationPlacementParentId ?? '');
   }, []);
 
   // ── Load on mount ──────────────────────────────────────────────────────
@@ -442,6 +463,27 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     [scheduleSave]
   );
 
+  const setOrganizationPlacementEnabled = useCallback((v: boolean): void => {
+    userTouchedRef.current = true;
+    organizationPlacementEnabledRef.current = v;
+    setOrganizationPlacementEnabledState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+
+  const setOrganizationPlacementOrganizationId = useCallback((v: string): void => {
+    userTouchedRef.current = true;
+    organizationPlacementOrganizationIdRef.current = v;
+    setOrganizationPlacementOrganizationIdState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+
+  const setOrganizationPlacementParentId = useCallback((v: string): void => {
+    userTouchedRef.current = true;
+    organizationPlacementParentIdRef.current = v;
+    setOrganizationPlacementParentIdState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+
   // ── Clear all ──────────────────────────────────────────────────────────
 
   const clearDraft = useCallback(() => {
@@ -468,6 +510,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     soloTeamRef.current = false;
     launchTeamRef.current = true;
     teamColorRef.current = '';
+    organizationPlacementEnabledRef.current = false;
+    organizationPlacementOrganizationIdRef.current = '';
+    organizationPlacementParentIdRef.current = '';
 
     setTeamNameState('');
     setMembersState([]);
@@ -479,6 +524,9 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setSoloTeamState(false);
     setLaunchTeamState(true);
     setTeamColorState('');
+    setOrganizationPlacementEnabledState(false);
+    setOrganizationPlacementOrganizationIdState('');
+    setOrganizationPlacementParentIdState('');
 
     void createTeamDraftStorage.deleteSnapshot();
   }, []);
@@ -508,6 +556,12 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setLaunchTeam,
     teamColor,
     setTeamColor,
+    organizationPlacementEnabled,
+    setOrganizationPlacementEnabled,
+    organizationPlacementOrganizationId,
+    setOrganizationPlacementOrganizationId,
+    organizationPlacementParentId,
+    setOrganizationPlacementParentId,
     isLoaded,
     restoredFromStorage,
     clearDraft,
