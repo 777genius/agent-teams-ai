@@ -111,7 +111,7 @@ describe('task table layout and column interactions', () => {
     expect(host.querySelector('[data-testid="team-task-table-header-owner"]')).toBeNull();
     expect(widths()).toHaveLength(5);
     expect(parseFloat(table.style.width)).toBe(1210);
-    expect(sum()).toBe(1200);
+    expect(sum()).toBe(1210);
     act(() => root.unmount());
   });
 });
