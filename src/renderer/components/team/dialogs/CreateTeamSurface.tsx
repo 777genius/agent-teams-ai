@@ -16,6 +16,7 @@ interface CreateTeamSurfaceProps {
   open: boolean;
   isCopy: boolean;
   onClose: () => void;
+  backDisabled?: boolean;
   children: ReactNode;
   overlay: ReactNode;
 }
@@ -30,6 +31,7 @@ export const CreateTeamSurface = ({
   open,
   isCopy,
   onClose,
+  backDisabled = false,
   children,
   overlay,
 }: CreateTeamSurfaceProps): React.JSX.Element => {
@@ -45,7 +47,7 @@ export const CreateTeamSurface = ({
         className="flex size-full min-h-0 min-w-0 flex-col overflow-y-auto overflow-x-hidden"
       >
         <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label={t('create.actions.backToTeams', { defaultValue: 'Back to teams' })}>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={backDisabled} aria-label={t('create.actions.backToTeams', { defaultValue: 'Back to teams' })}>
             <ArrowLeft className="size-4" />
           </Button>
           <div className="min-w-0">
@@ -62,7 +64,7 @@ export const CreateTeamSurface = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+    <Dialog open={open} onOpenChange={(next) => !next && !backDisabled && onClose()}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
         <DialogHeader>
           <DialogTitle className="text-sm">{title}</DialogTitle>
