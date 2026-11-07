@@ -172,6 +172,35 @@ try {
   const unsafeDelete=await native(unsafePath,'DELETE');
   if(unsafeDelete.status!==204)throw Error('native_second_TEST_session_delete_failed');
   receipt.steps.push('real_native_later_allow_override_refused_by_Host');
+  // Native positive readback for V2's ordered ASK shape, isolated from the
+  // captured DENY session. This proves only config/order preservation, NOT
+  // actual model/tool permission enforcement (which remains a HOLD).
+  const askRules=[
+    {action:'external_directory',resource:'*',effect:'deny'},
+    {action:'external_directory',resource:'*',effect:'ask'},
+  ];
+  const askSession=await native('/api/session','POST',{
+    location:{directory:workspace},permissions:askRules,
+  });
+  const askId=askSession.data?.data?.id;
+  if(askSession.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(askId||'')||
+     askId===nativeSessionId||askId===unsafeId)
+    throw Error('native_ask_TEST_session_missing');
+  const askPath='/api/session/'+encodeURIComponent(askId);
+  const askRead=await native(askPath);
+  if(askRead.status!==200||askRead.data?.data?.id!==askId||
+     JSON.stringify(askRead.data.data.permissions)!==JSON.stringify(askRules))
+    throw Error('native_ask_permission_order_readback_mismatch');
+  if(preflightOpenCodeV2EffectiveExternalDirectory(
+    askRead.data.data.permissions,'ask').kind!=='policy-candidate')
+    throw Error('Host_refused_native_effective_ask');
+  const denyGuard=preflightOpenCodeV2EffectiveExternalDirectory(
+    askRead.data.data.permissions,'deny');
+  if(denyGuard.kind!=='hold'||denyGuard.reason!=='external-directory')
+    throw Error('Host_weakened_captured_deny_to_ask');
+  if((await native(askPath,'DELETE')).status!==204)
+    throw Error('native_ask_TEST_session_delete_failed');
+  receipt.steps.push('real_native_ordered_ask_readback_without_tool_execution');
   const sessionPath='/api/session/'+encodeURIComponent(nativeSessionId);
   const instructions='TEST-only Host role, team and workspace. Do not execute real tools.';
   const context={request:{
