@@ -12,13 +12,13 @@ const OPTIONS = [
   { value: 'table', key: 'kanban.board.tableView', icon: Table2 },
 ] as const;
 
-export function KanbanViewModeSwitch({
+export const KanbanViewModeSwitch = ({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: KanbanViewMode;
   onChange: (next: KanbanViewMode) => void;
-}): React.JSX.Element {
+}>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
     <div role="group" aria-label={t('kanban.title')} className="inline-flex rounded-md border border-[var(--color-border)]">
@@ -48,4 +48,4 @@ export function KanbanViewModeSwitch({
       ))}
     </div>
   );
-}
+};

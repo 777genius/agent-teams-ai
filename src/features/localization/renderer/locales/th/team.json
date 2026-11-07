@@ -2422,10 +2422,11 @@
       "showMore": "แสดงอีก {{count}} รายการ",
       "hiddenCount": "{{count}} ที่ซ่อน",
       "trash": "ถังขยะ",
-      "gridView": "มุมมองตาราง",
+      "gridView": "มุมมองแบบกริด",
       "columnsView": "มุมมองคอลัมน์",
       "tableView": "มุมมองตาราง",
-      "configureColumns": "เลือกคอลัมน์"
+      "configureColumns": "เลือกคอลัมน์",
+      "resizeColumn": "ปรับความกว้าง {{column}}"
     },
     "trash": {
       "title": "ถังขยะ",

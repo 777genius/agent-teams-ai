@@ -2425,7 +2425,8 @@
       "gridView": "ग्रिड दृश्य",
       "columnsView": "कॉलम view",
       "tableView": "तालिका दृश्य",
-      "configureColumns": "कॉलम चुनें"
+      "configureColumns": "कॉलम चुनें",
+      "resizeColumn": "{{column}} की चौड़ाई बदलें"
     },
     "trash": {
       "title": "ट्रैश",

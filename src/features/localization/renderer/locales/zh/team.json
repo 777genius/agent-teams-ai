@@ -2425,7 +2425,8 @@
       "gridView": "网格视图",
       "columnsView": "列视图",
       "tableView": "表格视图",
-      "configureColumns": "选择列"
+      "configureColumns": "选择列",
+      "resizeColumn": "调整{{column}}列宽"
     },
     "trash": {
       "title": "垃圾",

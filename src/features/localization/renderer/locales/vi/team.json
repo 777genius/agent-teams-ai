@@ -2425,7 +2425,8 @@
       "gridView": "Chế độ xem lưới",
       "columnsView": "Chế độ xem cột",
       "tableView": "Chế độ bảng",
-      "configureColumns": "Chọn cột"
+      "configureColumns": "Chọn cột",
+      "resizeColumn": "Thay đổi độ rộng {{column}}"
     },
     "trash": {
       "title": "Thùng rác",

@@ -2425,7 +2425,8 @@
       "gridView": "Vista griglia",
       "columnsView": "Vista colonne",
       "tableView": "Vista tabella",
-      "configureColumns": "Scegli colonne"
+      "configureColumns": "Scegli colonne",
+      "resizeColumn": "Ridimensiona {{column}}"
     },
     "trash": {
       "title": "Cestino",

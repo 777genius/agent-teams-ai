@@ -2425,7 +2425,8 @@
       "gridView": "Paparan grid",
       "columnsView": "Paparan lajur",
       "tableView": "Paparan jadual",
-      "configureColumns": "Pilih lajur"
+      "configureColumns": "Pilih lajur",
+      "resizeColumn": "Ubah lebar {{column}}"
     },
     "trash": {
       "title": "Tong Sampah",

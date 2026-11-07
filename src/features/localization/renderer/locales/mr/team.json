@@ -2425,7 +2425,8 @@
       "gridView": "ग्रिड दृश्य",
       "columnsView": "स्तंभ दृश्य",
       "tableView": "तक्ता दृश्य",
-      "configureColumns": "स्तंभ निवडा"
+      "configureColumns": "स्तंभ निवडा",
+      "resizeColumn": "{{column}} ची रुंदी बदला"
     },
     "trash": {
       "title": "कचरा",

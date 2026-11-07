@@ -2621,7 +2621,8 @@
       "gridView": "Grid view",
       "columnsView": "Columns view",
       "tableView": "Table view",
-      "configureColumns": "Choose columns"
+      "configureColumns": "Choose columns",
+      "resizeColumn": "Resize {{column}}"
     },
     "trash": {
       "title": "Trash",

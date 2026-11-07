@@ -2427,7 +2427,8 @@
       "gridView": "Mwonekano wa gridi",
       "columnsView": "Mwonekano wa safu",
       "tableView": "Mwonekano wa jedwali",
-      "configureColumns": "Chagua safu wima"
+      "configureColumns": "Chagua safu wima",
+      "resizeColumn": "Badilisha upana wa {{column}}"
     },
     "trash": {
       "title": "Tupio",

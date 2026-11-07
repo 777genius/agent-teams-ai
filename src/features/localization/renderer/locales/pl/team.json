@@ -2425,7 +2425,8 @@
       "gridView": "Widok siatki",
       "columnsView": "Widok kolumn",
       "tableView": "Widok tabeli",
-      "configureColumns": "Wybierz kolumny"
+      "configureColumns": "Wybierz kolumny",
+      "resizeColumn": "Zmień szerokość: {{column}}"
     },
     "trash": {
       "title": "Kosz",

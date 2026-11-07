@@ -2425,7 +2425,8 @@
       "gridView": "グリッドビュー",
       "columnsView": "コラムビュー",
       "tableView": "テーブル表示",
-      "configureColumns": "列を選択"
+      "configureColumns": "列を選択",
+      "resizeColumn": "{{column}}の幅を変更"
     },
     "trash": {
       "title": "トラッシュ",

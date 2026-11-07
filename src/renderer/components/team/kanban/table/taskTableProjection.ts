@@ -17,9 +17,12 @@ export interface TaskTableRow {
 }
 
 function timestamp(task: TeamTask): number {
-  const raw = task.updatedAt ?? task.createdAt;
-  const parsed = raw ? Date.parse(raw) : 0;
-  return Number.isFinite(parsed) ? parsed : 0;
+  for (const value of [task.updatedAt, task.createdAt]) {
+    if (!value) continue;
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
 }
 
 /**
@@ -44,7 +47,7 @@ export function buildTaskTableRows(
       subject: task.subject,
       status,
       owner: task.owner ?? '',
-      blockedByCount: task.blockedBy?.filter(Boolean).length ?? 0,
+      blockedByCount: task.blockedBy?.filter((id) => id.trim().length > 0).length ?? 0,
       blocked: isTeamTaskBlockedByUnfinishedDependency(task, taskStateById),
       needsFix: isTeamTaskNeedsFixActionable(task),
       updatedAt: timestamp(task),

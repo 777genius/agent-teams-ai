@@ -2425,7 +2425,8 @@
       "gridView": "Affichage de la grille",
       "columnsView": "Vue des colonnes",
       "tableView": "Vue en tableau",
-      "configureColumns": "Choisir les colonnes"
+      "configureColumns": "Choisir les colonnes",
+      "resizeColumn": "Redimensionner {{column}}"
     },
     "trash": {
       "title": "Corbeille",

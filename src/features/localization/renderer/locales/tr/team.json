@@ -2425,7 +2425,8 @@
       "gridView": "Izgara görünümü",
       "columnsView": "Sütun görünümü",
       "tableView": "Tablo görünümü",
-      "configureColumns": "Sütunları seç"
+      "configureColumns": "Sütunları seç",
+      "resizeColumn": "{{column}} sütununu yeniden boyutlandır"
     },
     "trash": {
       "title": "Çöp",

@@ -2425,7 +2425,8 @@
       "gridView": "Visão da grade",
       "columnsView": "Vista das colunas",
       "tableView": "Vista de tabela",
-      "configureColumns": "Escolher colunas"
+      "configureColumns": "Escolher colunas",
+      "resizeColumn": "Redimensionar {{column}}"
     },
     "trash": {
       "title": "Lixo",

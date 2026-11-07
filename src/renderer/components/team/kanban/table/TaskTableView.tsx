@@ -4,9 +4,10 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
+import { useRelativeTimeClock } from '@renderer/hooks/useRelativeTimeClock';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTable } from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp, Settings2 } from 'lucide-react';
 
 import { createTaskTableColumns, taskTableFeatures } from './TaskTableColumns';
@@ -57,6 +58,7 @@ export const TaskTableView = memo(function TaskTableView({
     [tasks, allTasks, kanbanState, filter.columns]
   );
   const memberColors = useMemo(() => buildMemberColorMap(members), [members]);
+  const relativeTimeNowMs = useRelativeTimeClock(isActive && rows.some((row) => row.updatedAt > 0));
   const labels = useMemo(() => ({
     task: t('detail.actions.task'),
     status: t('tasks.list.columns.status'),
@@ -75,8 +77,8 @@ export const TaskTableView = memo(function TaskTableView({
     },
   }), [t]);
   const columns = useMemo(
-    () => createTaskTableColumns(labels, teamName, resolvedLanguage, memberColors, onTaskClick),
-    [labels, teamName, resolvedLanguage, memberColors, onTaskClick]
+    () => createTaskTableColumns(labels, teamName, resolvedLanguage, relativeTimeNowMs, memberColors, onTaskClick),
+    [labels, teamName, resolvedLanguage, relativeTimeNowMs, memberColors, onTaskClick]
   );
 
   const table = useTable({
@@ -89,6 +91,9 @@ export const TaskTableView = memo(function TaskTableView({
     onColumnVisibilityChange: setVisibility,
     onColumnSizingChange: setSizing,
     columnResizeMode: 'onEnd',
+    columnResizeDirection: ['ar', 'fa', 'ur'].includes(resolvedLanguage?.split('-')[0] ?? '')
+      ? 'rtl'
+      : 'ltr',
   });
 
   const tableRows = table.getRowModel().rows;
@@ -187,13 +192,31 @@ export const TaskTableView = memo(function TaskTableView({
                         {direction === 'asc' ? <ArrowUp size={11} /> : direction === 'desc' ? <ArrowDown size={11} /> : null}
                       </button>
                       {header.column.getCanResize() ? (
-                        <span
+                        <button
+                          type="button"
                           role="separator"
-                          aria-label={t('kanban.board.configureColumns')}
+                          tabIndex={0}
+                          aria-label={t('kanban.board.resizeColumn', {
+                            column: String(header.column.columnDef.header ?? header.column.id),
+                          })}
                           aria-orientation="vertical"
-                          className="absolute end-0 top-0 h-full w-1.5 cursor-col-resize touch-none hover:bg-blue-500/50"
+                          aria-valuemin={header.column.columnDef.minSize ?? 20}
+                          aria-valuemax={header.column.columnDef.maxSize ?? 720}
+                          aria-valuenow={header.column.getSize()}
+                          className="absolute end-0 top-0 h-full w-1.5 cursor-col-resize touch-none hover:bg-blue-500/50 focus:bg-blue-500/70"
                           onMouseDown={header.getResizeHandler()}
                           onTouchStart={header.getResizeHandler()}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                            event.preventDefault();
+                            const step = event.shiftKey ? 20 : 10;
+                            const direction = event.key === 'ArrowRight' ? 1 : -1;
+                            const offset = direction * (table.options.columnResizeDirection === 'rtl' ? -step : step);
+                            const min = header.column.columnDef.minSize ?? 20;
+                            const max = header.column.columnDef.maxSize ?? 720;
+                            const width = Math.min(max, Math.max(min, header.column.getSize() + offset));
+                            table.setColumnSizing((prev) => ({ ...prev, [header.column.id]: width }));
+                          }}
                         />
                       ) : null}
                     </th>

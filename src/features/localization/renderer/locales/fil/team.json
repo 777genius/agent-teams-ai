@@ -2425,7 +2425,8 @@
       "gridView": "Grid view",
       "columnsView": "Columns view",
       "tableView": "View ng talahanayan",
-      "configureColumns": "Piliin ang mga column"
+      "configureColumns": "Piliin ang mga column",
+      "resizeColumn": "Baguhin ang lapad ng {{column}}"
     },
     "trash": {
       "title": "Trash",

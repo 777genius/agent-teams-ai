@@ -2455,7 +2455,8 @@
       "gridView": "Перегляд сіткою",
       "columnsView": "Перегляд стовпцями",
       "tableView": "Таблиця",
-      "configureColumns": "Налаштувати стовпці"
+      "configureColumns": "Налаштувати стовпці",
+      "resizeColumn": "Змінити ширину: {{column}}"
     },
     "trash": {
       "title": "Кошик",

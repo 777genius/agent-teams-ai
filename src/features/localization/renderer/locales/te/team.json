@@ -2425,7 +2425,8 @@
       "gridView": "గ్రిడ్ వీక్షణ",
       "columnsView": "కాలమ్‌ల వీక్షణ",
       "tableView": "పట్టిక వీక్షణ",
-      "configureColumns": "నిలువు వరుసలను ఎంచుకోండి"
+      "configureColumns": "నిలువు వరుసలను ఎంచుకోండి",
+      "resizeColumn": "{{column}} వెడల్పును మార్చండి"
     },
     "trash": {
       "title": "ట్రాష్",

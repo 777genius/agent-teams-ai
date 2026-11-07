@@ -24,9 +24,6 @@ import {
 
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
-import { KanbanViewModeSwitch } from './KanbanViewModeSwitch';
-import { TaskTableView } from './table/TaskTableView';
-import type { KanbanViewMode } from './KanbanViewModeSwitch';
 import {
   KanbanGridLayout,
   SKELETON_HIDE_DELAY_MS,
@@ -35,10 +32,13 @@ import {
 import { KanbanSortPopover } from './KanbanSortPopover';
 import { estimateKanbanAttachmentPreviewHeight } from './kanbanTaskAttachmentLayout';
 import { KanbanTaskCard } from './KanbanTaskCard';
+import { KanbanViewModeSwitch } from './KanbanViewModeSwitch';
+import { TaskTableView } from './table/TaskTableView';
 import { getTaskColumn } from './teamTaskProjection';
 
 import type { KanbanFilterState } from './KanbanFilterPopover';
 import type { KanbanSortField, KanbanSortState } from './KanbanSortPopover';
+import type { KanbanViewMode } from './KanbanViewModeSwitch';
 import type { TaskGroupOption } from './teamTaskProjection';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';

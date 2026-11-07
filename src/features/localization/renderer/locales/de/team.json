@@ -2425,7 +2425,8 @@
       "gridView": "Blick auf das Netz",
       "columnsView": "Ansicht der Kolumnen",
       "tableView": "Tabellenansicht",
-      "configureColumns": "Spalten auswählen"
+      "configureColumns": "Spalten auswählen",
+      "resizeColumn": "Breite ändern: {{column}}"
     },
     "trash": {
       "title": "Müll",

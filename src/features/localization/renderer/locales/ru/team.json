@@ -2563,7 +2563,8 @@
       "gridView": "Вид сеткой",
       "columnsView": "Вид колонками",
       "tableView": "Таблица",
-      "configureColumns": "Настроить столбцы"
+      "configureColumns": "Настроить столбцы",
+      "resizeColumn": "Изменить ширину: {{column}}"
     },
     "trash": {
       "title": "Корзина",

@@ -2425,7 +2425,8 @@
       "gridView": "نمای شبکه‌ای",
       "columnsView": "نمای ستونی",
       "tableView": "نمای جدول",
-      "configureColumns": "انتخاب ستون‌ها"
+      "configureColumns": "انتخاب ستون‌ها",
+      "resizeColumn": "تغییر عرض {{column}}"
     },
     "trash": {
       "title": "سطل زباله",

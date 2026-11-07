@@ -2425,7 +2425,8 @@
       "gridView": "رؤية غريد",
       "columnsView": "رؤية كولومز",
       "tableView": "عرض الجدول",
-      "configureColumns": "اختيار الأعمدة"
+      "configureColumns": "اختيار الأعمدة",
+      "resizeColumn": "تغيير عرض {{column}}"
     },
     "trash": {
       "title": "Trash",

@@ -2425,7 +2425,8 @@
       "gridView": "গ্রিড/ ছক প্রদর্শক",
       "columnsView": "কলাম ভিউ",
       "tableView": "সারণি দৃশ্য",
-      "configureColumns": "কলাম নির্বাচন করুন"
+      "configureColumns": "কলাম নির্বাচন করুন",
+      "resizeColumn": "{{column}} কলামের প্রস্থ পরিবর্তন করুন"
     },
     "trash": {
       "title": "আবর্জনা",

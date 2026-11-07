@@ -1,6 +1,14 @@
 name: Kanban Table Desktop E2E
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/renderer/components/team/kanban/**'
+      - 'src/renderer/components/team/TeamDetailView.tsx'
+      - 'scripts/e2e/task-detail-tabs-desktop.ts'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/kanban-table-desktop-e2e.yml'
   pull_request:
     types: [opened, synchronize, ready_for_review]
     paths:
@@ -13,9 +21,10 @@ on:
 permissions:
   contents: read
 
+# Canonical PR supersession, aligned with test/workflows/runSupersession.mts.
 concurrency:
-  group: kanban-table-desktop-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
   table-desktop:
@@ -25,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with:
@@ -45,7 +54,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: kanban-table-desktop-${{ github.event.pull_request.head.sha }}
+          name: kanban-table-desktop-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             /srv/workers/task-tabs-e2e-scratch/task-tabs-TEST-*/kanban-table-*.png
             /srv/workers/task-tabs-e2e-scratch/task-tabs-TEST-*/electron-watcher-*.json

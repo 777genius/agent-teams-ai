@@ -1,3 +1,7 @@
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { formatExactTaskDateTime, formatTaskUpdatedRelativeTime } from '@renderer/components/sidebar/sidebarTaskTime';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   columnResizingFeature,
   columnSizingFeature,
@@ -7,15 +11,11 @@ import {
   sortFns,
   tableFeatures,
 } from '@tanstack/react-table';
-import { MemberBadge } from '@renderer/components/team/MemberBadge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { formatDistanceToNowStrict } from 'date-fns';
 import { MessageSquare } from 'lucide-react';
 
 import type { TaskTableRow } from './taskTableProjection';
-import type { ColumnDef } from '@tanstack/react-table';
 import type { KanbanColumnId, TeamTask } from '@shared/types';
+import type { ColumnDef } from '@tanstack/react-table';
 
 export const taskTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -50,6 +50,7 @@ export function createTaskTableColumns(
   labels: TaskTableLabels,
   teamName: string,
   language: string | undefined,
+  nowMs: number,
   memberColors: ReadonlyMap<string, string>,
   onTaskClick?: (task: TeamTask) => void
 ): Array<ColumnDef<typeof taskTableFeatures, TaskTableRow>> {
@@ -173,10 +174,10 @@ export function createTaskTableColumns(
                 tabIndex={0}
                 className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]"
               >
-                {formatDistanceToNowStrict(date, { addSuffix: true })}
+                {formatTaskUpdatedRelativeTime(date, language, nowMs)}
               </time>
             </TooltipTrigger>
-            <TooltipContent side="top">{date.toLocaleString(language)}</TooltipContent>
+            <TooltipContent side="top">{formatExactTaskDateTime(date, language)}</TooltipContent>
           </Tooltip>
         );
       },

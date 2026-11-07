@@ -4416,6 +4416,7 @@ export default interface Resources {
         "gridView": "Grid view",
         "hiddenCount": "{{count}} hidden",
         "noTasks": "No tasks",
+        "resizeColumn": "Resize {{column}}",
         "showMore": "Show {{count}} more",
         "tableView": "Table view",
         "trash": "Trash"

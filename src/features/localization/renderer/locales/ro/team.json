@@ -2425,7 +2425,8 @@
       "gridView": "Vizualizare grilă",
       "columnsView": "Vizualizare coloane",
       "tableView": "Vizualizare tabel",
-      "configureColumns": "Alege coloanele"
+      "configureColumns": "Alege coloanele",
+      "resizeColumn": "Redimensionează {{column}}"
     },
     "trash": {
       "title": "Coș de gunoi",

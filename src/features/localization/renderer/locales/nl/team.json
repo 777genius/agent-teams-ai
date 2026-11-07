@@ -2425,7 +2425,8 @@
       "gridView": "Rasterweergave",
       "columnsView": "Kolomweergave",
       "tableView": "Tabelweergave",
-      "configureColumns": "Kolommen kiezen"
+      "configureColumns": "Kolommen kiezen",
+      "resizeColumn": "Breedte aanpassen: {{column}}"
     },
     "trash": {
       "title": "Prullenbak",

@@ -2425,7 +2425,8 @@
       "gridView": "Vista a la parrilla",
       "columnsView": "Vista de las columnas",
       "tableView": "Vista de tabla",
-      "configureColumns": "Elegir columnas"
+      "configureColumns": "Elegir columnas",
+      "resizeColumn": "Cambiar ancho: {{column}}"
     },
     "trash": {
       "title": "Trash",

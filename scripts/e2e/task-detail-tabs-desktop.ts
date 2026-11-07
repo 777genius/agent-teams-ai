@@ -237,12 +237,22 @@ try {
     }
   }, 'real IPC startup ready');
   // Real TeamDetailView -> Kanban -> Table: UI, IPC watcher, and legacy modes.
-  await cdp.evaluate('(async()=>{const s=window.__agentTeamsDevStore.getState();s.openTeamTab(' +
-    JSON.stringify(tableTeam.teamName) + ',' + JSON.stringify(tableTeam.project) +
-    ');await s.selectTeam(' + JSON.stringify(tableTeam.teamName) + ');})()');
+  const initialTeamNavigation = await cdp.evaluate(
+    '(async()=>{const s=window.__agentTeamsDevStore.getState();await s.fetchTeams();await s.selectTeam(' +
+    JSON.stringify(tableTeam.teamName) +
+    ',{skipProjectAutoSelect:true});s.openTeamTab(' + JSON.stringify(tableTeam.teamName) +
+    ');const current=window.__agentTeamsDevStore.getState();const pane=current.paneLayout.panes.find(p=>p.id===current.paneLayout.focusedPaneId);return {selectedTeamName:current.selectedTeamName,error:current.selectedTeamError,activeTab:pane?.tabs.find(t=>t.id===pane.activeTabId)?.type,activeTeam:pane?.tabs.find(t=>t.id===pane.activeTabId)?.teamName};})()'
+  );
+  diagnostics.push({ kind: 'table-navigation', result: initialTeamNavigation });
+  assert.deepEqual(
+    { type: (initialTeamNavigation as { activeTab?: string }).activeTab, team: (initialTeamNavigation as { activeTeam?: string }).activeTeam },
+    { type: 'team', team: tableTeam.teamName },
+    'Actual team tab must be active before testing table'
+  );
   await until(
     () => cdp!.evaluate("!!document.querySelector('[data-testid=\"kanban-view-table\"]')"),
-    'real team Kanban view switch'
+    'real team Kanban view switch',
+    45000
   );
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]').click()");
   await until(() => cdp!.evaluate(
