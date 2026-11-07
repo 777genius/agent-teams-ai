@@ -1,5 +1,7 @@
-import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { useEffect, useRef } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import {
   Select,
   SelectContent,
@@ -23,6 +25,11 @@ export const TeamTemplatePicker = ({
   confirmBeforeApply?: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   return (
     <Select
       value=""
@@ -41,7 +48,8 @@ export const TeamTemplatePicker = ({
             }),
             confirmLabel: t('templates.confirmAction', { defaultValue: 'Apply template' }),
           });
-          if (accepted) onApply(applyTeamTemplate(template));
+          // The user may have closed/replaced this editor while the modal was open.
+          if (accepted && mounted.current) onApply(applyTeamTemplate(template));
         })();
       }}
     >
