@@ -214,11 +214,13 @@ test('cold native log proof compares retained event content, not only counts and
   });
   const sync = seq => ({ type: 'log.synced', aggregateID: sessionId, seq });
   const read = (events, watermark) => {
-    const fingerprints = [];
+    const fingerprints = [], positions = [];
     const body = events.map(frame).join('') + frame(sync(watermark));
-    const cursor = parseOwnedDurableLog(body, sessionId, directory,
-      value => fingerprints.push(createHash('sha256').update(JSON.stringify(value)).digest('hex')));
-    return { ...cursor, fingerprints };
+    const cursor = parseOwnedDurableLog(body, sessionId, directory, value => {
+      fingerprints.push(createHash('sha256').update(JSON.stringify(value)).digest('hex'));
+      positions.push(value.durable.seq);
+    });
+    return { ...cursor, fingerprints, positions };
   };
   const original = read([event(0, 'evt-0', 'TEST-A')], 2);
   const unchanged = read([event(0, 'evt-0', 'TEST-A')], 2);
@@ -226,6 +228,9 @@ test('cold native log proof compares retained event content, not only counts and
   const replacedId = read([event(0, 'evt-foreign', 'TEST-A')], 2);
   const alteredContent = read([event(0, 'evt-0', 'TEST-CHANGED')], 2);
   const regressed = read([event(0, 'evt-0', 'TEST-A')], 1);
+  const backfilled = read([event(0, 'evt-0', 'TEST-A'), event(1, 'evt-1', 'TEST-LATE')], 3);
+  const empty = read([], 0);
+  const lateCreated = read([event(0, 'evt-0', 'TEST-A')], 0);
   assert.equal(retainsOwnedDurablePrefix(original, unchanged), true);
   assert.equal(retainsOwnedDurablePrefix(original, appended), true);
   assert.equal(retainsOwnedDurablePrefix(original, replacedId), false,
@@ -233,5 +238,10 @@ test('cold native log proof compares retained event content, not only counts and
   assert.equal(retainsOwnedDurablePrefix(original, alteredContent), false,
     'same event ID with changed payload must not certify the old durable prefix');
   assert.equal(retainsOwnedDurablePrefix(original, regressed), false);
+  assert.equal(retainsOwnedDurablePrefix(original, backfilled), false,
+    'new events from at/before the previous sync watermark are not an append');
+  assert.equal(retainsOwnedDurablePrefix(empty, lateCreated), false,
+    'a newly visible event at an already synced position is not durable append proof');
+  assert.equal(retainsOwnedDurablePrefix(original, { ...unchanged, positions: undefined }), false);
   assert.equal(retainsOwnedDurablePrefix(original, { watermark: 2, eventCount: 1 }), false);
 });

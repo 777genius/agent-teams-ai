@@ -116,10 +116,12 @@ async function readOwnedDurableLog(sessionId) {
   });
   if(response.status!==200)throw Error('native_durable_log_read_unconfirmed');
   const body=await readBoundedNativeBody(response,'native_durable_log_read_unconfirmed');
-  const fingerprints=[];
-  const cursor=parseOwnedDurableLog(body,sessionId,workspace,
-    event=>fingerprints.push(digest(JSON.stringify(event))));
-  return {...cursor,fingerprints};
+  const fingerprints=[],positions=[];
+  const cursor=parseOwnedDurableLog(body,sessionId,workspace,event=>{
+    fingerprints.push(digest(JSON.stringify(event)));
+    positions.push(event.durable.seq);
+  });
+  return {...cursor,fingerprints,positions};
 }
 try {
   if (process.platform !== 'linux' || process.arch !== 'x64' ||

@@ -50,15 +50,26 @@ export function parseOwnedDurableLog(body, sessionId, directory, onEvent) {
 }
 
 // Native cold restart must retain the SAME previously observed events, not
-// merely an equal count or watermark. New events may be appended afterwards.
+// merely an equal count or watermark. New events must have durable positions
+// AFTER the first read's sync watermark, never backfill an older position.
 export function retainsOwnedDurablePrefix(fresh, recovered) {
   return Number.isSafeInteger(fresh?.watermark) && fresh.watermark >= 0 &&
     Number.isSafeInteger(recovered?.watermark) && recovered.watermark >= fresh.watermark &&
     Number.isSafeInteger(fresh?.eventCount) && fresh.eventCount >= 0 &&
     Number.isSafeInteger(recovered?.eventCount) && recovered.eventCount >= fresh.eventCount &&
     Array.isArray(fresh?.fingerprints) && Array.isArray(recovered?.fingerprints) &&
+    Array.isArray(fresh?.positions) && Array.isArray(recovered?.positions) &&
     fresh.fingerprints.length === fresh.eventCount &&
     recovered.fingerprints.length === recovered.eventCount &&
+    fresh.positions.length === fresh.eventCount &&
+    recovered.positions.length === recovered.eventCount &&
+    fresh.positions.every((seq, i) =>
+      safePosition(seq) && seq <= fresh.watermark &&
+      (i === 0 || seq > fresh.positions[i - 1])) &&
+    recovered.positions.every((seq, i) =>
+      safePosition(seq) && seq <= recovered.watermark &&
+      (i === 0 || seq > recovered.positions[i - 1]) &&
+      (i < fresh.eventCount ? seq === fresh.positions[i] : seq > fresh.watermark)) &&
     fresh.fingerprints.every((fingerprint, i) =>
       typeof fingerprint === 'string' && fingerprint === recovered.fingerprints[i]);
 }
