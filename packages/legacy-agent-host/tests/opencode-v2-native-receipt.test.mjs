@@ -65,6 +65,8 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
   assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture()), true);
   const mutations = [
     r => { r.steps.pop(); },
+    r => { r.steps[r.steps.indexOf('real_native_later_allow_preflight_hold')] = 'real_native_later_allow_override_refused_by_Host'; },
+    r => { r.steps[r.steps.indexOf('real_native_later_allow_resolver_observed_preflight_hold')] = 'real_native_later_allow_resolver_observed_and_Host_refused'; },
     r => { r.steps.splice(r.steps.indexOf('real_native_ordered_ask_readback_without_tool_execution'), 1); },
     r => { r.steps.splice(r.steps.indexOf('native_TEST_session_workspace_and_permissions_attested'), 1); },
     r => { r.steps.splice(r.steps.indexOf('real_native_fresh_session_durable_log_cursor_read_only'), 1); },

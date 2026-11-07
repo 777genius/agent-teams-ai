@@ -194,8 +194,8 @@ try {
     throw Error('native_TEST_session_workspace_or_permission_mismatch');
   receipt.steps.push('native_TEST_session_workspace_and_permissions_attested');
   const outsideResource=join(root,'temp','TEST-owned-outside-workspace');
-  // Real native ordering negative: a later allow must defeat an earlier deny
-  // for this disposable second TEST session, and the Host must refuse it.
+  // Real native ordering negative: a later allow defeats an earlier deny
+  // for this disposable second TEST session; source preflight must HOLD.
   // Never execute a model turn or create out-of-workspace files.
   const unsafeRules=[
     {action:'external_directory',resource:'*',effect:'deny'},
@@ -209,16 +209,15 @@ try {
      unsafeId===nativeSessionId)throw Error('native_second_TEST_session_missing');
   const unsafePath='/api/session/'+encodeURIComponent(unsafeId);
   const unsafeRead=await native(unsafePath);
-  if(unsafeRead.status!==200||unsafeRead.data?.data?.id!==unsafeId||
-     JSON.stringify(unsafeRead.data.data.permissions)!==JSON.stringify(unsafeRules))
+  if(!isOwnedNativeSessionSnapshot(unsafeRead,unsafeId,workspace,unsafeRules))
     throw Error('native_ordered_permissions_readback_mismatch');
   const unsafePolicy=preflightOpenCodeV2EffectiveExternalDirectory(
     unsafeRead.data.data.permissions,'deny');
   if(unsafePolicy.kind!=='hold'||unsafePolicy.reason!=='external-directory')
     throw Error('Host_accepted_native_later_allow_override');
-  receipt.steps.push('real_native_later_allow_override_refused_by_Host');
+  receipt.steps.push('real_native_later_allow_preflight_hold');
   // Probe the actual V2 native Permission.Service, not just persisted order.
-  // This disposable session is unsafe, but Host already refused its policy.
+  // This disposable session is unsafe; source preflight classified it HOLD.
   const allowDecision=await native(unsafePath+'/permission','POST',
     {action:'external_directory',resources:[outsideResource]});
   if(allowDecision.status!==200||allowDecision.data?.data?.effect!=='allow')
@@ -227,7 +226,7 @@ try {
   if(allowPending.status!==200||!Array.isArray(allowPending.data?.data)||
      allowPending.data.data.length!==0)
     throw Error('native_allow_created_unexpected_permission_request');
-  receipt.steps.push('real_native_later_allow_resolver_observed_and_Host_refused');
+  receipt.steps.push('real_native_later_allow_resolver_observed_preflight_hold');
   const unsafeDelete=await native(unsafePath,'DELETE');
   if(unsafeDelete.status!==204)throw Error('native_second_TEST_session_delete_failed');
   // Native positive readback for V2's ordered ASK shape, isolated from the
@@ -246,8 +245,7 @@ try {
     throw Error('native_ask_TEST_session_missing');
   const askPath='/api/session/'+encodeURIComponent(askId);
   const askRead=await native(askPath);
-  if(askRead.status!==200||askRead.data?.data?.id!==askId||
-     JSON.stringify(askRead.data.data.permissions)!==JSON.stringify(askRules))
+  if(!isOwnedNativeSessionSnapshot(askRead,askId,workspace,askRules))
     throw Error('native_ask_permission_order_readback_mismatch');
   if(preflightOpenCodeV2EffectiveExternalDirectory(
     askRead.data.data.permissions,'ask').kind!=='policy-candidate')
