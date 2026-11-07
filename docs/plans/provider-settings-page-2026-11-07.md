@@ -97,3 +97,27 @@ Four review rounds before implementation: (1) scope and reuse / unnecessary laye
 ## Size/risk envelope
 
 Plan-only commit first. Expected renderer implementation approximately 500–900 changed/new LOC plus 200–400 LOC tests and localized keys; mechanical relocation may inflate diff. If implementation requires moving authentication/state machine, expanding provider runtime, or changing tab lifecycle, **stop scope expansion and revise plan**. Initial regression probability estimate: low-to-moderate only with focused E2E; not verified until tested.
+
+
+## Four adversarial design-review passes (2026-11-07)
+
+These four passes are **source-grounded critical analyses**, not a claim of four independent agent executions. External GitHub review bots are tracked separately.
+
+### Pass 1 — scope / architectural reuse
+Finding: adding `Tab.type='providers'` or moving auth commands would unnecessarily multiply global tab persistence paths. **Fix:** use `openSettingsTab('providers')` and present the existing `CliStatusBanner` on the new Settings section. Do not migrate authorization UI into another form state machine. Existing `Advanced` provider entry remains for now (mounted only while its section is visible). Reuse existing translated labels: `settings.runtimeProvider.tabs.providers`, `settings.providerRuntime.description`, `dashboard.cliStatus.actions.manageProviders`.
+
+### Pass 2 — concurrency / state lifecycle
+Finding: `SettingsView` currently conditionally mounts sections, so switching to General would **unmount** the new provider manager even though the Settings tab itself stays mounted. Unmounting `useRuntimeProviderManagement` can cancel OAuth. **Fix:** once Providers has been visited, retain its subtree mounted but hide it with CSS; pass `isActive && activeSection==='providers'` to **passive** parts of `CliStatusBanner`. Closing the whole Settings tab still follows existing explicit close behavior; do not install global tab keep-alive. Codex login and credential writes must never be disabled merely because the section becomes hidden.
+
+### Pass 3 — count correctness / isolation
+Finding: the existing `formatRuntimeAuthSummary` adds curated quick-connect cards and may include inventory-only fallback; it is **not** an authoritative count of all live connections. OpenCode directory snapshots are keyed by project, can contain the first 100 entries only, and their `authoritative`/page fields must be honored. **Fix:** two labeled counts with no grand total or cross-family dedup: (a) connected main CLI providers (Anthropic, Codex, Gemini; omit OpenCode aggregate), and (b) connected OpenCode provider IDs **only when** the current-scope cached directory is authoritative and complete. Unknown when unavailable/partial. Use the cache's `useSyncExternalStore` hook; no dashboard calls to `loadProviderDirectory`/`loadModels`. Catalog evidence never grants launch authority.
+
+### Pass 4 — UX, verification and minimal risk
+Finding: adding a new section with fresh English text would require 29 translations; existing localized keys cover all essential labels. Detailed-provider UI is currently 2,835 lines with important install/error/terminal branches: moving those line-by-line is unnecessary risk. **Fix:** mount existing component unchanged where possible; introduce one summary view and one pure selector. Reuse current localized strings, do not invent a new settings route, protocol, event bus or poller. Add test for no new calls and for preserving a dialog across hidden section. Perf claims must be measured, not guessed. Existing CI/workflow constraints may prevent live Electron/paid OAuth; report CI status faithfully.
+
+### Review resolution and allowed sequence
+
+- All four **design** findings are resolved in this revised plan; external agent/bot approval is **not yet claimed**.
+- Commit smallest renderer change then push immediately; inspect exact PR diff and review comments; correct any concrete issues with immediate pushed commits.
+- Never loosen `hasEffectiveProviderLaunchAuthority` or consume a passive cached count as verification.
+- If `CliStatusBanner` reuse causes two simultaneously mounted polling surfaces, narrow the active mounting behavior instead of introducing a global scheduler.
