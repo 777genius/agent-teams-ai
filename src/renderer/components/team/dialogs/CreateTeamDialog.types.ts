@@ -42,6 +42,8 @@ export interface CreateTeamDialogProps {
   defaultProjectPath?: string | null;
   forceDefaultProjectSelection?: boolean;
   onClose: () => void;
+  /** Page Back can return to the originating organization tab; success uses onClose. */
+  onBack?: () => void;
   onCreate: (
     request: TeamCreateRequest,
     placement?: OrganizationPlacementSelection
