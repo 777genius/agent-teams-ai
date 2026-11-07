@@ -52,6 +52,9 @@ jobs:
           set -o pipefail
           pnpm exec vitest run --maxWorkers=1 \
             src/renderer/hooks/useCreateTeamDraft.test.tsx \
+            src/renderer/services/createTeamDraftStorage.test.ts \
+            test/renderer/hooks/useDraftPersistence.test.ts \
+            test/renderer/store/teamsCreationPage.test.ts \
             test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts \
             test/renderer/components/team/dialogs/ProjectPathSelectorDeleted.test.tsx \
             src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts \
