@@ -371,6 +371,48 @@ try {
   receipt.nativePermissionReadbacks=nativePermissionReads;
   receipt.steps.push('Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck');
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
+  // A separate live TEST session may own a real pending native permission.
+  // The selected Host has never accepted that session's input or interaction:
+  // an attempted cross-session grant must remain STALE before any native POST.
+  const foreignSession=await native('/api/session','POST',{
+    location:{directory:workspace},permissions:askRules,
+  });
+  const foreignId=foreignSession.data?.data?.id;
+  if(foreignSession.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(foreignId||'')||
+     [nativeSessionId,unsafeId,askId].includes(foreignId))
+    throw Error('native_foreign_TEST_session_missing');
+  const foreignPath='/api/session/'+encodeURIComponent(foreignId);
+  const foreignAsk=await native(foreignPath+'/permission','POST',
+    {action:'external_directory',resources:[outsideResource]});
+  const foreignPermissionId=foreignAsk.data?.data?.id;
+  if(foreignAsk.status!==200||foreignAsk.data?.data?.effect!=='ask'||
+     !/^per[A-Za-z0-9_-]+$/.test(foreignPermissionId||''))
+    throw Error('native_foreign_TEST_permission_missing');
+  const foreignHostReply=await opened.driver.respondToInteraction(
+    'TEST-foreign-input:'+foreignPermissionId,{kind:'permission',decision:'allow'});
+  if(foreignHostReply.ok!==false||foreignHostReply.code!=='stale'||
+     !provider.isReady()||initialPutCount!==1)
+    throw Error('Host_live_foreign_permission_was_not_fenced');
+  const foreignPending=await native(foreignPath+'/permission');
+  const originalPending=await native(sessionPath+'/permission');
+  if(foreignPending.status!==200||
+     !Array.isArray(foreignPending.data?.data)||
+     foreignPending.data.data.length!==1||
+     foreignPending.data.data[0]?.id!==foreignPermissionId||
+     foreignPending.data.data[0]?.sessionID!==foreignId||
+     originalPending.status!==200||
+     !Array.isArray(originalPending.data?.data)||
+     originalPending.data.data.length!==0)
+    throw Error('Host_cross_session_permission_grant_or_disclosure');
+  const foreignRejected=await native(
+    foreignPath+'/permission/'+encodeURIComponent(foreignPermissionId)+'/reply',
+    'POST',{decision:'reject'});
+  if(foreignRejected.status!==204||
+     (await native(foreignPath,'DELETE')).status!==204)
+    throw Error('native_foreign_TEST_permission_cleanup_unconfirmed');
+  receipt.crossSessionPermission={hostRefused:true,foreignPendingUnchanged:true,
+    owningSessionRejected:true,toolEnforcementProven:false};
+  receipt.steps.push('Host_live_foreign_native_permission_stale_no_grant');
   // Re-confirm the selected Host session's DENY with the real native resolver
   // after binary/PID/readiness re-attestation; never execute a model or tool.
   const denyDecision=await native(sessionPath+'/permission','POST',
