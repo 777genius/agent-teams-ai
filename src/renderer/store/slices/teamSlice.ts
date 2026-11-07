@@ -188,11 +188,11 @@ import {
   collectTeamScopedVisibleLoadingResets,
   teamProvisioningAttemptTracker,
 } from '../team/teamScopedStateCleanup';
+import { preserveReliableTaskBoardSnapshot } from '../team/teamSnapshotReadFallback';
 import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
-import { preserveReliableTaskBoardSnapshot } from '../team/teamSnapshotReadFallback';
 import {
   collectTaskChangeInvalidationState,
   preserveKnownTaskChangePresence,
