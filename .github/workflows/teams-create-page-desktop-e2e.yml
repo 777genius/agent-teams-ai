@@ -42,7 +42,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
-      TEAMS_CREATE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/teams-create-page-evidence
     steps:
       - uses: actions/checkout@v6
         with:
@@ -66,6 +65,8 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
         shell: bash
+        env:
+          TEAMS_CREATE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/teams-create-page-evidence
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
             xvfb-run -a node scripts/e2e/teams-create-page-desktop.mjs
