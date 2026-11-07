@@ -1,0 +1,68 @@
+# Temporary task verification; remove after preserving results. No model credentials.
+name: Teams creation baseline verification
+run-name: Teams create pre-change hook regression verification
+on:
+  push:
+    branches: [feat/teams-create-screen-plan]
+    paths:
+      - .github/workflows/teams-create-baseline.yml
+      - src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx
+permissions:
+  contents: read
+concurrency:
+  group: teams-create-baseline-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == '777genius/agent-teams-ai' && github.ref == 'refs/heads/feat/teams-create-screen-plan'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 20
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - name: Checkout exact task head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Setup pinned project pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup pinned project Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Run creation, launch and gateway lifecycle regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/teams-create-evidence"
+          printf 'source_sha=%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/teams-create-evidence/provenance.txt"
+          pnpm exec vitest run --maxWorkers=1 \
+            src/renderer/hooks/useCreateTeamDraft.test.tsx \
+            test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts \
+            test/renderer/components/team/dialogs/ProjectPathSelectorDeleted.test.tsx \
+            src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts \
+            src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.test.tsx \
+            src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx \
+            src/features/gateway-provider/__tests__/GatewayDraftRecovery.test.ts \
+            test/renderer/store/teamSlice.test.ts \
+            --reporter=default --reporter=json \
+            --outputFile.json="$RUNNER_TEMP/teams-create-evidence/tests.json" \
+            2>&1 | tee "$RUNNER_TEMP/teams-create-evidence/tests.log" | tail -45
+      - name: Check test formatting and lint
+        if: ${{ !cancelled() }}
+        run: |
+          pnpm exec prettier --check src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx
+          pnpm lint:fast:files -- src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx
+      - name: Preserve scoped test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: teams-create-prechange-${{ github.sha }}
+          path: ${{ runner.temp }}/teams-create-evidence/
+          retention-days: 7
+          if-no-files-found: warn
