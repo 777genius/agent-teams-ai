@@ -2124,7 +2124,6 @@ export const CliStatusBanner = ({
           <Suspense fallback={null}>
             <ProviderRuntimeSettingsDialog
               open={manageDialogOpen}
-              visible={isDashboardActive}
               onOpenChange={handleManageDialogOpenChange}
               providers={visibleCliProviders}
               projectPath={selectedProjectPath}

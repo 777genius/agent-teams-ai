@@ -100,7 +100,6 @@ type PendingConnectionAction =
 
 interface Props {
   readonly open: boolean;
-  readonly visible?: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly providers: CliProviderStatus[];
   readonly initialProviderId: CliProviderId;
@@ -675,7 +674,6 @@ const CodexRateLimitWindowCard = ({
 
 export const ProviderRuntimeSettingsDialog = ({
   open,
-  visible = true,
   onOpenChange,
   providers,
   initialProviderId,
@@ -1740,15 +1738,13 @@ export const ProviderRuntimeSettingsDialog = ({
 
   return (
     <Dialog
-      open={open && visible}
+      open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen && runtimeProviderOperationBlocking) return;
         onOpenChange(nextOpen);
       }}
     >
       <DialogContent
-        forceMount={open}
-        portalHidden={!visible}
         closeDisabled={runtimeProviderOperationBlocking}
         className="h-[90vh] w-[min(calc(100vw-2rem),980px)] max-w-[min(calc(100vw-2rem),980px)] grid-rows-[auto_minmax(0,1fr)]"
         onEscapeKeyDown={(event) => {

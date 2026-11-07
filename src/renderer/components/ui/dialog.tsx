@@ -30,26 +30,18 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   closeDisabled?: boolean;
   blocksAnnouncements?: boolean;
-  /** Keep content mounted but hide the portal while its owning tab is inactive. */
-  portalHidden?: boolean;
 };
 
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, closeDisabled = false, blocksAnnouncements = true, portalHidden = false, ...props }, ref) => {
+>(({ className, children, closeDisabled = false, blocksAnnouncements = true, ...props }, ref) => {
   const { t } = useAppTranslation('common');
 
   return (
     <DialogPortal forceMount={props.forceMount}>
-      {!portalHidden && <DialogOverlay />}
-      <div
-        aria-hidden={portalHidden || undefined}
-        className={cn(
-          'pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4',
-          portalHidden && 'hidden'
-        )}
-      >
+      <DialogOverlay />
+      <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="pointer-events-auto relative w-full max-w-full">
           <DialogPrimitive.Content
             ref={ref}
