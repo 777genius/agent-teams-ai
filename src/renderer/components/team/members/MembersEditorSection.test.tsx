@@ -544,6 +544,7 @@ describe('MembersEditorSection worktree master checkbox', () => {
       ],
     });
 
+    openSettingsMenu(host);
     act(() => {
       masterWorktreeCheckbox(host).click();
     });
@@ -651,6 +652,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
       softDeleteMembers: true,
     });
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -683,12 +685,14 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
     ];
     const { host, onChange, rerender } = renderMembersEditor({ members: originalMembers });
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
     const lockedMembers = onChange.mock.calls[0]?.[0] as MemberDraft[];
     rerender(lockedMembers);
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -706,6 +710,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
       members: [createMemberDraft({ id: 'alice', name: 'alice' })],
     });
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -721,6 +726,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
     expect(addedMember?.mcpPolicy).toEqual({ mode: 'appOnly' });
 
     rerender(withNewMember);
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -746,6 +752,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
     ];
     const { host, onChange, rerender } = renderMembersEditor({ members: originalMembers });
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -758,6 +765,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
     const withoutBob = onChange.mock.calls[1]?.[0] as MemberDraft[];
     rerender(withoutBob);
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -772,6 +780,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
       members: [createMemberDraft({ id: 'alice', name: 'alice' })],
     });
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -831,6 +840,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
       softDeleteMembers: true,
     });
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
@@ -846,6 +856,7 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
     });
     rerender(restoredDuringLock);
 
+    openSettingsMenu(host);
     act(() => {
       masterAgentTeamsMcpCheckbox(host).click();
     });
