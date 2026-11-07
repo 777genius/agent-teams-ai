@@ -1018,6 +1018,10 @@ describe('LaunchTeamDialog', () => {
           await flush();
         });
         await flushCustomFolderProbe();
+        // Billing and launch semantics depend on the actual provider and live-team state.
+        // Never show a stale separate Agent SDK credit warning or claim every run is claude -p.
+        expect(host.textContent).not.toContain('Starting June 15, 2026');
+        expect(host.textContent).not.toContain('claude -p');
         const submit = Array.from(host.querySelectorAll('button')).find(
           (button) => button.textContent?.trim() === 'Save Changes'
         )!;
@@ -4655,12 +4659,13 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).toContain('fast:on');
     // Only legacy one-shot schedules have an effective CLI warm-up option.
     expect(host.textContent).toContain('Warm-up time');
-    expect(host.textContent).toContain('monthly Agent SDK credit');
+    expect(host.textContent).not.toContain('monthly Agent SDK credit');
+    expect(host.textContent).not.toContain('claude -p');
     expect(
       host.querySelector(
         'a[href="https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan"]'
       )
-    ).toBeTruthy();
+    ).toBeNull();
 
     await flushCustomFolderProbe();
 
