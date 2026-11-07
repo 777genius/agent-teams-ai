@@ -56,8 +56,8 @@ function fallbackCleanupExpired(): void {
   const now = Date.now();
   for (const [fullKey, stored] of fallbackStore.entries()) {
     if (
-      !isLegacyComposerDraftStorageKey(fullKey) &&
       !isRetainedCreateKey(fullKey.slice(DRAFT_KEY_PREFIX.length)) &&
+      !isLegacyComposerDraftStorageKey(fullKey) &&
       now - stored.timestamp > DRAFT_TTL_MS
     ) {
       fallbackStore.delete(fullKey);
@@ -120,8 +120,8 @@ async function cleanupExpired(): Promise<void> {
       (k): k is IDBValidKey & string =>
         typeof k === 'string' &&
         k.startsWith(DRAFT_KEY_PREFIX) &&
-        !isLegacyComposerDraftStorageKey(k) &&
-        !isRetainedCreateKey(k.slice(DRAFT_KEY_PREFIX.length))
+        !isRetainedCreateKey(k.slice(DRAFT_KEY_PREFIX.length)) &&
+        !isLegacyComposerDraftStorageKey(k)
     );
     const now = Date.now();
     for (const fullKey of draftKeys) {
