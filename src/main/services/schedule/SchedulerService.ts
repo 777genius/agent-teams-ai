@@ -237,7 +237,8 @@ export class SchedulerService {
     // Reschedule cron job if expression or timezone changed
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
 
-    if (cronChanged || patch.warmUpMinutes !== undefined) {
+    const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
+    if (reschedule) {
       this.removeCronJob(id);
       if (updated.status === 'active') {
         updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;

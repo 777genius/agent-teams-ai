@@ -37,8 +37,9 @@ export interface SmartScheduleRuntimePort {
 
 const READY_KINDS = new Set(['confirmed_bootstrap', 'runtime_process']);
 const ABSENT_KINDS = new Set(['not_found', 'registered_only']);
-const READY_CHECK_ATTEMPTS = 10;
-const READY_CHECK_DELAY_MS = 1000;
+// Slow local-model and Windows process boots may take longer than a few seconds.
+const READY_CHECK_ATTEMPTS = 45;
+const READY_CHECK_DELAY_MS = 2000;
 
 function readyMember(entry: TeamAgentRuntimeEntry | undefined): boolean {
   return Boolean(entry?.alive && entry.livenessKind && READY_KINDS.has(entry.livenessKind));
@@ -81,6 +82,12 @@ export class SmartScheduleDispatcher {
     if (!schedule.executionMode) {
       throw new Error('Legacy schedule must use the original one-shot executor');
     }
+    if (schedule.executionMode !== 'agent' && schedule.executionMode !== 'team') {
+      throw new Error('Unsupported schedule execution mode');
+    }
+    if (!schedule.launchConfig.prompt.trim()) {
+      return skipped('Scheduled instructions are empty; no action was submitted');
+    }
     const team = schedule.teamName;
     if (this.dispatchingTeams.has(team)) {
       return skipped('Another schedule is already dispatching this team');
@@ -114,7 +121,7 @@ export class SmartScheduleDispatcher {
         // Launch has its own per-team admission. The prompt is sent by that launch
         // path; sending another inbox message here would execute it twice.
         const result = await this.runtime.launchTeam(
-          teamLaunchRequest(saved, schedule.launchConfig.prompt)
+          teamLaunchRequest(saved, schedule.launchConfig.prompt.trim())
         );
         if (result.launchStatus === 'already_running' || result.alreadyRunning) {
           return this.dispatchToLiveTeam(schedule, runId, isCancelled);
@@ -205,7 +212,7 @@ export class SmartScheduleDispatcher {
         commandId: runId,
         idempotencyKey: `schedule:${runId}`,
       },
-      subject: (schedule.label?.trim() || prompt.slice(0, 100)).slice(0, 120),
+      subject: (schedule.label?.trim() || prompt.replace(/\s+/g, ' ').slice(0, 100)).slice(0, 120),
       prompt,
       owner: memberName,
       startImmediately: true,

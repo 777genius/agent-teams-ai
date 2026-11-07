@@ -90,6 +90,26 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     dispatch = new SmartScheduleDispatcher(port);
   });
 
+  it('rejects invalid persisted modes instead of silently launching a team', async () => {
+    const invalid = { ...makeSchedule('agent'), executionMode: 'unknown' as never };
+    await expect(dispatch.dispatch(invalid, 'bad-mode', active)).rejects.toThrow(
+      'Unsupported schedule execution mode'
+    );
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('skips blank scheduled instructions without a process or task', async () => {
+    const bad = {
+      ...makeSchedule('agent'),
+      launchConfig: { ...makeSchedule('agent').launchConfig, prompt: '   ' },
+    };
+    const result = await dispatch.dispatch(bad, 'blank', active);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
   it('does not reinterpret a pre-existing legacy schedule', async () => {
     const legacy = makeSchedule('agent');
     delete legacy.executionMode;

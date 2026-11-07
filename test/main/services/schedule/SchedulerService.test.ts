@@ -262,6 +262,21 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('disables legacy warm-up when a schedule switches to smart execution', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      warmUpMinutes: 15,
+      launchConfig: { cwd: '/tmp/project', prompt: 'review task' },
+    });
+    await service.updateSchedule(schedule.id, { executionMode: 'team' });
+    await vi.advanceTimersByTimeAsync(46 * 60_000);
+    expect(warmUpFn).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
   it('updateSchedule() persists changes and emits event', async () => {
     const service = createService();
     const schedule = await service.createSchedule({
