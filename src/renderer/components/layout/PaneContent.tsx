@@ -173,7 +173,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
           {tab.type === 'settings' && <SettingsView />}
-          {tab.type === 'teams' && <TeamListView tabId={tab.id} />}
+          {tab.type === 'teams' && <TeamListView tabId={tab.id} isActive={isActive} />}
           {tab.type === 'organizations' && (
             <TabUIProvider tabId={tab.id}>
               <OrganizationMapTab isActive={isActive} isPaneFocused={isPaneFocused} />
