@@ -47,6 +47,7 @@ interface ScheduleSectionProps {
 
 interface ScheduleRowProps {
   schedule: Schedule;
+  hostScheduleUnsupported: boolean;
   onEdit: (schedule: Schedule) => void;
   onDelete: (id: string) => void;
   onPause: (id: string) => void;
@@ -56,6 +57,7 @@ interface ScheduleRowProps {
 
 const ScheduleRow = ({
   schedule,
+  hostScheduleUnsupported,
   onEdit,
   onDelete,
   onPause,
@@ -125,7 +127,7 @@ const ScheduleRow = ({
                 size="sm"
                 className="size-7 p-0"
                 onClick={() => onTriggerNow(schedule.id)}
-                disabled={schedule.status !== 'active'}
+                disabled={schedule.status !== 'active' || hostScheduleUnsupported}
               >
                 <Zap className="size-3.5" />
               </Button>
@@ -142,7 +144,8 @@ const ScheduleRow = ({
             <PopoverContent align="end" className="w-40 p-1">
               <button
                 type="button"
-                className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
+                className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={hostScheduleUnsupported}
                 onClick={() => onEdit(schedule)}
               >
                 <Pencil className="mr-2 size-3.5" />
@@ -160,7 +163,8 @@ const ScheduleRow = ({
               ) : (
                 <button
                   type="button"
-                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
+                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={hostScheduleUnsupported}
                   onClick={() => onResume(schedule.id)}
                 >
                   <Play className="mr-2 size-3.5" />
@@ -330,6 +334,7 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
             <ScheduleRow
               key={schedule.id}
               schedule={schedule}
+              hostScheduleUnsupported={hostScheduleUnsupported}
               onEdit={handleEdit}
               onDelete={(id) => void handleDelete(id)}
               onPause={(id) => void pauseSchedule(id)}
