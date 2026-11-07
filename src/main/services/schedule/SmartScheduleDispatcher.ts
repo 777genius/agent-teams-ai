@@ -193,7 +193,8 @@ export class SmartScheduleDispatcher {
     const prompt = schedule.launchConfig.prompt.trim();
     const task = await this.runtime.createTask(team, {
       command: {
-        commandId: `schedule:${runId}`,
+        // The existing command ledger requires a UUID; runId is generated with randomUUID().
+        commandId: runId,
         idempotencyKey: `schedule:${runId}`,
       },
       subject: (schedule.label?.trim() || prompt.slice(0, 100)).slice(0, 120),
