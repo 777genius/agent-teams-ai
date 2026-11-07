@@ -404,7 +404,8 @@ describe('useCreateTeamDraft', () => {
     draft = null;
     root = createRoot(host);
     await render();
-    expect(draft?.members[0]?.workflowChips).toEqual([workflowChip]);
+    const restoredDraft = draft as ReturnType<typeof useCreateTeamDraft> | null;
+    expect(restoredDraft?.members[0]?.workflowChips).toEqual([workflowChip]);
     act(() => root.unmount());
   });
 
