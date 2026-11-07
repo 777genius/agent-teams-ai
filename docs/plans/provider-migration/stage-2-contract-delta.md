@@ -64,6 +64,20 @@ Exact reviewed sources:
   [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656038),
   and [Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656582).
   This **does not** qualify an interactive production Host or any M01–M19 new-core parity.
+  **Admitted-boundary follow-up (7 Nov 2026):** [Runtime Draft #258](https://github.com/agent-teams-ai/agent-runtime/pull/258)
+  at exact HEAD [`c70f90bd04fc`](https://github.com/agent-teams-ai/agent-runtime/commit/c70f90bd04fc2e14219ecb80463604812fa8e315)
+  rejects missing, accessor/proxy and replaced HTTP broker-session methods
+  before native ingress; it captures tested callables but **does not**
+  authenticate the owners or attach a production route, resolver, evidence
+  store or credentialed interactive Host. [Full CI #42372257164](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42372257164)
+  completed SUCCESS after **one targeted AE3 retry** (1,566 PASS / 0 FAIL /
+  13 SKIP on the retried job); [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42372257106)
+  and [trusted Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42372257410)
+  completed SUCCESS on that HEAD. The original AE3 25-ms deadline failure
+  remains unrooted; independent review is INCOMPLETE 0/2 and CodeQL has no
+  confirmed receipt. #258 stays Draft; the selected Docker/Linux Codex route
+  registry tuple is **not** production broker-session composition or Desktop
+  S2.1/M01–M19 parity.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
@@ -157,7 +171,11 @@ is not proven compatible with the PR's schema-v3 protobuf source-coverage gate.
 The stacked-base commit-identity check also fails until integration against
 the live default branch. The parent #85 is nonmergeable against current
 Orchestrator `main=a34587b3`; 19 files were touched by both branches since
-the parent's recorded base (not a claim of 19 textual conflict hunks).
+the parent's recorded base (not a claim of 19 textual conflict hunks). A
+fresh `main...#85` ancestry comparison on 7 Nov 2026 was **40 commits ahead /
+7 behind**, while GitHub still reported `mergeable=false`; neither a
+previous 0-behind comparison against the stale PR base nor a green stacked
+native PostgreSQL receipt qualifies the parent for merge.
 Independent final-head review and CodeQL are not confirmed.
 Preserve the single intended M11 Activity writer, reconcile the **whole**
 qualified Docs cohort and current-main source first, then prove complete
