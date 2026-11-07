@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, rename, mkdir, realpath } from 'node:fs/promises';
+import { readFile, writeFile, rename, mkdir, realpath, utimes } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join, dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -91,6 +91,21 @@ const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')
 tableKanbanState.tasks['3'] = { column: 'review', movedAt: tableStamp };
 tableKanbanState.tasks['4'] = { column: 'approved', movedAt: tableStamp };
 await writeFile(tableTeam.kanbanFile, JSON.stringify(tableKanbanState, null, 2) + '\n', { flag: 'w', mode: 0o600 });
+// Older, disposable files exercise full-snapshot reads and row virtualization
+// without pushing the four named task cases out of the initial viewport.
+const oldTaskStamp = new Date('2022-01-01T00:00:00Z');
+for (let start = 5; start < 1005; start += 40) {
+  await Promise.all(Array.from({ length: Math.min(40, 1005 - start) }, async (_, offset) => {
+    const id = String(start + offset);
+    const path = join(dirname(tableTaskPath), id + '.json');
+    const subject = Number(id) <= 54 ? 'TABLE_BATCH50_' + id : 'TABLE_VIRTUAL_' + id;
+    await writeFile(path, JSON.stringify({
+      id, subject, status: 'pending', owner: tableTeam.secondOwner,
+      createdAt: oldTaskStamp.toISOString(),
+    }) + '\n', { flag: 'wx', mode: 0o600 });
+    await utimes(path, oldTaskStamp, oldTaskStamp);
+  }));
+}
 }
 console.log(JSON.stringify({ fixture: root, testedSourceCommit: sha, fullTaskTabsE2E: false }));
 const transport = (await import(
@@ -352,7 +367,43 @@ try {
   await until(() => cdp!.evaluate(
     "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
   ), 'legacy columns mode works');
-  reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true });
+  // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelector(':scope > div > span')?.textContent?.includes('1004');})()"
+  ), 'full 1004-task snapshot is available in table');
+  const setTableSearch = async (value: string): Promise<void> => {
+    await cdp!.evaluate(`(()=>{
+      const input=document.querySelector('[data-testid="kanban-search-input"]');
+      if(!(input instanceof HTMLInputElement))throw new Error('Kanban search missing');
+      const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+      if(!setter)throw new Error('Native input setter missing');
+      setter.call(input,${JSON.stringify(value)});
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+  };
+  await setTableSearch('TABLE_BATCH50_');
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const visible=[...root?.querySelectorAll('[data-testid=\"team-task-table-row\"]')??[]];return root?.querySelector(':scope > div > span')?.textContent?.includes('50')&&visible.length>=2&&visible.length<40&&visible.every(row=>row.textContent?.includes('TABLE_BATCH50_'));})()"
+  ), 'shared search filters to 50 virtualized tasks');
+  await setTableSearch('TABLE_E2E_REVIEW');
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=document.querySelectorAll('[data-testid=\"team-task-table-row\"]');return rows.length===1&&rows[0].getAttribute('data-task-id')==='3';})()"
+  ), 'shared search narrows to exactly one task');
+  await setTableSearch('TABLE_MATCH_NOT_FOUND_99999');
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length===0&&root.querySelector(':scope > div > span')?.textContent?.includes('0');})()"
+  ), 'shared search shows real empty-state table');
+  await setTableSearch('');
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const scroller=root?.querySelector('[data-testid=\"team-task-table-scroller\"]');const count=root?.querySelector(':scope > div > span')?.textContent;const rendered=root?.querySelectorAll('[data-testid=\"team-task-table-row\"]').length??0;return !!count?.includes('1004')&&!!scroller&&scroller.scrollHeight>scroller.clientHeight&&rendered>0&&rendered<40;})()"
+  ), 'all 1004 tasks remain virtualized after clearing search');
+  await cdp.evaluate("(()=>{const scroller=document.querySelector('[data-testid=\"team-task-table-scroller\"]');if(!scroller)throw new Error('Table scroller missing');scroller.scrollTop=scroller.scrollHeight;})()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=[...document.querySelectorAll('[data-testid=\"team-task-table-row\"]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=500);})()"
+  ), 'virtualizer reaches distant rows without mounting the whole table');
+  await cdp.screenshot(join(root, 'kanban-table-1000-rows.png'));
+  reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true, taskDetail: true, searchCounts: [0, 1, 50], virtualizedTasks: 1004 });
   }
 
   if (!tableOnly) {
