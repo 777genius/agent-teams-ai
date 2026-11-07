@@ -1,4 +1,6 @@
 import { isLegacyComposerDraftStorageKey } from '@renderer/utils/composerDraftIdentity';
+
+import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
 import { del, get, keys, set } from 'idb-keyval';
 
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -16,10 +18,17 @@ const isRetainedCreateKey = (key: string): boolean => RETAINED_CREATE_KEYS.has(k
 // Creation text/chips are separate legacy keys. Serialize only those mutations
 // so a delayed edit cannot resurrect them after successful creation or discard.
 const retainedMutations = new Map<string, Promise<void>>();
-function orderedCreateMutation(key: string, operation: () => Promise<void>): Promise<void> {
+function orderedCreateMutation(
+  key: string,
+  operation: () => Promise<void>,
+  generation?: number
+): Promise<void> {
   if (!isRetainedCreateKey(key)) return operation();
   const previous = retainedMutations.get(key) ?? Promise.resolve();
-  const result = previous.then(operation);
+  const result = previous.then(() => {
+    if (generation !== undefined && !isCreateTeamDraftGenerationCurrent(generation)) return;
+    return operation();
+  });
   const settled = result.then(() => undefined, () => undefined);
   retainedMutations.set(key, settled);
   void settled.then(() => {
@@ -94,8 +103,8 @@ async function saveDraftUnordered(key: string, value: string): Promise<void> {
   }
 }
 
-async function saveDraft(key: string, value: string): Promise<void> {
-  return orderedCreateMutation(key, () => saveDraftUnordered(key, value));
+async function saveDraft(key: string, value: string, generation?: number): Promise<void> {
+  return orderedCreateMutation(key, () => saveDraftUnordered(key, value), generation);
 }
 
 async function loadDraft(key: string): Promise<string | null> {
@@ -129,8 +138,8 @@ async function deleteDraftUnordered(key: string): Promise<void> {
   }
 }
 
-async function deleteDraft(key: string): Promise<void> {
-  return orderedCreateMutation(key, () => deleteDraftUnordered(key));
+async function deleteDraft(key: string, generation?: number): Promise<void> {
+  return orderedCreateMutation(key, () => deleteDraftUnordered(key), generation);
 }
 
 async function cleanupExpired(): Promise<void> {
