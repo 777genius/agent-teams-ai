@@ -32,6 +32,20 @@ export class TeamRequestValidationError extends Error {
   readonly name = 'TeamRequestValidationError';
 }
 
+/** Reject ambiguous launch requests before admission can replay persisted work. */
+export function validateBootstrapOnlyLaunchRequest(input: {
+  bootstrapOnly?: unknown;
+  prompt?: unknown;
+}): string | null {
+  if (input.bootstrapOnly !== undefined && input.bootstrapOnly !== true) {
+    return 'bootstrapOnly must be true when provided';
+  }
+  if (input.bootstrapOnly === true && typeof input.prompt === 'string' && input.prompt.trim()) {
+    return 'Bootstrap-only launch must not contain a work prompt';
+  }
+  return null;
+}
+
 export function assertProvisioningTeamName(value: unknown): string {
   const validated = validateTeamName(value);
   if (!validated.valid) {
