@@ -56,6 +56,10 @@ import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import {
+  currentCreateTeamDraftGeneration,
+  isCreateTeamDraftGenerationCurrent,
+} from '@renderer/services/createTeamDraftGeneration';
+import {
   applyStoredCreateTeamMemberRuntimePreferences,
   getStoredCreateTeamEffort,
   getStoredCreateTeamFastMode as getStoredTeamFastMode,
@@ -73,10 +77,6 @@ import {
   setStoredCreateTeamProvider,
   setStoredCreateTeamSkipPermissions,
 } from '@renderer/services/createTeamPreferences';
-import {
-  currentCreateTeamDraftGeneration,
-  isCreateTeamDraftGenerationCurrent,
-} from '@renderer/services/createTeamDraftGeneration';
 import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
