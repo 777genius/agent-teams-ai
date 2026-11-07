@@ -560,6 +560,44 @@ test('native instructions are not treated as installed when identity attestation
   assert.deepEqual(calls, { probe: 1, permissions: 1, context: 1, password: 0, stop: 1, stopped: 1 });
 });
 
+test('lost native V2 initial-context ACK cannot replay a write or conceal UNKNOWN cleanup', async () => {
+  // A remote mutation may have taken effect even when its acknowledgement was lost.
+  // This is deterministic TEST fault injection, NOT evidence of a real model turn.
+  for (const physicallyConfirmed of [true, false]) {
+    const { captured, calls } = owner(true);
+    const attemptedDigests: string[] = [];
+    captured.installAndAttestInitialContext = async (capture) => {
+      calls.context++;
+      attemptedDigests.push(capture.contextDigest);
+      throw new Error('TEST-native-instructions-applied-ACK-lost');
+    };
+    if (!physicallyConfirmed) {
+      captured.stopOwned = async () => { calls.stop++; return false; };
+      captured.confirmStopped = async () => { calls.stopped++; return false; };
+    }
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opening = () => provider.factory.open(request());
+    if (physicallyConfirmed) {
+      await assert.rejects(opening, 'lost context ACK must fail Host admission');
+    } else {
+      await assert.rejects(opening, /opencode.v2.owner-cleanup-unknown/,
+        'uncertain process custody must not be reported as a retryable admission failure');
+    }
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(attemptedDigests.length, 1, 'one and only one possibly applied native PUT');
+    assert.match(attemptedDigests[0]!, /^[0-9a-f]{64}$/);
+    assert.equal(calls.stop, 1, 'stopOwned must be single-flight even on an unknown ACK');
+
+    await assert.rejects(opening, 'failed admission cannot reopen the retired native capture');
+    assert.equal(calls.context, 1, 'never replay the possibly applied native context write');
+    assert.equal(calls.stop, 1, 'a lost stop ACK cannot authorize a second signal');
+    assert.equal(await provider.cleanup(), physicallyConfirmed,
+      'only confirmed physical termination can release native custody');
+    assert.equal(calls.stop, 1);
+  }
+});
+
 test('cleanup retries only read-only physical confirmation after uncertain stop ACK', async () => {
   const { captured, calls } = owner(true);
   captured.stopOwned = async () => { calls.stop++; return false; };
