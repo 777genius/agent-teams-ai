@@ -48,6 +48,17 @@ const HookProbeWithDraft = ({
   return null;
 };
 
+async function renderLoadedDraft(
+  root: ReturnType<typeof createRoot>,
+  onLoaded: (draft: ReturnType<typeof useCreateTeamDraft>) => void
+): Promise<void> {
+  await act(async () => {
+    root.render(React.createElement(HookProbeWithDraft, { onLoaded }));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 describe('useCreateTeamDraft', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -281,18 +292,9 @@ describe('useCreateTeamDraft', () => {
     document.body.appendChild(host);
     let root = createRoot(host);
     let draft: ReturnType<typeof useCreateTeamDraft> | null = null;
-    const mount = async () => {
-      await act(async () => {
-        root.render(
-          React.createElement(HookProbeWithDraft, {
-            onLoaded: (value) => { draft = value; },
-          })
-        );
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-    };
-    await mount();
+    await renderLoadedDraft(root, (value) => {
+      draft = value;
+    });
     act(() => {
       draft?.setOrganizationPlacementEnabled(true);
       draft?.setOrganizationPlacementOrganizationId('organization-1');
@@ -315,7 +317,9 @@ describe('useCreateTeamDraft', () => {
     loadSnapshotMock.mockResolvedValue(snapshot);
     draft = null;
     root = createRoot(host);
-    await mount();
+    await renderLoadedDraft(root, (value) => {
+      draft = value;
+    });
     expect(draft).toEqual(
       expect.objectContaining({
         teamName: '',
@@ -369,25 +373,9 @@ describe('useCreateTeamDraft', () => {
     document.body.appendChild(host);
     let root = createRoot(host);
     let draft: ReturnType<typeof useCreateTeamDraft> | null = null;
-    const render = async () => {
-      await act(async () => {
-        root.render(React.createElement(HookProbeWithDraft, {
-          onLoaded: (value) => { draft = value; },
-        }));
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-    };
-    const workflowChip = {
-      id: 'workflow-file-1',
-      fileName: 'README.md',
-      filePath: '/sandbox/README.md',
-      fromLine: null,
-      toLine: null,
-      codeText: '',
-      language: 'markdown',
-    };
-    await render();
+    await renderLoadedDraft(root, (value) => {
+      draft = value;
+    });
     act(() => {
       draft?.setMembers([{
         id: 'member-1',
@@ -404,7 +392,9 @@ describe('useCreateTeamDraft', () => {
     loadSnapshotMock.mockResolvedValue(stored);
     draft = null;
     root = createRoot(host);
-    await render();
+    await renderLoadedDraft(root, (value) => {
+      draft = value;
+    });
     const readRestoredDraft: () => ReturnType<typeof useCreateTeamDraft> | null = () => draft;
     expect(readRestoredDraft()?.members[0]?.workflowChips).toEqual([workflowChip]);
     act(() => root.unmount());

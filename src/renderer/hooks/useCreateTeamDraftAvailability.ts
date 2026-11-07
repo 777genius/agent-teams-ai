@@ -12,10 +12,10 @@ export async function hasUnfinishedCreateTeamDraft(): Promise<boolean> {
     draftStorage.loadDraft('createTeam:prompt:chips'),
   ]);
   return Boolean(
-    form?.teamName.trim() ||
-      form?.members.length ||
-      form?.customCwd.trim() ||
-      form?.teamColor.trim() ||
+    form?.teamName?.trim() ||
+      form?.members?.length ||
+      form?.customCwd?.trim() ||
+      form?.teamColor?.trim() ||
       form?.organizationPlacementEnabled ||
       description?.trim() ||
       prompt?.trim() ||

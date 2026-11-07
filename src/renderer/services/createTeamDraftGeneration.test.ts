@@ -16,12 +16,11 @@ vi.mock('idb-keyval', () => ({
   keys: vi.fn(async () => [...store.keys()]),
 }));
 
-import { createTeamDraftStorage } from './createTeamDraftStorage';
 import {
   currentCreateTeamDraftGeneration,
   isCreateTeamDraftGenerationCurrent,
-  retireCreateTeamDraftGeneration,
 } from './createTeamDraftGeneration';
+import { createTeamDraftStorage } from './createTeamDraftStorage';
 import { draftStorage } from './draftStorage';
 import { resetCreateTeamDraft } from './resetCreateTeamDraft';
 

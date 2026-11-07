@@ -1,10 +1,9 @@
 import { useCallback, useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
+import { hasUnfinishedCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraftAvailability';
 import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
@@ -106,12 +105,12 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
   );
 
   const openCreationPage = useCallback(async (placement: OrganizationPlacementSelection) => {
-    const saved = await createTeamDraftStorage.loadSnapshot();
+    const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
     const hasOpenEditor = useStore
       .getState()
       .getAllPaneTabs()
       .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
-    if (hasOpenEditor || Boolean(saved?.teamName.trim() || saved?.members.length)) {
+    if (hasOpenEditor || hasSavedDraft) {
       const accepted = await confirm({
         title: t('create.title.create'),
         message: t('create.draft.replaceConfirmation', {

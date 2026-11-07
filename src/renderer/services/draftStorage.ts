@@ -1,7 +1,7 @@
 import { isLegacyComposerDraftStorageKey } from '@renderer/utils/composerDraftIdentity';
+import { del, get, keys, set } from 'idb-keyval';
 
 import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
-import { del, get, keys, set } from 'idb-keyval';
 
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const DRAFT_KEY_PREFIX = 'draft:';

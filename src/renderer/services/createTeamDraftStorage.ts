@@ -9,13 +9,13 @@
  * Pattern mirrors `composerDraftStorage.ts`.
  */
 
-import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
-
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isTeamProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { del, get, set } from 'idb-keyval';
+
+import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
