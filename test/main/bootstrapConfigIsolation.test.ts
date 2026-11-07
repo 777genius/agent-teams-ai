@@ -29,6 +29,7 @@ it('applies profile paths before entrypoint imports construct the configuration 
   const nativeHome = path.join(sandbox, 'native-home');
   const isolatedClaude = path.join(sandbox, 'isolated-home', '.claude');
   const userData = path.join(sandbox, 'user-data');
+  const regularUserData = path.join(sandbox, 'regular-user-data');
   mkdirSync(path.join(nativeHome, '.claude'), { recursive: true });
   const nativeConfig = path.join(nativeHome, '.claude', 'agent-teams-config.json');
   const sentinel = JSON.stringify({
@@ -47,7 +48,15 @@ it('applies profile paths before entrypoint imports construct the configuration 
   vi.stubEnv('AGENT_TEAMS_ELECTRON_CLAUDE_ROOT', isolatedClaude);
   vi.doMock('electron', () => ({
     app: {
-      getPath: (name: string) => (name === 'home' ? nativeHome : userData),
+      // Model the regular Electron profile separately from the explicit isolated one.
+      // Returning userData for both would simulate a dangerous alias, correctly rejected.
+      getPath: (name: string) => {
+        if (name === 'home') return nativeHome;
+        if (name === 'userData' || name === 'sessionData') return regularUserData;
+        if (name === 'logs') return path.join(regularUserData, 'logs');
+        if (name === 'crashDumps') return path.join(regularUserData, 'crashes');
+        throw new Error(`Unexpected Electron path: ${name}`);
+      },
       setPath: vi.fn(),
     },
   }));

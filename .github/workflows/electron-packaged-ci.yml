@@ -18,6 +18,9 @@ on:
       - 'pnpm-workspace.yaml'
       - 'scripts/electron-builder/**'
       - 'runtime.lock.json'
+      - 'managed-git.lock.json'
+      - 'scripts/stage-managed-git.mjs'
+      - 'src/main/utils/managedGit.ts'
       - 'scripts/stage-runtime.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-archive-checksum.mjs'
@@ -30,6 +33,8 @@ on:
       - 'scripts/prepare-cpu-features-rebuild.cjs'
       - 'scripts/postinstall-electron.cjs'
       - 'src/main/ipc/window.ts'
+      - 'src/main/utils/electronDevPathOverrides.ts'
+      - 'src/main/bootstrapUserDataMigration.ts'
 
 permissions:
   contents: read
@@ -129,6 +134,8 @@ jobs:
           done
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify managed Git pins and archive path safety
+        run: node --test scripts/stage-managed-git.test.mjs
       - name: Typecheck packaged CI policy with pinned compiler
         run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
       - name: Assert Electron binary was provisioned during install
@@ -164,6 +171,11 @@ jobs:
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
       - name: Smoke packaged SQLite and PTY modules
         run: node ./scripts/electron-builder/smokePackagedNative.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
+      - name: Smoke packaged Git without external installation
+        run: node ./scripts/electron-builder/smokeManagedGit.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Smoke managed Git inside native Windows terminal
+        if: matrix.os == 'win32'
+        run: node ./scripts/electron-builder/smokeManagedTerminalGit.cjs "${{ matrix.bundle }}" ${{ matrix.arch }}
       - name: Smoke packaged MCP handshake
         run: node ./scripts/electron-builder/smokePackagedMcp.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
       - name: Verify macOS 13 minimum

@@ -434,6 +434,15 @@ async function main() {
     // Every startup outcome must clean up descendants, including early exit or spawn failure.
     try {
       await terminateChild(child, closePromise, platform, SHUTDOWN_TIMEOUT_MS, ownership);
+      if (startupError) {
+        const diagnosticPath = path.join(testRoot, 'bootstrap-result.txt');
+        console.error(
+          '[smokePackagedApp] early bootstrap diagnostic: ' +
+            (fs.existsSync(diagnosticPath)
+              ? fs.readFileSync(diagnosticPath, 'utf8').trim()
+              : 'not written')
+        );
+      }
       fs.rmSync(testRoot, {
         recursive: true,
         force: true,

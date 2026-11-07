@@ -15,15 +15,14 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
-  Columns3,
   Eye,
-  LayoutGrid,
   PlayCircle,
   Plus,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
 
+import { TaskTableView } from './table/TaskTableView';
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
 import {
@@ -34,10 +33,12 @@ import {
 import { KanbanSortPopover } from './KanbanSortPopover';
 import { estimateKanbanAttachmentPreviewHeight } from './kanbanTaskAttachmentLayout';
 import { KanbanTaskCard } from './KanbanTaskCard';
+import { KanbanViewModeSwitch } from './KanbanViewModeSwitch';
 import { getTaskColumn } from './teamTaskProjection';
 
 import type { KanbanFilterState } from './KanbanFilterPopover';
 import type { KanbanSortField, KanbanSortState } from './KanbanSortPopover';
+import type { KanbanViewMode } from './KanbanViewModeSwitch';
 import type { TaskGroupOption } from './teamTaskProjection';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';
@@ -68,6 +69,8 @@ const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.
 
 interface KanbanBoardProps {
   tasks: TeamTask[];
+  allTasks: TeamTask[];
+  isActive?: boolean;
   contextId: string;
   teamName: string;
   kanbanState: KanbanState;
@@ -106,8 +109,6 @@ interface KanbanBoardProps {
   /** Opens the trash dialog. */
   onOpenTrash?: () => void;
 }
-
-type KanbanViewMode = 'grid' | 'columns';
 
 const SCROLLABLE_OVERFLOW_VALUES = new Set(['auto', 'scroll', 'overlay']);
 const INITIAL_VISIBLE_TASKS_PER_COLUMN = 20;
@@ -304,6 +305,8 @@ const SortableKanbanTaskCard = ({
 
 export const KanbanBoard = memo(function KanbanBoard({
   tasks,
+  allTasks,
+  isActive = true,
   contextId,
   teamName,
   kanbanState,
@@ -348,26 +351,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';
   const shouldLimitTaskCards = !forceShowAllTasks && !enableTaskSorting;
 
-  const stableTaskMapRef = useRef<{
-    signatures: string[];
-    map: Map<string, TeamTask>;
-  } | null>(null);
-  const taskMap = useMemo(() => {
-    const signatures = tasks.map(
-      (task) => `${task.id}\0${task.displayId ?? ''}\0${task.subject}\0${task.status}`
-    );
-    const previous = stableTaskMapRef.current;
-    if (
-      previous?.signatures.length === signatures.length &&
-      previous.signatures.every((signature, index) => signature === signatures[index])
-    ) {
-      return previous.map;
-    }
-
-    const next = new Map(tasks.map((task) => [task.id, task]));
-    stableTaskMapRef.current = { signatures, map: next };
-    return next;
-  }, [tasks]);
+  const taskMap = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const memberColorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const grouped = useMemo(() => {
     const result = new Map<KanbanColumnId, TeamTask[]>(
@@ -685,7 +669,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   const columnModeSearchWidth =
     primaryVisibleColumnId != null ? (columnWidths.get(primaryVisibleColumnId) ?? 256) : 256;
   const toolbarLeftWidth =
-    viewMode === 'grid' ? (gridPrimaryColumnWidth ?? columnModeSearchWidth) : columnModeSearchWidth;
+    viewMode === 'grid'
+      ? (gridPrimaryColumnWidth ?? columnModeSearchWidth)
+      : viewMode === 'table' ? 320 : columnModeSearchWidth;
 
   const clearScheduledScrollRestore = useCallback(() => {
     for (const timeoutId of scrollRestoreTimeoutsRef.current) {
@@ -733,7 +719,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   const switchViewMode = useCallback(
     (nextViewMode: KanbanViewMode) => {
       const nextSkeletonDelayMs =
-        nextViewMode === 'grid' && viewMode === 'columns'
+        nextViewMode === 'grid' && viewMode !== 'grid'
           ? SKELETON_HIDE_DELAY_MS_ON_MODE_SWITCH
           : SKELETON_HIDE_DELAY_MS;
 
@@ -746,7 +732,7 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   const gridColumns = useMemo(
     () =>
-      visibleColumns.map((column) => {
+      viewMode !== 'grid' ? [] : visibleColumns.map((column) => {
         const columnTasks = groupedOrdered.get(column.id) ?? [];
         const accent = COLUMN_ACCENTS[column.id];
         return {
@@ -764,6 +750,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         };
       }),
     [
+      viewMode,
       visibleColumns,
       groupedOrdered,
       renderCards,
@@ -799,8 +786,12 @@ export const KanbanBoard = memo(function KanbanBoard({
               members={members}
               onFilterChange={onFilterChange}
             />
-            <div className="h-4 w-px bg-[var(--color-border)]" />
-            <KanbanSortPopover sort={sort} onSortChange={onSortChange} />
+            {viewMode !== 'table' ? (
+              <>
+                <div className="h-4 w-px bg-[var(--color-border)]" />
+                <KanbanSortPopover sort={sort} onSortChange={onSortChange} />
+              </>
+            ) : null}
           </div>
           {deletedTaskCount != null && deletedTaskCount > 0 && onOpenTrash ? (
             <Tooltip>
@@ -818,46 +809,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               <TooltipContent side="bottom">{t('kanban.board.trash')}</TooltipContent>
             </Tooltip>
           ) : null}
-          <div className="inline-flex rounded-md border border-[var(--color-border)]">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'h-7 rounded-r-none px-2',
-                    viewMode === 'grid'
-                      ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                      : 'text-[var(--color-text-muted)]'
-                  )}
-                  onClick={() => switchViewMode('grid')}
-                  aria-label={t('kanban.board.gridView')}
-                >
-                  <LayoutGrid size={14} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t('kanban.board.gridView')}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'h-7 rounded-l-none border-l border-[var(--color-border)] px-2',
-                    viewMode === 'columns'
-                      ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                      : 'text-[var(--color-text-muted)]'
-                  )}
-                  onClick={() => switchViewMode('columns')}
-                  aria-label={t('kanban.board.columnsView')}
-                >
-                  <Columns3 size={14} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t('kanban.board.columnsView')}</TooltipContent>
-            </Tooltip>
-          </div>
+          <KanbanViewModeSwitch value={viewMode} onChange={switchViewMode} />
         </div>
       </div>
 
@@ -868,6 +820,19 @@ export const KanbanBoard = memo(function KanbanBoard({
           onPrimaryColumnWidthChange={setGridPrimaryColumnWidth}
           skeletonDelayMs={gridSkeletonDelayMs}
           columns={gridColumns}
+        />
+      ) : viewMode === 'table' ? (
+        <TaskTableView
+          key={JSON.stringify([contextId, teamName])}
+          tasks={tasks}
+          allTasks={allTasks}
+          kanbanState={kanbanState}
+          filter={filter}
+          teamName={teamName}
+          contextId={contextId}
+          members={members}
+          isActive={isActive}
+          onTaskClick={onTaskClick}
         />
       ) : (
         <div className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-6 pt-2">
