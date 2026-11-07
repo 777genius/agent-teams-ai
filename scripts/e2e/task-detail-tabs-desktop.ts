@@ -322,6 +322,13 @@ try {
   assert(longIdRowHeight > 0 && longIdRowHeight <= 49,
     'A long task display ID must not expand the fixed-height virtualized row');
   await cdp.screenshot(join(root, 'kanban-table-dark.png'));
+  // Keep the task name visible while users scroll to columns on narrow panes.
+  await cdp.evaluate("(()=>{const scroller=document.querySelector('[data-testid=\"team-task-table-scroller\"]');if(!scroller)throw new Error('Table scroller missing');scroller.scrollLeft=220;})()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const sc=document.querySelector('[data-testid=\"team-task-table-scroller\"]');const task=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"] [data-testid=\"team-task-table-cell-task\"]');return !!sc&&!!task&&sc.scrollLeft>=200&&Math.abs(task.getBoundingClientRect().left-sc.getBoundingClientRect().left)<5;})()"
+  ), 'Task column stays pinned during horizontal scrolling');
+  await cdp.screenshot(join(root, 'kanban-table-pinned-task.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-scroller\"]').scrollLeft=0");
   // A table row must reuse the real task detail dialog, not a table-only editor.
   await cdp.evaluate(
     "(()=>{const button=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"3\"] [data-testid=\"team-task-table-open\"]');if(!button)throw new Error('Review task row action missing');button.click();})()"
