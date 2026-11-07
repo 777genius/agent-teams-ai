@@ -1490,8 +1490,8 @@ export const CreateTeamDialog = ({
         ? initialRosterDrafts
         : applyStoredCreateTeamMemberRuntimePreferences(initialRosterDrafts)
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- copy inputs are one-shot for this editor
   }, [open, draftLoaded]);
-
   useEffect(() => {
     if (!open || !draftLoaded || initialData || syncModelsWithLead || members.length === 0) {
       return;
