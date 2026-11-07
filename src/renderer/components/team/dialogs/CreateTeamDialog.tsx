@@ -300,7 +300,9 @@ export const CreateTeamDialog = ({
   const creationPageMountedRef = useRef(true);
   useEffect(() => {
     creationPageMountedRef.current = true;
-    return () => { creationPageMountedRef.current = false; };
+    return () => {
+      creationPageMountedRef.current = false;
+    };
   }, []);
   const stillOwnsCreatePage = (generation: number): boolean =>
     presentation !== 'page' ||
@@ -1836,7 +1838,6 @@ export const CreateTeamDialog = ({
     !isSubmittedTeamName &&
     provisioningTeamNames.includes(sanitizedTeamName) &&
     !isNameTakenByExistingTeam;
-
   const request = useMemo<TeamCreateRequest>(
     () => ({
       runtimeSelectionVersion,
@@ -1963,7 +1964,6 @@ export const CreateTeamDialog = ({
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission ||
     (launchTeam && customProjectFolder.blocksSubmit);
-
   const internalArgs = useMemo(() => {
     const args: string[] = [];
     args.push('--input-format', 'stream-json', '--output-format', 'stream-json');
