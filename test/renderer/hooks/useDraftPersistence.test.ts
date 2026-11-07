@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { draftStorage } from '@renderer/services/draftStorage';
+import { set as idbSet } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock idb-keyval before importing draftStorage
@@ -49,6 +50,38 @@ describe('draftStorage', () => {
       await draftStorage.saveDraft('test:field', 'second');
       const result = await draftStorage.loadDraft('test:field');
       expect(result).toBe('second');
+    });
+  });
+
+  describe('create-team save/clear ordering', () => {
+    it('does not resurrect creation text after an earlier save finishes late', async () => {
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => { releaseSave = resolve; });
+      vi.mocked(idbSet).mockImplementationOnce(async (key, value) => {
+        await saveGate;
+        store.set(String(key), value);
+      });
+      const save = draftStorage.saveDraft('createTeam:prompt', 'unsent prompt');
+      const clear = draftStorage.deleteDraft('createTeam:prompt');
+      await Promise.resolve();
+      releaseSave();
+      await Promise.all([save, clear]);
+      expect(await draftStorage.loadDraft('createTeam:prompt')).toBeNull();
+    });
+
+    it('waits for an in-flight creation save before attempting to restore it', async () => {
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => { releaseSave = resolve; });
+      vi.mocked(idbSet).mockImplementationOnce(async (key, value) => {
+        await saveGate;
+        store.set(String(key), value);
+      });
+      const save = draftStorage.saveDraft('createTeam:description', 'late update');
+      const restoring = draftStorage.loadDraft('createTeam:description');
+      await Promise.resolve();
+      releaseSave();
+      await save;
+      expect(await restoring).toBe('late update');
     });
   });
 
