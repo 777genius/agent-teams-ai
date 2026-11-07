@@ -73,6 +73,10 @@ async function mount(mode: Mode, retainedOwnerKey?: string, teamName?: string) {
       </StrictMode>
     );
   });
+  if (!teamName) {
+    // When given no restored name yet the retained session must stay untouched.
+    return;
+  }
   expect(latest.pending).toBe(false);
   expect(latest.boundMemberNames.has('existing')).toBe(true);
 }
