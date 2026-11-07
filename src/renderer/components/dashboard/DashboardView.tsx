@@ -108,7 +108,7 @@ interface DashboardViewProps {
   isActive?: boolean;
 }
 
-export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JSX.Element => {
+export const DashboardView = ({ isActive: _isActive = true }: DashboardViewProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);

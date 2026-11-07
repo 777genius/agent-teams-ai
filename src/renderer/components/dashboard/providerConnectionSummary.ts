@@ -1,6 +1,7 @@
+import type { RuntimeProviderDirectoryCacheSnapshot } from '@features/runtime-provider-management/renderer';
 import type { CliProviderId, CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
-import type { RuntimeProviderDirectoryCacheSnapshot } from '@features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 
+export const DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS = 2 * 60_000;
 const MAIN_PROVIDER_IDS = ['anthropic', 'codex', 'gemini'] as const;
 
 type MainProvider = Pick<
@@ -10,7 +11,7 @@ type MainProvider = Pick<
 
 type Directory = Pick<
   RuntimeProviderDirectoryCacheSnapshot,
-  'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor'
+  'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor' | 'fetchedAt'
 > & {
   entries: readonly Pick<RuntimeProviderDirectoryCacheSnapshot['entries'][number], 'providerId' | 'state'>[];
 };
@@ -30,6 +31,7 @@ interface ConnectionSummaryInput {
     OpenCodeRuntimeStatus,
     'installed' | 'state' | 'version' | 'binaryPath'
   > | null;
+  nowMs?: number;
 }
 
 export interface DashboardConnectionSummary {
@@ -41,10 +43,15 @@ export interface DashboardConnectionSummary {
 
 function isCompleteDirectory(
   directory: Directory | null,
-  runtimeRevision: string | null
+  runtimeRevision: string | null,
+  nowMs: number
 ): directory is Directory {
+  const fetchedAt = Date.parse(directory?.fetchedAt ?? '');
   return Boolean(
     runtimeRevision &&
+      Number.isFinite(fetchedAt) &&
+      fetchedAt <= nowMs &&
+      nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS &&
       directory?.authoritative &&
       directory.runtimeRevision === runtimeRevision &&
       directory.totalCount !== undefined &&
@@ -66,6 +73,7 @@ export function getDashboardConnectionSummary({
   globalDirectory,
   projectDirectory,
   runtimeStatus,
+  nowMs = Date.now(),
 }: ConnectionSummaryInput): DashboardConnectionSummary {
   const mainProviders =
     cliStatus?.flavor === 'agent_teams_orchestrator' && cliStatus.installed
@@ -90,9 +98,9 @@ export function getDashboardConnectionSummary({
     runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
       ? JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null])
       : null;
-  const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision);
+  const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision, nowMs);
   const projectComplete =
-    projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision);
+    projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
 
   if (!globalComplete || !projectComplete) {
     return { cliConnected, openCodeConnected: null };

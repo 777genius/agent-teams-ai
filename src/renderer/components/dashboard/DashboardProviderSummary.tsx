@@ -1,13 +1,16 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { useRuntimeProviderDirectoryCache } from '@features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
+import { useRuntimeProviderDirectoryCache } from '@features/runtime-provider-management/renderer';
 import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 import { Settings2 } from 'lucide-react';
 
-import { getDashboardConnectionSummary } from './providerConnectionSummary';
+import {
+  DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS,
+  getDashboardConnectionSummary,
+} from './providerConnectionSummary';
 
 export const DashboardProviderSummary = (): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
@@ -29,6 +32,18 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
   // Existing in-memory snapshots only; these hooks never start an IPC read.
   const globalDirectory = useRuntimeProviderDirectoryCache(null);
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
+  const [, setExpiredRevision] = useState(0);
+  useEffect(() => {
+    const expiries = [globalDirectory, ...(projectPath ? [projectDirectory] : [])]
+      .map((snapshot) => Date.parse(snapshot?.fetchedAt ?? '') + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS)
+      .filter((expiry) => Number.isFinite(expiry) && expiry > Date.now());
+    if (expiries.length === 0) return;
+    const nextExpiry = Math.min(...expiries);
+    // A one-shot display expiry timer is not provider polling or an IPC read.
+    const timer = window.setTimeout(() => setExpiredRevision((revision) => revision + 1),
+      Math.max(1, nextExpiry - Date.now() + 10));
+    return () => window.clearTimeout(timer);
+  }, [globalDirectory, projectDirectory, projectPath]);
   const summary = getDashboardConnectionSummary({
     cliStatus,
     cliStatusLoading,

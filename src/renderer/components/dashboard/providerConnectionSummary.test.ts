@@ -27,6 +27,7 @@ const globalDirectory = {
   ],
   authoritative: true,
   runtimeRevision: revision,
+  fetchedAt: new Date().toISOString(),
   totalCount: 3,
   nextCursor: null,
 };
@@ -118,6 +119,25 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       projectPath: '/work/project',
       projectDirectory,
     }).openCodeConnected).toBe(2); // xai (global), private project; openrouter overridden
+  });
+
+  it('expires cached OpenCode observations without treating stale counts as live', () => {
+    const nowMs = Date.parse('2026-11-07T12:00:00Z');
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 119_000).toISOString() },
+      nowMs,
+    }).openCodeConnected).toBe(2);
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 121_000).toISOString() },
+      nowMs,
+    }).openCodeConnected).toBeNull();
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: { ...globalDirectory, fetchedAt: 'invalid' },
+      nowMs,
+    }).openCodeConnected).toBeNull();
   });
 
   it('deduplicates case-folded OpenCode ids and excludes the OpenCode host entry', () => {

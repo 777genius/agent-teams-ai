@@ -17,7 +17,10 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
+import {
+  invalidateRuntimeProviderDirectoryCache,
+  observeRuntimeProviderDirectoryRevision,
+} from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -1344,6 +1347,9 @@ export function useRuntimeProviderManagement(
         setSetupSubmitError(null);
         setSetupSubmitErrorDiagnostics(null);
         const success = formatProviderConnectSuccess(connectedProvider);
+        // A successful mutation must invalidate any old "connected" count even
+        // if the follow-up directory/credential refresh subsequently fails.
+        invalidateRuntimeProviderDirectoryCache();
         const refreshOutcome = await refreshRuntimeProviderConnection({
           runtimeId: options.runtimeId,
           projectPath: projectContext.path,
@@ -1445,6 +1451,8 @@ export function useRuntimeProviderManagement(
           setView((current) => replaceProvider(current, response.provider!));
         }
         const success = formatCredentialRemovedMessage(response.provider ?? null);
+        // Do not let a retained authoritative cache claim a removed credential.
+        invalidateRuntimeProviderDirectoryCache();
         const refreshOutcome = await refreshRuntimeProviderConnection({
           runtimeId: options.runtimeId,
           projectPath: projectContext.path,
