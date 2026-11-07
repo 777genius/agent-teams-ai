@@ -334,6 +334,41 @@ test('lost Host allocation authority during recheck cannot resurrect cached V2 r
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+test('throwing Host authority guard permanently revokes a ready V2 native owner', async () => {
+  for (const failedGuard of ['binding', 'allocation'] as const) {
+    const input = context();
+    let unavailable = false;
+    input.isCurrent = () => {
+      if (failedGuard === 'binding' && unavailable) throw new Error('TEST binding unavailable');
+      return true;
+    };
+    input.canAllocate = () => {
+      if (failedGuard === 'allocation' && unavailable) throw new Error('TEST lease unavailable');
+      return true;
+    };
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(input, captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    unavailable = true;
+    assert.equal(provider.isReady(), false,
+      'an exception from either Host authority callback is not affirmative custody');
+    unavailable = false;
+    assert.equal(provider.isReady(), false, 'recovering the callback cannot renew the captured PID');
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.deepEqual(await opened.driver.submit({
+      inputId: 'TEST-guard-error', operationRef: 'TEST-guard-error-op',
+      content: 'must not reach the native engine',
+    }), { ok: false, code: 'unavailable', delivery: 'known-not-sent' });
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'only the TEST-owned process is stopped once');
+    assert.equal(calls.permissions, 2, 'no native policy readback after Host authority fails');
+    assert.equal(calls.context, 1, 'never replay initial instructions');
+    assert.equal(calls.password, 0, 'revoked credentials are never read');
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  }
+});
+
 test('transient authority loss observed without native recheck cannot revive V2 readiness', async () => {
   for (const lost of ['allocation', 'binding'] as const) {
     const { captured, calls } = owner(true);
