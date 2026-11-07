@@ -357,6 +357,12 @@ export const CreateTeamDialog = ({
     setLaunchTeam,
     teamColor,
     setTeamColor,
+    organizationPlacementEnabled,
+    setOrganizationPlacementEnabled,
+    organizationPlacementOrganizationId,
+    setOrganizationPlacementOrganizationId,
+    organizationPlacementParentId,
+    setOrganizationPlacementParentId,
     isLoaded: draftLoaded,
     restoredFromStorage,
     clearDraft,
@@ -408,10 +414,6 @@ export const CreateTeamDialog = ({
   const [organizationStructure, setOrganizationStructure] =
     useState<OrganizationStructurePayload | null>(null);
   const [organizationStructureLoading, setOrganizationStructureLoading] = useState(false);
-  const [organizationPlacementEnabled, setOrganizationPlacementEnabled] = useState(false);
-  const [organizationPlacementOrganizationId, setOrganizationPlacementOrganizationId] =
-    useState('');
-  const [organizationPlacementParentId, setOrganizationPlacementParentId] = useState('');
   const [organizationPlacementError, setOrganizationPlacementError] = useState<string | null>(null);
   const [conflictDismissed, setConflictDismissed] = useState(false);
   const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
@@ -440,11 +442,10 @@ export const CreateTeamDialog = ({
 
   useEffect(() => {
     if (!open) {
-      setOrganizationPlacementEnabled(false);
       setOrganizationPlacementError(null);
       return undefined;
     }
-
+    if (!draftLoaded) return undefined;
     let cancelled = false;
     const preferredPlacement = initialOrganizationPlacement ?? null;
     setOrganizationStructureLoading(true);
@@ -461,11 +462,13 @@ export const CreateTeamDialog = ({
             : undefined) ??
           payload.organizations[0] ??
           null;
-        setOrganizationPlacementEnabled(Boolean(preferredPlacement));
-        setOrganizationPlacementOrganizationId(organization?.id ?? '');
-        setOrganizationPlacementParentId(
-          preferredPlacement?.parentUnitId ?? organization?.rootNodeId ?? ''
-        );
+        if (!restoredFromStorage || preferredPlacement) {
+          setOrganizationPlacementEnabled(Boolean(preferredPlacement));
+          setOrganizationPlacementOrganizationId(organization?.id ?? '');
+          setOrganizationPlacementParentId(
+            preferredPlacement?.parentUnitId ?? organization?.rootNodeId ?? ''
+          );
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -480,8 +483,7 @@ export const CreateTeamDialog = ({
     return () => {
       cancelled = true;
     };
-  }, [initialOrganizationPlacement, open]);
-
+  }, [draftLoaded, initialOrganizationPlacement, open, restoredFromStorage]);
   // Re-read localStorage when advancedKey changes
   useEffect(() => {
     const storedEnabled =
@@ -491,7 +493,6 @@ export const CreateTeamDialog = ({
     setWorktreeNameRaw(storedName);
     setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
   }, [advancedKey]);
-
   const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
