@@ -1657,6 +1657,16 @@
       "description": "Project hooks and MCP servers may run when the team starts."
     },
     "schedule": {
+      "execution": "Execution",
+      "legacyNotice": "Existing one-shot schedule — saving keeps its current behavior.",
+      "upgradeSmart": "Switch to smart scheduling",
+      "oneAgent": "One agent",
+      "wholeTeam": "Whole team",
+      "target": "Target when team is running",
+      "leadDefault": "Team lead (default)",
+      "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
+      "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
+      "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
       "labelOptional": "Label (optional)",
       "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
       "maxBudgetUsd": "Max budget (USD)",
@@ -2314,6 +2324,8 @@
       "warm": "Warm",
       "running": "Running",
       "completed": "Completed",
+      "dispatched": "Dispatched",
+      "skipped": "Skipped",
       "failed": "Failed",
       "interrupted": "Interrupted",
       "cancelled": "Cancelled"
