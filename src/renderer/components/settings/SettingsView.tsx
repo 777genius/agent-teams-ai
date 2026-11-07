@@ -20,6 +20,7 @@ import {
   GeneralSection,
   NotificationsSection,
 } from './sections';
+import { SettingsLoadingSkeleton } from './SettingsLoadingSkeleton';
 import { type SettingsSection, SettingsTabs } from './SettingsTabs';
 
 const CliStatusBanner = lazy(() =>
@@ -104,19 +105,8 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
     updateConfig,
   });
 
-  // Loading state
   if (loading) {
-    return (
-      <div
-        className="flex flex-1 items-center justify-center"
-        style={{ backgroundColor: 'var(--color-surface)' }}
-      >
-        <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)' }}>
-          <Loader2 className="size-5 animate-spin" />
-          <span>{t('view.loading')}</span>
-        </div>
-      </div>
-    );
+    return <SettingsLoadingSkeleton label={t('view.loading')} activeSection={activeSection} />;
   }
 
   // Error state
