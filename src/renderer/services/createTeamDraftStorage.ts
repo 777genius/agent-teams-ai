@@ -193,8 +193,8 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
     const data = await get<unknown>(STORAGE_KEY);
     if (data == null) return null;
     if (isValidSnapshot(data)) return data;
-    // Do not bypass serialized writes when retiring an invalid old snapshot.
-    void deleteSnapshot();
+    // Unknown/future data must not be deleted on read: preserve user work
+    // for a compatible recovery path rather than racing a newer edit.
     return null;
   } catch {
     markIdbUnavailable();
