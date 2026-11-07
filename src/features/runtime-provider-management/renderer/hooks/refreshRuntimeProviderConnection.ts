@@ -1,6 +1,7 @@
 import { api } from '@renderer/api';
 
 import {
+  getRuntimeProviderDirectoryReadToken,
   markRuntimeProviderDirectoryScopeUnverified,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
@@ -27,6 +28,7 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
   if (!input.directorySupported) return true;
   // A deep-linked directory may be filtered. Publish an unfiltered summary for
   // selectors without treating that page as authority or changing its query.
+  const readToken = getRuntimeProviderDirectoryReadToken(input.projectPath);
   try {
     const response = await withUiTimeout(
       api.runtimeProviderManagement.loadProviderDirectory({
@@ -52,6 +54,7 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
       fetchedAt: response.directory.fetchedAt,
       authoritative: false,
       runtimeRevision: input.runtimeRevision,
+      readToken,
     });
     return true;
   } catch {
@@ -67,6 +70,7 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
 export async function refreshRuntimeProviderConnection(
   input: ConnectionRefreshInput
 ): Promise<'refreshed' | 'warning' | 'stale'> {
+  markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
   const sharedDirectoryRefresh = refreshSharedDirectory(input);
   try {
     const externalRefreshResult = await input.refreshExternal();

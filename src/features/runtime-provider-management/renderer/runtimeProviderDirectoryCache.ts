@@ -20,6 +20,7 @@ interface PublishRuntimeProviderDirectoryCacheInput {
   runtimeRevision?: string | null;
   totalCount?: number | null;
   nextCursor?: string | null;
+  readToken?: string;
 }
 
 const GLOBAL_SCOPE_KEY = '\u0000global';
@@ -38,6 +39,13 @@ const mergedFallbackByScope = new Map<
 let globalFallbackSource: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let globalFallbackSnapshot: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let observedRuntimeRevision: string | null = null;
+let invalidationEpoch = 0;
+const generationByScope = new Map<string, number>;
+
+/** Reject directory reads started before a credential mutation. */
+export function getRuntimeProviderDirectoryReadToken(projectPath?: string | null): string {
+  return `${invalidationEpoch}:${generationByScope.get(getScopeKey(projectPath)) ?? 0}`;
+}
 
 function getScopeKey(projectPath?: string | null): string {
   return projectPath?.trim() || GLOBAL_SCOPE_KEY;
@@ -197,7 +205,9 @@ export function publishRuntimeProviderDirectoryCache({
   totalCount,
   nextCursor,
   runtimeRevision,
+  readToken,
 }: PublishRuntimeProviderDirectoryCacheInput): void {
+  if (readToken !== undefined && readToken !== getRuntimeProviderDirectoryReadToken(projectPath)) return;
   if (runtimeRevision && observedRuntimeRevision && runtimeRevision !== observedRuntimeRevision) {
     return; // An in-flight response from a replaced binary is stale.
   }
@@ -265,6 +275,7 @@ export function publishRuntimeProviderDirectoryCache({
  * credential mutation cannot be reconciled with the runtime directory. */
 export function markRuntimeProviderDirectoryScopeUnverified(projectPath?: string | null): void {
   const scopeKey = getScopeKey(projectPath);
+  generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
   const current = snapshotsByScope.get(scopeKey);
   if (!current?.authoritative) return;
   touchScope(scopeKey, { ...current, authoritative: false });
@@ -318,6 +329,8 @@ export function observeRuntimeProviderDirectoryRevision(revision: string | null)
 
 /** Drop provider inventory when the installed OpenCode runtime identity changes. */
 export function invalidateRuntimeProviderDirectoryCache(): void {
+  invalidationEpoch += 1;
+  generationByScope.clear();
   snapshotsByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;
