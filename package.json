@@ -373,6 +373,17 @@
         ]
       },
       {
+        "from": "resources/git",
+        "to": "git",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/MANAGED_GIT_THIRD_PARTY.md",
+        "to": "MANAGED_GIT_THIRD_PARTY.md"
+      },
+      {
         "from": "resources/terminal-platform",
         "to": "terminal-platform"
       },

@@ -20,6 +20,7 @@ async function packageProbe(args: string[], env: NodeJS.ProcessEnv, platform: No
   const result = main(args, {
     platform, arch: 'arm64', env,
     guard: async () => { calls.push('guard'); },
+    stageGit: async () => undefined,
     packageInvocation: async () => { calls.push('builder'); },
   });
   return { result, calls };
