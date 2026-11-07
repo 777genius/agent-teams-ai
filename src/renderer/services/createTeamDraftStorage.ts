@@ -161,16 +161,16 @@ function serializeMutation(operation: () => Promise<void>): Promise<void> {
 
 async function saveSnapshot(snapshot: CreateTeamDraftSnapshot): Promise<void> {
   return serializeMutation(async () => {
-  if (idbUnavailable) {
-    fallbackStore.set(STORAGE_KEY, snapshot);
-    return;
-  }
-  try {
-    await set(STORAGE_KEY, snapshot);
-  } catch {
-    markIdbUnavailable();
-    fallbackStore.set(STORAGE_KEY, snapshot);
-  }
+    if (idbUnavailable) {
+      fallbackStore.set(STORAGE_KEY, snapshot);
+      return;
+    }
+    try {
+      await set(STORAGE_KEY, snapshot);
+    } catch {
+      markIdbUnavailable();
+      fallbackStore.set(STORAGE_KEY, snapshot);
+    }
   });
 }
 
@@ -183,8 +183,8 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
     const data = await get<unknown>(STORAGE_KEY);
     if (data == null) return null;
     if (isValidSnapshot(data)) return data;
-    // Invalid shape — discard silently
-    void del(STORAGE_KEY);
+    // Do not bypass serialized writes when retiring an invalid old snapshot.
+    void deleteSnapshot();
     return null;
   } catch {
     markIdbUnavailable();
@@ -194,16 +194,16 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
 
 async function deleteSnapshot(): Promise<void> {
   return serializeMutation(async () => {
-  if (idbUnavailable) {
-    fallbackStore.delete(STORAGE_KEY);
-    return;
-  }
-  try {
-    await del(STORAGE_KEY);
-  } catch {
-    markIdbUnavailable();
-    fallbackStore.delete(STORAGE_KEY);
-  }
+    if (idbUnavailable) {
+      fallbackStore.delete(STORAGE_KEY);
+      return;
+    }
+    try {
+      await del(STORAGE_KEY);
+    } catch {
+      markIdbUnavailable();
+      fallbackStore.delete(STORAGE_KEY);
+    }
   });
 }
 
