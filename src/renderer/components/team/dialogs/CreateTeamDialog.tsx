@@ -472,6 +472,11 @@ export const CreateTeamDialog = ({
     if (!draftLoaded) return undefined;
     let cancelled = false;
     const preferredPlacement = initialOrganizationPlacement ?? null;
+    if (!restoredFromStorage && preferredPlacement) {
+      setOrganizationPlacementEnabled(true);
+      setOrganizationPlacementOrganizationId(preferredPlacement.organizationId);
+      setOrganizationPlacementParentId(preferredPlacement.parentUnitId);
+    }
     setOrganizationStructureLoading(true);
     void api.organizations
       .getOrganizationStructure()
@@ -486,12 +491,10 @@ export const CreateTeamDialog = ({
             : undefined) ??
           payload.organizations[0] ??
           null;
-        if (!restoredFromStorage) {
-          setOrganizationPlacementEnabled(Boolean(preferredPlacement));
+        if (!restoredFromStorage && !preferredPlacement) {
+          setOrganizationPlacementEnabled(false);
           setOrganizationPlacementOrganizationId(organization?.id ?? '');
-          setOrganizationPlacementParentId(
-            preferredPlacement?.parentUnitId ?? organization?.rootNodeId ?? ''
-          );
+          setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
         }
       })
       .catch((error: unknown) => {
@@ -1122,7 +1125,6 @@ export const CreateTeamDialog = ({
       }
       return;
     }
-
     if (typeof api.teams.prepareProvisioning !== 'function') {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
@@ -1136,7 +1138,6 @@ export const CreateTeamDialog = ({
       setPrepareMessage(t('create.prepare.unsupportedPreload'));
       return;
     }
-
     const selectedProviderIdSet = new Set(selectedMemberProviders);
     for (const providerId of Array.from(lastPrepareProviderSignatureByIdRef.current.keys())) {
       if (!selectedProviderIdSet.has(providerId)) {
@@ -1146,7 +1147,6 @@ export const CreateTeamDialog = ({
         prepareWarningsByProviderIdRef.current.delete(providerId);
       }
     }
-
     const loadingProviderIds = selectedMemberProviders.filter((providerId) =>
       runtimeProviderLoadingById.get(providerId)
     );
