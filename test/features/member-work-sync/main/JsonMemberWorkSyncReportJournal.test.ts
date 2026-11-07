@@ -6,7 +6,6 @@ import { JsonMemberWorkSyncReportJournal } from '@features/member-work-sync/main
 import { buildPendingReportIntentId, JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import * as atomicWrite from '@agent-teams/task-change-ledger/review-io';
-import * as durableFileSync from '@main/utils/durableFileSync';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberWorkSyncReportJournalInput } from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalPort';
@@ -295,7 +294,7 @@ describe('strict JSON report journal', () => {
     });
     vi.restoreAllMocks();
     const write = vi.spyOn(atomicWrite, 'atomicWriteAsync');
-    const sync = vi.spyOn(durableFileSync, 'syncFile');
+    const sync = vi.spyOn(atomicWrite, 'syncFile');
     const journalBytes = await readFile(reportsPath, 'utf8');
     const proved = await journal.ensure({
       ...input,
@@ -317,7 +316,7 @@ describe('strict JSON report journal', () => {
     'returns commit_unknown if a Windows retry cannot sync the existing journal file',
     async () => {
       expect((await journal.ensure(input)).state).toBe('present');
-      vi.spyOn(durableFileSync, 'syncFile').mockRejectedValueOnce(new Error('fsync failed'));
+      vi.spyOn(atomicWrite, 'syncFile').mockRejectedValueOnce(new Error('fsync failed'));
       expect((await journal.ensure(input)).state).toBe('commit_unknown');
       expect((await journal.read(input)).state).toBe('present');
     }

@@ -416,7 +416,6 @@ function buildOpenCodeVirtualRows({
   columnCount: number;
 }): OpenCodeVirtualRow[] {
   const rows: OpenCodeVirtualRow[] = [];
-
   if (defaultOptions.length > 0) {
     rows.push({
       kind: 'models',

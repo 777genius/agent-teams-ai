@@ -553,7 +553,6 @@ export function useRuntimeProviderManagement(
         directoryRequestSeq.current === requestSeq &&
         currentRuntimeRevision.current === settledRuntimeRevision &&
         isProjectContextCurrent(projectContext);
-
       if (keepVisibleRows) {
         setDirectoryRefreshing(true);
       } else {

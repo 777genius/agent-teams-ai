@@ -319,7 +319,6 @@ export {
 } from '../team/teamResolvedMembers';
 
 const logger = createLogger('teamSlice');
-
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
 const TEAM_FETCH_TIMEOUT_MS = 90_000;
 const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
@@ -400,7 +399,6 @@ function doesRuntimeFreshnessTimestampExtendVisible(
 ): boolean {
   if (!visibleTimestamp) return true;
   if (!cachedTimestamp) return false;
-
   const visibleMs = parseRuntimeFreshnessTimestampMs(visibleTimestamp);
   const cachedMs = parseRuntimeFreshnessTimestampMs(cachedTimestamp);
   if (visibleMs === null || cachedMs === null) {
@@ -1096,7 +1094,6 @@ function recordTaskEndTransitions(
     const eventKey = `${teamName}:${task.id}:completed`;
     if (reportedTaskEndKeys.has(eventKey)) continue;
     reportedTaskEndKeys.add(eventKey);
-
     const duration = calculateTaskImplementationDuration(task);
     recordTaskEnd({
       result: 'completed',

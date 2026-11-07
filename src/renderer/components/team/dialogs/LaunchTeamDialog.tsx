@@ -2408,7 +2408,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           hasDuplicateLaunchMemberNames ||
           prepareBlocksLaunch ||
           teammateRuntimeCompatibility.blocksSubmission
-        : isSubmitting || validationErrors.length > 0 || (!isTeamSchedule && !!modelValidationError);
+        : isSubmitting || validationErrors.length > 0 || (!isTeamSchedule && !!modelValidationError));
   const { dialogTitle, submitLabel, submittingLabel } = getLaunchDialogActionLabels(
     props.mode,
     isEditing,
