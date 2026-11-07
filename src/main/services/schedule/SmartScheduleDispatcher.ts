@@ -161,6 +161,14 @@ export class SmartScheduleDispatcher {
       // Only attach a *confirmed absent* configured teammate. Never use the
       // destructive manual restart path or interpret stale/process candidates
       // as offline. The existing lifecycle admission rejects concurrent starts.
+      // OpenCode lane "reattach" can terminate an existing session when its
+      // separate evidence store still sees a lane. A schedule must never perform
+      // that destructive operation after only a best-effort liveness read.
+      const configuredMember = saved?.members.find((member) => member.name === memberName);
+      const providerId = entry?.providerId ?? configuredMember?.providerId ?? saved?.providerId;
+      if (providerId === 'opencode' || entry?.laneKind === 'secondary') {
+        return skipped('Automatic attach of this runtime lane is not safe; start the member manually');
+      }
       const statuses = await this.runtime.getMemberStatuses(team);
       const memberStatus = statuses.statuses[memberName];
       if (
