@@ -10,6 +10,8 @@ import { createLogger } from '@shared/utils/logger';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
+import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
+
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -97,7 +99,10 @@ export class SchedulerService {
     this.stopped = false;
 
     // Recovery: mark interrupted runs from previous session
-    await this.recoverInterruptedRuns();
+    const recoveredCount = await recoverInterruptedScheduleRuns(this.repository);
+    if (recoveredCount > 0) {
+      logger.info(`Recovered ${recoveredCount} interrupted runs as failed_interrupted`);
+    }
 
     // Load all schedules and create cron jobs for active ones
     const schedules = await this.repository.listSchedules();
@@ -574,29 +579,40 @@ export class SchedulerService {
     let retriedInternally = false;
 
     try {
-      if (schedule.executionMode) {
-        await this.executeSmartRun(schedule, run);
+      const outcome = schedule.executionMode
+        ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
+            this.stopped || this.activeRuns.get(scheduleId)?.id !== run.id
+          )
+        : {
+            kind: 'one_shot' as const,
+            result: await this.executor.execute({
+              runId: run.id,
+              config: launchConfig,
+              maxTurns: schedule.maxTurns,
+              maxBudgetUsd: schedule.maxBudgetUsd,
+            }),
+          };
+      if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
+      if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
+        await this.completeRun(run, outcome.kind, null, outcome.summary);
+        if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
-        const result = await this.executor.execute({
-          runId: run.id,
-          config: launchConfig,
-          maxTurns: schedule.maxTurns,
-          maxBudgetUsd: schedule.maxBudgetUsd,
-        });
-
+        const result = outcome.result;
+        await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
         if (result.exitCode === 0) {
-        // Success — save logs, complete run
-        await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
-        await this.completeRun(run, 'completed', result.exitCode, result.summary);
-        await this.resetConsecutiveFailures(schedule);
-        logger.info(
-          `[${scheduleId}] Run ${run.id} completed successfully (${result.durationMs}ms)`
-        );
-      } else {
-        // Failure — save logs before handling
-        await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
-        const errorMsg = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
-          retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+          await this.completeRun(run, 'completed', result.exitCode, result.summary);
+          await this.resetConsecutiveFailures(schedule);
+          logger.info(
+            `[${scheduleId}] Run ${run.id} completed successfully (${result.durationMs}ms)`
+          );
+        } else {
+          const errorMsg = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
+          if (schedule.executionMode) {
+            await this.completeRun(run, 'failed', result.exitCode, undefined, errorMsg);
+            await this.incrementConsecutiveFailures(schedule);
+          } else {
+            retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+          }
         }
       }
     } catch (err) {
@@ -629,31 +645,6 @@ export class SchedulerService {
     }
   }
 
-  private async executeSmartRun(schedule: Schedule, run: ScheduleRun): Promise<void> {
-    if (!this.smartDispatcher) throw new Error('Smart schedule dispatcher is unavailable');
-    const outcome = await this.smartDispatcher.dispatch(schedule, run.id, () => {
-      return this.stopped || this.activeRuns.get(schedule.id)?.id !== run.id;
-    });
-    if (outcome.kind === 'skipped') {
-      await this.completeRun(run, 'skipped', null, outcome.summary);
-      return;
-    }
-    if (outcome.kind === 'dispatched') {
-      await this.completeRun(run, 'dispatched', null, outcome.summary);
-      await this.resetConsecutiveFailures(schedule);
-      return;
-    }
-    const result = outcome.result;
-    await this.repository.saveRunLogs(schedule.id, run.id, result.stdout, result.stderr);
-    if (result.exitCode === 0) {
-      await this.completeRun(run, 'completed', result.exitCode, result.summary);
-      await this.resetConsecutiveFailures(schedule);
-    } else {
-      const error = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
-      await this.completeRun(run, 'failed', result.exitCode, undefined, error);
-      await this.incrementConsecutiveFailures(schedule);
-    }
-  }
 
   /**
    * Handle a failed run. Returns `true` if a retry was dispatched
@@ -832,36 +823,6 @@ export class SchedulerService {
   // Recovery
   // ===========================================================================
 
-  private async recoverInterruptedRuns(): Promise<void> {
-    const schedules = await this.repository.listSchedules();
-    let recoveredCount = 0;
-
-    for (const schedule of schedules) {
-      const runs = await this.repository.listRuns(schedule.id, { limit: 5 });
-
-      for (const run of runs) {
-        if (
-          run.status === 'warming_up' ||
-          run.status === 'warm' ||
-          run.status === 'running' ||
-          run.status === 'pending'
-        ) {
-          const updated: ScheduleRun = {
-            ...run,
-            status: 'failed_interrupted',
-            completedAt: new Date().toISOString(),
-            error: 'Interrupted by app restart',
-          };
-          await this.repository.saveRun(updated);
-          recoveredCount++;
-        }
-      }
-    }
-
-    if (recoveredCount > 0) {
-      logger.info(`Recovered ${recoveredCount} interrupted runs as failed_interrupted`);
-    }
-  }
 
   // ===========================================================================
   // Helpers
