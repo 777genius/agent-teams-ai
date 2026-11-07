@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { buildCopiedTeamMembers } from './teamCopyData';
@@ -109,35 +110,6 @@ const ImportTeamDialog = lazy(() =>
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
-
-interface CreateTeamDialogLoadingFallbackProps {
-  readonly isCopy: boolean;
-  readonly onClose: () => void;
-}
-
-const CreateTeamDialogLoadingFallback = ({
-  isCopy,
-  onClose,
-}: CreateTeamDialogLoadingFallbackProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-  const { t: tCommon } = useAppTranslation('common');
-  return (
-    <div data-testid="create-team-page" className="size-full min-h-0 overflow-auto">
-      <div className="flex items-center gap-3 border-b border-[var(--color-border)] p-4">
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          {t('list.title')}
-        </Button>
-        <h1 className="text-base font-semibold">
-          {isCopy ? t('create.title.copy') : t('create.title.create')}
-        </h1>
-      </div>
-      <div role="status" className="flex items-center gap-2 p-6 text-xs text-[var(--color-text-muted)]">
-        <Loader2 className="size-3.5 animate-spin" />
-        {tCommon('states.loading')}
-      </div>
-    </div>
-  );
-};
 
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
@@ -1101,7 +1073,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
   const createDialogElement = createPageOpen && (
     <Suspense
       fallback={
-        <CreateTeamDialogLoadingFallback
+        <CreateTeamPageLoadingFallback
           isCopy={copyData != null}
           onClose={handleCreateDialogClose}
         />
