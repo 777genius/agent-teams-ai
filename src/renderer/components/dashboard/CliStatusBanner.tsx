@@ -1535,13 +1535,9 @@ const InstalledBanner = ({
 
 interface CliStatusBannerProps {
   isDashboardActive?: boolean;
-  /** Separate from passive polling; legacy callers remain visible by default. */
   isPaneVisible?: boolean;
 }
-export const CliStatusBanner = ({
-  isDashboardActive = false,
-  isPaneVisible = true,
-}: CliStatusBannerProps): React.JSX.Element | null => {
+export const CliStatusBanner = ({ isDashboardActive = false, isPaneVisible = true }: CliStatusBannerProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const isElectron = useMemo(() => isElectronMode(), []);
