@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { currentCreateTeamDraftGeneration } from '@renderer/services/createTeamDraftGeneration';
 import { draftStorage } from '@renderer/services/draftStorage';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
@@ -49,6 +50,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const pendingRef = useRef<{ key: string; value: InlineChip[] } | null>(null);
   const editRevisionRef = useRef(0);
   const keyRef = useRef(key);
+  const generationRef = useRef(key.startsWith('createTeam:') ? currentCreateTeamDraftGeneration() : undefined);
 
   useEffect(() => {
     keyRef.current = key;
@@ -74,9 +76,9 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
       const pending = pendingRef.current;
       pendingRef.current = null;
       if (pending.value.length === 0) {
-        void draftStorage.deleteDraft(pending.key);
+        void draftStorage.deleteDraft(pending.key, generationRef.current);
       } else {
-        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value));
+        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value), generationRef.current);
       }
     }
   }, []);
@@ -137,9 +139,9 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
       if (pending == null) return;
 
       if (pending.value.length === 0) {
-        void draftStorage.deleteDraft(pending.key);
+        void draftStorage.deleteDraft(pending.key, generationRef.current);
       } else {
-        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value)).then(() => {
+        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value), generationRef.current).then(() => {
           if (mountedRef.current) setIsSaved(true);
         });
       }
@@ -170,7 +172,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
     chipsRef.current = [];
     setChipsState([]);
     setIsSaved(false);
-    void draftStorage.deleteDraft(keyRef.current);
+    void draftStorage.deleteDraft(keyRef.current, generationRef.current);
   }, []);
 
   return { chips, setChips, addChip, removeChip, clearChipDraft, isSaved };
