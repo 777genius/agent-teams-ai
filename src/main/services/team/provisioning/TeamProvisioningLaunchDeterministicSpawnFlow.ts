@@ -251,7 +251,8 @@ export async function persistDeterministicLaunchMetadata<
       launchIdentity,
       nowMs: savedMeta?.createdAt ?? ports.nowMs(),
     }),
-    prompt: request.prompt ?? savedMeta?.prompt,
+    // A bootstrap-only start must not overwrite saved historical instructions.
+    prompt: request.bootstrapOnly ? savedMeta?.prompt : (request.prompt ?? savedMeta?.prompt),
   });
   const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
   // Runtime materialization supplies workspaces, but never configured model authority.
