@@ -50,6 +50,7 @@ describe('Smart schedules filesystem safe E2E', () => {
     port = {
       isTeamAlive: vi.fn(() => running),
       isTeamLaunching: vi.fn(() => false),
+      isTeamBusy: vi.fn(() => false),
       getRuntime: vi.fn(async () => ({
         teamName: 'e2e-team',
         runId: running ? 'active-team-run' : null,

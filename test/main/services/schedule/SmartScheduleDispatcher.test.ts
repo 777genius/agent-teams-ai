@@ -70,6 +70,7 @@ function makePort(): SmartScheduleRuntimePort {
   return {
     isTeamAlive: vi.fn(() => true),
     isTeamLaunching: vi.fn(() => false),
+    isTeamBusy: vi.fn(() => false),
     getRuntime: vi.fn(async () => runtimeMembers(true)),
     getMemberStatuses: vi.fn(async () => ({
       runId: 'team-run-1',
@@ -239,6 +240,32 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     const result = await dispatch.dispatch(makeSchedule('team'), 'run-7', active);
     expect(result.kind).toBe('dispatched');
     expect(port.createTask).toHaveBeenCalledWith('test-team', expect.objectContaining({ owner: 'lead' }));
+    expect(port.launchTeam).not.toHaveBeenCalled();
+  });
+
+  it.each(['agent', 'team'] as const)(
+    'skips an in-flight stop instead of restarting a supposedly offline %s',
+    async (mode) => {
+      port.isTeamAlive = vi.fn(() => false);
+      port.isTeamBusy = vi.fn(() => true);
+      const result = await dispatch.dispatch(makeSchedule(mode), 'stopping', active);
+      expect(result.kind).toBe('skipped');
+      expect(port.runOneShot).not.toHaveBeenCalled();
+      expect(port.launchTeam).not.toHaveBeenCalled();
+      expect(port.createTask).not.toHaveBeenCalled();
+    }
+  );
+
+  it('rechecks stop admission after loading saved team settings', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    let busy = false;
+    port.isTeamBusy = vi.fn(() => busy);
+    port.getSavedRequest = vi.fn(async () => {
+      busy = true;
+      return { teamName: 'test-team', cwd: '/tmp/project', providerId: 'anthropic', members: [] };
+    });
+    const result = await dispatch.dispatch(makeSchedule('team'), 'stopping-after-read', active);
+    expect(result.kind).toBe('skipped');
     expect(port.launchTeam).not.toHaveBeenCalled();
   });
 

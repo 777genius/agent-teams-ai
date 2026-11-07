@@ -11,12 +11,13 @@ import type { TeamProvisioningService } from '../team/TeamProvisioningService';
 export function createSchedulerService(
   apis: Pick<TeamIpcHandlerApis, 'runtime' | 'provisioningRun' | 'diagnostics' | 'memberLifecycle'>,
   data: Pick<TeamDataService, 'getLeadMemberName' | 'getSavedRequest' | 'createTask'>,
-  provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning'>
+  provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
   const dispatcher = new SmartScheduleDispatcher({
     isTeamAlive: (teamName) => apis.runtime.isTeamAlive(teamName),
     isTeamLaunching: (teamName) => apis.provisioningRun.hasProvisioningRun(teamName),
+    isTeamBusy: (teamName) => provisioning.hasTeamOperationInProgress(teamName),
     getRuntime: (teamName) => apis.diagnostics.getTeamAgentRuntimeSnapshot(teamName),
     getMemberStatuses: (teamName) => apis.memberLifecycle.getMemberSpawnStatuses(teamName),
     getLeadName: (teamName) => data.getLeadMemberName(teamName),

@@ -25,6 +25,7 @@ export type SmartScheduleOutcome =
 export interface SmartScheduleRuntimePort {
   isTeamAlive(teamName: string): boolean;
   isTeamLaunching(teamName: string): boolean;
+  isTeamBusy(teamName: string): boolean;
   getRuntime(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
   getMemberStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   getLeadName(teamName: string): Promise<string | null>;
@@ -104,8 +105,11 @@ export class SmartScheduleDispatcher {
       if (this.runtime.isTeamLaunching(team)) {
         return skipped('Team is launching; no duplicate launch or task was submitted');
       }
+      if (this.runtime.isTeamBusy(team)) {
+        return skipped('Team lifecycle operation in progress; no work was submitted');
+      }
       if (!this.runtime.isTeamAlive(team)) {
-        if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamAlive(team)) {
+        if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamBusy(team) || this.runtime.isTeamAlive(team)) {
           return skipped('Team state changed while scheduling; no action was submitted');
         }
         if (schedule.executionMode === 'agent') {
@@ -121,7 +125,7 @@ export class SmartScheduleDispatcher {
         if (!saved?.cwd || !saved.providerId) {
           return skipped('Team launch settings are missing or the provider is not selected');
         }
-        if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamAlive(team)) {
+        if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamBusy(team) || this.runtime.isTeamAlive(team)) {
           return skipped('Team launch state changed; no duplicate launch was submitted');
         }
         // Launch has its own per-team admission. The prompt is sent by that launch
@@ -152,6 +156,9 @@ export class SmartScheduleDispatcher {
     isCancelled: () => boolean
   ): Promise<SmartScheduleOutcome> {
     const team = schedule.teamName;
+    if (this.runtime.isTeamBusy(team)) {
+      return skipped('Team lifecycle operation in progress; no task was submitted');
+    }
     const runtime = await this.runtime.getRuntime(team);
     if (!runtime.runId || !this.runtime.isTeamAlive(team)) {
       return skipped('Team runtime is not confirmed running');
@@ -192,8 +199,8 @@ export class SmartScheduleDispatcher {
       ) {
         return skipped(`Member "${memberName}" is not safely confirmed offline`);
       }
-      if (isCancelled() || !this.runtime.isTeamAlive(team)) {
-        return skipped('Team stopped before member attach');
+      if (isCancelled() || this.runtime.isTeamBusy(team) || !this.runtime.isTeamAlive(team)) {
+        return skipped('Team stopped or changed before member attach');
       }
       await this.runtime.attachMember(team, memberName);
       const ready = await this.waitForMember(team, memberName, runtime.runId, isCancelled);
@@ -205,6 +212,7 @@ export class SmartScheduleDispatcher {
     const fresh = await this.runtime.getRuntime(team);
     if (
       isCancelled() ||
+      this.runtime.isTeamBusy(team) ||
       !this.runtime.isTeamAlive(team) ||
       fresh.runId !== runtime.runId ||
       !readyMember(fresh.members[memberName])
