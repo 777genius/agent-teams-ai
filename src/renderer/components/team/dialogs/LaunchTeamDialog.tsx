@@ -88,7 +88,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { CronScheduleInput } from '../schedule/CronScheduleInput';
+import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
@@ -2602,89 +2602,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               </button>
 
               {schedExpanded ? (
-                <div className="space-y-3 border-t border-[var(--color-border)] px-3 pb-3 pt-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t('launch.schedule.execution')}</Label>
-                    {scheduleExecutionMode === 'legacy' ? (
-                      <div className="rounded border border-[var(--color-border)] p-2 text-xs text-[var(--color-text-secondary)]">
-                        {t('launch.schedule.legacyNotice')}
-                        <button
-                          type="button"
-                          className="ml-2 underline"
-                          onClick={() => setScheduleExecutionMode('agent')}
-                        >
-                          {t('launch.schedule.upgradeSmart')}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Schedule execution mode">
-                        {(['agent', 'team'] as const).map((mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            aria-pressed={scheduleExecutionMode === mode}
-                            className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                              scheduleExecutionMode === mode
-                                ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                                : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'
-                            }`}
-                            onClick={() => setScheduleExecutionMode(mode)}
-                          >
-                            {mode === 'agent' ? t('launch.schedule.oneAgent') : t('launch.schedule.wholeTeam')}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {scheduleExecutionMode === 'agent' ? (
-                      <>
-                        <Label htmlFor="schedule-member" className="text-xs">{t('launch.schedule.target')}</Label>
-                        <select
-                          id="schedule-member"
-                          className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-xs text-[var(--color-text)]"
-                          value={scheduleTargetMember}
-                          onChange={(event) => setScheduleTargetMember(event.target.value)}
-                        >
-                          <option value="">{t('launch.schedule.leadDefault')}</option>
-                          {(teamByName[effectiveTeamName]?.members ?? [])
-                            .filter((member) => member.name !== teamByName[effectiveTeamName]?.leadName)
-                            .map((member) => (
-                              <option key={member.name} value={member.name}>{member.name}</option>
-                            ))}
-                        </select>
-                        <p className="text-[11px] text-[var(--color-text-muted)]">
-                          {t('launch.schedule.agentDescription')}
-                        </p>
-                      </>
-                    ) : scheduleExecutionMode === 'team' ? (
-                      <p className="text-[11px] text-[var(--color-text-muted)]">
-                        {t('launch.schedule.teamDescription')}
-                      </p>
-                    ) : null}
-                  </div>
-                  {/* Label */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="schedule-label" className="label-optional">
-                      {t('launch.schedule.labelOptional')}
-                    </Label>
-                    <Input
-                      id="schedule-label"
-                      className="h-8 text-xs"
-                      value={schedLabel}
-                      onChange={(e) => setSchedLabel(e.target.value)}
-                      placeholder={t('launch.schedule.labelPlaceholder')}
-                    />
-                  </div>
-
-                  {/* Cron + Timezone + Warmup */}
-                  <CronScheduleInput
-                    cronExpression={cronExpression}
-                    onCronExpressionChange={setCronExpression}
-                    timezone={timezone}
-                    onTimezoneChange={setTimezone}
-                    warmUpMinutes={warmUpMinutes}
-                    onWarmUpMinutesChange={setWarmUpMinutes}
-                  />
-                </div>
+                <SmartScheduleFields
+                  mode={scheduleExecutionMode}
+                  onModeChange={setScheduleExecutionMode}
+                  targetMember={scheduleTargetMember}
+                  onTargetMemberChange={setScheduleTargetMember}
+                  team={teamByName[effectiveTeamName]}
+                  label={schedLabel}
+                  onLabelChange={setSchedLabel}
+                  cronExpression={cronExpression}
+                  onCronExpressionChange={setCronExpression}
+                  timezone={timezone}
+                  onTimezoneChange={setTimezone}
+                  warmUpMinutes={warmUpMinutes}
+                  onWarmUpMinutesChange={setWarmUpMinutes}
+                />
               ) : null}
             </div>
           ) : null}
