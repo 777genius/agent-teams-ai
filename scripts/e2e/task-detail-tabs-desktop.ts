@@ -307,6 +307,17 @@ try {
   assert(longIdRowHeight > 0 && longIdRowHeight <= 49,
     'A long task display ID must not expand the fixed-height virtualized row');
   await cdp.screenshot(join(root, 'kanban-table-dark.png'));
+  // A table row must reuse the real task detail dialog, not a table-only editor.
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"3\"] [data-testid=\"team-task-table-open\"]');if(!button)throw new Error('Review task row action missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const dialog=document.querySelector('[role=\"dialog\"]');return !!dialog&&dialog.textContent?.includes('TABLE_E2E_REVIEW');})()"
+  ), 'existing task detail dialog opens from table');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[role=\"dialog\"]')"
+  ), 'task detail closes before sorting');
   await cdp.evaluate(
     "(()=>{const button=document.querySelector('[data-testid=\"team-task-table-header-status\"] button');if(!button)throw new Error('Table status sort header missing');button.click();})()"
   );
