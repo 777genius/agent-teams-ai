@@ -308,7 +308,7 @@ describe('applyElectronDevPathOverrides', () => {
     expect(setPath).not.toHaveBeenCalled();
   });
 
-  it.skipIf(process.platform === 'win32')(
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
     'rejects an existing isolated logs directory that is not writable',
     () => {
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-profile-readonly-'));
