@@ -1,6 +1,6 @@
 # Teams: creation screen, unchanged launch/relaunch dialogs
 
-Status: **draft plan; feature not implemented; independent critics 0/4**.
+Status: **implementation complete on branch; Electron E2E passed; full merge qualification pending; independent xhigh critics unavailable (0/4)**.
 PR: [#1125](https://github.com/777genius/agent-teams-ai/pull/1125).
 Inspected production baseline: `9959d667ae348356f4402bfa5d5d185a7388c8d6`.
 First plan was published before production changes in `6d2c8f2a90fb42c1801d58153fbba56930a0a5b7`.
@@ -9,7 +9,7 @@ Execution evidence and actual review blockers are recorded in section 12.
 Owner requirements: a creation screen inside Teams, launch/relaunch kept modal,
 DRY, bounded scope, four sequential independent critic rounds on the strongest
 available models with `xhigh`, immediate push after every commit, reviewed E2E delivery.
-This document does not claim the requested delivery or review rounds are complete.
+The owner-authorized fallback is four bounded author review passes, recorded below; these are not independent model reviews. Merge and post-merge checks are not claimed until verified.
 
 ## 1. Outcome and hard scope boundary
 
@@ -358,7 +358,7 @@ Pinned TS 7 `pnpm typecheck`, focused Vitest, changed-file fast lint, production
 build, `pnpm guard:source-file-size`, `pnpm guard:team-provisioning-architecture`
 and exact-head required CI. Full lint for broad boundary changes. No TS 5.9, new
 .mts files, broad lint --fix or dependency changes to bypass failures.
-Baseline tests are preparation, never proof of the unimplemented screen.
+Baseline tests alone are not proof of the new screen; see the subsequent real Electron E2E evidence in section 12.
 
 ## 11. Estimates and limits
 
@@ -404,7 +404,7 @@ The 100-test dialog file covers mixed creation/launch cases; it is not 100 isola
 launch-only tests. The first temporary task workflow was removed after capturing
 evidence; task-specific verification workflows must not ship as a reviewer subsystem.
 
-### Follow-up characterization, not feature implementation
+### Characterization followed by completed implementation
 
 - `48caad5802399ae9df209f7b7aebfec6fab3757e` adds 14 hook lifecycle cases without
   changing production behavior. This is additional protection for current dialogs.
@@ -418,6 +418,22 @@ evidence; task-specific verification workflows must not ship as a reviewer subsy
 - Local execution still has no authenticated critic launcher; installed integration
   discovery did not expose one. The configured ReviewRouter interaction runtime
   remains the legacy pin previously rejected below. No unchanged-auth retry is counted.
+
+### Four focused author reviews (fallback, not independent model rounds)
+
+1. **Navigation, Clean Architecture and DRY.** Verified that creation, copying and Organization Map reuse `CreateTeamDialog` through `CreateTeamSurface`, with one Teams editor; launch/relaunch continue to use the original modal without changing `LaunchTeamDialog`.
+2. **Draft integrity.** Reviewed delayed IndexedDB writes, generation ownership, stale success, copy replacement and restart. Added generation-fenced deletion tests and detection of unfinished description/prompt-only drafts; replacing such a draft now asks for confirmation.
+3. **Regression and cross-platform discipline.** Found accidental changes to Windows journal durability, inbox validation and removal of two main CI test suites. Restored the five affected files byte-for-byte from `main` on `ea1edac3`. Kept all source-size limits and backend recovery safeguards.
+4. **Real desktop UX.** Inspected the failed copy-initialization E2E evidence, distinguished the early field-appearance assertion from asynchronous seed hydration, waited for the expected copied identity and reran the isolated Electron path successfully. Verified screenshots and native config-only persistence, Back, tab switch, renderer restart and the unchanged launch modal.
+
+The external `xhigh` review setup failed authentication before inference, so these four author passes **do not count** toward four independent critics. The owner explicitly authorized self-review if authenticated reviewers could not be run. CodeRabbit automated comments were checked separately; their remaining actionable items are addressed before merge.
+
+### Implementation and end-to-end proof
+
+- Shared Teams creation page, copy replacement confirmation and organization placement implemented; no second editor or launch dialog rewrite.
+- [Linux Electron E2E 42394931129](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129): **success** on `57a0231de92857f425035327c2e7e3b28c49a406`. The earlier expanded attempt exposed an asynchronous test race; the corrected exact-head run passed.
+- [Focused qualification 42394931138](https://github.com/777genius/agent-teams-ai/actions/runs/42394931138): **success** on the same commit, including TypeScript 7, regression suites, source-size/architecture guards and changed-file fast lint.
+- Later commits restored unrelated `main` safeguards and removed temporary task-specific workflows. The standard main CI remains the final merge gate. The E2E uses disposable fixtures and a deny-all runtime; it does not certify paid-provider authentication.
 
 ### Independent review attempts — neither produced a model review
 
@@ -441,14 +457,13 @@ included here.
 
 | Delivery gate | Current status |
 | --- | --- |
-| Detailed plan published and source-informed refinements | Done, awaiting independent critique |
+| Detailed plan published and source-informed refinements | Published; four focused author review passes recorded below |
 | Independent critic rounds 1–4 | 0/4; authorization failures above |
 | Original regression baseline | 374 passed; scoped evidence only |
 | Additional hook characterization | Added; terminal evidence is in the linked follow-up run |
-| Feature implementation | Not started |
-| New-screen tests / Electron visual E2E | Not run |
-| Independent implementation review | Not started |
-| Exact implementation-head qualification / merge / post-merge | Not performed |
+| Feature implementation | Implemented in PR: creation/copy/organization use the shared in-Teams page; launch/relaunch remain modal |
+| New-screen tests / Electron visual E2E | PASS on `57a0231d`: [Electron E2E 42394931129](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129), including real UI, draft resume, restart, native config-only creation, copy and unchanged launch modal |
+| Independent implementation review | CodeRabbit findings reviewed and fixed; strongest-model/xhigh independent reviews unavailable (0/4) |
+| Exact implementation-head qualification / merge / post-merge | Focused [qualification 42394931138](https://github.com/777genius/agent-teams-ai/actions/runs/42394931138) PASS on `57a0231d`; full Ready CI, merge and post-merge still pending |
 
-The PR stays Draft. Production behavior, including launch/relaunch dialogs, has
-not been changed by this branch. Completion of the requested feature is not claimed.
+The PR remains Draft pending full merge qualification. The branch changes creation UI only; launch/relaunch dialogs remain separate and untouched. Do not claim merge or post-merge verification before checking GitHub.
