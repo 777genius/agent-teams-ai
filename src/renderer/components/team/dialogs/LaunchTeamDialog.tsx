@@ -123,6 +123,7 @@ import {
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
+import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -452,8 +453,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       effectiveCwd,
       open && launchPreflightSelectionReady && requestedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled =
-    open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
+  const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
+    open, isLaunchMode, multimodelEnabled, requestedMemberProviders
+  );
   const {
     effectiveMemberDrafts,
     effectiveSelectedModel,
@@ -650,7 +652,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const createSchedule = useStore((s) => s.createSchedule);
   const updateSchedule = useStore((s) => s.updateSchedule);
   // localStorage persistence wrappers
-
   const setWorktreeEnabled = (value: boolean): void => {
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${effectiveTeamName}`, String(value));
@@ -723,7 +724,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
   };
-
   const autoResetSelectedEffort = (): void => {
     // EffortLevelSelector clears an unavailable effort through this callback. That
     // programmatic reset is not a user edit: no hydration cancel, no dirty mark.

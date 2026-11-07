@@ -128,6 +128,7 @@ import {
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
+import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -633,8 +634,9 @@ export const CreateTeamDialog = ({
       effectiveCwd,
       open && launchPreflightSelectionReady && selectedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled =
-    open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
+  const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
+    open, launchTeam, multimodelEnabled, selectedMemberProviders
+  );
   useEffect(() => {
     if (open && dialogTeamNameKey) {
       clearProvisioningError?.(dialogTeamNameKey);
@@ -770,7 +772,6 @@ export const CreateTeamDialog = ({
       selectedEffort,
     ]
   );
-
   const runtimeProviderLoadingById = useMemo(
     () =>
       new Map(
@@ -814,7 +815,6 @@ export const CreateTeamDialog = ({
   const pendingPrepareProviderSignatureByIdRef = useRef(new Map<TeamProviderId, string>());
   const prepareProviderRequestSeqByIdRef = useRef(new Map<TeamProviderId, number>());
   const prepareWarningsByProviderIdRef = useRef(new Map<TeamProviderId, string[]>());
-
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);

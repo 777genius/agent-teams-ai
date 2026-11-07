@@ -579,15 +579,17 @@ describe('TeamModelSelector disabled Codex models', () => {
     };
     const render = (state: typeof directory, providerId: 'codex' | 'opencode' = 'codex') =>
       root.render(
-        <OpenCodeSourceDirectoryContext.Provider value={state}>
-          <TeamModelSelector
-            providerId={providerId}
-            projectPath={projectPath}
-            onProviderChange={() => undefined}
-            onValueChange={() => undefined}
-            value=""
-          />
-        </OpenCodeSourceDirectoryContext.Provider>
+        React.createElement(
+          OpenCodeSourceDirectoryContext.Provider,
+          { value: state },
+          React.createElement(TeamModelSelector, {
+            providerId,
+            projectPath,
+            onProviderChange: () => undefined,
+            onValueChange: () => undefined,
+            value: '',
+          })
+        )
       );
 
     try {
@@ -646,15 +648,17 @@ describe('TeamModelSelector disabled Codex models', () => {
     try {
       await act(async () => {
         root.render(
-          <OpenCodeSourceDirectoryContext.Provider value={oldProjectDirectory}>
-            <TeamModelSelector
-              providerId="codex"
-              projectPath="/tmp/source-project-B"
-              onProviderChange={() => undefined}
-              onValueChange={() => undefined}
-              value=""
-            />
-          </OpenCodeSourceDirectoryContext.Provider>
+          React.createElement(
+            OpenCodeSourceDirectoryContext.Provider,
+            { value: oldProjectDirectory },
+            React.createElement(TeamModelSelector, {
+              providerId: 'codex',
+              projectPath: '/tmp/source-project-B',
+              onProviderChange: () => undefined,
+              onValueChange: () => undefined,
+              value: '',
+            })
+          )
         );
         await Promise.resolve();
       });
