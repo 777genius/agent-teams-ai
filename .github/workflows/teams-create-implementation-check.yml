@@ -1,0 +1,83 @@
+name: Teams creation implementation qualification
+run-name: Teams creation exact-head typecheck, regression and guards
+on:
+  push:
+    branches: [feat/teams-create-screen-plan]
+    paths:
+      - .github/workflows/teams-create-implementation-check.yml
+      - src/renderer/components/team/**
+      - src/renderer/components/layout/PaneContent.tsx
+      - src/renderer/store/slices/tabSlice.ts
+      - src/renderer/types/tabs.ts
+      - src/features/organizations/renderer/ui/OrganizationMapTab.tsx
+      - src/features/localization/renderer/locales/**
+      - src/renderer/hooks/useCreateTeamDraft.ts
+      - src/renderer/services/createTeamDraftStorage.ts
+permissions:
+  contents: read
+concurrency:
+  group: teams-create-impl-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  qualification:
+    if: github.repository == '777genius/agent-teams-ai' && github.ref == 'refs/heads/feat/teams-create-screen-plan'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 30
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: TypeScript 7 typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm typecheck 2>&1 | tee "$RUNNER_TEMP/teams-create-typecheck.log" | tail -45
+      - name: Test creation and launch regressions
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run --maxWorkers=1 \
+            src/renderer/hooks/useCreateTeamDraft.test.tsx \
+            test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts \
+            test/renderer/components/team/dialogs/ProjectPathSelectorDeleted.test.tsx \
+            src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts \
+            src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.test.tsx \
+            src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx \
+            test/renderer/store/teamSlice.test.ts \
+            2>&1 | tee "$RUNNER_TEMP/teams-create-tests.log" | tail -40
+      - name: Architecture guards and changed-file lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm guard:source-file-size
+          pnpm guard:team-provisioning-architecture
+          pnpm lint:fast:files -- \
+            src/renderer/components/team/TeamListView.tsx \
+            src/renderer/components/team/dialogs/CreateTeamDialog.tsx \
+            src/renderer/components/team/dialogs/CreateTeamSurface.tsx \
+            src/renderer/components/layout/PaneContent.tsx \
+            src/renderer/store/slices/tabSlice.ts \
+            src/renderer/types/tabs.ts \
+            src/features/organizations/renderer/ui/OrganizationMapTab.tsx
+      - name: Store machine-readable verification logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: teams-create-impl-${{ github.sha }}
+          path: ${{ runner.temp }}/teams-create-*.log
+          retention-days: 7
+          if-no-files-found: ignore
