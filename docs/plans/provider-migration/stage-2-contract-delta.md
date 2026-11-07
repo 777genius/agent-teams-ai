@@ -253,6 +253,20 @@ The listed tests are **existing oracles**, not new executions or evidence that t
 new cores pass. No new test names are invented, and no duplicate test harness is
 required before an implementation exists.
 
+**Current-main drift gate (7 Nov 2026; Stage 1 untouched):**
+[Current Desktop `main=2dd3eec`](https://github.com/777genius/agent-teams-ai/commit/2dd3eecce698a7a11d64be213eef424992d0ad81)
+versus Stage 1 #982 `999c468e` is [diverged](https://github.com/777genius/agent-teams-ai/compare/2dd3eecce698a7a11d64be213eef424992d0ad81...999c468e3f4f09a5e5eb1655f6b97a64e046c55e):
+171 commits ahead / 17 behind, merge base `62709419e1c1`.
+The [17-commit `main` delta](https://github.com/777genius/agent-teams-ai/compare/62709419e1c18be406e14e4cb644cf61d14a5a5c...2dd3eecce698a7a11d64be213eef424992d0ad81)
+touches 16 filenames also changed by Stage 1 #982, including `src/main/ipc/teams.ts`,
+`CreateTeamDialog.tsx`, `LaunchTeamDialog.tsx`, `TeamModelSelector.tsx`,
+`TeamListView.tsx`, and `test/main/ipc/teams.test.ts`. This is a **file-path
+intersection, not 16 proven textual conflicts**. Existing Stage 1 CI/packed
+receipts prove only their pinned candidate, not integration with the newer
+`main`. Stage 1 ownership must reconcile these UI/IPC paths separately before
+new-core M01–M19 release qualification; this S2.0 lane must not rebase or edit
+#982 or claim the old candidate's parity on a new merge tree.
+
 ## Minimum adapter qualification order
 
 1. **Owning upstream code:** Orchestrator must expose a real versioned Team/Task/
