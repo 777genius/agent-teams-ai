@@ -3,6 +3,7 @@ import React from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { CronScheduleInput } from './CronScheduleInput';
 
@@ -11,6 +12,9 @@ import type { TeamSummary } from '@shared/types';
 export type EditableScheduleMode = 'legacy' | 'agent' | 'team';
 
 interface SmartScheduleFieldsProps {
+  isLight: boolean;
+  expanded: boolean;
+  onToggle: () => void;
   mode: EditableScheduleMode;
   onModeChange: (mode: EditableScheduleMode) => void;
   targetMember: string;
@@ -28,6 +32,9 @@ interface SmartScheduleFieldsProps {
 
 /** Schedule-only controls: the shared team launch dialog remains untouched. */
 export const SmartScheduleFields = ({
+  isLight,
+  expanded,
+  onToggle,
   mode,
   onModeChange,
   targetMember,
@@ -44,8 +51,36 @@ export const SmartScheduleFields = ({
 }: SmartScheduleFieldsProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
-    <div className="space-y-3 border-t border-[var(--color-border)] px-3 pb-3 pt-2">
-      <div className="space-y-1.5">
+    <div
+      className="rounded-lg border border-[var(--color-border-emphasis)] shadow-sm"
+      style={{
+        backgroundColor: isLight
+          ? 'color-mix(in srgb, var(--color-surface-overlay) 24%, white 76%)'
+          : 'var(--color-surface-overlay)',
+      }}
+    >
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 px-3 py-2 text-left"
+        onClick={onToggle}
+      >
+        {expanded ? (
+          <ChevronDown className="size-3.5 shrink-0 text-[var(--color-text-muted)]" />
+        ) : (
+          <ChevronRight className="size-3.5 shrink-0 text-[var(--color-text-muted)]" />
+        )}
+        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+          {t('launch.schedule.title')}
+        </span>
+        {!expanded && (label || cronExpression) ? (
+          <span className="ml-auto truncate text-[11px] text-[var(--color-text-muted)] opacity-70">
+            {label || cronExpression}
+          </span>
+        ) : null}
+      </button>
+      {expanded ? (
+      <div className="space-y-3 border-t border-[var(--color-border)] px-3 pb-3 pt-2">
+        <div className="space-y-1.5">
         <Label className="text-xs">{t('launch.schedule.execution')}</Label>
         {mode === 'legacy' ? (
           <div className="rounded border border-[var(--color-border)] p-2 text-xs text-[var(--color-text-secondary)]">
@@ -123,6 +158,8 @@ export const SmartScheduleFields = ({
         warmUpMinutes={warmUpMinutes}
         onWarmUpMinutesChange={onWarmUpMinutesChange}
       />
+      </div>
+      ) : null}
     </div>
   );
 };
