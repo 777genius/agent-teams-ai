@@ -18,12 +18,6 @@ import { deferTabMutationForActiveChangeReview } from '@renderer/utils/changeRev
 import { normalizePath } from '@renderer/utils/pathNormalize';
 
 import {
-  leaveTeamsCreation,
-  navigateToTeamsCreation,
-  updateTabInLayout,
-} from '../utils/teamsCreationNavigation';
-
-import {
   findPane,
   findPaneByTabId,
   getAllTabs,
@@ -36,6 +30,11 @@ import {
   getSessionResetState,
   getWorktreeNavigationState,
 } from '../utils/stateResetHelpers';
+import {
+  leaveTeamsCreation,
+  navigateToTeamsCreation,
+  updateTabInLayout,
+} from '../utils/teamsCreationNavigation';
 
 import type { AppState, SearchNavigationContext } from '../types';
 import type { PaneLayout } from '@renderer/types/panes';
