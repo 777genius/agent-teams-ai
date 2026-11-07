@@ -24,6 +24,7 @@ import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useCreateTeamDraftAvailability } from '@renderer/hooks/useCreateTeamDraftAvailability';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
+import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -839,6 +840,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
         });
         if (!accepted) return;
       }
+      await resetCreateTeamDraft();
       openTeamsCreationPage({ copyData: copy }, true);
     },
     [openTeamsCreationPage, t]
