@@ -3245,7 +3245,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                   onOpenTrash={handleOpenTrash}
                 />
               </CollapsibleTeamSection>
-
               <TeamChangesSection
                 teamName={teamName}
                 sectionVariant="flat"
@@ -3254,7 +3253,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                 onOpenTask={openTaskDetailDialog}
                 onViewChanges={handleViewChangesForFile}
               />
-
               <CollapsibleTeamSection
                 sectionId="sessions"
                 variant="flat"
@@ -3270,9 +3268,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                   selectedSessionId={kanbanFilter.sessionId}
                   onSelectSession={(id) => {
                     setKanbanFilter((prev) => ({ ...prev, sessionId: id }));
-                    contentRef.current
-                      ?.querySelector<HTMLElement>('[data-section-id="kanban"]')
-                      ?.dispatchEvent(new CustomEvent('team-section-navigate'));
+                    contentRef.current?.querySelector('[data-section-id="kanban"]')
+                      ?.dispatchEvent(new Event('team-section-navigate'));
                   }}
                   projectPath={data.config.projectPath}
                 />
