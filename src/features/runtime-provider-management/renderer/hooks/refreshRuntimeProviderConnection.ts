@@ -1,6 +1,11 @@
 import { api } from '@renderer/api';
 
-import { publishRuntimeProviderDirectoryCache } from '../runtimeProviderDirectoryCache';
+import {
+  getRuntimeProviderDirectoryReadToken,
+  invalidateRuntimeProviderDirectoryScopeReads,
+  markRuntimeProviderDirectoryScopeUnverified,
+  publishRuntimeProviderDirectoryCache,
+} from '../runtimeProviderDirectoryCache';
 
 import { DEFAULT_DIRECTORY_FILTER } from './runtimeProviderDirectoryCatalogPolicy';
 import { withUiTimeout } from './runtimeProviderManagementInternals';
@@ -24,6 +29,7 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
   if (!input.directorySupported) return true;
   // A deep-linked directory may be filtered. Publish an unfiltered summary for
   // selectors without treating that page as authority or changing its query.
+  const readToken = getRuntimeProviderDirectoryReadToken(input.projectPath);
   try {
     const response = await withUiTimeout(
       api.runtimeProviderManagement.loadProviderDirectory({
@@ -38,23 +44,24 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
       }),
       'Provider metadata refresh timed out'
     );
-    if (
-      response.error ||
-      !response.directory ||
-      response.directory.entries.length === 0 ||
-      !input.isContextCurrent() ||
-      !input.isRuntimeRevisionCurrent()
-    )
+    if (!input.isContextCurrent() || !input.isRuntimeRevisionCurrent()) return false;
+    if (response.error || !response.directory || response.directory.entries.length === 0) {
+      markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
       return false;
+    }
     publishRuntimeProviderDirectoryCache({
       projectPath: input.projectPath,
       entries: response.directory.entries.map(presentDirectoryEntry),
       fetchedAt: response.directory.fetchedAt,
       authoritative: false,
       runtimeRevision: input.runtimeRevision,
+      readToken,
     });
     return true;
   } catch {
+    if (input.isContextCurrent() && input.isRuntimeRevisionCurrent()) {
+      markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
+    }
     return false;
   }
 }
@@ -64,6 +71,9 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
 export async function refreshRuntimeProviderConnection(
   input: ConnectionRefreshInput
 ): Promise<'refreshed' | 'warning' | 'stale'> {
+  // Preserve the existing full cache if the post-write refresh succeeds.
+  // Stale in-flight pre-write reads may no longer publish into this scope.
+  invalidateRuntimeProviderDirectoryScopeReads(input.projectPath);
   const sharedDirectoryRefresh = refreshSharedDirectory(input);
   try {
     const externalRefreshResult = await input.refreshExternal();
@@ -81,6 +91,9 @@ export async function refreshRuntimeProviderConnection(
       ? 'warning'
       : 'refreshed';
   } catch {
-    return input.isContextCurrent() ? 'warning' : 'stale';
+    await sharedDirectoryRefresh;
+    if (!input.isContextCurrent()) return 'stale';
+    markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
+    return 'warning';
   }
 }

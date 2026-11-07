@@ -17,7 +17,7 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
+import { getRuntimeProviderDirectoryReadToken, observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -104,7 +104,6 @@ interface UseRuntimeProviderManagementOptions {
     changeKind: RuntimeProviderChangeKind
   ) => Promise<boolean | void> | boolean | void;
 }
-
 export type RuntimeProviderModelPickerMode = 'use' | 'runtime-default';
 export type RuntimeProviderChangeKind =
   | 'connection'
@@ -544,6 +543,7 @@ export function useRuntimeProviderManagement(
         visibleEntryCount: directoryEntriesRef.current.length,
       });
       const projectContext = getProjectContextSnapshot();
+      const readToken = getRuntimeProviderDirectoryReadToken(projectContext.path);
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
       const requestIsCurrent = (): boolean =>
@@ -600,6 +600,7 @@ export function useRuntimeProviderManagement(
           directory,
           presentEntry: presentDirectoryEntry,
           runtimeRevision: settledRuntimeRevision,
+          readToken,
         });
         if (commit.action === 'retain') {
           setWarningMessage(EMPTY_FULL_CATALOG_WARNING);

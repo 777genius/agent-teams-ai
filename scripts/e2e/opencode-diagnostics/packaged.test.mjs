@@ -1588,6 +1588,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     export const verifyPackaged = () => {};
     export const catalogScenarios = [];
     export const verifyCatalog = () => {};
+    export const enterProviderSettings = () => {};
     export const waitForReadyCatalog = () => {};
     export const cleanupScenario = 'cleanup';
     export const seedStartupCleanup = () => {};
