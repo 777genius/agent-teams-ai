@@ -155,6 +155,7 @@ import { getOpenCodeRuntimeResolverCacheGeneration } from '@main/services/infras
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
+import { SmartScheduleDispatcher } from '@main/services/schedule/SmartScheduleDispatcher';
 import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/JsonTaskChangePresenceRepository';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
@@ -2200,7 +2201,24 @@ async function initializeServices(): Promise<void> {
         forceFresh: true,
       });
       return { ready: result.ready, message: result.message };
-    }
+    },
+    new SmartScheduleDispatcher({
+      isTeamAlive: (teamName) => teamIpcHandlerApis.runtime.isTeamAlive(teamName),
+      isTeamLaunching: (teamName) =>
+        teamIpcHandlerApis.provisioningRun.hasProvisioningRun(teamName),
+      getRuntime: (teamName) => teamDiagnosticsApi.getTeamAgentRuntimeSnapshot(teamName),
+      getMemberStatuses: (teamName) =>
+        teamIpcHandlerApis.memberLifecycle.getMemberSpawnStatuses(teamName),
+      getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),
+      getSavedRequest: (teamName) => teamDataService.getSavedRequest(teamName),
+      attachMember: (teamName, memberName) =>
+        teamIpcHandlerApis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
+          reason: 'member_added',
+        }),
+      createTask: (teamName, request) => teamDataService.createTask(teamName, request),
+      launchTeam: (request) => teamProvisioningService.launchTeam(request, () => undefined),
+      runOneShot: (request) => scheduledTaskExecutor.execute(request),
+    })
   );
   // Extension Store services
   const pluginCatalogService = new PluginCatalogService();
