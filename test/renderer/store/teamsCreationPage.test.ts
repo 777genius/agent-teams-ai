@@ -8,10 +8,13 @@ describe('Teams in-tab creation navigation', () => {
     vi.stubGlobal('crypto', { randomUUID: () => `teams-create-${++next}` });
   });
 
-  it('opens inside the Teams tab rather than creating a new tab type', () => {
+  it('opens inside an existing Teams tab without duplicating it', () => {
     const store = createTestStore();
+    store.getState().openTeamsTab();
+    const originalTabId = store.getState().getActiveTab()?.id;
     store.getState().openTeamsCreationPage();
     const editor = store.getState().getActiveTab();
+    expect(editor?.id).toBe(originalTabId);
     expect(editor).toMatchObject({ type: 'teams', teamsCreationPage: true });
     expect(store.getState().getAllPaneTabs()).toHaveLength(1);
 
