@@ -2,10 +2,24 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
+
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+
+let accountChanged: ((event: unknown, snapshot: CodexAccountSnapshotDto) => void) | null = null;
+vi.mock('@renderer/api', () => ({
+  api: {
+    onCodexAccountSnapshotChanged: (
+      listener: (event: unknown, snapshot: CodexAccountSnapshotDto) => void
+    ) => {
+      accountChanged = listener;
+      return () => { accountChanged = null; };
+    },
+  },
+}));
 
 const state = {
   fetchCliProviderStatus: vi.fn().mockResolvedValue(false),
@@ -78,6 +92,7 @@ describe('selected provider readiness revalidation', () => {
     vi.setSystemTime(new Date('2026-09-04T12:00:00.000Z'));
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.clearAllMocks();
+    accountChanged = null;
     state.cliProviderStatusLoading = {};
     state.cliStatusLoading = false;
     status = {
@@ -96,6 +111,27 @@ describe('selected provider readiness revalidation', () => {
     await act(async () => root.unmount());
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('rechecks selected Codex once when account sign-in completes after failed preflight', async () => {
+    status = {
+      ...status,
+      providers: [{
+        ...catalogProvider('codex', Date.now() - 1),
+        authenticated: false,
+        modelCatalogRefreshState: 'error',
+      }],
+    };
+    await render();
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    const snapshot = {
+      managedAccount: { type: 'chatgpt' },
+      login: { status: 'idle' },
+    } as CodexAccountSnapshotDto;
+    await act(async () => { accountChanged?.({}, snapshot); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+    await act(async () => { accountChanged?.({}, snapshot); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
   });
 
   it('refreshes at the exact expiry despite unrelated provider polling', async () => {

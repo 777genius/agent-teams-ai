@@ -2136,6 +2136,7 @@ export const CliStatusBanner = ({
           <Suspense fallback={null}>
             <ProviderRuntimeSettingsDialog
               open={manageDialogOpen}
+              visible={isDashboardActive}
               onOpenChange={handleManageDialogOpenChange}
               providers={visibleCliProviders}
               projectPath={selectedProjectPath}
@@ -2247,7 +2248,9 @@ export const CliStatusBanner = ({
     // Multimodel: render provider cards immediately instead of a generic intermediate block.
     if (multimodelEnabled) {
       return (
-        <InstalledBanner isActive={isDashboardActive}           catalogFailures={openCodeDashboardCatalog.failures}
+        <InstalledBanner
+          isActive={isDashboardActive}
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2506,7 +2509,9 @@ export const CliStatusBanner = ({
     if (renderCliStatus.authStatusChecking || isVerifyingAuth) {
       return (
         <>
-          <InstalledBanner isActive={isDashboardActive}             catalogFailures={openCodeDashboardCatalog.failures}
+          <InstalledBanner
+            isActive={isDashboardActive}
+            catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
             cliStatusLoading={cliStatusLoading}
@@ -2588,7 +2593,9 @@ export const CliStatusBanner = ({
 
     return (
       <>
-        <InstalledBanner isActive={isDashboardActive}           catalogFailures={openCodeDashboardCatalog.failures}
+        <InstalledBanner
+          isActive={isDashboardActive}
+          catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2790,7 +2797,9 @@ export const CliStatusBanner = ({
   // Installed — show version, path, update info
   return (
     <>
-      <InstalledBanner isActive={isDashboardActive}         catalogFailures={openCodeDashboardCatalog.failures}
+      <InstalledBanner
+        isActive={isDashboardActive}
+        catalogFailures={openCodeDashboardCatalog.failures}
         cliStatus={renderCliStatus}
         sourceProviderMap={loadingCliProviderMap}
         cliStatusLoading={cliStatusLoading}
