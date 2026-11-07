@@ -262,7 +262,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     port.isTeamBusy = vi.fn(() => busy);
     port.getSavedRequest = vi.fn(async () => {
       busy = true;
-      return { teamName: 'test-team', cwd: '/tmp/project', providerId: 'anthropic', members: [] };
+      return { teamName: 'test-team', cwd: '/tmp/project', providerId: 'anthropic' as const, members: [] };
     });
     const result = await dispatch.dispatch(makeSchedule('team'), 'stopping-after-read', active);
     expect(result.kind).toBe('skipped');
