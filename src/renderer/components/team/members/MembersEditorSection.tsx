@@ -6,7 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@renderer/components/ui/dropdown-menu';
 import { Label } from '@renderer/components/ui/label';
@@ -502,34 +501,25 @@ export const MembersEditorSection = ({
             <>
               <DropdownMenuCheckboxItem
                 checked={teammateWorktreeDefaultChecked}
-                disabled={worktreeDefaultDisabled}
+                aria-disabled={worktreeDefaultDisabled}
                 aria-describedby={worktreeDescriptionId}
-                onCheckedChange={(checked) =>
+                className={worktreeDefaultDisabled ? 'cursor-not-allowed opacity-50' : undefined}
+                onCheckedChange={(checked) => {
+                  if (worktreeDefaultDisabled) return;
                   updateTeammateWorktreeDefault(
                     worktreeIsolationDisabledReason ? false : checked === true
-                  )
-                }
+                  );
+                }}
                 onSelect={(event) => event.preventDefault()}
               >
                 {t('members.editor.runInSeparateWorktrees')}
               </DropdownMenuCheckboxItem>
-              {worktreeDefaultDisabled ? (
-                <DropdownMenuItem
-                  id={worktreeDescriptionId}
-                  aria-disabled="true"
-                  className="cursor-default pl-8 text-xs"
-                  onSelect={(event) => event.preventDefault()}
-                >
-                  {worktreeIsolationDisabledReason}
-                </DropdownMenuItem>
-              ) : (
-                <p
-                  id={worktreeDescriptionId}
-                  className="px-2 pb-1 pl-8 text-xs text-[var(--color-text-secondary)]"
-                >
-                  {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
-                </p>
-              )}
+              <p
+                id={worktreeDescriptionId}
+                className="px-2 pb-1 pl-8 text-xs text-[var(--color-text-secondary)]"
+              >
+                {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
+              </p>
             </>
           ) : null}
           <DropdownMenuCheckboxItem

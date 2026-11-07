@@ -6,8 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/components/ui/button', () => ({
   Button: React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-    ({ children, ...props }, ref) =>
-      React.createElement('button', { ...props, ref, type: 'button' }, children)
+    function MockButton({ children, ...props }, ref) {
+      return React.createElement('button', { ...props, ref, type: 'button' }, children);
+    }
   ),
 }));
 
@@ -507,20 +508,20 @@ describe('MembersEditorSection worktree master checkbox', () => {
     ).toEqual([undefined, undefined]);
   });
 
-  it('keeps enabling disabled and exposes the reason as a keyboard-focusable menu item', () => {
+  it('keeps enabling disabled and announces the reason on its keyboard-focusable control', () => {
     const { host, onChange } = renderMembersEditor({
       members: [createMemberDraft({ id: 'alice', name: 'alice' })],
       worktreeIsolationDisabledReason: 'Git is unavailable',
     });
 
     const checkbox = masterWorktreeCheckbox(host);
-    expect(checkbox.getAttribute('data-disabled')).toBe('');
+    expect(checkbox.getAttribute('aria-disabled')).toBe('true');
+    expect(checkbox.getAttribute('data-disabled')).toBeNull();
     const description = document.getElementById(checkbox.getAttribute('aria-describedby') ?? '');
     expect(description?.textContent).toContain('Git is unavailable');
-    expect(description?.getAttribute('role')).toBe('menuitem');
-    expect(description?.getAttribute('aria-disabled')).toBe('true');
-    act(() => description?.focus());
-    expect(document.activeElement).toBe(description);
+    expect(description?.getAttribute('role')).toBeNull();
+    act(() => checkbox.focus());
+    expect(document.activeElement).toBe(checkbox);
     act(() => checkbox.click());
     expect(onChange).not.toHaveBeenCalled();
   });
