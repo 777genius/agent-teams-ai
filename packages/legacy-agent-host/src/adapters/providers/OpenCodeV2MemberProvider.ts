@@ -556,10 +556,23 @@ export function createOpenCodeV2MemberProvider(
               },
               checkpoint: () => ready && current() ? source.checkpoint() :
                 { ok: false as const, code: 'unavailable' as const },
-              close: () => {
-                ready = false;
-                initialEvidence = undefined;
-                return source.close();
+              close: async () => {
+                // Retire the captured TEST-owned native process immediately.
+                // The private SPI bounds shutdown and can return UNKNOWN
+                // before its own confirmStopped callback is reached.
+                const stopped = finishOwned();
+                let privateCleanupConfirmed = false;
+                try {
+                  privateCleanupConfirmed = (await source.close()).cleanup === 'confirmed';
+                } catch {
+                  // The independent physical stop/readback still decides custody.
+                }
+                const physicallyStopped = await stopped;
+                return {
+                  logicallyClosed: true as const,
+                  cleanup: physicallyStopped && privateCleanupConfirmed ?
+                    'confirmed' as const : 'unknown' as const,
+                };
               },
             },
           };

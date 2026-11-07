@@ -690,6 +690,30 @@ test('buffered private V2 terminal never escapes a revoked Host observer', async
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+test('direct V2 SPI close retires its TEST owner without a separate Host cleanup call',
+  { timeout: 4000 }, async () => {
+    for (const physicallyConfirmed of [true, false]) {
+      const { captured, calls } = owner(true);
+      captured.confirmStopped = async () => { calls.stopped++; return physicallyConfirmed; };
+      const provider = createOpenCodeV2MemberProvider(context(), captured);
+      const opened = await provider.factory.open(request());
+      const observer = opened.driver.observe()[Symbol.asyncIterator]();
+      const waiting = observer.next();
+      const receipt = await opened.driver.close();
+      assert.equal((await waiting).done, true, 'closing wakes the private single-claim feed');
+      assert.deepEqual(receipt, {
+        logicallyClosed: true,
+        cleanup: physicallyConfirmed ? 'confirmed' : 'unknown',
+      }, 'an uncertain physical stop cannot be reported as a confirmed close');
+      assert.equal(provider.isReady(), false);
+      assert.equal(provider.initialContextEvidence?.(), undefined);
+      assert.equal(calls.stop, 1, 'close alone stops the original owned PID exactly once');
+      assert.equal(await provider.cleanup(), physicallyConfirmed);
+      assert.equal(calls.stop, 1, 'later cleanup never resends an uncertain stop');
+      assert.equal(calls.password, 0, 'no native request or credential read during close');
+    }
+  });
+
 test('consumer cancel before first V2 observation retires the unclaimable native session',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
