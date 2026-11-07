@@ -52,16 +52,24 @@ let root: Root | null;
 let host: HTMLDivElement;
 let latest: ReturnType<typeof useGatewayMemberBindings>;
 
-function Harness({ mode }: { mode: Mode }) {
-  latest = useGatewayMemberBindings(allocated.teamName, { memberNames, mode });
+function Harness({
+  mode,
+  retainedOwnerKey,
+  teamName = allocated.teamName,
+}: {
+  mode: Mode;
+  retainedOwnerKey?: string;
+  teamName?: string;
+}) {
+  latest = useGatewayMemberBindings(teamName, { memberNames, mode, retainedOwnerKey });
   return null;
 }
 
-async function mount(mode: Mode) {
+async function mount(mode: Mode, retainedOwnerKey?: string, teamName?: string) {
   await act(async () => {
     root!.render(
       <StrictMode>
-        <Harness mode={mode} />
+        <Harness mode={mode} retainedOwnerKey={retainedOwnerKey} teamName={teamName} />
       </StrictMode>
     );
   });
@@ -190,6 +198,63 @@ describe.each(modes)('gateway dialog lifecycle (%s)', (mode) => {
 
     await close();
 
+    expect(unbind).not.toHaveBeenCalled();
+  });
+});
+
+describe('retained creation ownership across in-tab navigation', () => {
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    list.mockReset().mockResolvedValue([existing]);
+    unbind.mockReset().mockResolvedValue(undefined);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+  });
+
+  afterEach(async () => {
+    await close();
+    host.remove();
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps an uncommitted receipt after Back and through a hydration-only render', async () => {
+    const owner = 'create-team-back-retention';
+    await mount('roster', owner);
+    await allocate();
+    await close();
+    expect(unbind).not.toHaveBeenCalled();
+
+    // A newly mounted form has not loaded its saved name yet. This must not
+    // clear the retained owner before IndexedDB hydration finishes.
+    root = createRoot(host);
+    await mount('roster', owner, '');
+    await close();
+    expect(unbind).not.toHaveBeenCalled();
+
+    list.mockResolvedValue([existing, allocated]);
+    root = createRoot(host);
+    await mount('roster', owner);
+    expect(latest.boundMemberNames.has('new')).toBe(true);
+    await act(async () => latest.discardRetained());
+    expect(unbind).toHaveBeenCalledExactlyOnceWith(expectedRemoval);
+  });
+
+  it('releases a confirmed binding so a new create does not own it', async () => {
+    const owner = 'create-team-accepted-release';
+    await mount('roster', owner);
+    await allocate();
+    await act(async () => {
+      await latest.run(async () => undefined);
+      latest.releaseRetained();
+    });
+    await close();
+    expect(unbind).not.toHaveBeenCalled();
+
+    list.mockResolvedValue([existing, allocated]);
+    root = createRoot(host);
+    await mount('roster', owner);
+    await act(async () => latest.discardRetained());
     expect(unbind).not.toHaveBeenCalled();
   });
 });
