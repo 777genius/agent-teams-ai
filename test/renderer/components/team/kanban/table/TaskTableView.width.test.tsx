@@ -94,13 +94,23 @@ describe('task table layout and column interactions', () => {
     expect(widths()[1]).toBe(before + 10);
     expect(parseFloat(table.style.width)).toBe(sum());
 
+    // Task resizing must remain effective even while it fills spare space.
+    const taskHeader = host.querySelector('[data-testid="team-task-table-header-task"]');
+    const resizeTask = taskHeader?.querySelector('button[aria-label]');
+    const originalTaskWidth = widths()[0];
+    act(() => {
+      resizeTask?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    });
+    expect(widths()[0]).toBe(originalTaskWidth + 10);
+    expect(parseFloat(table.style.width)).toBe(1210);
+
     const toggles = host.querySelectorAll<HTMLButtonElement>(
       '[data-testid="column-visibility-toggle"]'
     );
     act(() => toggles[2].click()); // owner
     expect(host.querySelector('[data-testid="team-task-table-header-owner"]')).toBeNull();
     expect(widths()).toHaveLength(5);
-    expect(parseFloat(table.style.width)).toBe(1200);
+    expect(parseFloat(table.style.width)).toBe(1210);
     expect(sum()).toBe(1200);
     act(() => root.unmount());
   });
