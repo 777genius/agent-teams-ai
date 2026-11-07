@@ -8,6 +8,7 @@ import {
   tableFeatures,
 } from '@tanstack/react-table';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { MessageSquare } from 'lucide-react';
@@ -62,23 +63,27 @@ export function createTaskTableColumns(
       maxSize: 720,
       enableHiding: false,
       cell: ({ row }) => (
-        <button
-          type="button"
-          data-testid="team-task-table-open"
-          className="flex w-full min-w-0 flex-col items-start gap-0.5 text-start"
-          title={row.original.subject}
-          onClick={(event) => {
-            event.stopPropagation();
-            onTaskClick?.(row.original.task);
-          }}
-        >
-          <span className="w-full truncate text-[13px] font-medium text-[var(--color-text)]">
-            {row.original.subject}
-          </span>
-          <span className="text-[10px] text-[var(--color-text-muted)]">
-            {formatTaskDisplayLabel(row.original.task)}
-          </span>
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              data-testid="team-task-table-open"
+              className="flex w-full min-w-0 flex-col items-start gap-0.5 text-start"
+              onClick={(event) => {
+                event.stopPropagation();
+                onTaskClick?.(row.original.task);
+              }}
+            >
+              <span className="w-full truncate text-[13px] font-medium text-[var(--color-text)]">
+                {row.original.subject}
+              </span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">
+                {formatTaskDisplayLabel(row.original.task)}
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{row.original.subject}</TooltipContent>
+        </Tooltip>
       ),
     },
     {
@@ -96,11 +101,17 @@ export function createTaskTableColumns(
             {labels.statusNames[row.original.status]}
           </span>
           {row.original.needsFix ? (
-            <span
-              title={labels.needsFix}
-              aria-label={labels.needsFix}
-              className="shrink-0 text-xs font-semibold text-amber-500"
-            >!</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  role="img"
+                  aria-label={labels.needsFix}
+                  className="shrink-0 text-xs font-semibold text-amber-500"
+                >!</span>
+              </TooltipTrigger>
+              <TooltipContent side="top">{labels.needsFix}</TooltipContent>
+            </Tooltip>
           ) : null}
         </span>
       ),
@@ -155,13 +166,18 @@ export function createTaskTableColumns(
         if (!updatedAt) return <span className="text-[var(--color-text-muted)]">—</span>;
         const date = new Date(updatedAt);
         return (
-          <time
-            dateTime={date.toISOString()}
-            title={date.toLocaleString(language)}
-            className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]"
-          >
-            {formatDistanceToNowStrict(date, { addSuffix: true })}
-          </time>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <time
+                dateTime={date.toISOString()}
+                tabIndex={0}
+                className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]"
+              >
+                {formatDistanceToNowStrict(date, { addSuffix: true })}
+              </time>
+            </TooltipTrigger>
+            <TooltipContent side="top">{date.toLocaleString(language)}</TooltipContent>
+          </Tooltip>
         );
       },
     },

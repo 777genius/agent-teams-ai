@@ -791,7 +791,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                 <div className="h-4 w-px bg-[var(--color-border)]" />
                 <KanbanSortPopover sort={sort} onSortChange={onSortChange} />
               </>
-            )}
+            ) : null}
           </div>
           {deletedTaskCount != null && deletedTaskCount > 0 && onOpenTrash ? (
             <Tooltip>
