@@ -2729,13 +2729,12 @@ export const TeamDetailView = memo(function TeamDetailView({
             className={cn(
               TEAM_HEADER_NAV_ACTION_CLASS,
               'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95',
-              pinned && 'w-8 px-0'
+              'w-8 px-0'
             )}
             style={visualizeButtonStyle}
             onClick={handleOpenGraphTab}
           >
             <Network size={13} className="shrink-0" />
-            {pinned ? null : t('detail.actions.visualize')}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
@@ -3062,10 +3061,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                           <button
                             type="button"
                             onClick={() => setEditorOpen(true)}
-                            className={TEAM_HEADER_NAV_ACTION_CLASS}
+                            aria-label={t('detail.actions.editCode')}
+                            className={cn(TEAM_HEADER_NAV_ACTION_CLASS, 'w-8 px-0')}
                           >
                             <Code size={11} className="shrink-0" />
-                            {t('detail.actions.editCode')}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>{t('detail.tooltips.openBuiltInEditor')}</TooltipContent>
@@ -3076,10 +3075,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                         <button
                           type="button"
                           onClick={handleOpenUsageTab}
-                          className={TEAM_HEADER_NAV_ACTION_CLASS}
+                          aria-label={t('detail.actions.usage', { defaultValue: 'Usage' })}
+                          className={cn(TEAM_HEADER_NAV_ACTION_CLASS, 'w-8 px-0')}
                         >
                           <BarChart3 size={11} className="shrink-0" />
-                          {t('detail.actions.usage', { defaultValue: 'Usage' })}
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
@@ -3126,18 +3125,23 @@ export const TeamDetailView = memo(function TeamDetailView({
                   badge={activeTeammateCount === 0 ? t('detail.solo') : activeTeammateCount}
                   defaultOpen
                   afterBadge={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="pointer-events-auto h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAddMemberDialogOpen(true);
-                      }}
-                    >
-                      <UserPlus size={12} />
-                      {t('detail.actions.add')}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t('detail.actions.add')}
+                          className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddMemberDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus size={12} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('detail.actions.add')}</TooltipContent>
+                    </Tooltip>
                   }
                   action={
                     <div className="runtime-telemetry-legend flex items-center gap-3 pr-3 text-[11px] font-medium leading-none text-[var(--color-text-muted)] opacity-0 transition-opacity duration-150">

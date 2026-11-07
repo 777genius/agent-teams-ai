@@ -1075,7 +1075,7 @@ export const MemberCard = memo(function MemberCard({
     >
       <div
         className={cn(
-          'group relative cursor-pointer overflow-hidden rounded py-1.5',
+          'group/member group relative cursor-pointer overflow-hidden rounded py-1.5',
           rowSurfaceBleedClass
         )}
         style={undefined}
@@ -1499,12 +1499,14 @@ export const MemberCard = memo(function MemberCard({
               progressPercent={progressPercent}
             />
             {!isRemoved && !passive && (
-              <MemberQuickActions
-                onSendMessage={onSendMessage}
-                onAssignTask={onAssignTask}
-                onEditMember={onEditMember}
-                editDisabled={isTeamProvisioning}
-              />
+              <div className="pointer-events-none opacity-0 transition-opacity group-focus-within/member:pointer-events-auto group-focus-within/member:opacity-100 group-hover/member:pointer-events-auto group-hover/member:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+                <MemberQuickActions
+                  onSendMessage={onSendMessage}
+                  onAssignTask={onAssignTask}
+                  onEditMember={onEditMember}
+                  editDisabled={isTeamProvisioning}
+                />
+              </div>
             )}
             {canRestoreMember ? (
               <Tooltip>
