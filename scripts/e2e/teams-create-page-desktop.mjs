@@ -589,6 +589,45 @@ async function main() {
     assert.equal((await renderSnapshot(cdp)).inCreatePage, false);
     await captureScreenshot(cdp, fixture, 'launch-still-modal');
 
+    log('wait for real Launch dialog content, not just its lazy-loading skeleton');
+    await cdp.waitFor(
+      "document.querySelector('[role=dialog] #dialog-model') || document.querySelector('[role=dialog] #launch-fast-mode')",
+      'launch model and runtime controls', 45_000
+    );
+    await captureScreenshot(cdp, fixture, 'launch-controls-loaded');
+
+    log('close launch dialog without starting the deny-all runtime');
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+    await cdp.waitFor("!document.querySelector('[role=dialog]')", 'launch modal closed');
+
+    log('create an actual config-only team from the restored screen');
+    await cdp.click(createButtonExpression('Continue creating'));
+    await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
+      'restored creation draft for config-only save');
+    const launchChecked = await cdp.evaluate(
+      "document.querySelector('#launch-team')?.getAttribute('data-state') === 'checked'"
+    );
+    if (launchChecked)
+      await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
+    await cdp.waitFor(createButtonExpression('Create'), 'config-only Create is enabled', 45_000);
+    await cdp.click(createButtonExpression('Create'));
+    await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
+      'config-only team created through real IPC', 45_000);
+    const created = await cdp.evaluate(
+      `window.electronAPI.teams.list().then(rows => rows.some(t => t.teamName === ${JSON.stringify(unique)}))`
+    );
+    assert.equal(created, true, 'Created config-only team was not persisted by native API');
+    const createdConfig = JSON.parse(await readFile(
+      path.join(fixture.claudeRoot, 'teams', unique, 'config.json'), 'utf8'
+    ));
+    assert.equal(createdConfig.name, unique, 'Native persisted config has wrong identity');
+    await captureScreenshot(cdp, fixture, 'config-only-created');
+
     const results = {
       success: true,
       unique,
@@ -596,6 +635,8 @@ async function main() {
       retainedAcrossTabSwitch: true,
       retainedAcrossProcessRestart: true,
       launchStillModal: true,
+      launchContentLoaded: true,
+      configOnlyCreatedThroughUi: true,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
