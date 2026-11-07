@@ -171,7 +171,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
         <Suspense fallback={fallback}>
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
-          {tab.type === 'settings' && <SettingsView />}
+          {tab.type === 'settings' && <SettingsView isActive={isActive} />}
           {tab.type === 'teams' && <TeamListView />}
           {tab.type === 'organizations' && (
             <TabUIProvider tabId={tab.id}>
