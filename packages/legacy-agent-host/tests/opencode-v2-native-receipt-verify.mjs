@@ -45,7 +45,7 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     r.packagedElectronQualified === false && sourceSha(r.sourceHead) &&
     sha256(r.binarySha256) && pid(r.pid) && ticks(r.processStartTicks) &&
     r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
-    policy && typeof policy === 'object' && !Array.isArray(policy) &&
+    policy !== undefined && policy !== null && typeof policy === 'object' && !Array.isArray(policy) &&
     policy.capturedDeny === 'deny' && policy.laterAllow === 'allow' &&
     policy.laterAsk === 'ask' && policy.askRejected === true &&
     policy.pendingAfterReject === 0 &&
