@@ -52,14 +52,14 @@ describe('OpenCodeSourceDirectoryProvider', () => {
     try {
       await act(async () => {
         root.render(
-          <OpenCodeSourceDirectoryProvider enabled projectPath="/tmp/project">
+          <OpenCodeSourceDirectoryProvider enabled projectPath="/workspace/project">
             <span>Dialog</span>
           </OpenCodeSourceDirectoryProvider>
         );
       });
       expect(quickConnect).toHaveBeenLastCalledWith({
         enabled: false,
-        projectPath: '/tmp/project',
+        projectPath: '/workspace/project',
         runtimeRevision: null,
       });
       expect(storeState.current.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
@@ -85,14 +85,14 @@ describe('OpenCodeSourceDirectoryProvider', () => {
       });
       await act(async () => {
         root.render(
-          <OpenCodeSourceDirectoryProvider enabled projectPath="/tmp/selected-project">
+          <OpenCodeSourceDirectoryProvider enabled projectPath="/workspace/selected-project">
             <span>Dialog</span>
           </OpenCodeSourceDirectoryProvider>
         );
       });
       expect(quickConnect).toHaveBeenLastCalledWith({
         enabled: true,
-        projectPath: '/tmp/selected-project',
+        projectPath: '/workspace/selected-project',
         runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
     } finally {
@@ -105,27 +105,27 @@ describe('OpenCodeSourceDirectoryProvider', () => {
     try {
       await act(async () => {
         root.render(
-          <OpenCodeSourceDirectoryProvider enabled projectPath="/tmp/test-project">
+          <OpenCodeSourceDirectoryProvider enabled projectPath="/workspace/test-project">
             <span>Dialog</span>
           </OpenCodeSourceDirectoryProvider>
         );
       });
       expect(quickConnect).toHaveBeenCalledWith({
         enabled: true,
-        projectPath: '/tmp/test-project',
+        projectPath: '/workspace/test-project',
         runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
 
       await act(async () => {
         root.render(
-          <OpenCodeSourceDirectoryProvider enabled={false} projectPath="/tmp/test-project">
+          <OpenCodeSourceDirectoryProvider enabled={false} projectPath="/workspace/test-project">
             <span>Dialog</span>
           </OpenCodeSourceDirectoryProvider>
         );
       });
       expect(quickConnect).toHaveBeenLastCalledWith({
         enabled: false,
-        projectPath: '/tmp/test-project',
+        projectPath: '/workspace/test-project',
         runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
     } finally {

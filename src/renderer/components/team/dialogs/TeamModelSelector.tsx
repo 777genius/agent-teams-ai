@@ -115,9 +115,9 @@ import {
   isOpenCodeProviderExplicitlyNotConnected,
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
-import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import { getOpenCodeSidebarSourceState } from './openCodeSidebarSourceState';
 import { useOpenCodeSourceDirectory, useScopedOpenCodeStatus } from './OpenCodeSourceDirectoryProvider';
+import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';

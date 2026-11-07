@@ -126,9 +126,9 @@ import {
   getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
+import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
-import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';

@@ -5,6 +5,7 @@ export {
   isOpenCodeRuntimeUsable,
   isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
 } from '../core/domain';
 export type { OpenCodeCatalogFailure } from './hooks/catalogFailure';
 export type {
@@ -49,6 +50,7 @@ export {
 } from './runtimeProviderDirectoryCache';
 export { RuntimeProviderManagementPanel } from './RuntimeProviderManagementPanel';
 export { RuntimeProviderOnboardingDialog } from './RuntimeProviderOnboardingDialog';
+export { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
 export { RuntimeProviderQuickConnect } from './RuntimeProviderQuickConnect';
 export { LocalProviderPrivateNetworkApprovalControl } from './ui/LocalProviderPrivateNetworkApprovalControl';
 export {

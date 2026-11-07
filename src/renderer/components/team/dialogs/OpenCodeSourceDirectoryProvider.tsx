@@ -3,13 +3,13 @@ import { createContext, useContext, useEffect } from 'react';
 import {
   resolveOpenCodeQuickConnectGate,
   resolveOpenCodeQuickConnectRuntimeRevision,
-} from '@features/runtime-provider-management/core/domain';
-import { useRuntimeProviderQuickConnect } from '@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
+  useRuntimeProviderQuickConnect,
+} from '@features/runtime-provider-management/renderer';
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
-import type { JSX, ReactNode } from 'react';
 import type { CliProviderStatus } from '@shared/types';
+import type { JSX, ReactNode } from 'react';
 
 type SourceDirectory = ReturnType<typeof useRuntimeProviderQuickConnect> & {
   readonly enabled: boolean;
@@ -34,7 +34,7 @@ export function useScopedOpenCodeStatus(projectPath: string): CliProviderStatus 
 }
 
 /** One summary-only source lookup per dialog, not per team member. */
-export function OpenCodeSourceDirectoryProvider({
+export const OpenCodeSourceDirectoryProvider = ({
   children,
   enabled,
   projectPath,
@@ -42,18 +42,24 @@ export function OpenCodeSourceDirectoryProvider({
   children: ReactNode;
   enabled: boolean;
   projectPath: string | null | undefined;
-}>): JSX.Element {
+}>): JSX.Element => {
   const normalizedPath = projectPath?.trim() || null;
-  const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus);
-  const runtimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
-  const runtimeError = useStore((state) => state.openCodeRuntimeError);
+  const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus ?? null);
+  const runtimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading === true);
+  const runtimeError = useStore((state) => state.openCodeRuntimeError ?? null);
   const fetchRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
-  const cliStatusLoading = useStore((state) => state.cliStatusLoading);
+  const cliStatusLoading = useStore((state) => state.cliStatusLoading === true);
   const provider = useStore(
     (state) => state.cliStatus?.providers.find((item) => item.providerId === 'opencode') ?? null
   );
   useEffect(() => {
-    if (enabled && !runtimeStatus && !runtimeStatusLoading && !runtimeError) {
+    if (
+      enabled &&
+      !runtimeStatus &&
+      !runtimeStatusLoading &&
+      !runtimeError &&
+      typeof fetchRuntimeStatus === 'function'
+    ) {
       void fetchRuntimeStatus();
     }
   }, [enabled, fetchRuntimeStatus, runtimeError, runtimeStatus, runtimeStatusLoading]);
@@ -90,4 +96,4 @@ export function OpenCodeSourceDirectoryProvider({
       {children}
     </OpenCodeSourceDirectoryContext.Provider>
   );
-}
+};
