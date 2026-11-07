@@ -494,6 +494,70 @@ test('native V2 submit preflight failure revokes Host readiness without replay o
   assert.equal(calls.stop, 1, 'no duplicate stop after uncertain native ACK');
 });
 
+test('pinned PR1 rejects the real V2 session envelope before native prompt (HOLD)',
+  { timeout: 10000 }, async () => {
+    // Official pinned V2.0.21 session GET returns {data: session}; the Host's
+    // existing PR1 vendor tarball still decodes flat session JSON. Demonstrate
+    // the incompatible boundary without inventing a native model-turn PASS.
+    const profile = v2Profile();
+    const sessionPath = '/api/session/' + profile.nativeSessionId;
+    let getCount = 0;
+    let promptCount = 0;
+    const server = createServer((req, res) => {
+      if (req.method === 'GET' && req.url === sessionPath) {
+        getCount++;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ data: {
+          id: profile.nativeSessionId,
+          location: { directory: profile.cwd },
+          agent: 'TEST-agent',
+          model: { providerID: 'TEST-provider', id: 'TEST-model' },
+          time: { created: 1 },
+        } }));
+        return;
+      }
+      if (req.method === 'POST') promptCount++;
+      res.writeHead(404);
+      res.end();
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    const { captured, calls } = owner(true);
+    let opened: Awaited<ReturnType<ReturnType<typeof createOpenCodeV2MemberProvider>['factory']['open']>> | undefined;
+    try {
+      const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+      opened = await provider.factory.open(request());
+      assert.equal(provider.isReady(), true, 'synthetic owner preflight is not wire qualification');
+      assert.deepEqual(await opened.driver.submit({
+        inputId: 'TEST-envelope-native',
+        operationRef: 'TEST-envelope-native-op',
+        content: 'TEST only; no model execution',
+      }), { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' });
+      assert.equal(getCount, 1, 'exactly one real-shaped session GET');
+      assert.equal(promptCount, 0, 'incompatible PR1 driver cannot submit a prompt');
+      assert.equal(provider.isReady(), false);
+      assert.equal(calls.stop, 1, 'only the captured TEST owner is retired');
+      assert.deepEqual(await opened.driver.submit({
+        inputId: 'TEST-envelope-no-retry',
+        operationRef: 'TEST-envelope-no-retry-op',
+        content: 'never send',
+      }), { ok: false, code: 'unavailable', delivery: 'known-not-sent' });
+      assert.equal(getCount, 1);
+      assert.equal(promptCount, 0);
+      assert.equal(await provider.cleanup(), true);
+      assert.equal(calls.stop, 1);
+    } finally {
+      await opened?.driver.close();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => {
+        server.close(error => error ? reject(error) : resolve());
+      });
+    }
+  });
+
 test('unknown physical stop after a failed V2 submit cannot claim safe reuse', async () => {
   const { captured, calls } = owner(true);
   captured.readPassword = () => { calls.password++; return ''; };
@@ -1083,8 +1147,9 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
           res.end(JSON.stringify(value));
         };
         if (req.method === 'GET' && url.pathname === sessionPath) {
-          // Pinned V2 queue preflight decodes the raw session GET body;
-          // the { data: ... } envelope belongs to prompt POST responses.
+          // This legacy pinned PR1 synthetic peer deliberately returns flat
+          // GET JSON. Official native V2 returns {data: ...}; the separate
+          // regression below records the current source-level HOLD.
           json({
             id: profile.nativeSessionId, location: { directory: profile.cwd },
             agent: 'TEST-agent', model: { providerID: 'TEST-provider', id: 'TEST-model' },
