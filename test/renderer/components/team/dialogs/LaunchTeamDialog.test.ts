@@ -4653,6 +4653,8 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).toContain('model:claude-opus-4-6');
     expect(host.textContent).toContain('effort:max');
     expect(host.textContent).toContain('fast:on');
+    // Only legacy one-shot schedules have an effective CLI warm-up option.
+    expect(host.textContent).toContain('Warm-up time');
     expect(host.textContent).toContain('monthly Agent SDK credit');
     expect(
       host.querySelector(
@@ -4754,6 +4756,7 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
       expect(wholeTeam?.getAttribute('aria-pressed')).toBe('true');
+      expect(host.textContent).not.toContain('Warm-up time');
 
       const save = Array.from(host.querySelectorAll('button')).find(
         (button) => button.textContent?.trim() === 'Save Changes'
@@ -4768,6 +4771,7 @@ describe('LaunchTeamDialog', () => {
       expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
         executionMode: 'team',
         targetMember: 'alice',
+        warmUpMinutes: 0,
         launchConfig: { cwd: '/tmp/project', prompt: 'Review open PRs' },
       });
     } finally {
