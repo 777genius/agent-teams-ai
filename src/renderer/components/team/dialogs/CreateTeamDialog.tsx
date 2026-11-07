@@ -91,6 +91,7 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
+import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
@@ -2220,17 +2221,17 @@ export const CreateTeamDialog = ({
               extraCliArgs: request.extraCliArgs,
             })
           );
-          if (selectedOrganizationPlacement) {
-            try {
-              await api.organizations.assignTeamToUnit({
-                ...selectedOrganizationPlacement,
-                teamName: request.teamName,
-                label: request.displayName || request.teamName,
-              });
-            } catch (error) {
-              console.warn('[Organizations] Failed to place created team in organization', error);
-            }
-          }
+          await assignCreatedTeamToOrganization({
+            placement: selectedOrganizationPlacement,
+            teamName: request.teamName,
+            label: request.displayName || request.teamName,
+            failureTitle: t('create.placementFailure.title', { defaultValue: 'Team created, not placed' }),
+            failureMessage: t('create.placementFailure.message', {
+              teamName: request.teamName,
+              defaultValue: 'Assign this team from the Organization Map; do not create it again.',
+            }),
+            acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
+          });
           onOpenTeam(request.teamName, configOnlyCwd);
           resetFormState();
           onClose();
