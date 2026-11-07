@@ -1,13 +1,15 @@
 // TEST-only durable SSE parser: never treat an unowned, truncated or reordered
 // stream as a native Host restart receipt.
 const invalid = () => { throw new Error('native_durable_log_identity_or_cursor_mismatch'); };
+const limit = () => { throw new Error('native_durable_log_limit_exceeded'); };
 const safePosition = value => Number.isSafeInteger(value) && value >= 0;
 const ownedString = value => typeof value === 'string' && value.length > 0 && value.length <= 4096;
 
 export function parseOwnedDurableLog(body, sessionId, directory) {
   if (typeof body !== 'string' || !ownedString(sessionId) || !ownedString(directory)) invalid();
   const frames = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n\n');
-  if (frames.at(-1) !== '' || frames.length > 4098) invalid();
+  if (frames.at(-1) !== '') invalid();
+  if (frames.length > 4098) limit();
   let previous = -1, synced = false, watermark;
   const ids = new Set();
   let eventCount = 0;
