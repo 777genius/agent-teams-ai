@@ -452,7 +452,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       effectiveCwd,
       open && launchPreflightSelectionReady && requestedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled = open && isLaunchMode && multimodelEnabled;
+  const openCodeCatalogEnabled =
+    open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
   const {
     effectiveMemberDrafts,
     effectiveSelectedModel,
@@ -2483,7 +2484,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           </div>
         ) : null}
-
         <div className="space-y-4">
           {/* ═══════════════════════════════════════════════════════════════════
               Schedule-only: Team selector (standalone mode)
