@@ -810,6 +810,64 @@ test('consumer observer cancel reports uncertain physical native cleanup',
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'unknown' });
   });
 
+test('consumer throw before first V2 observation retires its single-claim native owner',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    assert.equal(typeof observer.throw, 'function');
+    const failure = new Error('TEST observer failed before next');
+    await assert.rejects(async () => { await observer.throw?.(failure); },
+      (error: unknown) => error === failure);
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1, 'no observer can reclaim the native EventFeed');
+    assert.equal(calls.stopped, 1);
+    assert.equal(calls.password, 0);
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+    assert.equal(calls.stop, 1, 'cleanup must not signal twice');
+  });
+
+test('consumer throw wakes pending V2 observation without leaking native ownership',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    const pendingNext = observer.next();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const failure = new Error('TEST consumer abandons native feed');
+    const pendingThrow = observer.throw?.(failure);
+    assert.equal((await pendingNext).done, true, 'pending native next must be released');
+    await assert.rejects(async () => { await pendingThrow; },
+      (error: unknown) => error === failure);
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1);
+    assert.equal(calls.stopped, 1);
+    assert.equal(calls.password, 0);
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  });
+
+test('consumer throw cannot mask UNKNOWN physical native owner custody',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    captured.stopOwned = async () => { calls.stop++; return false; };
+    captured.confirmStopped = async () => { calls.stopped++; return false; };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    await assert.rejects(async () => { await observer.throw?.(new Error('TEST consumer failure')); },
+      /opencode.v2.owner-cleanup-unknown/);
+    assert.equal(provider.isReady(), false);
+    assert.equal(calls.stop, 1, 'no retry after unknown stop ACK');
+    assert.equal(await provider.cleanup(), false);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'unknown' });
+  });
+
 test('Host seal wakes a suspended native V2 observer without delivering a late event',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
