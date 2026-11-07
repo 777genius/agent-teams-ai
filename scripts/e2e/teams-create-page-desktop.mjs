@@ -388,6 +388,23 @@ class CdpClient {
       type: 'keyUp', key: modifierKey, code: modifierCode,
       windowsVirtualKeyCode: modifierCodeValue,
     });
+    // macOS Electron can ignore an emulated Cmd+A accelerator despite receiving
+    // the key events. Verify selection, then use Blink's native edit command.
+    const entireValueSelected = async () => this.evaluate(`(() => {
+      const input = ${expression};
+      return !!input && input.selectionStart === 0 &&
+        input.selectionEnd === input.value.length;
+    })()`);
+    if (!(await entireValueSelected()) && mac) {
+      await this.send('Input.dispatchKeyEvent', {
+        type: 'keyDown', key: 'a', code: 'KeyA',
+        windowsVirtualKeyCode: 65, modifiers: 4, commands: ['selectAll:'],
+      });
+      await this.send('Input.dispatchKeyEvent', {
+        type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 4,
+      });
+    }
+    assert(await entireValueSelected(), `Input select-all failed for ${selector}`);
     await this.send('Input.insertText', { text: value });
     await this.waitFor(
       `document.querySelector(${JSON.stringify(selector)})?.value === ${JSON.stringify(value)}`,
@@ -768,13 +785,13 @@ async function main() {
     };
     await selectTemplate();
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"] button:not([data-confirm-btn])"
+      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
     );
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"] button[data-confirm-btn]"
+      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button[data-confirm-btn]')"
     );
     await cdp.waitFor(
       "document.querySelector('#team-description')?.value === " +
