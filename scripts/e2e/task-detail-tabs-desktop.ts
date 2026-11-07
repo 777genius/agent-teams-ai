@@ -82,7 +82,7 @@ for (const [id, status, subject] of [
   ['4', 'completed', 'TABLE_E2E_APPROVED'],
 ] as const) {
   await writeFile(join(dirname(tableTaskPath), id + '.json'), JSON.stringify({
-    id, displayId: id, subject, status, owner: tableTeam.secondOwner,
+    id, displayId: id === '2' ? '2'.repeat(100) : id, subject, status, owner: tableTeam.secondOwner,
     blockedBy: id === '2' ? ['1'] : [], blocks: [], related: [],
     createdAt: tableStamp, comments: [],
   }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
@@ -301,6 +301,11 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length>=4&&[...root.querySelectorAll('[data-testid=\"team-task-table-row\"]')].some(r=>r.textContent.includes('TABLE_E2E_REVIEW')&&r.textContent.includes('РЕВЬЮ'));})()"
   ), 'render four real task rows with authoritative review state');
+  const longIdRowHeight = await cdp.evaluate(
+    "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return row?.getBoundingClientRect().height;})()"
+  ) as number;
+  assert(longIdRowHeight > 0 && longIdRowHeight <= 49,
+    'A long task display ID must not expand the fixed-height virtualized row');
   await cdp.screenshot(join(root, 'kanban-table-dark.png'));
   await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-header-status\"] button')?.click()");
   await until(() => cdp!.evaluate(

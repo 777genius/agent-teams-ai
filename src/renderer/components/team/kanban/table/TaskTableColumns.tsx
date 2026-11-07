@@ -78,7 +78,7 @@ export function createTaskTableColumns(
               <span className="w-full truncate text-[13px] font-medium text-[var(--color-text)]">
                 {row.original.subject}
               </span>
-              <span className="text-[10px] text-[var(--color-text-muted)]">
+              <span className="block w-full min-w-0 truncate whitespace-nowrap text-[10px] text-[var(--color-text-muted)]">
                 {formatTaskDisplayLabel(row.original.task)}
               </span>
             </button>

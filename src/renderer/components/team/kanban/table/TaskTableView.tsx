@@ -238,7 +238,7 @@ export const TaskTableView = memo(function TaskTableView({
                     <td
                         key={cell.id}
                         data-testid={'team-task-table-cell-' + cell.column.id}
-                        className="h-12 overflow-hidden px-3 align-middle"
+                        className="h-12 overflow-hidden whitespace-nowrap px-3 align-middle"
                       >
                       <table.FlexRender cell={cell} />
                     </td>
