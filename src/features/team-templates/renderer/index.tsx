@@ -19,19 +19,28 @@ import type { TeamProviderId } from '@shared/types';
 export const TeamTemplatePicker = ({
   onApply,
   confirmBeforeApply = false,
+  disabled = false,
 }: {
   onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
   /** Creation has an editable roster; replacing it requires an explicit decision. */
   confirmBeforeApply?: boolean;
+  /** Prevent replacement while persisted form fields are hydrating. */
+  disabled?: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const mounted = useRef(true);
+  const { t: tCommon } = useAppTranslation('common');
+  const confirmationOwner = useRef<AbortController | null>(null);
   useEffect(() => {
-    mounted.current = true;
-    return () => { mounted.current = false; };
+    const owner = new AbortController();
+    confirmationOwner.current = owner;
+    return () => {
+      owner.abort();
+      if (confirmationOwner.current === owner) confirmationOwner.current = null;
+    };
   }, []);
   return (
     <Select
+      disabled={disabled}
       value=""
       onValueChange={(id) => {
         const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
@@ -40,16 +49,19 @@ export const TeamTemplatePicker = ({
           onApply(applyTeamTemplate(template));
           return;
         }
+        const owner = confirmationOwner.current;
+        if (!owner || owner.signal.aborted) return;
         void (async () => {
           const accepted = await confirm({
             title: t('templates.confirmTitle', { defaultValue: 'Apply team template?' }),
             message: t('templates.confirmMessage', {
-              defaultValue: 'This replaces your current team description, prompt and teammates. Continue?',
+              defaultValue: 'This replaces the description, prompt and teammates, resets runtime selection, disables Run after create and Solo team, and enables model sync. Continue?',
             }),
             confirmLabel: t('templates.confirmAction', { defaultValue: 'Apply template' }),
+            cancelLabel: tCommon('actions.cancel'),
+            signal: owner.signal,
           });
-          // The user may have closed/replaced this editor while the modal was open.
-          if (accepted && mounted.current) onApply(applyTeamTemplate(template));
+          if (accepted && !owner.signal.aborted) onApply(applyTeamTemplate(template));
         })();
       }}
     >
