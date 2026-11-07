@@ -11,6 +11,7 @@ import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
+import type { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 import type { ScheduleRepository } from './ScheduleRepository';
 import type {
   CreateScheduleInput,
@@ -49,6 +50,7 @@ export class SchedulerService {
   private repository: ScheduleRepository;
   private executor: ScheduledTaskExecutor;
   private warmUpFn: WarmUpFn;
+  private smartDispatcher: SmartScheduleDispatcher | null;
   private changeEmitter: ChangeEmitter | null = null;
 
   // Croner jobs keyed by schedule ID
@@ -72,10 +74,12 @@ export class SchedulerService {
   constructor(
     repository: ScheduleRepository,
     executor: ScheduledTaskExecutor,
-    warmUpFn?: WarmUpFn
+    warmUpFn?: WarmUpFn,
+    smartDispatcher?: SmartScheduleDispatcher
   ) {
     this.repository = repository;
     this.executor = executor;
+    this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
 
@@ -169,6 +173,8 @@ export class SchedulerService {
     const schedule: Schedule = {
       id: randomUUID(),
       teamName: input.teamName,
+      ...(input.executionMode && { executionMode: input.executionMode }),
+      ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
       cronExpression: input.cronExpression,
       timezone: input.timezone,
@@ -208,6 +214,8 @@ export class SchedulerService {
 
     const updated: Schedule = {
       ...existing,
+      ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
+      ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
       ...(patch.label !== undefined && { label: patch.label }),
       ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
       ...(patch.timezone !== undefined && { timezone: patch.timezone }),
@@ -439,7 +447,9 @@ export class SchedulerService {
   private scheduleWarmUp(schedule: Schedule): void {
     this.clearWarmUpTimer(schedule.id);
 
-    if (schedule.warmUpMinutes <= 0) return;
+    // Smart jobs dispatch through existing runtime services; warming up the
+    // one-shot CLI needlessly can alter a live team and is not required.
+    if (schedule.executionMode || schedule.warmUpMinutes <= 0) return;
 
     const job = this.cronJobs.get(schedule.id);
     if (!job) return;
@@ -564,14 +574,17 @@ export class SchedulerService {
     let retriedInternally = false;
 
     try {
-      const result = await this.executor.execute({
-        runId: run.id,
-        config: launchConfig,
-        maxTurns: schedule.maxTurns,
-        maxBudgetUsd: schedule.maxBudgetUsd,
-      });
+      if (schedule.executionMode) {
+        await this.executeSmartRun(schedule, run);
+      } else {
+        const result = await this.executor.execute({
+          runId: run.id,
+          config: launchConfig,
+          maxTurns: schedule.maxTurns,
+          maxBudgetUsd: schedule.maxBudgetUsd,
+        });
 
-      if (result.exitCode === 0) {
+        if (result.exitCode === 0) {
         // Success — save logs, complete run
         await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
         await this.completeRun(run, 'completed', result.exitCode, result.summary);
@@ -583,11 +596,18 @@ export class SchedulerService {
         // Failure — save logs before handling
         await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
         const errorMsg = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
-        retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+          retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+        }
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      retriedInternally = await this.handleRunFailure(schedule, run, null, errorMsg);
+      if (schedule.executionMode) {
+        // Never blindly retry a task write or a team launch: ACK may have been lost.
+        await this.completeRun(run, 'failed', null, undefined, errorMsg);
+        await this.incrementConsecutiveFailures(schedule);
+      } else {
+        retriedInternally = await this.handleRunFailure(schedule, run, null, errorMsg);
+      }
     } finally {
       // Skip cleanup if retry took over — retry's own finally will handle it
       if (retriedInternally) return;
@@ -606,6 +626,32 @@ export class SchedulerService {
       if (freshSchedule?.status === 'active') {
         this.scheduleWarmUp(freshSchedule);
       }
+    }
+  }
+
+  private async executeSmartRun(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    if (!this.smartDispatcher) throw new Error('Smart schedule dispatcher is unavailable');
+    const outcome = await this.smartDispatcher.dispatch(schedule, run.id, () => {
+      return this.stopped || this.activeRuns.get(schedule.id)?.id !== run.id;
+    });
+    if (outcome.kind === 'skipped') {
+      await this.completeRun(run, 'skipped', null, outcome.summary);
+      return;
+    }
+    if (outcome.kind === 'dispatched') {
+      await this.completeRun(run, 'dispatched', null, outcome.summary);
+      await this.resetConsecutiveFailures(schedule);
+      return;
+    }
+    const result = outcome.result;
+    await this.repository.saveRunLogs(schedule.id, run.id, result.stdout, result.stderr);
+    if (result.exitCode === 0) {
+      await this.completeRun(run, 'completed', result.exitCode, result.summary);
+      await this.resetConsecutiveFailures(schedule);
+    } else {
+      const error = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
+      await this.completeRun(run, 'failed', result.exitCode, undefined, error);
+      await this.incrementConsecutiveFailures(schedule);
     }
   }
 
@@ -698,7 +744,10 @@ export class SchedulerService {
 
     await this.repository.saveRun(updatedRun);
 
-    const eventType = status === 'completed' ? 'run-completed' : 'run-failed';
+    const eventType =
+      status === 'completed' || status === 'dispatched' || status === 'skipped'
+        ? 'run-completed'
+        : 'run-failed';
     this.emitChange({
       type: eventType,
       scheduleId: run.scheduleId,
