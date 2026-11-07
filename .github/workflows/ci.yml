@@ -398,6 +398,8 @@ jobs:
         run: >-
           pnpm exec vitest run --maxWorkers=1
           test/main/services/team/TaskChangeLedgerReader.test.ts
+          test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts
+          test/main/services/team/TeamInboxReader.test.ts
           test/main/utils/childProcess.windows.test.ts
           test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
           test/main/utils/processStartTime.test.ts
