@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} tersembunyi",
       "trash": "Tempat Sampah",
       "gridView": "Tilikan kisi",
-      "columnsView": "Tilikan kolom"
+      "columnsView": "Tilikan kolom",
+      "tableView": "Tampilan tabel",
+      "configureColumns": "Pilih kolom"
     },
     "trash": {
       "title": "Tempat Sampah",

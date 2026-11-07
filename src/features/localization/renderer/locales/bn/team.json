@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} আড়াল করা",
       "trash": "আবর্জনা",
       "gridView": "গ্রিড/ ছক প্রদর্শক",
-      "columnsView": "কলাম ভিউ"
+      "columnsView": "কলাম ভিউ",
+      "tableView": "সারণি দৃশ্য",
+      "configureColumns": "কলাম নির্বাচন করুন"
     },
     "trash": {
       "title": "আবর্জনা",

@@ -2423,7 +2423,9 @@
       "hiddenCount": "隠される{{count}}",
       "trash": "トラッシュ",
       "gridView": "グリッドビュー",
-      "columnsView": "コラムビュー"
+      "columnsView": "コラムビュー",
+      "tableView": "テーブル表示",
+      "configureColumns": "列を選択"
     },
     "trash": {
       "title": "トラッシュ",
