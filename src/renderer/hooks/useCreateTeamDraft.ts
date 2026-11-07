@@ -123,8 +123,8 @@ function serializeMembers(members: MemberDraft[]): SerializedMemberDraft[] {
 }
 
 function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] {
-  return serialized.map((m) =>
-    createMemberDraft({
+  return serialized.map((m) => ({
+    ...createMemberDraft({
       id: m.id,
       name: m.name,
       roleSelection: m.roleSelection,
@@ -138,8 +138,9 @@ function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] 
       effort: m.effort,
       fastMode: m.fastMode,
       mcpPolicy: normalizeTeamMemberMcpPolicy(m.mcpPolicy),
-    })
-  );
+    }),
+    workflowChips: m.workflowChips,
+  }));
 }
 
 // ---------------------------------------------------------------------------
