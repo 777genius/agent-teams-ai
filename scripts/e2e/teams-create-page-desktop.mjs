@@ -634,8 +634,11 @@ async function main() {
     const createdMembers = JSON.parse(await readFile(path.join(teamDir, 'members.meta.json'), 'utf8'));
     assert.equal(createdMeta.version, 1, 'Native team metadata has the wrong schema');
     assert.equal(createdMeta.cwd, fixture.projectPath, 'Saved working directory differs');
-    assert(Array.isArray(createdMembers.members) && createdMembers.members.length > 0,
-      'Native team creation did not persist a roster');
+    // A config-only team may use the implicit lead without additional members.
+    // Prove the typed roster metadata exists, not that it contains extra agents.
+    assert.equal(createdMembers.version, 1, 'Native roster metadata has the wrong schema');
+    assert(Array.isArray(createdMembers.members),
+      'Native config-only creation did not persist roster metadata');
     await captureScreenshot(cdp, fixture, 'config-only-created');
 
     const results = {
