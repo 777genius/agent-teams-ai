@@ -468,9 +468,24 @@ export async function runDesktopF08ReadTimingProof(
       'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))'
     );
     const afterStale = await cdp.evaluate(sourceView);
+    // The renderer treats an absent Task changePresence and 'unknown' identically;
+    // background change-presence reads may drop only that non-authoritative hint.
+    // All selected-Team, cache, comments and known presence fields remain exact.
+    const stableProductView = (value: unknown) => {
+      const view = structuredClone(row(value));
+      for (const key of ['data', 'cache'] as const) {
+        const snapshot = row(view[key]);
+        assert.ok(Array.isArray(snapshot.tasks));
+        for (const rawTask of snapshot.tasks) {
+          const task = row(rawTask);
+          if (task.changePresence === 'unknown') delete task.changePresence;
+        }
+      }
+      return view;
+    };
     assert.deepEqual(
-      afterStale,
-      beforeStale,
+      stableProductView(afterStale),
+      stableProductView(beforeStale),
       'old same-A feed cannot roll back selected A or its newer cache'
     );
     const surfaceAfterStale = row(
