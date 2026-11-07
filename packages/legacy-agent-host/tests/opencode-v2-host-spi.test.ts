@@ -893,7 +893,7 @@ test('pinned private V2 PR1 refuses Windows native cwd before network access (HO
     assert.equal(await provider.cleanup(), true);
   });
 
-test('late native prompt ACK stays UNKNOWN during re-attestation and after Host seal',
+test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Host seal',
   { timeout: 15000 }, async () => {
     // An outer node:test timeout alone cannot release unresolved promises or
     // close live peers. Bound each synthetic HTTP/re-attestation handshake.
@@ -907,9 +907,8 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
         if (timer !== undefined) clearTimeout(timer);
       }
     };
-    // Two independent disposable peers: an active turn in the first case must
-    // not contaminate or stall the second case's private single-turn queue.
-    for (const mode of ['recheck', 'seal'] as const) {
+    // Independent disposable peers: active turns must never cross TEST sessions.
+    for (const mode of ['recheck', 'recheck-restored', 'seal'] as const) {
       const profile = v2Profile();
       const postSeen = Promise.withResolvers<void>();
       const releaseAck = Promise.withResolvers<void>();
@@ -981,7 +980,7 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
         // The pinned driver probes before its POST. Only block the separate
         // re-attestation AFTER the TEST HTTP peer has received the mutation.
         await within(postSeen.promise, mode + ' POST received');
-        if (mode === 'recheck') {
+        if (mode !== 'seal') {
           captured.probe = async () => {
             calls.probe++;
             recheckEntered.resolve();
@@ -991,21 +990,29 @@ test('late native prompt ACK stays UNKNOWN during re-attestation and after Host 
           const recheck = opened.driver.checkReadiness();
           await within(recheckEntered.promise, 're-attestation started');
           assert.equal(provider.isReady(), false);
+          if (mode === 'recheck-restored') {
+            completeRecheck.resolve();
+            assert.equal((await within(recheck, 'successful re-attestation')).ok, true);
+            assert.equal(provider.isReady(), true, 'owner restored before late native POST ACK');
+            assert.equal(calls.stop, 0, 'a successful probe alone must not retire the owner');
+          }
           releaseAck.resolve();
-          assert.deepEqual(await within(pending, 'recheck native ACK'), { ok: false, code: 'unknown' },
-            'committed native POST cannot be acknowledged while Host readiness is fenced');
+          assert.deepEqual(await within(pending, mode + ' native ACK'), { ok: false, code: 'unknown' },
+            'late POST ACK cannot inherit newly restored readiness after an intervening probe');
           assert.equal(postCount, 1, 'no second native POST after uncertain ACK');
           // The original native POST is uncertain after its ACK raced the
           // policy probe. Quarantine this capture before any further dispatch.
           // A probe by itself must not stop the PID; an uncertain mutation does.
           assert.equal(calls.stop, 1, 'uncertain native handoff retires only its TEST-owned PID');
           assert.equal(provider.isReady(), false, 'no renewed readiness after UNKNOWN delivery');
-          provider.seal();
-          completeRecheck.resolve();
-          const sealedReadback = await within(recheck, 'sealed re-attestation');
-          assert.ok(sealedReadback && typeof sealedReadback === 'object' && 'ok' in sealedReadback,
-            'the private Session SPI must return a structured readiness result');
-          assert.equal(sealedReadback.ok, false, 'seal revokes the suspended native probe');
+          if (mode === 'recheck') {
+            provider.seal();
+            completeRecheck.resolve();
+            const sealedReadback = await within(recheck, 'sealed re-attestation');
+            assert.ok(sealedReadback && typeof sealedReadback === 'object' && 'ok' in sealedReadback,
+              'the private Session SPI must return a structured readiness result');
+            assert.equal(sealedReadback.ok, false, 'seal revokes the suspended native probe');
+          }
         } else {
           provider.seal();
           releaseAck.resolve();

@@ -100,6 +100,8 @@ export function createOpenCodeV2MemberProvider(
   // Re-attestation may temporarily fence readiness without revoking Host authority.
   // Existing observers must wait for a definitive result, not drop native events.
   const pendingReattestations = new Set<Promise<void>>();
+  // Do not let a late native mutation ACK inherit a later admission epoch.
+  let readinessEpoch = 0;
   let physicallyStopped = false;
   let initialEvidence: NativeContextEvidence | undefined;
   // Installation may have taken effect even if its ACK was lost. Keep one
@@ -171,6 +173,8 @@ export function createOpenCodeV2MemberProvider(
           return owned.readPassword();
         },
         probe: async (signal) => {
+          // Fence in-flight native writes even if this recheck later succeeds.
+          readinessEpoch++;
           if (qualificationRevoked) return false;
           const reattestation = Promise.withResolvers<void>();
           pendingReattestations.add(reattestation.promise);
@@ -305,6 +309,7 @@ export function createOpenCodeV2MemberProvider(
                   return { ok: false as const,
                   code: 'unavailable' as const, delivery: 'known-not-sent' as const };
                 }
+                const dispatchedEpoch = readinessEpoch;
                 let reply: Awaited<ReturnType<typeof source.submit>>;
                 try {
                   reply = await source.submit(input);
@@ -324,7 +329,7 @@ export function createOpenCodeV2MemberProvider(
                 // was already committed while effective policy was unproven.
                 // Quarantine this capture: UNKNOWN delivery must not silently
                 // become eligible for a later dispatch if readiness recovers.
-                if (reply.ok && !ready) {
+                if (reply.ok && (!ready || readinessEpoch !== dispatchedEpoch)) {
                   if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unknown' as const };
                 }
@@ -472,6 +477,7 @@ export function createOpenCodeV2MemberProvider(
                   if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unavailable' as const };
                 }
+                const dispatchedEpoch = readinessEpoch;
                 try {
                   const result = await source.respondToInteraction(reference, reply);
                   // A late permission ACK cannot grant after Host authority loss.
@@ -481,7 +487,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                   // A potentially applied permission during unproven
                   // re-attestation cannot be reopened for later dispatch.
-                  if (result.ok && !ready) {
+                  if (result.ok && (!ready || readinessEpoch !== dispatchedEpoch)) {
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                     return { ok: false as const, code: 'unknown' as const };
                   }
@@ -502,6 +508,7 @@ export function createOpenCodeV2MemberProvider(
                   if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unavailable' as const };
                 }
+                const dispatchedEpoch = readinessEpoch;
                 try {
                   const result = await source.interrupt(operation);
                   // Interrupt may already have reached the native engine.
@@ -512,7 +519,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                   // An interrupt ACK during re-attestation can be applied
                   // without a current policy proof: quarantine this capture.
-                  if (result.ok && !ready) {
+                  if (result.ok && (!ready || readinessEpoch !== dispatchedEpoch)) {
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                     return { ok: false as const, code: 'unknown' as const };
                   }
