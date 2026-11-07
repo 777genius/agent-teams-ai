@@ -1570,7 +1570,6 @@ export const CreateTeamDialog = ({
     if (forcedDefaultProjectModePathRef.current === normalizedDefaultProjectPath) {
       return;
     }
-
     // Apply navigation context once. Later mode changes are explicit user choices.
     forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;
     if (cwdMode !== 'project') {
@@ -1611,7 +1610,6 @@ export const CreateTeamDialog = ({
     restoredFromStorage,
     setSelectedProjectPath,
   ]);
-
   // Ephemeral paths are cleared; a deleted project stays selected so the picker can
   // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
@@ -1619,18 +1617,15 @@ export const CreateTeamDialog = ({
       setSelectedProjectPath('');
     }
   }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
-
   const { suggestions: taskSuggestions } = useTaskSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
   });
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
   });
-
   const description = descriptionDraft.value;
   const prompt = promptDraft.value;
   const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
-
   const mentionSuggestions = useMemo(
     () =>
       soloTeam
@@ -1645,7 +1640,6 @@ export const CreateTeamDialog = ({
         : buildMemberDraftSuggestions(members, memberColorMap),
     [memberColorMap, members, soloTeam, t]
   );
-
   const effectiveModel = useMemo(
     () =>
       computeEffectiveTeamModel(
@@ -1746,7 +1740,6 @@ export const CreateTeamDialog = ({
         : null,
     [codexRuntimeSelection, selectedFastMode, selectedProviderId]
   );
-
   useEffect(() => {
     if (selectedProviderId !== 'anthropic' && selectedProviderId !== 'codex') {
       setAnthropicRuntimeNotice(null);
@@ -1756,7 +1749,6 @@ export const CreateTeamDialog = ({
       setAnthropicRuntimeNotice(null);
       return;
     }
-
     const reconciliation =
       selectedProviderId === 'anthropic'
         ? reconcileAnthropicRuntimeSelections({
@@ -1794,7 +1786,6 @@ export const CreateTeamDialog = ({
               selectedFastMode,
             }),
           };
-
     const notices: string[] = [];
     if (selectedEffortForCurrentSelection !== selectedEffort) {
       setSelectedEffortRaw(selectedEffortForCurrentSelection);
@@ -1828,7 +1819,6 @@ export const CreateTeamDialog = ({
     selectedModel,
     selectedProviderId,
   ]);
-
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());
   const teamNameInlineError = validateTeamNameInline(teamName, t);
   const isSubmittedTeamName = submittedTeamNameRef.current === sanitizedTeamName;
@@ -2129,6 +2119,25 @@ export const CreateTeamDialog = ({
   useEffect(() => {
     setConflictDismissed(false);
   }, [conflictingTeam?.teamName, effectiveCwd]);
+  /** Complete accepted work without stealing focus or deleting a remounted editor's edits. */
+  const finishAcceptedCreation = async (name: string, cwd?: string): Promise<void> => {
+    const generation = createGenerationRef.current;
+    if (presentation === 'page' && !isCreateTeamDraftGenerationCurrent(generation)) return;
+    if (!stillOwnsCreatePage(generation)) {
+      // With no open editor, there is no newer in-progress form to retire.
+      if (!useStore.getState().getAllPaneTabs().some((tab) =>
+        tab.type === 'teams' && tab.teamsCreationPage
+      )) await resetCreateTeamDraft();
+      return;
+    }
+    await resetFormState();
+    if (!stillOwnsCreatePage(generation + 1)) return;
+    const tab = useStore.getState().getActiveTab();
+    if (presentation !== 'page' || (tab?.type === 'teams' && tab.teamsCreationPage)) {
+      onOpenTeam(name, cwd);
+    }
+    onClose();
+  };
   const handleSubmit = (): void => {
     if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
@@ -2230,7 +2239,6 @@ export const CreateTeamDialog = ({
               extraCliArgs: request.extraCliArgs,
             })
           );
-          if (!stillOwnsCreatePage(createGenerationRef.current)) return;
           await assignCreatedTeamToOrganization({
             placement: selectedOrganizationPlacement,
             teamName: request.teamName,
@@ -2242,11 +2250,7 @@ export const CreateTeamDialog = ({
             }),
             acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
           });
-          if (!stillOwnsCreatePage(createGenerationRef.current)) return;
-          await resetFormState();
-          if (!stillOwnsCreatePage(createGenerationRef.current + 1)) return;
-          onOpenTeam(request.teamName, configOnlyCwd);
-          onClose();
+          await finishAcceptedCreation(request.teamName, configOnlyCwd);
         } catch (error) {
           optionalPreflight.resumeInterruptedProviderPreflight(
             prepareChecksRef.current,
@@ -2271,11 +2275,7 @@ export const CreateTeamDialog = ({
         await gatewayBindings.run(() =>
           onCreate(request, selectedOrganizationPlacement ?? undefined)
         );
-        if (!stillOwnsCreatePage(createGenerationRef.current)) return;
-        await resetFormState();
-        if (!stillOwnsCreatePage(createGenerationRef.current + 1)) return;
-        onOpenTeam(request.teamName, effectiveCwd || undefined);
-        onClose();
+        await finishAcceptedCreation(request.teamName, effectiveCwd || undefined);
       } catch (error) {
         optionalPreflight.resumeInterruptedProviderPreflight(
           prepareChecksRef.current,
