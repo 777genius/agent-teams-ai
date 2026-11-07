@@ -80,7 +80,6 @@ import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils
 import {
   AlertTriangle,
   Check,
-  ExternalLink,
   Info,
   X,
 } from 'lucide-react';
@@ -208,8 +207,6 @@ import type {
 
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
-const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
-  'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
 
 export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
@@ -2870,29 +2867,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     ) : null
                   }
                 />
-                {!isTeamSchedule ? <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {t('launch.prompt.oneShotPrefix')} <code className="font-mono">claude -p</code>{' '}
-                  {t('launch.prompt.oneShotSuffix')}
-                </p> : null}
-                {!isTeamSchedule && selectedProviderId === 'anthropic' ? (
-                  <div className="flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] leading-relaxed text-amber-100">
-                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                    <p>
-                      {t('launch.billing.prefix')} <code>claude -p</code>{' '}
-                      {t('launch.billing.suffix')}{' '}
-                      <a
-                        href={ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:text-white"
-                      >
-                        {t('launch.billing.readArticle')}
-                        <ExternalLink className="size-3" />
-                      </a>
-                      .
-                    </p>
-                  </div>
-                ) : null}
               </div>
               {!isTeamSchedule ? <div>
                 <TeamModelSelector
