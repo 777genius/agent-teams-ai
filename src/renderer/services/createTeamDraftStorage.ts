@@ -15,6 +15,7 @@ import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy'
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { del, get, set } from 'idb-keyval';
 
+import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   TeamFastMode,
   TeamMemberMcpPolicy,
@@ -37,6 +38,7 @@ export interface SerializedMemberDraft {
   roleSelection: string;
   customRole: string;
   workflow?: string;
+  workflowChips?: InlineChip[];
   isolation?: 'worktree';
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
@@ -90,6 +92,21 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
     typeof obj.name === 'string' &&
     typeof obj.roleSelection === 'string' &&
     typeof obj.customRole === 'string' &&
+    (obj.workflowChips === undefined ||
+      (Array.isArray(obj.workflowChips) &&
+        obj.workflowChips.every((chip: unknown) => {
+          if (!chip || typeof chip !== 'object') return false;
+          const c = chip as Record<string, unknown>;
+          return (
+            typeof c.id === 'string' &&
+            typeof c.filePath === 'string' &&
+            typeof c.fileName === 'string' &&
+            (c.fromLine === null || typeof c.fromLine === 'number') &&
+            (c.toLine === null || typeof c.toLine === 'number') &&
+            typeof c.codeText === 'string' &&
+            typeof c.language === 'string'
+          );
+        }))) &&
     (obj.isolation === undefined || obj.isolation === 'worktree') &&
     (obj.providerId === undefined || isTeamProviderId(obj.providerId)) &&
     (obj.providerBackendId === undefined ||
