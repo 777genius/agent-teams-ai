@@ -195,19 +195,27 @@ async function startApp(fixture) {
     XDG_CACHE_HOME: fixture.xdgCacheHome,
     XDG_STATE_HOME: fixture.xdgStateHome,
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
-    SHELL: '/bin/sh',
+    ...(process.platform === 'win32' ? {} : { SHELL: '/bin/sh' }),
     CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   };
-  appProcess = spawn('pnpm', ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])], {
-    cwd: repoRoot,
-    detached: process.platform !== 'win32',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env,
-  });
+  // Windows pnpm is a .cmd shim, which cannot be spawned as a POSIX executable.
+  // Keep a known launcher PID for taskkill /T on teardown (including restart).
+  const windows = process.platform === 'win32';
+  appProcess = spawn(
+    windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
+    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp'] : ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
+    {
+      cwd: repoRoot,
+      detached: !windows,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env,
+    }
+  );
   appProcessGroupId = appProcess.pid;
   appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
   appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
@@ -359,20 +367,26 @@ class CdpClient {
   async fill(selector, value) {
     const expression = `document.querySelector(${JSON.stringify(selector)})`;
     await this.click(expression);
+    const mac = process.platform === 'darwin';
+    const modifier = mac ? 4 : 2; // CDP: Meta or Control
+    const modifierKey = mac ? 'Meta' : 'Control';
+    const modifierCode = mac ? 'MetaLeft' : 'ControlLeft';
+    const modifierCodeValue = mac ? 91 : 17;
     await this.send('Input.dispatchKeyEvent', {
-      type: 'rawKeyDown', key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17,
-      modifiers: 2,
+      type: 'rawKeyDown', key: modifierKey, code: modifierCode,
+      windowsVirtualKeyCode: modifierCodeValue, modifiers: modifier,
     });
     await this.send('Input.dispatchKeyEvent', {
       type: 'keyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
-      modifiers: 2,
+      modifiers: modifier,
     });
     await this.send('Input.dispatchKeyEvent', {
       type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
-      modifiers: 2,
+      modifiers: modifier,
     });
     await this.send('Input.dispatchKeyEvent', {
-      type: 'keyUp', key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17,
+      type: 'keyUp', key: modifierKey, code: modifierCode,
+      windowsVirtualKeyCode: modifierCodeValue,
     });
     await this.send('Input.insertText', { text: value });
     await this.waitFor(
@@ -415,6 +429,17 @@ async function cleanup(fixture) {
       appProcess?.kill('SIGKILL');
     }
     await waitForProcessGroupExit(appProcessGroupId, 4_000);
+  } else if (appProcess?.pid && process.platform === 'win32') {
+    // Killing only cmd.exe leaves the child pnpm/Electron processes alive and
+    // contaminates the second launch or the next CI job.
+    const launcherPid = appProcess.pid;
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill', ['/PID', String(launcherPid), '/T', '/F'], {
+        windowsHide: true, stdio: 'ignore',
+      });
+      killer.once('error', resolve);
+      killer.once('close', resolve);
+    });
   } else if (appProcess?.pid) {
     appProcess.kill('SIGKILL');
   }
