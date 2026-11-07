@@ -26,6 +26,7 @@ import {
 import {
   parseCreateTeamRequest,
   TeamRequestValidationError,
+  validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -2141,12 +2142,8 @@ async function handleLaunchTeamUnlocked(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { success: false, error: 'prompt must be a string' };
   }
-  if (payload.bootstrapOnly !== undefined && payload.bootstrapOnly !== true) {
-    return { success: false, error: 'bootstrapOnly must be true when provided' };
-  }
-  if (payload.bootstrapOnly && payload.prompt?.trim()) {
-    return { success: false, error: 'Bootstrap-only launch must not contain a work prompt' };
-  }
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) return { success: false, error: bootstrapError };
 
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
@@ -2187,10 +2184,8 @@ async function handleLaunchTeamUnlocked(
     if (meta) isDraft = true;
   }
 
+  if (isDraft && payload.bootstrapOnly) return { success: false, error: 'Finish team setup first' };
   if (isDraft) {
-    if (payload.bootstrapOnly) {
-      return { success: false, error: 'Finish team setup before bootstrap-only launch' };
-    }
     const savedRequest = await getTeamDataService().getSavedRequest(tn);
     if (!savedRequest) {
       return { success: false, error: `Missing saved request for draft team: ${tn}` };
