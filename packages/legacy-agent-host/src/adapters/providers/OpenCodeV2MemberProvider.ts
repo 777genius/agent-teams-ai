@@ -254,6 +254,10 @@ export function createOpenCodeV2MemberProvider(
             };
             ready = true;
             context.onProgress();
+            // Progress callbacks may synchronously revoke the selected Host
+            // lease/generation. Never return a positive native readiness ACK
+            // from the first probe after that revocation.
+            if (combined.aborted || !current()) return false;
             wasEverReady = true;
             accepted = true;
             return true;
