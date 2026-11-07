@@ -149,6 +149,29 @@ export async function clickControl(evaluate, send, expression, preparePoint) {
     await send('Input.dispatchMouseEvent', { type, button: 'left', clickCount: 1, ...point });
 }
 
+/**
+ * Follow the real Dashboard -> Settings -> Providers route before using the
+ * existing provider controls. Idempotent for subsequent fixture scenarios.
+ */
+export async function enterProviderSettings(evaluate, send) {
+  const page = `document.querySelector('[data-testid="provider-settings-page"]')`;
+  const dashboardButton = `document.querySelector('[data-testid="dashboard-manage-providers"]')`;
+  let clicked = false;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    if (await evaluate(`Boolean(${page}?.getClientRects().length)`)) return;
+    if (!clicked && await evaluate(`Boolean(${dashboardButton}?.getClientRects().length && !${dashboardButton}?.disabled)`)) {
+      assert(
+        !(await evaluate(`Boolean(document.querySelector('[data-testid="runtime-manage-opencode"]')?.getClientRects().length)`)),
+        'Dashboard still mounts the full provider management UI'
+      );
+      await clickControl(evaluate, send, dashboardButton);
+      clicked = true;
+    }
+    await pause(250);
+  }
+  assert.fail('Providers page did not become visible after dashboard navigation');
+}
+
 export function correlateReport(copied, logs) {
   const ids = [
     ...new Set([...copied.matchAll(/reportId[:=]\s*(oc-[a-f0-9]{32})/g)].map((m) => m[1])),

@@ -183,7 +183,7 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
           {activeSection === 'connection' && <ConnectionSection />}
 
           {(hasVisitedProviders || activeSection === 'providers') && (
-            <div className={activeSection === 'providers' ? undefined : 'hidden'}>
+            <div data-testid="provider-settings-page" className={activeSection === 'providers' ? undefined : 'hidden'}>
               <Suspense
                 fallback={
                   <div className="flex min-h-24 items-center justify-center">

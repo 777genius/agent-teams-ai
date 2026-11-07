@@ -21,6 +21,7 @@ import {
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import {
   catalogScenarios,
+  enterProviderSettings,
   verifyCatalog,
   waitForReadyCatalog,
 } from './opencode-diagnostics/catalog.mjs';
@@ -583,6 +584,7 @@ if (mode === 'seed-packaged') {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
+      if (scenario !== cleanupScenario) await enterProviderSettings(evaluate, send);
       if (scenario === cleanupScenario) {
         await verifyStartupCleanup({ root, evaluate, send });
       } else if (catalogScenarios.includes(scenario)) {
