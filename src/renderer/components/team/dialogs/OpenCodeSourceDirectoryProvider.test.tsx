@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
+
 const storeState = vi.hoisted(() => ({
   current: {
     openCodeRuntimeStatus: {
@@ -33,8 +35,6 @@ vi.mock('@renderer/store', () => ({
 vi.mock('@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect', () => ({
   useRuntimeProviderQuickConnect: quickConnect,
 }));
-
-import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
