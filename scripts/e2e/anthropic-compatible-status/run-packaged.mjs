@@ -348,13 +348,6 @@ try {
     'testProject',
     `window.electronAPI.config.addCustomProjectPath(${JSON.stringify(data.project)})`
   );
-  // Provider management moved from Dashboard to Settings -> Providers.
-  // Navigate through the real user action before opening the existing modal.
-  await cdp.click('[data-testid=dashboard-manage-providers]');
-  await cdp.wait(
-    'Boolean(document.querySelector("[data-testid=provider-settings-page]")?.getClientRects().length)',
-    'Providers settings page'
-  );
   // Dashboard no longer mounts the expensive provider UI. Navigate using the
   // visible real button after the startup splash is gone.
   await cdp.wait(
