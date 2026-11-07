@@ -171,6 +171,9 @@ jobs:
         run: node ./scripts/electron-builder/smokePackagedNative.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
       - name: Smoke packaged Git without external installation
         run: node ./scripts/electron-builder/smokeManagedGit.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Smoke managed Git inside native Windows terminal
+        if: matrix.os == 'win32'
+        run: node ./scripts/electron-builder/smokeManagedTerminalGit.cjs "${{ matrix.bundle }}" ${{ matrix.arch }}
       - name: Smoke packaged MCP handshake
         run: node ./scripts/electron-builder/smokePackagedMcp.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
       - name: Verify macOS 13 minimum
