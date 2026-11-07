@@ -9,6 +9,8 @@
  * Pattern mirrors `composerDraftStorage.ts`.
  */
 
+import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
+
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isTeamProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
@@ -186,8 +188,12 @@ function serializeMutation(operation: () => Promise<void>): Promise<void> {
   return next;
 }
 
-async function saveSnapshot(snapshot: CreateTeamDraftSnapshot): Promise<void> {
+async function saveSnapshot(
+  snapshot: CreateTeamDraftSnapshot,
+  generation?: number
+): Promise<void> {
   return serializeMutation(async () => {
+    if (generation !== undefined && !isCreateTeamDraftGenerationCurrent(generation)) return;
     if (idbUnavailable) {
       fallbackStore.set(STORAGE_KEY, snapshot);
       return;
@@ -219,8 +225,9 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
   }
 }
 
-async function deleteSnapshot(): Promise<void> {
+async function deleteSnapshot(generation?: number): Promise<void> {
   return serializeMutation(async () => {
+    if (generation !== undefined && !isCreateTeamDraftGenerationCurrent(generation)) return;
     if (idbUnavailable) {
       fallbackStore.delete(STORAGE_KEY);
       return;
