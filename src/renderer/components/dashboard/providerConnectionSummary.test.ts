@@ -43,7 +43,7 @@ const input = {
 
 describe('getDashboardConnectionSummary (no IPC)', () => {
   it('counts verified CLI logins separately from complete OpenCode directory connections', () => {
-    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 2, openCodeConnected: 2 });
+    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 2, cliCountComplete: true, openCodeConnected: 2 });
   });
 
   it('never counts an OpenCode host or inventory-only fallback as a separate CLI credential', () => {
@@ -55,6 +55,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toEqual({
       cliConnected: 1,
+      cliCountComplete: true,
       openCodeConnected: 2,
     });
   });
@@ -62,6 +63,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
   it('does not present zero as a verified count during startup or transient failures', () => {
     expect(getDashboardConnectionSummary({ ...input, cliStatus: null })).toEqual({
       cliConnected: null,
+      cliCountComplete: false,
       openCodeConnected: 2,
     });
     const cliStatus = {
@@ -72,8 +74,11 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
           : provider
       ),
     };
-    expect(getDashboardConnectionSummary({ ...input, cliStatus }).cliConnected).toBeNull();
-    expect(getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliConnected).toBeNull();
+    expect(getDashboardConnectionSummary({ ...input, cliStatus })).toMatchObject({
+      cliConnected: 2,
+      cliCountComplete: false,
+    });
+    expect(getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliCountComplete).toBe(false);
   });
 
   it('does not claim an exact OpenCode count for partial, absent or stale directories', () => {

@@ -37,6 +37,8 @@ interface ConnectionSummaryInput {
 export interface DashboardConnectionSummary {
   /** Null means not yet verified, not zero. A connection is not launch authority. */
   cliConnected: number | null;
+  /** False means some CLI statuses remain unknown; connected count is only a lower bound. */
+  cliCountComplete: boolean;
   /** Only exact, complete, current-runtime OpenCode directory snapshots are counted. */
   openCodeConnected: number | null;
 }
@@ -80,20 +82,20 @@ export function getDashboardConnectionSummary({
     cliStatus?.flavor === 'agent_teams_orchestrator' && cliStatus.installed
       ? MAIN_PROVIDER_IDS.map((id) => cliStatus.providers.find((provider) => provider.providerId === id))
       : [];
-  const cliReady =
+  const settled = (provider: MainProvider | undefined): provider is MainProvider =>
+    provider != null &&
+    providerStatusLoading[provider.providerId] !== true &&
+    (provider.statusCheckOutcome === 'authoritative' ||
+      provider.statusCheckOutcome === 'model_only' ||
+      (provider.statusCheckOutcome == null && provider.verificationState === 'verified'));
+  const cliCountComplete =
     !cliStatusLoading &&
     mainProviders.length === MAIN_PROVIDER_IDS.length &&
-    mainProviders.every(
-      (provider) =>
-        provider != null &&
-        providerStatusLoading[provider.providerId] !== true &&
-        (provider.statusCheckOutcome === 'authoritative' ||
-          provider.statusCheckOutcome === 'model_only' ||
-          (provider.statusCheckOutcome == null && provider.verificationState === 'verified'))
-    );
-  const cliConnected = cliReady
-    ? mainProviders.filter((provider) => provider?.authenticated === true).length
-    : null;
+    mainProviders.every(settled);
+  const knownConnected = mainProviders.filter(
+    (provider) => settled(provider) && provider.authenticated
+  ).length;
+  const cliConnected = cliCountComplete || knownConnected > 0 ? knownConnected : null;
 
   const runtimeRevision =
     runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
@@ -104,7 +106,7 @@ export function getDashboardConnectionSummary({
     projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
 
   if (!globalComplete || !projectComplete) {
-    return { cliConnected, openCodeConnected: null };
+    return { cliConnected, cliCountComplete, openCodeConnected: null };
   }
 
   // The project snapshot may override a global connection with the same ID;
@@ -124,5 +126,5 @@ export function getDashboardConnectionSummary({
     }
   }
 
-  return { cliConnected, openCodeConnected };
+  return { cliConnected, cliCountComplete, openCodeConnected };
 }

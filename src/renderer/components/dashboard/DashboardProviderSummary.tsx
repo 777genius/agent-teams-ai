@@ -40,8 +40,10 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
     if (expiries.length === 0) return;
     const nextExpiry = Math.min(...expiries);
     // A one-shot display expiry timer is not provider polling or an IPC read.
-    const timer = window.setTimeout(() => setExpiredRevision((revision) => revision + 1),
-      Math.max(1, nextExpiry - Date.now() + 10));
+    const timer = window.setTimeout(
+      () => setExpiredRevision((revision) => revision + 1),
+      Math.max(1, nextExpiry - Date.now() + 10)
+    );
     return () => window.clearTimeout(timer);
   }, [globalDirectory, projectDirectory, projectPath]);
   const summary = getDashboardConnectionSummary({
@@ -67,7 +69,9 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
           : t('cliStatus.provider.connectToGetStarted')
       : summary.cliConnected === null
         ? t('cliStatus.provider.checkingProviders')
-        : `CLI: ${summary.cliConnected} ${connected}`;
+        : summary.cliCountComplete
+          ? `CLI: ${summary.cliConnected} ${connected}`
+          : `CLI: ${summary.cliConnected} ${connected} · ${t('cliStatus.provider.checkingProviders')}`;
   const openCodeText =
     multimodelEnabled &&
     `OpenCode: ${summary.openCodeConnected === null ? unknown : `${summary.openCodeConnected} ${connected}`}`;
