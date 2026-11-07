@@ -80,8 +80,6 @@ import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils
 import {
   AlertTriangle,
   Check,
-  ChevronDown,
-  ChevronRight,
   ExternalLink,
   Info,
   X,
