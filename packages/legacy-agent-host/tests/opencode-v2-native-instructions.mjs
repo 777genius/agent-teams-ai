@@ -407,7 +407,10 @@ try {
   const foreignRejected=await native(
     foreignPath+'/permission/'+encodeURIComponent(foreignPermissionId)+'/reply',
     'POST',{decision:'reject'});
-  if(foreignRejected.status!==204||
+  const foreignAfterReject=await native(foreignPath+'/permission');
+  if(foreignRejected.status!==204||foreignAfterReject.status!==200||
+     !Array.isArray(foreignAfterReject.data?.data)||
+     foreignAfterReject.data.data.length!==0||
      (await native(foreignPath,'DELETE')).status!==204)
     throw Error('native_foreign_TEST_permission_cleanup_unconfirmed');
   receipt.crossSessionPermission={hostRefused:true,foreignPendingUnchanged:true,
