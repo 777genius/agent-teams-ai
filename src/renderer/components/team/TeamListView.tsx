@@ -49,7 +49,6 @@ import {
   FolderOpen,
   GitBranch,
   Import,
-  Loader2,
   Network,
   Play,
   Plus,
