@@ -82,11 +82,19 @@ export async function refreshRuntimeProviderConnection(
     // either replacement read starts, while keeping view and directory parallel.
     const sharedDirectoryRefreshed = await sharedDirectoryRefresh;
     if (!input.isContextCurrent()) return 'stale';
-    const [viewRefreshed, directoryRefreshed] = await Promise.all([
-      input.refreshView(),
-      input.refreshDirectory(),
+    // Observe both results before downgrading cache authority. Otherwise a
+    // fast view failure can invalidate an in-flight, successful directory read.
+    const [viewResult, directoryResult] = await Promise.allSettled([
+      Promise.resolve().then(() => input.refreshView()),
+      Promise.resolve().then(() => input.refreshDirectory()),
     ]);
-    if (!input.isContextCurrent()) return 'stale';
+    if (!input.isContextCurrent() || !input.isRuntimeRevisionCurrent()) return 'stale';
+    if (directoryResult.status === 'rejected') {
+      markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
+    }
+    const viewRefreshed = viewResult.status === 'fulfilled' && viewResult.value === true;
+    const directoryRefreshed =
+      directoryResult.status === 'fulfilled' && directoryResult.value === true;
     return externalRefreshResult === false ||
       !viewRefreshed ||
       !directoryRefreshed ||

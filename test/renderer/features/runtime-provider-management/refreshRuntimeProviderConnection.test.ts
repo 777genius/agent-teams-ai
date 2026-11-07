@@ -89,6 +89,34 @@ describe('refreshRuntimeProviderConnection', () => {
     expect(getRuntimeProviderDirectoryReadToken(projectPath)).not.toBe(tokenBeforeFailure);
   });
 
+  it('keeps a replacement directory read valid when the view fails first', async () => {
+    const projectPath = '/tmp/TEST-view-failure-does-not-invalidate-directory';
+    const directory = deferredBoolean();
+    const refreshDirectory = vi.fn(() => directory.promise);
+    let completed = false;
+    const refresh = refreshRuntimeProviderConnection({
+      runtimeId: 'opencode',
+      projectPath,
+      runtimeRevision: null,
+      directorySupported: false,
+      isContextCurrent: () => true,
+      isRuntimeRevisionCurrent: () => true,
+      refreshExternal: async () => undefined,
+      refreshView: async () => { throw new Error('View failed'); },
+      refreshDirectory,
+    }).then((value) => { completed = true; return value; });
+
+    await vi.waitFor(() => expect(refreshDirectory).toHaveBeenCalledOnce());
+    const token = getRuntimeProviderDirectoryReadToken(projectPath);
+    await Promise.resolve();
+    expect(completed).toBe(false);
+    expect(getRuntimeProviderDirectoryReadToken(projectPath)).toBe(token);
+
+    directory.resolve(true);
+    expect(await refresh).toBe('warning');
+    expect(getRuntimeProviderDirectoryReadToken(projectPath)).toBe(token);
+  });
+
   it('still starts the directory refresh when the provider view rejects', async () => {
     const refreshDirectory = vi.fn(async () => true);
     const result = await refreshRuntimeProviderConnection({
