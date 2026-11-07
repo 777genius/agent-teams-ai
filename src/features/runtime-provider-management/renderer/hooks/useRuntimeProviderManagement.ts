@@ -23,6 +23,7 @@ import {
   projectClearedDefaultMutation,
 } from '../view-models/openCodeDefaultModelInheritance';
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
+
 import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import { refreshRuntimeProviderConnection } from './refreshRuntimeProviderConnection';
 import {
@@ -103,7 +104,6 @@ interface UseRuntimeProviderManagementOptions {
     changeKind: RuntimeProviderChangeKind
   ) => Promise<boolean | void> | boolean | void;
 }
-
 export type RuntimeProviderModelPickerMode = 'use' | 'runtime-default';
 export type RuntimeProviderChangeKind =
   | 'connection'
