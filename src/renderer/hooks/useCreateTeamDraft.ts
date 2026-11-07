@@ -230,12 +230,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     if (pendingRef.current != null) {
       const pending = pendingRef.current;
       pendingRef.current = null;
-      const isEmpty = pending.teamName === '' && pending.members.length === 0;
-      if (isEmpty) {
-        void createTeamDraftStorage.deleteSnapshot();
-      } else {
-        void createTeamDraftStorage.saveSnapshot(pending);
-      }
+      void createTeamDraftStorage.saveSnapshot(pending);
     }
   }, []);
 
@@ -253,12 +248,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       pendingRef.current = null;
       if (pending == null) return;
 
-      const isEmpty = pending.teamName === '' && pending.members.length === 0;
-      if (isEmpty) {
-        void createTeamDraftStorage.deleteSnapshot();
-      } else {
-        void createTeamDraftStorage.saveSnapshot(pending);
-      }
+      void createTeamDraftStorage.saveSnapshot(pending);
     }, DEBOUNCE_MS);
   }, [buildSnapshot]);
 
