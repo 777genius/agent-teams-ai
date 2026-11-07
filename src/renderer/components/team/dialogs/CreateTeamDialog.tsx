@@ -356,6 +356,7 @@ export const CreateTeamDialog = ({
     teamColor,
     setTeamColor,
     isLoaded: draftLoaded,
+    restoredFromStorage,
     clearDraft,
   } = useCreateTeamDraft();
   const runtimeSelectionUnresolved = runtimeSelectionVersion === 1 && !runtimeProviderId;
@@ -1536,6 +1537,10 @@ export const CreateTeamDialog = ({
     }
 
     const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+    if (restoredFromStorage && (selectedProjectPath || customCwd)) {
+      forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;
+      return;
+    }
     if (forcedDefaultProjectModePathRef.current === normalizedDefaultProjectPath) {
       return;
     }
@@ -1545,7 +1550,7 @@ export const CreateTeamDialog = ({
     if (cwdMode !== 'project') {
       setCwdMode('project');
     }
-  }, [cwdMode, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, setCwdMode]);
+  }, [cwdMode, customCwd, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, restoredFromStorage, selectedProjectPath, setCwdMode]);
   // Pre-select defaultProjectPath when the draft and projects are loaded.
   useEffect(() => {
     if (!open) {
@@ -1555,7 +1560,7 @@ export const CreateTeamDialog = ({
     if (!draftLoaded) {
       return;
     }
-    if (cwdMode !== 'project') {
+    if (cwdMode !== 'project' || (restoredFromStorage && selectedProjectPath)) {
       return;
     }
     const nextSelection = resolvePreferredProjectPathSelection({
@@ -1578,6 +1583,7 @@ export const CreateTeamDialog = ({
     projects,
     selectedProjectPath,
     defaultProjectPath,
+    restoredFromStorage,
     setSelectedProjectPath,
   ]);
 
