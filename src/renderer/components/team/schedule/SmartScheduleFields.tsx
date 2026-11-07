@@ -3,6 +3,13 @@ import React from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { CronScheduleInput } from './CronScheduleInput';
@@ -10,6 +17,7 @@ import { CronScheduleInput } from './CronScheduleInput';
 import type { TeamSummary } from '@shared/types';
 
 export type EditableScheduleMode = 'legacy' | 'agent' | 'team';
+const DEFAULT_LEAD_VALUE = '__default_lead__';
 
 interface SmartScheduleFieldsProps {
   isLight: boolean;
@@ -113,21 +121,28 @@ export const SmartScheduleFields = ({
             <Label htmlFor="schedule-member" className="text-xs">
               {t('launch.schedule.target')}
             </Label>
-            <select
-              id="schedule-member"
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-xs text-[var(--color-text)]"
-              value={targetMember}
-              onChange={(event) => onTargetMemberChange(event.target.value)}
+            <Select
+              value={targetMember || DEFAULT_LEAD_VALUE}
+              onValueChange={(value) =>
+                onTargetMemberChange(value === DEFAULT_LEAD_VALUE ? '' : value)
+              }
             >
-              <option value="">{t('launch.schedule.leadDefault')}</option>
-              {(team?.members ?? [])
-                .filter((member) => member.name !== team?.leadName)
-                .map((member) => (
-                  <option key={member.name} value={member.name}>
-                    {member.name}
-                  </option>
-                ))}
-            </select>
+              <SelectTrigger id="schedule-member" className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={DEFAULT_LEAD_VALUE}>
+                  {t('launch.schedule.leadDefault')}
+                </SelectItem>
+                {(team?.members ?? [])
+                  .filter((member) => member.name !== team?.leadName)
+                  .map((member) => (
+                    <SelectItem key={member.name} value={member.name}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
             <p className="text-[11px] text-[var(--color-text-muted)]">
               {t('launch.schedule.agentDescription')}
             </p>
