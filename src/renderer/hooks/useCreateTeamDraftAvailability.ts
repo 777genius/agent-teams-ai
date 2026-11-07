@@ -15,7 +15,7 @@ export async function hasUnfinishedCreateTeamDraft(): Promise<boolean> {
     form?.teamName?.trim() ||
       form?.members?.length ||
       form?.customCwd?.trim() ||
-      form?.selectedProjectPath?.trim() ||
+      (form?.projectSelectionExplicit !== false && form?.selectedProjectPath?.trim()) ||
       form?.cwdMode === 'custom' ||
       form?.soloTeam === true ||
       form?.launchTeam === false ||

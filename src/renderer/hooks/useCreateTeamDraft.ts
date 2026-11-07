@@ -57,7 +57,7 @@ export interface UseCreateTeamDraftResult {
   cwdMode: 'project' | 'custom';
   setCwdMode: (v: 'project' | 'custom') => void;
   selectedProjectPath: string;
-  setSelectedProjectPath: (v: string) => void;
+  setSelectedProjectPath: (v: string, options?: { explicit?: boolean }) => void;
   customCwd: string;
   setCustomCwd: (v: string) => void;
   soloTeam: boolean;
@@ -190,6 +190,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const teammateWorktreeDefaultRef = useRef(false);
   const cwdModeRef = useRef<'project' | 'custom'>('project');
   const selectedProjectPathRef = useRef('');
+  const projectSelectionExplicitRef = useRef(false);
   const customCwdRef = useRef('');
   const soloTeamRef = useRef(false);
   const launchTeamRef = useRef(true);
@@ -225,6 +226,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       teammateWorktreeDefault: teammateWorktreeDefaultRef.current,
       cwdMode: cwdModeRef.current,
       selectedProjectPath: selectedProjectPathRef.current,
+      projectSelectionExplicit: projectSelectionExplicitRef.current,
       customCwd: customCwdRef.current,
       soloTeam: soloTeamRef.current,
       launchTeam: launchTeamRef.current,
@@ -294,6 +296,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     teammateWorktreeDefaultRef.current = snap.teammateWorktreeDefault === true;
     cwdModeRef.current = snap.cwdMode;
     selectedProjectPathRef.current = snap.selectedProjectPath;
+    projectSelectionExplicitRef.current = snap.projectSelectionExplicit === true;
     customCwdRef.current = snap.customCwd;
     soloTeamRef.current = snap.soloTeam;
     launchTeamRef.current = snap.launchTeam;
@@ -426,9 +429,10 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   );
 
   const setSelectedProjectPath = useCallback(
-    (v: string) => {
+    (v: string, options?: { explicit?: boolean }) => {
       userTouchedRef.current = true;
       selectedProjectPathRef.current = v;
+      if (options?.explicit) projectSelectionExplicitRef.current = true;
       setSelectedProjectPathState(v);
       scheduleSave();
     },
@@ -531,6 +535,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     teammateWorktreeDefaultRef.current = false;
     cwdModeRef.current = 'project';
     selectedProjectPathRef.current = '';
+    projectSelectionExplicitRef.current = false;
     customCwdRef.current = '';
     soloTeamRef.current = false;
     launchTeamRef.current = true;

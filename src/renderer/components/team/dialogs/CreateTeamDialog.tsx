@@ -2585,7 +2585,7 @@ export const CreateTeamDialog = ({
                   cwdMode={cwdMode}
                   onCwdModeChange={setCwdMode}
                   selectedProjectPath={selectedProjectPath}
-                  onSelectedProjectPathChange={setSelectedProjectPath}
+                  onSelectedProjectPathChange={(path) => setSelectedProjectPath(path, { explicit: true })}
                   customCwd={customCwd}
                   onCustomCwdChange={setCustomCwd}
                   projects={projects}

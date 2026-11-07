@@ -61,6 +61,8 @@ export interface CreateTeamDraftSnapshot {
   teammateWorktreeDefault?: boolean;
   cwdMode: 'project' | 'custom';
   selectedProjectPath: string;
+  /** Old drafts have no provenance; treat their selection conservatively. */
+  projectSelectionExplicit?: boolean;
   customCwd: string;
   soloTeam: boolean;
   launchTeam: boolean;
@@ -146,6 +148,7 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
       typeof obj.teammateWorktreeDefault === 'boolean') &&
     (obj.cwdMode === 'project' || obj.cwdMode === 'custom') &&
     typeof obj.selectedProjectPath === 'string' &&
+    (obj.projectSelectionExplicit === undefined || typeof obj.projectSelectionExplicit === 'boolean') &&
     typeof obj.customCwd === 'string' &&
     typeof obj.soloTeam === 'boolean' &&
     typeof obj.launchTeam === 'boolean' &&
