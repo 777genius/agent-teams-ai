@@ -191,7 +191,7 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
                   </div>
                 }
               >
-                <CliStatusBanner isDashboardActive={isActive && activeSection === 'providers'} />
+                <CliStatusBanner isDashboardActive={isActive && activeSection === 'providers'} isPaneVisible={isActive && activeSection === 'providers'} />
               </Suspense>
             </div>
           )}
