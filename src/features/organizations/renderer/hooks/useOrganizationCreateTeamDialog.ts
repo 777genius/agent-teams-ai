@@ -5,6 +5,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
+import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
@@ -122,6 +123,7 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
       if (!accepted) return;
     }
     const originTabId = useStore.getState().getActiveTab()?.id;
+    await resetCreateTeamDraft();
     openTeamsCreationPage({ placement, originTabId }, true);
   }, [openTeamsCreationPage, t]);
 
