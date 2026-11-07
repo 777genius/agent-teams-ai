@@ -12,9 +12,10 @@ export function parseOwnedDurableLog(body, sessionId, directory) {
   const ids = new Set();
   let eventCount = 0;
   for (const frame of frames) {
-    const data = frame.split('\n').filter(line => line.startsWith('data:'))
-      .map(line => line.slice(5).replace(/^ /, '')).join('\n');
-    if (!data) continue; // SSE keep-alive comments are not durable events.
+    const dataLines = frame.split('\n').filter(line => line.startsWith('data:'));
+    if (dataLines.length === 0) continue; // Only non-data keep-alives may be skipped.
+    const data = dataLines.map(line => line.slice(5).replace(/^ /, '')).join('\n');
+    if (!data) invalid(); // An empty data: frame is an event, not a heartbeat.
     let event;
     try { event = JSON.parse(data); } catch { invalid(); }
     if (!event || typeof event !== 'object' || Array.isArray(event) || synced) invalid();

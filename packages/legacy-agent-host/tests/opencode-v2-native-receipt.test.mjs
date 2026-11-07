@@ -167,6 +167,8 @@ test('native durable SSE proof rejects foreign, incomplete and reordered events'
   const bad = [
     frame(sync()).trimEnd(), // truncated final SSE frame
     'data: {\n\n', // malformed JSON
+    'data:\n\n'+frame(sync()), // empty data before sync is not a keep-alive
+    frame(sync())+'data: \n\n', // empty data after sync must not be ignored
     frame(sync(0,'ses_FOREIGN')),
     frame(sync(-1)),
     frame(event(0,{data:{sessionID:'ses_FOREIGN'}}))+frame(sync()),
