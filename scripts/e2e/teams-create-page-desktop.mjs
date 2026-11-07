@@ -460,7 +460,7 @@ async function captureScreenshot(client, fixture, label) {
   const dir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || path.join(fixture.root, 'artifacts');
   await mkdir(dir, { recursive: true });
   const result = await client.send('Page.captureScreenshot', { format: 'png' });
-  await writeFile(path.join(dir, \`teams-create-\${label}.png\`), Buffer.from(result.data, 'base64'));
+  await writeFile(path.join(dir, `teams-create-${label}.png`), Buffer.from(result.data, 'base64'));
 }
 
 async function initializeTeams(client, fixture) {
@@ -469,32 +469,32 @@ async function initializeTeams(client, fixture) {
   await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
     'native API and dev store', 60_000);
   const names = await client.evaluate(
-    \`window.electronAPI.teams.list().then(rows => rows.map(team => team.teamName))\`);
+    `window.electronAPI.teams.list().then(rows => rows.map(team => team.teamName))`);
   assert(names.includes(fixture.teamName), 'Sandbox team is missing from native API');
   await client.evaluate(
-    \`window.__agentTeamsDevStore.getState().openTeamsTab(\${JSON.stringify(fixture.projectPath)})\`);
+    `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.projectPath)})`);
   await client.waitFor(
-    \`(() => {
+    `(() => {
       const s = window.__agentTeamsDevStore?.getState();
-      return s && !s.teamsLoading && s.teams?.some(t => t.teamName === \${JSON.stringify(fixture.teamName)});
-    })()\`,
+      return s && !s.teamsLoading && s.teams?.some(t => t.teamName === ${JSON.stringify(fixture.teamName)});
+    })()`,
     'hydrated Teams list', 60_000
   );
 }
 
 function createButtonExpression(label) {
-  return \`Array.from(document.querySelectorAll('button'))
-    .find(button => button.textContent?.trim() === \${JSON.stringify(label)}
-      && !button.disabled && button.getBoundingClientRect().width > 0)\`;
+  return `Array.from(document.querySelectorAll('button'))
+    .find(button => button.textContent?.trim() === ${JSON.stringify(label)}
+      && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
 async function main() {
   const fixture = await seedFixture();
-  const unique = \`create-page-e2e-\${randomUUID().slice(0, 8)}\`;
+  const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
   let failure = null;
-  const log = (step) => process.stdout.write(\`STEP: \${step}\\n\`);
+  const log = (step) => process.stdout.write(`STEP: ${step}\\n`);
   const renderSnapshot = async (client) => {
-    return client.evaluate(\`(() => {
+    return client.evaluate(`(() => {
       const page = document.querySelector('[data-testid="create-team-page"]');
       const dialog = document.querySelector('[role="dialog"]');
       return {
@@ -503,7 +503,7 @@ async function main() {
         dialogOpen: Boolean(dialog),
         bodyText: document.body?.innerText?.slice(0, 800) ?? '',
       };
-    })()\`);
+    })()`);
   };
   try {
     log('start isolated Electron profile');
@@ -531,22 +531,22 @@ async function main() {
       'creation page closed on Back');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'Continue creating button');
     await cdp.click(createButtonExpression('Continue creating'));
-    await cdp.waitFor(\`document.querySelector('#team-name')?.value === \${JSON.stringify(unique)}\`,
+    await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'same team name restored after Back');
     await captureScreenshot(cdp, fixture, 'resumed');
 
     log('switch away to Settings and return to Teams creation in same renderer');
-    const teamsTabId = await cdp.evaluate(\`(() => {
+    const teamsTabId = await cdp.evaluate(`(() => {
       const store = window.__agentTeamsDevStore.getState();
       const pane = store.paneLayout.panes.find(p => p.id === store.paneLayout.focusedPaneId);
       return pane.activeTabId;
-    })()\`);
+    })()`);
     await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('general')");
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
       'creation page inactive');
     await cdp.evaluate(
-      \`window.__agentTeamsDevStore.getState().setActiveTab(\${JSON.stringify(teamsTabId)})\`);
-    await cdp.waitFor(\`document.querySelector('#team-name')?.value === \${JSON.stringify(unique)}\`,
+      `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(teamsTabId)})`);
+    await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'draft survives tab switch');
 
     log('restart real Electron process retaining the same isolated data root');
@@ -555,14 +555,14 @@ async function main() {
     started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
     await initializeTeams(cdp, fixture);
-    const restored = await cdp.evaluate(\`(() => {
+    const restored = await cdp.evaluate(`(() => {
       const el = document.querySelector('[data-testid=create-team-page] #team-name');
       return el ? { inPage: true, value: el.value } : { inPage: false, value: null };
-    })()\`);
+    })()`);
     if (!restored.inPage) {
       await cdp.click(createButtonExpression('Continue creating'));
     }
-    await cdp.waitFor(\`document.querySelector('#team-name')?.value === \${JSON.stringify(unique)}\`,
+    await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'draft survived real Electron restart');
     await captureScreenshot(cdp, fixture, 'restarted');
 
