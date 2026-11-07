@@ -1,5 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
-import { api, isElectronMode } from '@renderer/api';
+import { isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { cn } from '@renderer/lib/utils';
 
@@ -14,6 +14,7 @@ interface AppearanceSectionProps {
   safeConfig: SafeConfig;
   saving: boolean;
   onGeneralToggle: (key: keyof AppConfig['general'], value: boolean) => void;
+  onNativeTitleBarChange: (value: boolean) => Promise<void>;
   onThemeChange: (value: 'dark' | 'light' | 'system') => void;
 }
 
@@ -21,6 +22,7 @@ export const AppearanceSection = ({
   safeConfig,
   saving,
   onGeneralToggle,
+  onNativeTitleBarChange,
   onThemeChange,
 }: AppearanceSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('settings');
@@ -79,16 +81,12 @@ export const AppearanceSection = ({
                 confirmLabel: t('general.appearance.nativeTitleBar.restartConfirm.confirmLabel'),
               });
               if (shouldRelaunch) {
-                // Await config write before relaunch to avoid race condition on Windows
-                // (antivirus/NTFS can delay file writes beyond a fixed timeout)
                 try {
-                  await api.config.update('general', { useNativeTitleBar: v });
+                  await onNativeTitleBarChange(v);
+                  void window.electronAPI?.windowControls?.relaunch();
                 } catch {
-                  // If save fails, still try to toggle via the normal path
-                  onGeneralToggle('useNativeTitleBar', v);
-                  await new Promise((r) => setTimeout(r, 500));
+                  // The settings hook displays the save error; never relaunch on failure.
                 }
-                void window.electronAPI?.windowControls?.relaunch();
               }
             }}
             disabled={saving}

@@ -165,6 +165,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         // Revert optimistic update on error
         setOptimisticConfig(config);
         setError(err instanceof Error ? err.message : 'Failed to save settings');
+        throw err;
       } finally {
         setSaving(false);
       }

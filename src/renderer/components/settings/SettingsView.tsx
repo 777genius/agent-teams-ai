@@ -174,6 +174,9 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
                 safeConfig={safeConfig}
                 saving={saving}
                 onGeneralToggle={handlers.handleGeneralToggle}
+                onNativeTitleBarChange={(value) =>
+                  updateConfig('general', { useNativeTitleBar: value })
+                }
                 onThemeChange={handlers.handleThemeChange}
               />
             )}

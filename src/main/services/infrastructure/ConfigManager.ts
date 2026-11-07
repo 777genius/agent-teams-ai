@@ -544,6 +544,7 @@ export class ConfigManager {
   private static instance: ConfigManager | null = null;
   private triggerManager: TriggerManager;
   private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
+  private pendingConfigWrite: Promise<void> = Promise.resolve();
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
@@ -610,7 +611,7 @@ export class ConfigManager {
   private saveConfig(): void {
     try {
       this.persistConfig(this.config);
-      logger.info('Config saved');
+      logger.info('Config save scheduled');
     } catch (error) {
       logger.error('Error saving config:', error);
     }
@@ -623,9 +624,17 @@ export class ConfigManager {
    */
   private persistConfig(config: AppConfig): void {
     const content = JSON.stringify(config, null, 2);
-    void atomicWriteAsync(this.configPath, content).catch((error) => {
-      logger.error('Error persisting config:', error);
-    });
+    // Serialize snapshots: an older async write must never overwrite a newer update.
+    const write = this.pendingConfigWrite
+      .catch(() => undefined)
+      .then(() => atomicWriteAsync(this.configPath, content));
+    this.pendingConfigWrite = write;
+    void write.catch((error) => logger.error('Error persisting config:', error));
+  }
+
+  /** Resolves only after the latest scheduled config snapshot reaches disk. */
+  waitForPersistence(): Promise<void> {
+    return this.pendingConfigWrite;
   }
 
   /**
