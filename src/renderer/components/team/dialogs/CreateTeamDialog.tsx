@@ -545,6 +545,7 @@ export const CreateTeamDialog = ({
   };
 
   const resetFormState = (): void => {
+    gatewayBindings.releaseRetained();
     clearDraft();
     lastAutoDescriptionRef.current = null;
     descriptionDraft.clearDraft();
@@ -585,6 +586,7 @@ export const CreateTeamDialog = ({
   });
   const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
+    retainedGatewayOwnerKey: presentation === 'page' ? 'createTeam' : undefined,
     teamName: sanitizeTeamName(teamName.trim()),
     projectPath: effectiveCwd,
     selectedProviderId,
