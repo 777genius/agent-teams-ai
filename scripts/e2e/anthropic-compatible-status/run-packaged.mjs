@@ -348,6 +348,13 @@ try {
     'testProject',
     `window.electronAPI.config.addCustomProjectPath(${JSON.stringify(data.project)})`
   );
+  // Provider management moved from Dashboard to Settings -> Providers.
+  // Navigate through the real user action before opening the existing modal.
+  await cdp.click('[data-testid=dashboard-manage-providers]');
+  await cdp.wait(
+    'Boolean(document.querySelector("[data-testid=provider-settings-page]")?.getClientRects().length)',
+    'Providers settings page'
+  );
   await cdp.wait(
     'Boolean(document.querySelector("[data-testid=runtime-manage-anthropic]"))',
     'Anthropic Manage button'
