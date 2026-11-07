@@ -61,6 +61,10 @@ export interface CreateTeamDraftSnapshot {
   soloTeam: boolean;
   launchTeam: boolean;
   teamColor: string;
+  /** Optional for backward-compatible v1 draft restoration. */
+  organizationPlacementEnabled?: boolean;
+  organizationPlacementOrganizationId?: string;
+  organizationPlacementParentId?: string;
   updatedAt: number;
 }
 
@@ -124,6 +128,12 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
     typeof obj.soloTeam === 'boolean' &&
     typeof obj.launchTeam === 'boolean' &&
     typeof obj.teamColor === 'string' &&
+    (obj.organizationPlacementEnabled === undefined ||
+      typeof obj.organizationPlacementEnabled === 'boolean') &&
+    (obj.organizationPlacementOrganizationId === undefined ||
+      typeof obj.organizationPlacementOrganizationId === 'string') &&
+    (obj.organizationPlacementParentId === undefined ||
+      typeof obj.organizationPlacementParentId === 'string') &&
     typeof obj.updatedAt === 'number'
   );
 }
@@ -224,6 +234,9 @@ function emptySnapshot(): CreateTeamDraftSnapshot {
     soloTeam: false,
     launchTeam: true,
     teamColor: '',
+    organizationPlacementEnabled: false,
+    organizationPlacementOrganizationId: '',
+    organizationPlacementParentId: '',
     updatedAt: Date.now(),
   };
 }
