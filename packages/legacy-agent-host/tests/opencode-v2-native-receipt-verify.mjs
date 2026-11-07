@@ -21,6 +21,7 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "real_native_seal_refused_retained_SPI_mutations_and_checkpoint",
   "same_TEST_native_owner_closed_without_replay",
   "native_cold_restart_session_permissions_and_context_read_only",
+  "native_cold_restart_durable_log_cursor_read_only",
   "same_TEST_native_owner_restart_cleanup_confirmed"
 ]);
 const sha256 = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
@@ -33,6 +34,7 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
       (expectedSourceHead !== undefined &&
         (!sourceSha(expectedSourceHead) || value.sourceHead !== expectedSourceHead))) return false;
   const r = value, restarted = r.restart, log = r.nativeLogReadback;
+  const recovered = r.restartLogReadback;
   return r.kind === 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS' && r.version === '2.0.21' &&
     r.cleanup === true && r.error === undefined && r.cleanupError === undefined &&
     r.qualified === false && r.productQualified === false &&
@@ -44,6 +46,12 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     Number.isSafeInteger(log.watermark) && log.watermark >= 0 &&
     Number.isSafeInteger(log.eventCount) && log.eventCount >= 0 &&
     log.eventCount <= 4096 && log.modelTurnProven === false &&
+    recovered !== undefined && recovered !== null &&
+    typeof recovered === 'object' && !Array.isArray(recovered) &&
+    recovered.readOnly === true && recovered.synced === true &&
+    Number.isSafeInteger(recovered.watermark) && recovered.watermark >= log.watermark &&
+    Number.isSafeInteger(recovered.eventCount) && recovered.eventCount >= log.eventCount &&
+    recovered.eventCount <= 4096 && recovered.modelTurnProven === false &&
     Array.isArray(r.steps) && r.steps.length === REQUIRED_NATIVE_HOST_STEPS.length &&
     r.steps.every((step, index) => step === REQUIRED_NATIVE_HOST_STEPS[index]) &&
     restarted && typeof restarted === 'object' && !Array.isArray(restarted) &&
