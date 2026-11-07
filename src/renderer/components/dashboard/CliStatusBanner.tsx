@@ -1536,7 +1536,6 @@ const InstalledBanner = ({
 interface CliStatusBannerProps {
   isDashboardActive?: boolean;
 }
-
 export const CliStatusBanner = ({
   isDashboardActive = false,
 }: CliStatusBannerProps): React.JSX.Element | null => {
@@ -1577,7 +1576,6 @@ export const CliStatusBanner = ({
     installCodexRuntime,
     isBusy,
   } = useCliInstaller();
-
   const [showLoginTerminal, setShowLoginTerminal] = useState(false);
   const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const [providerTerminal, setProviderTerminal] = useState<{
@@ -1715,7 +1713,6 @@ export const CliStatusBanner = ({
     [loadingCliStatus, visibleCliProviders]
   );
   const renderCliStatus = effectiveCliStatus;
-
   const shouldPollAnthropicSubscriptionLimits = useMemo(() => {
     if (
       !renderCliStatus?.installed ||
@@ -1724,13 +1721,11 @@ export const CliStatusBanner = ({
     ) {
       return false;
     }
-
     const provider =
       renderCliStatus.providers.find((candidate) => candidate.providerId === 'anthropic') ?? null;
     if (!provider) {
       return false;
     }
-
     return isDashboardRateLimitSubscriptionMode({
       provider,
       sourceProvider: loadingCliProviderMap.get('anthropic') ?? null,
@@ -1745,13 +1740,11 @@ export const CliStatusBanner = ({
     ) {
       return false;
     }
-
     const provider =
       renderCliStatus.providers.find((candidate) => candidate.providerId === 'codex') ?? null;
     if (!provider) {
       return false;
     }
-
     return isDashboardRateLimitSubscriptionMode({
       provider,
       sourceProvider: loadingCliProviderMap.get('codex') ?? null,
@@ -1759,12 +1752,10 @@ export const CliStatusBanner = ({
     });
   }, [loadingCliProviderMap, multimodelEnabled, providerConnectionAuthModes, renderCliStatus]);
   const runtimeDisplayName = getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled);
-
   const refreshAnthropicSubscriptionLimits = useCallback(async (): Promise<void> => {
     if (!shouldPollAnthropicSubscriptionLimits) {
       return;
     }
-
     setAnthropicRateLimitsRefreshing(true);
     try {
       const refreshed = await fetchCliProviderStatus('anthropic', { silent: true });
@@ -1775,18 +1766,15 @@ export const CliStatusBanner = ({
       setAnthropicRateLimitsRefreshing(false);
     }
   }, [fetchCliProviderStatus, shouldPollAnthropicSubscriptionLimits]);
-
   useEffect(() => {
     if (!isDashboardActive) {
       dashboardWasActiveRef.current = false;
       return;
     }
-
     if (dashboardWasActiveRef.current) {
       return;
     }
     dashboardWasActiveRef.current = true;
-
     if (!isElectron || dashboardLimitsRefreshInFlightRef.current) {
       return;
     }
