@@ -8,7 +8,6 @@ import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-
 import { Input } from '@renderer/components/ui/input';
 import {
   Tooltip,
