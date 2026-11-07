@@ -1511,7 +1511,17 @@
       "searchTeams": "チーム検索",
       "selectTeam": "チームを選択",
       "team": "スタッフ",
-      "title": "スケジュール"
+      "title": "スケジュール",
+      "execution": "実行方法",
+      "legacyNotice": "既存の単発スケジュールです。保存しても動作は変わりません。",
+      "upgradeSmart": "スマートスケジュールに切り替える",
+      "oneAgent": "エージェント1人",
+      "wholeTeam": "チーム全体",
+      "target": "チーム稼働中の担当者",
+      "leadDefault": "チームリーダー（既定）",
+      "agentDescription": "チーム停止中は単独のエージェントを実行し、稼働中は担当者にタスクを割り当てます。",
+      "teamDescription": "チーム停止中は保存済みのチームを起動し、稼働中はリーダーにタスクを割り当てます。保存済みの設定を使用します。",
+      "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。"
     },
     "title": {
       "createSchedule": "スケジュールの作成",
@@ -2134,7 +2144,9 @@
       "completed": "完了しました",
       "failed": "失敗した",
       "interrupted": "中断された",
-      "cancelled": "キャンセル"
+      "cancelled": "キャンセル",
+      "dispatched": "依頼済み",
+      "skipped": "スキップ"
     }
   },
   "openCodeContextConfigHint": {

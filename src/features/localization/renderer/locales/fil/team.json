@@ -1511,7 +1511,17 @@
       "searchTeams": "Maghanap ng mga team...",
       "selectTeam": "Pumili ng team...",
       "team": "Team",
-      "title": "Schedule"
+      "title": "Schedule",
+      "execution": "Pagpapatakbo",
+      "legacyNotice": "Umiiral na isang-beses na iskedyul: hindi mababago ng pag-save ang dating kilos nito.",
+      "upgradeSmart": "Lumipat sa matalinong iskedyul",
+      "oneAgent": "Isang agent",
+      "wholeTeam": "Buong team",
+      "target": "Tatanggap kapag tumatakbo ang team",
+      "leadDefault": "Team lead (default)",
+      "agentDescription": "Kapag hindi tumatakbo ang team, maglulunsad ng hiwalay na agent; kung aktibo, magtatalaga ng gawain.",
+      "teamDescription": "Kapag hindi tumatakbo ang team, sisimulan ito; kung aktibo, magtatalaga ng gawain sa lead. Gagamitin ang naka-save na setting.",
+      "teamPathMissing": "I-save muna ang project folder ng team bago mag-iskedyul ng paglulunsad."
     },
     "title": {
       "createSchedule": "Lumikha ng Schedule",
@@ -2134,7 +2144,9 @@
       "completed": "Tapos na",
       "failed": "Nabigo",
       "interrupted": "Naantala",
-      "cancelled": "Kinansela"
+      "cancelled": "Kinansela",
+      "dispatched": "Naipadala",
+      "skipped": "Nilaktawan"
     }
   },
   "openCodeContextConfigHint": {

@@ -1511,7 +1511,17 @@
       "searchTeams": "Teams zoeken...",
       "selectTeam": "Selecteer een team...",
       "team": "Team",
-      "title": "Planning"
+      "title": "Planning",
+      "execution": "Uitvoering",
+      "legacyNotice": "Bestaande eenmalige planning: opslaan verandert het huidige gedrag niet.",
+      "upgradeSmart": "Overschakelen naar slimme planning",
+      "oneAgent": "Eén agent",
+      "wholeTeam": "Hele team",
+      "target": "Ontvanger wanneer het team actief is",
+      "leadDefault": "Teamleider (standaard)",
+      "agentDescription": "Als het team uitstaat, start een losse agent; anders wordt een taak toegewezen.",
+      "teamDescription": "Als het team uitstaat, wordt het gestart; anders krijgt de teamleider een taak. Opgeslagen instellingen worden gebruikt.",
+      "teamPathMissing": "Sla eerst de projectmap van het team op voordat je een start plant."
     },
     "title": {
       "createSchedule": "Planning aanmaken",
@@ -2134,7 +2144,9 @@
       "completed": "Voltooid",
       "failed": "Mislukt",
       "interrupted": "Onderbroken",
-      "cancelled": "Geannuleerd"
+      "cancelled": "Geannuleerd",
+      "dispatched": "Verzonden",
+      "skipped": "Overgeslagen"
     }
   },
   "openCodeContextConfigHint": {
