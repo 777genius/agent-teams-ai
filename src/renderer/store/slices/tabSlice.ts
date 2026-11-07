@@ -18,6 +18,12 @@ import { deferTabMutationForActiveChangeReview } from '@renderer/utils/changeRev
 import { normalizePath } from '@renderer/utils/pathNormalize';
 
 import {
+  leaveTeamsCreation,
+  navigateToTeamsCreation,
+  updateTabInLayout,
+} from '../utils/teamsCreationNavigation';
+
+import {
   findPane,
   findPaneByTabId,
   getAllTabs,
@@ -108,22 +114,6 @@ function syncFromLayout(layout: PaneLayout): Record<string, unknown> {
   };
 }
 
-/**
- * Update a tab in whichever pane contains it, returning the new layout.
- */
-function updateTabInLayout(
-  layout: PaneLayout,
-  tabId: string,
-  updater: (tab: Tab) => Tab
-): PaneLayout {
-  const pane = findPaneByTabId(layout, tabId);
-  if (!pane) return layout;
-  return updatePane(layout, {
-    ...pane,
-    tabs: pane.tabs.map((t) => (t.id === tabId ? updater(t) : t)),
-  });
-}
-
 // =============================================================================
 // Slice Creator
 // =============================================================================
@@ -206,51 +196,11 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     set(syncFromLayout(newLayout));
   },
 
-  // There is one writable creation editor across all panes in this renderer.
-  // Opening it does not introduce another global tab type.
-  openTeamsCreationPage: (seed, replaceExisting = false) => {
-    const state = get();
-    const layout = state.paneLayout;
-    const existingEditor = getAllTabs(layout).find(
-      (tab) => tab.type === 'teams' && tab.teamsCreationPage
-    );
-    if (existingEditor && !replaceExisting) {
-      state.setActiveTab(existingEditor.id);
-      return;
-    }
+  openTeamsCreationPage: (seed, replaceExisting) =>
+    navigateToTeamsCreation(get(), (layout) => set(syncFromLayout(layout)), seed, replaceExisting),
 
-    const focusedPane = findPane(layout, layout.focusedPaneId);
-    const teamsTab = existingEditor ?? focusedPane?.tabs.find((tab) => tab.type === 'teams');
-    const seedValue = seed ? { ...seed, id: crypto.randomUUID() } : undefined;
-    if (!teamsTab) {
-      state.openTab({
-        type: 'teams',
-        label: 'Teams',
-        teamsCreationPage: true,
-        teamsCreationSeed: seedValue,
-      });
-      return;
-    }
-    const updatedLayout = updateTabInLayout(layout, teamsTab.id, (tab) => ({
-      ...tab,
-      teamsCreationPage: true,
-      teamsCreationSeed: seedValue,
-    }));
-    set(syncFromLayout(updatedLayout));
-    get().setActiveTab(teamsTab.id);
-  },
-
-  closeTeamsCreationPage: (tabId) => {
-    const state = get();
-    const existing = getAllTabs(state.paneLayout).find((tab) => tab.id === tabId);
-    if (!existing || existing.type !== 'teams' || !existing.teamsCreationPage) return;
-    const updatedLayout = updateTabInLayout(state.paneLayout, tabId, (tab) => ({
-      ...tab,
-      teamsCreationPage: false,
-      teamsCreationSeed: undefined,
-    }));
-    set(syncFromLayout(updatedLayout));
-  },
+  closeTeamsCreationPage: (tabId) =>
+    leaveTeamsCreation(get(), (layout) => set(syncFromLayout(layout)), tabId),
 
   // Close a tab by ID in whichever pane contains it
   closeTab: (tabId: string) => {
