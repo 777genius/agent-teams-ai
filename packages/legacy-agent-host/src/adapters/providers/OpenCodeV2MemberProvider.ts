@@ -65,9 +65,13 @@ export function createOpenCodeV2MemberProvider(
   owned: OpenCodeV2OwnedSession
 ): MemberProvider {
   const selected = context.profile;
+  // A trusted profile alone cannot sanitize an override inherited from
+  // the parent Host process. Refuse V2 before any TEST owner access.
+  const inheritedBinaryOverride = () => Object.hasOwn(process.env, 'OPENCODE_BIN_PATH');
   if (selected.provider !== 'opencode' || selected.nativeGeneration !== 'v2' ||
       (selected.protocolRevision !== '2.0.0' && selected.protocolRevision !== '2.0.21') ||
       !selected.nativeSessionId || Object.hasOwn(selected.environment, 'OPENCODE_BIN_PATH') ||
+      inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
       selected.capturedMcpServers || selected.nativeOptions.toolApprovalMode !== undefined ||
       (selected.extraArgs?.length ?? 0) !== 0)
@@ -114,7 +118,7 @@ export function createOpenCodeV2MemberProvider(
   const current = () => {
     if (sealed || qualificationRevoked) return false;
     try {
-      if (context.isCurrent() && context.canAllocate()) return true;
+      if (!inheritedBinaryOverride() && context.isCurrent() && context.canAllocate()) return true;
     } catch {
       // A failed Host authority callback cannot grant an existing native
       // process another turn. Treat errors as permanent lease revocation,
