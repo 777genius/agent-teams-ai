@@ -88,4 +88,23 @@ describe('refreshRuntimeProviderConnection', () => {
     expect(refreshDirectory).toHaveBeenCalledOnce();
     expect(getRuntimeProviderDirectoryReadToken(projectPath)).not.toBe(tokenBeforeFailure);
   });
+
+  it('still starts the directory refresh when the provider view rejects', async () => {
+    const refreshDirectory = vi.fn(async () => true);
+    const result = await refreshRuntimeProviderConnection({
+      runtimeId: 'opencode',
+      projectPath: '/tmp/TEST-view-fails',
+      runtimeRevision: null,
+      directorySupported: false,
+      isContextCurrent: () => true,
+      isRuntimeRevisionCurrent: () => true,
+      refreshExternal: async () => undefined,
+      refreshView: async () => {
+        throw new Error('View unavailable');
+      },
+      refreshDirectory,
+    });
+    expect(result).toBe('warning');
+    expect(refreshDirectory).toHaveBeenCalledOnce();
+  });
 });

@@ -78,14 +78,14 @@ export async function refreshRuntimeProviderConnection(
   try {
     const externalRefreshResult = await input.refreshExternal();
     if (!input.isContextCurrent()) return 'stale';
-    // The shared summary may invalidate this scope again on failure. Wait
-    // before starting the replacement directory read to avoid discarding it.
-    const [viewRefreshed, sharedDirectoryRefreshed] = await Promise.all([
-      input.refreshView(),
-      sharedDirectoryRefresh,
-    ]);
+    // A failed summary invalidates the scope again. Let it settle before
+    // either replacement read starts, while keeping view and directory parallel.
+    const sharedDirectoryRefreshed = await sharedDirectoryRefresh;
     if (!input.isContextCurrent()) return 'stale';
-    const directoryRefreshed = await input.refreshDirectory();
+    const [viewRefreshed, directoryRefreshed] = await Promise.all([
+      input.refreshView(),
+      input.refreshDirectory(),
+    ]);
     if (!input.isContextCurrent()) return 'stale';
     return externalRefreshResult === false ||
       !viewRefreshed ||
