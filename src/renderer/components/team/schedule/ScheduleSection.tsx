@@ -285,17 +285,33 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
         <span className="text-[11px] font-medium text-[var(--color-text-muted)]">
           {schedules.length > 0 ? t('schedule.count', { count: schedules.length }) : ''}
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-6 gap-1 px-2 text-[11px]"
-          onClick={handleCreate}
-          disabled={hostScheduleUnsupported}
-          title={hostScheduleUnsupported ? 'Host-owned team scheduling is not yet supported' : undefined}
-        >
-          <Plus className="size-3" />
-          {t('schedule.actions.addSchedule')}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="inline-flex"
+              tabIndex={hostScheduleUnsupported ? 0 : undefined}
+              aria-label={
+                hostScheduleUnsupported ? 'Host-owned team scheduling is not yet supported' : undefined
+              }
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 px-2 text-[11px]"
+                onClick={handleCreate}
+                disabled={hostScheduleUnsupported}
+              >
+                <Plus className="size-3" />
+                {t('schedule.actions.addSchedule')}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {hostScheduleUnsupported && (
+            <TooltipContent side="top">
+              Host-owned team scheduling is not yet supported
+            </TooltipContent>
+          )}
+        </Tooltip>
       </div>
 
       {hostScheduleUnsupported && (

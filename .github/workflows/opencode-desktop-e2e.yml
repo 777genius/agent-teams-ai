@@ -54,6 +54,10 @@ jobs:
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness safety
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
+      # Stage1 extracts Host imports consumed by the Electron main bundle.
+      # pnpm install alone does not materialize the workspace dist exports.
+      - name: Build isolated Host before Electron startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Configure disposable artifact directory
         shell: bash
         run: |
