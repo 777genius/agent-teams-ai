@@ -47,6 +47,8 @@ function completeReceiptFixture() {
     packagedElectronQualified: false, binarySha256: 'f'.repeat(64),
     pid: 1101, processStartTicks: '123456', nativeCustodyReadbacks: 4,
     nativePermissionReadbacks: 4, steps: [...REQUIRED_NATIVE_HOST_STEPS],
+    nativeLogReadback: { readOnly: true, synced: true, watermark: 0,
+      eventCount: 0, modelTurnProven: false },
     restart: { priorPid: 1101, priorStartTicks: '123456', pid: 1102,
       startTicks: '123489', readOnly: true, actualBinarySha256: 'f'.repeat(64) },
   };
@@ -57,6 +59,13 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
   const mutations = [
     r => { r.steps.pop(); },
     r => { r.steps.splice(r.steps.indexOf('real_native_ordered_ask_readback_without_tool_execution'), 1); },
+    r => { r.steps.splice(r.steps.indexOf('real_native_fresh_session_durable_log_cursor_read_only'), 1); },
+    r => { delete r.nativeLogReadback; },
+    r => { r.nativeLogReadback.synced = false; },
+    r => { r.nativeLogReadback.readOnly = false; },
+    r => { r.nativeLogReadback.modelTurnProven = true; },
+    r => { r.nativeLogReadback.watermark = -1; },
+    r => { r.nativeLogReadback.eventCount = 4097; },
     r => { r.steps[0] = 'npm_wrapper_hashed'; },
     r => { r.steps.reverse(); },
     r => { r.binarySha256 = 'unverified'; },
