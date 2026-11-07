@@ -30,6 +30,7 @@ import {
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
 import {
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
@@ -478,15 +479,22 @@ const ActiveTeamCard = ({
   );
 };
 
-export const TeamListView = memo(function TeamListView(): React.JSX.Element {
+export const TeamListView = memo(function TeamListView({ tabId }: { tabId: string }): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const creationTab = useStore((s) =>
+    s.paneLayout.panes.flatMap((pane) => pane.tabs).find((tab) => tab.id === tabId)
+  );
+  const createPageOpen = creationTab?.teamsCreationPage === true;
+  const createSeed = creationTab?.teamsCreationSeed;
+  const copyData = createSeed?.copyData ?? null;
+  const openTeamsCreationPage = useStore((s) => s.openTeamsCreationPage);
+  const closeTeamsCreationPage = useStore((s) => s.closeTeamsCreationPage);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
   const [teamPriorityProjectPath, setTeamPriorityProjectPath] = useState<string | null>(null);
@@ -635,7 +643,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
   // Refresh alive teams when opening the create dialog so conflict warning is accurate.
   useEffect(() => {
-    if (!electronMode || !showCreateDialog) return;
+    if (!electronMode || !createPageOpen) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
       if (!cancelled && list) {
@@ -645,7 +653,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [electronMode, fetchAliveTeams, showCreateDialog]);
+  }, [electronMode, fetchAliveTeams, createPageOpen]);
 
   const currentProjectSelection = useMemo(
     () =>
@@ -858,6 +866,23 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     [permanentlyDeleteTeam, t]
   );
 
+  const openCopiedTeam = useCallback(
+    async (copy: TeamCopyData) => {
+      const saved = await createTeamDraftStorage.loadSnapshot();
+      if (saved?.teamName.trim() && saved.teamName !== copy.teamName) {
+        const accepted = await confirm({
+          title: t('create.title.copy'),
+          message: t('create.draft.replaceConfirmation'),
+          confirmLabel: t('create.draft.replace'),
+          variant: 'danger',
+        });
+        if (!accepted) return;
+      }
+      openTeamsCreationPage({ copyData: copy }, true);
+    },
+    [openTeamsCreationPage, t]
+  );
+
   const handleCopyTeam = useCallback(
     (teamName: string, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -867,7 +892,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           const uniqueName = generateUniqueName(teamName, existingNames);
           const savedRequest = await api.teams.getSavedRequest(teamName);
           if (savedRequest) {
-            setCopyData({
+            void openCopiedTeam({
               teamName: uniqueName,
               runtimeSelectionVersion: savedRequest.runtimeSelectionVersion,
               description: savedRequest.description,
@@ -883,27 +908,25 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
               skipPermissions: savedRequest.skipPermissions,
               members: buildCopiedTeamMembers(savedRequest.members),
             });
-            setShowCreateDialog(true);
             return;
           }
 
           const data = await api.teams.getData(teamName, {
             includeMemberBranches: false,
           });
-          setCopyData({
+          void openCopiedTeam({
             teamName: uniqueName,
             description: data.config.description,
             color: data.config.color,
             cwd: data.config.projectPath,
             members: buildCopiedTeamMembers(data.config.members, data.members),
           });
-          setShowCreateDialog(true);
         } catch {
           // silently ignore — team data may be unavailable
         }
       })();
     },
-    [teams]
+    [teams, openCopiedTeam]
   );
 
   const handleStopTeam = useCallback(
@@ -1055,9 +1078,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   }, [teams, aliveTeams]);
 
   const handleCreateDialogClose = useCallback(() => {
-    setShowCreateDialog(false);
-    setCopyData(null);
-  }, []);
+    closeTeamsCreationPage(tabId);
+  }, [closeTeamsCreationPage, tabId]);
 
   const handleCreateSubmit = useCallback(
     async (request: TeamCreateRequest, placement?: OrganizationPlacementSelection) => {
@@ -1092,7 +1114,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     );
   }
 
-  const createDialogElement = showCreateDialog && (
+  const createDialogElement = createPageOpen && (
     <Suspense
       fallback={
         <CreateTeamDialogLoadingFallback
@@ -1102,7 +1124,8 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       }
     >
       <CreateTeamDialog
-        open={showCreateDialog}
+        presentation="page"
+        open={createPageOpen}
         canCreate={canCreate}
         provisioningErrorsByTeam={provisioningErrorByTeam}
         clearProvisioningError={clearProvisioningError}
@@ -1110,6 +1133,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         provisioningTeamNames={provisioningTeamNames}
         activeTeams={activeTeams}
         initialData={copyData ?? undefined}
+        initialOrganizationPlacement={createSeed?.placement ?? null}
         defaultProjectPath={createTeamDefaultProjectPath}
         forceDefaultProjectSelection={copyData == null && navigationProjectPath != null}
         onClose={handleCreateDialogClose}
@@ -1210,7 +1234,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             <Import size={13} />
             {t('list.actions.importTeam')}
           </Button>
-          <Button className="gap-2" disabled={!canCreate} onClick={() => setShowCreateDialog(true)}>
+          <Button className="gap-2" disabled={!canCreate} onClick={() => openTeamsCreationPage()}>
             <Plus size={15} />
             {t('list.actions.createTeam')}
           </Button>
@@ -1295,7 +1319,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
       return (
         <TeamEmptyState
           canCreate={canCreate}
-          onCreateTeam={() => setShowCreateDialog(true)}
+          onCreateTeam={() => openTeamsCreationPage()}
           onImportTeam={() => setShowImportDialog(true)}
         />
       );
@@ -1553,13 +1577,16 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="size-full overflow-auto p-4">
-        {renderHeader()}
-        {renderContent()}
-        {createDialogElement}
-        {importDialogElement}
-        {launchDialogElement}
-      </div>
+      {createPageOpen ? (
+        <div className="size-full min-h-0 min-w-0">{createDialogElement}</div>
+      ) : (
+        <div className="size-full overflow-auto p-4">
+          {renderHeader()}
+          {renderContent()}
+          {importDialogElement}
+          {launchDialogElement}
+        </div>
+      )}
     </TooltipProvider>
   );
 });
