@@ -142,7 +142,8 @@ const TeamPaneLazyFallback = ({
 const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [hasActivated, setHasActivated] = useState(isActive);
-  const shouldRenderContent = hasActivated && (tab.type !== 'teams' || isActive);
+  const shouldRenderContent =
+    hasActivated && (tab.type !== 'teams' || isActive || tab.teamsCreationPage === true);
 
   useEffect(() => {
     if (isActive) {
@@ -172,7 +173,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
           {tab.type === 'settings' && <SettingsView isActive={isActive} />}
-          {tab.type === 'teams' && <TeamListView />}
+          {tab.type === 'teams' && <TeamListView tabId={tab.id} isActive={isActive} />}
           {tab.type === 'organizations' && (
             <TabUIProvider tabId={tab.id}>
               <OrganizationMapTab isActive={isActive} isPaneFocused={isPaneFocused} />

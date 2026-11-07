@@ -130,7 +130,8 @@
       "create": "Create",
       "creating": "Creating...",
       "openExisting": "Open Existing Team",
-      "skipPreflightAndCreate": "Skip preflight and create"
+      "skipPreflightAndCreate": "Skip preflight and create",
+      "backToTeams": "Back to teams"
     },
     "conflict": {
       "description": "Running two teams in the same directory is risky - they may conflict editing the same files. Consider using a different directory or a git worktree for isolation.",
@@ -231,7 +232,8 @@
       "kind": {
         "root": "Root",
         "group": "Group"
-      }
+      },
+      "invalidSelection": "Choose a valid organization and destination before creating the team."
     },
     "defaultDescription": {
       "fallback": "Team for provisioning flow",
@@ -240,7 +242,17 @@
     "defaultWorkflows": {
       "reviewer": "Review every completed task in the project. Read the code changes, check for correctness, style, and potential issues. Approve the task or request changes with clear feedback."
     },
-    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
+    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort.",
+    "draft": {
+      "replaceConfirmation": "You have an unfinished team draft. Starting this action will replace it. Continue?",
+      "replace": "Replace draft",
+      "continue": "Continue creating"
+    },
+    "placementFailure": {
+      "title": "Team created, but not added to the organization",
+      "message": "Team {{teamName}} was created. Assign it from the Organization Map; do not create it again.",
+      "acknowledge": "Got it"
+    }
   },
   "editTeam": {
     "actions": {
