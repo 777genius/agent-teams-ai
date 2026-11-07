@@ -13,6 +13,21 @@ const RETAINED_CREATE_KEYS = new Set([
 ]);
 const isRetainedCreateKey = (key: string): boolean => RETAINED_CREATE_KEYS.has(key);
 
+// Creation text/chips are separate legacy keys. Serialize only those mutations
+// so a delayed edit cannot resurrect them after successful creation or discard.
+const retainedMutations = new Map<string, Promise<void>>();
+function orderedCreateMutation(key: string, operation: () => Promise<void>): Promise<void> {
+  if (!isRetainedCreateKey(key)) return operation();
+  const previous = retainedMutations.get(key) ?? Promise.resolve();
+  const result = previous.then(operation);
+  const settled = result.then(() => undefined, () => undefined);
+  retainedMutations.set(key, settled);
+  void settled.then(() => {
+    if (retainedMutations.get(key) === settled) retainedMutations.delete(key);
+  });
+  return result;
+}
+
 interface StoredDraft {
   value: string;
   timestamp: number;
@@ -65,7 +80,7 @@ function fallbackCleanupExpired(): void {
   }
 }
 
-async function saveDraft(key: string, value: string): Promise<void> {
+async function saveDraftUnordered(key: string, value: string): Promise<void> {
   if (idbUnavailable) {
     fallbackSave(key, value);
     return;
@@ -79,7 +94,12 @@ async function saveDraft(key: string, value: string): Promise<void> {
   }
 }
 
+async function saveDraft(key: string, value: string): Promise<void> {
+  return orderedCreateMutation(key, () => saveDraftUnordered(key, value));
+}
+
 async function loadDraft(key: string): Promise<string | null> {
+  if (isRetainedCreateKey(key)) await retainedMutations.get(key);
   if (idbUnavailable) return fallbackLoad(key);
   try {
     const stored = await get<StoredDraft>(`${DRAFT_KEY_PREFIX}${key}`);
@@ -96,7 +116,7 @@ async function loadDraft(key: string): Promise<string | null> {
   }
 }
 
-async function deleteDraft(key: string): Promise<void> {
+async function deleteDraftUnordered(key: string): Promise<void> {
   if (idbUnavailable) {
     fallbackDelete(key);
     return;
@@ -107,6 +127,10 @@ async function deleteDraft(key: string): Promise<void> {
     markIdbUnavailable();
     fallbackDelete(key);
   }
+}
+
+async function deleteDraft(key: string): Promise<void> {
+  return orderedCreateMutation(key, () => deleteDraftUnordered(key));
 }
 
 async function cleanupExpired(): Promise<void> {
