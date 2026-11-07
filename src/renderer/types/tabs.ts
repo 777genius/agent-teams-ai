@@ -3,11 +3,10 @@
  * Based on specs/001-tabbed-layout-dashboard/contracts/tab-state.ts
  */
 
+import type { Session } from './data';
 import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
 import type { TeamCopyData } from '@renderer/components/team/dialogs/CreateTeamDialog.types';
 import type { TriggerColor } from '@shared/constants/triggerColors';
-
-import type { Session } from './data';
 
 // =============================================================================
 // Navigation Request Types
