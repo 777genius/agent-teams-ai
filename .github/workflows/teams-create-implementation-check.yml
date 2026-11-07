@@ -19,6 +19,9 @@ on:
       - src/renderer/hooks/useDraftPersistence.ts
       - src/renderer/hooks/useChipDraftPersistence.ts
       - src/renderer/services/createTeamDraftStorage.ts
+      - src/renderer/services/createTeamDraftGeneration.ts
+      - src/renderer/services/createTeamDraftGeneration.test.ts
+      - src/renderer/services/resetCreateTeamDraft.ts
       - src/renderer/services/draftStorage.ts
       - src/renderer/store/utils/teamsCreationNavigation.ts
       - scripts/e2e/**
@@ -62,6 +65,7 @@ jobs:
           pnpm exec vitest run --maxWorkers=1 \
             src/renderer/hooks/useCreateTeamDraft.test.tsx \
             src/renderer/services/createTeamDraftStorage.test.ts \
+            src/renderer/services/createTeamDraftGeneration.test.ts \
             test/renderer/hooks/useDraftPersistence.test.ts \
             test/renderer/store/teamsCreationPage.test.ts \
             test/renderer/store/contextSliceTeamReset.test.ts \
