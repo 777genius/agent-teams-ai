@@ -1142,6 +1142,65 @@ test('idle observer revokes an expired native V2 lease without seal or native ev
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
   });
 
+test('late executable alias during a suspended V2 native probe cannot renew authority',
+  { timeout: 3000 }, async () => {
+    const previous = process.env.opencode_bin_path;
+    delete process.env.opencode_bin_path;
+    try {
+      for (const stopConfirmed of [true, false]) {
+        const { captured, calls } = owner(true);
+        captured.confirmStopped = async () => { calls.stopped++; return stopConfirmed; };
+        const provider = createOpenCodeV2MemberProvider(context(), captured);
+        const opened = await provider.factory.open(request());
+        assert.equal(provider.isReady(), true);
+        const entered = Promise.withResolvers<void>();
+        const resume = Promise.withResolvers<void>();
+        captured.probe = async () => {
+          calls.probe++;
+          entered.resolve();
+          await resume.promise;
+          return true;
+        };
+        const recheck = opened.driver.checkReadiness();
+        try {
+          await entered.promise;
+          assert.equal(provider.isReady(), false, 'suspended native re-attestation fences old readiness');
+          process.env.opencode_bin_path = '/TEST-parent/mixed-case-engine-during-probe';
+        } finally {
+          // Always release the deferred TEST probe, including on assertion failure.
+          resume.resolve();
+        }
+        try {
+          if (stopConfirmed) {
+            assert.deepEqual(await recheck, { ok: false, code: 'unavailable' });
+          } else {
+            await assert.rejects(recheck, /opencode.v2.owner-cleanup-unknown/,
+              'unconfirmed physical custody must not look like an ordinary readiness failure');
+          }
+          delete process.env.opencode_bin_path;
+          assert.equal(provider.isReady(), false, 'clearing the override never revives custody');
+          assert.equal(provider.initialContextEvidence?.(), undefined);
+          assert.equal(calls.context, 1, 'native instructions must not be replayed');
+          assert.equal(calls.stop, 1, 'stop is sent only to the captured TEST owner, once');
+          assert.ok(calls.stopped >= 1, 'physical process status must be read back');
+          assert.equal(await provider.cleanup(), stopConfirmed);
+          assert.deepEqual(await opened.driver.close(), {
+            logicallyClosed: true, cleanup: stopConfirmed ? 'confirmed' : 'unknown',
+          });
+          assert.equal(calls.stop, 1, 'cleanup must never resend an uncertain stop ACK');
+        } finally {
+          delete process.env.opencode_bin_path;
+          resume.resolve();
+          await opened.driver.close();
+          await provider.cleanup();
+        }
+      }
+    } finally {
+      if (previous === undefined) delete process.env.opencode_bin_path;
+      else process.env.opencode_bin_path = previous;
+    }
+  });
+
 test('pending native V2 re-attestation fences concurrent controls without retiring owner',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
