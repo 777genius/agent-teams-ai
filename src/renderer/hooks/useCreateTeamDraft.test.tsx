@@ -273,4 +273,92 @@ describe('useCreateTeamDraft', () => {
       })
     );
   });
+
+  it('restores organization placement and working directory when the team name is still empty', async () => {
+    loadSnapshotMock.mockResolvedValue(null);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let root = createRoot(host);
+    let draft: ReturnType<typeof useCreateTeamDraft> | null = null;
+    const mount = async () => {
+      await act(async () => {
+        root.render(
+          React.createElement(HookProbeWithDraft, {
+            onLoaded: (value) => { draft = value; },
+          })
+        );
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+    };
+    await mount();
+    act(() => {
+      draft?.setOrganizationPlacementEnabled(true);
+      draft?.setOrganizationPlacementOrganizationId('organization-1');
+      draft?.setOrganizationPlacementParentId('department-1');
+      draft?.setSelectedProjectPath('/sandbox/project-A');
+      root.unmount();
+    });
+    const snapshot = saveSnapshotMock.mock.calls.at(-1)?.[0];
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        teamName: '',
+        organizationPlacementEnabled: true,
+        organizationPlacementOrganizationId: 'organization-1',
+        organizationPlacementParentId: 'department-1',
+        selectedProjectPath: '/sandbox/project-A',
+      })
+    );
+    expect(deleteSnapshotMock).not.toHaveBeenCalled();
+
+    loadSnapshotMock.mockResolvedValue(snapshot);
+    draft = null;
+    root = createRoot(host);
+    await mount();
+    expect(draft).toEqual(
+      expect.objectContaining({
+        teamName: '',
+        organizationPlacementEnabled: true,
+        organizationPlacementOrganizationId: 'organization-1',
+        organizationPlacementParentId: 'department-1',
+        selectedProjectPath: '/sandbox/project-A',
+        restoredFromStorage: true,
+      })
+    );
+    act(() => root.unmount());
+  });
+
+  it('restores legacy snapshots that omit the newer organization fields', async () => {
+    loadSnapshotMock.mockResolvedValue({
+      version: 1,
+      teamName: 'legacy-team',
+      members: [],
+      cwdMode: 'project',
+      selectedProjectPath: '',
+      customCwd: '',
+      soloTeam: false,
+      launchTeam: false,
+      teamColor: '',
+      updatedAt: Date.now(),
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let draft: ReturnType<typeof useCreateTeamDraft> | null = null;
+    await act(async () => {
+      root.render(React.createElement(HookProbeWithDraft, {
+        onLoaded: (value) => { draft = value; },
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(draft).toEqual(expect.objectContaining({
+      teamName: 'legacy-team',
+      organizationPlacementEnabled: false,
+      organizationPlacementOrganizationId: '',
+      organizationPlacementParentId: '',
+    }));
+    act(() => root.unmount());
+  });
+
 });
