@@ -19,6 +19,7 @@ import {
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  invalidateRuntimeProviderDirectoryScopeReads,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
@@ -286,10 +287,10 @@ describe('useRuntimeProviderManagement', () => {
                 directory: {
                   ...createEmptyDirectoryResponse(input.query).directory!,
                   entries:
-                    input.summary || !input.query
+                    !input.query
                       ? [connectedNow ? connectedEntry : disconnected, unrelated]
                       : [connectedNow ? connectedEntry : disconnected],
-                  totalCount: input.summary || !input.query ? 2 : 1,
+                  totalCount: !input.query ? 2 : 1,
                   fetchedAt: '2026-11-04T10:00:00.000Z',
                 },
               }
@@ -347,6 +348,8 @@ describe('useRuntimeProviderManagement', () => {
             null,
             React.createElement(ConfigurableHarness, {
               enabled: true,
+              // This matrix verifies summary refreshes, not full catalog hydration.
+              directorySummaryOnEnable: true,
               loadViewOnEnable: false,
               projectPath,
             }),
@@ -1557,6 +1560,57 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.directorySupported).toBe(true);
     expect(state?.directoryError).toBeNull();
     expect(state?.directoryLoaded).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it('ignores a pre-mutation directory response without changing the project', async () => {
+    const projectPath = '/tmp/TEST-stale-credential-directory';
+    let resolveDirectory!: (response: RuntimeProviderManagementDirectoryResponse) => void;
+    const loadProviderDirectory = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          resolveDirectory = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    // The confirmed mutation fences reads before the replacement request begins.
+    invalidateRuntimeProviderDirectoryScopeReads(projectPath);
+    await act(async () => {
+      resolveDirectory({
+        ...createEmptyDirectoryResponse(),
+        directory: {
+          ...createEmptyDirectoryResponse().directory!,
+          totalCount: 1,
+          returnedCount: 1,
+          entries: [createOpenAiLocalDirectoryEntry()],
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.directoryEntries).toEqual([]);
+    expect(state?.directoryLoaded).toBe(false);
+    expect(state?.directoryLoading).toBe(false);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(projectPath)).toBeNull();
     await act(async () => root.unmount());
   });
 
@@ -2958,7 +3012,7 @@ describe('useRuntimeProviderManagement', () => {
     });
   });
 
-  it('keeps connect action busy until the post-connect refresh finishes', async () => {
+  it('refreshes the view and catalog after a confirmed connection', async () => {
     const disconnectedProvider: RuntimeProviderConnectionDto = {
       ...createOpenAiLocalProvider(),
       state: 'not-connected',
@@ -3007,27 +3061,8 @@ describe('useRuntimeProviderManagement', () => {
         diagnostics: [],
       },
     };
-    let resolveRefreshView: (() => void) | null = null;
-    let resolveRefreshDirectory: (() => void) | null = null;
-    const loadView = vi
-      .fn()
-      .mockResolvedValueOnce(initialViewResponse)
-      .mockImplementation(
-        () =>
-          new Promise<typeof refreshedViewResponse>((resolve) => {
-            resolveRefreshView = () => resolve(refreshedViewResponse);
-          })
-      );
-    const loadProviderDirectory = vi
-      .fn()
-      .mockResolvedValueOnce(directoryResponse)
-      .mockImplementation((input: { summary?: boolean }) =>
-        input.summary
-          ? Promise.resolve(directoryResponse)
-          : new Promise<typeof directoryResponse>((resolve) => {
-              resolveRefreshDirectory = () => resolve(directoryResponse);
-            })
-      );
+    const loadView = vi.fn().mockResolvedValueOnce(initialViewResponse).mockResolvedValue(refreshedViewResponse);
+    const loadProviderDirectory = vi.fn().mockResolvedValue(directoryResponse);
     const loadSetupForm = vi.fn(() =>
       Promise.resolve({
         schemaVersion: 1,
@@ -3093,32 +3128,18 @@ describe('useRuntimeProviderManagement', () => {
     await act(async () => {
       actions?.startConnect('openai');
       actions?.setApiKeyValue('sk-good-value');
-      await vi.waitFor(() => {
-        expect(loadSetupForm).toHaveBeenCalled();
-      });
     });
-
-    let submitPromise: ReturnType<RuntimeProviderManagementActions['submitConnect']> | null = null;
-    await act(async () => {
-      submitPromise = actions?.submitConnect('openai') ?? null;
-      await vi.waitFor(() => {
-        expect(connectProvider).toHaveBeenCalled();
-      });
-      await Promise.resolve();
-    });
-
-    expect(state?.savingProviderId).toBe('openai');
-    expect(state?.activeFormProviderId).toBeNull();
-
     await vi.waitFor(() => {
-      expect(resolveRefreshView).toBeTypeOf('function');
-      expect(resolveRefreshDirectory).toBeTypeOf('function');
+      expect(loadSetupForm).toHaveBeenCalled();
     });
+
     await act(async () => {
-      resolveRefreshView?.();
-      resolveRefreshDirectory?.();
-      await submitPromise;
+      expect(await actions?.submitConnect('openai')).toEqual({
+        status: 'connected',
+        verifiedModelId: 'openai/gpt-4.1',
+      });
     });
+    expect(state?.activeFormProviderId).toBeNull();
 
     expect(loadView).toHaveBeenCalledTimes(2);
     expect(

@@ -1511,7 +1511,17 @@
       "searchTeams": "فرق البحث",
       "selectTeam": "اختيار فريق...",
       "team": "الفريق",
-      "title": "الجدول"
+      "title": "الجدول",
+      "execution": "طريقة التنفيذ",
+      "legacyNotice": "جدولة فردية قديمة: لن يؤدي الحفظ إلى تغيير طريقة عملها.",
+      "upgradeSmart": "التبديل إلى الجدولة الذكية",
+      "oneAgent": "وكيل واحد",
+      "wholeTeam": "الفريق بأكمله",
+      "target": "المكلّف عند تشغيل الفريق",
+      "leadDefault": "قائد الفريق (افتراضي)",
+      "agentDescription": "إذا كان الفريق متوقفًا، يشغّل وكيلاً مستقلاً؛ وإذا كان يعمل، ينشئ مهمة ويسندها.",
+      "teamDescription": "إذا كان الفريق متوقفًا، يشغّله؛ وإذا كان يعمل، يسند مهمة إلى قائده. يستخدم الإعدادات المحفوظة.",
+      "teamPathMissing": "احفظ مجلد مشروع الفريق قبل جدولة تشغيله."
     },
     "title": {
       "createSchedule": "الجدول الزمني المحدد",
@@ -2134,7 +2144,9 @@
       "completed": "مكتملة",
       "failed": "فشل",
       "interrupted": "متداخلة",
-      "cancelled": "ألغيت"
+      "cancelled": "ألغيت",
+      "dispatched": "تم الإرسال",
+      "skipped": "تم التخطي"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} مخبأ",
       "trash": "Trash",
       "gridView": "رؤية غريد",
-      "columnsView": "رؤية كولومز"
+      "columnsView": "رؤية كولومز",
+      "tableView": "عرض الجدول",
+      "configureColumns": "اختيار الأعمدة",
+      "resizeColumn": "تغيير عرض {{column}}"
     },
     "trash": {
       "title": "Trash",

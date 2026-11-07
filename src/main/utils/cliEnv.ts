@@ -10,6 +10,7 @@
 
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { createManagedGitEnv } from '@main/utils/managedGit';
 import { getAutoDetectedClaudeBasePath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getCachedShellEnv, getShellPreferredHome } from '@main/utils/shellEnv';
 import { userInfo } from 'os';
@@ -37,7 +38,7 @@ export function buildEnrichedEnv(binaryPath?: string | null): NodeJS.ProcessEnv 
   const configDir = getClaudeBasePath();
   const isCustomConfigDir = configDir !== getAutoDetectedClaudeBasePath();
 
-  return applyAgentTeamsIdentityEnv({
+  return createManagedGitEnv(applyAgentTeamsIdentityEnv({
     ...process.env,
     ...(shellEnv ?? {}),
     HOME: home,
@@ -50,5 +51,5 @@ export function buildEnrichedEnv(binaryPath?: string | null): NodeJS.ProcessEnv 
           LOGNAME: shellEnv?.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
         }
       : {}),
-  });
+  }));
 }

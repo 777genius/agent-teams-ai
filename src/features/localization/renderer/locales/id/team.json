@@ -1511,7 +1511,17 @@
       "searchTeams": "Tim pencari...",
       "selectTeam": "Pilih sebuah tim...",
       "team": "Tim",
-      "title": "Jadwal"
+      "title": "Jadwal",
+      "execution": "Eksekusi",
+      "legacyNotice": "Jadwal sekali jalan yang sudah ada: menyimpan tidak mengubah perilakunya.",
+      "upgradeSmart": "Beralih ke jadwal cerdas",
+      "oneAgent": "Satu agen",
+      "wholeTeam": "Seluruh tim",
+      "target": "Penerima saat tim berjalan",
+      "leadDefault": "Pemimpin tim (default)",
+      "agentDescription": "Saat tim mati, jalankan agen terpisah; saat aktif, berikan tugas kepada anggota.",
+      "teamDescription": "Saat tim mati, jalankan tim tersimpan; saat aktif, berikan tugas kepada pemimpin. Gunakan pengaturan tersimpan.",
+      "teamPathMissing": "Simpan folder proyek tim sebelum menjadwalkan peluncuran."
     },
     "title": {
       "createSchedule": "Buat Jadwal",
@@ -2134,7 +2144,9 @@
       "completed": "Selesai",
       "failed": "Gagal",
       "interrupted": "Interupsi",
-      "cancelled": "Dibatalkan"
+      "cancelled": "Dibatalkan",
+      "dispatched": "Dikirim",
+      "skipped": "Dilewati"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} tersembunyi",
       "trash": "Tempat Sampah",
       "gridView": "Tilikan kisi",
-      "columnsView": "Tilikan kolom"
+      "columnsView": "Tilikan kolom",
+      "tableView": "Tampilan tabel",
+      "configureColumns": "Pilih kolom",
+      "resizeColumn": "Ubah lebar {{column}}"
     },
     "trash": {
       "title": "Tempat Sampah",

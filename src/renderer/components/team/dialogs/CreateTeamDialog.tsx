@@ -131,7 +131,9 @@ import {
   getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
+import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -610,8 +612,9 @@ export const CreateTeamDialog = ({
       effectiveCwd,
       open && launchPreflightSelectionReady && selectedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled =
-    open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
+  const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
+    open, launchTeam, multimodelEnabled, selectedMemberProviders
+  );
   useEffect(() => {
     if (open && dialogTeamNameKey) {
       clearProvisioningError?.(dialogTeamNameKey);
@@ -738,7 +741,6 @@ export const CreateTeamDialog = ({
       selectedEffort,
     ]
   );
-
   const runtimeProviderLoadingById = useMemo(
     () =>
       new Map(
@@ -782,7 +784,6 @@ export const CreateTeamDialog = ({
   const pendingPrepareProviderSignatureByIdRef = useRef(new Map<TeamProviderId, string>());
   const prepareProviderRequestSeqByIdRef = useRef(new Map<TeamProviderId, number>());
   const prepareWarningsByProviderIdRef = useRef(new Map<TeamProviderId, string[]>());
-
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
@@ -2355,6 +2356,7 @@ export const CreateTeamDialog = ({
         }
       }}
     >
+      <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled} projectPath={effectiveCwd}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
         <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         <DialogHeader>
@@ -2408,7 +2410,6 @@ export const CreateTeamDialog = ({
             {t('create.localOnly')}
           </p>
         ) : null}
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
             <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
@@ -2446,7 +2447,6 @@ export const CreateTeamDialog = ({
               </p>
             ) : null}
           </div>
-
           <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
               onApply={(draft) => {
@@ -2522,7 +2522,6 @@ export const CreateTeamDialog = ({
               headerBottom={rosterHeaderBottom}
             />
           </div>
-
           <div
             className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
             style={{
@@ -3086,6 +3085,7 @@ export const CreateTeamDialog = ({
           </div>
         </DialogFooter>
       </DialogContent>
+      </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
         openProviderId={providerSettingsProviderId}
         onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}

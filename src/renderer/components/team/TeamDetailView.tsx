@@ -3211,6 +3211,8 @@ export const TeamDetailView = memo(function TeamDetailView({
               >
                 <TeamKanbanBoardBridge
                   tasks={kanbanDisplayTasks}
+                  allTasks={data.tasks}
+                  isActive={isThisTabActive}
                   teamName={teamName}
                   kanbanState={data.kanbanState}
                   filter={kanbanFilter}

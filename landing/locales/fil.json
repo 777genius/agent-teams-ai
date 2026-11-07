@@ -136,7 +136,16 @@
       "launchProof": "Status ng paglunsad ng teammate",
       "orgGovernance": "Organizations at Global Overview",
       "budgetControls": "Mga kontrol sa badyet",
-      "price": "Presyo"
+      "price": "Presyo",
+      "desktopPlatforms": "Mga sinusuportahang desktop platform"
+    },
+    "platforms": {
+      "desktopApp": "(desktop app)",
+      "cliBinaries": "(CLI binary)",
+      "noNativeDesktop": "Walang native desktop app (self-hosted na panel)",
+      "desktopIde": "(desktop IDE)",
+      "cli": "(CLI)",
+      "wsl2": "sa pamamagitan ng WSL2 (hindi native)"
     }
   },
   "screenshots": {

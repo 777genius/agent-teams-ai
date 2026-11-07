@@ -1,3 +1,5 @@
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
+import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { execFile } from 'child_process';
 import { createHash } from 'crypto';
@@ -26,9 +28,9 @@ const GIT_TIMEOUT_MS = 15_000;
 function execGit(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
-      'git',
+      getManagedGitExecutable(),
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true, env: createManagedGitEnv(process.env, { gitCommand: true }) },
       (error, stdout, stderr) => {
         if (error) {
           const message = String(stderr || error.message || 'git command failed').trim();
@@ -99,6 +101,9 @@ export class TeamMemberWorktreeManager {
   async ensureMemberWorktree(
     request: TeamMemberWorktreeRequest
   ): Promise<TeamMemberWorktreeResolution> {
+    if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+      throw new Error('Git is required for worktree isolation but is not installed on this Mac.');
+    }
     const baseRepoPath = await this.resolveBaseRepoPath(request.baseCwd);
     const repoHash = shortHash(baseRepoPath);
     const projectSlug = slugify(path.basename(baseRepoPath));

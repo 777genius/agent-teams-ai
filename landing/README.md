@@ -14,31 +14,25 @@ pnpm generate
 pnpm preview
 ```
 
-## Render static sites
+## GitHub Pages deployment
 
-Landing and docs are deployed as separate Render Static Sites from the `main` branch.
+The [landing workflow](../.github/workflows/landing.yml) builds and deploys the landing and product docs together to GitHub Pages on relevant `main` pushes (or manual dispatch).
 
-Landing:
+- Landing: https://777genius.github.io/agent-teams-ai/
+- Bundled docs: https://777genius.github.io/agent-teams-ai/docs/
+- Build: `npm ci` in `landing/`, then `npm run generate:all`.
+- Published directory: `landing/.output/public`.
+- Build URLs: `NUXT_APP_BASE_URL=/agent-teams-ai/` and `NUXT_PUBLIC_SITE_URL=https://777genius.github.io/agent-teams-ai`.
 
-```bash
-corepack enable && pnpm install --frozen-lockfile --ignore-scripts && NUXT_PUBLIC_LANDING_SITE_URL=https://agentteams.live NUXT_PUBLIC_DOCS_SITE_URL=https://docs.agentteams.live NUXT_PUBLIC_ROBOTS="index, follow" pnpm --filter agent-teams-landing generate
-```
+The workflow validates generated docs and canonical URLs before uploading the Pages artifact.
 
-Publish path: `landing/.output/public`
+## Hetzner production domains
 
-Docs:
+The public **production** landing at `https://agentteams.live` and separate docs at `https://docs.agentteams.live` run on Hetzner (`prod-hel1-01`, Caddy), not on GitHub Pages. This was recorded in the 2026-09-23 cutover receipt in `777genius/platform-infra`.
 
-```bash
-corepack enable && pnpm install --frozen-lockfile --ignore-scripts && VITEPRESS_BASE=/ VITEPRESS_SITE_URL=https://docs.agentteams.live VITEPRESS_LANDING_SITE_URL=https://agentteams.live pnpm --filter agent-teams-landing docs:build
-```
+The [production static build workflow](../.github/workflows/landing-hetzner-release.yml) generates two separate root-path sites with the correct canonical URLs and an exact Git SHA marker. It **only prepares immutable artifacts**; it does not change the live Hetzner server. Publishing requires the reviewed operator command and authenticated SSH described in the private `platform-infra/docs/runbooks/agent-teams-static-deploy.md` runbook.
 
-Publish path: `landing/product-docs/.vitepress/dist`
-
-Both sites set `NODE_VERSION=24.16.0` and `SKIP_INSTALL_DEPS=true`; the build command runs the pnpm install step explicitly with `--ignore-scripts`.
-
-Production canonical domains are `https://agentteams.live` and `https://docs.agentteams.live`. Set the explicit landing URL shown above so the Render service URL does not override production canonical, Open Graph, Twitter, and sitemap URLs. For isolated preview deployments, override these URLs with the preview origins.
-
-The GitHub Pages workflow publishes a separate mirror under `/agent-teams-ai/` and intentionally keeps its own matching site URL and base path; production is served from Render on the custom domain.
+Do **not** deploy the GitHub Pages `/agent-teams-ai/` build to either production domain.
 
 ## Notes
 
@@ -51,4 +45,4 @@ The GitHub Pages workflow publishes a separate mirror under `/agent-teams-ai/` a
 
 ## Announcements
 
-Static builds generate the announcement feed before Nuxt. Authoring, validation, immutable IDs and required Render headers are documented in [the publishing runbook](../scripts/announcements/README.md). The production feed starts empty with automatic display disabled.
+Static builds generate the announcement feed before Nuxt. Authoring, validation, immutable IDs and hosting requirements are documented in [the publishing runbook](../scripts/announcements/README.md). The production feed starts empty with automatic display disabled.

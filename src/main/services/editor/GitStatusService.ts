@@ -6,6 +6,8 @@
  * Results are cached for 5 seconds; invalidated on file watcher events.
  */
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
+import { createManagedGitEnv, getManagedGitExecutable, MANAGED_GIT_ENV_KEYS } from '@main/utils/managedGit';
 import { createLogger } from '@shared/utils/logger';
 import { simpleGit } from 'simple-git';
 
@@ -45,11 +47,23 @@ export class GitStatusService {
   init(projectRoot: string): void {
     this.projectRoot = projectRoot;
     this.notAGitRepo = false;
-    this.git = simpleGit({
-      baseDir: projectRoot,
-      allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
-      timeout: { block: GIT_TIMEOUT_MS },
-    }).env('GIT_OPTIONAL_LOCKS', '0');
+    try {
+      this.git = simpleGit({
+        baseDir: projectRoot,
+        binary: getManagedGitExecutable(),
+        // Verified bundled Git lives under an application path that may contain spaces.
+        unsafe: { allowUnsafeCustomBinary: true },
+        allowEnvironment: ['GIT_OPTIONAL_LOCKS', ...MANAGED_GIT_ENV_KEYS],
+        timeout: { block: GIT_TIMEOUT_MS },
+      }).env('GIT_OPTIONAL_LOCKS', '0');
+      const environment = createManagedGitEnv(process.env, { gitCommand: true });
+      for (const key of MANAGED_GIT_ENV_KEYS) {
+        if (environment[key]) this.git.env(key, environment[key]);
+      }
+    } catch (error) {
+      log.warn(`Git status disabled: ${error instanceof Error ? error.message : String(error)}`);
+      this.git = null;
+    }
     this.invalidateCache();
   }
 
@@ -113,6 +127,10 @@ export class GitStatusService {
     }
 
     try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+        this.setCacheResult(notGitResult);
+        return notGitResult;
+      }
       const t0 = performance.now();
       // `--untracked-files=no` is a major performance win for large repos with many untracked files.
       // Most editors treat untracked as a separate concern; showing them can overwhelm the UI.

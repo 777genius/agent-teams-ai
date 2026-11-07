@@ -158,7 +158,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
         isPaneFocused={isPaneFocused}
       />
     ) : tab.type === 'teams' ? (
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4">
         <TeamListSkeleton label={t('list.loading')} />
       </div>
     ) : (
@@ -171,7 +171,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
         <Suspense fallback={fallback}>
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
-          {tab.type === 'settings' && <SettingsView />}
+          {tab.type === 'settings' && <SettingsView isActive={isActive} />}
           {tab.type === 'teams' && <TeamListView />}
           {tab.type === 'organizations' && (
             <TabUIProvider tabId={tab.id}>

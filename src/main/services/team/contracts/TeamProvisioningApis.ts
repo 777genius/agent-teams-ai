@@ -275,6 +275,11 @@ export interface TeamMessagingApi {
     teamName: string,
     memberName: string
   ): Promise<TeamProviderId | undefined>;
+  /** Explicit send command; may restore a verified live OpenCode recipient. */
+  resolveRuntimeRecipientProviderIdForUserSend(
+    teamName: string,
+    memberName: string
+  ): Promise<TeamProviderId | undefined>;
   getLiveLeadProcessMessages(teamName: string): InboxMessage[];
   getCurrentLeadSessionId(teamName: string): string | null;
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
@@ -620,6 +625,8 @@ export function bindTeamMessagingApi(source: TeamMessagingApi): TeamMessagingApi
     relayLeadInboxMessages: source.relayLeadInboxMessages.bind(source),
     getOpenCodeRuntimeDeliveryStatus: source.getOpenCodeRuntimeDeliveryStatus.bind(source),
     resolveRuntimeRecipientProviderId: source.resolveRuntimeRecipientProviderId.bind(source),
+    resolveRuntimeRecipientProviderIdForUserSend:
+      source.resolveRuntimeRecipientProviderIdForUserSend.bind(source),
     getLiveLeadProcessMessages: source.getLiveLeadProcessMessages.bind(source),
     getCurrentLeadSessionId: source.getCurrentLeadSessionId.bind(source),
     pushLiveLeadProcessMessage: source.pushLiveLeadProcessMessage.bind(source),

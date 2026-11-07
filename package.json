@@ -192,6 +192,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/electron": "^7.10.0",
     "@sentry/react": "^10.45.0",
+    "@tanstack/react-table": "9.3.1",
     "@tanstack/react-virtual": "^3.13.24",
     "@terminal-platform/design-tokens": "file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz",
     "@terminal-platform/foundation": "file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz",
@@ -377,6 +378,17 @@
           "!**/agent-teams-opencode-v2-support-*.zip",
           "!**/opencode-v2-engine-manifest.json"
         ]
+      },
+      {
+        "from": "resources/git",
+        "to": "git",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/MANAGED_GIT_THIRD_PARTY.md",
+        "to": "MANAGED_GIT_THIRD_PARTY.md"
       },
       {
         "from": "resources/terminal-platform",

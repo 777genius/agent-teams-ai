@@ -79,6 +79,23 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(result.status).toBe('failed');
   });
 
+  it('preserves a macOS project access remedy instead of replacing it with Windows advice', async () => {
+    const diagnostic =
+      'Project folder access denied (EPERM). Grant Agent Teams access in system privacy settings.';
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/Users/TEST/Library/CloudStorage/test-project',
+      providerId: 'opencode',
+      selectedModelIds: [],
+      prepareProvisioning: async (): Promise<TeamProvisioningPrepareResult> => ({
+        ready: false,
+        message: diagnostic,
+      }),
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details).toEqual([diagnostic]);
+  });
+
   it('normalizes OpenCode access-denied provider failures', async () => {
     const result = await runProviderPrepareDiagnostics({
       cwd: 'C:\\Program Files\\locked-project',

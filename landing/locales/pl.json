@@ -136,7 +136,16 @@
       "launchProof": "Status uruchomienia członka zespołu",
       "orgGovernance": "Organizacje i widok globalny",
       "budgetControls": "Kontrola budżetu",
-      "price": "Cena"
+      "price": "Cena",
+      "desktopPlatforms": "Obsługiwane platformy komputerowe"
+    },
+    "platforms": {
+      "desktopApp": "(aplikacja desktopowa)",
+      "cliBinaries": "(pliki binarne CLI)",
+      "noNativeDesktop": "Brak natywnej aplikacji desktopowej (panel hostowany samodzielnie)",
+      "desktopIde": "(IDE desktopowe)",
+      "cli": "(CLI)",
+      "wsl2": "przez WSL2 (nie natywnie)"
     }
   },
   "screenshots": {
