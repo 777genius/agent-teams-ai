@@ -106,7 +106,11 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
 
   const openCreationPage = useCallback(async (placement: OrganizationPlacementSelection) => {
     const saved = await createTeamDraftStorage.loadSnapshot();
-    if (saved?.teamName.trim()) {
+    const hasOpenEditor = useStore
+      .getState()
+      .getAllPaneTabs()
+      .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
+    if (hasOpenEditor || saved?.teamName.trim()) {
       const accepted = await confirm({
         title: t('create.title.create'),
         message: t('create.draft.replaceConfirmation', {
