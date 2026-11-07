@@ -14,8 +14,12 @@ export function parseOwnedDurableLog(body, sessionId, directory) {
   const ids = new Set();
   let eventCount = 0;
   for (const frame of frames) {
-    const dataLines = frame.split('\n').filter(line => line.startsWith('data:'));
-    if (dataLines.length === 0) continue; // Only non-data keep-alives may be skipped.
+    const lines = frame.split('\n');
+    // Only SSE comments/blank keep-alives may be ignored. Unsupported control
+    // directives must never silently conceal a native event in the proof.
+    if (lines.some(line => line !== '' && !line.startsWith(':') && !line.startsWith('data:'))) invalid();
+    const dataLines = lines.filter(line => line.startsWith('data:'));
+    if (dataLines.length === 0) continue;
     const data = dataLines.map(line => line.slice(5).replace(/^ /, '')).join('\n');
     if (!data) invalid(); // An empty data: frame is an event, not a heartbeat.
     let event;

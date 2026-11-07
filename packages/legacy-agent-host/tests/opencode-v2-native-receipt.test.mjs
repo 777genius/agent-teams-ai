@@ -180,6 +180,9 @@ test('native durable SSE proof rejects foreign, incomplete and reordered events'
     frame(sync()).trimEnd(), // truncated final SSE frame
     'data: {\n\n', // malformed JSON
     'data:\n\n'+frame(sync()), // empty data before sync is not a keep-alive
+    'event: session.created\n\n'+frame(sync()), // only comment keep-alives may be skipped
+    frame(sync())+'id: orphaned\n\n', // no hidden directives after sync
+    'data: '+JSON.stringify(sync())+'\nretry: 0\n\n', // no unsupported mixed fields
     frame(sync())+'data: \n\n', // empty data after sync must not be ignored
     frame(sync(0,'ses_FOREIGN')),
     frame(sync(-1)),
