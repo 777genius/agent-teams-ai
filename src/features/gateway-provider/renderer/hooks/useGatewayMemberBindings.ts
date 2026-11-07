@@ -13,6 +13,14 @@ const NO_MEMBERS: ReadonlySet<string> = new Set();
 // in-tab navigation, while ordinary launch/add-member dialogs keep discard-on-close.
 const retainedDraftSessions = new Map<string, ReturnType<typeof createGatewayBindingDraft>>();
 
+/** Explicit replacement discards only receipts owned by that creation editor. */
+export function discardRetainedGatewayBindingDraft(ownerKey: string): void {
+  const session = retainedDraftSessions.get(ownerKey);
+  if (!session) return;
+  retainedDraftSessions.delete(ownerKey);
+  session.discard();
+}
+
 export interface GatewayMemberBindingsState {
   boundMemberNames: ReadonlySet<string>;
   pending: boolean;
