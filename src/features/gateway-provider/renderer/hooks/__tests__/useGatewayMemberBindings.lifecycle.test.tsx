@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { listGatewayBindings, unbindGatewayMember } from '../../adapters/gatewayProviderApi';
-import { useGatewayMemberBindings } from '../useGatewayMemberBindings';
+import { discardRetainedGatewayBindingDraft, useGatewayMemberBindings } from '../useGatewayMemberBindings';
 
 import type { GatewayMemberBindingDto } from '../../../contracts';
 
@@ -241,6 +241,18 @@ describe('retained creation ownership across in-tab navigation', () => {
     await mount('roster', owner);
     expect(latest.boundMemberNames.has('new')).toBe(true);
     await act(async () => latest.discardRetained());
+    expect(unbind).toHaveBeenCalledExactlyOnceWith(expectedRemoval);
+  });
+
+  it('discards exact owned receipts when an unfinished create is replaced', async () => {
+    const owner = 'create-team-replaced-retention';
+    await mount('roster', owner);
+    await allocate();
+    await close();
+    expect(unbind).not.toHaveBeenCalled();
+
+    await act(async () => discardRetainedGatewayBindingDraft(owner));
+
     expect(unbind).toHaveBeenCalledExactlyOnceWith(expectedRemoval);
   });
 
