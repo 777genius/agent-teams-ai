@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   classifyAnalyticsError,
@@ -7,6 +8,7 @@ import {
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
+
 import {
   getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,
   getRuntimeProviderCredentialUrl,
@@ -21,7 +23,6 @@ import {
   projectClearedDefaultMutation,
 } from '../view-models/openCodeDefaultModelInheritance';
 import { runtimeProviderDirectoryInteraction } from '../view-models/runtimeProviderDirectoryInteraction';
-
 import { maskRuntimeProviderStateForScope } from './maskRuntimeProviderStateForScope';
 import { refreshRuntimeProviderConnection } from './refreshRuntimeProviderConnection';
 import {
