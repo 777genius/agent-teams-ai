@@ -992,12 +992,12 @@ jobs:
           gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
           gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
           gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
-          gh release download v0.3.3 --repo 777genius/terminal-platform --pattern terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz --dir "$selected_inputs"
+          gh release download v0.3.4 --repo 777genius/terminal-platform --pattern terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz --dir "$selected_inputs"
           printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
           printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
           printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
-          printf '%s  %s\n' b78da8494e2ee9b46b9bd2e002b7b6d27a2431fbac5f8bcd52d7940c408702cd "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz" | shasum -a 256 -c -
-          node scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 --archive "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz"
+          printf '%s  %s\n' b4fad2842deb430c8c4f89b7e1d6ab9e6934f80195a9dcfbc0f67a196d4ad038 "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz" | shasum -a 256 -c -
+          node scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 --archive "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz"
           tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
           tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
           mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"

@@ -98,22 +98,30 @@ const ScheduleRow = ({
             <span className="truncate text-xs font-medium text-[var(--color-text)]">
               {schedule.label || getCronDescription(schedule.cronExpression)}
             </span>
-            <ScheduleStatusBadge status={schedule.status} />
+            {hostScheduleUnsupported ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]" role="status">
+                Host unsupported
+              </span>
+            ) : (
+              <ScheduleStatusBadge status={schedule.status} />
+            )}
           </div>
           <div className="mt-0.5 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
             {schedule.label ? <span>{getCronDescription(schedule.cronExpression)}</span> : null}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-default">
-                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt) })}
-                </span>
-              </TooltipTrigger>
-              {schedule.nextRunAt ? (
-                <TooltipContent side="top" className="text-xs">
-                  {new Date(schedule.nextRunAt).toLocaleString()}
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
+            {!hostScheduleUnsupported && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-default">
+                    {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt) })}
+                  </span>
+                </TooltipTrigger>
+                {schedule.nextRunAt ? (
+                  <TooltipContent side="top" className="text-xs">
+                    {new Date(schedule.nextRunAt).toLocaleString()}
+                  </TooltipContent>
+                ) : null}
+              </Tooltip>
+            )}
             <span>{schedule.timezone}</span>
           </div>
         </div>
