@@ -1024,10 +1024,11 @@ export function buildDeterministicLaunchHydrationPrompt(
   const startLabel = isResume ? 'Team Start (resume)' : 'Team Start';
   const startupLabel = isResume ? 'resume/bootstrap' : 'launch/bootstrap';
   const headerModeLabel = isResume ? 'Deterministic resume' : 'Deterministic launch';
-  const userPromptBlock = request.prompt?.trim()
-    ? `\nOriginal user instructions to apply now:\n${request.prompt.trim()}\n`
+  const workPrompt = request.bootstrapOnly ? '' : (request.prompt?.trim() ?? '');
+  const userPromptBlock = workPrompt
+    ? `\nOriginal user instructions to apply now:\n${workPrompt}\n`
     : '';
-  const hasOriginalUserPrompt = Boolean(request.prompt?.trim());
+  const hasOriginalUserPrompt = Boolean(workPrompt);
   const taskBoardSnapshot = buildTaskBoardSnapshot(tasks);
   const persistentContext = buildPersistentLeadContext({
     teamName: request.teamName,
