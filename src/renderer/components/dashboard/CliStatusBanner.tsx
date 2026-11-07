@@ -450,6 +450,8 @@ const CliCheckingSpinner = ({
 // =============================================================================
 
 interface InstalledBannerProps {
+  /** Provider page is visible; hidden tabs retain forms but stop passive reads. */
+  isActive: boolean;
   catalogFailures?: readonly OpenCodeCatalogFailure[];
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
   sourceProviderMap: Map<CliProviderId, CliProviderStatus>;
@@ -801,6 +803,7 @@ const OpenCodeAtlasCloudBanner = ({
 };
 
 const InstalledBanner = ({
+  isActive,
   catalogFailures = [],
   cliStatus,
   sourceProviderMap,
@@ -1069,7 +1072,7 @@ const InstalledBanner = ({
             />
           ) : null}
           <RuntimeProviderQuickConnect
-            enabled
+            enabled={isActive}
             cliStatusLoading={cliStatusLoading}
             providers={visibleProviders}
             openCodeRuntimeStatus={openCodeRuntimeStatus}
@@ -1643,12 +1646,14 @@ export const CliStatusBanner = ({
       multimodelEnabled &&
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
-    includeRateLimits: true,
+    // Keep account login observation alive across tab switches, but stop heavy
+    // subscription rate-limit polling while the provider page is hidden.
+    includeRateLimits: isDashboardActive,
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
   const openCodeDashboardStatus = useOpenCodeDashboardStatus({
-    enabled: isElectron && multimodelEnabled,
+    enabled: isDashboardActive && isElectron && multimodelEnabled,
     projectPath: selectedProjectPath,
     cliStatus: loadingCliStatus,
     runtimeStatus: openCodeRuntimeStatus,
@@ -1815,12 +1820,12 @@ export const CliStatusBanner = ({
     shouldRefreshCodexSubscriptionLimits,
   ]);
 
-  useDashboardStatusRefresh(isElectron && Boolean(cliStatus), () => {
+  useDashboardStatusRefresh(isDashboardActive && isElectron && Boolean(cliStatus), () => {
     openCodeDashboardCatalog.refresh();
     void refreshCliStatusForCurrentMode({ multimodelEnabled, bootstrapCliStatus, fetchCliStatus });
   });
   useEffect(() => {
-    if (!isElectron || !shouldPollAnthropicSubscriptionLimits) {
+    if (!isDashboardActive || !isElectron || !shouldPollAnthropicSubscriptionLimits) {
       setAnthropicRateLimitsRefreshing(false);
       return;
     }
@@ -1832,7 +1837,7 @@ export const CliStatusBanner = ({
     return () => {
       clearInterval(interval);
     };
-  }, [isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
+  }, [isDashboardActive, isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
 
   const handleInstall = useCallback(() => {
     installCli();
@@ -2242,8 +2247,7 @@ export const CliStatusBanner = ({
     // Multimodel: render provider cards immediately instead of a generic intermediate block.
     if (multimodelEnabled) {
       return (
-        <InstalledBanner
-          catalogFailures={openCodeDashboardCatalog.failures}
+        <InstalledBanner isActive={isDashboardActive}           catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2502,8 +2506,7 @@ export const CliStatusBanner = ({
     if (renderCliStatus.authStatusChecking || isVerifyingAuth) {
       return (
         <>
-          <InstalledBanner
-            catalogFailures={openCodeDashboardCatalog.failures}
+          <InstalledBanner isActive={isDashboardActive}             catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
             cliStatusLoading={cliStatusLoading}
@@ -2585,8 +2588,7 @@ export const CliStatusBanner = ({
 
     return (
       <>
-        <InstalledBanner
-          catalogFailures={openCodeDashboardCatalog.failures}
+        <InstalledBanner isActive={isDashboardActive}           catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
           cliStatusLoading={cliStatusLoading}
@@ -2788,8 +2790,7 @@ export const CliStatusBanner = ({
   // Installed — show version, path, update info
   return (
     <>
-      <InstalledBanner
-        catalogFailures={openCodeDashboardCatalog.failures}
+      <InstalledBanner isActive={isDashboardActive}         catalogFailures={openCodeDashboardCatalog.failures}
         cliStatus={renderCliStatus}
         sourceProviderMap={loadingCliProviderMap}
         cliStatusLoading={cliStatusLoading}

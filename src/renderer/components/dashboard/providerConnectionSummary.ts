@@ -10,8 +10,10 @@ type MainProvider = Pick<
 
 type Directory = Pick<
   RuntimeProviderDirectoryCacheSnapshot,
-  'entries' | 'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor'
->;
+  'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor'
+> & {
+  entries: readonly Pick<RuntimeProviderDirectoryCacheSnapshot['entries'][number], 'providerId' | 'state'>[];
+};
 
 interface ConnectionSummaryInput {
   cliStatus: {
@@ -76,11 +78,9 @@ export function getDashboardConnectionSummary({
       (provider) =>
         provider != null &&
         providerStatusLoading[provider.providerId] !== true &&
-        provider.verificationState !== 'unknown' &&
-        provider.verificationState !== 'offline' &&
-        provider.verificationState !== 'error' &&
-        provider.statusCheckOutcome !== 'pending' &&
-        provider.statusCheckOutcome !== 'transient_error'
+        (provider.statusCheckOutcome === 'authoritative' ||
+          provider.statusCheckOutcome === 'model_only' ||
+          (provider.statusCheckOutcome == null && provider.verificationState === 'verified'))
     );
   const cliConnected = cliReady
     ? mainProviders.filter((provider) => provider?.authenticated === true).length
