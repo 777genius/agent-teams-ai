@@ -15,6 +15,13 @@ export async function hasUnfinishedCreateTeamDraft(): Promise<boolean> {
     form?.teamName?.trim() ||
       form?.members?.length ||
       form?.customCwd?.trim() ||
+      form?.selectedProjectPath?.trim() ||
+      form?.cwdMode === 'custom' ||
+      form?.soloTeam === true ||
+      form?.launchTeam === false ||
+      form?.syncModelsWithLead === false ||
+      form?.teammateWorktreeDefault === true ||
+      form?.runtimeSelectionVersion === 1 ||
       form?.teamColor?.trim() ||
       form?.organizationPlacementEnabled ||
       description?.trim() ||

@@ -45,4 +45,19 @@ describe('unfinished team creation detection', () => {
     mocks.loadSnapshot.mockResolvedValue({ teamName: '', members: [], teamColor: 'blue' });
     await expect(hasUnfinishedCreateTeamDraft()).resolves.toBe(true);
   });
+
+  it('preserves project-only and config-only settings without a team name', async () => {
+    mocks.loadSnapshot.mockResolvedValue({
+      teamName: '',
+      members: [],
+      selectedProjectPath: '/sandbox/important-project',
+    });
+    await expect(hasUnfinishedCreateTeamDraft()).resolves.toBe(true);
+    mocks.loadSnapshot.mockResolvedValue({
+      teamName: '',
+      members: [],
+      launchTeam: false,
+    });
+    await expect(hasUnfinishedCreateTeamDraft()).resolves.toBe(true);
+  });
 });
