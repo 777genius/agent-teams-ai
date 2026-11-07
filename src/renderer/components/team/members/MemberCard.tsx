@@ -1258,16 +1258,6 @@ export const MemberCard = memo(function MemberCard({
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2.5 justify-self-end">
-            {!isRemoved && !passive && (
-              <div className="hidden group-focus-within/member:block group-hover/member:block [@media(hover:none)]:block">
-                <MemberQuickActions
-                  onSendMessage={onSendMessage}
-                  onAssignTask={onAssignTask}
-                  onEditMember={onEditMember}
-                  editDisabled={isTeamProvisioning}
-                />
-              </div>
-            )}
             {showLaunchBadge ? (
               <span
                 className="flex shrink-0 items-center gap-1"
@@ -1531,6 +1521,16 @@ export const MemberCard = memo(function MemberCard({
               </Tooltip>
             ) : null}
           </div>
+            {!isRemoved && !passive && (
+              <div className="col-span-3 hidden min-w-0 justify-end group-focus-within/member:flex group-hover/member:flex [@media(any-pointer:coarse)]:flex [@media(hover:none)]:flex">
+                <MemberQuickActions
+                  onSendMessage={onSendMessage}
+                  onAssignTask={onAssignTask}
+                  onEditMember={onEditMember}
+                  editDisabled={isTeamProvisioning}
+                />
+              </div>
+            )}
           {launchFailureReason ? (
             <div
               data-testid="member-launch-failure-reason"

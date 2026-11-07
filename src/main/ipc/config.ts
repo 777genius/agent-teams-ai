@@ -241,7 +241,6 @@ async function handleUpdateConfig(
     };
     if (isClaudeRootUpdate && updateClaudeRoot) await updateClaudeRoot(applyConfig);
     else applyConfig();
-    await configManager.waitForPersistence();
 
     // Sync Sentry opt-in when general.telemetryEnabled changes
     if (
@@ -262,6 +261,7 @@ async function handleUpdateConfig(
       }
     }
 
+    await configManager.waitForPersistence();
     const updatedConfig = configManager.getConfig();
     return { success: true, data: updatedConfig };
   } catch (error) {

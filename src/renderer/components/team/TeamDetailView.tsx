@@ -3269,12 +3269,13 @@ export const TeamDetailView = memo(function TeamDetailView({
                   onSelectSession={(id) => {
                     setKanbanFilter((prev) => ({ ...prev, sessionId: id }));
                     contentRef.current?.querySelector('[data-section-id="kanban"]')
-                      ?.dispatchEvent(new Event('team-section-navigate'));
+                      ?.dispatchEvent(new CustomEvent('team-section-navigate', {
+                        detail: { focus: document.activeElement?.matches(':focus-visible') },
+                      }));
                   }}
                   projectPath={data.config.projectPath}
                 />
               </CollapsibleTeamSection>
-
               <CollapsibleTeamSection
                 sectionId="schedules"
                 variant="flat"
@@ -3284,7 +3285,6 @@ export const TeamDetailView = memo(function TeamDetailView({
               >
                 <ScheduleSection teamName={teamName} />
               </CollapsibleTeamSection>
-
               <LiveRuntimeStatusBridge
                 teamName={teamName}
                 members={membersWithLiveBranches}
