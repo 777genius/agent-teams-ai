@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const store = vi.hoisted(() => new Map<string, unknown>());
+const { store, discardGateway } = vi.hoisted(() => ({
+  store: new Map<string, unknown>(),
+  discardGateway: vi.fn(),
+}));
+
+vi.mock('@features/gateway-provider/renderer', () => ({
+  discardRetainedGatewayBindingDraft: discardGateway,
+}));
 
 vi.mock('idb-keyval', () => ({
   get: vi.fn(async (key: string) => store.get(key)),
@@ -19,7 +26,10 @@ import { draftStorage } from './draftStorage';
 import { resetCreateTeamDraft } from './resetCreateTeamDraft';
 
 describe('creation draft generation fence', () => {
-  beforeEach(() => store.clear());
+  beforeEach(() => {
+    store.clear();
+    discardGateway.mockClear();
+  });
 
   it('does not allow a retired editor to recreate its snapshot or text fields', async () => {
     const old = currentCreateTeamDraftGeneration();
@@ -29,6 +39,7 @@ describe('creation draft generation fence', () => {
     await draftStorage.saveDraft('createTeam:prompt', 'old prompt', old);
 
     await resetCreateTeamDraft();
+    expect(discardGateway).toHaveBeenCalledWith('createTeam');
     expect(isCreateTeamDraftGenerationCurrent(old)).toBe(false);
 
     // The old component unmounts after the replacement has already started.
