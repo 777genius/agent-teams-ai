@@ -1,4 +1,4 @@
-# Task-only review runner. Remove before product merge; never changes source or secrets.
+# Task-only review runner. Remove before product merge; never changes product source.
 name: Teams creation plan critic
 run-name: Teams creation critic round 1 — Astra xhigh
 on:
@@ -17,11 +17,28 @@ jobs:
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 25
     env:
-      CODEX_HOME: ${{ runner.temp }}/teams-create-critic-auth
       CRITIC_MODEL: gpt-6-astra
       CRITIC_EFFORT: xhigh
       CRITIC_ROUND: '1'
     steps:
+      - name: Checkout exact requested plan/source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Export tracked source for isolated inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=tar HEAD | gzip > "$RUNNER_TEMP/teams-create-source.tar.gz"
+      - name: Preserve exact tracked source (no Git config or credentials)
+        uses: actions/upload-artifact@v7
+        with:
+          name: teams-create-source-${{ github.sha }}
+          path: ${{ runner.temp }}/teams-create-source.tar.gz
+          retention-days: 3
+          if-no-files-found: error
       - name: Check authorized review credential availability
         env:
           CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
@@ -32,15 +49,11 @@ jobs:
             echo '::error::REVIEWROUTER_CODEX_AUTH_JSON is not configured. No independent critic ran; no lower-model fallback.'
             exit 1
           fi
+          export CODEX_HOME="$RUNNER_TEMP/teams-create-critic-auth"
+          echo "CODEX_HOME=$CODEX_HOME" >> "$GITHUB_ENV"
           umask 077
           mkdir -p "$CODEX_HOME"
           printf '%s' "$CODEX_AUTH_JSON" > "$CODEX_HOME/auth.json"
-      - name: Checkout exact requested plan/source
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-          fetch-depth: 1
       - name: Setup review-only Node runtime
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
@@ -92,4 +105,4 @@ jobs:
       - name: Remove job-owned credential copy
         if: always()
         shell: bash
-        run: rm -rf -- "$CODEX_HOME"
+        run: rm -rf -- "$RUNNER_TEMP/teams-create-critic-auth"
