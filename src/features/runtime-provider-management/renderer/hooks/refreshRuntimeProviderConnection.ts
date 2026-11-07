@@ -2,6 +2,7 @@ import { api } from '@renderer/api';
 
 import {
   getRuntimeProviderDirectoryReadToken,
+  invalidateRuntimeProviderDirectoryScopeReads,
   markRuntimeProviderDirectoryScopeUnverified,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
@@ -70,7 +71,9 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
 export async function refreshRuntimeProviderConnection(
   input: ConnectionRefreshInput
 ): Promise<'refreshed' | 'warning' | 'stale'> {
-  markRuntimeProviderDirectoryScopeUnverified(input.projectPath);
+  // Preserve the existing full cache if the post-write refresh succeeds.
+  // Stale in-flight pre-write reads may no longer publish into this scope.
+  invalidateRuntimeProviderDirectoryScopeReads(input.projectPath);
   const sharedDirectoryRefresh = refreshSharedDirectory(input);
   try {
     const externalRefreshResult = await input.refreshExternal();

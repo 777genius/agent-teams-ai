@@ -6,6 +6,7 @@ import {
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryCache,
+  invalidateRuntimeProviderDirectoryScopeReads,
   markRuntimeProviderDirectoryScopeUnverified,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   observeRuntimeProviderDirectoryRevision,
@@ -72,6 +73,39 @@ describe('runtimeProviderDirectoryCache', () => {
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state).toBe(
       'not-connected'
     );
+  });
+
+  it('fences old reads without downgrading the complete cache on successful refresh', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+    });
+    const previousToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state)
+      .toBe('not-connected');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      readToken: previousToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state)
+      .toBe('not-connected');
   });
 
   it('keeps provider snapshots isolated by project scope', () => {
