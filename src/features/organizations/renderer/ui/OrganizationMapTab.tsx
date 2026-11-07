@@ -71,7 +71,8 @@ export const OrganizationMapTab = ({
         });
         if (!accepted) return;
       }
-      openTeamsCreationPage({ placement }, true);
+      const originTabId = useStore.getState().getActiveTab()?.id;
+      openTeamsCreationPage({ placement, originTabId }, true);
     },
     [openTeamsCreationPage, t]
   );
