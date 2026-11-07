@@ -50,7 +50,7 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Run real Electron + IPC + table smoke
         run: |
-          xvfb-run -a env TASK_TABS_E2E_SCRATCH=/srv/workers/task-tabs-e2e-scratch node --experimental-strip-types scripts/e2e/task-detail-tabs-desktop.ts "$(git rev-parse HEAD)"
+          xvfb-run -a env TASK_TABS_E2E_SCRATCH=/srv/workers/task-tabs-e2e-scratch node --experimental-strip-types scripts/e2e/task-detail-tabs-desktop.ts "$(git rev-parse HEAD)" --table-only
       - uses: actions/upload-artifact@v4
         if: always()
         with:

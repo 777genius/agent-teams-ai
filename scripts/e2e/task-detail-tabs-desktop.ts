@@ -49,6 +49,7 @@ interface Cdp {
 }
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const sha = process.argv[2];
+const tableOnly = process.argv.includes('--table-only');
 assert(sha && /^[a-f0-9]{40}$/.test(sha), 'Supply the exact integrated source SHA');
 assert.equal(process.platform, 'linux', 'Hosted Linux desktop harness');
 assert(process.env.DISPLAY, 'Supply an isolated Xvfb DISPLAY');
@@ -74,6 +75,7 @@ const root = fixture.root;
 const tableTeam = fixture.teams[0];
 const tableTaskPath = join(dirname(tableTeam.taskFile), '2.json');
 const tableStamp = new Date().toISOString();
+if (tableOnly) {
 for (const [id, status, subject] of [
   ['2', 'pending', 'TABLE_E2E_PENDING'],
   ['3', 'completed', 'TABLE_E2E_REVIEW'],
@@ -89,6 +91,7 @@ const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')
 tableKanbanState.tasks['3'] = { column: 'review', movedAt: tableStamp };
 tableKanbanState.tasks['4'] = { column: 'approved', movedAt: tableStamp };
 await writeFile(tableTeam.kanbanFile, JSON.stringify(tableKanbanState, null, 2) + '\n', { flag: 'w', mode: 0o600 });
+}
 console.log(JSON.stringify({ fixture: root, testedSourceCommit: sha, fullTaskTabsE2E: false }));
 const transport = (await import(
   pathToFileURL(join(repo, 'scripts/e2e/comment-notification/cdp.mjs')).href
@@ -149,9 +152,10 @@ async function receipt() {
     receiptPath,
     JSON.stringify(
       {
-        kind: 'task-detail-tabs-desktop-v1',
+        kind: tableOnly ? 'kanban-table-desktop-v1' : 'task-detail-tabs-desktop-v1',
         testedSourceCommit: sha,
-        fullTaskTabsE2E: passed,
+        fullTaskTabsE2E: passed && !tableOnly,
+        tableModeE2E: passed && tableOnly,
         passed,
         root,
         rendererPort,
@@ -236,6 +240,7 @@ try {
       throw e;
     }
   }, 'real IPC startup ready');
+  if (tableOnly) {
   // Real TeamDetailView -> Kanban -> Table: UI, IPC watcher, and legacy modes.
   const startedTableNavigationAt = Date.now();
   const initialRendererOrigin = await cdp.evaluate('performance.timeOrigin') as number;
@@ -327,7 +332,9 @@ try {
     "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
   ), 'legacy columns mode works');
   reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true });
+  }
 
+  if (!tableOnly) {
   await cdp.evaluate('window.__agentTeamsDevStore.getState().fetchAllTasks()');
   const names = fixture.teams.map((t) => t.teamName);
   await until(
@@ -575,6 +582,7 @@ try {
   await runTaskDeletionCases(cdp, fixture, (value) => reads.push(value));
   await cdp.evaluate('window.__taskTabsColdPageUnsubscribe?.()');
   await cdp.screenshot(join(root, 'electron-cold-page-v3.png'));
+  }
   const audit = (await readFile(join(root, 'runtime-audit.ndjson'), 'utf8')).trim();
   if (audit)
     for (const line of audit.split('\n')) {
@@ -643,5 +651,5 @@ try {
   }
   await writeFile(join(root, 'electron-cold-page-v3.log'), logs, { mode: 0o600 });
   await receipt();
-  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed }));
+  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed && !tableOnly, tableModeE2E: passed && tableOnly }));
 }
