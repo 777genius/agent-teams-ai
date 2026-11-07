@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { assignCreatedTeamToOrganization } from './dialogs/assignCreatedTeamToOrganization';
 import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
@@ -1051,19 +1052,19 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
   const handleCreateSubmit = useCallback(
     async (request: TeamCreateRequest, placement?: OrganizationPlacementSelection) => {
       await createTeam(request);
-      if (placement) {
-        try {
-          await api.organizations.assignTeamToUnit({
-            ...placement,
-            teamName: request.teamName,
-            label: request.displayName || request.teamName,
-          });
-        } catch (error) {
-          console.warn('[Organizations] Failed to place created team in organization', error);
-        }
-      }
+      await assignCreatedTeamToOrganization({
+        placement,
+        teamName: request.teamName,
+        label: request.displayName || request.teamName,
+        failureTitle: t('create.placementFailure.title', { defaultValue: 'Team created, not placed' }),
+        failureMessage: t('create.placementFailure.message', {
+          teamName: request.teamName,
+          defaultValue: 'Assign this team from the Organization Map; do not create it again.',
+        }),
+        acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
+      });
     },
-    [createTeam]
+    [createTeam, t]
   );
 
   if (!electronMode) {
