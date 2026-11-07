@@ -307,9 +307,11 @@ try {
   assert(longIdRowHeight > 0 && longIdRowHeight <= 49,
     'A long task display ID must not expand the fixed-height virtualized row');
   await cdp.screenshot(join(root, 'kanban-table-dark.png'));
-  await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-header-status\"] button')?.click()");
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"team-task-table-header-status\"] button');if(!button)throw new Error('Table status sort header missing');button.click();})()"
+  );
   await until(() => cdp!.evaluate(
-    "document.querySelector('[data-testid=\"team-task-table-header-status\"]')?.getAttribute('aria-sort')!=='none'"
+    "['ascending','descending'].includes(document.querySelector('[data-testid=\"team-task-table-header-status\"]')?.getAttribute('aria-sort'))"
   ), 'interactive table header sorting');
   await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-settings\"]')?.click()");
   await until(() => cdp!.evaluate(
