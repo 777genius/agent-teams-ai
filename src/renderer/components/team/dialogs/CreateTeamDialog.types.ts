@@ -28,6 +28,8 @@ export interface ActiveTeamRef {
 
 export interface CreateTeamDialogProps {
   open: boolean;
+  /** Creation-only surface; launching and relaunching keep their separate dialogs. */
+  presentation?: 'dialog' | 'page';
   canCreate: boolean;
   provisioningErrorsByTeam: Record<string, string | null>;
   clearProvisioningError?: (teamName?: string) => void;
