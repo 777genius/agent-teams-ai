@@ -3,7 +3,7 @@ import * as React from 'react';
 
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { cn } from '@renderer/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
@@ -60,10 +60,12 @@ const DropdownMenuCheckboxItem = React.forwardRef<
     <span
       className={cn(
         'flex size-4 shrink-0 items-center justify-center rounded border border-[var(--color-border-emphasis)]',
-        checked === true && 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+        (checked === true || checked === 'indeterminate') &&
+          'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
       )}
     >
       {checked === true ? <Check className="size-3" /> : null}
+      {checked === 'indeterminate' ? <Minus className="size-3" /> : null}
     </span>
     {children}
   </DropdownMenuPrimitive.CheckboxItem>
