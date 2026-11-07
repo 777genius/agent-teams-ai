@@ -205,7 +205,7 @@ test('native durable SSE proof rejects foreign, incomplete and reordered events'
 
 test('cold native log proof compares retained event content, not only counts and watermark', () => {
   const sessionId = 'ses_TEST123', directory = '/TEST/workspace';
-  const frame = value => 'data: ' + JSON.stringify(value) + '\\n\\n';
+  const frame = value => 'data: ' + JSON.stringify(value) + '\n\n';
   const event = (seq, id, content) => ({
     id, type: seq === 0 ? 'session.created' : 'session.updated',
     durable: { aggregateID: sessionId, seq },
