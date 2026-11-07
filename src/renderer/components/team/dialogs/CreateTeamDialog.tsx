@@ -1556,16 +1556,15 @@ export const CreateTeamDialog = ({
       setCwdMode('project');
     }
   }, [cwdMode, customCwd, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, restoredFromStorage, selectedProjectPath, setCwdMode]);
-  // Pre-select defaultProjectPath when the draft and projects are loaded.
   useEffect(() => {
     if (!open) {
       appliedDefaultProjectPathRef.current = null;
       return;
     }
-    if (!draftLoaded) {
-      return;
-    }
-    if (cwdMode !== 'project' || (restoredFromStorage && selectedProjectPath)) {
+    if (!draftLoaded) return;
+    if (cwdMode !== 'project') return;
+    if (restoredFromStorage && selectedProjectPath) {
+      appliedDefaultProjectPathRef.current = defaultProjectPath ? normalizePath(defaultProjectPath) : null;
       return;
     }
     const nextSelection = resolvePreferredProjectPathSelection({
