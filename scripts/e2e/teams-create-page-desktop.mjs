@@ -21,6 +21,7 @@ const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
+let inputSelectAllDomFallbacks = 0;
 
 function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
@@ -415,6 +416,26 @@ class CdpClient {
       await this.send('Input.dispatchKeyEvent', {
         type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 4,
       });
+    }
+    if (!(await entireValueSelected()) && mac) {
+      // CDP's synthetic Command+A is sometimes ignored by Electron/macOS.
+      // Try an actual triple-click before the last-resort DOM selection.
+      const bounds = await this.evaluate(`(() => {
+        const rect = ${expression}.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })()`);
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', ...bounds, button: 'left', clickCount: 3,
+      });
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', ...bounds, button: 'left', clickCount: 3,
+      });
+    }
+    if (!(await entireValueSelected()) && mac) {
+      inputSelectAllDomFallbacks++;
+      // Fixture-only fallback; recorded in the E2E report, never treated as
+      // evidence that the native macOS keyboard accelerator works.
+      await this.evaluate(`(() => { const input = ${expression}; input.focus(); input.select(); })()`);
     }
     assert(await entireValueSelected(), `Input select-all failed for ${selector}`);
     await this.send('Input.insertText', { text: value });
@@ -825,10 +846,37 @@ async function main() {
     );
     assert(organization?.id && organization?.rootNodeId,
       'Native organization fixture has no root');
-    await cdp.evaluate(
-      "window.__agentTeamsDevStore.getState().openTab({ type: 'organizations', label: 'Organizations' })"
-    );
+    // Opening a previously unused lazy Organizations route can trigger Vite's
+    // dev-only dependency optimization and reload the renderer. Re-enter that
+    // route (max 3 attempts) rather than treating hot reload as a product error.
+    let mapReady = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await cdp.waitFor(
+        "window.__agentTeamsDevStore?.getState",
+        'renderer after potential Vite reload', 30_000
+      );
+      await cdp.evaluate(
+        "window.__agentTeamsDevStore.getState().openTab({ type: 'organizations', label: 'Organizations' })"
+      );
+      try {
+        await cdp.waitFor(createButtonExpression('Edit'), 'Organization Map Edit', 15_000);
+        mapReady = true;
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        log('development dependency optimization reloaded Organizations; retry navigation');
+      }
+    }
+    assert(mapReady, 'Organization Map did not become available');
     await cdp.click(createButtonExpression('Edit'));
+    await cdp.click(
+      "Array.from(document.querySelectorAll('button[role=combobox]'))" +
+      ".find(button => button.classList.contains('w-44'))"
+    );
+    await cdp.click(
+      "Array.from(document.querySelectorAll('[role=option]'))" +
+      ".find(option => option.textContent?.trim() === " + JSON.stringify(organizationName) + ")"
+    );
     await cdp.click(createButtonExpression('Team here'));
     await cdp.waitFor(
       "document.querySelector('[role=dialog] button[data-confirm-btn]')",
@@ -898,6 +946,7 @@ async function main() {
       themeDarkLightRendered: true,
       cssZoom200Rendered: true,
       splitPaneSingleEditor: true,
+      macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
