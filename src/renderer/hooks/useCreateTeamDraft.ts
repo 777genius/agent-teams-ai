@@ -66,6 +66,8 @@ export interface UseCreateTeamDraftResult {
 
   /** `true` after the initial IndexedDB load completes. */
   isLoaded: boolean;
+  /** True only if a previous on-disk creation draft was restored. */
+  restoredFromStorage: boolean;
   /** Clear all draft state and delete the IndexedDB entry. */
   clearDraft: () => void;
 }
@@ -156,6 +158,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const [launchTeam, setLaunchTeamState] = useState(true);
   const [teamColor, setTeamColorState] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [restoredFromStorage, setRestoredFromStorage] = useState(false);
 
   // ── Refs (latest values for debounced callbacks) ───────────────────────
   const teamNameRef = useRef('');
@@ -302,6 +305,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
       if (snapshot != null) {
         applySnapshot(snapshot);
+        setRestoredFromStorage(true);
       }
 
       if (mountedRef.current) setIsLoaded(true);
@@ -447,6 +451,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       timerRef.current = null;
     }
     pendingRef.current = null;
+    setRestoredFromStorage(false);
     // Keep userTouchedRef true so a late IDB load (theoretically impossible
     // since isLoaded gates submit, but defensive) cannot resurrect deleted data.
     userTouchedRef.current = true;
@@ -504,6 +509,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     teamColor,
     setTeamColor,
     isLoaded,
+    restoredFromStorage,
     clearDraft,
   };
 }
