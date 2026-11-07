@@ -1490,7 +1490,6 @@ export const CreateTeamDialog = ({
         ? initialRosterDrafts
         : applyStoredCreateTeamMemberRuntimePreferences(initialRosterDrafts)
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open/draftLoaded
   }, [open, draftLoaded]);
 
   useEffect(() => {
@@ -2389,6 +2388,7 @@ export const CreateTeamDialog = ({
       presentation={presentation}
       open={open}
       isCopy={Boolean(initialData)}
+      backDisabled={isSubmitting}
       onClose={() => {
         resetUIState();
         (presentation === 'page' && onBack ? onBack : onClose)();
