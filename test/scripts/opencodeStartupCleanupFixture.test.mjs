@@ -198,6 +198,12 @@ for (const existing of [false, true])
         : { httpServer: { enabled: true, port: 3456 } }
     );
     await assertEmptyCleanupState(root);
+    // The marker causes the production census to require cleanup; it is not
+    // a team, session, PID or real host-registry mutation proof.
+    const censusMarker = path.join(
+      root, 'home/AppData/Local/claude-multimodel-nodejs/Data/opencode/host-registry.json'
+    );
+    assert.deepEqual(JSON.parse(await readFile(censusMarker, 'utf8')), { hosts: [] });
   });
 
 test('event reader ignores an incomplete trailing record', async (t) => {
