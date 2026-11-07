@@ -132,7 +132,9 @@ describe('applyElectronDevPathOverrides', () => {
       ).toThrow(/overlaps regular userData/);
       expect(setPath).not.toHaveBeenCalled();
       expect(nativeSpy).toHaveBeenCalled();
-      expect(fs.existsSync(alternateName)).toBe(false);
+      // Windows can genuinely resolve REGULA~1 to the existing profile via an 8.3 alias.
+      // The invariant is that rejecting the alias leaves that profile untouched.
+      expect(fs.readdirSync(regular)).toEqual([]);
     } finally {
       nativeSpy.mockRestore();
     }
