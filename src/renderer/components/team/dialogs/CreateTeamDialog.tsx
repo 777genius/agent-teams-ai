@@ -105,6 +105,7 @@ import {
   getOrganizationPlacementUnitOptions,
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
+import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
 import { CreateTeamSurface } from './CreateTeamSurface';
 import {
@@ -1528,7 +1529,6 @@ export const CreateTeamDialog = ({
       setTeamName(suggestedTeamName);
     }
   }, [initialData, open, suggestedTeamName, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps -- teamName read once
-
   useEffect(() => {
     if (!open || initialData || !descriptionDraft.isLoaded) {
       return;
@@ -1539,13 +1539,11 @@ export const CreateTeamDialog = ({
     const previousAutoDescription = lastAutoDescriptionRef.current?.trim() ?? '';
     const shouldSyncDescription =
       currentDescription.length === 0 || currentDescription === previousAutoDescription;
-
     if (shouldSyncDescription && descriptionDraft.value !== nextAutoDescription) {
       lastAutoDescriptionRef.current = nextAutoDescription;
       descriptionDraft.setValue(nextAutoDescription);
       return;
     }
-
     if (currentDescription === nextAutoDescription) {
       lastAutoDescriptionRef.current = nextAutoDescription;
     }
@@ -2380,6 +2378,7 @@ export const CreateTeamDialog = ({
     />
   );
   return (
+    <CreateTeamPageActivityContext.Provider value={active}>
     <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled} projectPath={effectiveCwd}>
     <CreateTeamSurface
       presentation={presentation}
@@ -3103,5 +3102,6 @@ export const CreateTeamDialog = ({
         </DialogFooter>
     </CreateTeamSurface>
     </OpenCodeSourceDirectoryProvider>
+    </CreateTeamPageActivityContext.Provider>
   );
 };
