@@ -62,14 +62,14 @@ function makePort(): SmartScheduleRuntimePort {
     getMemberStatuses: vi.fn(async () => ({
       runId: 'team-run-1',
       statuses: {
-        alice: { status: 'offline', launchState: 'failed_to_start' },
+        alice: { status: 'offline' as const, launchState: 'failed_to_start' as const, updatedAt: new Date().toISOString() },
       },
     })),
     getLeadName: vi.fn(async () => 'lead'),
     getSavedRequest: vi.fn(async () => saved),
     attachMember: vi.fn(async () => undefined),
     createTask: vi.fn(async () => ({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask)),
-    launchTeam: vi.fn(async () => ({ runId: 'launched-1', launchStatus: 'started' })),
+    launchTeam: vi.fn(async () => ({ runId: 'launched-1', launchStatus: 'started' as const })),
     runOneShot: vi.fn(async () => ({
       stdout: 'done',
       stderr: '',
@@ -158,7 +158,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   it('respects a deliberately skipped teammate', async () => {
     port.getRuntime = vi.fn(async () => runtimeMembers(false));
     port.getMemberStatuses = vi.fn(async () => ({
-      runId: 'team-run-1', statuses: { alice: { status: 'skipped', launchState: 'skipped_for_launch' } },
+      runId: 'team-run-1', statuses: { alice: { status: 'skipped' as const, launchState: 'skipped_for_launch' as const, updatedAt: new Date().toISOString() } },
     }));
     const result = await dispatch.dispatch(
       { ...makeSchedule('agent'), targetMember: 'alice' }, 'run-skipped', active
@@ -208,15 +208,15 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   });
 
   it('skips simultaneous schedules for the same team instead of submitting duplicate tasks', async () => {
-    let release: ((task: TeamTask) => void) | null = null;
-    port.createTask = vi.fn(() => new Promise<TeamTask>((resolve) => { release = resolve; }));
+    const pending: { resolve?: (task: TeamTask) => void } = {};
+    port.createTask = vi.fn(() => new Promise<TeamTask>((resolve) => { pending.resolve = resolve; }));
     const first = dispatch.dispatch(makeSchedule('team'), 'run-10', active);
     const second = await dispatch.dispatch(makeSchedule('agent'), 'run-11', active);
     expect(second.kind).toBe('skipped');
     // The first dispatch is waiting for the one task write to finish.
     await vi.waitFor(() => expect(port.createTask).toHaveBeenCalledOnce());
-    if (!release) throw new Error('task write was not started');
-    release({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask);
+    if (!pending.resolve) throw new Error('task write was not started');
+    pending.resolve({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask);
     expect((await first).kind).toBe('dispatched');
   });
 });
