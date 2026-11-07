@@ -1379,16 +1379,13 @@ export const CreateTeamDialog = ({
     selectedMemberProviders,
     t,
   ]);
-
   useEffect(() => {
     if (!open) {
       setWorkflowMentionSuggestionsEnabled(false);
       return;
     }
-
     setProjectsLoading(true);
     setProjectsError(null);
-
     let cancelled = false;
     void (async () => {
       try {
@@ -1396,7 +1393,6 @@ export const CreateTeamDialog = ({
         if (cancelled) {
           return;
         }
-
         setProjects(nextProjects);
       } catch (error) {
         if (cancelled) {
@@ -1412,23 +1408,19 @@ export const CreateTeamDialog = ({
         }
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [open, defaultProjectPath, t]);
-
   useEffect(() => {
     if (!open || !draftLoaded) {
       return;
     }
-
     if (runtimeSelectionVersion === 1 && runtimeProviderId) {
       const draftProviderId = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
       setSelectedProviderIdRaw(draftProviderId);
       setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
     }
-
     if (initialData) {
       if (!consumeTeamCopySeedOnce(initialData)) return;
       const nextSyncModelsWithLead =
@@ -1491,7 +1483,6 @@ export const CreateTeamDialog = ({
       setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
       return;
     }
-
     if (members.length > 0) {
       return;
     }
@@ -1736,6 +1727,11 @@ export const CreateTeamDialog = ({
   );
   useEffect(() => {
     if (!draftLoaded) return;
+    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
+      const draftProvider = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
+      const draftModel = normalizeExplicitTeamModelForUi(draftProvider, runtimeModel ?? '');
+      if (selectedProviderId !== draftProvider || selectedModel !== draftModel) return;
+    }
     if (selectedProviderId !== 'anthropic' && selectedProviderId !== 'codex') {
       setAnthropicRuntimeNotice(null);
       return;
@@ -1808,6 +1804,10 @@ export const CreateTeamDialog = ({
     codexSnapshotPending,
     draftLoaded,
     effectiveAnthropicRuntimeLimitContext,
+    multimodelEnabled,
+    runtimeModel,
+    runtimeProviderId,
+    runtimeSelectionVersion,
     runtimeProviderStatusById,
     selectedEffort,
     selectedEffortForCurrentSelection,
