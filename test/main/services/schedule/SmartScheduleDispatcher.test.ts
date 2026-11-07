@@ -68,7 +68,7 @@ function makePort(): SmartScheduleRuntimePort {
     getLeadName: vi.fn(async () => 'lead'),
     getSavedRequest: vi.fn(async () => saved),
     attachMember: vi.fn(async () => undefined),
-    createTask: vi.fn(async () => ({ id: 'task-1', displayId: 7 } as TeamTask)),
+    createTask: vi.fn(async () => ({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask)),
     launchTeam: vi.fn(async () => ({ runId: 'launched-1', launchStatus: 'started' })),
     runOneShot: vi.fn(async () => ({
       stdout: 'done',
@@ -91,7 +91,9 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   });
 
   it('does not reinterpret a pre-existing legacy schedule', async () => {
-    await expect(dispatch.dispatch(makeSchedule(undefined), 'run-1', active)).rejects.toThrow(
+    const legacy = makeSchedule('agent');
+    delete legacy.executionMode;
+    await expect(dispatch.dispatch(legacy, 'run-1', active)).rejects.toThrow(
       'Legacy schedule'
     );
     expect(port.runOneShot).not.toHaveBeenCalled();
@@ -214,7 +216,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     // The first dispatch is waiting for the one task write to finish.
     await vi.waitFor(() => expect(port.createTask).toHaveBeenCalledOnce());
     if (!release) throw new Error('task write was not started');
-    release({ id: 'task-1', displayId: 7 } as TeamTask);
+    release({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask);
     expect((await first).kind).toBe('dispatched');
   });
 });
