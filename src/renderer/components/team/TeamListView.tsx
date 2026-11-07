@@ -21,9 +21,11 @@ import {
   type TeamColorSet,
 } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
-import { useCreateTeamDraftAvailability } from '@renderer/hooks/useCreateTeamDraftAvailability';
+import {
+  hasUnfinishedCreateTeamDraft,
+  useCreateTeamDraftAvailability,
+} from '@renderer/hooks/useCreateTeamDraftAvailability';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
 import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import {
@@ -826,12 +828,12 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
 
   const openCopiedTeam = useCallback(
     async (copy: TeamCopyData) => {
-      const saved = await createTeamDraftStorage.loadSnapshot();
+      const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
       const hasOpenEditor = useStore
         .getState()
         .getAllPaneTabs()
         .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
-      if (hasOpenEditor || Boolean(saved?.teamName.trim() || saved?.members.length)) {
+      if (hasOpenEditor || hasSavedDraft) {
         const accepted = await confirm({
           title: t('create.title.copy'),
           message: t('create.draft.replaceConfirmation', { defaultValue: 'Copying this team will replace your unfinished draft. Continue?' }),
