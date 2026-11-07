@@ -2,13 +2,13 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
-export function CreateTeamPageLoadingFallback({
+export const CreateTeamPageLoadingFallback = ({
   isCopy,
   onClose,
-}: {
+}: Readonly<{
   isCopy: boolean;
   onClose: () => void;
-}): React.JSX.Element {
+}>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: common } = useAppTranslation('common');
   return (
@@ -30,4 +30,4 @@ export function CreateTeamPageLoadingFallback({
       </div>
     </div>
   );
-}
+};

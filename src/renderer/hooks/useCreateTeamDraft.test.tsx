@@ -368,6 +368,7 @@ describe('useCreateTeamDraft', () => {
 
 
   it('retains per-member workflow file chips across unmount and restored snapshot', async () => {
+    const workflowChip = { id: 'chip-1', filePath: '/tmp/README.md', fileName: 'README.md', fromLine: null, toLine: null, codeText: 'Sample', language: 'markdown' };
     loadSnapshotMock.mockResolvedValue(null);
     const host = document.createElement('div');
     document.body.appendChild(host);

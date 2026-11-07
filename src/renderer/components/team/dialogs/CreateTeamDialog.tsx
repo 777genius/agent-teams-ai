@@ -572,7 +572,7 @@ export const CreateTeamDialog = ({
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
     resetUIState();
-    await resetCreateTeamDraft();
+    if (presentation === 'page') await resetCreateTeamDraft();
   };
 
   const persistCurrentMemberRuntimePreferences = useCallback(
