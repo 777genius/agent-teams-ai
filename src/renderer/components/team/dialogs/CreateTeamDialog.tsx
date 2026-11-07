@@ -95,13 +95,13 @@ import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
-import { CreateTeamSurface } from './CreateTeamSurface';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
+import { CreateTeamSurface } from './CreateTeamSurface';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -187,6 +187,7 @@ import {
   WorktreeGitReadinessBanner,
 } from './WorktreeGitReadinessBanner';
 
+import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
 import type {
   OrganizationPlacementSelection,
   OrganizationStructurePayload,
@@ -200,7 +201,6 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
-import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
 export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
 
 const TEAM_COLOR_NAMES = [
