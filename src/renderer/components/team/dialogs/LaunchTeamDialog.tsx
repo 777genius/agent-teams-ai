@@ -122,6 +122,7 @@ import {
   getDialogTeamModelValidationError,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -2414,7 +2415,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const submitLabel = t(labelKeys.submit);
   const submittingLabel = t(labelKeys.submitting);
-
   return (
     <Dialog
       open={open}
@@ -2424,6 +2424,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
       }}
     >
+      <OpenCodeSourceDirectoryProvider enabled={open && isLaunchMode && multimodelEnabled && launchPreflightSelectionReady} projectPath={effectiveCwd}>
       <DialogContent
         className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
       >
@@ -2432,7 +2433,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
           <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>
         </DialogHeader>
-
         {isRelaunch ? (
           <div
             className="rounded-md border p-3 text-xs"
@@ -2451,7 +2451,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           </div>
         ) : null}
-
         {/* Launch-only: Conflict warning */}
         {isLaunchMode && conflictingTeam && !conflictDismissed ? (
           <div
@@ -3233,6 +3232,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           />
         </DialogFooter>
       </DialogContent>
+      </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
         openProviderId={providerSettingsProviderId}
         onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}

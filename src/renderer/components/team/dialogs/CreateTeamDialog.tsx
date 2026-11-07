@@ -127,6 +127,7 @@ import {
   getDialogTeamModelValidationError,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -651,7 +652,7 @@ export const CreateTeamDialog = ({
     projectPath: effectiveCwd,
     catalogEnabled: openCodeCatalogEnabled,
     passiveStatusPrefetchEnabled:
-      open && multimodelEnabled && launchPreflightSelectionReady && Boolean(effectiveCwd),
+      openCodeCatalogEnabled && launchPreflightSelectionReady && Boolean(effectiveCwd),
     passiveProviderStatus: projectScopedOpenCodeStatus,
     leadProviderResolved: !runtimeSelectionUnresolved,
     members,
@@ -2365,6 +2366,7 @@ export const CreateTeamDialog = ({
         }
       }}
     >
+      <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled && launchPreflightSelectionReady} projectPath={effectiveCwd}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
         <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         <DialogHeader>
@@ -2418,7 +2420,6 @@ export const CreateTeamDialog = ({
             {t('create.localOnly')}
           </p>
         ) : null}
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
             <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
@@ -2456,7 +2457,6 @@ export const CreateTeamDialog = ({
               </p>
             ) : null}
           </div>
-
           <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
               onApply={(draft) => {
@@ -2532,7 +2532,6 @@ export const CreateTeamDialog = ({
               headerBottom={rosterHeaderBottom}
             />
           </div>
-
           <div
             className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
             style={{
@@ -3096,6 +3095,7 @@ export const CreateTeamDialog = ({
           </div>
         </DialogFooter>
       </DialogContent>
+      </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
         openProviderId={providerSettingsProviderId}
         onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
