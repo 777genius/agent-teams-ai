@@ -31,10 +31,10 @@ import {
   setStoredCreateTeamMemberRuntimePreferences,
   setStoredCreateTeamSyncModelsWithLead,
 } from '@renderer/services/createTeamPreferences';
-import type { TeamFastMode } from '@shared/types';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
+import type { TeamFastMode } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -449,6 +449,7 @@ export const CreateTeamDialog = ({
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
+  const [copySeedReady, setCopySeedReady] = useState(!initialData);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
@@ -1183,13 +1184,11 @@ export const CreateTeamDialog = ({
     ): void => {
       const selectedWarnings = getSelectedWarnings();
       setPrepareWarnings(selectedWarnings);
-
       if (nextChecks.some((check) => check.status === 'pending' || check.status === 'checking')) {
         setPrepareState('loading');
         setPrepareMessage(pendingMessage);
         return;
       }
-
       const anyFailure = nextChecks.some((check) => check.status === 'failed');
       const anyNotes =
         selectedWarnings.length > 0 || nextChecks.some((check) => check.status === 'notes');
@@ -1205,7 +1204,6 @@ export const CreateTeamDialog = ({
             : t('create.prepare.ready')
       );
     };
-
     let checks = alignProvisioningChecks(prepareChecksRef.current, selectedMemberProviders);
     for (const providerId of loadingProviderIds) {
       const current = providerPlans.find(
@@ -1243,15 +1241,12 @@ export const CreateTeamDialog = ({
         : (prepareMessageRef.current ??
             getProvisioningProviderProgressMessage([], selectedMemberProviders.length, t))
     );
-
     if (changedPlans.length === 0) {
       return;
     }
-
     for (const plan of changedPlans) {
       pendingPrepareProviderSignatureByIdRef.current.set(plan.providerId, plan.requestSignature);
     }
-
     const idleHandle = scheduleIdle(() => {
       prepareIdleHandlesRef.current.delete(idleHandle);
       const generation = prepareRequestSeqRef.current;
@@ -1422,7 +1417,10 @@ export const CreateTeamDialog = ({
       setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
     }
     if (initialData) {
-      if (!consumeTeamCopySeedOnce(initialData)) return;
+      if (!consumeTeamCopySeedOnce(initialData)) {
+        setCopySeedReady(true);
+        return;
+      }
       const nextSyncModelsWithLead =
         initialData.syncModelsWithLead ??
         !initialData.members.some(
@@ -1481,6 +1479,7 @@ export const CreateTeamDialog = ({
           initialData.members.every((member) => member.isolation === 'worktree')
       );
       setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
+      setCopySeedReady(true);
       return;
     }
     if (members.length > 0) {
@@ -1726,7 +1725,7 @@ export const CreateTeamDialog = ({
     [codexRuntimeSelection, selectedFastMode, selectedProviderId]
   );
   useEffect(() => {
-    if (!draftLoaded) return;
+    if (!draftLoaded || !copySeedReady) return;
     if (runtimeSelectionVersion === 1 && runtimeProviderId) {
       const draftProvider = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
       const draftModel = normalizeExplicitTeamModelForUi(draftProvider, runtimeModel ?? '');
@@ -1802,6 +1801,7 @@ export const CreateTeamDialog = ({
     anthropicRuntimeSelection,
     codexRuntimeSelection,
     codexSnapshotPending,
+    copySeedReady,
     draftLoaded,
     effectiveAnthropicRuntimeLimitContext,
     multimodelEnabled,

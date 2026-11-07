@@ -6030,7 +6030,10 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
     await vi.waitFor(() => {
-      expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
+      expect(onOpenTeam, (host.textContent ?? '').slice(-1200)).toHaveBeenCalledWith(
+        'team-alpha',
+        '/tmp/project'
+      );
       expect(onClose).toHaveBeenCalledOnce();
     });
 
