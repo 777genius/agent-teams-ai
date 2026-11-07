@@ -38,6 +38,7 @@ export function KanbanViewModeSwitch({
               onClick={() => onChange(option.value)}
               aria-label={t(option.key)}
               aria-pressed={value === option.value}
+              data-testid={'kanban-view-' + option.value}
             >
               <option.icon size={14} />
             </Button>

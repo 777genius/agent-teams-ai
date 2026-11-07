@@ -119,6 +119,7 @@ export const TaskTableView = memo(function TaskTableView({
               size="sm"
               className="h-7 gap-1.5 px-2 text-xs"
               aria-label={t('kanban.board.configureColumns')}
+              data-testid="team-task-table-settings"
             >
               <Settings2 size={14} aria-hidden="true" />
               {t('kanban.board.configureColumns')}
@@ -171,6 +172,7 @@ export const TaskTableView = memo(function TaskTableView({
                     <th
                       key={header.id}
                       scope="col"
+                      data-testid={'team-task-table-header-' + header.column.id}
                       aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
                       className="relative h-9 px-3 text-start text-[11px] font-medium text-[var(--color-text-muted)]"
                       style={{ width: header.getSize() }}

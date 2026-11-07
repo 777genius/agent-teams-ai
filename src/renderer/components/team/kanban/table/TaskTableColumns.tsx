@@ -64,6 +64,7 @@ export function createTaskTableColumns(
       cell: ({ row }) => (
         <button
           type="button"
+          data-testid="team-task-table-open"
           className="flex w-full min-w-0 flex-col items-start gap-0.5 text-start"
           title={row.original.subject}
           onClick={(event) => {
