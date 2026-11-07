@@ -4412,10 +4412,13 @@ export default interface Resources {
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",
+        "configureColumns": "Choose columns",
         "gridView": "Grid view",
         "hiddenCount": "{{count}} hidden",
         "noTasks": "No tasks",
+        "resizeColumn": "Resize {{column}}",
         "showMore": "Show {{count}} more",
+        "tableView": "Table view",
         "trash": "Trash"
       },
       "columns": {
@@ -4583,17 +4586,27 @@ export default interface Resources {
         "title": "Relaunch will restart the current team run"
       },
       "schedule": {
+        "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
+        "execution": "Execution",
         "labelOptional": "Label (optional)",
         "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
+        "leadDefault": "Team lead (default)",
+        "legacyNotice": "Existing one-shot schedule — saving keeps its current behavior.",
         "maxBudgetUsd": "Max budget (USD)",
         "maxTurns": "Max turns",
         "noLimit": "No limit",
         "noMatches": "No teams match your search.",
         "noTeams": "No teams available. Create a team first.",
+        "oneAgent": "One agent",
         "searchTeams": "Search teams...",
         "selectTeam": "Select a team...",
+        "target": "Target when team is running",
         "team": "Team",
-        "title": "Schedule"
+        "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
+        "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
+        "title": "Schedule",
+        "upgradeSmart": "Switch to smart scheduling",
+        "wholeTeam": "Whole team"
       },
       "title": {
         "createSchedule": "Create Schedule",
@@ -6403,10 +6416,12 @@ export default interface Resources {
       "runStatus": {
         "cancelled": "Cancelled",
         "completed": "Completed",
+        "dispatched": "Dispatched",
         "failed": "Failed",
         "interrupted": "Interrupted",
         "pending": "Pending",
         "running": "Running",
+        "skipped": "Skipped",
         "warm": "Warm",
         "warmingUp": "Warming up"
       },

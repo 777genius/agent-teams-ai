@@ -229,11 +229,11 @@
       "groupOrRootLabel": "Group or root",
       "groupOrRootHelp": "Choose a group, or keep the organization root.",
       "groupOrRootPlaceholder": "Root or group",
-      "invalidSelection": "Choose a valid organization and destination before creating the team.",
       "kind": {
         "root": "Root",
         "group": "Group"
-      }
+      },
+      "invalidSelection": "Choose a valid organization and destination before creating the team."
     },
     "defaultDescription": {
       "fallback": "Team for provisioning flow",
@@ -1669,17 +1669,27 @@
       "description": "Project hooks and MCP servers may run when the team starts."
     },
     "schedule": {
+      "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
+      "execution": "Execution",
       "labelOptional": "Label (optional)",
       "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
+      "leadDefault": "Team lead (default)",
+      "legacyNotice": "Existing one-shot schedule — saving keeps its current behavior.",
       "maxBudgetUsd": "Max budget (USD)",
       "maxTurns": "Max turns",
       "noLimit": "No limit",
       "noMatches": "No teams match your search.",
       "noTeams": "No teams available. Create a team first.",
+      "oneAgent": "One agent",
       "searchTeams": "Search teams...",
       "selectTeam": "Select a team...",
+      "target": "Target when team is running",
       "team": "Team",
-      "title": "Schedule"
+      "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
+      "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
+      "title": "Schedule",
+      "upgradeSmart": "Switch to smart scheduling",
+      "wholeTeam": "Whole team"
     },
     "title": {
       "createSchedule": "Create Schedule",
@@ -2326,6 +2336,8 @@
       "warm": "Warm",
       "running": "Running",
       "completed": "Completed",
+      "dispatched": "Dispatched",
+      "skipped": "Skipped",
       "failed": "Failed",
       "interrupted": "Interrupted",
       "cancelled": "Cancelled"
@@ -2631,7 +2643,10 @@
       "hiddenCount": "{{count}} hidden",
       "trash": "Trash",
       "gridView": "Grid view",
-      "columnsView": "Columns view"
+      "columnsView": "Columns view",
+      "tableView": "Table view",
+      "configureColumns": "Choose columns",
+      "resizeColumn": "Resize {{column}}"
     },
     "trash": {
       "title": "Trash",

@@ -192,6 +192,13 @@ export const ScheduleRunLogDialog = ({
             </div>
           ) : null}
 
+          {/* Smart dispatch is a recorded handoff, not a CLI transcript. */}
+          {!isRunning && (run.status === 'dispatched' || run.status === 'skipped') && run.summary ? (
+            <div className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs text-[var(--color-text-secondary)]">
+              {run.summary}
+            </div>
+          ) : null}
+
           {/* Loading */}
           {loading ? (
             <div className="flex items-center justify-center py-6 text-xs text-[var(--color-text-muted)]">
@@ -232,7 +239,7 @@ export const ScheduleRunLogDialog = ({
           ) : null}
 
           {/* Run error message (from ScheduleRun.error) */}
-          {!isRunning && run.error && !logs ? (
+          {!isRunning && run.error && (!logs || !logs.stderr.trim()) ? (
             <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span className="whitespace-pre-wrap">{run.error}</span>
