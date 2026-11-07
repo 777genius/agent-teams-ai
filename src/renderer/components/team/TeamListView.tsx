@@ -22,6 +22,7 @@ import {
   type TeamColorSet,
 } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
+import { useCreateTeamDraftAvailability } from '@renderer/hooks/useCreateTeamDraftAvailability';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
@@ -444,6 +445,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
     s.paneLayout.panes.flatMap((pane) => pane.tabs).find((tab) => tab.id === tabId)
   );
   const createPageOpen = creationTab?.teamsCreationPage === true;
+  const hasCreationDraft = useCreateTeamDraftAvailability(createPageOpen);
   const createSeed = creationTab?.teamsCreationSeed;
   const copyData = createSeed?.copyData ?? null;
   const openTeamsCreationPage = useStore((s) => s.openTeamsCreationPage);
@@ -1191,7 +1193,9 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
           </Button>
           <Button className="gap-2" disabled={!canCreate} onClick={() => openTeamsCreationPage()}>
             <Plus size={15} />
-            {t('list.actions.createTeam')}
+            {hasCreationDraft
+              ? t('create.draft.continue', { defaultValue: 'Continue creating' })
+              : t('list.actions.createTeam')}
           </Button>
         </div>
       </div>
@@ -1275,6 +1279,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
         <TeamEmptyState
           canCreate={canCreate}
           onCreateTeam={() => openTeamsCreationPage()}
+          hasCreationDraft={hasCreationDraft}
           onImportTeam={() => setShowImportDialog(true)}
         />
       );
