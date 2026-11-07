@@ -1,3 +1,5 @@
+import { discardRetainedGatewayBindingDraft } from '@features/gateway-provider/renderer';
+
 import { retireCreateTeamDraftGeneration } from './createTeamDraftGeneration';
 import { createTeamDraftStorage } from './createTeamDraftStorage';
 import { draftStorage } from './draftStorage';
@@ -9,6 +11,7 @@ import { draftStorage } from './draftStorage';
  */
 export async function resetCreateTeamDraft(): Promise<void> {
   retireCreateTeamDraftGeneration();
+  discardRetainedGatewayBindingDraft('createTeam');
   await Promise.all([
     createTeamDraftStorage.deleteSnapshot(),
     draftStorage.deleteDraft('createTeam:description'),
