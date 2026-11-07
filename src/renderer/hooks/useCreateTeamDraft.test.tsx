@@ -367,7 +367,7 @@ describe('useCreateTeamDraft', () => {
   });
 
 
-  it('persists copied permission and context settings without replacing global defaults', async () => {
+  it('persists copied permission, context, effort and fast-mode settings without replacing global defaults', async () => {
     loadSnapshotMock.mockResolvedValue(null);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -377,16 +377,18 @@ describe('useCreateTeamDraft', () => {
     act(() => {
       draft?.setSkipPermissions(false);
       draft?.setLimitContext(true);
+      draft?.setSelectedEffort('high');
+      draft?.setSelectedFastMode('off');
       root.unmount();
     });
     const saved = saveSnapshotMock.mock.calls.at(-1)?.[0];
-    expect(saved).toMatchObject({ skipPermissions: false, limitContext: true });
+    expect(saved).toMatchObject({ skipPermissions: false, limitContext: true, selectedEffort: 'high', selectedFastMode: 'off' });
     loadSnapshotMock.mockResolvedValue(saved);
     draft = null;
     root = createRoot(host);
     await renderLoadedDraft(root, (value) => { draft = value; });
     const readDraft: () => ReturnType<typeof useCreateTeamDraft> | null = () => draft;
-    expect(readDraft()).toMatchObject({ skipPermissions: false, limitContext: true });
+    expect(readDraft()).toMatchObject({ skipPermissions: false, limitContext: true, selectedEffort: 'high', selectedFastMode: 'off' });
     act(() => root.unmount());
   });
 

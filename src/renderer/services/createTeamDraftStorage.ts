@@ -70,6 +70,8 @@ export interface CreateTeamDraftSnapshot {
   /** Optional, for backwards-compatible restoration of old creation drafts. */
   limitContext?: boolean;
   skipPermissions?: boolean;
+  selectedEffort?: string;
+  selectedFastMode?: TeamFastMode;
   /** Optional for backward-compatible v1 draft restoration. */
   organizationPlacementEnabled?: boolean;
   organizationPlacementOrganizationId?: string;
@@ -155,6 +157,8 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
     typeof obj.teamColor === 'string' &&
     (obj.limitContext === undefined || typeof obj.limitContext === 'boolean') &&
     (obj.skipPermissions === undefined || typeof obj.skipPermissions === 'boolean') &&
+    (obj.selectedEffort === undefined || typeof obj.selectedEffort === 'string') &&
+    (obj.selectedFastMode === undefined || ['inherit', 'on', 'off'].includes(obj.selectedFastMode as string)) &&
     (obj.organizationPlacementEnabled === undefined ||
       typeof obj.organizationPlacementEnabled === 'boolean') &&
     (obj.organizationPlacementOrganizationId === undefined ||

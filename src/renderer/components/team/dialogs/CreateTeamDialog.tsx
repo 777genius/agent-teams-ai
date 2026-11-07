@@ -379,6 +379,10 @@ export const CreateTeamDialog = ({
     setLimitContext: setLimitContextRaw,
     skipPermissions,
     setSkipPermissions: setSkipPermissionsRaw,
+    selectedEffort,
+    setSelectedEffort: setSelectedEffortRaw,
+    selectedFastMode,
+    setSelectedFastMode: setSelectedFastModeRaw,
     organizationPlacementEnabled,
     setOrganizationPlacementEnabled,
     organizationPlacementOrganizationId,
@@ -444,8 +448,6 @@ export const CreateTeamDialog = ({
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
-  const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
-  const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
@@ -1548,7 +1550,6 @@ export const CreateTeamDialog = ({
       lastAutoDescriptionRef.current = nextAutoDescription;
     }
   }, [descriptionDraft, initialData, open, suggestedTeamName, t, teamName]);
-
   useEffect(() => {
     if (!open || !forceDefaultProjectSelection) {
       forcedDefaultProjectModePathRef.current = null;
@@ -1561,7 +1562,6 @@ export const CreateTeamDialog = ({
       forcedDefaultProjectModePathRef.current = null;
       return;
     }
-
     const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
     if (restoredFromStorage && (selectedProjectPath || customCwd)) {
       forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;

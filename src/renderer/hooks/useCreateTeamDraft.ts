@@ -23,6 +23,8 @@ import {
   type SerializedMemberDraft,
 } from '@renderer/services/createTeamDraftStorage';
 import {
+  getStoredCreateTeamEffort,
+  getStoredCreateTeamFastMode,
   getStoredCreateTeamLimitContext,
   getStoredCreateTeamSkipPermissions,
   getStoredCreateTeamSyncModelsWithLead,
@@ -30,6 +32,8 @@ import {
   setStoredCreateTeamSyncModelsWithLead,
 } from '@renderer/services/createTeamPreferences';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
+
+import type { TeamFastMode } from '@shared/types';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 
@@ -70,6 +74,10 @@ export interface UseCreateTeamDraftResult {
   setLimitContext: (v: boolean) => void;
   skipPermissions: boolean;
   setSkipPermissions: (v: boolean) => void;
+  selectedEffort: string;
+  setSelectedEffort: (v: string) => void;
+  selectedFastMode: TeamFastMode;
+  setSelectedFastMode: (v: TeamFastMode) => void;
   organizationPlacementEnabled: boolean;
   setOrganizationPlacementEnabled: (v: boolean) => void;
   organizationPlacementOrganizationId: string;
@@ -177,6 +185,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const [teamColor, setTeamColorState] = useState('');
   const [limitContext, setLimitContextState] = useState(getStoredCreateTeamLimitContext);
   const [skipPermissions, setSkipPermissionsState] = useState(getStoredCreateTeamSkipPermissions);
+  const [selectedEffort, setSelectedEffortState] = useState(getStoredCreateTeamEffort);
+  const [selectedFastMode, setSelectedFastModeState] = useState<TeamFastMode>(getStoredCreateTeamFastMode);
   const [organizationPlacementEnabled, setOrganizationPlacementEnabledState] = useState(false);
   const [organizationPlacementOrganizationId, setOrganizationPlacementOrganizationIdState] = useState('');
   const [organizationPlacementParentId, setOrganizationPlacementParentIdState] = useState('');
@@ -197,6 +207,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const teamColorRef = useRef('');
   const limitContextRef = useRef(limitContext);
   const skipPermissionsRef = useRef(skipPermissions);
+  const selectedEffortRef = useRef(selectedEffort);
+  const selectedFastModeRef = useRef(selectedFastMode);
   const organizationPlacementEnabledRef = useRef(false);
   const organizationPlacementOrganizationIdRef = useRef('');
   const organizationPlacementParentIdRef = useRef('');
@@ -233,6 +245,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       teamColor: teamColorRef.current,
       limitContext: limitContextRef.current,
       skipPermissions: skipPermissionsRef.current,
+      selectedEffort: selectedEffortRef.current,
+      selectedFastMode: selectedFastModeRef.current,
       organizationPlacementEnabled: organizationPlacementEnabledRef.current,
       organizationPlacementOrganizationId: organizationPlacementOrganizationIdRef.current,
       organizationPlacementParentId: organizationPlacementParentIdRef.current,
@@ -303,6 +317,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     teamColorRef.current = snap.teamColor;
     limitContextRef.current = snap.limitContext ?? getStoredCreateTeamLimitContext();
     skipPermissionsRef.current = snap.skipPermissions ?? getStoredCreateTeamSkipPermissions();
+    selectedEffortRef.current = snap.selectedEffort ?? getStoredCreateTeamEffort();
+    selectedFastModeRef.current = snap.selectedFastMode ?? getStoredCreateTeamFastMode();
     organizationPlacementEnabledRef.current = snap.organizationPlacementEnabled === true;
     organizationPlacementOrganizationIdRef.current = snap.organizationPlacementOrganizationId ?? '';
     organizationPlacementParentIdRef.current = snap.organizationPlacementParentId ?? '';
@@ -319,6 +335,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setTeamColorState(snap.teamColor);
     setLimitContextState(limitContextRef.current);
     setSkipPermissionsState(skipPermissionsRef.current);
+    setSelectedEffortState(selectedEffortRef.current);
+    setSelectedFastModeState(selectedFastModeRef.current);
     setOrganizationPlacementEnabledState(snap.organizationPlacementEnabled === true);
     setOrganizationPlacementOrganizationIdState(snap.organizationPlacementOrganizationId ?? '');
     setOrganizationPlacementParentIdState(snap.organizationPlacementParentId ?? '');
@@ -492,6 +510,19 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     scheduleSave();
   }, [scheduleSave]);
 
+  const setSelectedEffort = useCallback((v: string): void => {
+    userTouchedRef.current = true;
+    selectedEffortRef.current = v;
+    setSelectedEffortState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+  const setSelectedFastMode = useCallback((v: TeamFastMode): void => {
+    userTouchedRef.current = true;
+    selectedFastModeRef.current = v;
+    setSelectedFastModeState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+
   const setOrganizationPlacementEnabled = useCallback((v: boolean): void => {
     userTouchedRef.current = true;
     organizationPlacementEnabledRef.current = v;
@@ -542,6 +573,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     teamColorRef.current = '';
     limitContextRef.current = getStoredCreateTeamLimitContext();
     skipPermissionsRef.current = getStoredCreateTeamSkipPermissions();
+    selectedEffortRef.current = getStoredCreateTeamEffort();
+    selectedFastModeRef.current = getStoredCreateTeamFastMode();
     organizationPlacementEnabledRef.current = false;
     organizationPlacementOrganizationIdRef.current = '';
     organizationPlacementParentIdRef.current = '';
@@ -558,6 +591,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setTeamColorState('');
     setLimitContextState(limitContextRef.current);
     setSkipPermissionsState(skipPermissionsRef.current);
+    setSelectedEffortState(selectedEffortRef.current);
+    setSelectedFastModeState(selectedFastModeRef.current);
     setOrganizationPlacementEnabledState(false);
     setOrganizationPlacementOrganizationIdState('');
     setOrganizationPlacementParentIdState('');
@@ -594,6 +629,10 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setLimitContext,
     skipPermissions,
     setSkipPermissions,
+    selectedEffort,
+    setSelectedEffort,
+    selectedFastMode,
+    setSelectedFastMode,
     organizationPlacementEnabled,
     setOrganizationPlacementEnabled,
     organizationPlacementOrganizationId,
