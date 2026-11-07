@@ -451,8 +451,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       effectiveCwd,
       open && launchPreflightSelectionReady && requestedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled =
-    open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
+  const openCodeCatalogEnabled = open && isLaunchMode && multimodelEnabled;
   const {
     effectiveMemberDrafts,
     effectiveSelectedModel,
@@ -464,9 +463,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
     catalogEnabled: openCodeCatalogEnabled,
-    // Discover OpenCode sources before the user switches to its tab.
-    passiveStatusPrefetchEnabled:
-      open && isLaunchMode && multimodelEnabled && launchPreflightSelectionReady,
+    passiveStatusPrefetchEnabled: openCodeCatalogEnabled && launchPreflightSelectionReady,
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,

@@ -650,8 +650,6 @@ export const CreateTeamDialog = ({
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
     catalogEnabled: openCodeCatalogEnabled,
-    // Warm the project catalog even when the current lead uses Codex or Claude.
-    // Per-source model probes remain limited to selected OpenCode routes.
     passiveStatusPrefetchEnabled:
       open && multimodelEnabled && launchPreflightSelectionReady && Boolean(effectiveCwd),
     passiveProviderStatus: projectScopedOpenCodeStatus,
