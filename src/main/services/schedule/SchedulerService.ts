@@ -11,6 +11,7 @@ import { createLogger } from '@shared/utils/logger';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
+import { completeScheduleRun } from './completeScheduleRun';
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 
@@ -744,32 +745,10 @@ export class SchedulerService {
     summary?: string,
     error?: string
   ): Promise<void> {
-    const completedAt = new Date().toISOString();
-    const startedAt = new Date(run.startedAt).getTime();
-    const durationMs = Date.now() - startedAt;
-
-    const updatedRun: ScheduleRun = {
-      ...run,
-      status,
-      completedAt,
-      durationMs,
-      exitCode,
-      summary: summary ?? run.summary,
-      error: error ?? run.error,
-    };
-
-    await this.repository.saveRun(updatedRun);
-
-    const eventType =
-      status === 'completed' || status === 'dispatched' || status === 'skipped'
-        ? 'run-completed'
-        : 'run-failed';
-    this.emitChange({
-      type: eventType,
-      scheduleId: run.scheduleId,
-      teamName: run.teamName,
-      detail: error,
-    });
+    await completeScheduleRun(
+      this.repository, (event) => this.emitChange(event),
+      run, status, exitCode, summary, error
+    );
   }
 
   // ===========================================================================
@@ -843,11 +822,6 @@ export class SchedulerService {
       teamName: fresh.teamName,
     });
   }
-
-  // ===========================================================================
-  // Recovery
-  // ===========================================================================
-
 
   // ===========================================================================
   // Helpers
