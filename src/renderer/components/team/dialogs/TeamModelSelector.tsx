@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CodexRuntimeUpdateDialog,
@@ -81,6 +81,7 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
+import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
 import { OpenCodeAuthRequiredModelsNotice } from './OpenCodeAuthRequiredModelsNotice';
 import { useOpenCodeDefaultMaterialization } from './openCodeDefaultMaterialization';
 import { formatOpenCodeDefaultRouteLabel } from './openCodeDefaultModel';
@@ -1119,6 +1120,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
+  const creationPageActive = useContext(CreateTeamPageActivityContext);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const selectedProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -3323,7 +3325,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 );
               })}
             </TabsList>
-
             <div className="flex min-h-0 min-w-0 flex-col bg-[var(--color-surface)]">
               {!multimodelAvailable ? (
                 <div className="border-b border-[var(--color-border-subtle)] px-3 py-2">
@@ -3332,7 +3333,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   </p>
                 </div>
               ) : null}
-
               <div className="flex min-h-0 flex-1 flex-col p-4">
                 {effectiveProviderId === 'codex' ? (
                   <>
@@ -3756,7 +3756,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           </div>
         </Tabs>
         <CodexRuntimeUpdateDialog
-          open={codexRuntimeDialogOpen}
+          open={creationPageActive && codexRuntimeDialogOpen}
           onOpenChange={setCodexRuntimeDialogOpen}
           status={codexRuntimeStatus}
           loading={codexRuntimeStatusLoading}
@@ -3764,7 +3764,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           onInstall={() => void installCodexRuntime?.()}
         />
         <OpenCodeLocalModelPrivateNetworkApprovalDialog
-          target={pendingPrivateNetworkSetup?.target ?? null}
+          target={creationPageActive ? pendingPrivateNetworkSetup?.target ?? null : null}
           onCancel={() => setPendingPrivateNetworkSetup(null)}
           onApprove={(target) => {
             const approvedProjectPath = pendingPrivateNetworkSetup?.projectPath;

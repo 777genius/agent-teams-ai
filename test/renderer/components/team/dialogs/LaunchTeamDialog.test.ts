@@ -78,6 +78,20 @@ const createTeamDraftMock = vi.hoisted(() => ({
     setLaunchTeam: vi.fn(),
     teamColor: 'slate',
     setTeamColor: vi.fn(),
+    limitContext: false,
+    setLimitContext: vi.fn(),
+    skipPermissions: true,
+    setSkipPermissions: vi.fn(),
+    selectedEffort: '' as string,
+    setSelectedEffort: vi.fn(),
+    selectedFastMode: 'inherit' as 'inherit' | 'on' | 'off',
+    setSelectedFastMode: vi.fn(),
+    organizationPlacementEnabled: false,
+    setOrganizationPlacementEnabled: vi.fn(),
+    organizationPlacementOrganizationId: '',
+    setOrganizationPlacementOrganizationId: vi.fn(),
+    organizationPlacementParentId: '',
+    setOrganizationPlacementParentId: vi.fn(),
     isLoaded: true,
     clearDraft: vi.fn(),
   },
@@ -2153,6 +2167,10 @@ describe('LaunchTeamDialog', () => {
           await flush();
         });
         await flushCustomFolderProbe();
+        // Billing and launch semantics depend on the actual provider and live-team state.
+        // Never show a stale separate Agent SDK credit warning or claim every run is claude -p.
+        expect(host.textContent).not.toContain('Starting June 15, 2026');
+        expect(host.textContent).not.toContain('claude -p');
         const submit = Array.from(host.querySelectorAll('button')).find(
           (button) => button.textContent?.trim() === 'Save Changes'
         )!;
@@ -5856,12 +5874,13 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).toContain('fast:on');
     // Only legacy one-shot schedules have an effective CLI warm-up option.
     expect(host.textContent).toContain('Warm-up time');
-    expect(host.textContent).toContain('monthly Agent SDK credit');
+    expect(host.textContent).not.toContain('monthly Agent SDK credit');
+    expect(host.textContent).not.toContain('claude -p');
     expect(
       host.querySelector(
         'a[href="https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan"]'
       )
-    ).toBeTruthy();
+    ).toBeNull();
 
     await flushCustomFolderProbe();
 
@@ -5946,7 +5965,11 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
 
-      expect(host.querySelector('button#schedule-member')).toBeTruthy();
+      const recipientSelect = host.querySelector(
+        'button[role="combobox"][aria-label="Target when team is running"]'
+      );
+      expect(recipientSelect).toBeTruthy();
+      expect(recipientSelect?.textContent).toContain('alice');
       const wholeTeam = Array.from(host.querySelectorAll('button')).find(
         (button) => button.textContent?.trim() === 'Whole team'
       );
@@ -7777,8 +7800,13 @@ describe('LaunchTeamDialog', () => {
       await createPromise;
       await flush();
     });
-    expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
-    expect(onClose).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(onOpenTeam, (host.textContent ?? '').slice(-1200)).toHaveBeenCalledWith(
+        'team-alpha',
+        '/tmp/project'
+      );
+      expect(onClose).toHaveBeenCalledOnce();
+    });
 
     await act(async () => {
       root.unmount();

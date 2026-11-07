@@ -170,6 +170,26 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.launchTeam).not.toHaveBeenCalled();
   });
 
+  it('routes a case-variant lead target to the actual live lead', async () => {
+    const schedule = { ...makeSchedule('agent'), targetMember: 'LEAD' };
+    const result = await dispatch.dispatch(schedule, 'lead-case', active);
+    expect(result.kind).toBe('dispatched');
+    expect(port.createTask).toHaveBeenCalledOnce();
+    expect(port.createTask).toHaveBeenCalledWith(
+      'test-team',
+      expect.objectContaining({ owner: 'lead', startImmediately: true })
+    );
+    expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('keeps non-lead teammate identity exact to avoid accidental rerouting', async () => {
+    const schedule = { ...makeSchedule('agent'), targetMember: 'ALICE' };
+    const result = await dispatch.dispatch(schedule, 'member-case', active);
+    expect(result.kind).toBe('skipped');
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
   it('creates exactly one idempotent task for an already running agent', async () => {
     const result = await dispatch.dispatch(makeSchedule('agent'), 'run-2', active);
     expect(result.kind).toBe('dispatched');

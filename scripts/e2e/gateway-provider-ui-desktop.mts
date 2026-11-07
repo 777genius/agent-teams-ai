@@ -145,6 +145,12 @@ export async function verifyGatewayUi(
   };
   const row = (): GatewayUiLocator => page.locator('div.border-b').filter({ hasText: editedName });
   const cancelDialog = async (): Promise<void> => {
+    const createPage = page.locator('[data-testid="create-team-page"]');
+    if (await createPage.count()) {
+      await createPage.getByRole('button', { name: 'Back to teams' }).click();
+      await createPage.waitFor({ state: 'hidden' });
+      return;
+    }
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'hidden' });
   };
@@ -154,8 +160,8 @@ export async function verifyGatewayUi(
       `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.dirs.sandbox)})`
     );
     // The Teams header precedes the equivalent empty-state action.
-    await page.getByRole('button', { name: 'Create Team', exact: true }).first().click();
-    const dialog = page.getByRole('dialog');
+    await page.getByRole('button', { name: /^(Create Team|Continue creating)$/ }).first().click();
+    const dialog = page.locator('[data-testid="create-team-page"]');
     const nameInput = dialog.locator('#team-name');
     await readback('initialized team draft', async () => (await nameInput.inputValue()).length > 0);
     await nameInput.fill(teamName);
@@ -264,11 +270,14 @@ export async function verifyGatewayUi(
   await bindDraft(true);
   await cancelDialog();
   await readback(
-    'cancelled draft releases its binding',
-    async () => (await bindings()).length === 0
+    'Back retains the creation draft gateway binding',
+    async () => (await bindings()).some((binding) =>
+      binding.memberName === memberName && binding.profileId === profile.id
+    )
   );
-  await bindDraft();
-  const createDialog = page.getByRole('dialog');
+  await page.getByRole('button', { name: 'Continue creating', exact: true }).first().click();
+  const createDialog = page.locator('[data-testid="create-team-page"]');
+  await createDialog.getByText(`Bound to ${editedName} · key stored`, { exact: true }).waitFor();
   const launchAfterCreate = createDialog.locator('#launch-team');
   if ((await launchAfterCreate.getAttribute('aria-checked')) === 'true')
     await launchAfterCreate.click();
@@ -310,7 +319,7 @@ export async function verifyGatewayUi(
   await capture('profile-deleted');
   await page.evaluate(`window.electronAPI.teams.deleteTeam(${JSON.stringify(teamName)})`);
   console.log(
-    'Gateway UI PASS: profile CRUD, bound URL guard, invalid-key error, model selection, bind/unbind, cancelled draft cleanup, config-only save'
+    'Gateway UI PASS: profile CRUD, bound URL guard, invalid-key error, model selection, Back/resume binding retention, saved binding, explicit unbind'
   );
 }
 
