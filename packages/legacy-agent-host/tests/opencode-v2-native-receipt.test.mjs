@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { isCompleteNativeHostReceipt, REQUIRED_NATIVE_HOST_STEPS } from './opencode-v2-native-receipt-verify.mjs';
+import { parseOwnedDurableLog } from './opencode-v2-native-log-parse.mjs';
 
 test('a failed native Host proof publishes only sanitized diagnostics and no raw paths', () => {
   const root = mkdtempSync(join(tmpdir(), 'TEST-v2-host-failure-receipt-'));
@@ -136,4 +137,50 @@ test('receipt verifier CLI refuses lockfile-only artifacts with sanitized diagno
       assert.equal(result.stderr, 'native_host_receipt_missing_or_incomplete\n');
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('native durable SSE proof accepts a bounded, owned and ordered history prefix', () => {
+  const id = 'ses_TEST123', dir = '/TEST/workspace';
+  const frame = value => 'data: '+JSON.stringify(value)+'\n\n';
+  const sync = seq => ({type:'log.synced',aggregateID:id,seq});
+  const event = (seq, type = 'session.created') => ({
+    id:'evt'+seq, type, durable:{aggregateID:id,seq},
+    data:{sessionID:id},location:{directory:dir},
+  });
+  assert.deepEqual(parseOwnedDurableLog(frame(sync(0)),id,dir),
+    {watermark:0,eventCount:0}, 'stock V2 fresh log is sync-only, never a model turn');
+  assert.deepEqual(parseOwnedDurableLog(': heartbeat\n\n'+frame(event(0))+
+    frame(event(2,'session.updated'))+frame(sync(3)),id,dir),
+    {watermark:3,eventCount:2}, 'filtered native bus positions may have gaps');
+  assert.deepEqual(parseOwnedDurableLog(frame(sync(0)).replaceAll('\n','\r\n'),id,dir),
+    {watermark:0,eventCount:0});
+});
+
+test('native durable SSE proof rejects foreign, incomplete and reordered events', () => {
+  const id = 'ses_TEST123', dir = '/TEST/workspace';
+  const frame = value => 'data: '+JSON.stringify(value)+'\n\n';
+  const sync = (seq = 0, aggregateID = id) => ({type:'log.synced',aggregateID,seq});
+  const event = (seq = 0, overrides = {}) => ({
+    id:'evt'+seq,type:'session.created',durable:{aggregateID:id,seq},
+    data:{sessionID:id},location:{directory:dir},...overrides,
+  });
+  const bad = [
+    frame(sync()).trimEnd(), // truncated final SSE frame
+    'data: {\n\n', // malformed JSON
+    frame(sync(0,'ses_FOREIGN')),
+    frame(sync(-1)),
+    frame(event(0,{data:{sessionID:'ses_FOREIGN'}}))+frame(sync()),
+    frame(event(0,{durable:{aggregateID:'ses_FOREIGN',seq:0}}))+frame(sync()),
+    frame(event(0,{location:{directory:'/foreign'}}))+frame(sync()),
+    frame(event(0,{id:'duplicate'}))+frame(event(0,{id:'duplicate'}))+frame(sync(1)),
+    frame(event(0))+frame({...event(0),id:'evt_new',type:'session.updated'})+frame(sync(1)),
+    frame(event(0))+frame(sync(0))+frame(event(1)),
+    frame({...event(1),type:'session.updated'})+frame(sync(1)),
+    frame({...event(0),type:'session.updated'})+frame(sync(1)),
+    frame(event(0))+frame(sync(-1)),
+    frame(event(0)), // no log.synced terminal
+  ];
+  for (const stream of bad)
+    assert.throws(() => parseOwnedDurableLog(stream,id,dir),
+      /native_durable_log_identity_or_cursor_mismatch/);
 });
