@@ -21,6 +21,7 @@ import {
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import {
   catalogScenarios,
+  enterProviderSettings,
   verifyCatalog,
   waitForReadyCatalog,
 } from './opencode-diagnostics/catalog.mjs';
@@ -583,6 +584,23 @@ if (mode === 'seed-packaged') {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
+      // Startup cleanup also needs the mounted Providers page: its Manage
+      // control no longer lives on the passive Dashboard summary.
+      try {
+        await enterProviderSettings(evaluate, send);
+      } catch (navigationError) {
+        // Preserve an actual screenshot if navigation cannot become visible.
+        try {
+          const screenshot = await send('Page.captureScreenshot');
+          await writeFile(
+            path.join(root, `navigation-failure-${scenario}.png`),
+            Buffer.from(screenshot.data, 'base64')
+          );
+        } catch {
+          /* Keep the original navigation failure. */
+        }
+        throw navigationError;
+      }
       if (scenario === cleanupScenario) {
         await verifyStartupCleanup({ root, evaluate, send });
       } else if (catalogScenarios.includes(scenario)) {

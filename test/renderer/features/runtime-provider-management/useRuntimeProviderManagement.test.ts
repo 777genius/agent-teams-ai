@@ -19,6 +19,7 @@ import {
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  invalidateRuntimeProviderDirectoryScopeReads,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
@@ -1559,6 +1560,57 @@ describe('useRuntimeProviderManagement', () => {
     expect(state?.directorySupported).toBe(true);
     expect(state?.directoryError).toBeNull();
     expect(state?.directoryLoaded).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  it('ignores a pre-mutation directory response without changing the project', async () => {
+    const projectPath = '/tmp/TEST-stale-credential-directory';
+    let resolveDirectory!: (response: RuntimeProviderManagementDirectoryResponse) => void;
+    const loadProviderDirectory = vi.fn(
+      () =>
+        new Promise<RuntimeProviderManagementDirectoryResponse>((resolve) => {
+          resolveDirectory = resolve;
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: { runtimeProviderManagement: { loadProviderDirectory } } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: true,
+          projectPath,
+          loadViewOnEnable: false,
+          directorySummaryOnEnable: true,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadProviderDirectory).toHaveBeenCalledTimes(1));
+    });
+    // The confirmed mutation fences reads before the replacement request begins.
+    invalidateRuntimeProviderDirectoryScopeReads(projectPath);
+    await act(async () => {
+      resolveDirectory({
+        ...createEmptyDirectoryResponse(),
+        directory: {
+          ...createEmptyDirectoryResponse().directory!,
+          totalCount: 1,
+          returnedCount: 1,
+          entries: [createOpenAiLocalDirectoryEntry()],
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(state?.directoryEntries).toEqual([]);
+    expect(state?.directoryLoaded).toBe(false);
+    expect(state?.directoryLoading).toBe(false);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(projectPath)).toBeNull();
     await act(async () => root.unmount());
   });
 
