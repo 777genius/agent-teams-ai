@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigManager } from '../../../../src/main/services/infrastructure/ConfigManager';
 import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
@@ -39,5 +39,11 @@ describe('ConfigManager persistence barrier', () => {
     const manager = new ConfigManager(path.join(parentFile, 'settings.json'));
     manager.updateConfig('general', { useNativeTitleBar: true });
     await expect(manager.waitForPersistence()).rejects.toThrow();
+    // Both diagnostics are expected in this intentionally broken filesystem fixture.
+    const errors = vi.mocked(console.error).mock.calls.map((call) => call.map(String).join(' '));
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain('Error loading config');
+    expect(errors[1]).toContain('Error persisting config');
+    vi.mocked(console.error).mockClear();
   });
 });
