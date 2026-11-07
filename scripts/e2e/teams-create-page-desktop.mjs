@@ -575,6 +575,53 @@ async function main() {
       `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(teamsTabId)})`);
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'draft survives tab switch');
+    log('render creation page in both themes and at 200% CSS zoom');
+    for (const theme of ['light', 'dark']) {
+      await cdp.evaluate(
+        "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig.general, theme: " +
+          JSON.stringify(theme) + " } } }))"
+      );
+      await cdp.waitFor(
+        "document.documentElement.classList.contains(" + JSON.stringify(theme) + ")",
+        theme + ' theme applied'
+      );
+      await captureScreenshot(cdp, fixture, 'theme-' + theme);
+    }
+    // Layout-only proxy for 200% zoom. Native Electron zoom is a separate host capability.
+    await cdp.evaluate("document.documentElement.style.zoom = '2'");
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')?.getBoundingClientRect().width > 0",
+      'page Back action remains visible at CSS zoom 200%'
+    );
+    await captureScreenshot(cdp, fixture, 'css-zoom-200');
+    await cdp.evaluate("document.documentElement.style.zoom = ''");
+
+    log('split into two panes and prevent duplicate creation editors');
+    const paneCount = await cdp.evaluate("(() => { " +
+      "const s = window.__agentTeamsDevStore.getState(); " +
+      "const settings = s.getAllPaneTabs().find(t => t.type === 'settings'); " +
+      "const owner = s.paneLayout.panes.find(p => p.tabs.some(t => t.teamsCreationPage)); " +
+      "if (!settings || !owner) throw new Error('Missing staged Settings/Teams tabs'); " +
+      "s.splitPane(owner.id, settings.id, 'right'); " +
+      "window.__agentTeamsDevStore.getState().openTeamsCreationPage(); " +
+      "return window.__agentTeamsDevStore.getState().paneLayout.panes.length; " +
+    "})()");
+    assert.equal(paneCount, 2, 'Split-pane creation view did not create two panes');
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]')?.getBoundingClientRect().width > 0",
+      'single creation editor visible in split pane'
+    );
+    const editorCount = await cdp.evaluate(
+      "window.__agentTeamsDevStore.getState().getAllPaneTabs().filter(t => t.teamsCreationPage).length"
+    );
+    assert.equal(editorCount, 1, 'A second writable creation editor was opened');
+    await captureScreenshot(cdp, fixture, 'split-pane');
+    await cdp.evaluate("(() => { " +
+      "const s = window.__agentTeamsDevStore.getState(); " +
+      "const settings = s.paneLayout.panes.find(p => p.tabs.some(t => t.type === 'settings')); " +
+      "if (settings) s.closePane(settings.id); " +
+      "window.__agentTeamsDevStore.getState().openTeamsCreationPage(); " +
+    "})()");
 
     log('restart real Electron process retaining the same isolated data root');
     await cleanup({ ...fixture, root: null });
@@ -696,6 +743,114 @@ async function main() {
       'copy seed did not replay over an edited draft'
     );
     await captureScreenshot(cdp, fixture, 'copy-resumed-edits');
+    log('template replacement must be cancelable without losing copied draft');
+    await cdp.click(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))" +
+      ".find(b => b.textContent?.includes('Optional team details'))"
+    );
+    await cdp.waitFor("document.querySelector('#team-description')", 'expanded team details');
+    const copiedDescription = await cdp.evaluate(
+      "document.querySelector('#team-description')?.value"
+    );
+    assert(copiedDescription, 'Copied team description did not hydrate');
+    const selectTemplate = async () => {
+      await cdp.click(
+        "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
+      );
+      await cdp.click(
+        "Array.from(document.querySelectorAll('[role=option]'))" +
+        ".find(option => option.textContent?.includes('Software Product Team'))"
+      );
+      await cdp.waitFor(
+        "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"]')",
+        'template replacement confirmation'
+      );
+    };
+    await selectTemplate();
+    await cdp.click(
+      "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"] button:not([data-confirm-btn])"
+    );
+    assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
+      copiedDescription, 'Canceling template replacement discarded the copied description');
+    await selectTemplate();
+    await cdp.click(
+      "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"] button[data-confirm-btn]"
+    );
+    await cdp.waitFor(
+      "document.querySelector('#team-description')?.value === " +
+      JSON.stringify('Design, build and validate apps, websites and digital products.'),
+      'template applied after explicit confirmation'
+    );
+    await captureScreenshot(cdp, fixture, 'template-confirmed');
+
+    log('create from actual Organization Map and verify native placement');
+    await cdp.click(
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
+    );
+    await cdp.waitFor(createButtonExpression('Continue creating'), 'template draft retained');
+    const organizationName = 'e2e-org-' + randomUUID().slice(0, 8);
+    const organization = await cdp.evaluate(
+      "window.electronAPI.organizations.createOrganization({ name: " +
+      JSON.stringify(organizationName) + " }).then(s => s.organizations.find(o => o.name === " +
+      JSON.stringify(organizationName) + "))"
+    );
+    assert(organization?.id && organization?.rootNodeId,
+      'Native organization fixture has no root');
+    await cdp.evaluate(
+      "window.__agentTeamsDevStore.getState().openTab({ type: 'organizations', label: 'Organizations' })"
+    );
+    await cdp.click(createButtonExpression('Edit'));
+    await cdp.click(createButtonExpression('Team here'));
+    await cdp.waitFor(
+      "document.querySelector('[role=dialog] button[data-confirm-btn]')",
+      'replace-existing-draft confirmation from Organization Map'
+    );
+    await cdp.click("document.querySelector('[role=dialog] button[data-confirm-btn]')");
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page] input#team-name')",
+      'creation page opened from Organization Map'
+    );
+    const creationSeed = await cdp.evaluate(
+      "window.__agentTeamsDevStore.getState().getAllPaneTabs()" +
+      ".find(t => t.type === 'teams' && t.teamsCreationPage)?.teamsCreationSeed"
+    );
+    assert.equal(creationSeed?.placement?.organizationId, organization.id);
+    assert.equal(creationSeed?.placement?.parentUnitId, organization.rootNodeId);
+    await captureScreenshot(cdp, fixture, 'organization-entry');
+
+    log('duplicate team-name validation and recovery in organization editor');
+    await cdp.fill('#team-name', fixture.teamName);
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]')?.innerText.includes('Team name already exists')",
+      'existing team name rejected'
+    );
+    const orgTeamName = 'org-team-e2e-' + randomUUID().slice(0, 8);
+    await cdp.fill('#team-name', orgTeamName);
+    await cdp.click(createButtonExpression('Custom path'));
+    await cdp.fill(
+      '[data-testid=create-team-page] input[aria-label="Custom working directory"]',
+      fixture.projectPath
+    );
+    const orgLaunchChecked = await cdp.evaluate(
+      "document.querySelector('#launch-team')?.getAttribute('data-state') === 'checked'"
+    );
+    if (orgLaunchChecked) {
+      await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
+    }
+    await cdp.click(createButtonExpression('Create'));
+    await cdp.waitFor(
+      "!document.querySelector('[data-testid=create-team-page]')",
+      'organization team saved and editor closed', 45_000
+    );
+    const structure = await cdp.evaluate(
+      "window.electronAPI.organizations.getOrganizationStructure()"
+    );
+    assert(
+      structure.units.some(u => u.kind === 'team' &&
+        u.teamName === orgTeamName && u.organizationId === organization.id),
+      'Created team was not assigned to the requested organization'
+    );
+    await captureScreenshot(cdp, fixture, 'organization-created');
 
     const results = {
       success: true,
