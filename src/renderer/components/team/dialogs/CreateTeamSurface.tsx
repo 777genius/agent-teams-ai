@@ -25,14 +25,14 @@ interface CreateTeamSurfaceProps {
  * The form, provider checks, and submission flow have exactly one owner.
  * LaunchTeamDialog is intentionally independent of this component.
  */
-export function CreateTeamSurface({
+export const CreateTeamSurface = ({
   presentation,
   open,
   isCopy,
   onClose,
   children,
   overlay,
-}: CreateTeamSurfaceProps): React.JSX.Element {
+}: CreateTeamSurfaceProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const title = isCopy ? t('create.title.copy') : t('create.title.create');
   const description = isCopy ? t('create.description.copy') : t('create.description.create');
@@ -73,4 +73,4 @@ export function CreateTeamSurface({
       {overlay}
     </Dialog>
   );
-}
+};
