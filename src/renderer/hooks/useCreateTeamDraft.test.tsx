@@ -361,4 +361,51 @@ describe('useCreateTeamDraft', () => {
     act(() => root.unmount());
   });
 
+
+  it('retains per-member workflow file chips across unmount and restored snapshot', async () => {
+    loadSnapshotMock.mockResolvedValue(null);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let root = createRoot(host);
+    let draft: ReturnType<typeof useCreateTeamDraft> | null = null;
+    const render = async () => {
+      await act(async () => {
+        root.render(React.createElement(HookProbeWithDraft, {
+          onLoaded: (value) => { draft = value; },
+        }));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+    };
+    const workflowChip = {
+      id: 'workflow-file-1',
+      fileName: 'README.md',
+      filePath: '/sandbox/README.md',
+      fromLine: null,
+      toLine: null,
+      codeText: '',
+      language: 'markdown',
+    };
+    await render();
+    act(() => {
+      draft?.setMembers([{
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        customRole: '',
+        workflow: 'Review 📄README.md',
+        workflowChips: [workflowChip],
+      }]);
+      root.unmount();
+    });
+    const stored = saveSnapshotMock.mock.calls.at(-1)?.[0];
+    expect(stored.members[0].workflowChips).toEqual([workflowChip]);
+    loadSnapshotMock.mockResolvedValue(stored);
+    draft = null;
+    root = createRoot(host);
+    await render();
+    expect(draft?.members[0]?.workflowChips).toEqual([workflowChip]);
+    act(() => root.unmount());
+  });
+
 });
