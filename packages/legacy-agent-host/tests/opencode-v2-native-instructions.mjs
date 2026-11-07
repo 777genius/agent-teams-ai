@@ -78,6 +78,19 @@ async function port() {
   await new Promise((ok,reject)=>s.close(error=>error?reject(error):ok()));
   return address.port;
 }
+async function readBoundedNativeBody(response, errorCode) {
+  // Bound the actual network read, not only the decoded body after buffering.
+  // A native 204 response legitimately has no body.
+  if (!response.body) return '';
+  const chunks=[];
+  let bytes=0;
+  for await (const chunk of response.body) {
+    bytes+=chunk.byteLength;
+    if(bytes>1024*1024)throw Error(errorCode);
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
 async function native(path, method='GET', body, signal=AbortSignal.timeout(12000)) {
   if (!endpoint || !path.startsWith('/api/') && !path.startsWith('/api/experimental/'))
     throw Error('non_owned_native_route');
@@ -89,8 +102,7 @@ async function native(path, method='GET', body, signal=AbortSignal.timeout(12000
     },
     body: body===undefined?undefined:JSON.stringify(body), signal,
   });
-  const text=await response.text();
-  if(Buffer.byteLength(text)>1024*1024)throw Error('unbounded_native_response');
+  const text=await readBoundedNativeBody(response,'unbounded_native_response');
   return { status:response.status, data:text?JSON.parse(text):undefined };
 }
 // Read-only durable cursor proof, reusable across the original native process
@@ -101,9 +113,8 @@ async function readOwnedDurableLog(sessionId) {
     redirect:'error',signal:AbortSignal.timeout(12000),
     headers:{authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64')},
   });
-  const body=await response.text();
-  if(response.status!==200||Buffer.byteLength(body)>1024*1024)
-    throw Error('native_durable_log_read_unconfirmed');
+  if(response.status!==200)throw Error('native_durable_log_read_unconfirmed');
+  const body=await readBoundedNativeBody(response,'native_durable_log_read_unconfirmed');
   const frames=body.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n\n')
     .flatMap(frame=>{
       const data=frame.split('\n').filter(line=>line.startsWith('data:'))
