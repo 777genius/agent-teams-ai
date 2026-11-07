@@ -1,4 +1,5 @@
 import { resolveAnthropicEffortSupport } from '@features/anthropic-runtime-profile/main';
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { execCli } from '@main/utils/childProcess';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
@@ -538,6 +539,7 @@ export async function probeProviderRuntimeControlPlane({
   providerArgs: string[];
   appendDebugLog?: (event: string, data: Record<string, unknown>) => void;
 }): Promise<{ warning?: string }> {
+  const context = await resolveRuntimeStatusExecutionContext(providerId, cwd);
   const cliCommandLabel = getConfiguredCliCommandLabel();
   const providerLabel = getTeamProviderLabel(providerId);
 
@@ -551,9 +553,10 @@ export async function probeProviderRuntimeControlPlane({
         '--summary',
         '--provider',
         providerId,
+        ...context.projectArgs,
       ]),
       {
-        cwd,
+        cwd: context.cwd ?? cwd,
         env,
         timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
       }
