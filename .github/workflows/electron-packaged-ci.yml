@@ -33,6 +33,8 @@ on:
       - 'scripts/prepare-cpu-features-rebuild.cjs'
       - 'scripts/postinstall-electron.cjs'
       - 'src/main/ipc/window.ts'
+      - 'src/main/utils/electronDevPathOverrides.ts'
+      - 'src/main/bootstrapUserDataMigration.ts'
 
 permissions:
   contents: read
