@@ -542,8 +542,12 @@ async function main() {
       return pane.activeTabId;
     })()`);
     await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('general')");
-    await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
-      'creation page inactive');
+    // Inactive Teams creation pages are retained mounted to avoid lost editor state.
+    // Assert that the inactive page is hidden, not removed from the DOM.
+    await cdp.waitFor(
+      "(() => { const page = document.querySelector('[data-testid=create-team-page]'); return !page || page.getClientRects().length === 0; })()",
+      'creation page hidden while Settings is active'
+    );
     await cdp.evaluate(
       `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(teamsTabId)})`);
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
