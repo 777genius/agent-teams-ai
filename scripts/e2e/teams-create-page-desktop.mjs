@@ -651,8 +651,9 @@ async function main() {
       "?.querySelector('button[aria-label=\"Copy team\"]')";
     await cdp.click(copyTarget);
     await cdp.waitFor(
-      "document.querySelector('[data-testid=create-team-page] #team-name')",
-      'copy action opened the shared creation page'
+      `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`,
+      'copy action initialized the new team identity from the selected card',
+      30_000
     );
     const copiedName = await cdp.evaluate(
       "document.querySelector('[data-testid=create-team-page] #team-name')?.value"
