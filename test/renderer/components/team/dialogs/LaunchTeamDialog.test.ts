@@ -6029,8 +6029,10 @@ describe('LaunchTeamDialog', () => {
       await createPromise;
       await flush();
     });
-    expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
-    expect(onClose).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
+      expect(onClose).toHaveBeenCalledOnce();
+    });
 
     await act(async () => {
       root.unmount();
