@@ -43,7 +43,7 @@ const input = {
 
 describe('getDashboardConnectionSummary (no IPC)', () => {
   it('counts verified CLI logins separately from complete OpenCode directory connections', () => {
-    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 2, cliCountComplete: true, openCodeConnected: 2 });
+    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 2, cliCountComplete: true, cliCountPending: false, openCodeConnected: 2 });
   });
 
   it('never counts an OpenCode host or inventory-only fallback as a separate CLI credential', () => {
@@ -56,6 +56,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toEqual({
       cliConnected: 1,
       cliCountComplete: true,
+      cliCountPending: false,
       openCodeConnected: 2,
     });
   });
@@ -64,6 +65,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     expect(getDashboardConnectionSummary({ ...input, cliStatus: null })).toEqual({
       cliConnected: null,
       cliCountComplete: false,
+      cliCountPending: false,
       openCodeConnected: 2,
     });
     const cliStatus = {
@@ -79,6 +81,29 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       cliCountComplete: false,
     });
     expect(getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliCountComplete).toBe(false);
+  });
+
+  it('shows the settled zero as a lower bound when Gemini is frozen, not checking forever', () => {
+    const cliStatus = {
+      ...baseCliStatus,
+      providers: baseCliStatus.providers
+        .filter((provider) => provider.providerId !== 'gemini')
+        .map((provider) => ({ ...provider, authenticated: false })),
+    };
+    expect(getDashboardConnectionSummary({ ...input, cliStatus })).toMatchObject({
+      cliConnected: 0,
+      cliCountComplete: false,
+      cliCountPending: false,
+    });
+    expect(getDashboardConnectionSummary({
+      ...input,
+      cliStatus,
+      providerStatusLoading: { gemini: true },
+    })).toMatchObject({
+      cliConnected: null,
+      cliCountComplete: false,
+      cliCountPending: true,
+    });
   });
 
   it('does not claim an exact OpenCode count for partial, absent or stale directories', () => {

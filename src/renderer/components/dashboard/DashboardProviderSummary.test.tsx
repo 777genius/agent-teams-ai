@@ -60,7 +60,7 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-provider-summary"]')).not.toBeNull();
       expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-        .toContain('cliStatus.provider.checkingProviders');
+        .toContain('runtimeProvider.badges.unknown');
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();

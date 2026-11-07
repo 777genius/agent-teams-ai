@@ -39,6 +39,8 @@ export interface DashboardConnectionSummary {
   cliConnected: number | null;
   /** False means some CLI statuses remain unknown; connected count is only a lower bound. */
   cliCountComplete: boolean;
+  /** True only while a known CLI provider status check is in progress. */
+  cliCountPending: boolean;
   /** Only exact, complete, current-runtime OpenCode directory snapshots are counted. */
   openCodeConnected: number | null;
 }
@@ -88,14 +90,27 @@ export function getDashboardConnectionSummary({
     (provider.statusCheckOutcome === 'authoritative' ||
       provider.statusCheckOutcome === 'model_only' ||
       (provider.statusCheckOutcome == null && provider.verificationState === 'verified'));
+  const cliCountPending =
+    cliStatusLoading ||
+    MAIN_PROVIDER_IDS.some(
+      (id) =>
+        providerStatusLoading[id] === true ||
+        cliStatus?.providers.find((provider) => provider.providerId === id)
+          ?.statusCheckOutcome === 'pending'
+    );
   const cliCountComplete =
-    !cliStatusLoading &&
+    !cliCountPending &&
     mainProviders.length === MAIN_PROVIDER_IDS.length &&
     mainProviders.every(settled);
   const knownConnected = mainProviders.filter(
     (provider) => settled(provider) && provider.authenticated
   ).length;
-  const cliConnected = cliCountComplete || knownConnected > 0 ? knownConnected : null;
+  // A completed partial scan can establish "at least 0 connected" if one
+  // provider was checked. Do not present it as an exact total.
+  const cliConnected =
+    cliCountComplete || knownConnected > 0 || (!cliCountPending && mainProviders.some(settled))
+      ? knownConnected
+      : null;
 
   const runtimeRevision =
     runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
@@ -106,7 +121,7 @@ export function getDashboardConnectionSummary({
     projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
 
   if (!globalComplete || !projectComplete) {
-    return { cliConnected, cliCountComplete, openCodeConnected: null };
+    return { cliConnected, cliCountComplete, cliCountPending, openCodeConnected: null };
   }
 
   // The project snapshot may override a global connection with the same ID;
@@ -126,5 +141,5 @@ export function getDashboardConnectionSummary({
     }
   }
 
-  return { cliConnected, cliCountComplete, openCodeConnected };
+  return { cliConnected, cliCountComplete, cliCountPending, openCodeConnected };
 }

@@ -355,8 +355,27 @@ try {
     'Boolean(document.querySelector("[data-testid=provider-settings-page]")?.getClientRects().length)',
     'Providers settings page'
   );
+  // Dashboard no longer mounts the expensive provider UI. Navigate using the
+  // visible real button after the startup splash is gone.
   await cdp.wait(
-    'Boolean(document.querySelector("[data-testid=runtime-manage-anthropic]"))',
+    `(() => {
+      const button = document.querySelector('[data-testid=dashboard-manage-providers]');
+      if (document.getElementById('splash') || !button?.isConnected || button.disabled) return false;
+      button.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const r = button.getBoundingClientRect();
+      if (!r.width || !r.height) return false;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return hit === button || button.contains(hit);
+    })()`,
+    'Dashboard Manage Providers action'
+  );
+  await cdp.click('[data-testid=dashboard-manage-providers]');
+  await cdp.wait(
+    'Boolean(document.querySelector("[data-testid=provider-settings-page]")?.getClientRects().length)',
+    'Providers settings page'
+  );
+  await cdp.wait(
+    'Boolean(document.querySelector("[data-testid=runtime-manage-anthropic]")?.getClientRects().length)',
     'Anthropic Manage button'
   );
   await cdp.click('[data-testid=runtime-manage-anthropic]');

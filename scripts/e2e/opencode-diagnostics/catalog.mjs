@@ -165,6 +165,9 @@ export async function enterProviderSettings(evaluate, send) {
     const buttonReady = await evaluate(`(() => {
       const button = ${dashboardButton};
       if (document.getElementById('splash') || !button?.isConnected || button.disabled) return false;
+      // Hit-testing an off-screen element always fails; scroll before checking
+      // which element actually owns the prospective native mouse event.
+      button.scrollIntoView({ block: 'center', inline: 'nearest' });
       const rect = button.getBoundingClientRect();
       if (!rect.width || !rect.height) return false;
       const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);

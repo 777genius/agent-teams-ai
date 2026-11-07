@@ -59,6 +59,7 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
   if (!isElectronMode()) return null;
 
   const unknown = settingsT('runtimeProvider.badges.unknown');
+  const cliCountSuffix = summary.cliCountPending ? t('cliStatus.provider.checkingProviders') : unknown;
   const mainText =
     !multimodelEnabled
       ? cliStatus?.authLoggedIn
@@ -67,12 +68,12 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
           ? t('cliStatus.provider.checkingAuthentication')
           : t('cliStatus.provider.connectToGetStarted')
       : summary.cliConnected === null
-        ? t('cliStatus.provider.checkingProviders')
+        ? cliCountSuffix
         : summary.cliCountComplete
           ? t('cliStatus.provider.connectedCount', { connected: summary.cliConnected })
           : `${t('cliStatus.provider.connectedCount', {
               connected: summary.cliConnected,
-            })} · ${t('cliStatus.provider.checkingProviders')}`;
+            })} · ${cliCountSuffix}`;
   const openCodeText =
     multimodelEnabled &&
     (summary.openCodeConnected === null
