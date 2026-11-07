@@ -93,6 +93,32 @@ async function native(path, method='GET', body, signal=AbortSignal.timeout(12000
   if(Buffer.byteLength(text)>1024*1024)throw Error('unbounded_native_response');
   return { status:response.status, data:text?JSON.parse(text):undefined };
 }
+// Read-only durable cursor proof, reusable across the original native process
+// and an independently attested cold restart. Never submit a model turn.
+async function readOwnedDurableLog(sessionId) {
+  const path='/api/experimental/session/'+encodeURIComponent(sessionId)+'/log?follow=false';
+  const response=await fetch(endpoint+path, {
+    redirect:'error',signal:AbortSignal.timeout(12000),
+    headers:{authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64')},
+  });
+  const body=await response.text();
+  if(response.status!==200||Buffer.byteLength(body)>1024*1024)
+    throw Error('native_durable_log_read_unconfirmed');
+  const frames=body.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n\n')
+    .flatMap(frame=>{
+      const data=frame.split('\n').filter(line=>line.startsWith('data:'))
+        .map(line=>line.slice(5).trimStart()).join('\n');
+      return data?[JSON.parse(data)]:[];
+    });
+  const sync=frames.at(-1), events=frames.slice(0,-1);
+  if(frames.length<1||frames.length>4097||
+     sync?.type!=='log.synced'||sync.aggregateID!==sessionId||
+     !Number.isSafeInteger(sync.seq)||sync.seq<0||
+     events.some(event=>event?.durable?.aggregateID!==sessionId||
+       event?.data?.sessionID!==sessionId))
+    throw Error('native_durable_log_identity_or_cursor_mismatch');
+  return {watermark:sync.seq,eventCount:events.length};
+}
 try {
   if (process.platform !== 'linux' || process.arch !== 'x64' ||
       !binaryRoot?.startsWith('/')) throw Error('unsupported_TEST_host');
@@ -304,33 +330,9 @@ try {
   // Stock V2 can ACK a prompt without retaining durable session events.
   // Read the real pinned native session log BEFORE any model/tool execution:
   // this is a cursor observation, never an authorization to submit a turn.
-  const nativeLogPath='/api/experimental/session/'+encodeURIComponent(nativeSessionId)+
-    '/log?follow=false';
-  const logResponse=await fetch(endpoint+nativeLogPath, {
-    redirect:'error',signal:AbortSignal.timeout(12000),
-    headers:{authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64')},
-  });
-  const logText=await logResponse.text();
-  if(logResponse.status!==200||Buffer.byteLength(logText)>1024*1024)
-    throw Error('native_durable_log_read_unconfirmed');
-  const logFrames=logText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n\n')
-    .flatMap(frame=>{
-      const data=frame.split('\n').filter(line=>line.startsWith('data:'))
-        .map(line=>line.slice(5).trimStart()).join('\n');
-      return data?[JSON.parse(data)]:[];
-    });
-  const logSync=logFrames.at(-1);
-  const logEvents=logFrames.slice(0,-1);
-  if(logFrames.length<1||logFrames.length>4097||
-     logSync?.type!=='log.synced'||logSync.aggregateID!==nativeSessionId||
-     !Number.isSafeInteger(logSync.seq)||logSync.seq<0||
-     logEvents.some(event=>event?.durable?.aggregateID!==nativeSessionId||
-       event?.data?.sessionID!==nativeSessionId))
-    throw Error('native_durable_log_identity_or_cursor_mismatch');
-  // Only schema, count and watermark may enter the public receipt. A native
-  // SSE body might include provider data and must never be serialized.
-  receipt.nativeLogReadback={readOnly:true,synced:true,watermark:logSync.seq,
-    eventCount:logEvents.length,modelTurnProven:false};
+  const freshLog=await readOwnedDurableLog(nativeSessionId);
+  // Only schema, count and watermark may enter a publicly downloadable receipt.
+  receipt.nativeLogReadback={readOnly:true,synced:true,...freshLog,modelTurnProven:false};
   receipt.steps.push('real_native_fresh_session_durable_log_cursor_read_only');
   // Seal is synchronous revocation. The exact owner must initiate the real
   // native process-group stop before driver.close()/cleanup() are requested.
@@ -417,6 +419,14 @@ try {
   receipt.restart={priorPid,priorStartTicks,pid:child.pid,
     startTicks,actualBinarySha256:hash,readOnly:true};
   receipt.steps.push('native_cold_restart_session_permissions_and_context_read_only');
+  // Reopen the EXACT same durable log against a different, freshly attested
+  // TEST-owned PID. No prompt, permissions reply or instruction mutation occurs.
+  const recoveredLog=await readOwnedDurableLog(nativeSessionId);
+  if(recoveredLog.watermark<freshLog.watermark||
+     recoveredLog.eventCount<freshLog.eventCount)
+    throw Error('native_cold_restart_durable_log_cursor_regressed');
+  receipt.restartLogReadback={readOnly:true,synced:true,...recoveredLog,modelTurnProven:false};
+  receipt.steps.push('native_cold_restart_durable_log_cursor_read_only');
   if(!await stopOwned())throw Error('restarted_native_process_tree_cleanup_unconfirmed');
   receipt.steps.push('same_TEST_native_owner_restart_cleanup_confirmed');
 } catch {
