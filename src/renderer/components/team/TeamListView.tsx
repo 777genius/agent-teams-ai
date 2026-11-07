@@ -826,7 +826,11 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
   const openCopiedTeam = useCallback(
     async (copy: TeamCopyData) => {
       const saved = await createTeamDraftStorage.loadSnapshot();
-      if (saved?.teamName.trim() && saved.teamName !== copy.teamName) {
+      const hasOpenEditor = useStore
+        .getState()
+        .getAllPaneTabs()
+        .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
+      if (hasOpenEditor || (saved?.teamName.trim() && saved.teamName !== copy.teamName)) {
         const accepted = await confirm({
           title: t('create.title.copy'),
           message: t('create.draft.replaceConfirmation', { defaultValue: 'Copying this team will replace your unfinished draft. Continue?' }),
@@ -1088,6 +1092,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
       }
     >
       <CreateTeamDialog
+        key={createSeed?.id ?? 'new'}
         presentation="page"
         open={createPageOpen}
         canCreate={canCreate}
