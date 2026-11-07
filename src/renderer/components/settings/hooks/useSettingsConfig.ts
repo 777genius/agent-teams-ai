@@ -14,10 +14,10 @@ import type { AppConfig } from '@renderer/types/data';
 // Get the setState function from the store to update appConfig globally
 const setStoreState = useStore.setState;
 
-type PendingConfigUpdate = {
+interface PendingConfigUpdate {
   section: keyof AppConfig;
   data: Partial<AppConfig[keyof AppConfig]>;
-};
+}
 
 function applyConfigUpdate(config: AppConfig, update: PendingConfigUpdate): AppConfig {
   return {

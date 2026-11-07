@@ -64,6 +64,20 @@ const createTeamDraftMock = vi.hoisted(() => ({
     setLaunchTeam: vi.fn(),
     teamColor: 'slate',
     setTeamColor: vi.fn(),
+    limitContext: false,
+    setLimitContext: vi.fn(),
+    skipPermissions: true,
+    setSkipPermissions: vi.fn(),
+    selectedEffort: '' as string,
+    setSelectedEffort: vi.fn(),
+    selectedFastMode: 'inherit' as 'inherit' | 'on' | 'off',
+    setSelectedFastMode: vi.fn(),
+    organizationPlacementEnabled: false,
+    setOrganizationPlacementEnabled: vi.fn(),
+    organizationPlacementOrganizationId: '',
+    setOrganizationPlacementOrganizationId: vi.fn(),
+    organizationPlacementParentId: '',
+    setOrganizationPlacementParentId: vi.fn(),
     isLoaded: true,
     clearDraft: vi.fn(),
   },
@@ -4750,7 +4764,11 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
 
-      expect(host.querySelector('button#schedule-member')).toBeTruthy();
+      const recipientSelect = host.querySelector(
+        'button[role="combobox"][aria-label="Target when team is running"]'
+      );
+      expect(recipientSelect).toBeTruthy();
+      expect(recipientSelect?.textContent).toContain('alice');
       const wholeTeam = Array.from(host.querySelectorAll('button')).find(
         (button) => button.textContent?.trim() === 'Whole team'
       );
@@ -6020,8 +6038,13 @@ describe('LaunchTeamDialog', () => {
       await createPromise;
       await flush();
     });
-    expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
-    expect(onClose).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(onOpenTeam, (host.textContent ?? '').slice(-1200)).toHaveBeenCalledWith(
+        'team-alpha',
+        '/tmp/project'
+      );
+      expect(onClose).toHaveBeenCalledOnce();
+    });
 
     await act(async () => {
       root.unmount();
