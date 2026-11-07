@@ -377,7 +377,7 @@ try {
   // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");
   await until(() => cdp!.evaluate(
-    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&!!root.querySelector('[data-testid="team-task-table-count"][data-shown="1004"][data-total="1004"]');})()"
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='1004'&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='1004';})()"
   ), 'full 1004-task snapshot is available in table');
   const setTableSearch = async (value: string): Promise<void> => {
     await cdp!.evaluate(`(()=>{
@@ -391,19 +391,19 @@ try {
   };
   await setTableSearch('TABLE_BATCH50_');
   await until(() => cdp!.evaluate(
-    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const visible=[...root?.querySelectorAll('[data-testid=\"team-task-table-row\"]')??[]];return !!root?.querySelector('[data-testid="team-task-table-count"][data-shown="50"][data-total="50"]')&&visible.length>=2&&visible.length<40&&visible.every(row=>row.textContent?.includes('TABLE_BATCH50_'));})()"
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const visible=[...root?.querySelectorAll('[data-testid=\"team-task-table-row\"]')??[]];return root?.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='50'&&root?.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='50'&&visible.length>=2&&visible.length<40&&visible.every(row=>row.textContent?.includes('TABLE_BATCH50_'));})()"
   ), 'shared search filters to 50 virtualized tasks');
   await setTableSearch('TABLE_E2E_REVIEW');
   await until(() => cdp!.evaluate(
-    "(()=>{const rows=document.querySelectorAll('[data-testid=\"team-task-table-row\"]');return rows.length===1&&rows[0].getAttribute('data-task-id')==='3'&&!!document.querySelector('[data-testid="team-task-table-count"][data-shown="1"][data-total="1"]');})()"
+    "(()=>{const rows=document.querySelectorAll('[data-testid=\"team-task-table-row\"]');return rows.length===1&&rows[0].getAttribute('data-task-id')==='3'&&document.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='1'&&document.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='1';})()"
   ), 'shared search narrows to exactly one task');
   await setTableSearch('TABLE_MATCH_NOT_FOUND_99999');
   await until(() => cdp!.evaluate(
-    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length===0&&!!root.querySelector('[data-testid="team-task-table-count"][data-shown="0"][data-total="0"]');})()"
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length===0&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='0'&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='0';})()"
   ), 'shared search shows real empty-state table');
   await setTableSearch('');
   await until(() => cdp!.evaluate(
-    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const scroller=root?.querySelector('[data-testid=\"team-task-table-scroller\"]');const count=!!root?.querySelector('[data-testid="team-task-table-count"][data-shown="1004"][data-total="1004"]');const rendered=root?.querySelectorAll('[data-testid=\"team-task-table-row\"]').length??0;return count&&!!scroller&&scroller.scrollHeight>scroller.clientHeight&&rendered>0&&rendered<40;})()"
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const scroller=root?.querySelector('[data-testid=\"team-task-table-scroller\"]');const count=root?.querySelector('[data-testid=team-task-table-count]');const rendered=root?.querySelectorAll('[data-testid=\"team-task-table-row\"]').length??0;return count?.dataset.shown==='1004'&&count?.dataset.total==='1004'&&!!scroller&&scroller.scrollHeight>scroller.clientHeight&&rendered>0&&rendered<40;})()"
   ), 'all 1004 tasks remain virtualized after clearing search');
   await cdp.evaluate("(()=>{const scroller=document.querySelector('[data-testid=\"team-task-table-scroller\"]');if(!scroller)throw new Error('Table scroller missing');scroller.scrollTop=scroller.scrollHeight;})()");
   await until(() => cdp!.evaluate(
