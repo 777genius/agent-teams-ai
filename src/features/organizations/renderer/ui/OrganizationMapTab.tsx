@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
-import { useStore } from '@renderer/store';
 import { Button } from '@renderer/components/ui/button';
 import {
   Select,
@@ -14,6 +11,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Bot, Building2, Link2, Network, Pencil, RadioTower, RefreshCw, Users } from 'lucide-react';
 
+import { useOrganizationCreateTeamDialog } from '../hooks/useOrganizationCreateTeamDialog';
 import { useOrganizationMap } from '../hooks/useOrganizationMap';
 import { useOrganizationStructureManager } from '../hooks/useOrganizationStructureManager';
 import { DEFAULT_ORGANIZATION_MAP_LAYOUT_MODE } from '../view-models/organizationMapLayout';
@@ -23,7 +21,7 @@ import { OrganizationEditorPanel } from './OrganizationEditorPanel';
 import { OrgGraphSurface } from './OrgGraphSurface';
 import { OrgInspector } from './OrgInspector';
 
-import type { OrganizationMapScope, OrganizationPlacementSelection } from '../../contracts';
+import type { OrganizationMapScope } from '../../contracts';
 import type { GraphLayoutMode } from '@claude-teams/agent-graph';
 
 export interface OrganizationMapTabProps {
@@ -42,7 +40,7 @@ export const OrganizationMapTab = ({
   );
   const [mapScope, setMapScope] = useState<OrganizationMapScope>('all');
   const [activeOrganizationId, setActiveOrganizationId] = useState<string | undefined>(undefined);
-  const openTeamsCreationPage = useStore((state) => state.openTeamsCreationPage);
+  const creation = useOrganizationCreateTeamDialog();
   const {
     viewModel,
     selectedNodeId,
@@ -59,23 +57,6 @@ export const OrganizationMapTab = ({
     organizationId: activeOrganizationId,
     refreshMap: refreshMapAfterStructureMutation,
   });
-  const startCreateFromOrganization = useCallback(
-    async (placement: OrganizationPlacementSelection): Promise<void> => {
-      const saved = await createTeamDraftStorage.loadSnapshot();
-      if (saved?.teamName.trim()) {
-        const accepted = await confirm({
-          title: t('create.title.create'),
-          message: t('create.draft.replaceConfirmation', { defaultValue: 'Copying this team will replace your unfinished draft. Continue?' }),
-          confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
-          variant: 'danger',
-        });
-        if (!accepted) return;
-      }
-      const originTabId = useStore.getState().getActiveTab()?.id;
-      openTeamsCreationPage({ placement, originTabId }, true);
-    },
-    [openTeamsCreationPage, t]
-  );
   const organizations = useMemo(
     () => structureManager.structure?.organizations ?? viewModel?.payload.organizations ?? [],
     [structureManager.structure?.organizations, viewModel?.payload.organizations]
@@ -348,7 +329,9 @@ export const OrganizationMapTab = ({
             onRemoveTeam={structureManager.removeTeam}
             onUpsertRelation={structureManager.upsertRelation}
             onDeleteRelation={structureManager.deleteRelation}
-            onCreateTeamHere={(placement) => { void startCreateFromOrganization(placement); }}
+            onCreateTeamHere={(placement) => {
+              void creation.openCreationPage(placement);
+            }}
           />
         ) : selectedNode ? (
           <OrgInspector
