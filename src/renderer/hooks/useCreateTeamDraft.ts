@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { createMemberDraft } from '@renderer/components/team/members/membersEditorUtils';
+import { currentCreateTeamDraftGeneration } from '@renderer/services/createTeamDraftGeneration';
 import {
   type CreateTeamDraftSnapshot,
   createTeamDraftStorage,
@@ -148,6 +149,7 @@ function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] 
 // ---------------------------------------------------------------------------
 
 export function useCreateTeamDraft(): UseCreateTeamDraftResult {
+  const draftGeneration = useRef(currentCreateTeamDraftGeneration());
   const storedSyncModelsWithLead = getStoredCreateTeamSyncModelsWithLead();
 
   // ── State ──────────────────────────────────────────────────────────────
@@ -234,7 +236,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     if (pendingRef.current != null) {
       const pending = pendingRef.current;
       pendingRef.current = null;
-      void createTeamDraftStorage.saveSnapshot(pending);
+      void createTeamDraftStorage.saveSnapshot(pending, draftGeneration.current);
     }
   }, []);
 
@@ -252,7 +254,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       pendingRef.current = null;
       if (pending == null) return;
 
-      void createTeamDraftStorage.saveSnapshot(pending);
+      void createTeamDraftStorage.saveSnapshot(pending, draftGeneration.current);
     }, DEBOUNCE_MS);
   }, [buildSnapshot]);
 
@@ -522,7 +524,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setOrganizationPlacementOrganizationIdState('');
     setOrganizationPlacementParentIdState('');
 
-    void createTeamDraftStorage.deleteSnapshot();
+    void createTeamDraftStorage.deleteSnapshot(draftGeneration.current);
   }, []);
 
   return {
