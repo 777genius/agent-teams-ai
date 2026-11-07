@@ -173,8 +173,6 @@ export function createOpenCodeV2MemberProvider(
           return owned.readPassword();
         },
         probe: async (signal) => {
-          // Fence in-flight native writes even if this recheck later succeeds.
-          readinessEpoch++;
           if (qualificationRevoked) return false;
           const reattestation = Promise.withResolvers<void>();
           pendingReattestations.add(reattestation.promise);
@@ -540,6 +538,10 @@ export function createOpenCodeV2MemberProvider(
                   if (!authorized && !await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unavailable' as const };
                 }
+                // Private D probes internally for each queued submit; that is the
+                // mutation's own admission, not a competing Host re-attestation.
+                // Only an explicit Host check invalidates an in-flight ACK epoch.
+                readinessEpoch++;
                 try {
                   const result = await source.checkReadiness();
                   // A native readiness ACK is not a renewed Host lease: the
