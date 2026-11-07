@@ -5,24 +5,10 @@ import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/components/ui/button', () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    title,
-    className,
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) =>
-    React.createElement(
-      'button',
-      {
-        type: 'button',
-        className,
-        disabled,
-        title,
-        onClick,
-      },
-      children
-    ),
+  Button: React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+    ({ children, ...props }, ref) =>
+      React.createElement('button', { ...props, ref, type: 'button' }, children)
+  ),
 }));
 
 vi.mock('@renderer/components/ui/checkbox', () => ({
@@ -176,6 +162,7 @@ beforeEach(() => {
 function renderMembersEditor(props: {
   members: MemberDraft[];
   teammateWorktreeDefault?: boolean;
+  worktreeIsolationDisabledReason?: string | null;
   onChange?: (members: MemberDraft[]) => void;
   softDeleteMembers?: boolean;
   inheritedProviderId?: TeamProviderId;
@@ -205,6 +192,7 @@ function renderMembersEditor(props: {
           onChange={onChange}
           showWorktreeIsolationControls
           teammateWorktreeDefault={props.teammateWorktreeDefault}
+          worktreeIsolationDisabledReason={props.worktreeIsolationDisabledReason}
           softDeleteMembers={props.softDeleteMembers}
           inheritedProviderId={props.inheritedProviderId}
           defaultProviderId={props.defaultProviderId}
@@ -234,21 +222,35 @@ function renderMembersEditor(props: {
   };
 }
 
-function masterWorktreeCheckbox(host: HTMLElement): HTMLInputElement {
-  const checkbox = host.querySelector<HTMLInputElement>('#teammate-worktree-default-worktree-test');
-  if (!checkbox) {
-    throw new Error('Master worktree checkbox not found');
+function openSettingsMenu(host: HTMLElement): void {
+  if (document.body.querySelector('[role="menu"]')) return;
+  const trigger = host.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+  if (!trigger) throw new Error('Roster settings trigger not found');
+  act(() => {
+    trigger.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
+  });
+  if (!document.body.querySelector('[role="menu"]')) {
+    throw new Error('Roster settings menu did not open');
   }
+}
+
+function masterWorktreeCheckbox(host: HTMLElement): HTMLElement {
+  openSettingsMenu(host);
+  const checkbox = document.body.querySelector<HTMLElement>(
+    '[role="menuitemcheckbox"][aria-describedby]'
+  );
+  if (!checkbox) throw new Error('Master worktree menu item not found');
   return checkbox;
 }
 
-function masterAgentTeamsMcpCheckbox(host: HTMLElement): HTMLInputElement {
-  const checkbox = host.querySelector<HTMLInputElement>(
-    '#teammate-agent-teams-mcp-default-worktree-test'
-  );
-  if (!checkbox) {
-    throw new Error('Master Agent Teams MCP checkbox not found');
-  }
+function masterAgentTeamsMcpCheckbox(host: HTMLElement): HTMLElement {
+  openSettingsMenu(host);
+  const checkbox = Array.from(
+    document.body.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]')
+  ).find((item) => item.textContent?.includes('Agent Teams MCP only'));
+  if (!checkbox) throw new Error('Master Agent Teams MCP menu item not found');
   return checkbox;
 }
 
@@ -308,7 +310,7 @@ describe('MembersEditorSection runtime model selection', () => {
     });
     const { host, onChange } = renderMembersEditor({ members: [draft], singleMemberMode: true });
 
-    expect(host.querySelector('#teammate-worktree-default-worktree-test')).toBeNull();
+    expect(host.querySelector('button[aria-haspopup="menu"]')).toBeNull();
     expect(
       Array.from(host.querySelectorAll('button')).some((button) =>
         button.textContent?.includes('Add member')
@@ -445,8 +447,11 @@ describe('MembersEditorSection worktree master checkbox', () => {
     const removedAlice = { ...alice, removedAt: Date.now() };
     const { host, rerender } = renderMembersEditor({ members: [removedAlice] });
 
-    expect(host.querySelector('#teammate-worktree-default-worktree-test')).toBeNull();
-    expect(host.querySelector('#teammate-agent-teams-mcp-default-worktree-test')).toBeTruthy();
+    openSettingsMenu(host);
+    expect(
+      document.body.querySelector('[role="menuitemcheckbox"][aria-describedby]')
+    ).toBeNull();
+    expect(masterAgentTeamsMcpCheckbox(host)).toBeTruthy();
 
     rerender([alice]);
 
@@ -464,7 +469,7 @@ describe('MembersEditorSection worktree master checkbox', () => {
 
     const checkbox = masterWorktreeCheckbox(host);
 
-    expect(checkbox.checked).toBe(false);
+    expect(checkbox.getAttribute('aria-checked')).toBe('mixed');
     expect(checkbox.dataset.state).toBe('indeterminate');
   });
 
@@ -478,8 +483,57 @@ describe('MembersEditorSection worktree master checkbox', () => {
 
     const checkbox = masterWorktreeCheckbox(host);
 
-    expect(checkbox.checked).toBe(true);
+    expect(checkbox.getAttribute('aria-checked')).toBe('true');
     expect(checkbox.dataset.state).toBe('checked');
+  });
+
+  it('allows bulk clearing but not enabling when Git is unavailable for a mixed roster', () => {
+    const { host, onChange } = renderMembersEditor({
+      members: [
+        createMemberDraft({ id: 'alice', name: 'alice' }),
+        createMemberDraft({ id: 'bob', name: 'bob', isolation: 'worktree' }),
+      ],
+      worktreeIsolationDisabledReason: 'Git is unavailable',
+    });
+
+    const checkbox = masterWorktreeCheckbox(host);
+    expect(checkbox.dataset.state).toBe('indeterminate');
+    expect(checkbox.getAttribute('data-disabled')).toBeNull();
+    act(() => checkbox.click());
+
+    expect(
+      (onChange.mock.calls[0]?.[0] as MemberDraft[]).map((member) => member.isolation)
+    ).toEqual([undefined, undefined]);
+  });
+
+  it('keeps enabling disabled and exposes the reason as a keyboard-focusable menu item', () => {
+    const { host, onChange } = renderMembersEditor({
+      members: [createMemberDraft({ id: 'alice', name: 'alice' })],
+      worktreeIsolationDisabledReason: 'Git is unavailable',
+    });
+
+    const checkbox = masterWorktreeCheckbox(host);
+    expect(checkbox.getAttribute('data-disabled')).toBe('');
+    const description = document.getElementById(checkbox.getAttribute('aria-describedby') ?? '');
+    expect(description?.textContent).toContain('Git is unavailable');
+    expect(description?.getAttribute('role')).toBe('menuitem');
+    expect(description?.getAttribute('aria-disabled')).toBe('true');
+    act(() => description?.focus());
+    expect(document.activeElement).toBe(description);
+    act(() => checkbox.click());
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('allows bulk clearing when every member already uses worktrees and Git is unavailable', () => {
+    const { host, onChange } = renderMembersEditor({
+      members: [createMemberDraft({ id: 'alice', name: 'alice', isolation: 'worktree' })],
+      worktreeIsolationDisabledReason: 'Git is unavailable',
+    });
+
+    const checkbox = masterWorktreeCheckbox(host);
+    expect(checkbox.getAttribute('data-disabled')).toBeNull();
+    act(() => checkbox.click());
+    expect((onChange.mock.calls[0]?.[0] as MemberDraft[])[0]?.isolation).toBeUndefined();
   });
 
   it('turns all active members on when clicked from mixed state', () => {
@@ -562,7 +616,7 @@ function anthropicStatusWithHaikuWithoutEffort(): CliProviderStatus {
 }
 
 describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
-  it('renders to the right of the worktree master control', () => {
+  it('renders after the worktree option inside the portaled settings menu', () => {
     const { host } = renderMembersEditor({
       members: [createMemberDraft({ id: 'alice', name: 'alice' })],
     });
@@ -570,8 +624,8 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
     const worktreeCheckbox = masterWorktreeCheckbox(host);
     const mcpCheckbox = masterAgentTeamsMcpCheckbox(host);
 
-    expect(host.textContent).toContain('Agent Teams MCP only');
-    expect(mcpCheckbox.checked).toBe(false);
+    expect(document.body.textContent).toContain('Agent Teams MCP only');
+    expect(mcpCheckbox.getAttribute('aria-checked')).toBe('false');
     expect(
       worktreeCheckbox.compareDocumentPosition(mcpCheckbox) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
