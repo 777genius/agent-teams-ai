@@ -47,6 +47,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const [isSaved, setIsSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ key: string; value: InlineChip[] } | null>(null);
+  const editRevisionRef = useRef(0);
   const keyRef = useRef(key);
 
   useEffect(() => {
@@ -90,9 +91,11 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
     setChipsState([]);
 
     setIsSaved(false);
+    const loadRevision = editRevisionRef.current;
     void (async () => {
       const raw = await draftStorage.loadDraft(key);
-      if (cancelled || raw == null) return;
+      // A new user edit must win over an older IndexedDB response.
+      if (cancelled || editRevisionRef.current !== loadRevision || raw == null) return;
       try {
         const parsed: unknown = JSON.parse(raw);
         if (isValidChipArray(parsed)) {
@@ -117,6 +120,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   }, [flushPending]);
 
   const setChips = useCallback((nextChips: InlineChip[]) => {
+    editRevisionRef.current++;
     chipsRef.current = nextChips;
     setChipsState(nextChips);
     setIsSaved(false);
@@ -157,6 +161,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   );
 
   const clearChipDraft = useCallback(() => {
+    editRevisionRef.current++;
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
