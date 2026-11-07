@@ -579,6 +579,13 @@ async function main() {
     await cdp.click("document.querySelector('button[aria-label=\"Launch team\"]')");
     await cdp.waitFor("document.querySelector('[role=dialog]')",
       'unchanged launch modal');
+    // The lazy Suspense fallback also has role=dialog. Wait for the REAL
+    // LaunchTeamDialog's project controls before signing off the launch path.
+    await cdp.waitFor(
+      "(() => { const d = document.querySelector('[role=dialog]'); return d && d.querySelectorAll('button').length >= 5 && d.innerText.includes('Project'); })()",
+      'loaded launch dialog with existing project controls',
+      45_000
+    );
     assert.equal((await renderSnapshot(cdp)).inCreatePage, false);
     await captureScreenshot(cdp, fixture, 'launch-still-modal');
 
