@@ -119,6 +119,48 @@ describe('Smart schedules filesystem safe E2E', () => {
     return (await repository.listRuns(scheduleId))[0];
   }
 
+  it('refuses to persist, resume or execute Host-owned schedules through legacy services', async () => {
+    const hostTeam = 'host-team:TEST-captured-handle';
+    const hostInput = { ...input(), teamName: hostTeam, executionMode: 'agent' as const };
+    await expect(scheduler.createSchedule(hostInput)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    expect(await repository.listSchedules()).toHaveLength(0);
+
+    // Old records remain readable for cleanup, but never become executable.
+    const now = new Date().toISOString();
+    const retained: Schedule = {
+      ...hostInput,
+      id: 'retained-host-schedule',
+      status: 'active',
+      maxConsecutiveFailures: 3,
+      consecutiveFailures: 0,
+      maxTurns: 5,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await repository.saveSchedule(retained);
+    await scheduler.stop();
+    await scheduler.start();
+    await expect(scheduler.triggerNow(retained.id)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    await expect(scheduler.updateSchedule(retained.id, { label: 'Unsafe' })).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    await expect(scheduler.resumeSchedule(retained.id)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    expect((await repository.listRuns(retained.id))).toHaveLength(0);
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+
+    await scheduler.pauseSchedule(retained.id);
+    await scheduler.deleteSchedule(retained.id);
+    expect(await repository.listSchedules()).toHaveLength(0);
+  });
+
   it('reads unmodified preexisting JSON and continues the one-shot executor after editing', async () => {
     const now = new Date().toISOString();
     const legacy: Schedule = {

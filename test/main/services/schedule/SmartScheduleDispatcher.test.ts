@@ -103,6 +103,22 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     dispatch = new SmartScheduleDispatcher(port);
   });
 
+  it('refuses Host-owned schedules before reading or mutating the legacy runtime', async () => {
+    for (const mode of ['agent', 'team'] as const) {
+      const result = await dispatch.dispatch(
+        { ...makeSchedule(mode), teamName: 'host-team:TEST-captured-handle' },
+        'TEST-host-run',
+        active
+      );
+      expect(result.kind).toBe('skipped');
+    }
+    expect(port.isTeamAlive).not.toHaveBeenCalled();
+    expect(port.getSavedRequest).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid persisted modes instead of silently launching a team', async () => {
     const invalid = { ...makeSchedule('agent'), executionMode: 'unknown' as never };
     await expect(dispatch.dispatch(invalid, 'bad-mode', active)).rejects.toThrow(

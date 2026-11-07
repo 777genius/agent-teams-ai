@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
@@ -217,6 +218,7 @@ const ScheduleRow = ({
 
 export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const hostScheduleUnsupported = isHostTeamSelectionKey(teamName);
   const { schedules, pauseSchedule, resumeSchedule, deleteSchedule, triggerNow, fetchSchedules } =
     useStore(
       useShallow((s) => ({
@@ -238,14 +240,16 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
   }, [fetchSchedules]);
 
   const handleEdit = useCallback((schedule: Schedule) => {
+    if (hostScheduleUnsupported) return;
     setEditingSchedule(schedule);
     setDialogOpen(true);
-  }, []);
+  }, [hostScheduleUnsupported]);
 
   const handleCreate = useCallback(() => {
+    if (hostScheduleUnsupported) return;
     setEditingSchedule(null);
     setDialogOpen(true);
-  }, []);
+  }, [hostScheduleUnsupported]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -286,11 +290,20 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
           size="sm"
           className="h-6 gap-1 px-2 text-[11px]"
           onClick={handleCreate}
+          disabled={hostScheduleUnsupported}
+          title={hostScheduleUnsupported ? 'Host-owned team scheduling is not yet supported' : undefined}
         >
           <Plus className="size-3" />
           {t('schedule.actions.addSchedule')}
         </Button>
       </div>
+
+      {hostScheduleUnsupported && (
+        <p role="status" className="text-xs text-[var(--color-text-muted)]">
+          Host-owned teams cannot use schedules until owner-aware scheduling is qualified.
+          Existing schedules can be paused or deleted.
+        </p>
+      )}
 
       {/* Schedule list or empty state */}
       {schedules.length === 0 ? (
@@ -312,7 +325,7 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
       )}
 
       {/* Create/Edit Dialog */}
-      {dialogOpen && (
+      {dialogOpen && !hostScheduleUnsupported && (
         <Suspense
           fallback={
             <LaunchTeamDialogLoadingFallback

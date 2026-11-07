@@ -5,6 +5,7 @@
  * Uses one-shot `claude -p` executor (NOT launchTeam stream-json).
  */
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { Cron } from 'croner';
@@ -30,6 +31,14 @@ const logger = createLogger('Service:Scheduler');
 // =============================================================================
 // Constants
 // =============================================================================
+
+// A captured Host handle is not a legacy team name. Until an owner-aware
+// scheduling port is qualified, refuse before creating any native/legacy effect.
+const HOST_SCHEDULE_UNSUPPORTED = 'Schedules for Host-backed teams require owner-aware scheduling';
+
+function assertSupportedScheduledTeam(teamName: string): void {
+  if (isHostTeamSelectionKey(teamName)) throw new Error(HOST_SCHEDULE_UNSUPPORTED);
+}
 
 const WARMUP_RETRY_DELAY_MS = 60_000;
 const WARMUP_MAX_RETRIES = 3;
@@ -110,7 +119,7 @@ export class SchedulerService {
     let activeCount = 0;
 
     for (const schedule of schedules) {
-      if (schedule.status === 'active') {
+      if (schedule.status === 'active' && !isHostTeamSelectionKey(schedule.teamName)) {
         this.createCronJob(schedule);
         activeCount++;
       }
@@ -175,6 +184,7 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    assertSupportedScheduledTeam(input.teamName);
     const now = new Date().toISOString();
     const schedule: Schedule = {
       id: randomUUID(),
@@ -217,6 +227,7 @@ export class SchedulerService {
     if (!existing) {
       throw new Error(`Schedule not found: ${id}`);
     }
+    assertSupportedScheduledTeam(existing.teamName);
 
     const updated: Schedule = {
       ...existing,
@@ -319,6 +330,8 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
 
+    // A retained Host schedule cannot be armed against the legacy executor.
+    assertSupportedScheduledTeam(existing.teamName);
     // Remove old job and recreate to get fresh next-run timing
     this.removeCronJob(id);
 
@@ -368,6 +381,9 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
 
+    // Reject foreign owner keys before allocating an execution record.
+    assertSupportedScheduledTeam(schedule.teamName);
+
     // Check locks
     if (this.activeRuns.has(id)) {
       throw new Error(`Schedule ${id} already has an active run`);
@@ -415,6 +431,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private createCronJob(schedule: Schedule): void {
+    if (isHostTeamSelectionKey(schedule.teamName)) return;
     if (this.cronJobs.has(schedule.id)) {
       this.removeCronJob(schedule.id);
     }
@@ -528,8 +545,8 @@ export class SchedulerService {
 
   private async onCronTick(scheduleId: string): Promise<void> {
     const schedule = await this.repository.getSchedule(scheduleId);
-    if (schedule?.status !== 'active') {
-      logger.debug(`Cron tick for ${scheduleId} skipped (not active)`);
+    if (schedule?.status !== 'active' || isHostTeamSelectionKey(schedule.teamName)) {
+      logger.debug(`Cron tick for ${scheduleId} skipped (not active or unsupported owner)`);
       return;
     }
 
@@ -572,6 +589,12 @@ export class SchedulerService {
   // ===========================================================================
 
   private async executeRunInBackground(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    // Also guard an already-queued callback from before this code was deployed.
+    // A Host selection key must never reach the legacy one-shot or team runtime.
+    if (isHostTeamSelectionKey(schedule.teamName)) {
+      await this.completeRun(run, 'skipped', null, HOST_SCHEDULE_UNSUPPORTED);
+      return;
+    }
     const { id: scheduleId, launchConfig } = schedule;
 
     // Acquire locks

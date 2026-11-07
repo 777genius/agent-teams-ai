@@ -4,6 +4,8 @@
  *
  * Legacy schedules never reach this class.
  */
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+
 import type { ExecutionRequest, ScheduledTaskResult } from './ScheduledTaskExecutor';
 import type {
   CreateTaskRequest,
@@ -91,6 +93,9 @@ export class SmartScheduleDispatcher {
     }
     if (schedule.executionMode !== 'agent' && schedule.executionMode !== 'team') {
       throw new Error('Unsupported schedule execution mode');
+    }
+    if (isHostTeamSelectionKey(schedule.teamName)) {
+      return skipped('Host-owned team scheduling requires an owner-aware runtime');
     }
     if (!schedule.launchConfig.prompt.trim()) {
       return skipped('Scheduled instructions are empty; no action was submitted');
