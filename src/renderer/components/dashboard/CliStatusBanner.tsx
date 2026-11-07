@@ -450,6 +450,8 @@ const CliCheckingSpinner = ({
 // =============================================================================
 
 interface InstalledBannerProps {
+  /** Provider page is visible; hidden tabs retain forms but stop passive reads. */
+  isActive: boolean;
   catalogFailures?: readonly OpenCodeCatalogFailure[];
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
   sourceProviderMap: Map<CliProviderId, CliProviderStatus>;
@@ -801,6 +803,7 @@ const OpenCodeAtlasCloudBanner = ({
 };
 
 const InstalledBanner = ({
+  isActive,
   catalogFailures = [],
   cliStatus,
   sourceProviderMap,
@@ -1069,7 +1072,7 @@ const InstalledBanner = ({
             />
           ) : null}
           <RuntimeProviderQuickConnect
-            enabled
+            enabled={isActive}
             cliStatusLoading={cliStatusLoading}
             providers={visibleProviders}
             openCodeRuntimeStatus={openCodeRuntimeStatus}
@@ -1533,7 +1536,6 @@ const InstalledBanner = ({
 interface CliStatusBannerProps {
   isDashboardActive?: boolean;
 }
-
 export const CliStatusBanner = ({
   isDashboardActive = false,
 }: CliStatusBannerProps): React.JSX.Element | null => {
@@ -1574,7 +1576,6 @@ export const CliStatusBanner = ({
     installCodexRuntime,
     isBusy,
   } = useCliInstaller();
-
   const [showLoginTerminal, setShowLoginTerminal] = useState(false);
   const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const [providerTerminal, setProviderTerminal] = useState<{
@@ -1643,12 +1644,14 @@ export const CliStatusBanner = ({
       multimodelEnabled &&
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
-    includeRateLimits: true,
+    // Keep account login observation alive across tab switches, but stop heavy
+    // subscription rate-limit polling while the provider page is hidden.
+    includeRateLimits: isDashboardActive,
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
   const openCodeDashboardStatus = useOpenCodeDashboardStatus({
-    enabled: isElectron && multimodelEnabled,
+    enabled: isDashboardActive && isElectron && multimodelEnabled,
     projectPath: selectedProjectPath,
     cliStatus: loadingCliStatus,
     runtimeStatus: openCodeRuntimeStatus,
@@ -1710,7 +1713,6 @@ export const CliStatusBanner = ({
     [loadingCliStatus, visibleCliProviders]
   );
   const renderCliStatus = effectiveCliStatus;
-
   const shouldPollAnthropicSubscriptionLimits = useMemo(() => {
     if (
       !renderCliStatus?.installed ||
@@ -1719,13 +1721,11 @@ export const CliStatusBanner = ({
     ) {
       return false;
     }
-
     const provider =
       renderCliStatus.providers.find((candidate) => candidate.providerId === 'anthropic') ?? null;
     if (!provider) {
       return false;
     }
-
     return isDashboardRateLimitSubscriptionMode({
       provider,
       sourceProvider: loadingCliProviderMap.get('anthropic') ?? null,
@@ -1740,13 +1740,11 @@ export const CliStatusBanner = ({
     ) {
       return false;
     }
-
     const provider =
       renderCliStatus.providers.find((candidate) => candidate.providerId === 'codex') ?? null;
     if (!provider) {
       return false;
     }
-
     return isDashboardRateLimitSubscriptionMode({
       provider,
       sourceProvider: loadingCliProviderMap.get('codex') ?? null,
@@ -1754,12 +1752,10 @@ export const CliStatusBanner = ({
     });
   }, [loadingCliProviderMap, multimodelEnabled, providerConnectionAuthModes, renderCliStatus]);
   const runtimeDisplayName = getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled);
-
   const refreshAnthropicSubscriptionLimits = useCallback(async (): Promise<void> => {
     if (!shouldPollAnthropicSubscriptionLimits) {
       return;
     }
-
     setAnthropicRateLimitsRefreshing(true);
     try {
       const refreshed = await fetchCliProviderStatus('anthropic', { silent: true });
@@ -1770,18 +1766,15 @@ export const CliStatusBanner = ({
       setAnthropicRateLimitsRefreshing(false);
     }
   }, [fetchCliProviderStatus, shouldPollAnthropicSubscriptionLimits]);
-
   useEffect(() => {
     if (!isDashboardActive) {
       dashboardWasActiveRef.current = false;
       return;
     }
-
     if (dashboardWasActiveRef.current) {
       return;
     }
     dashboardWasActiveRef.current = true;
-
     if (!isElectron || dashboardLimitsRefreshInFlightRef.current) {
       return;
     }
@@ -1815,12 +1808,12 @@ export const CliStatusBanner = ({
     shouldRefreshCodexSubscriptionLimits,
   ]);
 
-  useDashboardStatusRefresh(isElectron && Boolean(cliStatus), () => {
+  useDashboardStatusRefresh(isDashboardActive && isElectron && Boolean(cliStatus), () => {
     openCodeDashboardCatalog.refresh();
     void refreshCliStatusForCurrentMode({ multimodelEnabled, bootstrapCliStatus, fetchCliStatus });
   });
   useEffect(() => {
-    if (!isElectron || !shouldPollAnthropicSubscriptionLimits) {
+    if (!isDashboardActive || !isElectron || !shouldPollAnthropicSubscriptionLimits) {
       setAnthropicRateLimitsRefreshing(false);
       return;
     }
@@ -1832,7 +1825,7 @@ export const CliStatusBanner = ({
     return () => {
       clearInterval(interval);
     };
-  }, [isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
+  }, [isDashboardActive, isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
 
   const handleInstall = useCallback(() => {
     installCli();
@@ -2243,6 +2236,7 @@ export const CliStatusBanner = ({
     if (multimodelEnabled) {
       return (
         <InstalledBanner
+          isActive={isDashboardActive}
           catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus ?? createLoadingMultimodelCliStatus()}
           sourceProviderMap={loadingCliProviderMap}
@@ -2503,6 +2497,7 @@ export const CliStatusBanner = ({
       return (
         <>
           <InstalledBanner
+            isActive={isDashboardActive}
             catalogFailures={openCodeDashboardCatalog.failures}
             cliStatus={renderCliStatus}
             sourceProviderMap={loadingCliProviderMap}
@@ -2586,6 +2581,7 @@ export const CliStatusBanner = ({
     return (
       <>
         <InstalledBanner
+          isActive={isDashboardActive}
           catalogFailures={openCodeDashboardCatalog.failures}
           cliStatus={renderCliStatus}
           sourceProviderMap={loadingCliProviderMap}
@@ -2789,6 +2785,7 @@ export const CliStatusBanner = ({
   return (
     <>
       <InstalledBanner
+        isActive={isDashboardActive}
         catalogFailures={openCodeDashboardCatalog.failures}
         cliStatus={renderCliStatus}
         sourceProviderMap={loadingCliProviderMap}

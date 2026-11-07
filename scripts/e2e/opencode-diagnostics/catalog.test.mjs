@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   catalogRefreshEvidence,
   clickControl,
+  enterProviderSettings,
   readPendingArtifact,
   verifyCatalog,
   waitForReadyCatalog,
@@ -744,4 +745,27 @@ test('Settings refresh waits for a remounted control before exactly one mouse se
   assert.equal(clock, 500);
   assert.deepEqual(sent.map(event => event.type), ['mousePressed', 'mouseReleased']);
   assert(sent.every(event => event.x === 31 && event.y === 42));
+});
+
+
+test('E2E provider navigation performs a real click only once', async () => {
+  let entered = false;
+  const sent = [];
+  const evaluate = async (expression) => {
+    if (expression.startsWith('(() => { const b')) return { x: 20, y: 30 };
+    if (expression.includes('provider-settings-page')) return entered;
+    if (expression.includes('dashboard-manage-providers')) return true;
+    if (expression.includes('runtime-manage-opencode')) return false;
+    throw new Error(`Unexpected navigation probe: ${expression}`);
+  };
+  const send = async (method, event) => {
+    sent.push([method, event.type]);
+    if (event.type === 'mouseReleased') entered = true;
+  };
+  await enterProviderSettings(evaluate, send);
+  await enterProviderSettings(evaluate, send);
+  assert.deepEqual(sent, [
+    ['Input.dispatchMouseEvent', 'mousePressed'],
+    ['Input.dispatchMouseEvent', 'mouseReleased'],
+  ]);
 });

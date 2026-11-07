@@ -1511,7 +1511,17 @@
       "searchTeams": "Ekiplerde ara...",
       "selectTeam": "Bir ekip seç...",
       "team": "Ekip",
-      "title": "Zamanlama"
+      "title": "Zamanlama",
+      "execution": "Çalıştırma",
+      "legacyNotice": "Mevcut tek seferlik zamanlama: kaydetmek önceki davranışı değiştirmez.",
+      "upgradeSmart": "Akıllı zamanlamaya geç",
+      "oneAgent": "Bir ajan",
+      "wholeTeam": "Tüm ekip",
+      "target": "Ekip çalışırken görevli üye",
+      "leadDefault": "Ekip lideri (varsayılan)",
+      "agentDescription": "Ekip kapalıysa bağımsız ajanı çalıştırır; açıksa görev atar.",
+      "teamDescription": "Ekip kapalıysa kayıtlı ekibi başlatır; açıksa lidere görev atar. Kayıtlı ayarları kullanır.",
+      "teamPathMissing": "Başlatma zamanlamadan önce ekibin proje klasörünü kaydedin."
     },
     "title": {
       "createSchedule": "Zamanlama Oluştur",
@@ -2134,7 +2144,9 @@
       "completed": "Tamamlandı",
       "failed": "Başarısız",
       "interrupted": "Kesildi",
-      "cancelled": "İptal edildi"
+      "cancelled": "İptal edildi",
+      "dispatched": "İletildi",
+      "skipped": "Atlandı"
     }
   },
   "openCodeContextConfigHint": {

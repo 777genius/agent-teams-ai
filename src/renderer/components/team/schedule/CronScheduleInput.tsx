@@ -65,6 +65,7 @@ interface CronScheduleInputProps {
   onTimezoneChange: (value: string) => void;
   warmUpMinutes: number;
   onWarmUpMinutesChange: (value: number) => void;
+  showWarmUp?: boolean;
 }
 
 // =============================================================================
@@ -78,6 +79,7 @@ export const CronScheduleInput = ({
   onTimezoneChange,
   warmUpMinutes,
   onWarmUpMinutesChange,
+  showWarmUp = true,
 }: CronScheduleInputProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   // Parse and validate cron expression
@@ -234,8 +236,8 @@ export const CronScheduleInput = ({
         </Select>
       </div>
 
-      {/* Warm-up time */}
-      <div className="space-y-1.5">
+      {/* Warm-up applies only to legacy one-shot schedules. */}
+      {showWarmUp ? <div className="space-y-1.5">
         <Label className="label-optional">{t('schedule.cron.warmUpTime')}</Label>
         <Select
           value={String(warmUpMinutes)}
@@ -255,7 +257,7 @@ export const CronScheduleInput = ({
         <p className="text-[11px] text-[var(--color-text-muted)]">
           {t('schedule.cron.warmUpDescription')}
         </p>
-      </div>
+      </div> : null}
     </div>
   );
 };

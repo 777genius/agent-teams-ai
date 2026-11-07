@@ -3,7 +3,7 @@
  * Provides UI for managing notifications, display settings, and advanced options.
  */
 
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 
 import { GatewayProvidersSettingsSection } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
@@ -20,10 +20,30 @@ import {
 } from './sections';
 import { type SettingsSection, SettingsTabs } from './SettingsTabs';
 
-export const SettingsView = (): React.JSX.Element | null => {
+const CliStatusBanner = lazy(() =>
+  import('../dashboard/CliStatusBanner').then((module) => ({
+    default: module.CliStatusBanner,
+  }))
+);
+
+interface SettingsViewProps {
+  isActive?: boolean;
+}
+
+export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
+  const [hasVisitedProviders, setHasVisitedProviders] = useState(false);
+
+  // Keep active OAuth and unsaved forms mounted across Settings section switches.
+  // Only passive provider checks are gated by activeSection and isActive.
+  useEffect(() => {
+    if (activeSection === 'providers' && !hasVisitedProviders) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- preserve mounted provider operations
+      setHasVisitedProviders(true);
+    }
+  }, [activeSection, hasVisitedProviders]);
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const { pendingSettingsSection, clearPendingSettingsSection } = useStore(
     useShallow((s) => ({
@@ -126,7 +146,7 @@ export const SettingsView = (): React.JSX.Element | null => {
     <div className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--color-surface)' }}>
       <div
         className={`mx-auto w-full px-6 py-8 transition-[max-width] duration-200 ${
-          activeSection === 'notifications' ? 'max-w-7xl' : 'max-w-2xl'
+          activeSection === 'notifications' ? 'max-w-7xl' : activeSection === 'providers' ? 'max-w-5xl' : 'max-w-2xl'
         }`}
       >
         {/* Header */}
@@ -161,6 +181,20 @@ export const SettingsView = (): React.JSX.Element | null => {
           )}
 
           {activeSection === 'connection' && <ConnectionSection />}
+
+          {(hasVisitedProviders || activeSection === 'providers') && (
+            <div data-testid="provider-settings-page" className={activeSection === 'providers' ? undefined : 'hidden'}>
+              <Suspense
+                fallback={
+                  <div className="flex min-h-24 items-center justify-center">
+                    <Loader2 className="size-5 animate-spin text-text-muted" />
+                  </div>
+                }
+              >
+                <CliStatusBanner isDashboardActive={isActive && activeSection === 'providers'} />
+              </Suspense>
+            </div>
+          )}
 
           {activeSection === 'gatewayProviders' && <GatewayProvidersSettingsSection />}
 
@@ -203,6 +237,7 @@ function isSettingsSection(value: string | undefined): value is SettingsSection 
   return (
     value === 'general' ||
     value === 'connection' ||
+    value === 'providers' ||
     value === 'gatewayProviders' ||
     value === 'notifications' ||
     value === 'advanced'

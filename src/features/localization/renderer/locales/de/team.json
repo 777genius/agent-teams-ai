@@ -1511,7 +1511,17 @@
       "searchTeams": "Suchteams...",
       "selectTeam": "Wählen Sie ein Team aus...",
       "team": "Team",
-      "title": "Fälligkeitsplan"
+      "title": "Fälligkeitsplan",
+      "execution": "Ausführung",
+      "legacyNotice": "Bestehender einmaliger Zeitplan: Speichern ändert das bisherige Verhalten nicht.",
+      "upgradeSmart": "Zur intelligenten Planung wechseln",
+      "oneAgent": "Ein Agent",
+      "wholeTeam": "Gesamtes Team",
+      "target": "Zuständig bei laufendem Team",
+      "leadDefault": "Teamleitung (Standard)",
+      "agentDescription": "Ist das Team gestoppt, wird ein eigenständiger Agent gestartet; andernfalls wird eine Aufgabe zugewiesen.",
+      "teamDescription": "Ist das Team gestoppt, wird es gestartet; andernfalls erhält die Teamleitung eine Aufgabe. Gespeicherte Einstellungen werden verwendet.",
+      "teamPathMissing": "Speichere den Projektordner des Teams, bevor du einen Start planst."
     },
     "title": {
       "createSchedule": "Plan erstellen",
@@ -2134,7 +2144,9 @@
       "completed": "abgeschlossen",
       "failed": "Versäumt",
       "interrupted": "Unterbrechung",
-      "cancelled": "gekündigt"
+      "cancelled": "gekündigt",
+      "dispatched": "Übergeben",
+      "skipped": "Übersprungen"
     }
   },
   "openCodeContextConfigHint": {

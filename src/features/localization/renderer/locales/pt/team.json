@@ -1511,7 +1511,17 @@
       "searchTeams": "Equipas de busca...",
       "selectTeam": "Selecionar uma equipe...",
       "team": "Equipa",
-      "title": "Agendar"
+      "title": "Agendar",
+      "execution": "Execução",
+      "legacyNotice": "Agendamento avulso existente: guardar não altera o comportamento.",
+      "upgradeSmart": "Mudar para agendamento inteligente",
+      "oneAgent": "Um agente",
+      "wholeTeam": "Toda a equipa",
+      "target": "Responsável quando a equipa estiver ativa",
+      "leadDefault": "Líder da equipa (predefinição)",
+      "agentDescription": "Com a equipa parada, executa um agente isolado; com ela ativa, atribui uma tarefa.",
+      "teamDescription": "Com a equipa parada, inicia-a; com ela ativa, atribui uma tarefa ao líder. Usa as definições guardadas.",
+      "teamPathMissing": "Guarde a pasta do projeto da equipa antes de agendar o arranque."
     },
     "title": {
       "createSchedule": "Criar agendamento",
@@ -2134,7 +2144,9 @@
       "completed": "Concluído",
       "failed": "Falha",
       "interrupted": "Interrompido",
-      "cancelled": "Cancelado"
+      "cancelled": "Cancelado",
+      "dispatched": "Enviado",
+      "skipped": "Ignorado"
     }
   },
   "openCodeContextConfigHint": {
