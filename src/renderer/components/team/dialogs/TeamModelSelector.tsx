@@ -33,7 +33,6 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
-import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -118,7 +117,7 @@ import {
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import { getOpenCodeSidebarSourceState } from './openCodeSidebarSourceState';
-import { useOpenCodeSourceDirectory } from './OpenCodeSourceDirectoryProvider';
+import { useOpenCodeSourceDirectory, useScopedOpenCodeStatus } from './OpenCodeSourceDirectoryProvider';
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
@@ -2522,14 +2521,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeCatalogUnavailable =
     openCodeCatalogRefreshFailed ||
     (effectiveProviderId === 'opencode' && openCodePassiveCatalogState === 'unavailable');
-  // A provider-wide flag also covers other projects; use the exact scope.
-  const scopedOpenCodeStatus = useStore((state) =>
-    openCodeCatalogScopeKey
-      ? (state.cliProviderStatusByScope?.[
-          getCliProviderStatusScopeKey('opencode', openCodeCatalogScopeKey)
-        ] ?? null)
-      : null
-  );
+  const scopedOpenCodeStatus = useScopedOpenCodeStatus(openCodeCatalogScopeKey);
   const {
     loading: openCodeSourcesLoading,
     unavailable: openCodeSourcesUnavailable,

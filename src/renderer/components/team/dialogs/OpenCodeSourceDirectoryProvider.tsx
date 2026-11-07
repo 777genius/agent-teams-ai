@@ -2,8 +2,10 @@ import { createContext, useContext } from 'react';
 
 import { useRuntimeProviderQuickConnect } from '@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
 import { useStore } from '@renderer/store';
+import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
 import type { JSX, ReactNode } from 'react';
+import type { CliProviderStatus } from '@shared/types';
 
 type SourceDirectory = ReturnType<typeof useRuntimeProviderQuickConnect> & {
   readonly enabled: boolean;
@@ -15,6 +17,16 @@ export const OpenCodeSourceDirectoryContext = createContext<SourceDirectory | nu
 export function useOpenCodeSourceDirectory(projectPath: string | null): SourceDirectory | null {
   const discovery = useContext(OpenCodeSourceDirectoryContext);
   return discovery?.enabled && discovery.projectPath === projectPath ? discovery : null;
+}
+
+export function useScopedOpenCodeStatus(projectPath: string): CliProviderStatus | null {
+  return useStore((state) =>
+    projectPath
+      ? (state.cliProviderStatusByScope?.[
+          getCliProviderStatusScopeKey('opencode', projectPath)
+        ] ?? null)
+      : null
+  );
 }
 
 /** One summary-only source lookup per dialog, not per team member. */
