@@ -1495,7 +1495,6 @@ export const CreateTeamDialog = ({
     if (members.length > 0) {
       return;
     }
-
     const initialRosterDrafts = buildInitialRosterMemberDrafts({ multimodelEnabled });
     if (initialRosterDrafts.length === 0) {
       return;
@@ -1520,7 +1519,6 @@ export const CreateTeamDialog = ({
     persistCurrentMemberRuntimePreferences,
     syncModelsWithLead,
   ]);
-
   useEffect(() => {
     if (!open || initialData || !draftLoaded) {
       return;
@@ -1737,6 +1735,7 @@ export const CreateTeamDialog = ({
     [codexRuntimeSelection, selectedFastMode, selectedProviderId]
   );
   useEffect(() => {
+    if (!draftLoaded) return;
     if (selectedProviderId !== 'anthropic' && selectedProviderId !== 'codex') {
       setAnthropicRuntimeNotice(null);
       return;
@@ -1807,6 +1806,7 @@ export const CreateTeamDialog = ({
     anthropicRuntimeSelection,
     codexRuntimeSelection,
     codexSnapshotPending,
+    draftLoaded,
     effectiveAnthropicRuntimeLimitContext,
     runtimeProviderStatusById,
     selectedEffort,
