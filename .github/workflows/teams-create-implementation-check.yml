@@ -10,9 +10,16 @@ on:
       - src/renderer/store/slices/tabSlice.ts
       - src/renderer/types/tabs.ts
       - src/features/organizations/renderer/ui/OrganizationMapTab.tsx
+      - src/features/organizations/renderer/hooks/useOrganizationCreateTeamDialog.ts
+      - src/features/gateway-provider/renderer/hooks/**
       - src/features/localization/renderer/locales/**
       - src/renderer/hooks/useCreateTeamDraft.ts
+      - src/renderer/hooks/useDraftPersistence.ts
+      - src/renderer/hooks/useChipDraftPersistence.ts
       - src/renderer/services/createTeamDraftStorage.ts
+      - src/renderer/services/draftStorage.ts
+      - src/renderer/store/utils/teamsCreationNavigation.ts
+      - scripts/e2e/**
 permissions:
   contents: read
 concurrency:
