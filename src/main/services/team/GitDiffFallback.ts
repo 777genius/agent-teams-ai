@@ -1,5 +1,4 @@
 import { GitDiffFallback as PortableGitDiffFallback } from '@agent-teams/task-change-ledger/review-git';
-
 import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 
