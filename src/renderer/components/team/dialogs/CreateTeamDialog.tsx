@@ -1501,7 +1501,7 @@ export const CreateTeamDialog = ({
   }, [initialData, open, suggestedTeamName, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps -- teamName read once
 
   useEffect(() => {
-    if (!open || initialData) {
+    if (!open || initialData || !descriptionDraft.isLoaded) {
       return;
     }
     const resolvedTeamName = teamName.trim() || suggestedTeamName;
