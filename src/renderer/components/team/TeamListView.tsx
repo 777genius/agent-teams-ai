@@ -829,7 +829,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
         .getState()
         .getAllPaneTabs()
         .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
-      if (hasOpenEditor || (saved?.teamName.trim() && saved.teamName !== copy.teamName)) {
+      if (hasOpenEditor || Boolean(saved?.teamName.trim() || saved?.members.length)) {
         const accepted = await confirm({
           title: t('create.title.copy'),
           message: t('create.draft.replaceConfirmation', { defaultValue: 'Copying this team will replace your unfinished draft. Continue?' }),
