@@ -471,6 +471,7 @@ describe('MembersEditorSection worktree master checkbox', () => {
 
     expect(checkbox.getAttribute('aria-checked')).toBe('mixed');
     expect(checkbox.dataset.state).toBe('indeterminate');
+    expect(checkbox.querySelector('svg.lucide-minus')).not.toBeNull();
   });
 
   it('renders checked only when all active members use worktrees', () => {
