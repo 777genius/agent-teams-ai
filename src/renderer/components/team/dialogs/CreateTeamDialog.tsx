@@ -96,8 +96,8 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
-import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
+import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
