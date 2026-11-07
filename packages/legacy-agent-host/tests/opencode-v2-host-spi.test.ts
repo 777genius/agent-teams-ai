@@ -702,8 +702,8 @@ test('direct V2 SPI close retires its TEST owner without a separate Host cleanup
       // while physical custody remains UNKNOWN, and that rejection must not
       // become an unhandled promise or be mistaken for clean exhaustion.
       const observed = observer.next().then(
-        event => event.done ? 'done' : 'unexpected-event',
-        error => error instanceof Error ? error.message : String(error),
+        (event: IteratorResult<unknown>) => event.done ? 'done' : 'unexpected-event',
+        (error: unknown) => error instanceof Error ? error.message : String(error),
       );
       const receipt = await opened.driver.close();
       assert.equal(await observed, physicallyConfirmed ? 'done' : 'opencode.v2.owner-cleanup-unknown',
