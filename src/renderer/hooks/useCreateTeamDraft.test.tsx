@@ -270,7 +270,8 @@ describe('useCreateTeamDraft', () => {
             },
           }),
         ],
-      })
+      }),
+      expect.any(Number)
     );
   });
 
