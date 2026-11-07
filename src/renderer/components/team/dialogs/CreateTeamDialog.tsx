@@ -1,5 +1,3 @@
-import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
-export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -201,6 +199,9 @@ import type {
   TeamFastMode,
   TeamProviderId,
 } from '@shared/types';
+
+import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
+export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
 
 const TEAM_COLOR_NAMES = [
   'blue',
