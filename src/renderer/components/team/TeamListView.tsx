@@ -1550,7 +1550,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="size-full overflow-auto p-4">
-        {teamsLoading ? (
+        {teamsLoading && teamsWithProvisioning.length === 0 ? (
           <TeamListSkeleton label={t('list.loading')} />
         ) : (
           <>
