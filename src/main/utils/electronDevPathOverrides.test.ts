@@ -105,6 +105,55 @@ describe('applyElectronDevPathOverrides', () => {
     expect(fs.existsSync(normal)).toBe(false);
   });
 
+  it.skipIf(process.platform !== 'win32')(
+    'uses absolute APPDATA when Electron cannot return appData before ready on Windows',
+    () => {
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-early-appdata-'));
+      tempDirs.push(tempRoot);
+      const appData = path.join(tempRoot, 'regular-appdata');
+      const regularProfile = path.join(appData, 'Agent Teams AI');
+      const isolated = path.join(tempRoot, 'isolated');
+      const previousAppData = process.env.APPDATA;
+      process.env.APPDATA = appData;
+      try {
+        const setPath = vi.fn();
+        const app = {
+          setPath,
+          getName: () => 'Agent Teams AI',
+          commandLine: { hasSwitch: (name: string) => name === 'user-data-dir' },
+          getPath: (name: string): string => {
+            if (name === 'appData') throw new Error("Failed to get 'appData' path");
+            if (name === 'userData') return isolated;
+            throw new Error(`Unexpected Electron path: ${name}`);
+          },
+        };
+        expect(
+          applyElectronDevPathOverrides(app, {
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
+          }).userDataDir
+        ).toBe(isolated);
+        expect(setPath).toHaveBeenCalledTimes(4);
+        setPath.mockClear();
+        expect(() =>
+          applyElectronDevPathOverrides(app, {
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: regularProfile,
+          })
+        ).toThrow(/overlaps regular userData/);
+        expect(setPath).not.toHaveBeenCalled();
+        expect(fs.existsSync(regularProfile)).toBe(false);
+        process.env.APPDATA = 'relative-appdata';
+        expect(() =>
+          applyElectronDevPathOverrides(app, {
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
+          })
+        ).toThrow("Failed to get 'appData' path");
+      } finally {
+        if (previousAppData === undefined) delete process.env.APPDATA;
+        else process.env.APPDATA = previousAppData;
+      }
+    }
+  );
+
   it('fails closed for an explicit relative userData path', () => {
     const setPathCalls: Array<{ name: string; value: string }> = [];
     expect(() =>

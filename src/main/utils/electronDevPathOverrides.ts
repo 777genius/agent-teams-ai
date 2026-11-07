@@ -89,6 +89,18 @@ function pathsOverlap(first: string, second: string): boolean {
   return isWithin(left, right) || isWithin(right, left);
 }
 
+function regularAppDataPath(getPath: (name: string) => string): string {
+  try {
+    return getPath('appData');
+  } catch (error) {
+    // Electron can report appData unavailable before ready on packaged Windows,
+    // even though the OS-defined APPDATA environment variable is already set.
+    const appData = process.env.APPDATA?.trim();
+    if (process.platform !== 'win32' || !appData || !path.isAbsolute(appData)) throw error;
+    return path.resolve(appData);
+  }
+}
+
 function regularElectronProfilePaths(app: ElectronDevPathOverrideApp): [string, string][] {
   if (!app.getPath) return [];
   const getPath = app.getPath.bind(app);
@@ -99,7 +111,7 @@ function regularElectronProfilePaths(app: ElectronDevPathOverrideApp): [string, 
     process.argv.some((arg) => arg === '--user-data-dir' || arg.startsWith('--user-data-dir='));
   const userDataPath =
     cliSelected && app.getName
-      ? path.join(getPath('appData'), app.getName())
+      ? path.join(regularAppDataPath(getPath), app.getName())
       : getPath('userData');
   const otherPaths: [string, string][] = cliSelected
     ? [
