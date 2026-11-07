@@ -17,7 +17,7 @@ interface TrackedRecipientRun {
 interface DurableRecipient {
   member: TeamCreateRequest['members'][number];
   isCurrentRun(): boolean;
-  beforeCommit(): Promise<boolean>;
+  beforeCommit(currentMeta: readonly TeamMember[]): Promise<boolean>;
 }
 
 function findPersistedRecipient(
@@ -43,8 +43,9 @@ async function verifyDurableRecipient(
   ports: OpenCodeRecipientIdentityForUserSendPorts
 ): Promise<DurableRecipient | null> {
   const stopEpoch = ports.getStopEpoch(teamName);
+  const model = meta.model?.trim();
   if (
-    !meta.model?.trim() ||
+    !model ||
     !(await ports.isTeamOwned(teamName)) ||
     (await ports.isTeamStopped(teamName)) ||
     !ports.isRuntimeReachable(teamName)
@@ -59,7 +60,7 @@ async function verifyDurableRecipient(
   if (
     snapshot?.teamName !== teamName ||
     recipient?.providerId !== 'opencode' ||
-    recipient.model?.trim() !== meta.model.trim() ||
+    recipient.model?.trim() !== model ||
     recipient.launchState !== 'confirmed_alive' ||
     !recipient.runtimeAlive ||
     !recipient.bootstrapConfirmed ||
@@ -71,11 +72,27 @@ async function verifyDurableRecipient(
     return null;
   }
 
+  const verifiedMember = { ...meta, providerId: 'opencode' as const, model };
   const isCurrentRun = () =>
     ports.getTrackedRunId(teamName) === null &&
     ports.getStopEpoch(teamName) === stopEpoch &&
     ports.isRuntimeReachable(teamName);
-  const beforeCommit = async () => {
+  const beforeCommit = async (currentMeta: readonly TeamMember[]) => {
+    const matches = currentMeta.filter(
+      (candidate) => candidate.name.trim().toLowerCase() === memberName.trim().toLowerCase()
+    );
+    const currentMember = matches.length === 1 ? matches[0] : undefined;
+    if (
+      !currentMember ||
+      currentMember.removedAt != null ||
+      (normalizeOptionalTeamProviderId(currentMember.providerId) ??
+        inferTeamProviderIdFromModel(currentMember.model)) !== 'opencode' ||
+      currentMember.model?.trim() !== model ||
+      currentMember.providerBackendId !== verifiedMember.providerBackendId ||
+      currentMember.cwd?.trim() !== verifiedMember.cwd?.trim()
+    ) {
+      return false;
+    }
     if (
       !isCurrentRun() ||
       !(await ports.isTeamOwned(teamName)) ||
@@ -89,7 +106,7 @@ async function verifyDurableRecipient(
       latest?.teamName === teamName &&
       latest.publicationRunId === snapshot.publicationRunId &&
       current?.providerId === 'opencode' &&
-      current.model?.trim() === meta.model?.trim() &&
+      current.model?.trim() === model &&
       current.runtimeRunId === runId &&
       current.runtimeSessionId === sessionId &&
       current.laneId === laneId &&
@@ -108,9 +125,9 @@ async function verifyDurableRecipient(
       isCurrentRun()
     );
   };
-  if (!(await beforeCommit())) return null;
+  if (!(await beforeCommit([meta]))) return null;
   return {
-    member: { ...meta, providerId: 'opencode', model: meta.model.trim() },
+    member: verifiedMember,
     isCurrentRun,
     beforeCommit,
   };

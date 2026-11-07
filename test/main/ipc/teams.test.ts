@@ -1607,6 +1607,10 @@ describe('ipc teams handlers', () => {
       delivered: false,
       reason: 'opencode_runtime_not_active',
     });
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'OpenCode runtime delivery after sendMessage failed for teammate "bob": opencode_runtime_not_active'
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('returns success false on invalid sendMessage args', async () => {

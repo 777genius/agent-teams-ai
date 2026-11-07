@@ -9,7 +9,7 @@ export interface TeamProvisioningLaunchRosterInput {
   members: TeamCreateRequest['members'];
   isCurrentRun(): boolean;
   /** Extra durable-runtime authority check immediately before an atomic user-send repair. */
-  beforeCommit?: () => Promise<boolean>;
+  beforeCommit?: (currentMeta: readonly TeamMember[]) => Promise<boolean>;
 }
 
 export interface TeamProvisioningLaunchRosterPorts {
@@ -156,11 +156,15 @@ async function publishLaunchRoster(
   }
 
   await ports.writeConfig(nextRaw, async () => {
-    if (!input.isCurrentRun() || (input.beforeCommit && !(await input.beforeCommit()))) {
+    if (!input.isCurrentRun()) {
       throw new Error(ROSTER_CONFLICT_MESSAGE);
     }
     const currentMeta = await ports.readMetaMembers();
-    if (!input.isCurrentRun() || hasRemovedMember(currentMeta)) {
+    if (
+      !input.isCurrentRun() ||
+      hasRemovedMember(currentMeta) ||
+      (input.beforeCommit && !(await input.beforeCommit(currentMeta)))
+    ) {
       throw new Error(ROSTER_CONFLICT_MESSAGE);
     }
     const currentRaw = await ports.readConfig();

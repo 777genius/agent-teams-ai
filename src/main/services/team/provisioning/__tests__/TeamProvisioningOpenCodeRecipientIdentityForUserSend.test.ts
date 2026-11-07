@@ -318,6 +318,25 @@ describe('OpenCode explicit user-send identity repair', () => {
     expect(h.resolve).toThrow('has no authoritative config identity');
   });
 
+  it.each(['model', 'provider', 'cwd'])(
+    'refuses a stale durable %s when metadata changes after recipient verification',
+    async (change) => {
+      const h = createHarness();
+      h.setTrackedRunId(null);
+      const materialize = h.ports.materializeLaunchRoster;
+      h.ports.materializeLaunchRoster = (input) => {
+        if (change === 'model') h.metadata[0].model = 'openai/replaced';
+        if (change === 'provider') h.metadata[0].providerId = 'codex';
+        if (change === 'cwd') h.metadata[0].cwd = '/other-project';
+        return materialize(input);
+      };
+      await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
+        'roster changed before config commit'
+      );
+      expect(h.resolve).toThrow('has no authoritative config identity');
+    }
+  );
+
   it('rechecks Stop generation and refuses stale persisted repair before writing', async () => {
     const h = createHarness();
     h.setTrackedRunId(null);
@@ -327,9 +346,9 @@ describe('OpenCode explicit user-send identity repair', () => {
     h.ports.materializeLaunchRoster = (input) =>
       materialize({
         ...input,
-        beforeCommit: async () => {
+        beforeCommit: async (currentMeta) => {
           epoch = '1';
-          return (await input.beforeCommit?.()) ?? true;
+          return (await input.beforeCommit?.(currentMeta)) ?? true;
         },
       });
     await expect(resolveOpenCodeRecipientIdentityForUserSend(h.input, h.ports)).rejects.toThrow(
