@@ -114,7 +114,12 @@ export const TaskTableView = memo(function TaskTableView({
   return (
     <section data-testid="team-task-table" aria-label={t('kanban.board.tableView')} className="min-w-0 pt-2">
       <div className="flex items-center justify-end px-3 pb-2">
-        <span className="mr-auto text-xs text-[var(--color-text-muted)]">
+        <span
+          data-testid="team-task-table-count"
+          data-shown={rows.length}
+          data-total={tasks.length}
+          className="mr-auto text-xs text-[var(--color-text-muted)]"
+        >
           {t('tasks.list.showing', { shown: rows.length, total: tasks.length })}
         </span>
         <Popover>
