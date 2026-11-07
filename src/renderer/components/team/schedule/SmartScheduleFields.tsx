@@ -3,13 +3,7 @@ import React from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
+import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { CronScheduleInput } from './CronScheduleInput';
@@ -58,6 +52,19 @@ export const SmartScheduleFields = ({
   onWarmUpMinutesChange,
 }: SmartScheduleFieldsProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const leadName = team?.leadName?.trim() ?? '';
+  const memberOptions = React.useMemo(() => {
+    const roster = team?.members ?? [];
+    // TeamSummary supplies the canonical lead separately from teammate rows.
+    // Add only that real lead identity for display; do not synthesize runtime status.
+    if (!leadName) {
+      // Local UI-only default. Never write the placeholder as a member identity.
+      return [{ name: DEFAULT_LEAD_VALUE, agentType: 'team-lead' }, ...roster];
+    }
+    if (roster.some((member) => member.name === leadName)) return roster;
+    return [{ name: leadName, role: 'Lead', agentType: 'team-lead' }, ...roster];
+  }, [leadName, team?.members]);
+
   return (
     <div
       className="rounded-lg border border-[var(--color-border-emphasis)] shadow-sm"
@@ -121,28 +128,22 @@ export const SmartScheduleFields = ({
             <Label htmlFor="schedule-member" className="text-xs">
               {t('launch.schedule.target')}
             </Label>
-            <Select
-              value={targetMember || DEFAULT_LEAD_VALUE}
-              onValueChange={(value) =>
-                onTargetMemberChange(value === DEFAULT_LEAD_VALUE ? '' : value)
+            <MemberSelect
+              id="schedule-member"
+              members={memberOptions}
+              value={targetMember || leadName || DEFAULT_LEAD_VALUE}
+              onChange={(name) =>
+                onTargetMemberChange(name === leadName || name === DEFAULT_LEAD_VALUE ? '' : (name ?? ''))
               }
-            >
-              <SelectTrigger id="schedule-member" className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={DEFAULT_LEAD_VALUE}>
-                  {t('launch.schedule.leadDefault')}
-                </SelectItem>
-                {(team?.members ?? [])
-                  .filter((member) => member.name !== team?.leadName)
-                  .map((member) => (
-                    <SelectItem key={member.name} value={member.name}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+              placeholder={t('launch.schedule.leadDefault')}
+              ariaLabel={t('launch.schedule.target')}
+              getMemberLabel={(member) =>
+                member.name === leadName || member.name === DEFAULT_LEAD_VALUE
+                  ? t('launch.schedule.leadDefault')
+                  : member.name
+              }
+              disabled={!team}
+            />
             <p className="text-[11px] text-[var(--color-text-muted)]">
               {t('launch.schedule.agentDescription')}
             </p>

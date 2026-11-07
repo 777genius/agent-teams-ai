@@ -194,4 +194,23 @@ describe('MemberSelect', () => {
     expect(document.body.textContent).toContain('Lead');
     expect(document.body.textContent).toContain('Alice');
   });
+  it('shows a removed saved recipient instead of the default placeholder', async () => {
+    await act(async () => {
+      root.render(
+        <MemberSelect
+          members={[member('alice', { role: 'Developer' })]}
+          value="old-reviewer"
+          onChange={vi.fn()}
+          placeholder="Team lead (default)"
+        />
+      );
+      await flush();
+    });
+
+    const trigger = host.querySelector('button[role="combobox"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('old-reviewer');
+    expect(trigger.textContent).not.toContain('Team lead (default)');
+  });
+
+
 });
