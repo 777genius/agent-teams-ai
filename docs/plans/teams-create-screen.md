@@ -1,9 +1,9 @@
 # Teams: creation screen, unchanged launch/relaunch dialogs
 
-> **Status correction — 2026-11-08 (post-merge follow-up):** Feature PR [#1125](https://github.com/777genius/agent-teams-ai/pull/1125) **merged** as `df26d00a38f2bb983f889950ac6cbeb55d72ad38`. [Main post-merge CI](https://github.com/777genius/agent-teams-ai/actions/runs/42422713898) and [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42422713884) **passed** on that exact merge commit; all 29 inline threads were resolved. Earlier sections below are a historical execution ledger and their "Draft / pending merge" rows no longer describe the current PR state. The [Linux Electron create-page E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129) passed on the earlier `57a0231d`, **not** the final merged SHA. The Windows packaged suite exercised model-selection behavior, **not** the complete create-page matrix. Four independent strongest-model `xhigh` review rounds remained **0/4**; four source-informed *author* passes are not four independent reviews. The follow-up branch `test/teams-creation-e2e-cross-platform-20261108` documents/extends verification without modifying `LaunchTeamDialog` or production runtime behavior. Uncommitted provisional Gateway bindings deliberately do **not** survive an Electron process restart: saved non-secret intent is restored and the user must reconnect, subject to main-process recovery.
+> **Status correction — 2026-11-08 (post-merge follow-up):** Feature PR [#1125](https://github.com/777genius/agent-teams-ai/pull/1125) **merged** as `df26d00a38f2bb983f889950ac6cbeb55d72ad38`. [Main post-merge CI](https://github.com/777genius/agent-teams-ai/actions/runs/42422713898) and [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42422713884) **passed** on that exact merge commit; all 29 inline threads were resolved. Earlier sections below are a historical execution ledger and their "Draft / pending merge" rows no longer describe the current PR state. The [Linux Electron create-page E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129) passed on the earlier `57a0231d`, **not** the final merged SHA. The Windows packaged suite exercised model-selection behavior, **not** the complete create-page matrix. Four independent strongest-model `xhigh` review rounds remained **0/4**; four source-informed *author* passes are not four independent reviews. The follow-up branch `test/teams-creation-e2e-cross-platform-20261108` documents/extends verification without modifying `LaunchTeamDialog` or production runtime behavior. Uncommitted provisional Gateway bindings **may be reclaimed** by main-process recovery after an Electron process restart. The current creation snapshot stores the non-secret roster but **does not store Gateway binding profile/selection identity**; the creation roster currently does not expose the previous Gateway selector. Do **not** claim that binding intent is restored, that a reconnect action is available there, or that the binding survives a restart. The user may need to set up the Gateway binding separately. This unverified UX limitation needs a dedicated follow-up before an automatic reconnect guarantee.
 
 
-Status: **implementation complete on branch; Electron E2E passed; full merge qualification pending; independent xhigh critics unavailable (0/4)**.
+Status (updated 2026-11-08): **feature merged in #1125**; main CI and CodeQL passed on `df26d00a`. New [follow-up #1136](https://github.com/777genius/agent-teams-ai/pull/1136) covers missing multi-OS Electron evidence. Four external `xhigh` reviews remain unverified (0/4); four author review passes are recorded separately.
 PR: [#1125](https://github.com/777genius/agent-teams-ai/pull/1125).
 Inspected production baseline: `9959d667ae348356f4402bfa5d5d185a7388c8d6`.
 First plan was published before production changes in `6d2c8f2a90fb42c1801d58153fbba56930a0a5b7`.
@@ -213,12 +213,15 @@ accepted create transfers ownership to the team. A failed/late binding operation
 cannot attach to a replacement draft. Do not use a saved flag to bypass cleanup.
 
 Renderer reload, crash and application restart are different: the existing main
-recovery may reclaim provisional receipts. Restore the non-secret form and gateway
-selection intent, refresh binding facts, and show a reconnect action for affected
-members. A missing intended gateway binding must not silently switch that member
-to a direct provider or submit a different runtime/model. Keep submission blocked
-for that unresolved selection until the user reconnects or explicitly changes it.
-Persisting an old receipt does not restore its authorization or prove it survived.
+recovery may reclaim provisional receipts. The requested UX was to retain
+non-secret binding intent, verify the binding and offer explicit reconnection
+without a silent provider fallback. **This is a plan requirement, not a
+verified implementation**: the current creation snapshot does not persist the
+Gateway profile or which teammate was affected, and the current roster does not
+present that former Gateway selector. Restoring a team name and teammates alone
+is not evidence that the binding can be safely resumed. The existing security
+recovery must remain active; any missing reconnect/validation UX needs a
+separate specifically reviewed implementation and E2E before acceptance.
 
 No new durable gateway ownership protocol, credential copying, IPC method or
 main-process recovery change is in scope. Transparent survival of provisional
