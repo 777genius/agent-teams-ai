@@ -4,6 +4,8 @@
  */
 
 import type { Session } from './data';
+import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
+import type { TeamCopyData } from '@renderer/components/team/dialogs/CreateTeamDialog.types';
 import type { TriggerColor } from '@shared/constants/triggerColors';
 
 // =============================================================================
@@ -71,6 +73,13 @@ export interface TabNavigationRequest {
 /**
  * Represents a single open tab in the main content area
  */
+/** One-time entry data for the create screen. It is never a second persisted form. */
+export interface TeamsCreationSeed {
+  id: string;
+  copyData?: TeamCopyData;
+  placement?: OrganizationPlacementSelection;
+}
+
 export interface Tab {
   /** Unique identifier (UUID v4) */
   id: string;
@@ -89,6 +98,10 @@ export interface Tab {
     | 'schedules'
     | 'graph'
     | 'token-usage';
+
+  /** In-tab Teams screen; launch/relaunch remain independent modal surfaces. */
+  teamsCreationPage?: boolean;
+  teamsCreationSeed?: TeamsCreationSeed;
 
   /** Session ID (required when type === 'session') */
   sessionId?: string;
