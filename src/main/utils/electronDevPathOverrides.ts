@@ -109,11 +109,20 @@ function regularElectronProfilePaths(app: ElectronDevPathOverrideApp): [string, 
   const cliSelected =
     app.commandLine?.hasSwitch('user-data-dir') === true ||
     process.argv.some((arg) => arg === '--user-data-dir' || arg.startsWith('--user-data-dir='));
-  const userDataPath =
-    cliSelected && app.getName
-      ? path.join(regularAppDataPath(getPath), app.getName())
-      : getPath('userData');
-  const otherPaths: [string, string][] = cliSelected
+  let earlyUserDataUnavailable = false;
+  const userDataPath = (() => {
+    if (cliSelected && app.getName) return path.join(regularAppDataPath(getPath), app.getName());
+    try {
+      return getPath('userData');
+    } catch (error) {
+      // Electron may reject userData before ready on Windows. Resolve the
+      // ordinary profile from appData/name, never from the requested test root.
+      if (process.platform !== 'win32' || !app.getName) throw error;
+      earlyUserDataUnavailable = true;
+      return path.join(regularAppDataPath(getPath), app.getName());
+    }
+  })();
+  const otherPaths: [string, string][] = cliSelected || earlyUserDataUnavailable
     ? [
         ['sessionData', userDataPath],
         ['logs', path.join(userDataPath, 'logs')],
