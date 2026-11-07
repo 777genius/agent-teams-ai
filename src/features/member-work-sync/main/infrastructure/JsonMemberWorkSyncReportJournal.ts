@@ -1,9 +1,9 @@
-import { open } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
 import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
+import { syncFile } from '@main/utils/durableFileSync';
 
 import { decodeMemberWorkSyncReportJournalMetadata } from '../../core/domain/MemberWorkSyncReportJournalMetadata';
 
@@ -191,14 +191,8 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                     if (dir === dirname(this.paths.getTeamRootDir(input.teamName))) break;
                     if (dirname(dir) === dir) break;
                   }
-                  if (provingExisting) {
-                    const handle = await open(path, 'r');
-                    try {
-                      await handle.sync();
-                    } finally {
-                      await handle.close();
-                    }
-                  } else
+                  if (provingExisting) await syncFile(path, true);
+                  else
                     await atomicWriteAsync(path, `${JSON.stringify(file, null, 2)}\n`, {
                       durability: 'strict',
                       syncDirectory: true,

@@ -10,6 +10,7 @@ import {
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadThoughtSourceMessage } from '@shared/utils/leadDetection';
+import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -456,7 +457,17 @@ export class TeamInboxReader {
     this.trimInboxFileCache();
   }
 
+  /**
+   * Expose inbox owners as team members only when the member-name contract accepts them.
+   * Keep non-member inbox files available to the message-history readers.
+   */
   async listInboxNames(teamName: string): Promise<string[]> {
+    return (await this.listInboxFileNames(teamName)).filter(
+      (name) => name.length > 0 && name.trim() === name && validateTeamMemberNameFormat(name) === null
+    );
+  }
+
+  private async listInboxFileNames(teamName: string): Promise<string[]> {
     const inboxDir = path.join(getTeamsBasePath(), teamName, 'inboxes');
 
     let entries: string[];
@@ -544,7 +555,7 @@ export class TeamInboxReader {
   }
 
   async getMessages(teamName: string): Promise<InboxMessage[]> {
-    const members = await this.listInboxNames(teamName);
+    const members = await this.listInboxFileNames(teamName);
     const chunks = await mapLimit(members, INBOX_READ_CONCURRENCY, async (member) => {
       try {
         const msgs = await this.getMessagesFor(teamName, member);
