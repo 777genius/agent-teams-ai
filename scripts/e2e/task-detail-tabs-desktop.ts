@@ -240,7 +240,7 @@ try {
   const startedTableNavigationAt = Date.now();
   const initialRendererOrigin = await cdp.evaluate('performance.timeOrigin') as number;
   const navigateToTeam = async (): Promise<unknown> => cdp!.evaluate(
-    '(async()=>{const s=window.__agentTeamsDevStore.getState();await s.fetchTeams();await s.selectTeam(' +
+    '(async()=>{if(!window.__agentTeamsDevStore || !window.electronAPI?.startup) return null;const ready=await window.electronAPI.startup.getStatus();if(!ready.ready) return null;const s=window.__agentTeamsDevStore.getState();await s.fetchTeams();await s.selectTeam(' +
     JSON.stringify(tableTeam.teamName) +
     ',{skipProjectAutoSelect:true});s.openTeamTab(' + JSON.stringify(tableTeam.teamName) +
     ');const current=window.__agentTeamsDevStore.getState();const pane=current.paneLayout.panes.find(p=>p.id===current.paneLayout.focusedPaneId);return {origin:performance.timeOrigin,selectedTeamName:current.selectedTeamName,error:current.selectedTeamError,activeTab:pane?.tabs.find(t=>t.id===pane.activeTabId)?.type,activeTeam:pane?.tabs.find(t=>t.id===pane.activeTabId)?.teamName};})()'
@@ -280,9 +280,11 @@ try {
         restoredAfterViteReload < 2 &&
         Date.now() - startedTableNavigationAt > 2500
       ) {
-        restoredAfterViteReload += 1;
         const restored = await navigateToTeam();
-        diagnostics.push({ kind: 'vite-renderer-reload-navigation', attempt: restoredAfterViteReload, probe, restored });
+        if (restored) {
+          restoredAfterViteReload += 1;
+          diagnostics.push({ kind: 'vite-renderer-reload-navigation', attempt: restoredAfterViteReload, probe, restored });
+        }
       }
       return false;
     } catch (error) {

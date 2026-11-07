@@ -1,6 +1,6 @@
+import { formatExactTaskDateTime, formatTaskUpdatedRelativeTime } from '@renderer/components/sidebar/sidebarTaskTime';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { formatExactTaskDateTime, formatTaskUpdatedRelativeTime } from '@renderer/components/sidebar/sidebarTaskTime';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   columnResizingFeature,

@@ -194,15 +194,9 @@ export const TaskTableView = memo(function TaskTableView({
                       {header.column.getCanResize() ? (
                         <button
                           type="button"
-                          role="separator"
-                          tabIndex={0}
                           aria-label={t('kanban.board.resizeColumn', {
                             column: String(header.column.columnDef.header ?? header.column.id),
                           })}
-                          aria-orientation="vertical"
-                          aria-valuemin={header.column.columnDef.minSize ?? 20}
-                          aria-valuemax={header.column.columnDef.maxSize ?? 720}
-                          aria-valuenow={header.column.getSize()}
                           className="absolute end-0 top-0 h-full w-1.5 cursor-col-resize touch-none hover:bg-blue-500/50 focus:bg-blue-500/70"
                           onMouseDown={header.getResizeHandler()}
                           onTouchStart={header.getResizeHandler()}

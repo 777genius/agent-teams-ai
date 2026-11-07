@@ -22,6 +22,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import { TaskTableView } from './table/TaskTableView';
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
 import {
@@ -33,7 +34,6 @@ import { KanbanSortPopover } from './KanbanSortPopover';
 import { estimateKanbanAttachmentPreviewHeight } from './kanbanTaskAttachmentLayout';
 import { KanbanTaskCard } from './KanbanTaskCard';
 import { KanbanViewModeSwitch } from './KanbanViewModeSwitch';
-import { TaskTableView } from './table/TaskTableView';
 import { getTaskColumn } from './teamTaskProjection';
 
 import type { KanbanFilterState } from './KanbanFilterPopover';
