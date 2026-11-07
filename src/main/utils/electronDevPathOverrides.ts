@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -35,6 +36,10 @@ function normalizeAbsolutePath(value: string | undefined): string | null {
 function ensureDirectory(dirPath: string, warnings: string[], envName: string): boolean {
   try {
     fs.mkdirSync(dirPath, { recursive: true });
+    // Existing folders can be read-only; verify real file creation before startup.
+    const probe = path.join(dirPath, `.agent-teams-write-probe-${randomUUID()}`);
+    fs.writeFileSync(probe, '', { flag: 'wx' });
+    fs.unlinkSync(probe);
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -67,7 +72,39 @@ function pathsOverlap(first: string, second: string): boolean {
       (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
     );
   };
-  return isWithin(first, second) || isWithin(second, first);
+  // Missing path suffixes cannot be realpathed. On case-insensitive macOS
+  // volumes they can still alias a profile that normal startup later reuses.
+  const left = process.platform === 'darwin' ? first.toLowerCase() : first;
+  const right = process.platform === 'darwin' ? second.toLowerCase() : second;
+  return isWithin(left, right) || isWithin(right, left);
+}
+
+function regularElectronProfilePaths(app: ElectronDevPathOverrideApp): [string, string][] {
+  if (!app.getPath) return [];
+  const getPath = app.getPath.bind(app);
+  const userDataPath = getPath('userData');
+  return [
+    ['userData', userDataPath],
+    ...['sessionData', 'logs', 'crashDumps'].map(
+      (name): [string, string] => [name, getPath(name)]
+    ),
+    ...getLegacyElectronUserDataCandidates(userDataPath).map(
+      (candidate): [string, string] => ['legacy userData', candidate]
+    ),
+  ];
+}
+
+function assertSeparateFromRegularProfile(
+  requested: string,
+  kind: string,
+  regularPaths: readonly (readonly [string, string])[]
+): void {
+  const realRequested = resolveExistingAncestor(requested);
+  for (const [name, candidate] of regularPaths) {
+    if (pathsOverlap(realRequested, resolveExistingAncestor(candidate))) {
+      throw new Error(`Electron isolated ${kind} overlaps regular ${name}`);
+    }
+  }
 }
 
 export function resolveElectronDevClaudeRootOverride(
@@ -112,13 +149,19 @@ export function applyElectronDevPathOverrides(
 ): ElectronDevPathOverrideResult {
   const warnings: string[] = [];
   const claudeRoot = requireValidClaudeRoot(env);
-  if (claudeRoot && !ensureDirectory(claudeRoot, warnings, AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV)) {
-    throw new Error(warnings[warnings.length - 1]);
-  }
   const userDataDir = normalizeAbsolutePath(env[AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]);
-  const rawUserDataDir = env[AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV];
-  if (rawUserDataDir !== undefined && !userDataDir) {
+  if (env[AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV] !== undefined && !userDataDir) {
     throw new Error(`${AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV} must be an absolute path.`);
+  }
+
+  const regularPaths = claudeRoot || userDataDir ? regularElectronProfilePaths(app) : [];
+  if (claudeRoot) {
+    // Validate before creating: an explicit test root must not touch a normal
+    // Electron profile or a legacy profile eligible for migration.
+    assertSeparateFromRegularProfile(claudeRoot, 'Claude root', regularPaths);
+    if (!ensureDirectory(claudeRoot, warnings, AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV)) {
+      throw new Error(warnings[warnings.length - 1]);
+    }
   }
 
   if (userDataDir) {
@@ -128,28 +171,7 @@ export function applyElectronDevPathOverrides(
 
     // Resolve existing ancestors before creating anything: a junction in an
     // ancestor must not redirect an explicit dev profile into the regular one.
-    const requestedRealPath = resolveExistingAncestor(userDataDir);
-    if (app.getPath) {
-      const getPath = app.getPath.bind(app);
-      const userDataPath = getPath('userData');
-      const regularPaths: [string, string][] = [
-        ['userData', userDataPath],
-        ...['sessionData', 'logs', 'crashDumps'].map((name): [string, string] => [
-          name,
-          getPath(name),
-        ]),
-        ...getLegacyElectronUserDataCandidates(userDataPath).map((candidate): [string, string] => [
-          'legacy userData',
-          candidate,
-        ]),
-      ];
-      for (const [name, candidate] of regularPaths) {
-        const regularPath = resolveExistingAncestor(candidate);
-        if (pathsOverlap(requestedRealPath, regularPath)) {
-          throw new Error(`Electron isolated userData overlaps regular ${name}`);
-        }
-      }
-    }
+    assertSeparateFromRegularProfile(userDataDir, 'userData', regularPaths);
     try {
       if (fs.lstatSync(userDataDir).isSymbolicLink()) {
         throw new Error('Electron isolated userData must not be a symlink or junction');

@@ -182,6 +182,71 @@ describe('applyElectronDevPathOverrides', () => {
     expect(setPath).toHaveBeenCalledTimes(4);
   });
 
+  it.skipIf(process.platform !== 'darwin' && process.platform !== 'win32')(
+    'rejects a case-only alias of a nonexistent legacy profile',
+    () => {
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-path-case-alias-'));
+      tempDirs.push(tempRoot);
+      const regular = path.join(tempRoot, 'Agent Teams AI');
+      const alias = path.join(tempRoot, 'AGENT-TEAMS-AI');
+      const setPath = vi.fn();
+      expect(() =>
+        applyElectronDevPathOverrides(
+          {
+            setPath,
+            getPath: (name: string) =>
+              name === 'userData' || name === 'sessionData'
+                ? regular
+                : path.join(regular, name),
+          },
+          { [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: alias }
+        )
+      ).toThrow(/overlaps regular legacy userData/);
+      expect(setPath).not.toHaveBeenCalled();
+      expect(fs.existsSync(alias)).toBe(false);
+    }
+  );
+
+  it('rejects an explicit Claude root inside a normal Electron profile', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-claude-profile-'));
+    tempDirs.push(tempRoot);
+    const regular = path.join(tempRoot, 'regular-profile');
+    const claudeRoot = path.join(regular, 'data', '.claude');
+    const setPath = vi.fn();
+    expect(() =>
+      applyElectronDevPathOverrides(
+        { setPath, getPath: () => regular },
+        { [AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV]: claudeRoot }
+      )
+    ).toThrow(/Electron isolated Claude root overlaps regular userData/);
+    expect(fs.existsSync(claudeRoot)).toBe(false);
+    expect(setPath).not.toHaveBeenCalled();
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'rejects an existing isolated logs directory that is not writable',
+    () => {
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-profile-readonly-'));
+      tempDirs.push(tempRoot);
+      const userDataDir = path.join(tempRoot, 'isolated');
+      const logs = path.join(userDataDir, 'logs');
+      fs.mkdirSync(logs, { recursive: true });
+      fs.chmodSync(logs, 0o500);
+      const setPath = vi.fn();
+      try {
+        expect(() =>
+          applyElectronDevPathOverrides(
+            { setPath },
+            { [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: userDataDir }
+          )
+        ).toThrow(/could not be created/);
+        expect(setPath).not.toHaveBeenCalled();
+      } finally {
+        fs.chmodSync(logs, 0o700);
+      }
+    }
+  );
+
   it('rejects a junction used as the dev profile root', () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-path-root-link-'));
     tempDirs.push(tempRoot);

@@ -8,6 +8,7 @@ on:
       - 'src/main/utils/electronDevPathOverrides.test.ts'
       - 'src/main/utils/electronUserDataMigration.ts'
       - 'test/main/utils/electronUserDataMigration.test.ts'
+      - 'test/main/bootstrapConfigIsolation.test.ts'
       - '.github/workflows/electron-dev-profile-cross-platform.yml'
   push:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'src/main/utils/electronDevPathOverrides.test.ts'
       - 'src/main/utils/electronUserDataMigration.ts'
       - 'test/main/utils/electronUserDataMigration.test.ts'
+      - 'test/main/bootstrapConfigIsolation.test.ts'
       - '.github/workflows/electron-dev-profile-cross-platform.yml'
 
 permissions:
@@ -59,3 +61,4 @@ jobs:
           src/main/utils/electronDevPathOverrides.test.ts
           test/main/utils/electronUserDataMigration.test.ts
           test/main/services/infrastructure/ConfigManager.claudeRoot.test.ts
+          test/main/bootstrapConfigIsolation.test.ts
