@@ -8,6 +8,8 @@ on:
       - src/renderer/components/team/**
       - src/renderer/components/layout/PaneContent.tsx
       - src/renderer/store/slices/tabSlice.ts
+      - src/renderer/store/slices/contextSlice.ts
+      - test/renderer/store/contextSliceTeamReset.test.ts
       - src/renderer/types/tabs.ts
       - src/features/organizations/renderer/ui/OrganizationMapTab.tsx
       - src/features/organizations/renderer/hooks/useOrganizationCreateTeamDialog.ts
@@ -62,6 +64,7 @@ jobs:
             src/renderer/services/createTeamDraftStorage.test.ts \
             test/renderer/hooks/useDraftPersistence.test.ts \
             test/renderer/store/teamsCreationPage.test.ts \
+            test/renderer/store/contextSliceTeamReset.test.ts \
             test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts \
             test/renderer/components/team/dialogs/ProjectPathSelectorDeleted.test.tsx \
             src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts \
@@ -81,6 +84,7 @@ jobs:
             src/renderer/components/team/dialogs/CreateTeamSurface.tsx \
             src/renderer/components/layout/PaneContent.tsx \
             src/renderer/store/slices/tabSlice.ts \
+            src/renderer/store/slices/contextSlice.ts \
             src/renderer/types/tabs.ts \
             src/features/organizations/renderer/ui/OrganizationMapTab.tsx
       - name: Store machine-readable verification logs
