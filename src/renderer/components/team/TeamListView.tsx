@@ -601,7 +601,6 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
     };
   }, [fetchAliveTeams, readyProgressRefreshKey]);
 
-  // Refresh alive teams when opening the create dialog so conflict warning is accurate.
   useEffect(() => {
     if (!electronMode || !createPageOpen) return;
     let cancelled = false;
