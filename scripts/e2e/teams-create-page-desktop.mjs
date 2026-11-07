@@ -202,7 +202,7 @@ async function startApp(fixture) {
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   };
-  appProcess = spawn('pnpm', ['dev:mcp'], {
+  appProcess = spawn('pnpm', ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])], {
     cwd: repoRoot,
     detached: process.platform !== 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
