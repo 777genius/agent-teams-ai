@@ -2350,7 +2350,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               label: schedLabel.trim() || undefined,
               cronExpression: cronExpression.trim(),
               timezone,
-              warmUpMinutes,
+              warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
               maxTurns,
               maxBudgetUsd: parsedBudget,
               launchConfig,
@@ -2364,7 +2364,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               label: schedLabel.trim() || undefined,
               cronExpression: cronExpression.trim(),
               timezone,
-              warmUpMinutes,
+              warmUpMinutes: scheduleExecutionMode === 'legacy' ? warmUpMinutes : 0,
               maxTurns,
               maxBudgetUsd: parsedBudget,
               launchConfig,
@@ -2852,7 +2852,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   value={promptDraft.value}
                   onValueChange={promptDraft.setValue}
                   suggestions={mentionSuggestions}
-                  projectPath={effectiveCwd || null}
+                  projectPath={
+                    isTeamSchedule
+                      ? teamByName[effectiveTeamName]?.projectPath || schedule?.launchConfig.cwd || null
+                      : effectiveCwd || null
+                  }
                   chips={chipDraft.chips}
                   onChipRemove={chipDraft.removeChip}
                   onFileChipInsert={chipDraft.addChip}

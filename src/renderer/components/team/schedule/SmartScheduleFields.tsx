@@ -166,6 +166,7 @@ export const SmartScheduleFields = ({
         />
       </div>
       <CronScheduleInput
+        showWarmUp={mode === 'legacy'}
         cronExpression={cronExpression}
         onCronExpressionChange={onCronExpressionChange}
         timezone={timezone}
