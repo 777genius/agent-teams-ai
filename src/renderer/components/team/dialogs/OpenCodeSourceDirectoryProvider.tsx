@@ -1,5 +1,9 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 
+import {
+  resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
+} from '@features/runtime-provider-management/core/domain';
 import { useRuntimeProviderQuickConnect } from '@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
@@ -40,17 +44,45 @@ export function OpenCodeSourceDirectoryProvider({
   projectPath: string | null | undefined;
 }>): JSX.Element {
   const normalizedPath = projectPath?.trim() || null;
-  const runtimeRevision = useStore((state) => state.openCodeRuntimeStatus?.version ?? null);
+  const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus);
+  const runtimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
+  const runtimeError = useStore((state) => state.openCodeRuntimeError);
+  const fetchRuntimeStatus = useStore((state) => state.fetchOpenCodeRuntimeStatus);
+  const cliStatusLoading = useStore((state) => state.cliStatusLoading);
+  const provider = useStore(
+    (state) => state.cliStatus?.providers.find((item) => item.providerId === 'opencode') ?? null
+  );
+  useEffect(() => {
+    if (enabled && !runtimeStatus && !runtimeStatusLoading && !runtimeError) {
+      void fetchRuntimeStatus();
+    }
+  }, [enabled, fetchRuntimeStatus, runtimeError, runtimeStatus, runtimeStatusLoading]);
+
+  const gate = resolveOpenCodeQuickConnectGate({
+    runtimeStatus,
+    runtimeStatusLoading,
+    provider,
+    cliStatusLoading,
+  });
+  const runtimeRevision = resolveOpenCodeQuickConnectRuntimeRevision({ gate, runtimeStatus });
+  const runtimeReady = enabled && gate === 'ready';
+  const checking = enabled && (gate === 'checking' || gate === 'installing');
   const directory = useRuntimeProviderQuickConnect({
-    enabled,
+    enabled: runtimeReady,
     projectPath: normalizedPath,
     runtimeRevision,
   });
+  const error = enabled && !checking && !runtimeReady
+    ? (runtimeError ?? runtimeStatus?.error ?? 'OpenCode runtime is not ready.')
+    : directory.error;
 
   return (
     <OpenCodeSourceDirectoryContext.Provider
       value={{
         ...directory,
+        loading: checking || directory.loading,
+        authoritativePending: checking || (runtimeReady && directory.authoritativePending),
+        error,
         enabled,
         projectPath: normalizedPath,
       }}

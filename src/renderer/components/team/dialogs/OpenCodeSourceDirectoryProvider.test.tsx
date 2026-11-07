@@ -3,6 +3,19 @@ import { createRoot } from 'react-dom/client';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const storeState = vi.hoisted(() => ({
+  current: {
+    openCodeRuntimeStatus: {
+      installed: true, state: 'ready', version: '1.17.18', binaryPath: '/opt/opencode',
+    } as { installed: boolean; state: string; version: string; binaryPath: string } | null,
+    openCodeRuntimeStatusLoading: false,
+    openCodeRuntimeError: null,
+    fetchOpenCodeRuntimeStatus: vi.fn().mockResolvedValue(undefined),
+    cliStatus: null,
+    cliStatusLoading: false,
+  },
+}));
+
 const quickConnect = vi.hoisted(() => vi.fn(() => ({
   entries: [],
   loading: false,
@@ -15,7 +28,7 @@ const quickConnect = vi.hoisted(() => vi.fn(() => ({
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: unknown) => unknown) =>
-    selector({ openCodeRuntimeStatus: { version: '1.17.18' } }),
+    selector(storeState.current),
 }));
 vi.mock('@features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect', () => ({
   useRuntimeProviderQuickConnect: quickConnect,
@@ -26,9 +39,35 @@ import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvid
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   quickConnect.mockClear();
+  storeState.current.openCodeRuntimeStatus = {
+    installed: true, state: 'ready', version: '1.17.18', binaryPath: '/opt/opencode',
+  };
+  storeState.current.fetchOpenCodeRuntimeStatus.mockClear();
 });
 
 describe('OpenCodeSourceDirectoryProvider', () => {
+  it('does not start directory discovery for a missing runtime', async () => {
+    storeState.current.openCodeRuntimeStatus = null;
+    const root = createRoot(document.createElement('div'));
+    try {
+      await act(async () => {
+        root.render(
+          <OpenCodeSourceDirectoryProvider enabled projectPath="/tmp/project">
+            <span>Dialog</span>
+          </OpenCodeSourceDirectoryProvider>
+        );
+      });
+      expect(quickConnect).toHaveBeenLastCalledWith({
+        enabled: false,
+        projectPath: '/tmp/project',
+        runtimeRevision: null,
+      });
+      expect(storeState.current.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('starts global source discovery on open before a project is selected', async () => {
     const root = createRoot(document.createElement('div'));
     try {
@@ -42,7 +81,7 @@ describe('OpenCodeSourceDirectoryProvider', () => {
       expect(quickConnect).toHaveBeenLastCalledWith({
         enabled: true,
         projectPath: null,
-        runtimeRevision: '1.17.18',
+        runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
       await act(async () => {
         root.render(
@@ -54,7 +93,7 @@ describe('OpenCodeSourceDirectoryProvider', () => {
       expect(quickConnect).toHaveBeenLastCalledWith({
         enabled: true,
         projectPath: '/tmp/selected-project',
-        runtimeRevision: '1.17.18',
+        runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
     } finally {
       await act(async () => root.unmount());
@@ -74,7 +113,7 @@ describe('OpenCodeSourceDirectoryProvider', () => {
       expect(quickConnect).toHaveBeenCalledWith({
         enabled: true,
         projectPath: '/tmp/test-project',
-        runtimeRevision: '1.17.18',
+        runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
 
       await act(async () => {
@@ -87,7 +126,7 @@ describe('OpenCodeSourceDirectoryProvider', () => {
       expect(quickConnect).toHaveBeenLastCalledWith({
         enabled: false,
         projectPath: '/tmp/test-project',
-        runtimeRevision: '1.17.18',
+        runtimeRevision: JSON.stringify(['ready', '1.17.18', '/opt/opencode']),
       });
     } finally {
       await act(async () => root.unmount());
