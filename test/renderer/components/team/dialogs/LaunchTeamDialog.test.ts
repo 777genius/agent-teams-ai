@@ -4762,11 +4762,18 @@ describe('LaunchTeamDialog', () => {
         (button) => button.textContent?.trim() === 'Save Changes'
       );
       expect(save).toBeTruthy();
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        members: [{ name: 'alice' }],
+      });
       await act(async () => {
         save?.click();
         await flush();
       });
 
+      expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
       expect(updateSchedule).toHaveBeenCalledOnce();
       expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
         executionMode: 'team',

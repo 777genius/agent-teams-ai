@@ -2033,8 +2033,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         errors.push('Project folder is not available');
       }
       if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
-    } else if (!teamByName[effectiveTeamName]?.projectPath && !schedule?.launchConfig.cwd) {
-      errors.push(t('launch.schedule.teamPathMissing'));
     }
     if (isSchedule) {
       if (!effectiveTeamName) errors.push('Team is required');
@@ -2295,7 +2293,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);
           closeDialog();
         } else {
-          // Schedule mode: create or update
+          // Whole-team schedules must use the saved team launch profile, never
+          // a legacy one-shot cwd or unsaved renderer project selection.
+          const savedTeam = isTeamSchedule ? await api.teams.getSavedRequest(effectiveTeamName) : null;
+          if (isTeamSchedule && (!savedTeam?.cwd?.trim() || !savedTeam.providerId)) {
+            throw new Error(t('launch.schedule.teamPathMissing'));
+          }
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
           const scheduleModel = resolvePersistedTeamModel({
             model: computeEffectiveTeamModel(
@@ -2321,9 +2324,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               ? (explicitScheduleEffort ?? anthropicRuntimeSelection?.defaultEffort ?? undefined)
               : explicitScheduleEffort;
           const launchConfig: ScheduleLaunchConfig = {
-            cwd: isTeamSchedule
-              ? teamByName[effectiveTeamName]?.projectPath || schedule?.launchConfig.cwd || ''
-              : effectiveCwd,
+            cwd: isTeamSchedule ? savedTeam?.cwd ?? '' : effectiveCwd,
             prompt: promptDraft.value.trim(),
             providerId: selectedProviderId,
             providerBackendId: selectedProviderBackendId,
