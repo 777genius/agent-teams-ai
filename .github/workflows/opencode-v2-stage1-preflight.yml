@@ -8,7 +8,12 @@ on:
       # the pinned provider package; changing either must invalidate its proof.
       - runtime.lock.json
       - pnpm-lock.yaml
+      # Root manifest/workspace membership and Host TS project files affect
+      # this exact pinned install, build and source test, even without a lock change.
+      - package.json
+      - pnpm-workspace.yaml
       - packages/legacy-agent-host/package.json
+      - packages/legacy-agent-host/tsconfig*.json
       - packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts
       - packages/legacy-agent-host/src/composition/runtimeProfile.ts
       - packages/legacy-agent-host/src/composition/launchConfiguration.ts
