@@ -42,7 +42,13 @@ const READY_CHECK_ATTEMPTS = 45;
 const READY_CHECK_DELAY_MS = 2000;
 
 function readyMember(entry: TeamAgentRuntimeEntry | undefined): boolean {
-  return Boolean(entry?.alive && entry.livenessKind && READY_KINDS.has(entry.livenessKind));
+  if (!entry?.alive) return false;
+  // Non-OpenCode leads are tracked by the authoritative live process rather
+  // than an optional teammate livenessKind (which is absent in their snapshot).
+  if (entry.backendType === 'lead') {
+    return entry.pidSource === 'lead_process' && Number.isSafeInteger(entry.pid) && (entry.pid ?? 0) > 0;
+  }
+  return Boolean(entry.livenessKind && READY_KINDS.has(entry.livenessKind));
 }
 
 function skipped(reason: string): SmartScheduleOutcome {

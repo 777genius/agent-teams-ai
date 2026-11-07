@@ -43,7 +43,19 @@ function runtimeMembers(ready: boolean): TeamAgentRuntimeSnapshot {
     teamName: 'test-team',
     runId: 'team-run-1',
     updatedAt: new Date().toISOString(),
-    members: { lead: member('lead', true), alice: member('alice', ready) },
+    members: {
+      // Mirrors the real non-OpenCode lead process snapshot: no livenessKind.
+      lead: {
+        memberName: 'lead',
+        alive: true,
+        backendType: 'lead',
+        pid: 321,
+        pidSource: 'lead_process',
+        restartable: false,
+        updatedAt: new Date().toISOString(),
+      },
+      alice: member('alice', ready),
+    },
   };
 }
 
@@ -129,6 +141,16 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     );
     expect(port.launchTeam).not.toHaveBeenCalled();
     expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('rejects a lead without current process evidence even when alive is claimed', async () => {
+    const snapshot = runtimeMembers(true);
+    snapshot.members.lead = { ...snapshot.members.lead, pidSource: undefined, pid: undefined };
+    port.getRuntime = vi.fn(async () => snapshot);
+    const outcome = await dispatch.dispatch(makeSchedule('team'), 'missing-lead-pid', active);
+    expect(outcome.kind).toBe('skipped');
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
   });
 
   it('creates exactly one idempotent task for an already running agent', async () => {
