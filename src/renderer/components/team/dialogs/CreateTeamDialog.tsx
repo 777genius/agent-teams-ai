@@ -282,6 +282,7 @@ export const CreateTeamDialog = ({
   defaultProjectPath,
   forceDefaultProjectSelection = false,
   onClose,
+  onBack,
   onCreate,
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
@@ -2373,7 +2374,7 @@ export const CreateTeamDialog = ({
       isCopy={Boolean(initialData)}
       onClose={() => {
         resetUIState();
-        onClose();
+        (presentation === 'page' && onBack ? onBack : onClose)();
       }}
       overlay={providerSettingsOverlay}
     >
