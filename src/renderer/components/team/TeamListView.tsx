@@ -1264,10 +1264,6 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
   );
 
   const renderContent = (): React.JSX.Element => {
-    if (teamsLoading) {
-      return <TeamListSkeleton label={t('list.loading')} />;
-    }
-
     if (teamsError) {
       return (
         <div className="flex size-full items-center justify-center p-6">
@@ -1556,8 +1552,14 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
         <div className="size-full min-h-0 min-w-0">{createDialogElement}</div>
       ) : (
         <div className="size-full overflow-auto p-4">
-          {renderHeader()}
-          {renderContent()}
+          {teamsLoading && teamsWithProvisioning.length === 0 ? (
+            <TeamListSkeleton label={t('list.loading')} />
+          ) : (
+            <>
+              {renderHeader()}
+              {renderContent()}
+            </>
+          )}
           {importDialogElement}
           {launchDialogElement}
         </div>
