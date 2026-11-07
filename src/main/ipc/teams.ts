@@ -2141,6 +2141,12 @@ async function handleLaunchTeamUnlocked(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { success: false, error: 'prompt must be a string' };
   }
+  if (payload.bootstrapOnly !== undefined && payload.bootstrapOnly !== true) {
+    return { success: false, error: 'bootstrapOnly must be true when provided' };
+  }
+  if (payload.bootstrapOnly && payload.prompt?.trim()) {
+    return { success: false, error: 'Bootstrap-only launch must not contain a work prompt' };
+  }
 
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
@@ -2182,6 +2188,9 @@ async function handleLaunchTeamUnlocked(
   }
 
   if (isDraft) {
+    if (payload.bootstrapOnly) {
+      return { success: false, error: 'Finish team setup before bootstrap-only launch' };
+    }
     const savedRequest = await getTeamDataService().getSavedRequest(tn);
     if (!savedRequest) {
       return { success: false, error: `Missing saved request for draft team: ${tn}` };
@@ -2366,6 +2375,7 @@ async function handleLaunchTeamUnlocked(
           cwd,
           prompt:
             typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+          bootstrapOnly: payload.bootstrapOnly === true ? true : undefined,
           providerId: launchProviderId,
           providerBackendId: launchProviderBackendValidation.value,
           model: rawLaunchModel,
