@@ -392,6 +392,22 @@ try {
   if(foreignAsk.status!==200||foreignAsk.data?.data?.effect!=='ask'||
      !/^per[A-Za-z0-9_-]+$/.test(foreignPermissionId||''))
     throw Error('native_foreign_TEST_permission_missing');
+  // Native session scope is independent of the Host's unregistered-reference
+  // guard: a permission owned by a DIFFERENT disposable TEST session must
+  // reject a reply addressed to the selected Host session. Use reject only;
+  // a known 404 is never retried, and no model or user permission is involved.
+  const wrongSessionReply=await native(
+    sessionPath+'/permission/'+encodeURIComponent(foreignPermissionId)+'/reply',
+    'POST',{decision:'reject'});
+  if(wrongSessionReply.status!==404)
+    throw Error('native_foreign_permission_wrong_session_route_accepted');
+  const stillForeign=await native(foreignPath+'/permission');
+  if(stillForeign.status!==200||!Array.isArray(stillForeign.data?.data)||
+     stillForeign.data.data.length!==1||
+     stillForeign.data.data[0]?.id!==foreignPermissionId||
+     stillForeign.data.data[0]?.sessionID!==foreignId)
+    throw Error('native_wrong_session_reply_changed_foreign_pending_permission');
+  receipt.steps.push('native_foreign_permission_wrong_session_reply_rejected');
   const foreignHostReply=await opened.driver.respondToInteraction(
     'TEST-foreign-input:'+foreignPermissionId,{kind:'permission',decision:'allow'});
   if(foreignHostReply.ok!==false||foreignHostReply.code!=='stale'||
@@ -420,7 +436,7 @@ try {
   // The Host received no registered interaction for this foreign native request.
   // Never present this stale synthetic reference as cross-session grant enforcement.
   receipt.unregisteredPermissionProbe={unregisteredReferenceStale:true,
-    foreignPendingUnchanged:true,nativeCleanupRejected:true,
+    nativeWrongSessionReplyRejected:true,foreignPendingUnchanged:true,nativeCleanupRejected:true,
     sessionAuthorityProven:false,toolEnforcementProven:false};
   receipt.steps.push('Host_unregistered_permission_reference_stale_no_native_change');
   // Re-confirm the selected Host session's DENY with the real native resolver
