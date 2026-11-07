@@ -56,6 +56,7 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
   assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture()), true);
   const mutations = [
     r => { r.steps.pop(); },
+    r => { r.steps.splice(r.steps.indexOf('real_native_ordered_ask_readback_without_tool_execution'), 1); },
     r => { r.steps[0] = 'npm_wrapper_hashed'; },
     r => { r.steps.reverse(); },
     r => { r.binarySha256 = 'unverified'; },
