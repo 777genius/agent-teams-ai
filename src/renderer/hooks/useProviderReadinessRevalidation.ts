@@ -27,9 +27,11 @@ export function useProviderReadinessRevalidation(
   // When a Codex sign-in completes outside the app after failed preflight,
   // revalidate once on the account event without a hidden dashboard poll.
   const codexAuthRechecked = useRef(false);
+  const pendingCodexAuthRecheck = useRef(false);
   useEffect(() => {
     if (!enabled || !providerIds.includes('codex')) {
       codexAuthRechecked.current = false;
+      pendingCodexAuthRecheck.current = false;
       return;
     }
     return api.onCodexAccountSnapshotChanged?.((_event, snapshot) => {
@@ -37,19 +39,43 @@ export function useProviderReadinessRevalidation(
         snapshot.managedAccount?.type === 'chatgpt' && snapshot.login.status === 'idle';
       if (!signedIn) {
         codexAuthRechecked.current = false;
+        pendingCodexAuthRecheck.current = false;
         return;
       }
       const codex = cliStatus?.providers.find((provider) => provider.providerId === 'codex');
       if (
         codexAuthRechecked.current ||
         !attempted.current.has('codex') ||
-        statusLoading ||
-        providerLoading.codex ||
         hasEffectiveProviderLaunchAuthority(codex)
       ) return;
+      if (statusLoading || providerLoading.codex || codex?.modelCatalogRefreshState === 'loading') {
+        pendingCodexAuthRecheck.current = true;
+        return;
+      }
+      pendingCodexAuthRecheck.current = false;
       codexAuthRechecked.current = true;
       void fetchProvider('codex').catch(() => undefined);
     });
+  }, [cliStatus, enabled, fetchProvider, providerIds, providerLoading.codex, statusLoading]);
+
+  useEffect(() => {
+    if (
+      !pendingCodexAuthRecheck.current ||
+      !enabled ||
+      !providerIds.includes('codex') ||
+      statusLoading ||
+      providerLoading.codex
+    ) return;
+    const codex = cliStatus?.providers.find((provider) => provider.providerId === 'codex');
+    if (codex?.modelCatalogRefreshState === 'loading') return;
+    pendingCodexAuthRecheck.current = false;
+    if (
+      codexAuthRechecked.current ||
+      !attempted.current.has('codex') ||
+      hasEffectiveProviderLaunchAuthority(codex)
+    ) return;
+    codexAuthRechecked.current = true;
+    void fetchProvider('codex').catch(() => undefined);
   }, [cliStatus, enabled, fetchProvider, providerIds, providerLoading.codex, statusLoading]);
 
   useEffect(() => {

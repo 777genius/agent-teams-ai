@@ -134,6 +134,34 @@ describe('selected provider readiness revalidation', () => {
     expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
   });
 
+  it('defers Codex revalidation until an in-progress provider status check settles', async () => {
+    status = {
+      ...status,
+      providers: [{
+        ...catalogProvider('codex', Date.now() - 1),
+        authenticated: false,
+        modelCatalogRefreshState: 'error',
+      }],
+    };
+    await render();
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    state.cliProviderStatusLoading = { codex: true };
+    await render();
+    const snapshot = {
+      managedAccount: { type: 'chatgpt' },
+      login: { status: 'idle' },
+    } as CodexAccountSnapshotDto;
+    await act(async () => { accountChanged?.({}, snapshot); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+
+    state.cliProviderStatusLoading = {};
+    status = { ...status };
+    await render();
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+    await act(async () => { accountChanged?.({}, snapshot); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+  });
+
   it('refreshes at the exact expiry despite unrelated provider polling', async () => {
     await render();
     await act(async () => vi.advanceTimersByTime(500));
