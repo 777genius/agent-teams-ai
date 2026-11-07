@@ -35,8 +35,17 @@ function toRepoRelativePath(projectPath: string, filePath: string): string | nul
   return gitPath;
 }
 
+/** Desktop supplies a pinned Git binary/env; isolated consumers retain a plain-git default. */
+export type ResolveGitFallbackCommand = () => Promise<
+  Readonly<{ executable: string; env?: NodeJS.ProcessEnv }> | null
+>;
+
 export class GitDiffFallback {
   private gitRepoCache = new Map<string, boolean>();
+
+  constructor(
+    private readonly resolveGitCommand: ResolveGitFallbackCommand = async () => ({ executable: 'git' })
+  ) {}
 
   /**
    * Get file contents at a specific commit.
@@ -50,11 +59,14 @@ export class GitDiffFallback {
     try {
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
-      const { stdout } = await execFileAsync('git', ['show', `${commitHash}:${relativePath}`], {
+      const command = await this.resolveGitCommand();
+      if (!command) return null;
+      const { stdout } = await execFileAsync(command.executable, ['show', `${commitHash}:${relativePath}`], {
         cwd: projectPath,
         maxBuffer: GIT_MAX_BUFFER,
         timeout: GIT_TIMEOUT,
         windowsHide: true,
+        env: command.env,
       });
       return stdout;
     } catch {
@@ -73,10 +85,12 @@ export class GitDiffFallback {
     try {
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
+      const command = await this.resolveGitCommand();
+      if (!command) return null;
       const { stdout } = await execFileAsync(
-        'git',
+        command.executable,
         ['log', '--format=%H', '--before', timestamp, '-1', '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: command.env }
       );
       return stdout.trim() || null;
     } catch {
@@ -96,10 +110,12 @@ export class GitDiffFallback {
     try {
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return null;
+      const command = await this.resolveGitCommand();
+      if (!command) return null;
       const { stdout } = await execFileAsync(
-        'git',
+        command.executable,
         ['diff', fromCommit, toCommit, '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: command.env }
       );
       return stdout || null;
     } catch {
@@ -118,10 +134,12 @@ export class GitDiffFallback {
     try {
       const relativePath = toRepoRelativePath(projectPath, filePath);
       if (!relativePath) return [];
+      const command = await this.resolveGitCommand();
+      if (!command) return [];
       const { stdout } = await execFileAsync(
-        'git',
+        command.executable,
         ['log', `--max-count=${maxCount}`, '--format=%H|%aI|%s', '--', relativePath],
-        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true }
+        { cwd: projectPath, timeout: GIT_TIMEOUT, windowsHide: true, env: command.env }
       );
 
       return stdout
@@ -146,10 +164,13 @@ export class GitDiffFallback {
     if (cached !== undefined) return cached;
 
     try {
-      await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {
+      const command = await this.resolveGitCommand();
+      if (!command) return false;
+      await execFileAsync(command.executable, ['rev-parse', '--is-inside-work-tree'], {
         cwd: projectPath,
         timeout: GIT_TIMEOUT,
         windowsHide: true,
+        env: command.env,
       });
       this.gitRepoCache.set(projectPath, true);
       return true;
