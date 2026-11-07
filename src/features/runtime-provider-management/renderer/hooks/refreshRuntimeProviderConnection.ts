@@ -1,6 +1,9 @@
 import { api } from '@renderer/api';
 
-import { publishRuntimeProviderDirectoryCache } from '../runtimeProviderDirectoryCache';
+import {
+  invalidateRuntimeProviderDirectoryCache,
+  publishRuntimeProviderDirectoryCache,
+} from '../runtimeProviderDirectoryCache';
 
 import { DEFAULT_DIRECTORY_FILTER } from './runtimeProviderDirectoryCatalogPolicy';
 import { withUiTimeout } from './runtimeProviderManagementInternals';
@@ -64,6 +67,9 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
 export async function refreshRuntimeProviderConnection(
   input: ConnectionRefreshInput
 ): Promise<'refreshed' | 'warning' | 'stale'> {
+  // Called only after confirmed writes: stale connected counts must disappear
+  // even when the next directory read fails.
+  invalidateRuntimeProviderDirectoryCache();
   const sharedDirectoryRefresh = refreshSharedDirectory(input);
   try {
     const externalRefreshResult = await input.refreshExternal();
