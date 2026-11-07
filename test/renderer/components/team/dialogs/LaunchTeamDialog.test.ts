@@ -4743,7 +4743,7 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
 
-      expect(host.querySelector('select#schedule-member')).toBeTruthy();
+      expect(host.querySelector('button#schedule-member')).toBeTruthy();
       const wholeTeam = Array.from(host.querySelectorAll('button')).find(
         (button) => button.textContent?.trim() === 'Whole team'
       );
