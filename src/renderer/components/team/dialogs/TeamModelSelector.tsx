@@ -117,6 +117,7 @@ import {
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
+import { getOpenCodeSidebarSourceState } from './openCodeSidebarSourceState';
 import { useOpenCodeSourceDirectory } from './OpenCodeSourceDirectoryProvider';
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
@@ -1145,12 +1146,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeProviderDirectoryCache = useRuntimeProviderDirectoryCacheWithGlobalFallback(
     openCodeCatalogScopeKey || null
   );
-  const discoveryContext = useOpenCodeSourceDirectory();
-  const sourceDiscovery =
-    discoveryContext?.enabled &&
-    discoveryContext.projectPath === (openCodeCatalogScopeKey || null)
-      ? discoveryContext
-      : null;
+  const sourceDiscovery = useOpenCodeSourceDirectory(openCodeCatalogScopeKey || null);
   const [pendingPrivateNetworkSetup, setPendingPrivateNetworkSetup] = useState<{
     target: OpenCodeLocalModelSetupTarget;
     projectPath: string;
@@ -2534,29 +2530,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         ] ?? null)
       : null
   );
-  const openCodeSourcesLoading = sourceDiscovery
-    ? sourceDiscovery.loading || sourceDiscovery.authoritativePending
-    : openCodeCatalogLoading ||
-      (openCodeCatalogScopeKey
-        ? scopedOpenCodeStatus?.statusCheckOutcome === 'pending'
-        : cliProviderStatusLoading.opencode === true) ||
-      (cliStatusLoading && !openCodePassiveProviderStatus);
-  const passiveStatusFailed =
-    openCodePassiveProviderStatus?.statusCheckOutcome === 'transient_error';
-  const passiveCatalogFailed =
-    openCodePassiveProviderStatus?.modelCatalogRefreshState === 'error';
-  const sourceFailureKind = sourceDiscovery?.error
-    ? 'directory'
-    : sourceDiscovery?.loaded
-      ? null
-      : passiveStatusFailed
-        ? 'status'
-        : openCodeCatalogRefreshFailed || passiveCatalogFailed
-          ? 'catalog'
-          : null;
-  const openCodeSourcesUnavailable = sourceDiscovery
-    ? Boolean(sourceDiscovery.error)
-    : openCodeCatalogUnavailable || (!openCodeSourcesLoading && sourceFailureKind !== null);
+  const {
+    loading: openCodeSourcesLoading,
+    unavailable: openCodeSourcesUnavailable,
+    failureKind: sourceFailureKind,
+  } = getOpenCodeSidebarSourceState({
+    directory: sourceDiscovery,
+    catalogLoading: openCodeCatalogLoading,
+    catalogUnavailable: openCodeCatalogUnavailable,
+    catalogRefreshFailed: openCodeCatalogRefreshFailed,
+    scopedLoading: openCodeCatalogScopeKey
+      ? scopedOpenCodeStatus?.statusCheckOutcome === 'pending'
+      : cliProviderStatusLoading.opencode === true,
+    bootstrapLoading: cliStatusLoading && !openCodePassiveProviderStatus,
+    passiveStatusFailed: openCodePassiveProviderStatus?.statusCheckOutcome === 'transient_error',
+    passiveCatalogFailed: openCodePassiveProviderStatus?.modelCatalogRefreshState === 'error',
+  });
   const retryOpenCodeCatalogRefresh = (): void => {
     openCodeScopedCatalog.refresh();
     invalidateCliProviderModelCatalog?.();

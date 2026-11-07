@@ -12,8 +12,9 @@ type SourceDirectory = ReturnType<typeof useRuntimeProviderQuickConnect> & {
 
 export const OpenCodeSourceDirectoryContext = createContext<SourceDirectory | null>(null);
 
-export function useOpenCodeSourceDirectory(): SourceDirectory | null {
-  return useContext(OpenCodeSourceDirectoryContext);
+export function useOpenCodeSourceDirectory(projectPath: string | null): SourceDirectory | null {
+  const discovery = useContext(OpenCodeSourceDirectoryContext);
+  return discovery?.enabled && discovery.projectPath === projectPath ? discovery : null;
 }
 
 /** One summary-only source lookup per dialog, not per team member. */
