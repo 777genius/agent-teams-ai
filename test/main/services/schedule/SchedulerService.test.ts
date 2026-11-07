@@ -814,4 +814,89 @@ describe('SchedulerService', () => {
 
     await service.stop();
   });
+  // --- Smart scheduling regression: existing JSON schedules remain one-shot ---
+
+  it('keeps a legacy schedule one-shot after a normal edit', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'legacy task' },
+    });
+    expect(schedule.executionMode).toBeUndefined();
+
+    await service.updateSchedule(schedule.id, { label: 'Updated label' });
+    expect((await repo.getSchedule(schedule.id))?.executionMode).toBeUndefined();
+
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(100);
+    const runs = await repo.listRuns(schedule.id);
+    expect(executor.execute).toHaveBeenCalledOnce();
+    expect(runs[0]?.status).toBe('completed');
+    await service.stop();
+  });
+
+  it('records smart dispatch without claiming task completion or starting the legacy CLI', async () => {
+    const dispatcher = {
+      dispatch: vi.fn(async () => ({ kind: 'dispatched' as const, summary: 'Task created' })),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'agent',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'new task' },
+    });
+
+    const run = await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(100);
+    const runs = await repo.listRuns(schedule.id);
+    expect(runs[0]).toMatchObject({ id: run.id, status: 'dispatched', summary: 'Task created' });
+    expect(executor.execute).not.toHaveBeenCalled();
+    expect(dispatcher.dispatch).toHaveBeenCalledOnce();
+    expect(warmUpFn).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('records a safely skipped smart tick with a visible reason', async () => {
+    const dispatcher = {
+      dispatch: vi.fn(async () => ({ kind: 'skipped' as const, summary: 'Target not ready' })),
+    };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(100);
+    const runs = await repo.listRuns(schedule.id);
+    expect(runs[0]).toMatchObject({ status: 'skipped', summary: 'Target not ready' });
+    expect(executor.execute).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('does not auto-retry a smart dispatch with an uncertain side effect', async () => {
+    const dispatcher = { dispatch: vi.fn(async () => { throw new Error('delivery unknown'); }) };
+    const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      executionMode: 'team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'check PRs' },
+    });
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(100);
+    const runs = await repo.listRuns(schedule.id);
+    expect(runs[0]).toMatchObject({ status: 'failed', error: 'delivery unknown', retryCount: 0 });
+    expect(dispatcher.dispatch).toHaveBeenCalledOnce();
+    expect(executor.execute).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
 });
