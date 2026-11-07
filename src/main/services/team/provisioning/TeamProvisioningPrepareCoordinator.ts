@@ -546,6 +546,7 @@ export class TeamProvisioningPrepareCoordinator {
   ): Promise<string | null> {
     let parsed: ProviderModelListCommandResponse;
     try {
+      const context = await resolveRuntimeStatusExecutionContext(providerId, cwd);
       const { stdout } = await this.ports.execCli(
         claudePath,
         buildProviderControlPlaneCliCommandArgs(providerArgs, [
@@ -554,9 +555,10 @@ export class TeamProvisioningPrepareCoordinator {
           '--json',
           '--provider',
           providerId,
+          ...context.projectArgs,
         ]),
         {
-          cwd,
+          cwd: context.cwd ?? cwd,
           env,
           timeout:
             providerId === 'opencode'

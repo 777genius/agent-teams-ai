@@ -8,7 +8,7 @@ Screenshot shows macOS Google Drive File Provider project path, bundled Bun comm
 ## Design and critical reviews
 - **Reliability review:** Merely changing `cwd` to `HOME` is incorrect: it silently substitutes home model/config. Always pass the *original selected project* as the explicit `--project-path` argument to full `runtime status`. Only OpenCode on macOS relocates; others retain their previous arguments/cwd.
 - **Security review:** Do not bypass actual filesystem permissions, or mark model/launch ready from a passive summary. Check selected project directory existence before relocating so a missing directory still fails closed. Pass path as argv, not shell text. No feature flag.
-- **Architecture review:** One shared leaf helper, used by status UI and team-preflight status. No edits to actual CLI/host execution cwd. Do not touch live projects or runtime installer mechanics.
+- **Architecture review:** One shared leaf helper, used by status UI, team-preflight status and model-list reads for launch identity/default selection. No edits to actual CLI/host execution cwd. Do not touch live projects or runtime installer mechanics.
 - **Release compatibility:** Until the compatible runtime binary is published and pinned in `runtime.lock.json`, keep this PR unmerged; don't silently fall back to an incompatible old binary.
 
 ## Verification

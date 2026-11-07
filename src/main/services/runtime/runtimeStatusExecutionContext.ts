@@ -13,7 +13,8 @@ export class RuntimeStatusProjectAccessDeniedError extends Error {
 
 /**
  * Bun 1.4.2 cannot reliably realpath() a macOS File Provider directory as its cwd.
- * Keep OpenCode's selected project as an explicit argument, never HOME-scoped.
+ * Keep the selected OpenCode project explicit for both runtime status and model list;
+ * never use HOME as a substitute for project-scoped inventory.
  */
 export async function resolveRuntimeStatusExecutionContext(
   providerId: string,

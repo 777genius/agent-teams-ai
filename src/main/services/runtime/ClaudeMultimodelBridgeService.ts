@@ -925,14 +925,15 @@ export class ClaudeMultimodelBridgeService {
           })
         : Promise.resolve(null);
 
+    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
     const modelListPromise = execCli(
       binaryPath,
-      ['model', 'list', '--json', '--provider', providerId],
+      ['model', 'list', '--json', '--provider', providerId, ...context.projectArgs],
       {
         timeout: PROVIDER_MODELS_TIMEOUT_MS,
         maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
         env,
-        cwd: getProviderStatusCommandCwd(options.projectPath),
+        cwd: context.cwd,
       }
     );
 
