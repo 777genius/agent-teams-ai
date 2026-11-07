@@ -4,8 +4,8 @@ Status: Draft plan. Scope: Electron desktop scheduler only, backward-compatible.
 
 ## Goal
 Expose exactly two choices for **new** schedules:
-1. **One agent** (default): if the team is offline, run the existing isolated one-shot CLI job; if the team is live, use its selected member instead of creating an unrelated process.
-2. **Whole team**: if the team is offline, use the existing team launch/provisioning API; if live, give work to the existing team lead without relaunching.
+1. **One agent** (default): if the team is offline, run the existing isolated one-shot CLI job; if the team is live, create an assigned Kanban task using the existing task API and its owner notification (do not duplicate provider-specific messaging).
+2. **Whole team**: if the team is offline, use the existing team launch/provisioning API; if live, assign the scheduled task to the existing team lead without relaunching.
 
 Preserve every already-saved schedule's execution, retry, CLI arguments, logs, edit behavior and pause/resume semantics. No data migration.
 
@@ -20,46 +20,52 @@ Preserve every already-saved schedule's execution, retry, CLI arguments, logs, e
 | Condition | One agent | Whole team |
 | --- | --- | --- |
 | Team not running | Existing `ScheduledTaskExecutor` one-shot (separate process) | Existing team provisioner `launchTeam` with scheduled prompt |
-| Team running; target member alive and ready | Send prompt to that member through existing inbox/delivery service | Send prompt to current lead through existing message service |
-| Team running; target member offline | Use existing member restart **only if snapshot says restartable**; await readiness and send once | Send to live lead (team is already running) |
-| Team running; member cannot be safely restarted | Mark run skipped with explicit reason, never restart entire team | Route to lead if actually live, otherwise fail safely |
+| Team running; target member alive and ready | Create a task with `startImmediately: true` and the existing owner-notification flow | Send prompt to current lead through existing message service |
+| Team running; target member offline | Use non-destructive `attachLiveRosterMember` only when snapshot proves no live/pending runtime; await readiness, then create the assigned task | Assign a new task to the live lead (team is already running) |
+| Team running; member cannot be safely restarted | Mark run skipped with explicit reason, never restart entire team | Assign to lead only when live, otherwise skip |
 | Team launching, stopping, ambiguous liveness | Refuse destructive action and record skipped/failed reason | Refuse competing launch and record pending/skipped; never force-stop |
 | Cron overlap for same schedule or same team | Skip, no duplicate dispatch | Skip, no duplicate launch |
 
 Notes:
 - `targetMember` defaults to the resolved team lead for new one-agent schedules; member selection must resolve to a currently configured team member. Removed/renamed/missing members are a safe skip, not a guessed substitute.
-- A scheduled prompt is a **message/work instruction**, not necessarily a new Kanban card. Existing task creation/assignment notifications remain untouched; auto-creating cards is outside this scope.
+- When a live team receives work, create a **Kanban task** via the existing `TeamDataService.createTask` flow, using a run-stable `commandId` / `idempotencyKey` and `startImmediately: true`. The already-present assignment/start notification wakes the owner. No new messaging implementation. A stopped team in one-agent mode still gets a standalone one-shot CLI execution with no Kanban card.
 - For a team launch, pass the prompt **once in the launch request**, never also send it after a newly initiated launch. For `already_running`, send it to lead only if the runtime is confirmed ready.
-- The member restart path may be unavailable for certain runtimes (e.g. lead/shared-host); respect `restartable` and fail closed. Do not restart a live process.
-- Persist only a grounded result: `dispatched`/`launch requested` is not proof that the model completed its work.
+- Never call destructive `restartMember` from a schedule. Use `attachLiveRosterMember` only for a configured non-lead member with authoritative *absent* runtime evidence (not `stale_metadata`, `shell_only`, `runtime_process_candidate`, a pending spawn, or a shared primary lane); re-read snapshot after it returns. If not safe/ready, skip without touching another process.
+- Persist only a grounded result: “task created / owner notified” or “team launch requested” does not prove the model completed work. A launch request is not a success of the full team bootstrap.
 - Running team checks must use authoritative main-process state (`processAlive`, member runtime/launch snapshot), not renderer stale caches or PID alone.
 
 ## Minimal design
 - Preserve `SchedulerService` as cron owner, run history, retry policy and locks.
-- Introduce a small `ScheduleDispatchService` application use case with a narrow injected `ScheduleRuntimePort` for: inspect team/member state, launch team, restart member, send message. Keep Electron/provisioning/CLI details in main-process adapters. No new inheritance or generic workflow engine.
+- Introduce a small `ScheduleDispatchService` application use case with a narrow injected `ScheduleRuntimePort` for: inspect team/member state, read saved team settings, launch team, attach absent member, create idempotent task. Keep Electron/provisioning/CLI details in main-process adapters. No new inheritance, generic workflow engine or duplicate user-message routing.
 - Existing `ScheduledTaskExecutor` remains the one-shot adapter for legacy and offline one-agent cases.
-- `SchedulerService` chooses legacy or new dispatch once per run; use the same run/history model. Add only the minimum result distinction necessary for `skipped`, `launch_requested`, `message_queued` vs actual process exit.
-- Never auto-retry an uncertain/non-idempotent delivery or team start. Assign stable run-specific message identity (`schedule:<runId>:<member>`) through the existing idempotency mechanism. Avoid duplicate messages after restart/cancellation.
+- `SchedulerService` chooses legacy or new dispatch once per run; use the same run/history model. Add `skipped` for safe non-execution and a summary that clearly distinguishes task creation / launch request from actual one-shot process exit.
+- Never auto-retry a smart dispatch after an uncertain side effect. Assign a stable task-command idempotency key derived from the schedule run ID; the existing task system owns notifications. Preserve legacy one-shot retries unchanged.
 - Serialize conflicting schedule dispatches per team and recheck authority immediately before side effects; reuse provisioning's admission and member-lifecycle locks instead of reinventing lifecycle.
 - Reuse existing IPC `ScheduleAPI`; only its request/response types gain optional fields. No new user-triggerable privileged endpoint.
 
 ## UI (small, explicit)
 - In existing `LaunchTeamDialog` schedule mode, show a two-option selector: **One agent** (default) / **Whole team**.
-- For One agent show configured member choice (default lead), existing prompt, cron and timezone. Explain offline fallback: “Runs one standalone agent when team is off.”
+- For One agent show configured member choice (default lead), existing prompt, cron and timezone. Do not take a member name from the currently selected unrelated team; hydrate roster for the chosen team. Explain offline fallback: “Runs one standalone agent when team is off.”
 - For Whole team show team and prompt, schedule/timezone; explain that the team launches only when off, otherwise the lead receives the instruction. Reuse the team provider launch settings already persisted; do not copy the entire launch flow UI.
 - For legacy schedules, show a legacy badge/explanation and a deliberate “Switch to new behavior” affordance; a normal Edit/Save does not convert.
-- Run history shows concise outcomes: completed one-shot; message queued; team launch requested; skipped (reason); failed. Never label an inbox write as “task completed.”
+- Run history shows concise outcomes: completed one-shot; Kanban task created (execution not yet proved); team launch requested; skipped (reason); failed. Never label an inbox write as “task completed.”
 - Existing Pause, Run now, Delete and logs continue to work.
 
 ## Safety and edge cases (must pass before merge)
 1. Legacy JSON without new fields: schedule list/edit/save/run reproduces identical one-shot args; two existing overlapping jobs honor existing locks.
-2. Newly created one-agent schedule: team off -> exactly one CLI spawn; live target -> zero spawn, one message; live team + offline restartable target -> one restart and one message *after readiness*.
+2. Newly created one-agent schedule: team off -> exactly one CLI spawn; live target -> zero spawn, exactly one task and its existing notification; live team + proven-absent target -> one non-destructive attach and exactly one task after readiness.
 3. Member offline and non-restartable, deleted member, stale snapshot, missing team, team stopping -> no guessed process restart/message; clear skipped/failed record.
-4. Whole-team schedule: team off -> exactly one launch; starting/online -> no additional launch; successful new launch does not also inbox-deliver the prompt.
+4. Whole-team schedule: team off -> exactly one launch using saved team settings + scheduled prompt; starting/online -> no additional launch; successful new launch does not also inbox-deliver the prompt.
 5. Two schedules at the same time; manual launch/restart/stop races; same tick duplicate; retries; app shutdown mid-dispatch -> no double launch or send, no false success.
 6. Validate `teamName`, target member, prompt, cwd and supported provider before any mutation. No dynamic CLI string interpolation.
 7. Cross-provider source-level tests for Anthropic, Codex, and OpenCode runtime snapshots; do not assume that every member runtime is independently restartable.
 8. No change to pre-existing team launch dialog outside its `mode="schedule"` conditional branches; no new install requirements.
+
+## Critical plan reviews (before implementation)
+- **Pass 1 — compatibility:** Optional mode must not be defaulted on load, and an ordinary edit must preserve legacy one-shot. New default applies to *creation only*.
+- **Pass 2 — lifecycle:** `restartMember` is not a safe “start if absent” primitive; it can destroy a live runtime. Changed to guarded non-destructive attach of confirmed-absent non-lead members; ambiguous observations skip.
+- **Pass 3 — delivery:** Reimplementing the UI's Anthropic/Codex/OpenCode direct-send and relay paths would duplicate complex protocol behavior. Changed to existing idempotent task creation/notification while team is online; no transport recreation.
+- **Pass 4 — startup/races:** Start a stopped team from its **current saved team launch profile** (`getSavedRequest`), overriding only the one scheduled prompt; do not accidentally switch the team's provider to the one-shot selector. Avoid a second post-launch message; treat acceptance as “requested”, not “completed”.
 
 ## Test strategy (minimum valuable E2E)
 - Pure dispatch-policy table tests including ambiguous liveness and idempotency.
