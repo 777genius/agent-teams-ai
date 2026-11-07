@@ -1,3 +1,5 @@
+import { execFile } from 'node:child_process';
+
 import {
   resolveWorkspaceTrustCanonicalGitRoot,
   resolveWorkspaceTrustFilesystemGitRoot,
@@ -5,7 +7,6 @@ import {
 import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
 import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { getHomeDir } from '@main/utils/pathDecoder';
-import { execFile } from 'node:child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
