@@ -37,14 +37,7 @@ import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamR
 import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@renderer/components/ui/dialog';
+import { DialogFooter } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
@@ -102,6 +95,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
+import { CreateTeamSurface } from './CreateTeamSurface';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import {
@@ -276,6 +270,7 @@ function isCurrentPrepareGeneration(ref: { current: number }, generation: number
 
 export const CreateTeamDialog = ({
   open,
+  presentation = 'dialog',
   canCreate,
   provisioningErrorsByTeam,
   clearProvisioningError,
@@ -2355,26 +2350,28 @@ export const CreateTeamDialog = ({
         ? t('create.actions.skipPreflightAndCreate')
         : t('create.prepare.checkingProviders')
       : t('create.actions.create');
+  const providerSettingsOverlay = (
+    <ProvisioningProviderRuntimeSettingsDialog
+      openProviderId={providerSettingsProviderId}
+      onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
+      providers={effectiveCliStatus?.providers ?? []}
+      projectPath={effectiveCwd || null}
+      disabled={isSubmitting}
+      onProviderRuntimeChanged={invalidatePrepareProvider}
+    />
+  );
   return (
-    <Dialog
+    <CreateTeamSurface
+      presentation={presentation}
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          resetUIState();
-          onClose();
-        }
+      isCopy={Boolean(initialData)}
+      onClose={() => {
+        resetUIState();
+        onClose();
       }}
+      overlay={providerSettingsOverlay}
     >
-      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
-        <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
-        <DialogHeader>
-          <DialogTitle className="text-sm">
-            {initialData ? t('create.title.copy') : t('create.title.create')}
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            {initialData ? t('create.description.copy') : t('create.description.create')}
-          </DialogDescription>
-        </DialogHeader>
+      <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         {conflictingTeam && !conflictDismissed ? (
           <div
             className="rounded-md border p-3 text-xs"
@@ -3095,15 +3092,6 @@ export const CreateTeamDialog = ({
             </div>
           </div>
         </DialogFooter>
-      </DialogContent>
-      <ProvisioningProviderRuntimeSettingsDialog
-        openProviderId={providerSettingsProviderId}
-        onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
-        providers={effectiveCliStatus?.providers ?? []}
-        projectPath={effectiveCwd || null}
-        disabled={isSubmitting}
-        onProviderRuntimeChanged={invalidatePrepareProvider}
-      />
-    </Dialog>
+    </CreateTeamSurface>
   );
 };
