@@ -54,7 +54,10 @@ async function seedFixture() {
     projectPath: path.join(root, 'sandbox-project'),
     teamName: `teams-create-page-e2e-${randomUUID()}`,
     memberName: 'team-lead',
-    runtimeWrapperPath: path.join(root, 'fixture-runtime-deny.cjs'),
+    runtimeScriptPath: path.join(root, 'fixture-runtime-deny.cjs'),
+    runtimeWrapperPath: path.join(
+      root, process.platform === 'win32' ? 'fixture-runtime-deny.cmd' : 'fixture-runtime-deny.cjs'
+    ),
     runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),
     deliveryRuntimeVersion: runtimeLock.version,
   };
@@ -75,7 +78,7 @@ async function seedFixture() {
   }
   const nodeBinary = await realpath(process.execPath);
   await writeFile(
-    fixture.runtimeWrapperPath,
+    fixture.runtimeScriptPath,
     `#!${nodeBinary}\n'use strict';\n` +
       `const fs = require('node:fs');\n` +
       `const args = process.argv.slice(2);\n` +
@@ -87,7 +90,16 @@ async function seedFixture() {
       `process.stderr.write('fixture runtime denies all lifecycle and provider commands\\n');\n` +
       `process.exit(77);\n`
   );
-  await chmod(fixture.runtimeWrapperPath, 0o755);
+  if (process.platform === 'win32') {
+    // Dev bootstrap uses the project's Windows-shell-aware runner for .cmd.
+    // Keep the test runtime deny-all; never point this fixture at real providers.
+    await writeFile(
+      fixture.runtimeWrapperPath,
+      `@echo off\r\n"${nodeBinary}" "${fixture.runtimeScriptPath}" %*\r\n`
+    );
+  } else {
+    await chmod(fixture.runtimeScriptPath, 0o755);
+  }
   await writeFile(fixture.runtimeLedgerPath, '');
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Teams Creation Page E2E\n');
   const member = {
