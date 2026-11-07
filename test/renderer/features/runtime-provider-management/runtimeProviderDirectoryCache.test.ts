@@ -4,7 +4,9 @@ import { runtimeProviderDirectoryInteraction } from '../../../../src/features/ru
 
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryCache,
+  markRuntimeProviderDirectoryScopeUnverified,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
@@ -38,6 +40,38 @@ const providerEntry = {
 describe('runtimeProviderDirectoryCache', () => {
   afterEach(() => {
     resetRuntimeProviderDirectoryCacheForTests();
+  });
+
+  it('rejects stale in-flight reads after a credential change without touching other scopes', () => {
+    const oldReadToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const otherScopeToken = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    markRuntimeProviderDirectoryScopeUnverified('/tmp/project-a');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      readToken: oldReadToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-b',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      readToken: otherScopeToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-b')).not.toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state).toBe(
+      'not-connected'
+    );
   });
 
   it('keeps provider snapshots isolated by project scope', () => {

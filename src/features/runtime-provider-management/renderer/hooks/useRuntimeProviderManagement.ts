@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   classifyAnalyticsError,
@@ -8,7 +7,6 @@ import {
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { PROVIDER_UI_TIMEOUT_MS } from '@shared/constants/runtimeLoading';
-
 import {
   getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,
   getRuntimeProviderCredentialUrl,
@@ -17,7 +15,7 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
+import { getRuntimeProviderDirectoryReadToken, observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -544,6 +542,7 @@ export function useRuntimeProviderManagement(
         visibleEntryCount: directoryEntriesRef.current.length,
       });
       const projectContext = getProjectContextSnapshot();
+      const readToken = getRuntimeProviderDirectoryReadToken(projectContext.path);
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
       const requestIsCurrent = (): boolean =>
@@ -600,6 +599,7 @@ export function useRuntimeProviderManagement(
           directory,
           presentEntry: presentDirectoryEntry,
           runtimeRevision: settledRuntimeRevision,
+          readToken,
         });
         if (commit.action === 'retain') {
           setWarningMessage(EMPTY_FULL_CATALOG_WARNING);
