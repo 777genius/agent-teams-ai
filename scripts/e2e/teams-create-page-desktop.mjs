@@ -620,10 +620,15 @@ async function main() {
       `window.electronAPI.teams.list().then(rows => rows.some(t => t.teamName === ${JSON.stringify(unique)}))`
     );
     assert.equal(created, true, 'Created config-only team was not persisted by native API');
-    const createdConfig = JSON.parse(await readFile(
-      path.join(fixture.claudeRoot, 'teams', unique, 'config.json'), 'utf8'
-    ));
-    assert.equal(createdConfig.name, unique, 'Native persisted config has wrong identity');
+    // Config-only teams deliberately have team.meta.json and members.meta.json.
+    // config.json is CLI-created later during an actual runtime launch.
+    const teamDir = path.join(fixture.claudeRoot, 'teams', unique);
+    const createdMeta = JSON.parse(await readFile(path.join(teamDir, 'team.meta.json'), 'utf8'));
+    const createdMembers = JSON.parse(await readFile(path.join(teamDir, 'members.meta.json'), 'utf8'));
+    assert.equal(createdMeta.version, 1, 'Native team metadata has the wrong schema');
+    assert.equal(createdMeta.cwd, fixture.projectPath, 'Saved working directory differs');
+    assert(Array.isArray(createdMembers.members) && createdMembers.members.length > 0,
+      'Native team creation did not persist a roster');
     await captureScreenshot(cdp, fixture, 'config-only-created');
 
     const results = {
