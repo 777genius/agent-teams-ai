@@ -35,11 +35,13 @@ interface UseOrganizationCreateTeamDialogResult {
 
 export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDialogResult {
   const electronMode = isElectronMode();
+  const { t } = useAppTranslation('team');
   const {
     teams,
     connectionMode,
     createTeam,
     openTeamTab,
+    openTeamsCreationPage,
     provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
