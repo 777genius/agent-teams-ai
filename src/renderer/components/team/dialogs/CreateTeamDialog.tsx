@@ -95,9 +95,9 @@ import { useShallow } from 'zustand/react/shallow';
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
-import { CreateTeamSurface } from './CreateTeamSurface';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+import { CreateTeamSurface } from './CreateTeamSurface';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
