@@ -33,6 +33,8 @@ export function useGatewayMemberBindings(
 ): GatewayMemberBindingsState & {
   run<T>(operation: () => T | Promise<T>, confirmedNames?: readonly string[]): Promise<T>;
   markSaved(names: readonly string[]): void;
+  releaseRetained(): void;
+  discardRetained(): void;
 } {
   const name = teamName?.trim() ?? '';
   const retainedOwnerKey = draft?.retainedOwnerKey;
