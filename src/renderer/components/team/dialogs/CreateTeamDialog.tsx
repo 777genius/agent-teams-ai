@@ -2474,13 +2474,17 @@ export const CreateTeamDialog = ({
           </div>
           <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
-              confirmBeforeApply onApply={(draft) => {
+              confirmBeforeApply
+              disabled={!draftLoaded || !descriptionDraft.isLoaded || !promptDraft.isLoaded}
+              onApply={(draft) => {
                 setRuntimeSelection(1);
                 setLaunchTeam(false);
                 setSoloTeam(false);
                 setSyncModelsWithLead(true, { persistStoredPreference: false });
                 descriptionDraft.setValue(draft.description ?? '');
                 promptDraft.setValue(draft.prompt ?? '');
+                // Template prompts have no file-mention chips; retire old references.
+                promptChipDraft.clearChipDraft();
                 setMembers(
                   buildInitialRosterMemberDrafts({
                     copiedMembers: draft.members,
