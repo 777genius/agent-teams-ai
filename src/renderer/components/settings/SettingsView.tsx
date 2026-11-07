@@ -5,12 +5,14 @@
 
 import { lazy, Suspense, useEffect, useState } from 'react';
 
-import { GatewayProvidersSettingsSection } from '@features/gateway-provider/renderer';
+import { ExternalAgentConnectionSettings } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { api, isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { Loader2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { AppearanceSection } from './sections/AppearanceSection';
 import { useSettingsConfig, useSettingsHandlers } from './hooks';
 import {
   AdvancedSection,
@@ -45,10 +47,11 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
     }
   }, [activeSection, hasVisitedProviders]);
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
-  const { pendingSettingsSection, clearPendingSettingsSection } = useStore(
+  const { pendingSettingsSection, clearPendingSettingsSection, connectionMode } = useStore(
     useShallow((s) => ({
       pendingSettingsSection: s.pendingSettingsSection,
       clearPendingSettingsSection: s.clearPendingSettingsSection,
+      connectionMode: s.connectionMode,
     }))
   );
 
@@ -143,90 +146,109 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
   if (!config) return null;
 
   return (
-    <div className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--color-surface)' }}>
-      <div
-        className={`mx-auto w-full px-6 py-8 transition-[max-width] duration-200 ${
-          activeSection === 'notifications' ? 'max-w-7xl' : activeSection === 'providers' ? 'max-w-5xl' : 'max-w-2xl'
-        }`}
-      >
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-lg font-medium" style={{ color: 'var(--color-text)' }}>
-            {t('view.title')}
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('view.description')}
-          </p>
+    <div
+      className="flex min-h-0 min-w-0 flex-1"
+      style={{ backgroundColor: 'var(--color-surface)' }}
+    >
+      <SettingsTabs activeSection={activeSection} onSectionChange={setActiveSection} />
+      <div className="min-w-0 flex-1 overflow-auto">
+        <div
+          className={`mx-auto w-full px-6 py-8 transition-[max-width] duration-200 ${
+            activeSection === 'notifications'
+              ? 'max-w-7xl'
+              : activeSection === 'providers'
+                ? 'max-w-5xl'
+                : 'max-w-2xl'
+          }`}
+        >
           {error && (
-            <div className="mt-4 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2">
+            <div className="mb-4 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2">
               <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
-        </div>
 
-        {/* Tabs */}
-        <SettingsTabs activeSection={activeSection} onSectionChange={setActiveSection} />
+          {/* Content */}
+          <div className="mt-4">
+            {activeSection === 'general' && (
+              <GeneralSection
+                safeConfig={safeConfig}
+                saving={saving}
+                onGeneralToggle={handlers.handleGeneralToggle}
+                onLanguageChange={handlers.handleLanguageChange}
+                onAppLocaleChange={handlers.handleAppLocaleChange}
+              />
+            )}
 
-        {/* Content */}
-        <div className="mt-4">
-          {activeSection === 'general' && (
-            <GeneralSection
-              safeConfig={safeConfig}
-              saving={saving}
-              onGeneralToggle={handlers.handleGeneralToggle}
-              onThemeChange={handlers.handleThemeChange}
-              onLanguageChange={handlers.handleLanguageChange}
-              onAppLocaleChange={handlers.handleAppLocaleChange}
-            />
-          )}
+            {activeSection === 'appearance' && (
+              <AppearanceSection
+                safeConfig={safeConfig}
+                saving={saving}
+                onGeneralToggle={handlers.handleGeneralToggle}
+                onThemeChange={handlers.handleThemeChange}
+              />
+            )}
 
-          {activeSection === 'connection' && <ConnectionSection />}
+            {activeSection === 'connection' && <ConnectionSection />}
 
-          {(hasVisitedProviders || activeSection === 'providers') && (
-            <div data-testid="provider-settings-page" className={activeSection === 'providers' ? undefined : 'hidden'}>
-              <Suspense
-                fallback={
-                  <div className="flex min-h-24 items-center justify-center">
-                    <Loader2 className="size-5 animate-spin text-text-muted" />
-                  </div>
-                }
+            {(hasVisitedProviders || activeSection === 'providers') && (
+              <div
+                data-testid="provider-settings-page"
+                className={activeSection === 'providers' ? undefined : 'hidden'}
               >
-                <CliStatusBanner isDashboardActive={isActive && activeSection === 'providers'} />
-              </Suspense>
-            </div>
-          )}
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-24 items-center justify-center">
+                      <Loader2 className="size-5 animate-spin text-text-muted" />
+                    </div>
+                  }
+                >
+                  <CliStatusBanner isDashboardActive={isActive && activeSection === 'providers'} />
+                </Suspense>
+              </div>
+            )}
 
-          {activeSection === 'gatewayProviders' && <GatewayProvidersSettingsSection />}
+            {activeSection === 'externalAgentConnection' && isElectronMode() && (
+              <ExternalAgentConnectionSettings
+                api={api.externalAgentConnection}
+                local={connectionMode === 'local'}
+                cdpEnabled={safeConfig.general.externalAgentCdpEnabled}
+                saving={saving}
+                onCdpEnabledChange={(enabled) =>
+                  handlers.handleGeneralToggle('externalAgentCdpEnabled', enabled)
+                }
+              />
+            )}
 
-          {activeSection === 'notifications' && (
-            <NotificationsSection
-              safeConfig={safeConfig}
-              saving={saving}
-              isSnoozed={isSnoozed}
-              ignoredRepositoryItems={ignoredRepositoryItems}
-              excludedRepositoryIds={excludedRepositoryIds}
-              onNotificationToggle={handlers.handleNotificationToggle}
-              onTeamRuntimeRecoveryUpdate={handlers.handleTeamRuntimeRecoveryUpdate}
-              onSnooze={handlers.handleSnooze}
-              onClearSnooze={handlers.handleClearSnooze}
-              onAddIgnoredRepository={handlers.handleAddIgnoredRepository}
-              onRemoveIgnoredRepository={handlers.handleRemoveIgnoredRepository}
-              onAddTrigger={handlers.handleAddTrigger}
-              onUpdateTrigger={handlers.handleUpdateTrigger}
-              onRemoveTrigger={handlers.handleRemoveTrigger}
-              onStatusChangeStatusesUpdate={handlers.handleStatusChangeStatusesUpdate}
-            />
-          )}
+            {activeSection === 'notifications' && (
+              <NotificationsSection
+                safeConfig={safeConfig}
+                saving={saving}
+                isSnoozed={isSnoozed}
+                ignoredRepositoryItems={ignoredRepositoryItems}
+                excludedRepositoryIds={excludedRepositoryIds}
+                onNotificationToggle={handlers.handleNotificationToggle}
+                onTeamRuntimeRecoveryUpdate={handlers.handleTeamRuntimeRecoveryUpdate}
+                onSnooze={handlers.handleSnooze}
+                onClearSnooze={handlers.handleClearSnooze}
+                onAddIgnoredRepository={handlers.handleAddIgnoredRepository}
+                onRemoveIgnoredRepository={handlers.handleRemoveIgnoredRepository}
+                onAddTrigger={handlers.handleAddTrigger}
+                onUpdateTrigger={handlers.handleUpdateTrigger}
+                onRemoveTrigger={handlers.handleRemoveTrigger}
+                onStatusChangeStatusesUpdate={handlers.handleStatusChangeStatusesUpdate}
+              />
+            )}
 
-          {activeSection === 'advanced' && (
-            <AdvancedSection
-              saving={saving}
-              onResetToDefaults={handlers.handleResetToDefaults}
-              onExportConfig={handlers.handleExportConfig}
-              onImportConfig={handlers.handleImportConfig}
-              onOpenInEditor={handlers.handleOpenInEditor}
-            />
-          )}
+            {activeSection === 'advanced' && (
+              <AdvancedSection
+                saving={saving}
+                onResetToDefaults={handlers.handleResetToDefaults}
+                onExportConfig={handlers.handleExportConfig}
+                onImportConfig={handlers.handleImportConfig}
+                onOpenInEditor={handlers.handleOpenInEditor}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -236,9 +258,10 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
 function isSettingsSection(value: string | undefined): value is SettingsSection {
   return (
     value === 'general' ||
+    value === 'appearance' ||
     value === 'connection' ||
     value === 'providers' ||
-    value === 'gatewayProviders' ||
+    value === 'externalAgentConnection' ||
     value === 'notifications' ||
     value === 'advanced'
   );

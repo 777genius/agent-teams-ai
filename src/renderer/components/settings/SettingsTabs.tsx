@@ -2,21 +2,16 @@ import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@renderer/components/ui/tooltip';
-import { Bell, Info, Network, Plug, Settings, Wrench } from 'lucide-react';
+import { Bell, Cable, Palette, Plug, Settings, Wrench } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
 export type SettingsSection =
   | 'general'
+  | 'appearance'
   | 'connection'
   | 'providers'
-  | 'gatewayProviders'
+  | 'externalAgentConnection'
   | 'notifications'
   | 'advanced';
 
@@ -25,63 +20,32 @@ interface SettingsTabsProps {
   onSectionChange: (section: SettingsSection) => void;
 }
 
-type TabLabelKey =
-  | 'tabs.advanced.label'
-  | 'tabs.gatewayProviders.label'
-  | 'runtimeProvider.tabs.providers'
-  | 'tabs.general.label'
-  | 'tabs.notifications.label';
-
-type TabDescriptionKey =
-  | 'tabs.advanced.description'
-  | 'tabs.gatewayProviders.description'
-  | 'providerRuntime.description'
-  | 'tabs.general.description'
-  | 'tabs.notifications.description';
-
-interface TabConfig {
+interface SectionConfig {
   id: SettingsSection;
-  labelKey: TabLabelKey;
+  labelKey:
+    | 'general.appearance.title'
+    | 'tabs.advanced.label'
+    | 'runtimeProvider.tabs.providers'
+    | 'tabs.general.label'
+    | 'tabs.notifications.label'
+    | 'general.externalAgentConnection.title';
   icon: LucideIcon;
-  descriptionKey: TabDescriptionKey;
   electronOnly?: boolean;
 }
 
-const tabs: TabConfig[] = [
+const sections: SectionConfig[] = [
+  { id: 'general', labelKey: 'tabs.general.label', icon: Settings },
+  { id: 'appearance', labelKey: 'general.appearance.title', icon: Palette },
+  { id: 'notifications', labelKey: 'tabs.notifications.label', icon: Bell },
+  { id: 'providers', labelKey: 'runtimeProvider.tabs.providers', icon: Plug, electronOnly: true },
   {
-    id: 'general',
-    labelKey: 'tabs.general.label',
-    icon: Settings,
-    descriptionKey: 'tabs.general.description',
-  },
-  // { id: 'connection', label: 'Connection', icon: Server, description: 'Manage CLI connection and authentication settings.', electronOnly: true },
-  {
-    id: 'notifications',
-    labelKey: 'tabs.notifications.label',
-    icon: Bell,
-    descriptionKey: 'tabs.notifications.description',
-  },
-  {
-    id: 'providers',
-    labelKey: 'runtimeProvider.tabs.providers',
-    icon: Plug,
-    descriptionKey: 'providerRuntime.description',
+    id: 'externalAgentConnection',
+    labelKey: 'general.externalAgentConnection.title',
+    icon: Cable,
     electronOnly: true,
   },
-  {
-    id: 'gatewayProviders',
-    labelKey: 'tabs.gatewayProviders.label',
-    icon: Network,
-    descriptionKey: 'tabs.gatewayProviders.description',
-    electronOnly: true,
-  },
-  {
-    id: 'advanced',
-    labelKey: 'tabs.advanced.label',
-    icon: Wrench,
-    descriptionKey: 'tabs.advanced.description',
-  },
-] satisfies TabConfig[];
+  { id: 'advanced', labelKey: 'tabs.advanced.label', icon: Wrench },
+];
 
 export const SettingsTabs = ({
   activeSection,
@@ -89,60 +53,34 @@ export const SettingsTabs = ({
 }: Readonly<SettingsTabsProps>): React.JSX.Element => {
   const { t } = useAppTranslation('settings');
   const isElectron = useMemo(() => isElectronMode(), []);
-  const visibleTabs = useMemo(
-    () => tabs.filter((tab) => !tab.electronOnly || isElectron),
-    [isElectron]
-  );
 
   return (
-    <TooltipProvider>
-      <div className="min-w-0 border-b border-border pb-0">
-        <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-t-lg bg-[var(--color-surface-raised)] p-1 text-[var(--color-text-muted)]">
-          {visibleTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeSection === tab.id;
-            const label = t(tab.labelKey);
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onSectionChange(tab.id)}
-                className={`relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1 pr-7 text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-                }`}
-              >
-                <Icon className="size-3.5" />
-                {label}
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={t('tabs.infoAriaLabel', { label })}
-                      onClick={(event) => event.stopPropagation()}
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.stopPropagation();
-                        }
-                      }}
-                      className="size-4.5 absolute right-1.5 top-0.5 z-10 inline-flex items-center justify-center rounded-full text-text-muted transition-colors hover:bg-[var(--color-surface-raised)] hover:text-text"
-                    >
-                      <Info className="size-3" />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64 text-pretty text-xs leading-relaxed">
-                    {t(tab.descriptionKey)}
-                  </TooltipContent>
-                </Tooltip>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </TooltipProvider>
+    <nav
+      aria-label={t('view.title')}
+      className="flex w-48 shrink-0 flex-col gap-1 border-e border-border p-3 max-sm:w-36 max-sm:p-2"
+    >
+      {sections
+        .filter((section) => !section.electronOnly || isElectron)
+        .map((section) => {
+          const Icon = section.icon;
+          const isActive = activeSection === section.id;
+          return (
+            <button
+              key={section.id}
+              type="button"
+              aria-current={isActive ? 'page' : undefined}
+              onClick={() => onSectionChange(section.id)}
+              className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-start text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] ${
+                isActive
+                  ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+                  : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]'
+              }`}
+            >
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 break-words">{t(section.labelKey)}</span>
+            </button>
+          );
+        })}
+    </nav>
   );
 };

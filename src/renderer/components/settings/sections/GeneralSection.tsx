@@ -4,14 +4,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ExternalAgentConnectionSettings } from '@features/external-agent-connection/renderer';
 import { normalizeAppLocalePreference } from '@features/localization';
 import { AppLanguageSelect, useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Combobox } from '@renderer/components/ui/combobox';
 import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
-import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { AGENT_LANGUAGE_OPTIONS, resolveLanguageName } from '@shared/utils/agentLanguage';
@@ -26,13 +24,10 @@ import type { ClaudeRootInfo, WslClaudeRootCandidate } from '@shared/types';
 import type { HttpServerStatus } from '@shared/types/api';
 import type { AppConfig } from '@shared/types/notifications';
 
-const THEME_OPTIONS = ['dark', 'light', 'system'] as const;
-
 interface GeneralSectionProps {
   readonly safeConfig: SafeConfig;
   readonly saving: boolean;
   readonly onGeneralToggle: (key: keyof AppConfig['general'], value: boolean) => void;
-  readonly onThemeChange: (value: 'dark' | 'light' | 'system') => void;
   readonly onLanguageChange: (value: string) => void;
   readonly onAppLocaleChange: (value: string) => void;
 }
@@ -41,7 +36,6 @@ export const GeneralSection = ({
   safeConfig,
   saving,
   onGeneralToggle,
-  onThemeChange,
   onLanguageChange,
   onAppLocaleChange,
 }: GeneralSectionProps): React.JSX.Element => {
@@ -260,15 +254,6 @@ export const GeneralSection = ({
     return t('general.agentLanguage.description');
   }, [safeConfig.general.agentLanguage, t]);
 
-  const themeOptions = useMemo(
-    () =>
-      THEME_OPTIONS.map((value) => ({
-        value,
-        label: t(`general.appearance.theme.options.${value}`),
-      })),
-    [t]
-  );
-
   const languageComboboxOptions = useMemo(
     () =>
       AGENT_LANGUAGE_OPTIONS.map((opt) => ({
@@ -347,71 +332,6 @@ export const GeneralSection = ({
             </SettingRow>
           )}
         </>
-      )}
-
-      <SettingsSectionHeader title={t('general.appearance.title')} />
-      <SettingRow
-        label={t('general.appearance.theme.label')}
-        description={t('general.appearance.theme.description')}
-      >
-        <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-          {themeOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              disabled={saving}
-              className={cn(
-                'rounded-[3px] px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50',
-                safeConfig.general.theme === opt.value
-                  ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-              )}
-              onClick={() => onThemeChange(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </SettingRow>
-      <SettingRow
-        label={t('general.appearance.autoExpandAIGroups.label')}
-        description={t('general.appearance.autoExpandAIGroups.description')}
-      >
-        <SettingsToggle
-          enabled={safeConfig.general.autoExpandAIGroups ?? false}
-          onChange={(v) => onGeneralToggle('autoExpandAIGroups', v)}
-          disabled={saving}
-        />
-      </SettingRow>
-      {isElectron && !window.navigator.userAgent.includes('Macintosh') && (
-        <SettingRow
-          label={t('general.appearance.nativeTitleBar.label')}
-          description={t('general.appearance.nativeTitleBar.description')}
-        >
-          <SettingsToggle
-            enabled={safeConfig.general.useNativeTitleBar}
-            onChange={async (v) => {
-              const shouldRelaunch = await confirm({
-                title: t('general.appearance.nativeTitleBar.restartConfirm.title'),
-                message: t('general.appearance.nativeTitleBar.restartConfirm.message'),
-                confirmLabel: t('general.appearance.nativeTitleBar.restartConfirm.confirmLabel'),
-              });
-              if (shouldRelaunch) {
-                // Await config write before relaunch to avoid race condition on Windows
-                // (antivirus/NTFS can delay file writes beyond a fixed timeout)
-                try {
-                  await api.config.update('general', { useNativeTitleBar: v });
-                } catch {
-                  // If save fails, still try to toggle via the normal path
-                  onGeneralToggle('useNativeTitleBar', v);
-                  await new Promise((r) => setTimeout(r, 500));
-                }
-                void window.electronAPI?.windowControls?.relaunch();
-              }
-            }}
-            disabled={saving}
-          />
-        </SettingRow>
       )}
 
       {isElectron && (
@@ -698,16 +618,6 @@ export const GeneralSection = ({
             {t('general.server.standaloneModeDescription')}
           </p>
         </>
-      )}
-
-      {isElectron && (
-        <ExternalAgentConnectionSettings
-          api={api.externalAgentConnection}
-          local={connectionMode === 'local'}
-          cdpEnabled={safeConfig.general.externalAgentCdpEnabled}
-          saving={saving}
-          onCdpEnabledChange={(enabled) => onGeneralToggle('externalAgentCdpEnabled', enabled)}
-        />
       )}
 
       {/* Privacy / Telemetry - only visible when telemetry is baked into the build */}
