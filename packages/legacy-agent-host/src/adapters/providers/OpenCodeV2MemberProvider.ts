@@ -4,6 +4,7 @@ import { runtimeDigest } from '../../runtime/identity.js';
 import { initialContextDigest } from '../../team-launch/context.js';
 import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
+import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 
 /**
@@ -67,10 +68,10 @@ export function createOpenCodeV2MemberProvider(
   const selected = context.profile;
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
-  const inheritedBinaryOverride = () => Object.hasOwn(process.env, 'OPENCODE_BIN_PATH');
+  const inheritedBinaryOverride = () => hasUntrustedOpenCodeBinaryOverride(process.env);
   if (selected.provider !== 'opencode' || selected.nativeGeneration !== 'v2' ||
       (selected.protocolRevision !== '2.0.0' && selected.protocolRevision !== '2.0.21') ||
-      !selected.nativeSessionId || Object.hasOwn(selected.environment, 'OPENCODE_BIN_PATH') ||
+      !selected.nativeSessionId || hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
       selected.capturedMcpServers || selected.nativeOptions.toolApprovalMode !== undefined ||

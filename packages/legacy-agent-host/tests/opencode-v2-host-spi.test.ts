@@ -114,6 +114,10 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
     { ...valid, extraArgs: ['--install-v1-plugin'] },
     { ...valid, environment: { ...valid.environment,
       OPENCODE_BIN_PATH: '/TEST-untrusted/native' } },
+    { ...valid, environment: { ...valid.environment,
+      opencode_bin_path: '/TEST-untrusted/lowercase-native' } },
+    { ...valid, environment: { ...valid.environment,
+      OpenCode_Bin_Path: '/TEST-untrusted/mixed-case-native' } },
   ]) assert.equal(runtimeProfileSchema.safeParse({ members: [invalid] }).success, false,
     JSON.stringify(invalid));
   assert.equal(runtimeProfileSchema.safeParse({ members: [
@@ -160,6 +164,8 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
     { ...fixture, mcpPolicyPlugin: { path: '/TEST-only-plugin', sha256: 'a'.repeat(64) } },
     { ...fixture, environment: { ...fixture.environment,
       OPENCODE_BIN_PATH: '/TEST-untrusted/native' } },
+    { ...fixture, environment: { ...fixture.environment,
+      opencode_bin_path: '/TEST-untrusted/alias-native' } },
   ]) {
     assert.throws(() => createOpenCodeV2MemberProvider(
       context(bad as typeof fixture), captured), /separate native profile/);
@@ -179,6 +185,21 @@ test('inherited OPENCODE_BIN_PATH refuses V2 admission before owner access', () 
   } finally {
     if (previous === undefined) delete process.env.OPENCODE_BIN_PATH;
     else process.env.OPENCODE_BIN_PATH = previous;
+  }
+});
+
+test('lowercase inherited V2 executable override refuses admission before owner access', () => {
+  const previous = process.env.opencode_bin_path;
+  try {
+    process.env.opencode_bin_path = '/TEST-parent/lowercase-foreign-engine';
+    const { captured, calls } = owner(true);
+    assert.throws(() => createOpenCodeV2MemberProvider(context(), captured),
+      /separate native profile/);
+    assert.deepEqual(calls,
+      { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 });
+  } finally {
+    if (previous === undefined) delete process.env.opencode_bin_path;
+    else process.env.opencode_bin_path = previous;
   }
 });
 
@@ -206,6 +227,30 @@ test('inherited OPENCODE_BIN_PATH appearing after readiness permanently revokes 
     await provider.cleanup();
   }
   assert.equal(calls.stopped, 1, 'physical stop confirmation must be observed');
+});
+
+test('lowercase inherited override appearing after readiness permanently retires V2 custody', async () => {
+  const previous = process.env.opencode_bin_path;
+  delete process.env.opencode_bin_path;
+  const { captured, calls } = owner(true);
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  let opened: Awaited<ReturnType<typeof provider.factory.open>> | undefined;
+  try {
+    opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    process.env.opencode_bin_path = '/TEST-parent/lowercase-late-override';
+    assert.equal((await opened.driver.checkReadiness()).ok, false);
+    delete process.env.opencode_bin_path;
+    assert.equal(provider.isReady(), false, 'clearing a foreign override never renews authority');
+    assert.equal(calls.context, 1, 'no replay of initial native context');
+    assert.equal(calls.stop, 1, 'only the TEST-owned process is stopped once');
+  } finally {
+    if (previous === undefined) delete process.env.opencode_bin_path;
+    else process.env.opencode_bin_path = previous;
+    if (opened) await opened.driver.close();
+    await provider.cleanup();
+  }
+  assert.equal(calls.stopped, 1);
 });
 
 test('V2 private SPI refuses mismatched request before native probe and credentials', async () => {

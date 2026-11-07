@@ -4,6 +4,7 @@ import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
 import { z } from 'zod';
 
 import { nativeProcessProfileSchema } from './nativeProcessProfile.js';
+import { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
 
 const id = z.string().min(1).max(256);
@@ -210,7 +211,7 @@ export const runtimeProfileSchema = z
       member.provider !== 'opencode' ||
       (member.nativeGeneration === 'v2'
         ? (member.protocolRevision === '2.0.0' || member.protocolRevision === '2.0.21') &&
-          !!member.nativeSessionId && !Object.hasOwn(member.environment, 'OPENCODE_BIN_PATH') &&
+          !!member.nativeSessionId && !hasUntrustedOpenCodeBinaryOverride(member.environment) &&
           member.mcpPolicyPlugin === undefined &&
           member.capturedMcpServers === undefined &&
           member.nativeOptions.toolApprovalMode === undefined &&
