@@ -3,7 +3,7 @@
  * Handles loading, saving, and providing safe defaults for config.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
@@ -13,6 +13,18 @@ import type { AppConfig } from '@renderer/types/data';
 
 // Get the setState function from the store to update appConfig globally
 const setStoreState = useStore.setState;
+
+type PendingConfigUpdate = {
+  section: keyof AppConfig;
+  data: Partial<AppConfig[keyof AppConfig]>;
+};
+
+function applyConfigUpdate(config: AppConfig, update: PendingConfigUpdate): AppConfig {
+  return {
+    ...config,
+    [update.section]: { ...config[update.section], ...update.data },
+  };
+}
 
 /** Repository item for ignored repositories list */
 export interface RepositoryDropdownItem {
@@ -109,6 +121,9 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const savedConfigRef = useRef<AppConfig | null>(null);
+  const pendingUpdatesRef = useRef<PendingConfigUpdate[]>([]);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   // Local optimistic state for immediate visual feedback on toggles
   const [optimisticConfig, setOptimisticConfig] = useState<AppConfig | null>(null);
@@ -120,6 +135,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         setLoading(true);
         setError(null);
         const loadedConfig = await api.config.get();
+        savedConfigRef.current = loadedConfig;
         setConfig(loadedConfig);
         setOptimisticConfig(loadedConfig);
       } catch (err) {
@@ -132,6 +148,11 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
     void loadConfig();
   }, []);
 
+  // Other settings handlers can also replace the confirmed config.
+  useEffect(() => {
+    if (pendingUpdatesRef.current.length === 0) savedConfigRef.current = config;
+  }, [config]);
+
   // Fetch repository groups for ignored repositories dropdown
   useEffect(() => {
     if (repositoryGroups.length === 0) {
@@ -139,38 +160,40 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
     }
   }, [repositoryGroups.length, fetchRepositoryGroups]);
 
-  // Update a config section with optimistic update for immediate UI feedback
+  // Serialize saves; each preview is rebuilt from the last confirmed config and queued edits.
   const updateConfig = useCallback(
-    async (section: keyof AppConfig, data: Partial<AppConfig[keyof AppConfig]>) => {
-      // Optimistic update - immediately reflect the change in UI
-      setOptimisticConfig((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          [section]: {
-            ...prev[section],
-            ...data,
-          },
-        };
-      });
+    (section: keyof AppConfig, data: Partial<AppConfig[keyof AppConfig]>): Promise<void> => {
+      const pending = { section, data };
+      pendingUpdatesRef.current.push(pending);
+      setSaving(true);
+      setError(null);
+      setOptimisticConfig((prev) => (prev ? applyConfigUpdate(prev, pending) : prev));
 
-      try {
-        setSaving(true);
-        const updatedConfig = await api.config.update(section, data as object);
-        setConfig(updatedConfig);
-        setOptimisticConfig(updatedConfig);
-        // Update global store so other components (like useTheme) see the change
-        setStoreState({ appConfig: updatedConfig });
-      } catch (err) {
-        // Revert optimistic update on error
-        setOptimisticConfig(config);
-        setError(err instanceof Error ? err.message : 'Failed to save settings');
-        throw err;
-      } finally {
-        setSaving(false);
-      }
+      const operation = saveQueueRef.current.then(async () => {
+        try {
+          const updatedConfig = await api.config.update(section, data as object);
+          savedConfigRef.current = updatedConfig;
+          setConfig(updatedConfig);
+          setStoreState({ appConfig: updatedConfig });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to save settings');
+          throw err;
+        } finally {
+          pendingUpdatesRef.current = pendingUpdatesRef.current.filter((item) => item !== pending);
+          const lastSaved = savedConfigRef.current;
+          setOptimisticConfig(
+            lastSaved
+              ? pendingUpdatesRef.current.reduce(applyConfigUpdate, lastSaved)
+              : null
+          );
+          setSaving(pendingUpdatesRef.current.length > 0);
+        }
+      });
+      // A failed save must not discard the later, already-queued user change.
+      saveQueueRef.current = operation.catch(() => undefined);
+      return operation;
     },
-    [config]
+    []
   );
 
   // Use optimistic config for UI display (falls back to config if not set)
