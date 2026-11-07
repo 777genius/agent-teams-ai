@@ -48,14 +48,33 @@ export async function confirm(opts: {
   cancelLabel?: string;
   variant?: 'default' | 'danger';
   mode?: 'confirm' | 'info';
+  /** An owner may cancel only its own pending confirmation (e.g. editor unmount). */
+  signal?: AbortSignal;
 }): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    // If a previous dialog is open, resolve it as cancelled
-    if (globalResolver) {
-      globalResolver(false);
+    if (opts.signal?.aborted) {
+      resolve(false);
+      return;
     }
+    // If another confirmation owns the singleton, finish it as canceled.
+    globalResolver?.(false);
 
-    globalResolver = resolve;
+    let settled = false;
+    const finish = (accepted: boolean): void => {
+      if (settled) return;
+      settled = true;
+      opts.signal?.removeEventListener('abort', onAbort);
+      resolve(accepted);
+    };
+    const onAbort = (): void => {
+      // The old owner must not dismiss a newer, unrelated confirmation.
+      if (globalResolver !== finish) return;
+      globalResolver = null;
+      globalSetState?.(initialState);
+      finish(false);
+    };
+    globalResolver = finish;
+    opts.signal?.addEventListener('abort', onAbort, { once: true });
     globalSetState?.({
       isOpen: true,
       title: opts.title,
