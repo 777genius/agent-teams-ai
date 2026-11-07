@@ -49,11 +49,6 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
-import {
-  currentCreateTeamDraftGeneration,
-  isCreateTeamDraftGenerationCurrent,
-} from '@renderer/services/createTeamDraftGeneration';
-import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -78,6 +73,11 @@ import {
   setStoredCreateTeamProvider,
   setStoredCreateTeamSkipPermissions,
 } from '@renderer/services/createTeamPreferences';
+import {
+  currentCreateTeamDraftGeneration,
+  isCreateTeamDraftGenerationCurrent,
+} from '@renderer/services/createTeamDraftGeneration';
+import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
@@ -493,7 +493,7 @@ export const CreateTeamDialog = ({
     return () => {
       cancelled = true;
     };
-  }, [draftLoaded, initialOrganizationPlacement, open, restoredFromStorage]);
+  }, [draftLoaded, initialOrganizationPlacement, open, restoredFromStorage, setOrganizationPlacementEnabled, setOrganizationPlacementOrganizationId, setOrganizationPlacementParentId]);
   // Re-read localStorage when advancedKey changes
   useEffect(() => {
     const storedEnabled =
