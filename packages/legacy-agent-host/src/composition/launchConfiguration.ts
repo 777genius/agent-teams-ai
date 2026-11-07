@@ -40,6 +40,11 @@ export function applyLaunchConfiguration(
   raw: unknown
 ): RuntimeMemberProfile {
   const selected = options.parse(raw);
+  // V2 uses ordered native permissions, not V1 toolApprovalMode. Reject the
+  // incompatible launch choice before launch.prepare can publish a selection.
+  if (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
+      selected.permissions !== undefined)
+    throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   const profile = structuredClone(base);
   if (selected.model !== undefined) {
     const prefix = profile.provider === 'opencode' ? `${profile.nativeOptions.providerId}/` : null;

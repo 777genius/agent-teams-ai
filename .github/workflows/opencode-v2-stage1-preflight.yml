@@ -8,15 +8,24 @@ on:
       # the pinned provider package; changing either must invalidate its proof.
       - runtime.lock.json
       - pnpm-lock.yaml
+      # Root manifest/workspace membership and Host TS project files affect
+      # this exact pinned install, build and source test, even without a lock change.
+      - package.json
+      - pnpm-workspace.yaml
       - packages/legacy-agent-host/package.json
-      - packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts
-      - packages/legacy-agent-host/src/composition/runtimeProfile.ts
-      - packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts
-      - packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
-      - packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
+      - packages/legacy-agent-host/tsconfig*.json
+      # The job builds the full Host package and typechecks its TEST tree;
+      # every Host source/test change invalidates the exact native proof.
+      - packages/legacy-agent-host/src/**
+      - packages/legacy-agent-host/tests/**
       - vendor/provider-migration/**
       - scripts/ci/install-dependencies-with-retry.mjs
       - .github/workflows/opencode-v2-stage1-preflight.yml
+
+# Canonical PR supersession; never cancel main/tag/manual evidence.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 permissions:
   contents: read
@@ -34,6 +43,16 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require immutable PR source HEAD
+        shell: bash
+        env:
+          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"
       # Read the actual moving Desktop product lock separately from this
       # historical Stage1 stacked checkout. The test requires both releases
       # to agree before returning even a static read-only candidate.
@@ -61,4 +80,74 @@ jobs:
       - name: Execute V2 static preflight, current-main lock and FIFO negatives
         env:
           OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
-        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs
+
+  native-host-instructions:
+    name: Native V2.0.21 Host SPI instructions (Ubuntu TEST only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      npm_config_audit: 'false'
+      npm_config_fund: 'false'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require immutable PR native source HEAD
+        shell: bash
+        env:
+          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install pinned Host workspace dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build Host V2 SPI with real pinned private driver
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Check native TEST proof syntax
+        run: node --check packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      - name: Install exact official V2 CLI in isolated runner prefix, without scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/opencode-v2-host-cli"
+          (cd "$RUNNER_TEMP/opencode-v2-host-cli" && npm init -y)
+          npm install --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --save-exact \
+            --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/cli@2.0.21
+          npm ls --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --depth=0 @opencode/cli
+          test -s "$RUNNER_TEMP/opencode-v2-host-cli/package-lock.json"
+      - name: Exercise real pinned native server against existing Host Session SPI
+        env:
+          OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
+          OPENCODE_V2_HOST_NATIVE_RECEIPT: ${{ github.workspace }}/opencode-v2-host-native-instructions.json
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      # Passing the native runner alone is not evidence: a missing receipt must
+      # fail this job even when the pinned npm lockfile still uploads successfully.
+      # Keep the always() upload below for sanitized failure/HOLD artifacts.
+      - name: Require complete native TEST receipt before success
+        shell: bash
+        env:
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test -s opencode-v2-host-native-instructions.json
+          node packages/legacy-agent-host/tests/opencode-v2-native-receipt-verify.mjs opencode-v2-host-native-instructions.json
+      - name: Preserve exact native TEST proof or HOLD receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opencode-v2-stage1-host-native-instructions-ubuntu
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            opencode-v2-host-native-instructions.json
+            ${{ runner.temp }}/opencode-v2-host-cli/package-lock.json

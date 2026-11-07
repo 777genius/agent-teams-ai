@@ -84,6 +84,12 @@ export function createRuntimeMemberProviderFactory(options: {
       );
       if (!entry || options.isSealed() || entry.provider || !assertAllocation)
         throw new RuntimeOwnerError('hold');
+      // A selected V2 member must never fall through to the legacy V1 provider.
+      // Until native process/permissions are qualified, only an explicitly
+      // injected Stage1 V2 owner may open the existing Session SPI.
+      if (entry.profile.provider === 'opencode' &&
+          entry.profile.nativeGeneration === 'v2' && !options.createProvider)
+        throw new RuntimeOwnerError('hold');
       const authority = captureMemberProviderAuthority({
         entry,
         request,

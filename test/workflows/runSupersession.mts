@@ -29,6 +29,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'dependency-review',
     'opencode-desktop-e2e',
     'opencode-packaged-e2e',
+    'opencode-v2-stage1-preflight',
     'prepare-updater-native-inputs',
     'runtime-bootstrap-smoke',
     'sentry-owned-process-native',
