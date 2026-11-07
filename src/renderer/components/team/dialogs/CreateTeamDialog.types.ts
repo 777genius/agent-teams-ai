@@ -30,6 +30,8 @@ export interface CreateTeamDialogProps {
   open: boolean;
   /** Creation-only surface; launching and relaunching keep their separate dialogs. */
   presentation?: 'dialog' | 'page';
+  /** Hidden Teams pages keep their form, but suspend portaled provider settings. */
+  active?: boolean;
   canCreate: boolean;
   provisioningErrorsByTeam: Record<string, string | null>;
   clearProvisioningError?: (teamName?: string) => void;
