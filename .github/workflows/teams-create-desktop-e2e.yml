@@ -30,6 +30,19 @@ jobs:
           cache: pnpm
       - name: Install desktop dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Install the Chromium SUID sandbox helper correctly
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          electron_binary="$(node -p "require('electron')")"
+          sandbox="$(dirname "$electron_binary")/chrome-sandbox"
+          test -f "$sandbox" && test ! -L "$sandbox"
+          case "$sandbox" in "$PWD"/node_modules/*) ;; *) echo 'Sandbox helper outside job checkout'; exit 1 ;; esac
+          sudo chown 0:0 "$sandbox"
+          sudo chmod 4755 "$sandbox"
+          test "$(stat -c %u "$sandbox")" = 0
+          test "$(stat -c %a "$sandbox")" = 4755
       - name: Check E2E driver before launching Electron
         run: node --check scripts/e2e/teams-create-page-desktop.mjs
       - name: Test creation screen and unchanged launch modal on isolated Electron
