@@ -641,6 +641,38 @@ async function main() {
       'Native config-only creation did not persist roster metadata');
     await captureScreenshot(cdp, fixture, 'config-only-created');
 
+    log('copy an existing sandbox team using the real Teams card');
+    await cdp.evaluate(
+      `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.projectPath)})`
+    );
+    const copyTarget =
+      "Array.from(document.querySelectorAll('.team-row-zebra-card'))" +
+      ".find(card => card.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))" +
+      "?.querySelector('button[aria-label=\"Copy team\"]')";
+    await cdp.click(copyTarget);
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page] #team-name')",
+      'copy action opened the shared creation page'
+    );
+    const copiedName = await cdp.evaluate(
+      "document.querySelector('[data-testid=create-team-page] #team-name')?.value"
+    );
+    assert.notEqual(copiedName, fixture.teamName, 'Copy reused the original identity');
+    assert(copiedName.startsWith('teams-create-page-e2e-'),
+      'Copy did not use the existing team name as its source');
+    const editedCopyName = `copy-edited-e2e-${randomUUID().slice(0, 8)}`;
+    await cdp.fill('#team-name', editedCopyName);
+    await cdp.click(
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
+    );
+    await cdp.waitFor(createButtonExpression('Continue creating'), 'resume copied draft');
+    await cdp.click(createButtonExpression('Continue creating'));
+    await cdp.waitFor(
+      `document.querySelector('#team-name')?.value === ${JSON.stringify(editedCopyName)}`,
+      'copy seed did not replay over an edited draft'
+    );
+    await captureScreenshot(cdp, fixture, 'copy-resumed-edits');
+
     const results = {
       success: true,
       unique,
@@ -650,6 +682,8 @@ async function main() {
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,
+      copiedTeamUsesSharedEditor: true,
+      copiedDraftDoesNotReplaySeed: true,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
