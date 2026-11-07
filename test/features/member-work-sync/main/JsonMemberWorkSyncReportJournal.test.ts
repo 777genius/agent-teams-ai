@@ -308,8 +308,9 @@ describe('strict JSON report journal', () => {
       intent: { recordedAt: input.receivedAt, journal: { firstRecordedAt: input.receivedAt } },
     });
     expect(write.mock.calls.every(([path]) => path !== reportsPath)).toBe(true);
-    if (process.platform === 'win32') expect(sync).toHaveBeenCalledWith(reportsPath, true);
-    else expect(sync).not.toHaveBeenCalled();
+    const reportsProofCalls = sync.mock.calls.filter(([filePath]) => filePath === reportsPath);
+    if (process.platform === 'win32') expect(reportsProofCalls).toContainEqual([reportsPath, true]);
+    else expect(reportsProofCalls).toEqual([]);
     expect(await readFile(reportsPath, 'utf8')).toBe(journalBytes);
   });
   it.skipIf(process.platform !== 'win32')(
