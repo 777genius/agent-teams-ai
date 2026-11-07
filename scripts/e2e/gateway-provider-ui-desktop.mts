@@ -270,11 +270,14 @@ export async function verifyGatewayUi(
   await bindDraft(true);
   await cancelDialog();
   await readback(
-    'cancelled draft releases its binding',
-    async () => (await bindings()).length === 0
+    'Back retains the creation draft gateway binding',
+    async () => (await bindings()).some((binding) =>
+      binding.memberName === memberName && binding.profileId === profile.id
+    )
   );
-  await bindDraft();
+  await page.getByRole('button', { name: 'Continue creating', exact: true }).first().click();
   const createDialog = page.locator('[data-testid="create-team-page"]');
+  await createDialog.getByText(`Bound to ${editedName} · key stored`, { exact: true }).waitFor();
   const launchAfterCreate = createDialog.locator('#launch-team');
   if ((await launchAfterCreate.getAttribute('aria-checked')) === 'true')
     await launchAfterCreate.click();
@@ -316,7 +319,7 @@ export async function verifyGatewayUi(
   await capture('profile-deleted');
   await page.evaluate(`window.electronAPI.teams.deleteTeam(${JSON.stringify(teamName)})`);
   console.log(
-    'Gateway UI PASS: profile CRUD, bound URL guard, invalid-key error, model selection, bind/unbind, cancelled draft cleanup, config-only save'
+    'Gateway UI PASS: profile CRUD, bound URL guard, invalid-key error, model selection, Back/resume binding retention, saved binding, explicit unbind'
   );
 }
 
