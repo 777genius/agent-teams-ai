@@ -160,7 +160,7 @@ export async function verifyGatewayUi(
       `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.dirs.sandbox)})`
     );
     // The Teams header precedes the equivalent empty-state action.
-    await page.getByRole('button', { name: 'Create Team', exact: true }).first().click();
+    await page.getByRole('button', { name: /^(Create Team|Continue creating)$/ }).first().click();
     const dialog = page.locator('[data-testid="create-team-page"]');
     const nameInput = dialog.locator('#team-name');
     await readback('initialized team draft', async () => (await nameInput.inputValue()).length > 0);
