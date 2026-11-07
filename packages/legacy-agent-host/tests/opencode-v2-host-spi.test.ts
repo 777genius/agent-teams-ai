@@ -992,7 +992,10 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
           assert.equal(provider.isReady(), false);
           if (mode === 'recheck-restored') {
             completeRecheck.resolve();
-            assert.equal((await within(recheck, 'successful re-attestation')).ok, true);
+            const recoveredReadback = await within(recheck, 'successful re-attestation');
+            assert.ok(recoveredReadback && typeof recoveredReadback === 'object' &&
+              'ok' in recoveredReadback, 're-attestation returns a structured SPI reply');
+            assert.equal(recoveredReadback.ok, true);
             assert.equal(provider.isReady(), true, 'owner restored before late native POST ACK');
             assert.equal(calls.stop, 0, 'a successful probe alone must not retire the owner');
           }
