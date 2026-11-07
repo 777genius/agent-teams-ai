@@ -3,8 +3,9 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as managedGit from '../../../../src/main/utils/managedGit';
 import { TeamWorktreeGitService } from '../../../../src/main/services/team/TeamWorktreeGitService';
 
 function execGit(args: string[], cwd: string): Promise<string> {
@@ -43,6 +44,20 @@ describe('TeamWorktreeGitService', () => {
       canUseWorktrees: false,
       reason: 'not_git_repo',
     });
+  });
+
+  it('reports invalid packaged Git as unavailable instead of rejecting', async () => {
+    const resolver = vi.spyOn(managedGit, 'getManagedGitExecutable').mockImplementation(() => {
+      throw new Error('Agent Teams bundled Git is missing or invalid');
+    });
+    try {
+      await expect(service.getStatus(projectPath)).resolves.toMatchObject({
+        reason: 'git_unavailable',
+        canUseWorktrees: false,
+      });
+    } finally {
+      resolver.mockRestore();
+    }
   });
 
   it('initializes git without silently creating a commit', async () => {
