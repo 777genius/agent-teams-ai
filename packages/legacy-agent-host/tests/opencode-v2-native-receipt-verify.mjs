@@ -36,7 +36,7 @@ export function isCompleteNativeHostReceipt(value) {
     r.packagedElectronQualified === false &&
     sha256(r.binarySha256) && pid(r.pid) && ticks(r.processStartTicks) &&
     r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
-    log && typeof log === 'object' && !Array.isArray(log) &&
+    log !== undefined && log !== null && typeof log === 'object' && !Array.isArray(log) &&
     log.readOnly === true && log.synced === true &&
     Number.isSafeInteger(log.watermark) && log.watermark >= 0 &&
     Number.isSafeInteger(log.eventCount) && log.eventCount >= 0 &&
