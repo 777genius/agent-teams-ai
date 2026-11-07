@@ -246,6 +246,11 @@
       "replaceConfirmation": "You have an unfinished team draft. Starting this action will replace it. Continue?",
       "replace": "Replace draft",
       "continue": "Continue creating"
+    },
+    "placementFailure": {
+      "title": "Team created, but not added to the organization",
+      "message": "Team {{teamName}} was created. Assign it from the Organization Map; do not create it again.",
+      "acknowledge": "Got it"
     }
   },
   "editTeam": {
