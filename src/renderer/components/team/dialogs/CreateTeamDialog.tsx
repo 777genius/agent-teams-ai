@@ -2474,7 +2474,7 @@ export const CreateTeamDialog = ({
           </div>
           <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
-              onApply={(draft) => {
+              confirmBeforeApply onApply={(draft) => {
                 setRuntimeSelection(1);
                 setLaunchTeam(false);
                 setSoloTeam(false);
