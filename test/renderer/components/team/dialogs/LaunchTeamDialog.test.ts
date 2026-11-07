@@ -4764,7 +4764,11 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
 
-      expect(host.querySelector('button#schedule-member')).toBeTruthy();
+      const recipientSelect = host.querySelector(
+        'button[role="combobox"][aria-label="Target when team is running"]'
+      );
+      expect(recipientSelect).toBeTruthy();
+      expect(recipientSelect?.textContent).toContain('alice');
       const wholeTeam = Array.from(host.querySelectorAll('button')).find(
         (button) => button.textContent?.trim() === 'Whole team'
       );

@@ -165,10 +165,13 @@ export class SmartScheduleDispatcher {
     }
     const leadName = await this.runtime.getLeadName(team);
     if (!leadName) return skipped('Team lead cannot be resolved');
-    const memberName =
+    const requestedMember =
       schedule.executionMode === 'team'
         ? leadName
         : schedule.targetMember?.trim() || leadName;
+    // Only the lead is case-insensitive; teammate identities stay exact.
+    const memberName =
+      requestedMember.toLowerCase() === leadName.toLowerCase() ? leadName : requestedMember;
     const saved = await this.runtime.getSavedRequest(team);
     const configured = memberName === leadName || saved?.members.some((m) => m.name === memberName);
     if (!configured) return skipped(`Member "${memberName}" is not configured in this team`);
