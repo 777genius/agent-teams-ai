@@ -100,8 +100,8 @@ import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganizati
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
-import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
+import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
