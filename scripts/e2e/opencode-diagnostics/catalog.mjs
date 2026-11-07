@@ -160,7 +160,17 @@ export async function enterProviderSettings(evaluate, send) {
   // First app launch includes native service startup before React mounts.
   for (let attempt = 0; attempt < 480; attempt++) {
     if (await evaluate(`Boolean(${page}?.getClientRects().length)`)) return;
-    if (!clicked && await evaluate(`Boolean(${dashboardButton}?.getClientRects().length && !${dashboardButton}?.disabled)`)) {
+    // A CSS-visible button can still sit under the boot splash, so a mouse
+    // event would hit the splash and silently lose the one allowed click.
+    const buttonReady = await evaluate(`(() => {
+      const button = ${dashboardButton};
+      if (document.getElementById('splash') || !button?.isConnected || button.disabled) return false;
+      const rect = button.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === button || button.contains(hit);
+    })()`);
+    if (!clicked && buttonReady) {
       assert(
         !(await evaluate(`Boolean(document.querySelector('[data-testid="runtime-manage-opencode"]')?.getClientRects().length)`)),
         'Dashboard still mounts the full provider management UI'
