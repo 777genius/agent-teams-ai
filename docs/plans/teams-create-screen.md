@@ -1,5 +1,8 @@
 # Teams: creation screen, unchanged launch/relaunch dialogs
 
+> **Status correction — 2026-11-08 (post-merge follow-up):** Feature PR [#1125](https://github.com/777genius/agent-teams-ai/pull/1125) **merged** as `df26d00a38f2bb983f889950ac6cbeb55d72ad38`. [Main post-merge CI](https://github.com/777genius/agent-teams-ai/actions/runs/42422713898) and [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42422713884) **passed** on that exact merge commit; all 29 inline threads were resolved. Earlier sections below are a historical execution ledger and their "Draft / pending merge" rows no longer describe the current PR state. The [Linux Electron create-page E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129) passed on the earlier `57a0231d`, **not** the final merged SHA. The Windows packaged suite exercised model-selection behavior, **not** the complete create-page matrix. Four independent strongest-model `xhigh` review rounds remained **0/4**; four source-informed *author* passes are not four independent reviews. The follow-up branch `test/teams-creation-e2e-cross-platform-20261108` documents/extends verification without modifying `LaunchTeamDialog` or production runtime behavior. Uncommitted provisional Gateway bindings deliberately do **not** survive an Electron process restart: saved non-secret intent is restored and the user must reconnect, subject to main-process recovery.
+
+
 Status: **implementation complete on branch; Electron E2E passed; full merge qualification pending; independent xhigh critics unavailable (0/4)**.
 PR: [#1125](https://github.com/777genius/agent-teams-ai/pull/1125).
 Inspected production baseline: `9959d667ae348356f4402bfa5d5d185a7388c8d6`.
