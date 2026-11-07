@@ -12,14 +12,14 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "native_TEST_session_created_no_model_call",
   "native_TEST_session_workspace_and_permissions_attested",
   "real_native_later_allow_override_refused_by_Host",
-  "real_native_later_allow_effect_verified_and_Host_refused",
+  "real_native_later_allow_resolver_observed_and_Host_refused",
   "real_native_ordered_ask_readback_without_tool_execution",
   "real_native_ask_permission_rejected_without_tool_execution",
   "actual_native_instruction_put_and_readback",
   "Host_existing_Session_SPI_ready_with_real_native_attestation",
   "Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck",
   "Host_native_readiness_recheck_no_instruction_replay",
-  "real_native_Host_captured_external_deny_effect_verified",
+  "real_native_Host_captured_external_deny_resolver_observed",
   "real_native_fresh_session_durable_log_cursor_read_only",
   "Host_seal_started_real_native_owned_stop_before_close",
   "real_native_seal_refused_retained_SPI_mutations_and_checkpoint",
@@ -49,6 +49,7 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     policy.capturedDeny === 'deny' && policy.laterAllow === 'allow' &&
     policy.laterAsk === 'ask' && policy.askRejected === true &&
     policy.pendingAfterReject === 0 &&
+    policy.resolverOnly === true && policy.toolEnforcementProven === false &&
     log !== undefined && log !== null && typeof log === 'object' && !Array.isArray(log) &&
     log.readOnly === true && log.synced === true &&
     Number.isSafeInteger(log.watermark) && log.watermark >= 0 &&
