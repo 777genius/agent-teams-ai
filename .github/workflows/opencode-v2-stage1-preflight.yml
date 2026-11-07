@@ -1,0 +1,64 @@
+name: OpenCode V2 Stage1 static preflight (TEST only)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      # The preflight test reads the actual Stage1 runtime lock and builds
+      # the pinned provider package; changing either must invalidate its proof.
+      - runtime.lock.json
+      - pnpm-lock.yaml
+      - packages/legacy-agent-host/package.json
+      - packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts
+      - packages/legacy-agent-host/src/composition/runtimeProfile.ts
+      - packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts
+      - packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts
+      - packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
+      - vendor/provider-migration/**
+      - scripts/ci/install-dependencies-with-retry.mjs
+      - .github/workflows/opencode-v2-stage1-preflight.yml
+
+permissions:
+  contents: read
+
+jobs:
+  static-preflight:
+    name: Static V01 source test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v6
+      # Read the actual moving Desktop product lock separately from this
+      # historical Stage1 stacked checkout. The test requires both releases
+      # to agree before returning even a static read-only candidate.
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          path: .current-product-lock
+          persist-credentials: false
+          sparse-checkout: runtime.lock.json
+          sparse-checkout-cone-mode: false
+      - name: Record exact current product commit
+        shell: bash
+        run: git -C .current-product-lock rev-parse HEAD
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install pinned workspace dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build Stage1 Host without launching providers
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Typecheck Host TEST contracts
+        run: pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+      - name: Execute V2 static preflight, current-main lock and FIFO negatives
+        env:
+          OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts
