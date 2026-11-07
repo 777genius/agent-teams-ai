@@ -395,6 +395,39 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('preserves explicit bootstrap-only intent through HTTP launch', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockResolvedValue({ runId: 'bootstrap-run' });
+    try {
+      const ok = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: { cwd: '/Users/test/project', bootstrapOnly: true },
+      });
+      expect(ok.statusCode).toBe(200);
+      expect(launchTeam).toHaveBeenCalledOnce();
+      const payload = launchTeam.mock.calls[0]?.[0];
+      expect(payload?.bootstrapOnly).toBe(true);
+      expect(payload).not.toHaveProperty('prompt');
+
+      for (const invalid of [
+        { cwd: '/Users/test/project', bootstrapOnly: 'true' },
+        { cwd: '/Users/test/project', bootstrapOnly: false },
+        { cwd: '/Users/test/project', bootstrapOnly: true, prompt: 'Run old work' },
+      ]) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/launch',
+          payload: invalid,
+        });
+        expect(response.statusCode).toBe(400);
+      }
+      expect(launchTeam).toHaveBeenCalledOnce();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('maps provisioning not-found errors with an embedded team name to 404', async () => {
     const { app, launchTeam } = await createApp();
     launchTeam.mockRejectedValue(
@@ -708,6 +741,30 @@ describe('HTTP team runtime routes', () => {
         },
         expect.any(Function)
       );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects bootstrap-only HTTP launch of a config-only draft before creating runtime', async () => {
+    const { app, getSavedRequest, createTeam, launchTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'draft-team',
+      cwd: '/Users/test/project',
+      providerId: 'anthropic',
+      members: [{ name: 'builder' }],
+      prompt: 'Legacy saved one-time task',
+    });
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/draft-team/launch',
+        payload: { cwd: '/Users/test/project', bootstrapOnly: true },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ error: 'Finish team setup first' });
+      expect(createTeam).not.toHaveBeenCalled();
+      expect(launchTeam).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
