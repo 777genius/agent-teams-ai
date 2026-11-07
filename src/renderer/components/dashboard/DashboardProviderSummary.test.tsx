@@ -46,6 +46,8 @@ describe('DashboardProviderSummary (passive)', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.clearAllMocks();
+    state.cliStatus = null;
+    state.cliStatusLoading = false;
   });
   afterEach(() => {
     document.body.innerHTML = '';
@@ -71,4 +73,21 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.unmount());
     }
   });
+  it('reports a missing CLI instead of endlessly checking after discovery settles', async () => {
+    state.cliStatus = { installed: false, flavor: 'agent_teams_orchestrator', providers: [] };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
+        .toContain('cliStatus.quickConnect.cliNotInstalled');
+      expect(state.getStatus).not.toHaveBeenCalled();
+      expect(state.loadProviderDirectory).not.toHaveBeenCalled();
+      expect(state.loadModels).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
 });

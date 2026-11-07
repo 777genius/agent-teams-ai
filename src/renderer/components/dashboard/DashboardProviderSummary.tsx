@@ -61,7 +61,9 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
   const unknown = settingsT('runtimeProvider.badges.unknown');
   const cliCountSuffix = summary.cliCountPending ? t('cliStatus.provider.checkingProviders') : unknown;
   const mainText =
-    !multimodelEnabled
+    cliStatus?.installed === false && !cliStatusLoading
+      ? t('cliStatus.quickConnect.cliNotInstalled')
+      : !multimodelEnabled
       ? cliStatus?.authLoggedIn
         ? t('cliStatus.provider.authenticated')
         : cliStatusLoading || !cliStatus
