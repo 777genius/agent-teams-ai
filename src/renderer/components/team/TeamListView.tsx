@@ -1086,7 +1086,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
       fallback={
         <CreateTeamPageLoadingFallback
           isCopy={copyData != null}
-          onClose={handleCreateDialogClose}
+          onClose={handleCreateBack}
         />
       }
     >
