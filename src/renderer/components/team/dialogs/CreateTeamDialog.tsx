@@ -63,11 +63,9 @@ import {
   applyStoredCreateTeamMemberRuntimePreferences,
   getStoredCreateTeamEffort,
   getStoredCreateTeamFastMode as getStoredTeamFastMode,
-  getStoredCreateTeamLimitContext,
   getStoredCreateTeamMemberRuntimePreferences,
   getStoredCreateTeamModel as getStoredTeamModel,
   getStoredCreateTeamProvider as getStoredTeamProvider,
-  getStoredCreateTeamSkipPermissions,
   migrateLegacyCreateTeamPreferences,
   setStoredCreateTeamEffort,
   setStoredCreateTeamFastMode,
@@ -377,6 +375,10 @@ export const CreateTeamDialog = ({
     setLaunchTeam,
     teamColor,
     setTeamColor,
+    limitContext,
+    setLimitContext: setLimitContextRaw,
+    skipPermissions,
+    setSkipPermissions: setSkipPermissionsRaw,
     organizationPlacementEnabled,
     setOrganizationPlacementEnabled,
     organizationPlacementOrganizationId,
@@ -442,8 +444,6 @@ export const CreateTeamDialog = ({
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
-  const [limitContext, setLimitContextRaw] = useState(getStoredCreateTeamLimitContext);
-  const [skipPermissions, setSkipPermissionsRaw] = useState(getStoredCreateTeamSkipPermissions);
   const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);

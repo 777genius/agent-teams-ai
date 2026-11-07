@@ -65,6 +65,9 @@ export interface CreateTeamDraftSnapshot {
   soloTeam: boolean;
   launchTeam: boolean;
   teamColor: string;
+  /** Optional, for backwards-compatible restoration of old creation drafts. */
+  limitContext?: boolean;
+  skipPermissions?: boolean;
   /** Optional for backward-compatible v1 draft restoration. */
   organizationPlacementEnabled?: boolean;
   organizationPlacementOrganizationId?: string;
@@ -147,6 +150,8 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
     typeof obj.soloTeam === 'boolean' &&
     typeof obj.launchTeam === 'boolean' &&
     typeof obj.teamColor === 'string' &&
+    (obj.limitContext === undefined || typeof obj.limitContext === 'boolean') &&
+    (obj.skipPermissions === undefined || typeof obj.skipPermissions === 'boolean') &&
     (obj.organizationPlacementEnabled === undefined ||
       typeof obj.organizationPlacementEnabled === 'boolean') &&
     (obj.organizationPlacementOrganizationId === undefined ||

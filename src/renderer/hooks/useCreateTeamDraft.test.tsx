@@ -367,6 +367,29 @@ describe('useCreateTeamDraft', () => {
   });
 
 
+  it('persists copied permission and context settings without replacing global defaults', async () => {
+    loadSnapshotMock.mockResolvedValue(null);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let root = createRoot(host);
+    let draft: ReturnType<typeof useCreateTeamDraft> | null = null;
+    await renderLoadedDraft(root, (value) => { draft = value; });
+    act(() => {
+      draft?.setSkipPermissions(false);
+      draft?.setLimitContext(true);
+      root.unmount();
+    });
+    const saved = saveSnapshotMock.mock.calls.at(-1)?.[0];
+    expect(saved).toMatchObject({ skipPermissions: false, limitContext: true });
+    loadSnapshotMock.mockResolvedValue(saved);
+    draft = null;
+    root = createRoot(host);
+    await renderLoadedDraft(root, (value) => { draft = value; });
+    const readDraft: () => ReturnType<typeof useCreateTeamDraft> | null = () => draft;
+    expect(readDraft()).toMatchObject({ skipPermissions: false, limitContext: true });
+    act(() => root.unmount());
+  });
+
   it('retains per-member workflow file chips across unmount and restored snapshot', async () => {
     const workflowChip = { id: 'chip-1', filePath: '/tmp/README.md', fileName: 'README.md', fromLine: null, toLine: null, codeText: 'Sample', language: 'markdown' };
     loadSnapshotMock.mockResolvedValue(null);

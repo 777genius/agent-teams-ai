@@ -23,6 +23,8 @@ import {
   type SerializedMemberDraft,
 } from '@renderer/services/createTeamDraftStorage';
 import {
+  getStoredCreateTeamLimitContext,
+  getStoredCreateTeamSkipPermissions,
   getStoredCreateTeamSyncModelsWithLead,
   setStoredCreateTeamMemberRuntimePreferences,
   setStoredCreateTeamSyncModelsWithLead,
@@ -64,6 +66,10 @@ export interface UseCreateTeamDraftResult {
   setLaunchTeam: (v: boolean) => void;
   teamColor: string;
   setTeamColor: (v: string) => void;
+  limitContext: boolean;
+  setLimitContext: (v: boolean) => void;
+  skipPermissions: boolean;
+  setSkipPermissions: (v: boolean) => void;
   organizationPlacementEnabled: boolean;
   setOrganizationPlacementEnabled: (v: boolean) => void;
   organizationPlacementOrganizationId: string;
@@ -169,6 +175,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const [soloTeam, setSoloTeamState] = useState(false);
   const [launchTeam, setLaunchTeamState] = useState(true);
   const [teamColor, setTeamColorState] = useState('');
+  const [limitContext, setLimitContextState] = useState(getStoredCreateTeamLimitContext);
+  const [skipPermissions, setSkipPermissionsState] = useState(getStoredCreateTeamSkipPermissions);
   const [organizationPlacementEnabled, setOrganizationPlacementEnabledState] = useState(false);
   const [organizationPlacementOrganizationId, setOrganizationPlacementOrganizationIdState] = useState('');
   const [organizationPlacementParentId, setOrganizationPlacementParentIdState] = useState('');
@@ -186,6 +194,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   const soloTeamRef = useRef(false);
   const launchTeamRef = useRef(true);
   const teamColorRef = useRef('');
+  const limitContextRef = useRef(limitContext);
+  const skipPermissionsRef = useRef(skipPermissions);
   const organizationPlacementEnabledRef = useRef(false);
   const organizationPlacementOrganizationIdRef = useRef('');
   const organizationPlacementParentIdRef = useRef('');
@@ -219,6 +229,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       soloTeam: soloTeamRef.current,
       launchTeam: launchTeamRef.current,
       teamColor: teamColorRef.current,
+      limitContext: limitContextRef.current,
+      skipPermissions: skipPermissionsRef.current,
       organizationPlacementEnabled: organizationPlacementEnabledRef.current,
       organizationPlacementOrganizationId: organizationPlacementOrganizationIdRef.current,
       organizationPlacementParentId: organizationPlacementParentIdRef.current,
@@ -286,6 +298,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     soloTeamRef.current = snap.soloTeam;
     launchTeamRef.current = snap.launchTeam;
     teamColorRef.current = snap.teamColor;
+    limitContextRef.current = snap.limitContext ?? getStoredCreateTeamLimitContext();
+    skipPermissionsRef.current = snap.skipPermissions ?? getStoredCreateTeamSkipPermissions();
     organizationPlacementEnabledRef.current = snap.organizationPlacementEnabled === true;
     organizationPlacementOrganizationIdRef.current = snap.organizationPlacementOrganizationId ?? '';
     organizationPlacementParentIdRef.current = snap.organizationPlacementParentId ?? '';
@@ -300,6 +314,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setSoloTeamState(snap.soloTeam);
     setLaunchTeamState(snap.launchTeam);
     setTeamColorState(snap.teamColor);
+    setLimitContextState(limitContextRef.current);
+    setSkipPermissionsState(skipPermissionsRef.current);
     setOrganizationPlacementEnabledState(snap.organizationPlacementEnabled === true);
     setOrganizationPlacementOrganizationIdState(snap.organizationPlacementOrganizationId ?? '');
     setOrganizationPlacementParentIdState(snap.organizationPlacementParentId ?? '');
@@ -459,6 +475,19 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     [scheduleSave]
   );
 
+  const setLimitContext = useCallback((v: boolean): void => {
+    userTouchedRef.current = true;
+    limitContextRef.current = v;
+    setLimitContextState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+  const setSkipPermissions = useCallback((v: boolean): void => {
+    userTouchedRef.current = true;
+    skipPermissionsRef.current = v;
+    setSkipPermissionsState(v);
+    scheduleSave();
+  }, [scheduleSave]);
+
   const setOrganizationPlacementEnabled = useCallback((v: boolean): void => {
     userTouchedRef.current = true;
     organizationPlacementEnabledRef.current = v;
@@ -506,6 +535,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     soloTeamRef.current = false;
     launchTeamRef.current = true;
     teamColorRef.current = '';
+    limitContextRef.current = getStoredCreateTeamLimitContext();
+    skipPermissionsRef.current = getStoredCreateTeamSkipPermissions();
     organizationPlacementEnabledRef.current = false;
     organizationPlacementOrganizationIdRef.current = '';
     organizationPlacementParentIdRef.current = '';
@@ -520,6 +551,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setSoloTeamState(false);
     setLaunchTeamState(true);
     setTeamColorState('');
+    setLimitContextState(limitContextRef.current);
+    setSkipPermissionsState(skipPermissionsRef.current);
     setOrganizationPlacementEnabledState(false);
     setOrganizationPlacementOrganizationIdState('');
     setOrganizationPlacementParentIdState('');
@@ -552,6 +585,10 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setLaunchTeam,
     teamColor,
     setTeamColor,
+    limitContext,
+    setLimitContext,
+    skipPermissions,
+    setSkipPermissions,
     organizationPlacementEnabled,
     setOrganizationPlacementEnabled,
     organizationPlacementOrganizationId,
