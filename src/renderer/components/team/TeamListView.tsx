@@ -24,8 +24,8 @@ import {
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useCreateTeamDraftAvailability } from '@renderer/hooks/useCreateTeamDraftAvailability';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { useStore } from '@renderer/store';
 import { createTeamDraftStorage } from '@renderer/services/createTeamDraftStorage';
+import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
