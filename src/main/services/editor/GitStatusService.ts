@@ -60,7 +60,8 @@ export class GitStatusService {
       for (const key of MANAGED_GIT_ENV_KEYS) {
         if (environment[key]) this.git.env(key, environment[key]);
       }
-    } catch {
+    } catch (error) {
+      log.warn(`Git status disabled: ${error instanceof Error ? error.message : String(error)}`);
       this.git = null;
     }
     this.invalidateCache();

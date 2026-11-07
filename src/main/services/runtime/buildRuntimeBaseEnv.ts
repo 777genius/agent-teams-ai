@@ -112,6 +112,13 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   // PATH can be overwritten by caller/provider merges; re-apply managed Git last.
   Object.assign(env, createManagedGitEnv(env));
   if (process.platform === 'win32') {
+    // Preserve a caller's Path alias if the bundled Git payload could not supply PATH.
+    if (env.PATH === undefined) {
+      const pathAlias = Object.entries(env).find(
+        ([key, value]) => key !== 'PATH' && key.toUpperCase() === 'PATH' && value !== undefined
+      )?.[1];
+      if (pathAlias !== undefined) env.PATH = pathAlias;
+    }
     // Clean AFTER merging, including when bundled Git is unavailable.
     for (const key of Object.keys(env)) {
       if (key !== 'PATH' && key.toUpperCase() === 'PATH') delete env[key];

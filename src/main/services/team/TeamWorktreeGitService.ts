@@ -73,8 +73,12 @@ export class TeamWorktreeGitService {
       return blockedStatus(projectPath.trim(), 'invalid_project_path', normalizeGitError(error));
     }
 
-    if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
-      return blockedStatus(cwd, 'git_unavailable', 'Git is required for worktree isolation.');
+    try {
+      if (getManagedGitExecutable() === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+        return blockedStatus(cwd, 'git_unavailable', 'Git is required for worktree isolation.');
+      }
+    } catch (error) {
+      return blockedStatus(cwd, 'git_unavailable', normalizeGitError(error));
     }
 
     let rootPath: string;
