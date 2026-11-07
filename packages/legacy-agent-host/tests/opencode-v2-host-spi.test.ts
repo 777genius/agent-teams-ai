@@ -112,10 +112,13 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
     { ...valid, capturedMcpServers: {} },
     { ...valid, nativeOptions: { ...valid.nativeOptions, toolApprovalMode: 'auto' } },
     { ...valid, extraArgs: ['--install-v1-plugin'] },
+    { ...valid, environment: { ...valid.environment,
+      OPENCODE_BIN_PATH: '/TEST-untrusted/native' } },
   ]) assert.equal(runtimeProfileSchema.safeParse({ members: [invalid] }).success, false,
     JSON.stringify(invalid));
   assert.equal(runtimeProfileSchema.safeParse({ members: [
-    { ...valid, nativeGeneration: undefined, protocolRevision: '1.19.4', nativeSessionId: undefined },
+    { ...valid, nativeGeneration: undefined, protocolRevision: '1.19.4', nativeSessionId: undefined,
+      environment: { ...valid.environment, OPENCODE_BIN_PATH: '/TEST-only-V1-legacy-path' } },
   ] }).success, true, 'unchanged V1 default remains valid');
 });
 
@@ -155,6 +158,8 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
     { ...fixture, nativeGeneration: undefined },
     { ...fixture, protocolRevision: '2.1.4' },
     { ...fixture, mcpPolicyPlugin: { path: '/TEST-only-plugin', sha256: 'a'.repeat(64) } },
+    { ...fixture, environment: { ...fixture.environment,
+      OPENCODE_BIN_PATH: '/TEST-untrusted/native' } },
   ]) {
     assert.throws(() => createOpenCodeV2MemberProvider(
       context(bad as typeof fixture), captured), /separate native profile/);

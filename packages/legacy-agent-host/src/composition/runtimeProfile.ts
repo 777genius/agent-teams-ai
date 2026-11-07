@@ -210,7 +210,8 @@ export const runtimeProfileSchema = z
       member.provider !== 'opencode' ||
       (member.nativeGeneration === 'v2'
         ? (member.protocolRevision === '2.0.0' || member.protocolRevision === '2.0.21') &&
-          !!member.nativeSessionId && member.mcpPolicyPlugin === undefined &&
+          !!member.nativeSessionId && !Object.hasOwn(member.environment, 'OPENCODE_BIN_PATH') &&
+          member.mcpPolicyPlugin === undefined &&
           member.capturedMcpServers === undefined &&
           member.nativeOptions.toolApprovalMode === undefined &&
           (member.extraArgs?.length ?? 0) === 0

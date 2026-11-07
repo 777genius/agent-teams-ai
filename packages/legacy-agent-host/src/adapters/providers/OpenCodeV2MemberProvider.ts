@@ -67,7 +67,8 @@ export function createOpenCodeV2MemberProvider(
   const selected = context.profile;
   if (selected.provider !== 'opencode' || selected.nativeGeneration !== 'v2' ||
       (selected.protocolRevision !== '2.0.0' && selected.protocolRevision !== '2.0.21') ||
-      !selected.nativeSessionId || selected.mcpPolicyPlugin ||
+      !selected.nativeSessionId || Object.hasOwn(selected.environment, 'OPENCODE_BIN_PATH') ||
+      selected.mcpPolicyPlugin ||
       selected.capturedMcpServers || selected.nativeOptions.toolApprovalMode !== undefined ||
       (selected.extraArgs?.length ?? 0) !== 0)
     throw new Error('OpenCode V2 requires a separate native profile and owner');
