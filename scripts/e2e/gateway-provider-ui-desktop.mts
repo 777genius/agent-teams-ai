@@ -145,6 +145,12 @@ export async function verifyGatewayUi(
   };
   const row = (): GatewayUiLocator => page.locator('div.border-b').filter({ hasText: editedName });
   const cancelDialog = async (): Promise<void> => {
+    const createPage = page.locator('[data-testid="create-team-page"]');
+    if (await createPage.count()) {
+      await createPage.getByRole('button', { name: 'Back to teams' }).click();
+      await createPage.waitFor({ state: 'hidden' });
+      return;
+    }
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'hidden' });
   };
@@ -155,7 +161,7 @@ export async function verifyGatewayUi(
     );
     // The Teams header precedes the equivalent empty-state action.
     await page.getByRole('button', { name: 'Create Team', exact: true }).first().click();
-    const dialog = page.getByRole('dialog');
+    const dialog = page.locator('[data-testid="create-team-page"]');
     const nameInput = dialog.locator('#team-name');
     await readback('initialized team draft', async () => (await nameInput.inputValue()).length > 0);
     await nameInput.fill(teamName);
@@ -268,7 +274,7 @@ export async function verifyGatewayUi(
     async () => (await bindings()).length === 0
   );
   await bindDraft();
-  const createDialog = page.getByRole('dialog');
+  const createDialog = page.locator('[data-testid="create-team-page"]');
   const launchAfterCreate = createDialog.locator('#launch-team');
   if ((await launchAfterCreate.getAttribute('aria-checked')) === 'true')
     await launchAfterCreate.click();
