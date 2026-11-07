@@ -110,7 +110,7 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
       .getState()
       .getAllPaneTabs()
       .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
-    if (hasOpenEditor || saved?.teamName.trim()) {
+    if (hasOpenEditor || Boolean(saved?.teamName.trim() || saved?.members.length)) {
       const accepted = await confirm({
         title: t('create.title.create'),
         message: t('create.draft.replaceConfirmation', {
