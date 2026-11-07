@@ -109,6 +109,13 @@ try {
   if(bytes.subarray(0,4).toString('hex')!=='7f454c46')throw Error('not_native_elf');
   const hash=digest(bytes);
   if(hash!==pinnedLinuxX64Avx2Digest)throw Error('native_binary_sha256_mismatch');
+  // Bind this publicly downloadable TEST proof to the exact PR source HEAD,
+  // not the synthetic pull_request merge checkout or a stale workflow run.
+  const sourceHead=process.env.OPENCODE_V2_TEST_SOURCE_HEAD;
+  if(!/^[a-f0-9]{40}$/.test(sourceHead||'')||
+     execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',timeout:5000}).trim()!==sourceHead)
+    throw Error('native_source_head_mismatch');
+  receipt.sourceHead=sourceHead;
   receipt.binarySha256=hash;
   receipt.steps.push('pinned_actual_ELF_measured');
   if(execFileSync(binary,['--version'],{cwd:workspace,env,encoding:'utf8',timeout:12000}).trim()

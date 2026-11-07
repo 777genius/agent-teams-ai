@@ -24,16 +24,19 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "same_TEST_native_owner_restart_cleanup_confirmed"
 ]);
 const sha256 = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+const sourceSha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 const pid = value => Number.isSafeInteger(value) && value > 0;
 const ticks = value => typeof value === 'string' && /^[1-9][0-9]*$/.test(value);
 
-export function isCompleteNativeHostReceipt(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      (expectedSourceHead !== undefined &&
+        (!sourceSha(expectedSourceHead) || value.sourceHead !== expectedSourceHead))) return false;
   const r = value, restarted = r.restart, log = r.nativeLogReadback;
   return r.kind === 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS' && r.version === '2.0.21' &&
     r.cleanup === true && r.error === undefined && r.cleanupError === undefined &&
     r.qualified === false && r.productQualified === false &&
-    r.packagedElectronQualified === false &&
+    r.packagedElectronQualified === false && sourceSha(r.sourceHead) &&
     sha256(r.binarySha256) && pid(r.pid) && ticks(r.processStartTicks) &&
     r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
     log !== undefined && log !== null && typeof log === 'object' && !Array.isArray(log) &&
@@ -53,7 +56,12 @@ export function isCompleteNativeHostReceipt(value) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let verified = false;
-  try { verified = isCompleteNativeHostReceipt(JSON.parse(readFileSync(process.argv[2], 'utf8'))); }
+  try {
+    const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD;
+    if (sourceSha(sourceHead))
+      verified = isCompleteNativeHostReceipt(JSON.parse(readFileSync(process.argv[2], 'utf8')),
+        sourceHead);
+  }
   catch { /* Do not log receipt contents, paths or credentials. */ }
   if (!verified) {
     process.stderr.write('native_host_receipt_missing_or_incomplete\n');

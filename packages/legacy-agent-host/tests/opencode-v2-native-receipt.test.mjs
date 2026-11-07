@@ -44,7 +44,7 @@ function completeReceiptFixture() {
   return {
     kind: 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS', version: '2.0.21',
     cleanup: true, qualified: false, productQualified: false,
-    packagedElectronQualified: false, binarySha256: 'f'.repeat(64),
+    packagedElectronQualified: false, sourceHead: 'a'.repeat(40), binarySha256: 'f'.repeat(64),
     pid: 1101, processStartTicks: '123456', nativeCustodyReadbacks: 4,
     nativePermissionReadbacks: 4, steps: [...REQUIRED_NATIVE_HOST_STEPS],
     nativeLogReadback: { readOnly: true, synced: true, watermark: 0,
@@ -68,6 +68,9 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
     r => { r.nativeLogReadback.eventCount = 4097; },
     r => { r.steps[0] = 'npm_wrapper_hashed'; },
     r => { r.steps.reverse(); },
+    r => { r.sourceHead = 'unverified'; },
+    r => { r.sourceHead = 'A'.repeat(40); },
+    r => { delete r.sourceHead; },
     r => { r.binarySha256 = 'unverified'; },
     r => { r.binarySha256 = 'F'.repeat(64); },
     r => { r.nativeCustodyReadbacks = 3; },
@@ -89,6 +92,9 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
     mutate(candidate);
     assert.equal(isCompleteNativeHostReceipt(candidate), false);
   }
+  assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture(), 'a'.repeat(40)), true);
+  assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture(), 'b'.repeat(40)), false,
+    'an otherwise valid native receipt cannot authorize another PR HEAD');
   assert.equal(isCompleteNativeHostReceipt(undefined), false);
 });
 
@@ -104,10 +110,20 @@ test('receipt verifier CLI refuses lockfile-only artifacts with sanitized diagno
       writeFileSync(path, JSON.stringify(payload));
       const result = spawnSync(process.execPath, [
         fileURLToPath(new URL('./opencode-v2-native-receipt-verify.mjs', import.meta.url)), path,
-      ], { encoding: 'utf8' });
+      ], { encoding: 'utf8',
+        env: { ...process.env, OPENCODE_V2_TEST_SOURCE_HEAD: 'a'.repeat(40) } });
       assert.equal(result.status, exitCode);
       assert.equal(result.stdout, '');
       assert.equal(result.stderr, exitCode ? 'native_host_receipt_missing_or_incomplete\n' : '');
+    }
+    writeFileSync(path, JSON.stringify(completeReceiptFixture()));
+    for (const sourceHead of ['', 'b'.repeat(40)]) {
+      const result = spawnSync(process.execPath, [
+        fileURLToPath(new URL('./opencode-v2-native-receipt-verify.mjs', import.meta.url)), path,
+      ], { encoding: 'utf8',
+        env: { ...process.env, OPENCODE_V2_TEST_SOURCE_HEAD: sourceHead } });
+      assert.equal(result.status, 1, 'missing or different workflow HEAD must reject artifact');
+      assert.equal(result.stderr, 'native_host_receipt_missing_or_incomplete\n');
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
