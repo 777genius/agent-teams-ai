@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
+import { syncFile } from '@main/utils/durableFileSync';
 
 import { decodeMemberWorkSyncReportJournalMetadata } from '../../core/domain/MemberWorkSyncReportJournalMetadata';
 
@@ -192,11 +193,16 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                     if (dirname(dir) === dir) break;
                   }
                   if (provingExisting) {
-                    const handle = await open(path, 'r');
-                    try {
-                      await handle.sync();
-                    } finally {
-                      await handle.close();
+                    if (process.platform === 'win32') {
+                      await syncFile(path, true);
+                    } else {
+                      // Unix can durably prove an unchanged, readable journal without write access.
+                      const handle = await open(path, 'r');
+                      try {
+                        await handle.sync();
+                      } finally {
+                        await handle.close();
+                      }
                     }
                   } else
                     await atomicWriteAsync(path, `${JSON.stringify(file, null, 2)}\n`, {
