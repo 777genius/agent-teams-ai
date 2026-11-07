@@ -2681,7 +2681,7 @@
       "addTask": "Add task",
       "noTasks": "No tasks"
     },
-    "title": "Kanban",
+    "title": "Tasks",
     "columns": {
       "todo": "TODO",
       "inProgress": "IN PROGRESS",

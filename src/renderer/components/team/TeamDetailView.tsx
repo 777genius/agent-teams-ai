@@ -3178,24 +3178,6 @@ export const TeamDetailView = memo(function TeamDetailView({
               </div>
 
               <CollapsibleTeamSection
-                sectionId="sessions"
-                variant="flat"
-                title={t('sessions.title')}
-                icon={<History size={14} />}
-                defaultOpen={false}
-              >
-                <TeamSessionsSection
-                  sessions={teamSessions}
-                  sessionsLoading={sessionsLoading}
-                  sessionsError={sessionsError}
-                  leadSessionId={data.config.leadSessionId}
-                  selectedSessionId={kanbanFilter.sessionId}
-                  onSelectSession={(id) => setKanbanFilter((prev) => ({ ...prev, sessionId: id }))}
-                  projectPath={data.config.projectPath}
-                />
-              </CollapsibleTeamSection>
-
-              <CollapsibleTeamSection
                 sectionId="kanban"
                 variant="flat"
                 title={t('kanban.title')}
@@ -3268,6 +3250,24 @@ export const TeamDetailView = memo(function TeamDetailView({
                 onOpenTask={openTaskDetailDialog}
                 onViewChanges={handleViewChangesForFile}
               />
+
+              <CollapsibleTeamSection
+                sectionId="sessions"
+                variant="flat"
+                title={t('sessions.title')}
+                icon={<History size={14} />}
+                defaultOpen={false}
+              >
+                <TeamSessionsSection
+                  sessions={teamSessions}
+                  sessionsLoading={sessionsLoading}
+                  sessionsError={sessionsError}
+                  leadSessionId={data.config.leadSessionId}
+                  selectedSessionId={kanbanFilter.sessionId}
+                  onSelectSession={(id) => setKanbanFilter((prev) => ({ ...prev, sessionId: id }))}
+                  projectPath={data.config.projectPath}
+                />
+              </CollapsibleTeamSection>
 
               <CollapsibleTeamSection
                 sectionId="schedules"
