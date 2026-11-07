@@ -112,7 +112,13 @@ export function createOpenCodeV2MemberProvider(
 
   const current = () => {
     if (sealed || qualificationRevoked) return false;
-    if (context.isCurrent() && context.canAllocate()) return true;
+    try {
+      if (context.isCurrent() && context.canAllocate()) return true;
+    } catch {
+      // A failed Host authority callback cannot grant an existing native
+      // process another turn. Treat errors as permanent lease revocation,
+      // not a transient readiness probe or a recoverable model failure.
+    }
     // A temporarily lost Host authority is not a renewable V2 lease.
     // Latch revocation even if allocation becomes available again before
     // the next asynchronous native readiness check.
