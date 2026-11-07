@@ -1503,27 +1503,27 @@
       "title": "Kuzindua tena kutaanzisha upya mwendo wa sasa wa timu"
     },
     "schedule": {
-      "agentDescription": "Timu ikiwa imesimama, huanzisha wakala tofauti; ikiwa inaendelea, hugawa kazi.",
-      "execution": "Utekelezaji",
       "labelOptional": "Lebo (hiari)",
       "labelPlaceholder": "k.m., Mapitio ya msimbo ya kila siku, Majaribio ya usiku...",
-      "leadDefault": "Kiongozi wa timu (chaguo-msingi)",
-      "legacyNotice": "Ratiba ya mara moja iliyopo: kuhifadhi hakutabadilisha jinsi inavyofanya kazi.",
       "maxBudgetUsd": "Bajeti ya juu (USD)",
       "maxTurns": "Zamu za juu",
       "noLimit": "Hakuna kikomo",
       "noMatches": "Hakuna timu zinazolingana na utafutaji wako.",
       "noTeams": "Hakuna timu zinazopatikana. Unda timu kwanza.",
-      "oneAgent": "Wakala mmoja",
       "searchTeams": "Tafuta timu...",
       "selectTeam": "Chagua timu...",
-      "target": "Mpokeaji wakati timu inaendelea",
       "team": "Timu",
-      "teamDescription": "Timu ikiwa imesimama, huiwasha; ikiwa inaendelea, humpa kiongozi kazi. Hutumia mipangilio iliyohifadhiwa.",
-      "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji.",
       "title": "Ratiba",
+      "execution": "Utekelezaji",
+      "legacyNotice": "Ratiba ya mara moja iliyopo: kuhifadhi hakutabadilisha jinsi inavyofanya kazi.",
       "upgradeSmart": "Badili hadi ratiba mahiri",
-      "wholeTeam": "Timu nzima"
+      "oneAgent": "Wakala mmoja",
+      "wholeTeam": "Timu nzima",
+      "target": "Mpokeaji wakati timu inaendelea",
+      "leadDefault": "Kiongozi wa timu (chaguo-msingi)",
+      "agentDescription": "Timu ikiwa imesimama, huanzisha wakala tofauti; ikiwa inaendelea, hugawa kazi.",
+      "teamDescription": "Timu ikiwa imesimama, huiwasha; ikiwa inaendelea, humpa kiongozi kazi. Hutumia mipangilio iliyohifadhiwa.",
+      "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji."
     },
     "title": {
       "createSchedule": "Unda Ratiba",
@@ -2139,17 +2139,542 @@
       "disabled": "Imezimwa"
     },
     "runStatus": {
-      "cancelled": "Imeghairiwa",
+      "pending": "Inasubiri",
+      "warmingUp": "Inapasha joto",
+      "warm": "Imepashwa joto",
+      "running": "Inaendeshwa",
       "completed": "Imekamilika",
-      "dispatched": "Imetumwa",
       "failed": "Imeshindwa",
       "interrupted": "Imekatizwa",
-      "pending": "Inasubiri",
-      "running": "Inaendeshwa",
-      "skipped": "Imerukwa",
-      "warm": "Imepashwa joto",
-      "warmingUp": "Inapasha joto"
+      "cancelled": "Imeghairiwa",
+      "dispatched": "Imetumwa",
+      "skipped": "Imerukwa"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Modeli za ndani za OpenCode zinaweza kutumia bajeti ya muktadha ya OpenCode badala ya vikomo vya kidokezo pekee.",
+    "description": "Ongeza vikomo vinavyolingana kwenye usanidi wa OpenCode kwa mtoa huduma na modeli inayotumiwa na mwenzako huyu wa timu. Hii husaidia OpenCode kubana na kupogoa kabla modeli za ndani kufurika dirisha lao la muktadha.",
+    "replacePrefix": "Badilisha",
+    "and": "na",
+    "replaceSuffix": "na vitambulisho vya mtoa huduma na modeli kutoka usanidi wako wa OpenCode. Maagizo ya kidokezo kama vile",
+    "promptInstructionsSuffix": "ni dhaifu kwa sababu ombi linakusanywa kabla modeli kuyasoma.",
+    "providerLimits": "Vikomo vya mtoa huduma",
+    "compactionConfig": "Usanidi wa ubanaji"
+  },
+  "sessions": {
+    "noProjectPath": "Hakuna njia ya mradi iliyounganishwa",
+    "provisioningHint": "Vipindi vitaonekana baada ya ugavi wa timu",
+    "projectNotFound": "Mradi haukupatikana",
+    "loading": "Inapakia vipindi...",
+    "empty": "Hakuna vipindi vilivyopatikana",
+    "showAllSessions": "Onyesha kwa vipindi vyote",
+    "lead": "kiongozi",
+    "removeFilter": "Ondoa kichujio",
+    "filterBySession": "Chuja kwa kipindi hiki",
+    "openSession": "Fungua kipindi",
+    "title": "Vipindi"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Ghairi",
+    "moreWarningsHidden": "maonyo {{count}} zaidi yamefichwa",
+    "diagnostics": "Utambuzi",
+    "liveOutput": "Towe la moja kwa moja",
+    "diagnosticsCopied": "Utambuzi umenakiliwa",
+    "copyDiagnostics": "Nakili utambuzi",
+    "copied": "Imenakiliwa",
+    "noOutput": "Bado hakuna towe lililonaswa.",
+    "cliLogs": "Kumbukumbu za CLI",
+    "steps": {
+      "starting": "Inaanza",
+      "configuring": "Usanidi wa timu",
+      "assembling": "Wanachama wanajiunga",
+      "finalizing": "Inakamilisha"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "inakagua...",
+        "ready": "SAWA",
+        "notes": "SAWA (madokezo)",
+        "failed": "HITILAFU",
+        "pending": "inasubiri"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Binari ya CLI haipo",
+        "openCodeRuntimeMissing": "Runtime ya OpenCode haipo",
+        "openCodeWindowsAccessBlocked": "Ufikiaji wa OpenCode wa Windows umezuiwa",
+        "openCodeNoOutput": "Ukaguzi wa runtime ya OpenCode haukurudisha towe",
+        "openCodeMcpUnreachable": "MCP ya programu ya OpenCode haifikiki",
+        "workingDirectoryMissing": "Saraka ya kazi haipo",
+        "cliBinaryCouldNotStart": "Binari ya CLI haikuweza kuanzishwa",
+        "cliPreflightIncomplete": "Ukaguzi wa awali wa CLI haukukamilika",
+        "authenticationRequired": "Uthibitishaji unahitajika",
+        "runtimeProviderNotConfigured": "Mtoa huduma wa runtime hajasanidiwa",
+        "cliPreflightFailed": "Ukaguzi wa awali wa CLI umeshindwa",
+        "selectedModelCompatible": "Modeli iliyochaguliwa inaoana",
+        "selectedModelCompatibilityPending": "Uoanifu wa modeli iliyochaguliwa unasubiri",
+        "selectedModelAvailable": "Modeli iliyochaguliwa inapatikana",
+        "selectedModelVerified": "Modeli iliyochaguliwa imethibitishwa",
+        "selectedModelUnavailable": "Modeli iliyochaguliwa haipatikani",
+        "selectedModelTimedOut": "Uthibitishaji wa modeli iliyochaguliwa muda umeisha",
+        "selectedModelCheckFailed": "Ukaguzi wa modeli iliyochaguliwa umeshindwa",
+        "selectedModelDeferred": "Uthibitishaji wa modeli iliyochaguliwa umeahirishwa",
+        "selectedModelPingNotConfirmed": "Ping ya modeli iliyochaguliwa haijathibitishwa",
+        "readyWithNotes": "Tayari ikiwa na madokezo",
+        "needsAttention": "Inahitaji uangalifu"
+      },
+      "modelChecksSummary": "Ukaguzi wa modeli iliyochaguliwa - {{details}}",
+      "modelParts": {
+        "unavailable": "modeli {{count}} haipatikani",
+        "unavailable_one": "modeli {{count}} haipatikani",
+        "unavailable_other": "modeli {{count}} hazipatikani",
+        "checkFailed": "ukaguzi wa modeli {{count}} umeshindwa",
+        "checkFailed_one": "ukaguzi wa modeli {{count}} umeshindwa",
+        "checkFailed_other": "ukaguzi wa modeli {{count}} umeshindwa",
+        "timedOut": "modeli {{count}} muda umeisha",
+        "timedOut_one": "modeli {{count}} muda umeisha",
+        "timedOut_other": "modeli {{count}} muda umeisha",
+        "deferred": "uthibitishaji {{count}} umeahirishwa",
+        "deferred_one": "uthibitishaji {{count}} umeahirishwa",
+        "deferred_other": "uthibitishaji {{count}} umeahirishwa",
+        "pingNotConfirmed": "ping {{count}} haijathibitishwa",
+        "pingNotConfirmed_one": "ping {{count}} haijathibitishwa",
+        "pingNotConfirmed_other": "ping {{count}} hazijathibitishwa",
+        "compatibilityPending": "{{count}} zinaoana, uthibitishaji wa kina unasubiri",
+        "compatibilityPending_one": "{{count}} inaoana, uthibitishaji wa kina unasubiri",
+        "compatibilityPending_other": "{{count}} zinaoana, uthibitishaji wa kina unasubiri",
+        "compatible": "{{count}} zinaoana",
+        "compatible_one": "{{count}} inaoana",
+        "compatible_other": "{{count}} zinaoana",
+        "checking": "{{count}} zinakaguliwa",
+        "checking_one": "{{count}} inakaguliwa",
+        "checking_other": "{{count}} zinakaguliwa",
+        "available": "{{count}} zinapatikana",
+        "available_one": "{{count}} inapatikana",
+        "available_other": "{{count}} zinapatikana",
+        "verified": "{{count}} zimethibitishwa",
+        "verified_one": "{{count}} imethibitishwa",
+        "verified_other": "{{count}} zimethibitishwa",
+        "unavailable_few": "modeli {{count}} hazipatikani",
+        "unavailable_many": "modeli {{count}} hazipatikani",
+        "checkFailed_few": "ukaguzi wa modeli {{count}} umeshindwa",
+        "checkFailed_many": "ukaguzi wa modeli {{count}} umeshindwa",
+        "timedOut_few": "modeli {{count}} muda umeisha",
+        "timedOut_many": "modeli {{count}} muda umeisha",
+        "deferred_few": "uthibitishaji {{count}} umeahirishwa",
+        "deferred_many": "uthibitishaji {{count}} umeahirishwa",
+        "pingNotConfirmed_few": "ping {{count}} hazijathibitishwa",
+        "pingNotConfirmed_many": "ping {{count}} hazijathibitishwa",
+        "compatibilityPending_few": "{{count}} zinaoana, uthibitishaji wa kina unasubiri",
+        "compatibilityPending_many": "{{count}} zinaoana, uthibitishaji wa kina unasubiri",
+        "compatible_few": "{{count}} zinaoana",
+        "compatible_many": "{{count}} zinaoana",
+        "checking_few": "{{count}} zinakaguliwa",
+        "checking_many": "{{count}} zinakaguliwa",
+        "available_few": "{{count}} zinapatikana",
+        "available_many": "{{count}} zinapatikana",
+        "verified_few": "{{count}} zimethibitishwa",
+        "verified_many": "{{count}} zimethibitishwa"
+      },
+      "openProviderSettings": "Fungua mipangilio ya {{provider}}",
+      "copied": "Imenakiliwa",
+      "copyDiagnostics": "Nakili utambuzi",
+      "deepVerificationPending": "Uthibitishaji wa kina bado unaendeshwa. Modeli za bure za OpenCode zinaweza kuchukua karibu sekunde 20.",
+      "progress": {
+        "checkingSelectedProviders": "Inakagua watoa huduma waliochaguliwa sambamba...",
+        "checkingProvider": "Inakagua mtoa huduma {{provider}}...",
+        "checkingProviders": "Inakagua watoa huduma {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Rekebisha ruhusa za folda au uhamishe mradi kwenye folda inayoandikika na mtumiaji. Kuendesha kama msimamizi ni suluhisho la muda pekee.",
+        "openCodeBridgeNoOutput": "Anzisha upya programu na runtime ya OpenCode, kisha ujaribu tena. Ikijirudia, nakili utambuzi.",
+        "workingDirectoryMissing": "Chagua saraka ya kazi iliyopo, kisha ufungue tena kidirisha hiki.",
+        "authenticationRequired": "Thibitisha mtoa huduma anayehitajika katika runtime iliyosanidiwa kwa ajili yake, kisha ufungue tena kidirisha hiki.",
+        "runtimeProviderNotConfigured": "Sanidi runtime ya mtoa huduma uliyechagua, kisha ufungue tena kidirisha hiki.",
+        "openCodeRuntimeMissing": "Sakinisha au jaribu tena runtime ya OpenCode kutoka kadi ya hali ya mtoa huduma, kisha ufungue tena kidirisha hiki.",
+        "openCodeAppMcpUnreachable": "Jaribu tena uzinduzi ili kuonyesha upya daraja la MCP la programu ya OpenCode. Ikijirudia, anzisha upya programu na runtime ya OpenCode.",
+        "cliBinaryMissing": "Hakikisha runtime ya ndani inayohitajika imesakinishwa na inaweza kuanzishwa, kisha ufungue tena kidirisha hiki.",
+        "default": "Suluhisha tatizo hapo juu, kisha ufungue tena kidirisha hiki.",
+        "openCodeNodeModulesSymlinkPermission": "Endesha Agent Teams AI kama Msimamizi, kisha ujaribu tena uzinduzi."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "mwenzako {{count}} wa timu anasubiri idhini",
+      "nameListWithMore": "{{names}}, +{{count}} zaidi",
+      "waitingForOpenCode": "Inasubiri OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap imekwama: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Inasubiri OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap imekwama",
+        "shellOnly": "Shell-pekee",
+        "waitingForBootstrap": "Inasubiri bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap haijathibitishwa",
+        "awaitingPermission": "Inasubiri idhini",
+        "waitingForRuntime": "Inasubiri runtime",
+        "shellOnlyLower": "shell-pekee",
+        "waitingForBootstrapLower": "inasubiri bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap haijathibitishwa",
+        "awaitingPermissionLower": "inasubiri idhini",
+        "waitingForRuntimeLower": "inasubiri runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} ameshindwa kuanza",
+        "teammatesFailedToStart": "wenzako {{count}} wa timu wameshindwa kuanza",
+        "teammatesFailedRatio": "wenzako {{count}}/{{total}} wa timu wameshindwa kuanza"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} ameruka kwa uzinduzi huu",
+        "memberSkippedWithReason": "{{name}} ameruka kwa uzinduzi huu - {{reason}}",
+        "memberSkippedCompact": "{{name}} ameruka",
+        "teammatesSkipped": "wenzako {{count}} wa timu wameruka",
+        "teammatesSkippedList": "Wenzako wa timu walioruka: {{list}}",
+        "teammatesSkippedRatio": "wenzako {{count}}/{{total}} wa timu wameruka kwa uzinduzi huu"
+      },
+      "joining": {
+        "teammatesStillJoining": "wenzako {{count}} wa timu bado wanajiunga",
+        "teammatesStillJoining_one": "mwenzako {{count}} wa timu bado anajiunga",
+        "teammatesStillJoining_few": "wenzako {{count}} wa timu bado wanajiunga",
+        "teammatesStillJoining_many": "wenzako {{count}} wa timu bado wanajiunga",
+        "teammatesStillJoining_other": "wenzako {{count}} wa timu bado wanajiunga",
+        "teammatesConfirmedRatio": "wenzako {{count}}/{{total}} wa timu wamethibitishwa"
+      },
+      "ready": {
+        "leadOnline": "Kiongozi mtandaoni",
+        "allTeammatesJoined": "Wenzako wote {{count}} wa timu wamejiunga",
+        "teamProvisionedLeadOnline": "Timu imepewa ugavi - kiongozi mtandaoni",
+        "teamProvisionedAllJoined": "Timu imepewa ugavi - wenzako wote {{count}} wa timu wamejiunga",
+        "teamProvisionedStillJoining": "Timu imepewa ugavi - wenzako wa timu bado wanajiunga",
+        "launchFinishedWithErrors": "Uzinduzi umemalizika na hitilafu - wenzako {{count}}/{{total}} wa timu wameshindwa kuanza",
+        "launchContinuedSkipped": "Uzinduzi umeendelea - wenzako {{count}}/{{total}} wa timu wameruka",
+        "teamLaunchedLeadOnline": "Timu imezinduliwa - kiongozi mtandaoni",
+        "teamLaunchedAllJoined": "Timu imezinduliwa - wenzako wote {{count}} wa timu wamejiunga"
+      },
+      "panel": {
+        "launchFailed": "Uzinduzi umeshindwa",
+        "launchDetails": "Maelezo ya uzinduzi",
+        "launchFinishedWithErrors": "Uzinduzi umemalizika na hitilafu",
+        "launchContinuedSkipped": "Uzinduzi umeendelea na wenzako wa timu walioruka",
+        "coreTeamReady": "Timu kuu iko tayari",
+        "finishingLaunch": "Inamaliza uzinduzi",
+        "teamLaunched": "Timu imezinduliwa",
+        "launchingTeam": "Inazindua timu"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Hali ya runtime ya moja kwa moja",
+    "description": "Mpigo wa moyo na hali ya uzinduzi ya kuonyesha tu. Vidhibiti vya mchakato vinabaki hapa chini.",
+    "source": "chanzo: {{source}}",
+    "lane": "njia ya {{lane}}",
+    "diagnosticOnly": "Utambuzi pekee",
+    "updated": "imesasishwa {{value}}",
+    "states": {
+      "running": "Inaendeshwa",
+      "starting": "Inaanza",
+      "waiting": "Inasubiri",
+      "degraded": "Inahitaji uangalifu",
+      "stopped": "Imesimamishwa",
+      "unknown": "Haijulikani"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Kumbukumbu Kamili za Kazi",
+      "loading": "Inapakia kumbukumbu kamili za kazi...",
+      "description": "Vipande kamili vya nakala vinavyoonyeshwa na vijenzi vile vile vya kumbukumbu za utekelezaji vinavyotumiwa katika Kumbukumbu.",
+      "emptyTitle": "Bado hakuna kumbukumbu kamili za kazi",
+      "emptyDescription": "Vifurushi vya nakala kamili vitaonekana hapa wakati metadata ya nakala iliyounganishwa na kazi kwa uwazi inapatikana.",
+      "summaryOnly": "muhtasari pekee"
+    },
+    "executionSessions": {
+      "title": "Vipindi vya Utekelezaji",
+      "online": "Mtandaoni",
+      "updating": "Inasasisha...",
+      "description": "Uvinjari na hakikisho la nakala lenye kuzingatia kipindi cha zamani."
+    },
+    "stream": {
+      "title": "Mtiririko wa Kumbukumbu za Kazi"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Ghairi kazi {{taskId}}",
+      "cancel": "Ghairi",
+      "moveBackToTodoConfirm": "Rudisha kazi hii kwa YA KUFANYA na uarifu timu?",
+      "confirm": "Thibitisha",
+      "keep": "Weka",
+      "changesNeedAttention": "Mabadiliko yanahitaji uangalifu",
+      "changes": "Mabadiliko",
+      "deleteTask": "Futa kazi",
+      "taskLogsActive": "Kumbukumbu za kazi hai",
+      "newTaskLogsArriving": "Kumbukumbu mpya za kazi zinafika",
+      "awaitingUser": "Inasubiri mtumiaji",
+      "awaitingLead": "Inasubiri kiongozi",
+      "blockedBy": "Imezuiwa na",
+      "blocks": "Inazuia",
+      "start": "Anza",
+      "complete": "Kamilisha",
+      "approve": "Idhinisha",
+      "requestReview": "Omba mapitio",
+      "manualReview": "Mapitio ya mkono",
+      "requestChanges": "Omba mabadiliko"
+    },
+    "filter": {
+      "title": "Chuja kazi",
+      "session": "Kipindi",
+      "allSessions": "Vipindi vyote",
+      "teammate": "Mwenzako wa timu",
+      "unassigned": "(hawajakabidhiwa)",
+      "column": "Safu",
+      "clearAll": "Futa zote"
+    },
+    "board": {
+      "addTask": "Ongeza kazi",
+      "noTasks": "Hakuna kazi",
+      "showMore": "Onyesha {{count}} zaidi",
+      "hiddenCount": "{{count}} zimefichwa",
+      "trash": "Tupio",
+      "gridView": "Mwonekano wa gridi",
+      "columnsView": "Mwonekano wa safu"
+    },
+    "trash": {
+      "title": "Tupio",
+      "empty": "Hakuna kazi zilizofutwa",
+      "subject": "Mada",
+      "owner": "Mmiliki",
+      "deleted": "Imefutwa",
+      "unassigned": "Hawajakabidhiwa",
+      "restoreTask": "Rejesha kazi",
+      "restore": "Rejesha",
+      "close": "Funga"
+    },
+    "sort": {
+      "title": "Panga kazi",
+      "sortBy": "Panga kwa",
+      "reset": "Weka upya",
+      "options": {
+        "updatedAt": {
+          "label": "Iliyosasishwa mwisho",
+          "description": "Zilizosasishwa hivi karibuni kwanza"
+        },
+        "createdAt": {
+          "label": "Iliyoundwa",
+          "description": "Mpya zaidi kwanza"
+        },
+        "owner": {
+          "label": "Mmiliki",
+          "description": "Kialfabeti kwa aliyekabidhiwa"
+        },
+        "manual": {
+          "label": "Mkono",
+          "description": "Mpangilio wa buruta-na-dondosha"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Futa utafutaji",
+      "tasks": "Kazi",
+      "createdAgo": "imeundwa {{time}}",
+      "updatedAgo": "imesasishwa {{time}}",
+      "placeholder": "Tafuta kazi... (#id au maandishi)"
+    },
+    "grid": {
+      "addTask": "Ongeza kazi",
+      "noTasks": "Hakuna kazi"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "YA KUFANYA",
+      "inProgress": "INAENDELEA",
+      "review": "MAPITIO",
+      "done": "IMEKAMILIKA",
+      "approved": "IMEIDHINISHWA"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Inakagua hali ya hazina ya Git kwa worktree za wenzako wa timu...",
+    "ready": "Worktree za Git ziko tayari.",
+    "readyOnBranch": "Worktree za Git ziko tayari kwenye tawi {{branch}}.",
+    "needsSetup": "Kutengana kwa worktree kunahitaji usanidi wa Git",
+    "initialCommitNotice": "Kitendo cha commit ya awali kinaweka na kufanya commit ya faili zote za sasa kwa ujumbe",
+    "initializeRepository": "Anzisha hazina ya Git",
+    "createInitialCommit": "Unda commit ya awali",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Mipangilio",
+    "autoAllowAllTools": "Ruhusu kiotomatiki zana zote",
+    "autoAllowFileEdits": "Ruhusu kiotomatiki uhariri wa faili (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Ruhusu kiotomatiki amri salama (git, pnpm, npm, ls...)",
+    "onTimeout": "Wakati muda unaisha:",
+    "after": "baada ya",
+    "secondsShort": "sek",
+    "timeoutActions": {
+      "wait": "Subiri milele",
+      "allow": "Ruhusu",
+      "deny": "Kataa"
+    },
+    "submit": "Wasilisha",
+    "allow": "Ruhusu",
+    "deny": "Kataa",
+    "allowAll": "Ruhusu zote",
+    "pendingCount": "{{count}} zinasubiri",
+    "autoActionIn": "Otomatiki-{{action}} baada ya {{time}}",
+    "diff": {
+      "previewChanges": "Hakiki mabadiliko",
+      "readingFile": "Inasoma faili...",
+      "binaryFile": "Faili ya binari - haiwezi kuhakikiwa",
+      "truncated": "Faili imepunguzwa kwa 2MB - tofauti inaweza kuwa haijakamilika",
+      "newFile": "Faili mpya"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Usawazishaji wa kazi ya mwanachama",
+      "actionableItems": "Vipengee vinavyoweza kutekelezwa",
+      "fingerprint": "Alama ya kidole",
+      "report": "Ripoti",
+      "none": "hakuna",
+      "shadowWouldNudge": "Kivuli kingedokeza",
+      "yes": "ndiyo",
+      "no": "hapana",
+      "moreActionableItems": "kipengee {{count}} zaidi kinachoweza kutekelezwa",
+      "diagnostics": "Utambuzi: {{diagnostics}}",
+      "autoResumeStopped": "Kuendelea kiotomatiki kumesimamishwa.",
+      "continue": "Endelea",
+      "stopAutoResume": "Simamisha kuendelea kiotomatiki",
+      "resumeAutoResume": "Anzisha tena kuendelea kiotomatiki"
+    },
+    "title": "Usawazishaji wa kazi ya mwanachama",
+    "loadingDiagnostics": "Inapakia utambuzi wa usawazishaji wa kazi ya mwanachama.",
+    "diagnosticsUnavailable": "Utambuzi wa usawazishaji wa kazi ya mwanachama haupatikani."
+  },
+  "advancedCli": {
+    "title": "Kina",
+    "useWorktree": "Endesha kiongozi wa timu katika worktree tofauti. Worktrees za wanatimu zinasanidiwa hapo juu.",
+    "recent": "Hivi karibuni",
+    "commandPreview": "Hakikisho la amri",
+    "customArguments": "Hoja maalum",
+    "validate": "Thibitisha",
+    "validation": {
+      "allFlagsValid": "Bendera zote halali",
+      "unknownFlags": "Zisizojulikana: {{flags}}",
+      "protectedFlags": "Zilizolindwa: {{flags}}",
+      "failed": "Uthibitishaji umeshindwa"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} iliyopita",
+    "stoppedAgo": "imesimamishwa {{time}} iliyopita",
+    "running": "Inaendeshwa",
+    "stopped": "Imesimamishwa",
+    "stopProcess": "Simamisha mchakato (SIGTERM)",
+    "kill": "Ua",
+    "openInBrowser": "Fungua katika kivinjari",
+    "open": "Fungua",
+    "pid": "PID{{pid}}",
+    "title": "Michakato ya CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "Inapakia maelezo ya shughuli...",
+    "contextUnavailable": "Muktadha wa kina wa nakala haupatikani tena kwa shughuli hii.",
+    "loading": "Inapakia shughuli za kazi...",
+    "lowSignalOnly": "Bado hakuna shughuli muhimu za kazi zilizopatikana. Maelezo ya kiwango cha chini ya utekelezaji yanapatikana hapa chini katika Mtiririko wa Kumbukumbu za Kazi.",
+    "empty": "Bado hakuna shughuli za kazi za wazi zilizopatikana katika nakala zinazopatikana. Kumbukumbu za kipindi za zamani au za kiheuristiki zinaweza bado kupatikana hapa chini katika Vipindi vya Utekelezaji.",
+    "title": "Shughuli za Kazi",
+    "description": "Shughuli muhimu za wazi za runtime zilizounganishwa na kazi hii kutoka metadata ya nakala."
+  },
+  "sendMessage": {
+    "title": "Tuma Ujumbe",
+    "description": "Tuma ujumbe wa moja kwa moja kwa mwanachama wa timu.",
+    "recipientLabel": "Mpokeaji",
+    "selectMemberPlaceholder": "Chagua mwanachama...",
+    "messageLabel": "Ujumbe",
+    "placeholder": "Andika ujumbe wako... (Enter kutuma)",
+    "send": "Tuma",
+    "sending": "Inatuma...",
+    "charsLeft": "herufi {{count}} zimebaki",
+    "saved": "Imehifadhiwa",
+    "attachments": {
+      "teamOnlineRequired": "Timu lazima iwe mtandaoni ili kuambatisha faili",
+      "recipientUnsupported": "Faili zinaweza kutumwa kwa kiongozi wa timu au wenzako wa timu wa OpenCode",
+      "openCodeOnlineRequired": "Timu lazima iwe mtandaoni ili kuambatisha faili kwa wenzako wa timu wa OpenCode",
+      "disabledHint": "Viambatisho vya faili vinaungwa mkono kwa kiongozi wa timu wa mtandaoni na wenzako wa timu wa OpenCode wa mtandaoni. Ondoa viambatisho au ubadilishe mpokeaji.",
+      "attachFiles": "Ambatisha faili (bandika au buruta na dondosha)",
+      "unavailable": "Viambatisho havipatikani"
+    },
+    "quote": {
+      "remove": "Ondoa nukuu",
+      "replyingTo": "Inajibu"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Ghairi jibu",
+    "replyingTo": "Inajibu",
+    "placeholder": "Ongeza maoni... (Enter kutuma)",
+    "attachFile": "Ambatisha faili (au bandika)",
+    "voiceToText": "Sauti hadi maandishi",
+    "comment": "Maoni",
+    "charsLeft": "herufi {{count}} zimebaki",
+    "saved": "Imehifadhiwa",
+    "awaitingReplyFrom": "Inasubiri jibu kutoka",
+    "or": "au"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Dondosha picha hapa",
+    "attachImage": "Ambatisha picha",
+    "pasteOrDragDrop": "au bandika / buruta-dondosha",
+    "fromOriginalMessage": "Kutoka ujumbe wa awali",
+    "dropFilesHere": "Dondosha faili hapa",
+    "loading": "Inapakia viambatisho..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Idhinisha kiotomatiki zana zote",
+    "autonomousModeDescription": "Hali ya kujitegemea: zana za timu zinatekelezwa bila uthibitisho. Kuwa makini na msimbo usioaminika.",
+    "manualModeDescription": "Hali ya mkono: utaidhinisha au kukataa kila wito wa zana kwa wakati halisi."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Utekelezaji",
+      "process": "Mchakato"
+    },
+    "filters": {
+      "all": "Zote"
+    },
+    "logs": {
+      "title": "Kumbukumbu",
+      "loading": "Inapakia mtiririko wa kumbukumbu za mwanachama...",
+      "emptyTitle": "Bado hakuna vipengee vya mtiririko wa kumbukumbu vilivyopatikana kwa mwanachama huyu.",
+      "emptyDescription": "Kumbukumbu za nakala au runtime zenye kuzingatia mwanachama zitaonekana hapa zinapopatikana."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Eleza kinachohitaji kubadilika... (Enter kuwasilisha)",
+    "submit": "Wasilisha",
+    "charsLeft": "herufi {{count}} zimebaki",
+    "saved": "Imehifadhiwa",
+    "title": "Omba Mabadiliko"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Fungua Dashibodi",
+      "openTeam": "Fungua timu",
+      "cancel": "Ghairi"
+    },
+    "membersJson": {
+      "hide": "Ficha JSON"
+    },
+    "optional": {
+      "badge": "Hiari"
+    }
+  },
+  "runningTeams": {
+    "title": "Timu Zinazoendeshwa",
     "status": {
       "active": "Hai",
       "provisioning": "Inazindua",

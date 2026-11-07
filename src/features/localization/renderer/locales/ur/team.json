@@ -1501,27 +1501,27 @@
       "title": "راولپنڈی موجودہ ٹیم کو چلا رہے گا۔"
     },
     "schedule": {
-      "agentDescription": "ٹیم بند ہو تو الگ ایجنٹ چلتا ہے؛ فعال ہو تو کام تفویض ہوتا ہے۔",
-      "execution": "اجرا",
       "labelOptional": "نوبل (اختیاری)",
       "labelPlaceholder": "جیسے، ڈیلی کوڈ جائزہ، نائٹلی امتحانات...",
-      "leadDefault": "ٹیم لیڈ (طے شدہ)",
-      "legacyNotice": "پرانا ایک بار چلنے والا شیڈول: محفوظ کرنے سے اس کا طریقہ نہیں بدلے گا۔",
       "maxBudgetUsd": "میکس بجٹ (USD)",
       "maxTurns": "میکس مل جاتا ہے",
       "noLimit": "کوئی حد",
       "noMatches": "کوئی ٹیم آپ کی تلاش سے میچ نہیں کرتی۔",
       "noTeams": "کوئی ٹیم دستیاب نہیں۔ پہلے ٹیم بنائیں",
-      "oneAgent": "ایک ایجنٹ",
       "searchTeams": "تلاش ٹیمیں ...",
       "selectTeam": "ٹیم منتخب کریں...",
-      "target": "ٹیم چل رہی ہو تو ذمہ دار رکن",
       "team": "ٹیم",
-      "teamDescription": "ٹیم بند ہو تو محفوظ شدہ ٹیم شروع ہوتی ہے؛ فعال ہو تو لیڈ کو کام ملتا ہے۔ محفوظ ترتیبات استعمال ہوتی ہیں۔",
-      "teamPathMissing": "شیڈول سے ٹیم شروع کرنے سے پہلے پروجیکٹ فولڈر محفوظ کریں۔",
       "title": "تیار",
+      "execution": "اجرا",
+      "legacyNotice": "پرانا ایک بار چلنے والا شیڈول: محفوظ کرنے سے اس کا طریقہ نہیں بدلے گا۔",
       "upgradeSmart": "اسمارٹ شیڈول پر منتقل ہوں",
-      "wholeTeam": "پوری ٹیم"
+      "oneAgent": "ایک ایجنٹ",
+      "wholeTeam": "پوری ٹیم",
+      "target": "ٹیم چل رہی ہو تو ذمہ دار رکن",
+      "leadDefault": "ٹیم لیڈ (طے شدہ)",
+      "agentDescription": "ٹیم بند ہو تو الگ ایجنٹ چلتا ہے؛ فعال ہو تو کام تفویض ہوتا ہے۔",
+      "teamDescription": "ٹیم بند ہو تو محفوظ شدہ ٹیم شروع ہوتی ہے؛ فعال ہو تو لیڈ کو کام ملتا ہے۔ محفوظ ترتیبات استعمال ہوتی ہیں۔",
+      "teamPathMissing": "شیڈول سے ٹیم شروع کرنے سے پہلے پروجیکٹ فولڈر محفوظ کریں۔"
     },
     "title": {
       "createSchedule": "ایجاد کریں",
@@ -2137,17 +2137,542 @@
       "disabled": "بند"
     },
     "runStatus": {
-      "cancelled": "منسوخ کیا گیا",
+      "pending": "پَک",
+      "warmingUp": "گرم",
+      "warm": "گرم",
+      "running": "چلاو",
       "completed": "مکمل",
-      "dispatched": "بھیج دیا گیا",
       "failed": "ناکام ہوا",
       "interrupted": "غیر متصل",
-      "pending": "پَک",
-      "running": "چلاو",
-      "skipped": "چھوڑ دیا گیا",
-      "warm": "گرم",
-      "warmingUp": "گرم"
+      "cancelled": "منسوخ کیا گیا",
+      "dispatched": "بھیج دیا گیا",
+      "skipped": "چھوڑ دیا گیا"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode مقامی ماڈل فوری حدود کی بجائے OpenCode section بجٹ استعمال کر سکتے ہیں۔",
+    "description": "اس ٹیم کی طرف سے استعمال ہونے والے فراہم کار اور ماڈل کے لئے OpenCode کو ملتی جلتی حدود شامل کریں. اس سے مقامی ماڈلز سے پہلے OpenCode ملانے اور پرینے میں مدد ملتی ہے ۔",
+    "replacePrefix": "پرنٹ",
+    "and": "اور",
+    "replaceSuffix": "آپکا اوپن کوڈ اپ کی طرف سے فراہم کردہ فراہم کار اور ماڈل آئی ڈیس کے ساتھ. واضح ہدایات",
+    "promptInstructionsSuffix": "اس لئے کہ درخواست کو نمونے کے سامنے جمع کرنے سے پہلے جمع کیا جاتا ہے ۔",
+    "providerLimits": "فراہم کُنندہ حدود",
+    "compactionConfig": "عمل"
+  },
+  "sessions": {
+    "noProjectPath": "کوئی منصوبہ بندی نہیں کی گئی",
+    "provisioningHint": "ٹیم فراہم کرنے کے بعد ٹیموں کا ظہور ہوگا",
+    "projectNotFound": "منصوبہ بندی نہیں ہوئی",
+    "loading": "اجلاس بند کریں...",
+    "empty": "کوئی سیٹ نہیں پائی گئی",
+    "showAllSessions": "تمام اجلاسوں پر ظاہر کریں",
+    "lead": "قیادت",
+    "removeFilter": "مواجہ لوڈ کریں",
+    "filterBySession": "اس سیشن سے شروع کریں",
+    "openSession": "سیشن کھولیں",
+    "title": "جمع"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "منسوخ",
+    "moreWarningsHidden": "{{count}} مزید اگلے ڈرانے والے",
+    "diagnostics": "علمِ‌نجوم",
+    "liveOutput": "برآمد",
+    "diagnosticsCopied": "روزنامہیات نقل کرتے ہیں۔",
+    "copyDiagnostics": "نقل و حمل",
+    "copied": "کوس",
+    "noOutput": "ابھی تک کوئی برآمد نہیں ہوا۔",
+    "cliLogs": "CLI لاگ ان",
+    "steps": {
+      "starting": "شروع",
+      "configuring": "ٹیم سیٹ اپ",
+      "assembling": "ارکان شامل ہوتے ہیں۔",
+      "finalizing": "اختتام"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "پڑتال کی جا رہی ہے...",
+        "ready": "ٹھیک",
+        "notes": "معاف کیجئے گا.",
+        "failed": "ERR",
+        "pending": "انتظار کریں"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI بنرجی گم ہوگئی",
+        "openCodeRuntimeMissing": "اوپن کوڈ غیر متوقع طور پر ختم ہو گیا ہے",
+        "openCodeWindowsAccessBlocked": "اوپن کوڈ ونڈوز رسائی بلاک",
+        "openCodeNoOutput": "اوپن کوڈ وقتی چیک واپس نہیں آیا",
+        "openCodeMcpUnreachable": "کھولیں MCP رنگ",
+        "workingDirectoryMissing": "ورکنگ سروس کی ناکامی",
+        "cliBinaryCouldNotStart": "CLI binary شروع نہیں کیا جا سکتا تھا",
+        "cliPreflightIncomplete": "CLI پیشگی روشنی مکمل نہیں ہوئی",
+        "authenticationRequired": "توثیق درکار",
+        "runtimeProviderNotConfigured": "موبائل براڈ بینڈ فراہم کُنندہ موجود نہیں ہے",
+        "cliPreflightFailed": "CLI پیشین گوئی ناکام ہوئی",
+        "selectedModelCompatible": "منتخب کردہ ماڈل میلس منتخب کریں",
+        "selectedModelCompatibilityPending": "منتخب کردہ ماڈل نیٹ ورکنگ نیٹ ورکنگ",
+        "selectedModelAvailable": "منتخب کردہ ماڈل دستیاب ہیں",
+        "selectedModelVerified": "منتخب کردہ ماڈل توثیق",
+        "selectedModelUnavailable": "منتخب کردہ ماڈل غیر درج ذیل",
+        "selectedModelTimedOut": "منتخب کردہ ماڈل بیک وقت منتخب کریں",
+        "selectedModelCheckFailed": "منتخب کردہ ماڈل چیک ناکام",
+        "selectedModelDeferred": "منتخب کردہ ماڈل پیچھے ہٹ گیا",
+        "selectedModelPingNotConfirmed": "منتخب کردہ ماڈل پینگ تصدیق نہیں کی گئی",
+        "readyWithNotes": "نوٹس کے ساتھ تیار",
+        "needsAttention": "ضرورت"
+      },
+      "modelChecksSummary": "منتخب کردہ ماڈل چیک - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} ماڈل غیر درج شدہ",
+        "unavailable_one": "{{count}} ماڈل غیر درج شدہ",
+        "unavailable_other": "{{count}} ماڈل غیر درج شدہ",
+        "checkFailed": "{{count}} ماڈل چیک ناکام ہوا",
+        "checkFailed_one": "{{count}} ماڈل چیک ناکام ہوا",
+        "checkFailed_other": "{{count}} ماڈل چیک ناکام ہوا",
+        "timedOut": "{{count}} ماڈل مقررہ وقت",
+        "timedOut_one": "{{count}} ماڈل مقررہ وقت",
+        "timedOut_other": "{{count}} ماڈل ختم",
+        "deferred": "{{count}} فوری وقفہ",
+        "deferred_one": "{{count}} فوری وقفہ",
+        "deferred_other": "{{count}} فوری وقفہ",
+        "pingNotConfirmed": "{{count}} پی کی تصدیق نہیں کی گئی",
+        "pingNotConfirmed_one": "{{count}} پی کی تصدیق نہیں کی گئی",
+        "pingNotConfirmed_other": "{{count}} پی کی تصدیق نہیں کی گئی",
+        "compatibilityPending": "{{count}} میل جول، گہرا پن",
+        "compatibilityPending_one": "{{count}} میل جول، گہرا پن",
+        "compatibilityPending_other": "{{count}} میل جول، گہرا پن",
+        "compatible": "{{count}} تعلقات",
+        "compatible_one": "{{count}} تعلقات",
+        "compatible_other": "{{count}} تعلقات",
+        "checking": "{{count}} جانچ پڑتال",
+        "checking_one": "{{count}} جانچ پڑتال",
+        "checking_other": "{{count}} جانچ پڑتال",
+        "available": "{{count}} دستیاب",
+        "available_one": "{{count}} دستیاب",
+        "available_other": "{{count}} دستیاب",
+        "verified": "{{count}} توثیق",
+        "verified_one": "{{count}} توثیق",
+        "verified_other": "{{count}} توثیق",
+        "unavailable_few": "{{count}} ماڈل غیر درج شدہ",
+        "unavailable_many": "{{count}} ماڈل غیر درج شدہ",
+        "checkFailed_few": "{{count}} ماڈل چیک ناکام ہوا",
+        "checkFailed_many": "{{count}} ماڈل چیک ناکام ہوا",
+        "timedOut_few": "{{count}} ماڈل ختم",
+        "timedOut_many": "{{count}} ماڈل ختم",
+        "deferred_few": "{{count}} فوری وقفہ",
+        "deferred_many": "{{count}} فوری وقفہ",
+        "pingNotConfirmed_few": "{{count}} پی کی تصدیق نہیں کی گئی",
+        "pingNotConfirmed_many": "{{count}} پی کی تصدیق نہیں کی گئی",
+        "compatibilityPending_few": "{{count}} میل جول، گہرا پن",
+        "compatibilityPending_many": "{{count}} میل جول، گہرا پن",
+        "compatible_few": "{{count}} تعلقات",
+        "compatible_many": "{{count}} تعلقات",
+        "checking_few": "{{count}} جانچ پڑتال",
+        "checking_many": "{{count}} جانچ پڑتال",
+        "available_few": "{{count}} دستیاب",
+        "available_many": "{{count}} دستیاب",
+        "verified_few": "{{count}} توثیق",
+        "verified_many": "{{count}} توثیق"
+      },
+      "openProviderSettings": "کھولیں {{provider}} جگہ",
+      "copied": "کوس",
+      "copyDiagnostics": "نقل و حمل",
+      "deepVerificationPending": "اب بھی دھنیں چل رہی ہیں۔ اوپن کوڈ مفت ماڈل 20 سیکنڈ کے آس پاس لے جا سکتا ہے۔",
+      "progress": {
+        "checkingSelectedProviders": "منتخب فراہم کنندگان کو مساوی طور پر جانچنا...",
+        "checkingProvider": "پڑتال {{provider}} فراہم کُنندہ...",
+        "checkingProviders": "پڑتال {{providers}} فراہم کُنندہ"
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "فیکس فولڈر کے اجازے یا اس منصوبے کو صارف-ورئٹہ فولڈر میں منتقل کرتا ہے۔ انتظامیہ کے طور پر چلانا محض ایک عارضی کام ہے.",
+        "openCodeBridgeNoOutput": "ایپ اور اوپنCode وقت کو دوبارہ شروع کریں، پھر دوبارہ اگر اسے دوبارہ بنایا جائے تو نقل کریں ۔",
+        "workingDirectoryMissing": "موجودہ کام کی ڈائریکٹری منتخب کریں، پھر اس پلگ انس کو بھیج دیں۔",
+        "authenticationRequired": "مطلوبہ فراہم کنندہ کی اس کے لیے ترتیب دیے گئے runtime میں توثیق کریں، پھر یہ ڈائیلاگ دوبارہ کھولیں۔",
+        "runtimeProviderNotConfigured": "منتخب فراہم کُنندہ وقتی طور پر وضع کریں، پھر اس پلگ تازہ کریں.",
+        "openCodeRuntimeMissing": "فراہم کُنندہ اسٹیٹ کارڈ سے وقتاً فوقتاً انسٹال کریں یا پھر اس پلگ ان انسٹال کریں۔",
+        "openCodeAppMcpUnreachable": "اوپن کووڈ ایپ کو تازگی بخشنے کے لئے دوبارہ آغاز MCP بریگیڈ. اگر اسے دوبارہ بحال کیا جائے تو ایپ اور اوپنCode وقت کو دوبارہ شروع کریں۔",
+        "cliBinaryMissing": "یقینی بنائیں کہ مطلوبہ مقامی runtime انسٹال ہے اور اسے شروع کیا جا سکتا ہے، پھر یہ ڈائیلاگ دوبارہ کھولیں۔",
+        "default": "اوپر کے شمارے پر غور کریں، پھر اس کو دوبارہ کھول دیں۔",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI کو Administrator کے طور پر چلائیں، پھر launch دوبارہ آزمائیں."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} ٹیم کے ارکان اجازت کا انتظار کرتے ہیں۔",
+      "nameListWithMore": "{{names}}, +{{count}} مزید",
+      "waitingForOpenCode": "اوپن کوڈ کے لئے انتظار کریں: {{names}}",
+      "bootstrapStalled": "بوٹسٹر اپ لوڈ: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}؛ اوپن کوڈ کا انتظار: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "بُک‌انگ",
+        "shellOnly": "صرف سیل کرنے والا",
+        "waitingForBootstrap": "بوٹسٹر کا انتظار",
+        "bootstrapUnconfirmed": "بوٹسٹر بے ثبات",
+        "awaitingPermission": "انتظار کرنے کی اجازت",
+        "waitingForRuntime": "رن کا انتظار",
+        "shellOnlyLower": "صرف شیل",
+        "waitingForBootstrapLower": "بوٹسٹر کا انتظار",
+        "bootstrapUnconfirmedLower": "بوٹسٹر بے ثبات",
+        "awaitingPermissionLower": "انتظار فرمائیں اجازت",
+        "waitingForRuntimeLower": "رن کا انتظار"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} شروع میں ناکام ہوا",
+        "teammatesFailedToStart": "{{count}} ٹیمیں شروع کرنے میں ناکام رہی",
+        "teammatesFailedRatio": "{{count}}/{{total}} ٹیمیں شروع کرنے میں ناکام رہی"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} اس لانچ کے لئے پلگ ان",
+        "memberSkippedWithReason": "{{name}} اس لانچ - {{reason}}",
+        "memberSkippedCompact": "{{name}} طےشدہ",
+        "teammatesSkipped": "{{count}} ٹیموں کے کچھ حصے",
+        "teammatesSkippedList": "سکیورٹی ٹیم کے ساتھیوں: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} اس لانچ کے لئے ٹیم کے ساتھی"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} ٹیمیں اب بھی شامل ہیں",
+        "teammatesStillJoining_one": "{{count}} اب بھی ٹیم کے ساتھی شامل ہو گئے ہیں۔",
+        "teammatesStillJoining_few": "{{count}} ٹیمیں اب بھی شامل ہیں",
+        "teammatesStillJoining_many": "{{count}} ٹیمیں اب بھی شامل ہیں",
+        "teammatesStillJoining_other": "{{count}} ٹیمیں اب بھی شامل ہیں",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} فریقین نے تصدیق کی"
+      },
+      "ready": {
+        "leadOnline": "قیادت آن لائن",
+        "allTeammatesJoined": "تمام {{count}} گروہیوں نے ساتھ لیا",
+        "teamProvisionedLeadOnline": "ٹیم فراہم کی گئی آن لائن",
+        "teamProvisionedAllJoined": "ٹیم فراہم کی گئی تمام {{count}} گروہیوں نے ساتھ لیا",
+        "teamProvisionedStillJoining": "ٹیموں کی فراہم‌کردہ ٹیم ابھی بھی شامل ہو رہی ہے",
+        "launchFinishedWithErrors": "لانچ ختم ضلع - {{count}}/{{total}} ٹیمیں شروع کرنے میں ناکام رہی",
+        "launchContinuedSkipped": "لانچ جاری - {{count}}/{{total}} ٹیموں کے کچھ حصے",
+        "teamLaunchedLeadOnline": "ٹیم کا آغاز آن لائن",
+        "teamLaunchedAllJoined": "ٹیم شروع کی گئی تمام {{count}} گروہیوں نے ساتھ لیا"
+      },
+      "panel": {
+        "launchFailed": "لانچ ناکام ہوا",
+        "launchDetails": "لانچ تفصیلات",
+        "launchFinishedWithErrors": "لانچ غلطی سے فارغ",
+        "launchContinuedSkipped": "لاؤنچ نے ٹیم کے ساتھیوں کیساتھ جاری رکھی",
+        "coreTeamReady": "کرو ٹیم تیار",
+        "finishingLaunch": "لانچ کرنا",
+        "teamLaunched": "ٹیم چلائی گئی",
+        "launchingTeam": "لانچنگ ٹیم"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "وقتی طور پر جاری مقام",
+    "description": "صرف ناقابل یقین اور لانچ حالت دکھائیں اِس سلسلے میں ایک مثال پر غور کریں ۔",
+    "source": "ماخذ: {{source}}",
+    "lane": "{{lane}} مصر",
+    "diagnosticOnly": "صرف حیاتیاتی تنوع",
+    "updated": "تجدید {{value}}",
+    "states": {
+      "running": "چلاو",
+      "starting": "شروع",
+      "waiting": "انتظار کریں",
+      "degraded": "ضرورت",
+      "stopped": "بند کریں",
+      "unknown": "نامعلوم"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "ایگزیکٹو لاگس",
+      "loading": "کام کی صحیح لاگس لوڈ کریں...",
+      "description": "لاگوس میں استعمال ہونے والے اسی قتل کے اجزاء کے ساتھ کی جانے والی سرگرمیوں کے ساتھ",
+      "emptyTitle": "ابھی تک کوئی درست کام لاگس نہیں",
+      "emptyDescription": "جب واضح طور پر کام کرنے والے سرمایہ کار میٹاداٹا دستیاب ہے",
+      "summaryOnly": "خلاصہ"
+    },
+    "executionSessions": {
+      "title": "ترجیحات",
+      "online": "آن لائن",
+      "updating": "آرام کرنا...",
+      "description": "سیشن کو دوبارہ شروع کرنے اور پیش نظر آنے والا"
+    },
+    "stream": {
+      "title": "محفوظ لاگ ان"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "مصروف کام {{taskId}}",
+      "cancel": "منسوخ",
+      "moveBackToTodoConfirm": "اس کام کو واپس بھیج نے کے ليے TODO اور آپس میں لڑتے رہو",
+      "confirm": "تصدیق",
+      "keep": "برقرار رکھیں",
+      "changesNeedAttention": "تبدیلیوں کو توجہ کی ضرورت ہے",
+      "changes": "تبدیلیاں",
+      "deleteTask": "کام حذف کریں",
+      "taskLogsActive": "دستیاب لاگس فعال",
+      "newTaskLogsArriving": "نیا کام لاگس حاصل کرتا ہے۔",
+      "awaitingUser": "صارف کا انتظار کررہا ہے",
+      "awaitingLead": "پیشوائی کا انتظار",
+      "blockedBy": "بلاک کیا گیا",
+      "blocks": "بلاکس",
+      "start": "آغاز",
+      "complete": "مکمل",
+      "approve": "پیکج",
+      "requestReview": "درخواست کا جائزہ",
+      "manualReview": "دستی جائزے",
+      "requestChanges": "مطلوبہ تبدیلیاں"
+    },
+    "filter": {
+      "title": "فائلز",
+      "session": "غیر متصل",
+      "allSessions": "تمام اجلاس",
+      "teammate": "گروہ",
+      "unassigned": "(ہنسی)",
+      "column": "رنگ",
+      "clearAll": "تمام صاف"
+    },
+    "board": {
+      "addTask": "کام شامل کریں",
+      "noTasks": "کوئی کام نہیں",
+      "showMore": "دکھائیں {{count}} مزید",
+      "hiddenCount": "{{count}} پوشیدہ",
+      "trash": "ترش",
+      "gridView": "وائیرڈ نظریہ",
+      "columnsView": "رنگ"
+    },
+    "trash": {
+      "title": "ترش",
+      "empty": "کوئی غیر متصل کام نہیں",
+      "subject": "مضمون",
+      "owner": "مالک",
+      "deleted": "حذف",
+      "unassigned": "غیر متصل",
+      "restoreTask": "کام",
+      "restore": "مصر",
+      "close": "بندکرو"
+    },
+    "sort": {
+      "title": "معاملات ترتیب دیں",
+      "sortBy": "ترتیب دیں",
+      "reset": "مصر",
+      "options": {
+        "updatedAt": {
+          "label": "آخری تجدید",
+          "description": "حال ہی میں پہلی بار تجدید"
+        },
+        "createdAt": {
+          "label": "تخلیق",
+          "description": "پہلا سلسلہ"
+        },
+        "owner": {
+          "label": "مالک",
+          "description": "حروف تہجی کی مدد سے"
+        },
+        "manual": {
+          "label": "دستی",
+          "description": "گر تے هو ئے اور رے"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "صاف تلاش",
+      "tasks": "علامات",
+      "createdAgo": "مخلوق {{time}}",
+      "updatedAgo": "تجدید {{time}}",
+      "placeholder": "Search tasks... (#id or text)"
+    },
+    "grid": {
+      "addTask": "کام شامل کریں",
+      "noTasks": "کوئی کام نہیں"
+    },
+    "title": "کنعان",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "اندر PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "ٹیموں کا کام کرنے کے لئے جی‌نہیں ۔ . . .",
+    "ready": "جیو کام درخت تیار ہیں۔",
+    "readyOnBranch": "جیو کام درخت شاخ پر تیار ہیں۔ {{branch}}.",
+    "needsSetup": "کام کی جگہ پر علیٰحدگی کی ضرورت ہوتی ہے۔",
+    "initialCommitNotice": "ابتدائی عمل کاری عمل کے مراحل اور پیغام کے ساتھ تمام موجودہ فائلیں ادا کرتا ہے۔",
+    "initializeRepository": "جی‌نہیں ۔",
+    "createInitialCommit": "ابتدائی عمل بنائیں",
+    "initialCommitMessage": "مسئلہ : ابتدائی کارروائی"
+  },
+  "toolApproval": {
+    "settings": "ترتیبات",
+    "autoAllowAllTools": "تمام آلات خود کار",
+    "autoAllowFileEdits": "Auto-alllow فائل ایڈیٹرز (Ediction, تحریر, Notebook Edition)۔",
+    "autoAllowSafeCommands": "خودکار محفوظ احکام (git, pnpm, npm, Ls...)۔",
+    "onTimeout": "وقت پر:",
+    "after": "بعد",
+    "secondsShort": "رنگ",
+    "timeoutActions": {
+      "wait": "انتظار کریں ہمیشہ",
+      "allow": "اجازت",
+      "deny": "انکار کرو"
+    },
+    "submit": "غیر متصل",
+    "allow": "اجازت",
+    "deny": "انکار کرو",
+    "allowAll": "سب کو اجازت دیں",
+    "pendingCount": "{{count}} ختم",
+    "autoActionIn": "خودکار-{{action}} اندر {{time}}",
+    "diff": {
+      "previewChanges": "تبدیلی",
+      "readingFile": "فائل پڑھی جارہی ہے...",
+      "binaryFile": "بینکاری فائل - پیش نظر نہیں رہ سکتی۔",
+      "truncated": "فائل عارضی طور پر 2MB - ڈرائنگ پر لی گئی فائل نامکمل ہو سکتی ہے۔",
+      "newFile": "فائل فہرست"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "قیدخانہ کا کام",
+      "actionableItems": "جگہ",
+      "fingerprint": "فن‌لینڈ",
+      "report": "رپورٹ",
+      "none": "کچھ نہیں",
+      "shadowWouldNudge": "سائے کے سائے",
+      "yes": "جی ہاں",
+      "no": "کچھ نہیں",
+      "moreActionableItems": "{{count}} مزید قابل عمل آئٹم(s)",
+      "diagnostics": "Diagnostics: {{diagnostics}}",
+      "autoResumeStopped": "خودکار تسلسل روک دیا گیا ہے۔",
+      "continue": "جاری رکھیں",
+      "stopAutoResume": "خودکار دوبارہ شروع روکیں",
+      "resumeAutoResume": "خودکار دوبارہ شروع کریں"
+    },
+    "title": "قیدخانہ کا کام",
+    "loadingDiagnostics": "اعضا کی دیکھ‌بھال",
+    "diagnosticsUnavailable": "ایمبر کام سنسکرت زبان میں بے مثال ہے۔"
+  },
+  "advancedCli": {
+    "title": "اعلی",
+    "useWorktree": "ٹیم لیڈ کو ایک علیحدہ worktree میں چلائیں۔ ٹیم ممبرز کے worktrees اوپر کنفیگر کیے جاتے ہیں۔",
+    "recent": "حال",
+    "commandPreview": "کمانڈ پیشگی منظر",
+    "customArguments": "منطقی دلائل",
+    "validate": "بچے",
+    "validation": {
+      "allFlagsValid": "تمام جھنڈے موزوں",
+      "unknownFlags": "نامعلوم: {{flags}}",
+      "protectedFlags": "وعدہ : {{flags}}",
+      "failed": "وی پی این ڈی ناکام"
+    },
+    "placeholders": {
+      "worktreeName": "کاری-نام"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} پہلے",
+    "stoppedAgo": "روکا {{time}} پہلے",
+    "running": "چلاو",
+    "stopped": "بند کریں",
+    "stopProcess": "عمل بند کرو (SIGTERM)",
+    "kill": "قتل کرو",
+    "openInBrowser": "براؤزر میں کھولیں",
+    "open": "کھولیں",
+    "pid": "PID{{pid}}",
+    "title": "CLI جمع"
+  },
+  "taskActivity": {
+    "loadingDetails": "تفصیلات لوڈ کریں...",
+    "contextUnavailable": "اب اس عمل کے لیے تحقیقی تناظر دستیاب نہیں ہے۔",
+    "loading": "عمل",
+    "lowSignalOnly": "ابھی تک کوئی کلیدی کام نہیں ملا تھا۔ کم درجہ بندی کی تفصیلات Special لاگ گوئی میں درج ذیل ہیں۔",
+    "empty": "ابھی تک دستیاب اشیا میں کوئی واضح کام نہیں پایا گیا تھا ۔ عمررسیدہ یا تجربہ‌کار سیشن لاگس ابھی تک ایگزیکٹو سیریز میں دستیاب ہو سکتے ہیں ۔",
+    "title": "غیر متصل",
+    "description": "( متی ۲۴ : ۱۴ ؛ ۲۸ : ۱۹ ، ۲۰ ) اِس سے ظاہر ہوتا ہے کہ اِس کام سے وقت گزرنے کے ساتھ‌ساتھ اِس کا تعلق بھی اِس کام سے ہے ۔"
+  },
+  "sendMessage": {
+    "title": "بھیجو",
+    "description": "ٹیم کے کسی ممبر کو براہ راست پیغام بھیجیں",
+    "recipientLabel": "دوبارہ شروع",
+    "selectMemberPlaceholder": "منتخب ممبر منتخب کریں...",
+    "messageLabel": "پیام",
+    "placeholder": "اپنا پیغام لکھیں... (آپ کو بھیجنا)",
+    "send": "بھیجو",
+    "sending": "اتاری جارہی ہے...",
+    "charsLeft": "{{count}} حساب",
+    "saved": "محفوظ کریں",
+    "attachments": {
+      "teamOnlineRequired": "فائلوں کو شامل کرنے کے لیے ٹیم آن لائن ہونا ضروری ہے۔",
+      "recipientUnsupported": "فائل کو ٹیم کی قیادت یا اوپن سیوڈ ٹیم کے لیے بھیجا جا سکتا ہے۔",
+      "openCodeOnlineRequired": "اوپنCode ٹیم ساتھیوں کے لیے فائلوں کو ملانے کے لیے ٹیم آن لائن ہونا ضروری ہے۔",
+      "disabledHint": "فائل وابستگیوں کو آن لائن ٹیم کی قیادت اور آن لائن اوپن کوڈ ٹیموں کے لیے معاونت حاصل ہے۔ وابستگیوں کو دور کریں یا قبول کریں.",
+      "attachFiles": "Attach files (paste or drag & drop)",
+      "unavailable": "اِن میں سے ایک بھی نہیں ہے ۔"
+    },
+    "quote": {
+      "remove": "عبارت حذف کریں",
+      "replyingTo": "تفریح"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "جواب",
+    "replyingTo": "تفریح",
+    "placeholder": "تبصرے شامل کریں",
+    "attachFile": "عتیق فائل (یا ماضی)",
+    "voiceToText": "متن کے لئے آواز چلائیں",
+    "comment": "تبصرہ",
+    "charsLeft": "{{count}} حساب",
+    "saved": "محفوظ کریں",
+    "awaitingReplyFrom": "انتظار کرنا",
+    "or": "یا"
+  },
+  "taskAttachments": {
+    "dropImageHere": "یہاں تصویر ڈال دیں",
+    "attachImage": "تصویر",
+    "pasteOrDragDrop": "یا پسی ہوئی / ذرہ۔",
+    "fromOriginalMessage": "اصل پیغام سے",
+    "dropFilesHere": "یہاں فائلیں کھولیں",
+    "loading": "وابستگیاں..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "تمام اوزاروں کو چلائیں",
+    "autonomousModeDescription": "Autonomous mode: ٹیم کے آلات بغیر تصدیق کے کام کرتے ہیں۔ غیر مجاز کوڈ سے ہوشیار رہیں ۔",
+    "manualModeDescription": "دستی طریقہ : آپ ہر آلے کو حقیقی وقت میں منظور کریں گے یا انکار کریں گے۔"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "ایگزیکٹو",
+      "process": "پرنٹ"
+    },
+    "filters": {
+      "all": "تمام"
+    },
+    "logs": {
+      "title": "لاگ ان",
+      "loading": "ممبر لاگ ریور لوڈ کریں...",
+      "emptyTitle": "ابھی تک اس عضو کے لیے لاگ اسکرپٹ نہیں ملے تھے۔",
+      "emptyDescription": "جب دستیاب ہو جائے گا"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "کیا تبدیلی لانے کی ضرورت ہے... (مسلم )",
+    "submit": "غیر متصل",
+    "charsLeft": "{{count}} حساب",
+    "saved": "محفوظ کریں",
+    "title": "مطلوبہ تبدیلیاں"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "ڈاک بورڈ کھولیں",
+      "openTeam": "کھولیں",
+      "cancel": "منسوخ"
+    },
+    "membersJson": {
+      "hide": "بند JSON"
+    },
+    "optional": {
+      "badge": "غیر متصل"
+    }
+  },
+  "runningTeams": {
+    "title": "ٹیمیں",
     "status": {
       "active": "فعال",
       "provisioning": "شروع ہو رہی ہے",

@@ -1501,27 +1501,27 @@
       "title": "重新启动将重新开始当前的团队运行"
     },
     "schedule": {
-      "agentDescription": "团队未运行时单独启动智能体；团队运行时创建并分配任务。",
-      "execution": "执行方式",
       "labelOptional": "标签（可选）",
       "labelPlaceholder": "例如，每日代码审核、每晚测试……",
-      "leadDefault": "团队负责人（默认）",
-      "legacyNotice": "现有一次性计划任务：保存不会改变其原有行为。",
       "maxBudgetUsd": "最高预算（美元）",
       "maxTurns": "最大转数",
       "noLimit": "无限制",
       "noMatches": "没有团队符合您的搜索。",
       "noTeams": "没有可用的团队。首先创建一个团队。",
-      "oneAgent": "单个智能体",
       "searchTeams": "搜寻队伍…",
       "selectTeam": "选择一个团队…",
-      "target": "团队运行时的执行者",
       "team": "团队",
-      "teamDescription": "团队未运行时启动已保存的团队；运行时向负责人分配任务。使用已保存的提供商和项目设置。",
-      "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。",
       "title": "日程",
+      "execution": "执行方式",
+      "legacyNotice": "现有一次性计划任务：保存不会改变其原有行为。",
       "upgradeSmart": "切换到智能计划",
-      "wholeTeam": "整个团队"
+      "oneAgent": "单个智能体",
+      "wholeTeam": "整个团队",
+      "target": "团队运行时的执行者",
+      "leadDefault": "团队负责人（默认）",
+      "agentDescription": "团队未运行时单独启动智能体；团队运行时创建并分配任务。",
+      "teamDescription": "团队未运行时启动已保存的团队；运行时向负责人分配任务。使用已保存的提供商和项目设置。",
+      "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。"
     },
     "title": {
       "createSchedule": "创建计划任务",
@@ -2137,17 +2137,542 @@
       "disabled": "已停用"
     },
     "runStatus": {
-      "cancelled": "取消",
+      "pending": "待办的",
+      "warmingUp": "热身",
+      "warm": "温暖的",
+      "running": "运行中",
       "completed": "完全的",
-      "dispatched": "已派发",
       "failed": "失败",
       "interrupted": "被打断",
-      "pending": "待办的",
-      "running": "运行中",
-      "skipped": "已跳过",
-      "warm": "温暖的",
-      "warmingUp": "热身"
+      "cancelled": "取消",
+      "dispatched": "已派发",
+      "skipped": "已跳过"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode 本地模型可以使用 OpenCode 上下文预算，而不是仅限提示词的限制。",
+    "description": "向该队友使用的提供商和模型的 OpenCode 配置添加匹配限制。这有助于 OpenCode 在本地模型溢出其上下文窗口之前进行压缩和修剪。",
+    "replacePrefix": "代替",
+    "and": "和",
+    "replaceSuffix": "使用 OpenCode 设置中的提供商和模型 ID。提示词说明如",
+    "promptInstructionsSuffix": "较弱，因为请求是在模型读取它们之前组装的。",
+    "providerLimits": "提供商限制",
+    "compactionConfig": "压缩配置"
+  },
+  "sessions": {
+    "noProjectPath": "没有链接项目路径",
+    "provisioningHint": "会话将在团队配置后出现",
+    "projectNotFound": "未找到项目",
+    "loading": "正在加载会话…",
+    "empty": "未找到会话",
+    "showAllSessions": "显示所有会话",
+    "lead": "带领",
+    "removeFilter": "移除过滤器",
+    "filterBySession": "按此会话过滤",
+    "openSession": "公开会话",
+    "title": "会话"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "取消",
+    "moreWarningsHidden": "{{count}} 隐藏更多警告",
+    "diagnostics": "诊断",
+    "liveOutput": "实时输出",
+    "diagnosticsCopied": "已复制诊断信息",
+    "copyDiagnostics": "复制诊断",
+    "copied": "已复制",
+    "noOutput": "尚未捕获任何输出。",
+    "cliLogs": "CLI 日志",
+    "steps": {
+      "starting": "开始",
+      "configuring": "团队设置",
+      "assembling": "成员加入",
+      "finalizing": "敲定"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "检查…",
+        "ready": "好的",
+        "notes": "好的（注释）",
+        "failed": "犯错",
+        "pending": "等待"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI 二进制文件缺失",
+        "openCodeRuntimeMissing": "OpenCode 运行时缺失",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows 访问被阻止",
+        "openCodeNoOutput": "OpenCode 运行时检查未返回任何输出",
+        "openCodeMcpUnreachable": "OpenCode 应用 MCP 无法访问",
+        "workingDirectoryMissing": "工作目录丢失",
+        "cliBinaryCouldNotStart": "CLI 二进制文件无法启动",
+        "cliPreflightIncomplete": "CLI 预检未完成",
+        "authenticationRequired": "需要认证",
+        "runtimeProviderNotConfigured": "未配置运行时提供商",
+        "cliPreflightFailed": "CLI 预检失败",
+        "selectedModelCompatible": "所选模型兼容",
+        "selectedModelCompatibilityPending": "所选模型兼容性待定",
+        "selectedModelAvailable": "可选模型",
+        "selectedModelVerified": "所选模型已验证",
+        "selectedModelUnavailable": "所选模型不可用",
+        "selectedModelTimedOut": "所选模型验证超时",
+        "selectedModelCheckFailed": "所选模型检查失败",
+        "selectedModelDeferred": "选定的模型验证推迟",
+        "selectedModelPingNotConfirmed": "所选模型 ping 未确认",
+        "readyWithNotes": "准备好备注",
+        "needsAttention": "需要注意"
+      },
+      "modelChecksSummary": "选定模型检查 - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} 模型不可用",
+        "unavailable_one": "{{count}} 模型不可用",
+        "unavailable_other": "{{count}} 模型不可用",
+        "checkFailed": "{{count}} 模型检查失败",
+        "checkFailed_one": "{{count}} 模型检查失败",
+        "checkFailed_other": "{{count}} 模型检查失败",
+        "timedOut": "{{count}} 模型超时",
+        "timedOut_one": "{{count}} 模型超时",
+        "timedOut_other": "{{count}} 模型超时",
+        "deferred": "{{count}} 验证延迟",
+        "deferred_one": "{{count}} 验证延迟",
+        "deferred_other": "{{count}} 验证延迟",
+        "pingNotConfirmed": "{{count}} ping 未确认",
+        "pingNotConfirmed_one": "{{count}} ping 未确认",
+        "pingNotConfirmed_other": "{{count}} ping 未确认",
+        "compatibilityPending": "{{count}} 兼容，深度验证待定",
+        "compatibilityPending_one": "{{count}} 兼容，深度验证待定",
+        "compatibilityPending_other": "{{count}} 兼容，深度验证待定",
+        "compatible": "{{count}} 兼容",
+        "compatible_one": "{{count}} 兼容",
+        "compatible_other": "{{count}} 兼容",
+        "checking": "{{count}} 检查",
+        "checking_one": "{{count}} 检查",
+        "checking_other": "{{count}} 检查",
+        "available": "{{count}} 可用",
+        "available_one": "{{count}} 可用",
+        "available_other": "{{count}} 可用",
+        "verified": "{{count}} 已验证",
+        "verified_one": "{{count}} 已验证",
+        "verified_other": "{{count}} 已验证",
+        "unavailable_few": "{{count}} 模型不可用",
+        "unavailable_many": "{{count}} 模型不可用",
+        "checkFailed_few": "{{count}} 模型检查失败",
+        "checkFailed_many": "{{count}} 模型检查失败",
+        "timedOut_few": "{{count}} 模型超时",
+        "timedOut_many": "{{count}} 模型超时",
+        "deferred_few": "{{count}} 验证延迟",
+        "deferred_many": "{{count}} 验证延迟",
+        "pingNotConfirmed_few": "{{count}} ping 未确认",
+        "pingNotConfirmed_many": "{{count}} ping 未确认",
+        "compatibilityPending_few": "{{count}} 兼容，深度验证待定",
+        "compatibilityPending_many": "{{count}} 兼容，深度验证待定",
+        "compatible_few": "{{count}} 兼容",
+        "compatible_many": "{{count}} 兼容",
+        "checking_few": "{{count}} 检查",
+        "checking_many": "{{count}} 检查",
+        "available_few": "{{count}} 可用",
+        "available_many": "{{count}} 可用",
+        "verified_few": "{{count}} 已验证",
+        "verified_many": "{{count}} 已验证"
+      },
+      "openProviderSettings": "打开 {{provider}} 设置",
+      "copied": "已复制",
+      "copyDiagnostics": "复制诊断",
+      "deepVerificationPending": "深度验证仍在运行。 OpenCode 免费模型可能需要大约 20 秒。",
+      "progress": {
+        "checkingSelectedProviders": "并行检查选定的提供商…",
+        "checkingProvider": "正在检查 {{provider}} 提供商…",
+        "checkingProviders": "正在检查 {{providers}} 提供商…"
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "修复文件夹权限或将项目移动到用户可写的文件夹。以管理员身份运行只是一个临时解决方法。",
+        "openCodeBridgeNoOutput": "重新启动应用和 OpenCode 运行时，然后重试。如果重复出现，请复制诊断信息。",
+        "workingDirectoryMissing": "选择现有的工作目录，然后重新打开此对话框。",
+        "authenticationRequired": "在为所需提供商配置的运行时中完成身份验证，然后重新打开此对话框。",
+        "runtimeProviderNotConfigured": "配置选定的提供商运行时，然后重新打开此对话框。",
+        "openCodeRuntimeMissing": "从提供商状态卡安装或重试 OpenCode 运行时，然后重新打开此对话框。",
+        "openCodeAppMcpUnreachable": "重试启动以刷新 OpenCode 应用 MCP 桥。如果重复出现，请重新启动应用和 OpenCode 运行时。",
+        "cliBinaryMissing": "确保所需的本地运行时已安装且可以启动，然后重新打开此对话框。",
+        "default": "解决上述问题，然后重新打开此对话框。",
+        "openCodeNodeModulesSymlinkPermission": "以管理员身份运行 Agent Teams AI，然后重试启动。"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} 队友正在等待权限批准",
+      "nameListWithMore": "{{names}}, +{{count}} 更多",
+      "waitingForOpenCode": "等待 OpenCode：{{names}}",
+      "bootstrapStalled": "引导程序停止：{{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}};等待 OpenCode：{{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "引导程序停滞",
+        "shellOnly": "仅外壳",
+        "waitingForBootstrap": "等待引导程序",
+        "bootstrapUnconfirmed": "引导程序未经确认",
+        "awaitingPermission": "等待许可",
+        "waitingForRuntime": "等待运行时",
+        "shellOnlyLower": "仅外壳",
+        "waitingForBootstrapLower": "等待引导程序",
+        "bootstrapUnconfirmedLower": "引导程序未确认",
+        "awaitingPermissionLower": "等待许可",
+        "waitingForRuntimeLower": "等待运行时"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} 启动失败",
+        "teammatesFailedToStart": "{{count}} 队友启动失败",
+        "teammatesFailedRatio": "{{count}}/{{total}} 队友启动失败"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} 跳过本次启动",
+        "memberSkippedWithReason": "本次启动跳过了 {{name}} - {{reason}}",
+        "memberSkippedCompact": "{{name}} 已跳过",
+        "teammatesSkipped": "{{count}} 队友跳过",
+        "teammatesSkippedList": "跳过的队友：{{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} 队友跳过了本次启动"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_one": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_few": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_many": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_other": "{{count}} 队友仍在加入",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} 队友确认"
+      },
+      "ready": {
+        "leadOnline": "在线引导",
+        "allTeammatesJoined": "{{count}} 队友全部加入",
+        "teamProvisionedLeadOnline": "团队配置 - 在线领导",
+        "teamProvisionedAllJoined": "团队配置 - 所有 {{count}} 队友都加入",
+        "teamProvisionedStillJoining": "团队已配置 - 队友仍在加入",
+        "launchFinishedWithErrors": "启动完成但出现错误 - {{count}}/{{total}} 队友启动失败",
+        "launchContinuedSkipped": "启动继续 - {{count}}/{{total}} 队友跳过",
+        "teamLaunchedLeadOnline": "团队启动 - 在线领导",
+        "teamLaunchedAllJoined": "团队启动 - 所有 {{count}} 队友加入"
+      },
+      "panel": {
+        "launchFailed": "启动失败",
+        "launchDetails": "启动详情",
+        "launchFinishedWithErrors": "启动完成但有错误",
+        "launchContinuedSkipped": "与跳过的队友一起继续启动",
+        "coreTeamReady": "核心团队准备就绪",
+        "finishingLaunch": "正在完成启动",
+        "teamLaunched": "团队启动",
+        "launchingTeam": "启动团队"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "实时运行时状态",
+    "description": "仅显示心跳和启动状态。过程控制保留在下面。",
+    "source": "来源：{{source}}",
+    "lane": "{{lane}} 车道",
+    "diagnosticOnly": "仅用于诊断",
+    "updated": "更新 {{value}}",
+    "states": {
+      "running": "运行中",
+      "starting": "开始",
+      "waiting": "等待",
+      "degraded": "需要注意",
+      "stopped": "已停止",
+      "unknown": "未知"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "确切的任务日志",
+      "loading": "正在加载准确的任务日志…",
+      "description": "使用日志中使用的相同执行日志组件呈现的精确转录切片。",
+      "emptyTitle": "尚无确切的任务日志",
+      "emptyDescription": "当明确的任务链接转录本元数据可用时，精确的转录本包将出现在此处。",
+      "summaryOnly": "仅摘要"
+    },
+    "executionSessions": {
+      "title": "执行会话",
+      "online": "在线的",
+      "updating": "更新中…",
+      "description": "传统的以会话为中心的成绩单浏览和预览。"
+    },
+    "stream": {
+      "title": "任务日志流"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "取消任务 {{taskId}}",
+      "cancel": "取消",
+      "moveBackToTodoConfirm": "将此任务移回 TODO 并通知团队？",
+      "confirm": "确认",
+      "keep": "保持",
+      "changesNeedAttention": "变化需要关注",
+      "changes": "变化",
+      "deleteTask": "删除任务",
+      "taskLogsActive": "任务日志处于活动状态",
+      "newTaskLogsArriving": "新任务日志到达",
+      "awaitingUser": "等待用户",
+      "awaitingLead": "等待线索",
+      "blockedBy": "被阻止",
+      "blocks": "积木",
+      "start": "开始",
+      "complete": "完全的",
+      "approve": "批准",
+      "requestReview": "请求审核",
+      "manualReview": "人工审核",
+      "requestChanges": "请求更改"
+    },
+    "filter": {
+      "title": "过滤任务",
+      "session": "会话",
+      "allSessions": "所有会话",
+      "teammate": "队友",
+      "unassigned": "（未分配）",
+      "column": "柱子",
+      "clearAll": "全部清除"
+    },
+    "board": {
+      "addTask": "添加任务",
+      "noTasks": "没有任务",
+      "showMore": "再显示 {{count}} 条",
+      "hiddenCount": "{{count}} 隐藏",
+      "trash": "垃圾",
+      "gridView": "网格视图",
+      "columnsView": "列视图"
+    },
+    "trash": {
+      "title": "垃圾",
+      "empty": "没有删除的任务",
+      "subject": "主题",
+      "owner": "所有者",
+      "deleted": "已删除",
+      "unassigned": "未分配",
+      "restoreTask": "恢复任务",
+      "restore": "恢复",
+      "close": "关闭"
+    },
+    "sort": {
+      "title": "对任务进行排序",
+      "sortBy": "排序方式",
+      "reset": "重置",
+      "options": {
+        "updatedAt": {
+          "label": "最后更新",
+          "description": "最近更新的先"
+        },
+        "createdAt": {
+          "label": "已创建",
+          "description": "最新的优先"
+        },
+        "owner": {
+          "label": "所有者",
+          "description": "按受让人字母顺序排列"
+        },
+        "manual": {
+          "label": "手动的",
+          "description": "拖放顺序"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "清除搜索",
+      "tasks": "任务",
+      "createdAgo": "创建了 {{time}}",
+      "updatedAgo": "更新 {{time}}",
+      "placeholder": "搜索任务…（#id 或文本）"
+    },
+    "grid": {
+      "addTask": "添加任务",
+      "noTasks": "没有任务"
+    },
+    "title": "看板",
+    "columns": {
+      "todo": "待办事项",
+      "inProgress": "进行中",
+      "review": "审核",
+      "done": "完毕",
+      "approved": "已批准"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "正在检查队友工作树的 Git 仓库状态…",
+    "ready": "Git 工作树已准备就绪。",
+    "readyOnBranch": "Git 工作树已在分支 {{branch}} 上准备就绪。",
+    "needsSetup": "工作树隔离需要 Git 设置",
+    "initialCommitNotice": "初始提交操作阶段并提交带有消息的所有当前文件",
+    "initializeRepository": "初始化 Git 仓库",
+    "createInitialCommit": "创建初始提交",
+    "initialCommitMessage": "杂务：初始提交"
+  },
+  "toolApproval": {
+    "settings": "设置",
+    "autoAllowAllTools": "自动允许所有工具",
+    "autoAllowFileEdits": "自动允许文件编辑（编辑、写入、NotebookEdit）",
+    "autoAllowSafeCommands": "自动允许安全命令（git、pnpm、npm、ls…）",
+    "onTimeout": "超时时：",
+    "after": "后",
+    "secondsShort": "秒",
+    "timeoutActions": {
+      "wait": "永远等待",
+      "allow": "允许",
+      "deny": "否定"
+    },
+    "submit": "提交",
+    "allow": "允许",
+    "deny": "否定",
+    "allowAll": "允许全部",
+    "pendingCount": "{{count}} 待定",
+    "autoActionIn": "将在 {{time}} 后自动{{action}}",
+    "diff": {
+      "previewChanges": "预览更改",
+      "readingFile": "正在读取文件…",
+      "binaryFile": "二进制文件 - 无法预览",
+      "truncated": "文件被截断为 2MB - diff 可能不完整",
+      "newFile": "新文件"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "成员工作同步",
+      "actionableItems": "可操作的项目",
+      "fingerprint": "指纹",
+      "report": "报告",
+      "none": "无",
+      "shadowWouldNudge": "影子会轻推",
+      "yes": "是的",
+      "no": "不",
+      "moreActionableItems": "{{count}} 更多可操作项目",
+      "diagnostics": "诊断：{{diagnostics}}",
+      "autoResumeStopped": "自动续跑已停止。",
+      "continue": "继续",
+      "stopAutoResume": "停止自动恢复",
+      "resumeAutoResume": "恢复自动恢复"
+    },
+    "title": "成员工作同步",
+    "loadingDiagnostics": "正在加载成员工作同步诊断。",
+    "diagnosticsUnavailable": "成员工作同步诊断不可用。"
+  },
+  "advancedCli": {
+    "title": "高级",
+    "useWorktree": "负责人 worktree (与队友 worktree 分开)",
+    "recent": "最近的",
+    "commandPreview": "命令预览",
+    "customArguments": "自定义参数",
+    "validate": "证实",
+    "validation": {
+      "allFlagsValid": "所有标志均有效",
+      "unknownFlags": "未知：{{flags}}",
+      "protectedFlags": "密码保护：{{flags}}",
+      "failed": "验证失败"
+    },
+    "placeholders": {
+      "worktreeName": "工作树名称"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} 前",
+    "stoppedAgo": "之前停止过 {{time}}",
+    "running": "运行中",
+    "stopped": "已停止",
+    "stopProcess": "停止进程（SIGTERM）",
+    "kill": "杀",
+    "openInBrowser": "在浏览器中打开",
+    "open": "打开",
+    "pid": "PID{{pid}}",
+    "title": "CLI 进程"
+  },
+  "taskActivity": {
+    "loadingDetails": "正在加载活动详细信息…",
+    "contextUnavailable": "此活动不再提供详细的文字记录上下文。",
+    "loading": "正在加载任务活动…",
+    "lowSignalOnly": "尚未找到关键任务活​​动。下面的任务日志流中提供了低级执行详细信息。",
+    "empty": "在可用的记录中尚未发现明确的任务活动。旧的或启发式会话日志可能仍可在下面的执行会话中使用。",
+    "title": "任务活动",
+    "description": "从转录元数据链接到此任务的关键显式运行时活动。"
+  },
+  "sendMessage": {
+    "title": "发送消息",
+    "description": "向团队成员发送直接消息。",
+    "recipientLabel": "接受者",
+    "selectMemberPlaceholder": "选择成员…",
+    "messageLabel": "信息",
+    "placeholder": "写下您的信息…（输入以发送）",
+    "send": "发送",
+    "sending": "正在发送…",
+    "charsLeft": "{{count}} 剩余字符数",
+    "saved": "已保存",
+    "attachments": {
+      "teamOnlineRequired": "团队必须在线才能附加文件",
+      "recipientUnsupported": "文件可以发送给团队领导或 OpenCode 队友",
+      "openCodeOnlineRequired": "团队必须在线才能为 OpenCode 队友附加文件",
+      "disabledHint": "在线团队领导和在线 OpenCode 队友支持文件附件。删除附件或切换收件人。",
+      "attachFiles": "附加文件（粘贴或拖放）",
+      "unavailable": "附件不可用"
+    },
+    "quote": {
+      "remove": "删除报价",
+      "replyingTo": "正在回复"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "取消回复",
+    "replyingTo": "正在回复",
+    "placeholder": "添加评论…（输入发送）",
+    "attachFile": "附加文件（或粘贴）",
+    "voiceToText": "语音转文字",
+    "comment": "评论",
+    "charsLeft": "{{count}} 剩余字符数",
+    "saved": "已保存",
+    "awaitingReplyFrom": "正在等待回复",
+    "or": "或"
+  },
+  "taskAttachments": {
+    "dropImageHere": "将图像拖放到此处",
+    "attachImage": "附上图片",
+    "pasteOrDragDrop": "或粘贴/拖放",
+    "fromOriginalMessage": "来自原始消息",
+    "dropFilesHere": "将文件拖放到此处",
+    "loading": "正在加载附件…"
+  },
+  "permissions": {
+    "autoApproveAllTools": "自动批准所有工具",
+    "autonomousModeDescription": "自主模式：团队工具无需确认即可执行。对不受信任的代码要小心。",
+    "manualModeDescription": "手动模式：您将实时批准或拒绝每个工具调用。"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "执行",
+      "process": "过程"
+    },
+    "filters": {
+      "all": "全部"
+    },
+    "logs": {
+      "title": "日志",
+      "loading": "正在加载成员日志流…",
+      "emptyTitle": "尚未找到该成员的日志流条目。",
+      "emptyDescription": "成员范围的记录或运行时日志将在可用时显示在此处。"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "描述需要更改的内容…（输入提交）",
+    "submit": "提交",
+    "charsLeft": "{{count}} 剩余字符数",
+    "saved": "已保存",
+    "title": "请求变更"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "打开控制台",
+      "openTeam": "开放组队",
+      "cancel": "取消"
+    },
+    "membersJson": {
+      "hide": "隐藏 JSON"
+    },
+    "optional": {
+      "badge": "选修的"
+    }
+  },
+  "runningTeams": {
+    "title": "运行团队",
     "status": {
       "active": "活跃",
       "provisioning": "启动中",

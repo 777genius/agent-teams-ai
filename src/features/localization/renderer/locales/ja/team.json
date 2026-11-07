@@ -1501,27 +1501,27 @@
       "title": "Relaunch は、現在のチームの実行を再起動します"
     },
     "schedule": {
-      "agentDescription": "チーム停止中は単独のエージェントを実行し、稼働中は担当者にタスクを割り当てます。",
-      "execution": "実行方法",
       "labelOptional": "ラベル(任意)",
       "labelPlaceholder": "例:毎日コードレビュー、夜テスト...",
-      "leadDefault": "チームリーダー（既定）",
-      "legacyNotice": "既存の単発スケジュールです。保存しても動作は変わりません。",
       "maxBudgetUsd": "最高の予算(USD)",
       "maxTurns": "最高の回転",
       "noLimit": "制限なし",
       "noMatches": "チームが検索にマッチしません。",
       "noTeams": "チームなし チームを最初に作成します。",
-      "oneAgent": "エージェント1人",
       "searchTeams": "チーム検索",
       "selectTeam": "チームを選択",
-      "target": "チーム稼働中の担当者",
       "team": "スタッフ",
-      "teamDescription": "チーム停止中は保存済みのチームを起動し、稼働中はリーダーにタスクを割り当てます。保存済みの設定を使用します。",
-      "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。",
       "title": "スケジュール",
+      "execution": "実行方法",
+      "legacyNotice": "既存の単発スケジュールです。保存しても動作は変わりません。",
       "upgradeSmart": "スマートスケジュールに切り替える",
-      "wholeTeam": "チーム全体"
+      "oneAgent": "エージェント1人",
+      "wholeTeam": "チーム全体",
+      "target": "チーム稼働中の担当者",
+      "leadDefault": "チームリーダー（既定）",
+      "agentDescription": "チーム停止中は単独のエージェントを実行し、稼働中は担当者にタスクを割り当てます。",
+      "teamDescription": "チーム停止中は保存済みのチームを起動し、稼働中はリーダーにタスクを割り当てます。保存済みの設定を使用します。",
+      "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。"
     },
     "title": {
       "createSchedule": "スケジュールの作成",
@@ -2137,17 +2137,542 @@
       "disabled": "バリアフリー"
     },
     "runStatus": {
-      "cancelled": "キャンセル",
+      "pending": "ペンディング",
+      "warmingUp": "ウォームアップ",
+      "warm": "ウォーム",
+      "running": "ランニング",
       "completed": "完了しました",
-      "dispatched": "依頼済み",
       "failed": "失敗した",
       "interrupted": "中断された",
-      "pending": "ペンディング",
-      "running": "ランニング",
-      "skipped": "スキップ",
-      "warm": "ウォーム",
-      "warmingUp": "ウォームアップ"
+      "cancelled": "キャンセル",
+      "dispatched": "依頼済み",
+      "skipped": "スキップ"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode ローカルモデルは、プロンプトのみの制限ではなく OpenCode コンテキスト予算を使用できます。",
+    "description": "このチームメイトが使用するプロバイダとモデルのOpenCode configにマッチする制限を追加します。 これは、ローカルモデルがコンテキストウィンドウをオーバーフローする前に、OpenCode のコンパクトとプルーンを助けます。",
+    "replacePrefix": "リプレース",
+    "and": "そして、",
+    "replaceSuffix": "OpenCode のセットアップからプロバイダーとモデル ID を使用します。 プロンプトの指示のような",
+    "promptInstructionsSuffix": "モデルが読み込まれる前に要求が組み立てられるのでより弱いです。",
+    "providerLimits": "プロバイダーの制限",
+    "compactionConfig": "コンパクト化の設定"
+  },
+  "sessions": {
+    "noProjectPath": "プロジェクトパスがリンクされていない",
+    "provisioningHint": "チームプロビジョニング後にセッションが現れます",
+    "projectNotFound": "プロジェクトが見つかりません",
+    "loading": "セッションの読み込み",
+    "empty": "セッションが見つかりません",
+    "showAllSessions": "すべてのセッションを表示",
+    "lead": "リード",
+    "removeFilter": "フィルターの削除",
+    "filterBySession": "このセッションでフィルタリング",
+    "openSession": "オープンセッション",
+    "title": "セッション"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}の特長",
+    "cancel": "キャンセル",
+    "moreWarningsHidden": "隠される{{count}}のより多くの警告",
+    "diagnostics": "診断",
+    "liveOutput": "ライブ出力",
+    "diagnosticsCopied": "コピーされた診断",
+    "copyDiagnostics": "コピー診断",
+    "copied": "コピッド",
+    "noOutput": "未処理の出力が未処理です。",
+    "cliLogs": "CLIログ",
+    "steps": {
+      "starting": "スタート",
+      "configuring": "チームセットアップ",
+      "assembling": "参加メンバー",
+      "finalizing": "ファイナライズ"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "チェックイン",
+        "ready": "お問い合わせ",
+        "notes": "OK(ノート)",
+        "failed": "ERRの特長",
+        "pending": "リクエスト"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLIバイナリ欠落",
+        "openCodeRuntimeMissing": "OpenCode のランタイムが不足している",
+        "openCodeWindowsAccessBlocked": "OpenCode Windowsアクセスブロック",
+        "openCodeNoOutput": "OpenCode のランタイム チェックは出力なし",
+        "openCodeMcpUnreachable": "OpenCodeアプリ MCP の到達不能",
+        "workingDirectoryMissing": "作業ディレクトリ欠落",
+        "cliBinaryCouldNotStart": "CLIバイナリは起動できません",
+        "cliPreflightIncomplete": "CLIのプリフライトは完了しなかった",
+        "authenticationRequired": "認証が必要",
+        "runtimeProviderNotConfigured": "Runtime プロバイダーは構成されていません",
+        "cliPreflightFailed": "CLIのpreflightは失敗しました",
+        "selectedModelCompatible": "選択されたモデル 多用性がある",
+        "selectedModelCompatibilityPending": "選択されたモデルの互換性の保留",
+        "selectedModelAvailable": "選べる機種",
+        "selectedModelVerified": "選択したモデルの検証",
+        "selectedModelUnavailable": "機種選択不可",
+        "selectedModelTimedOut": "選択したモデル検証がタイムアウト",
+        "selectedModelCheckFailed": "選択したモデルチェックが失敗しました",
+        "selectedModelDeferred": "選択されたモデル検証の拒否",
+        "selectedModelPingNotConfirmed": "選択モデル ping 未確認",
+        "readyWithNotes": "ノートと準備",
+        "needsAttention": "注意が必要"
+      },
+      "modelChecksSummary": "選択したモデルチェック - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}}モデルが利用できなくなった",
+        "unavailable_one": "{{count}}モデルが利用できなくなった",
+        "unavailable_other": "{{count}}モデルが利用できなくなった",
+        "checkFailed": "{{count}}モデルチェック失敗",
+        "checkFailed_one": "{{count}}モデルチェック失敗",
+        "checkFailed_other": "{{count}}モデルチェック失敗",
+        "timedOut": "{{count}}モデルをタイムアウト",
+        "timedOut_one": "{{count}}モデルをタイムアウト",
+        "timedOut_other": "{{count}}モデルがタイムアウト",
+        "deferred": "{{count}}の検証は、",
+        "deferred_one": "{{count}}の検証は、",
+        "deferred_other": "{{count}}の検証は、",
+        "pingNotConfirmed": "{{count}} ping 未確認",
+        "pingNotConfirmed_one": "{{count}} ping 未確認",
+        "pingNotConfirmed_other": "{{count}} ping 未確認",
+        "compatibilityPending": "{{count}}対応、深部検証ペンディング",
+        "compatibilityPending_one": "{{count}}対応、深部検証ペンディング",
+        "compatibilityPending_other": "{{count}}対応、深部検証ペンディング",
+        "compatible": "{{count}}対応",
+        "compatible_one": "{{count}}対応",
+        "compatible_other": "{{count}}対応",
+        "checking": "{{count}} チェック",
+        "checking_one": "{{count}} チェック",
+        "checking_other": "{{count}} チェック",
+        "available": "{{count}}対応",
+        "available_one": "{{count}}対応",
+        "available_other": "{{count}}対応",
+        "verified": "{{count}}検証",
+        "verified_one": "{{count}}検証",
+        "verified_other": "{{count}}検証",
+        "unavailable_few": "{{count}}モデルが利用できなくなった",
+        "unavailable_many": "{{count}}モデルが利用できなくなった",
+        "checkFailed_few": "{{count}}モデルチェック失敗",
+        "checkFailed_many": "{{count}}モデルチェック失敗",
+        "timedOut_few": "{{count}}モデルがタイムアウト",
+        "timedOut_many": "{{count}}モデルがタイムアウト",
+        "deferred_few": "{{count}}の検証は、",
+        "deferred_many": "{{count}}の検証は、",
+        "pingNotConfirmed_few": "{{count}} ping 未確認",
+        "pingNotConfirmed_many": "{{count}} ping 未確認",
+        "compatibilityPending_few": "{{count}}対応、深部検証ペンディング",
+        "compatibilityPending_many": "{{count}}対応、深部検証ペンディング",
+        "compatible_few": "{{count}}対応",
+        "compatible_many": "{{count}}対応",
+        "checking_few": "{{count}} チェック",
+        "checking_many": "{{count}} チェック",
+        "available_few": "{{count}}対応",
+        "available_many": "{{count}}対応",
+        "verified_few": "{{count}}検証",
+        "verified_many": "{{count}}検証"
+      },
+      "openProviderSettings": "{{provider}}の設定を開く",
+      "copied": "コピッド",
+      "copyDiagnostics": "コピー診断",
+      "deepVerificationPending": "ディープ検証はまだ実行中です。 OpenCode の無料モデルは 20 秒かかります。",
+      "progress": {
+        "checkingSelectedProviders": "選択したプロバイダーを並列でチェックする...",
+        "checkingProvider": "{{provider}}プロバイダをチェック...",
+        "checkingProviders": "{{providers}}プロバイダをチェック..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "フォルダ権限を修正したり、プロジェクトをユーザ書き込み可能なフォルダに移動したりします。 管理者としての実行は一時的な回避策です。",
+        "openCodeBridgeNoOutput": "アプリとOpenCodeのランタイムを再起動し、再試行します。 繰り返すと、診断をコピーします。",
+        "workingDirectoryMissing": "既存の作業ディレクトリを選択し、このダイアログを開きます。",
+        "authenticationRequired": "必要なプロバイダーを、そのプロバイダー用に設定されたランタイムで認証してから、このダイアログを再度開いてください。",
+        "runtimeProviderNotConfigured": "選択したプロバイダのランタイムを設定し、このダイアログを再オープンします。",
+        "openCodeRuntimeMissing": "プロバイダーのステータスカードからOpenCodeのランタイムをインストールまたは再試行し、このダイアログを再起動します。",
+        "openCodeAppMcpUnreachable": "OpenCodeアプリのMCPブリッジをリフレッシュするためのリトリー起動。 繰り返すと、アプリとOpenCodeのランタイムを再起動します。",
+        "cliBinaryMissing": "必要なローカルランタイムがインストールされ、起動できることを確認してから、このダイアログを再度開いてください。",
+        "default": "上記の問題を解決し、このダイアログを再オープンします。",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI を管理者として実行してから、launch を再試行してください。"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}}チームメイトの許可承認",
+      "nameListWithMore": "{{names}}、+{{count}} より",
+      "waitingForOpenCode": "OpenCode待ち時間:{{names}}",
+      "bootstrapStalled": "ブーツストラップ: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; OpenCode待ち:{{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}の特長",
+      "countPendingDiagnostic": "{{count}} {{label}}の特長",
+      "pendingLabels": {
+        "bootstrapStalled": "ブーツストラップ スタリング",
+        "shellOnly": "シェルのみ",
+        "waitingForBootstrap": "ブーツストラップの待ち合わせ",
+        "bootstrapUnconfirmed": "ブーツストラップ 未確認",
+        "awaitingPermission": "許可を待っている",
+        "waitingForRuntime": "実行時間待ち",
+        "shellOnlyLower": "シェルのみ",
+        "waitingForBootstrapLower": "ブーツストラップの待ち合わせ",
+        "bootstrapUnconfirmedLower": "boottrap 未確認",
+        "awaitingPermissionLower": "許可を待っている",
+        "waitingForRuntimeLower": "実行時間待ち"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}}が起動できなかった",
+        "teammatesFailedToStart": "{{count}} チームメイトが起動できなかった",
+        "teammatesFailedRatio": "{{count}}/{{total}} チームメイトが起動できなかった"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}}はこの起動のためにスキップしました",
+        "memberSkippedWithReason": "{{name}}はこの起動のためにスキップ - {{reason}}",
+        "memberSkippedCompact": "{{name}} をスキップ",
+        "teammatesSkipped": "{{count}} チームメイトがスキップ",
+        "teammatesSkippedList": "チームメイトをスキップ: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} チームメイトがこの起動のためにスキップ"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} チームメイトはまだ参加",
+        "teammatesStillJoining_one": "{{count}}チームメイトはまだ加わります",
+        "teammatesStillJoining_few": "{{count}} チームメイトはまだ参加",
+        "teammatesStillJoining_many": "{{count}} チームメイトはまだ参加",
+        "teammatesStillJoining_other": "{{count}} チームメイトはまだ参加",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} チームメイトの確認"
+      },
+      "ready": {
+        "leadOnline": "オンラインでリード",
+        "allTeammatesJoined": "{{count}}チームメイト全員が参加",
+        "teamProvisionedLeadOnline": "チームプロビジョニング - オンラインリード",
+        "teamProvisionedAllJoined": "チームプロビジョニング - {{count}} チームメイト全員が参加",
+        "teamProvisionedStillJoining": "チームプロビジョニング - チームメイトはまだ参加しています",
+        "launchFinishedWithErrors": "エラーで終了 - {{count}}/{{total}} チームメイトが起動できなかった",
+        "launchContinuedSkipped": "{{count}}/{{total}} チームメイトがスキップ",
+        "teamLaunchedLeadOnline": "チーム立ち上げ - リードオンライン",
+        "teamLaunchedAllJoined": "チーム立ち上げ - {{count}} チームメイト全員が参加"
+      },
+      "panel": {
+        "launchFailed": "起動失敗",
+        "launchDetails": "リリース情報",
+        "launchFinishedWithErrors": "エラーで終了",
+        "launchContinuedSkipped": "チームメイトをスキップして継続開始",
+        "coreTeamReady": "コアチームの準備",
+        "finishingLaunch": "終わりの進水",
+        "teamLaunched": "チーム開設",
+        "launchingTeam": "チーム立ち上げ"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "ライブランタイムステータス",
+    "description": "ディスプレイ専用のハートビートと起動状態。 プロセス制御は以下のままです。",
+    "source": "ソース: {{source}}",
+    "lane": "{{lane}}レーン",
+    "diagnosticOnly": "診断のみ",
+    "updated": "更新された{{value}}",
+    "states": {
+      "running": "ランニング",
+      "starting": "スタート",
+      "waiting": "待ち合わせ",
+      "degraded": "注意が必要",
+      "stopped": "停止",
+      "unknown": "未知の"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "正確なタスクログ",
+      "loading": "正確なタスクログを読み込む...",
+      "description": "ログで使用される同じ実行ログコンポーネントでレンダリングされた正確なトランスクリプトのスライス。",
+      "emptyTitle": "タスクログがまだない",
+      "emptyDescription": "タスク・リンクされたトランスクリプト・メタデータが利用可能になったら、正確なトランスクリプト・バンドルが表示されます。",
+      "summaryOnly": "要約のみ"
+    },
+    "executionSessions": {
+      "title": "実行セッション",
+      "online": "オンライン",
+      "updating": "最近の投稿",
+      "description": "レガシーセッション中心のトランスクリプトの閲覧とプレビュー。"
+    },
+    "stream": {
+      "title": "タスクログストリーム"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "タスクをキャンセル {{taskId}}",
+      "cancel": "キャンセル",
+      "moveBackToTodoConfirm": "このタスクをTODOに移動してチームに通知しますか?",
+      "confirm": "お問い合わせ",
+      "keep": "お問い合わせ",
+      "changesNeedAttention": "変化は注意を必要とします",
+      "changes": "変更点",
+      "deleteTask": "タスクの削除",
+      "taskLogsActive": "タスクログをアクティブに",
+      "newTaskLogsArriving": "新規タスクが到着するログ",
+      "awaitingUser": "ユーザを待っている",
+      "awaitingLead": "待望のリード",
+      "blockedBy": "ブロック",
+      "blocks": "ブロック",
+      "start": "スタート",
+      "complete": "エントリー",
+      "approve": "プロモーション",
+      "requestReview": "リクエストレビュー",
+      "manualReview": "マニュアルレビュー",
+      "requestChanges": "変更リクエスト"
+    },
+    "filter": {
+      "title": "フィルタータスク",
+      "session": "セッション",
+      "allSessions": "すべてのセッション",
+      "teammate": "チームメイト",
+      "unassigned": "(必須)",
+      "column": "コラム",
+      "clearAll": "すべてクリア"
+    },
+    "board": {
+      "addTask": "タスクを追加",
+      "noTasks": "タスクなし",
+      "showMore": "{{count}}をもっと見る",
+      "hiddenCount": "隠される{{count}}",
+      "trash": "トラッシュ",
+      "gridView": "グリッドビュー",
+      "columnsView": "コラムビュー"
+    },
+    "trash": {
+      "title": "トラッシュ",
+      "empty": "削除されたタスクなし",
+      "subject": "コンテンツ",
+      "owner": "オーナー",
+      "deleted": "削除された",
+      "unassigned": "非署名",
+      "restoreTask": "タスクの復元",
+      "restore": "リストア",
+      "close": "ふりがな"
+    },
+    "sort": {
+      "title": "タスクのソート",
+      "sortBy": "並び替え",
+      "reset": "リセット",
+      "options": {
+        "updatedAt": {
+          "label": "更新履歴",
+          "description": "更新履歴"
+        },
+        "createdAt": {
+          "label": "コンテンツ",
+          "description": "最新記事"
+        },
+        "owner": {
+          "label": "オーナー",
+          "description": "アサインによるアルファベット順"
+        },
+        "manual": {
+          "label": "マニュアル",
+          "description": "ドラッグアンドドロップ注文"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "明確な検索",
+      "tasks": "タスク",
+      "createdAgo": "{{time}}の作成",
+      "updatedAgo": "更新された{{time}}",
+      "placeholder": "タスクを検索... (#id またはテキスト)"
+    },
+    "grid": {
+      "addTask": "タスクを追加",
+      "noTasks": "タスクなし"
+    },
+    "title": "カンバン",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "チームメイトのワークツリーのGitリポジトリの状態をチェックする...",
+    "ready": "Gitのワークツリーは準備が整っています。",
+    "readyOnBranch": "{{branch}} のブランチに Git のワークツリーを用意しました。",
+    "needsSetup": "ワークツリーの分離はジットのセットアップを必要とします",
+    "initialCommitNotice": "初期のコミットアクションステージで、すべての現在のファイルをメッセージでコミットします。",
+    "initializeRepository": "Gitリポジトリの初期化",
+    "createInitialCommit": "初期コミットを作成する",
+    "initialCommitMessage": "chore: 初期コミット"
+  },
+  "toolApproval": {
+    "settings": "コンテンツ",
+    "autoAllowAllTools": "すべてのツールを自動使用",
+    "autoAllowFileEdits": "自動ファイル編集(編集、書き込み、メモ帳編集)",
+    "autoAllowSafeCommands": "自動で安全なコマンド (git, pnpm, npm, ls...)",
+    "onTimeout": "タイムアウト:",
+    "after": "アフター",
+    "secondsShort": "ログイン",
+    "timeoutActions": {
+      "wait": "永遠に待つ",
+      "allow": "許可する",
+      "deny": "デンディ"
+    },
+    "submit": "送信する",
+    "allow": "許可する",
+    "deny": "デンディ",
+    "allowAll": "すべてを許可する",
+    "pendingCount": "{{count}} ペンディング",
+    "autoActionIn": "{{time}}のオート{{action}}",
+    "diff": {
+      "previewChanges": "プレビュー変更",
+      "readingFile": "読み込みファイル...",
+      "binaryFile": "バイナリファイル - プレビューできません",
+      "truncated": "2MBで切り捨てられたファイル - diffが不完全である可能性があります",
+      "newFile": "新しいファイル"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "会員作品の同期",
+      "actionableItems": "実用的なアイテム",
+      "fingerprint": "指紋認証",
+      "report": "レポート",
+      "none": "なし",
+      "shadowWouldNudge": "シャドウはnudge",
+      "yes": "お問い合わせ",
+      "no": "お問い合わせ",
+      "moreActionableItems": "{{count}} より実用的な項目",
+      "diagnostics": "診断: {{diagnostics}}",
+      "autoResumeStopped": "自動継続は停止されています。",
+      "continue": "続行",
+      "stopAutoResume": "自動再開を停止",
+      "resumeAutoResume": "自動再開を再開"
+    },
+    "title": "会員作品の同期",
+    "loadingDiagnostics": "ローディングのメンバーの仕事は診断をsyncします。",
+    "diagnosticsUnavailable": "メンバーワークシンク診断は利用できません。"
+  },
+  "advancedCli": {
+    "title": "アドバンスト",
+    "useWorktree": "リード用 worktree (チームメイト用 worktree とは別)",
+    "recent": "最近の投稿",
+    "commandPreview": "コマンドプレビュー",
+    "customArguments": "カスタム引数",
+    "validate": "検証",
+    "validation": {
+      "allFlagsValid": "すべてのフラグが有効",
+      "unknownFlags": "不明: {{flags}}",
+      "protectedFlags": "保護: {{flags}}",
+      "failed": "検証失敗"
+    },
+    "placeholders": {
+      "worktreeName": "ワークツリー名"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} 前に",
+    "stoppedAgo": "停止 {{time}} 前に",
+    "running": "ランニング",
+    "stopped": "停止",
+    "stopProcess": "停止プロセス(SIGTERM)",
+    "kill": "キル",
+    "openInBrowser": "ブラウザで開く",
+    "open": "アクセス",
+    "pid": "PID{{pid}}の特長",
+    "title": "CLIの特長 プロセス"
+  },
+  "taskActivity": {
+    "loadingDetails": "アクティビティの詳細を読み込む...",
+    "contextUnavailable": "詳細なトランスクリプトコンテキストは、このアクティビティでは利用できません。",
+    "loading": "タスクアクティビティの読み込み",
+    "lowSignalOnly": "まだ重要なタスクアクティビティが見つかりませんでした。 タスクログストリームでは、低レベルの実行詳細が利用できます。",
+    "empty": "利用可能なトランスクリプトはまだ明示的なタスクアクティビティが見つかりませんでした。 実行セッションでは、以前のセッションログまたはヒューリスティックセッションログが利用できなくなることがあります。",
+    "title": "タスク活動",
+    "description": "トランスクリプトメタデータからこのタスクにリンクされたキー明示的なランタイムアクティビティ。"
+  },
+  "sendMessage": {
+    "title": "送信メッセージ",
+    "description": "チームメンバーにダイレクトメッセージを送る",
+    "recipientLabel": "リクルート",
+    "selectMemberPlaceholder": "メンバーを選択",
+    "messageLabel": "メッセージ",
+    "placeholder": "メッセージを書く...(送信する)",
+    "send": "お問い合わせ",
+    "sending": "送信...",
+    "charsLeft": "{{count}} 文字左",
+    "saved": "保存済み",
+    "attachments": {
+      "teamOnlineRequired": "チームはファイルを添付するためにオンラインでなければなりません",
+      "recipientUnsupported": "ファイルは、チームのリードまたはOpenCodeチームメイトに送信することができます",
+      "openCodeOnlineRequired": "OpenCode チームメイト用のファイルをオンラインで添付する必要があります。",
+      "disabledHint": "オンライン チーム リードとオンライン OpenCode チーム メイトのファイルの添付ファイルをサポートしています。 添付ファイルを削除します。",
+      "attachFiles": "添付ファイル(ペーストまたはドラッグ&ドロップ)",
+      "unavailable": "付属品は使用できません"
+    },
+    "quote": {
+      "remove": "引用を削除",
+      "replyingTo": "返信する"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "返信をキャンセル",
+    "replyingTo": "返信する",
+    "placeholder": "コメントを追加... (送信するEnter)",
+    "attachFile": "添付ファイル(またはペースト)",
+    "voiceToText": "テキストへの音声",
+    "comment": "コメント",
+    "charsLeft": "{{count}} 文字左",
+    "saved": "保存済み",
+    "awaitingReplyFrom": "返信をお待ちしています",
+    "or": "または"
+  },
+  "taskAttachments": {
+    "dropImageHere": "ドロップイメージはこちら",
+    "attachImage": "添付画像",
+    "pasteOrDragDrop": "またはペースト/ドラッグドロップ",
+    "fromOriginalMessage": "オリジナルメッセージ",
+    "dropFilesHere": "ここにファイルをドロップ",
+    "loading": "添付ファイルを読み込む..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "すべてのツールを自動承認",
+    "autonomousModeDescription": "自動モード:チームツールは確認なしで実行します。 信頼できないコードに注意してください。",
+    "manualModeDescription": "手動モード:各ツールの呼び出しをリアルタイムで承認または拒否します。"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "導入事例",
+      "process": "プロセス"
+    },
+    "filters": {
+      "all": "すべて"
+    },
+    "logs": {
+      "title": "ログイン",
+      "loading": "会員ログストリームをロードする...",
+      "emptyTitle": "ログストリームエントリは、まだこのメンバーのために発見されていません。",
+      "emptyDescription": "メンバースコープのトランスクリプトまたはランタイムログは、利用可能なときにここに表示されます。"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "変化するニーズを記述する...(送信する)",
+    "submit": "送信する",
+    "charsLeft": "{{count}} 文字左",
+    "saved": "保存済み",
+    "title": "リクエストの変更"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "ダッシュボードを開く",
+      "openTeam": "オープンチーム",
+      "cancel": "キャンセル"
+    },
+    "membersJson": {
+      "hide": "JSONを隠す"
+    },
+    "optional": {
+      "badge": "オプション"
+    }
+  },
+  "runningTeams": {
+    "title": "ランニングチーム",
     "status": {
       "active": "アクティブ",
       "provisioning": "起動中",

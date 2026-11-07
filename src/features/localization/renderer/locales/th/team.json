@@ -1501,27 +1501,27 @@
       "title": "การเริ่มใหม่จะรีสตาร์ทการรันทีมปัจจุบัน"
     },
     "schedule": {
-      "agentDescription": "หากทีมปิดอยู่ จะเรียกเอเจนต์แยกต่างหาก; หากทีมทำงานอยู่ จะมอบหมายงาน",
-      "execution": "การทำงาน",
       "labelOptional": "ป้ายกำกับ (ไม่บังคับ)",
       "labelPlaceholder": "เช่น รีวิวโค้ดรายวัน, ทดสอบกลางคืน...",
-      "leadDefault": "หัวหน้าทีม (ค่าเริ่มต้น)",
-      "legacyNotice": "กำหนดการแบบครั้งเดียวที่มีอยู่: การบันทึกจะไม่เปลี่ยนพฤติกรรมเดิม",
       "maxBudgetUsd": "งบประมาณสูงสุด (USD)",
       "maxTurns": "เทิร์นสูงสุด",
       "noLimit": "ไม่จำกัด",
       "noMatches": "ไม่มีทีมที่ตรงกับการค้นหาของคุณ",
       "noTeams": "ไม่มีทีมให้ใช้งาน สร้างทีมก่อน",
-      "oneAgent": "เอเจนต์หนึ่งตัว",
       "searchTeams": "ค้นหาทีม...",
       "selectTeam": "เลือกทีม...",
-      "target": "ผู้รับงานเมื่อทีมทำงานอยู่",
       "team": "ทีม",
-      "teamDescription": "หากทีมปิดอยู่ จะเริ่มทีมที่บันทึกไว้; หากทำงานอยู่ จะมอบหมายงานให้หัวหน้าทีม ใช้การตั้งค่าที่บันทึกไว้",
-      "teamPathMissing": "บันทึกโฟลเดอร์โครงการของทีมก่อนกำหนดเวลาเริ่มทำงาน",
       "title": "กำหนดการ",
+      "execution": "การทำงาน",
+      "legacyNotice": "กำหนดการแบบครั้งเดียวที่มีอยู่: การบันทึกจะไม่เปลี่ยนพฤติกรรมเดิม",
       "upgradeSmart": "เปลี่ยนเป็นกำหนดการอัจฉริยะ",
-      "wholeTeam": "ทั้งทีม"
+      "oneAgent": "เอเจนต์หนึ่งตัว",
+      "wholeTeam": "ทั้งทีม",
+      "target": "ผู้รับงานเมื่อทีมทำงานอยู่",
+      "leadDefault": "หัวหน้าทีม (ค่าเริ่มต้น)",
+      "agentDescription": "หากทีมปิดอยู่ จะเรียกเอเจนต์แยกต่างหาก; หากทีมทำงานอยู่ จะมอบหมายงาน",
+      "teamDescription": "หากทีมปิดอยู่ จะเริ่มทีมที่บันทึกไว้; หากทำงานอยู่ จะมอบหมายงานให้หัวหน้าทีม ใช้การตั้งค่าที่บันทึกไว้",
+      "teamPathMissing": "บันทึกโฟลเดอร์โครงการของทีมก่อนกำหนดเวลาเริ่มทำงาน"
     },
     "title": {
       "createSchedule": "สร้างกำหนดการ",
@@ -2137,17 +2137,542 @@
       "disabled": "ปิดใช้งาน"
     },
     "runStatus": {
-      "cancelled": "ยกเลิกแล้ว",
+      "pending": "รอดำเนินการ",
+      "warmingUp": "กำลังวอร์มอัป",
+      "warm": "พร้อม",
+      "running": "กำลังทำงาน",
       "completed": "เสร็จสมบูรณ์",
-      "dispatched": "ส่งงานแล้ว",
       "failed": "ล้มเหลว",
       "interrupted": "ถูกขัดจังหวะ",
-      "pending": "รอดำเนินการ",
-      "running": "กำลังทำงาน",
-      "skipped": "ข้ามแล้ว",
-      "warm": "พร้อม",
-      "warmingUp": "กำลังวอร์มอัป"
+      "cancelled": "ยกเลิกแล้ว",
+      "dispatched": "ส่งงานแล้ว",
+      "skipped": "ข้ามแล้ว"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "โมเดลในเครื่องของ OpenCode สามารถใช้งบประมาณคอนเท็กซ์ของ OpenCode แทนขีดจำกัดเฉพาะพรอมต์ได้",
+    "description": "เพิ่มขีดจำกัดที่ตรงกันลงในการตั้งค่า OpenCode สำหรับผู้ให้บริการและโมเดลที่เพื่อนร่วมทีมคนนี้ใช้ สิ่งนี้ช่วยให้ OpenCode บีบอัดและตัดทอนก่อนที่โมเดลในเครื่องจะล้นหน้าต่างคอนเท็กซ์",
+    "replacePrefix": "แทนที่",
+    "and": "และ",
+    "replaceSuffix": "ด้วย ID ของผู้ให้บริการและโมเดลจากการตั้งค่า OpenCode ของคุณ คำแนะนำในพรอมต์เช่น",
+    "promptInstructionsSuffix": "อ่อนแอกว่าเพราะคำขอถูกประกอบขึ้นก่อนที่โมเดลจะอ่าน",
+    "providerLimits": "ขีดจำกัดผู้ให้บริการ",
+    "compactionConfig": "การตั้งค่าการบีบอัด"
+  },
+  "sessions": {
+    "noProjectPath": "ไม่มีเส้นทางโปรเจกต์ที่เชื่อมโยง",
+    "provisioningHint": "เซสชันจะปรากฏหลังจากการจัดเตรียมทีม",
+    "projectNotFound": "ไม่พบโปรเจกต์",
+    "loading": "กำลังโหลดเซสชัน...",
+    "empty": "ไม่พบเซสชัน",
+    "showAllSessions": "แสดงสำหรับทุกเซสชัน",
+    "lead": "หัวหน้า",
+    "removeFilter": "ลบตัวกรอง",
+    "filterBySession": "กรองตามเซสชันนี้",
+    "openSession": "เปิดเซสชัน",
+    "title": "เซสชัน"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "ยกเลิก",
+    "moreWarningsHidden": "ซ่อนคำเตือนอีก {{count}} รายการ",
+    "diagnostics": "การวินิจฉัย",
+    "liveOutput": "เอาต์พุตสด",
+    "diagnosticsCopied": "คัดลอกการวินิจฉัยแล้ว",
+    "copyDiagnostics": "คัดลอกการวินิจฉัย",
+    "copied": "คัดลอกแล้ว",
+    "noOutput": "ยังไม่มีเอาต์พุตที่ถูกจับ",
+    "cliLogs": "บันทึก CLI",
+    "steps": {
+      "starting": "กำลังเริ่ม",
+      "configuring": "ตั้งค่าทีม",
+      "assembling": "สมาชิกกำลังเข้าร่วม",
+      "finalizing": "กำลังสรุป"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "กำลังตรวจสอบ...",
+        "ready": "ตกลง",
+        "notes": "ตกลง (หมายเหตุ)",
+        "failed": "ผิดพลาด",
+        "pending": "กำลังรอ"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "ไม่มีไบนารี CLI",
+        "openCodeRuntimeMissing": "ไม่มีรันไทม์ OpenCode",
+        "openCodeWindowsAccessBlocked": "การเข้าถึง OpenCode บน Windows ถูกบล็อก",
+        "openCodeNoOutput": "การตรวจสอบรันไทม์ OpenCode ไม่ได้คืนเอาต์พุต",
+        "openCodeMcpUnreachable": "ไม่สามารถเข้าถึง MCP ของแอป OpenCode",
+        "workingDirectoryMissing": "ไม่มีไดเรกทอรีทำงาน",
+        "cliBinaryCouldNotStart": "ไม่สามารถเริ่มไบนารี CLI ได้",
+        "cliPreflightIncomplete": "การตรวจสอบก่อนเริ่มของ CLI ไม่เสร็จสมบูรณ์",
+        "authenticationRequired": "ต้องยืนยันตัวตน",
+        "runtimeProviderNotConfigured": "ผู้ให้บริการรันไทม์ยังไม่ได้กำหนดค่า",
+        "cliPreflightFailed": "การตรวจสอบก่อนเริ่มของ CLI ล้มเหลว",
+        "selectedModelCompatible": "โมเดลที่เลือกเข้ากันได้",
+        "selectedModelCompatibilityPending": "รอการตรวจสอบความเข้ากันได้ของโมเดลที่เลือก",
+        "selectedModelAvailable": "โมเดลที่เลือกพร้อมใช้งาน",
+        "selectedModelVerified": "ยืนยันโมเดลที่เลือกแล้ว",
+        "selectedModelUnavailable": "โมเดลที่เลือกไม่พร้อมใช้งาน",
+        "selectedModelTimedOut": "การยืนยันโมเดลที่เลือกหมดเวลา",
+        "selectedModelCheckFailed": "การตรวจสอบโมเดลที่เลือกล้มเหลว",
+        "selectedModelDeferred": "เลื่อนการยืนยันโมเดลที่เลือก",
+        "selectedModelPingNotConfirmed": "ยังไม่ยืนยัน ping ของโมเดลที่เลือก",
+        "readyWithNotes": "พร้อม (มีหมายเหตุ)",
+        "needsAttention": "ต้องการความสนใจ"
+      },
+      "modelChecksSummary": "การตรวจสอบโมเดลที่เลือก - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "unavailable_one": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "unavailable_other": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "checkFailed": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "checkFailed_one": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "checkFailed_other": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "timedOut": "{{count}} โมเดลหมดเวลา",
+        "timedOut_one": "{{count}} โมเดลหมดเวลา",
+        "timedOut_other": "{{count}} โมเดลหมดเวลา",
+        "deferred": "{{count}} การยืนยันถูกเลื่อน",
+        "deferred_one": "{{count}} การยืนยันถูกเลื่อน",
+        "deferred_other": "{{count}} การยืนยันถูกเลื่อน",
+        "pingNotConfirmed": "{{count}} ยังไม่ยืนยัน ping",
+        "pingNotConfirmed_one": "{{count}} ยังไม่ยืนยัน ping",
+        "pingNotConfirmed_other": "{{count}} ยังไม่ยืนยัน ping",
+        "compatibilityPending": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatibilityPending_one": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatibilityPending_other": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatible": "{{count}} เข้ากันได้",
+        "compatible_one": "{{count}} เข้ากันได้",
+        "compatible_other": "{{count}} เข้ากันได้",
+        "checking": "{{count}} กำลังตรวจสอบ",
+        "checking_one": "{{count}} กำลังตรวจสอบ",
+        "checking_other": "{{count}} กำลังตรวจสอบ",
+        "available": "{{count}} พร้อมใช้งาน",
+        "available_one": "{{count}} พร้อมใช้งาน",
+        "available_other": "{{count}} พร้อมใช้งาน",
+        "verified": "{{count}} ยืนยันแล้ว",
+        "verified_one": "{{count}} ยืนยันแล้ว",
+        "verified_other": "{{count}} ยืนยันแล้ว",
+        "unavailable_few": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "unavailable_many": "{{count}} โมเดลไม่พร้อมใช้งาน",
+        "checkFailed_few": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "checkFailed_many": "{{count}} โมเดลตรวจสอบล้มเหลว",
+        "timedOut_few": "{{count}} โมเดลหมดเวลา",
+        "timedOut_many": "{{count}} โมเดลหมดเวลา",
+        "deferred_few": "{{count}} การยืนยันถูกเลื่อน",
+        "deferred_many": "{{count}} การยืนยันถูกเลื่อน",
+        "pingNotConfirmed_few": "{{count}} ยังไม่ยืนยัน ping",
+        "pingNotConfirmed_many": "{{count}} ยังไม่ยืนยัน ping",
+        "compatibilityPending_few": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatibilityPending_many": "{{count}} เข้ากันได้ รอการยืนยันเชิงลึก",
+        "compatible_few": "{{count}} เข้ากันได้",
+        "compatible_many": "{{count}} เข้ากันได้",
+        "checking_few": "{{count}} กำลังตรวจสอบ",
+        "checking_many": "{{count}} กำลังตรวจสอบ",
+        "available_few": "{{count}} พร้อมใช้งาน",
+        "available_many": "{{count}} พร้อมใช้งาน",
+        "verified_few": "{{count}} ยืนยันแล้ว",
+        "verified_many": "{{count}} ยืนยันแล้ว"
+      },
+      "openProviderSettings": "เปิดการตั้งค่า {{provider}}",
+      "copied": "คัดลอกแล้ว",
+      "copyDiagnostics": "คัดลอกการวินิจฉัย",
+      "deepVerificationPending": "การยืนยันเชิงลึกยังกำลังทำงาน โมเดล OpenCode ฟรีอาจใช้เวลาประมาณ 20 วินาที",
+      "progress": {
+        "checkingSelectedProviders": "กำลังตรวจสอบผู้ให้บริการที่เลือกพร้อมกัน...",
+        "checkingProvider": "กำลังตรวจสอบผู้ให้บริการ {{provider}}...",
+        "checkingProviders": "กำลังตรวจสอบผู้ให้บริการ {{providers}}..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "แก้ไขสิทธิ์โฟลเดอร์หรือย้ายโปรเจกต์ไปยังโฟลเดอร์ที่ผู้ใช้เขียนได้ การรันในฐานะผู้ดูแลระบบเป็นเพียงวิธีแก้ไขชั่วคราวเท่านั้น",
+        "openCodeBridgeNoOutput": "รีสตาร์ทแอปและรันไทม์ OpenCode แล้วลองอีกครั้ง หากเกิดขึ้นซ้ำ ให้คัดลอกการวินิจฉัย",
+        "workingDirectoryMissing": "เลือกไดเรกทอรีทำงานที่มีอยู่ แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "authenticationRequired": "ยืนยันตัวตนผู้ให้บริการที่จำเป็นใน runtime ที่กำหนดค่าไว้สำหรับผู้ให้บริการนั้น แล้วเปิดกล่องโต้ตอบนี้อีกครั้ง",
+        "runtimeProviderNotConfigured": "กำหนดค่ารันไทม์ของผู้ให้บริการที่เลือก แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "openCodeRuntimeMissing": "ติดตั้งหรือลองรันไทม์ OpenCode อีกครั้งจากการ์ดสถานะผู้ให้บริการ แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "openCodeAppMcpUnreachable": "ลองเริ่มอีกครั้งเพื่อรีเฟรช MCP บริดจ์ของแอป OpenCode หากเกิดขึ้นซ้ำ ให้รีสตาร์ทแอปและรันไทม์ OpenCode",
+        "cliBinaryMissing": "ตรวจสอบว่าได้ติดตั้ง runtime ภายในเครื่องที่จำเป็นและสามารถเริ่มทำงานได้ แล้วเปิดกล่องโต้ตอบนี้อีกครั้ง",
+        "default": "แก้ไขปัญหาด้านบน แล้วเปิดกล่องโต้ตอบนี้ใหม่",
+        "openCodeNodeModulesSymlinkPermission": "รัน Agent Teams AI ในฐานะผู้ดูแลระบบ แล้วลองเริ่มอีกครั้ง"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "เพื่อนร่วมทีม {{count}} คนรอการอนุมัติสิทธิ์",
+      "nameListWithMore": "{{names}}, +{{count}} เพิ่มเติม",
+      "waitingForOpenCode": "กำลังรอ OpenCode: {{names}}",
+      "bootstrapStalled": "การบูตสแตรปค้าง: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; กำลังรอ OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "การบูตสแตรปค้าง",
+        "shellOnly": "เชลล์เท่านั้น",
+        "waitingForBootstrap": "กำลังรอการบูตสแตรป",
+        "bootstrapUnconfirmed": "ยังไม่ยืนยันการบูตสแตรป",
+        "awaitingPermission": "รอการอนุมัติสิทธิ์",
+        "waitingForRuntime": "กำลังรอรันไทม์",
+        "shellOnlyLower": "เชลล์เท่านั้น",
+        "waitingForBootstrapLower": "กำลังรอการบูตสแตรป",
+        "bootstrapUnconfirmedLower": "ยังไม่ยืนยันการบูตสแตรป",
+        "awaitingPermissionLower": "รอการอนุมัติสิทธิ์",
+        "waitingForRuntimeLower": "กำลังรอรันไทม์"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} เริ่มไม่สำเร็จ",
+        "teammatesFailedToStart": "เพื่อนร่วมทีม {{count}} คนเริ่มไม่สำเร็จ",
+        "teammatesFailedRatio": "เพื่อนร่วมทีม {{count}}/{{total}} คนเริ่มไม่สำเร็จ"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} ถูกข้ามสำหรับการเริ่มนี้",
+        "memberSkippedWithReason": "{{name}} ถูกข้ามสำหรับการเริ่มนี้ - {{reason}}",
+        "memberSkippedCompact": "{{name}} ถูกข้าม",
+        "teammatesSkipped": "เพื่อนร่วมทีม {{count}} คนถูกข้าม",
+        "teammatesSkippedList": "เพื่อนร่วมทีมที่ถูกข้าม: {{list}}",
+        "teammatesSkippedRatio": "เพื่อนร่วมทีม {{count}}/{{total}} คนถูกข้ามสำหรับการเริ่มนี้"
+      },
+      "joining": {
+        "teammatesStillJoining": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_one": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_few": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_many": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesStillJoining_other": "เพื่อนร่วมทีม {{count}} คนยังกำลังเข้าร่วม",
+        "teammatesConfirmedRatio": "ยืนยันเพื่อนร่วมทีม {{count}}/{{total}} คนแล้ว"
+      },
+      "ready": {
+        "leadOnline": "หัวหน้าออนไลน์",
+        "allTeammatesJoined": "เพื่อนร่วมทีมทั้ง {{count}} คนเข้าร่วมแล้ว",
+        "teamProvisionedLeadOnline": "จัดเตรียมทีมแล้ว - หัวหน้าออนไลน์",
+        "teamProvisionedAllJoined": "จัดเตรียมทีมแล้ว - เพื่อนร่วมทีมทั้ง {{count}} คนเข้าร่วมแล้ว",
+        "teamProvisionedStillJoining": "จัดเตรียมทีมแล้ว - เพื่อนร่วมทีมยังกำลังเข้าร่วม",
+        "launchFinishedWithErrors": "การเริ่มเสร็จสิ้นพร้อมข้อผิดพลาด - เพื่อนร่วมทีม {{count}}/{{total}} คนเริ่มไม่สำเร็จ",
+        "launchContinuedSkipped": "การเริ่มดำเนินต่อ - เพื่อนร่วมทีม {{count}}/{{total}} คนถูกข้าม",
+        "teamLaunchedLeadOnline": "เริ่มทีมแล้ว - หัวหน้าออนไลน์",
+        "teamLaunchedAllJoined": "เริ่มทีมแล้ว - เพื่อนร่วมทีมทั้ง {{count}} คนเข้าร่วมแล้ว"
+      },
+      "panel": {
+        "launchFailed": "การเริ่มล้มเหลว",
+        "launchDetails": "รายละเอียดการเริ่ม",
+        "launchFinishedWithErrors": "การเริ่มเสร็จสิ้นพร้อมข้อผิดพลาด",
+        "launchContinuedSkipped": "การเริ่มดำเนินต่อพร้อมเพื่อนร่วมทีมที่ถูกข้าม",
+        "coreTeamReady": "ทีมหลักพร้อมแล้ว",
+        "finishingLaunch": "กำลังสรุปการเริ่ม",
+        "teamLaunched": "เริ่มทีมแล้ว",
+        "launchingTeam": "กำลังเริ่มทีม"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "สถานะรันไทม์สด",
+    "description": "การเต้นหัวใจและสถานะการเริ่มแบบแสดงผลเท่านั้น การควบคุมกระบวนการยังคงอยู่ด้านล่าง",
+    "source": "แหล่งที่มา: {{source}}",
+    "lane": "เลน {{lane}}",
+    "diagnosticOnly": "การวินิจฉัยเท่านั้น",
+    "updated": "อัปเดต {{value}}",
+    "states": {
+      "running": "กำลังทำงาน",
+      "starting": "กำลังเริ่ม",
+      "waiting": "กำลังรอ",
+      "degraded": "ต้องการความสนใจ",
+      "stopped": "หยุดแล้ว",
+      "unknown": "ไม่ทราบ"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "บันทึกงานที่แม่นยำ",
+      "loading": "กำลังโหลดบันทึกงานที่แม่นยำ...",
+      "description": "ส่วนทรานสคริปต์ที่แม่นยำซึ่งเรนเดอร์ด้วยส่วนประกอบบันทึกการทำงานเดียวกับที่ใช้ในบันทึก",
+      "emptyTitle": "ยังไม่มีบันทึกงานที่แม่นยำ",
+      "emptyDescription": "ชุดทรานสคริปต์ที่แม่นยำจะปรากฏที่นี่เมื่อมีเมตาดาตาทรานสคริปต์ที่เชื่อมโยงกับงานอย่างชัดเจน",
+      "summaryOnly": "เฉพาะสรุป"
+    },
+    "executionSessions": {
+      "title": "เซสชันการทำงาน",
+      "online": "ออนไลน์",
+      "updating": "กำลังอัปเดต...",
+      "description": "การเรียกดูและตัวอย่างทรานสคริปต์แบบเดิมที่เน้นเซสชัน"
+    },
+    "stream": {
+      "title": "สตรีมบันทึกงาน"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "ยกเลิกงาน {{taskId}}",
+      "cancel": "ยกเลิก",
+      "moveBackToTodoConfirm": "ย้ายงานนี้กลับไปยัง TODO และแจ้งทีมหรือไม่?",
+      "confirm": "ยืนยัน",
+      "keep": "เก็บไว้",
+      "changesNeedAttention": "การเปลี่ยนแปลงต้องการความสนใจ",
+      "changes": "การเปลี่ยนแปลง",
+      "deleteTask": "ลบงาน",
+      "taskLogsActive": "บันทึกงานทำงานอยู่",
+      "newTaskLogsArriving": "บันทึกงานใหม่กำลังมาถึง",
+      "awaitingUser": "รอผู้ใช้",
+      "awaitingLead": "รอหัวหน้า",
+      "blockedBy": "ถูกบล็อกโดย",
+      "blocks": "บล็อก",
+      "start": "เริ่ม",
+      "complete": "เสร็จสิ้น",
+      "approve": "อนุมัติ",
+      "requestReview": "ขอรีวิว",
+      "manualReview": "รีวิวด้วยตนเอง",
+      "requestChanges": "ขอให้แก้ไข"
+    },
+    "filter": {
+      "title": "กรองงาน",
+      "session": "เซสชัน",
+      "allSessions": "ทุกเซสชัน",
+      "teammate": "เพื่อนร่วมทีม",
+      "unassigned": "(ยังไม่ได้มอบหมาย)",
+      "column": "คอลัมน์",
+      "clearAll": "ล้างทั้งหมด"
+    },
+    "board": {
+      "addTask": "เพิ่มงาน",
+      "noTasks": "ไม่มีงาน",
+      "showMore": "แสดงอีก {{count}} รายการ",
+      "hiddenCount": "{{count}} ที่ซ่อน",
+      "trash": "ถังขยะ",
+      "gridView": "มุมมองตาราง",
+      "columnsView": "มุมมองคอลัมน์"
+    },
+    "trash": {
+      "title": "ถังขยะ",
+      "empty": "ไม่มีงานที่ถูกลบ",
+      "subject": "หัวเรื่อง",
+      "owner": "เจ้าของ",
+      "deleted": "ลบแล้ว",
+      "unassigned": "ยังไม่ได้มอบหมาย",
+      "restoreTask": "กู้คืนงาน",
+      "restore": "กู้คืน",
+      "close": "ปิด"
+    },
+    "sort": {
+      "title": "เรียงงาน",
+      "sortBy": "เรียงตาม",
+      "reset": "รีเซ็ต",
+      "options": {
+        "updatedAt": {
+          "label": "อัปเดตล่าสุด",
+          "description": "ที่อัปเดตล่าสุดก่อน"
+        },
+        "createdAt": {
+          "label": "สร้างเมื่อ",
+          "description": "ใหม่สุดก่อน"
+        },
+        "owner": {
+          "label": "เจ้าของ",
+          "description": "เรียงตามตัวอักษรตามผู้รับมอบหมาย"
+        },
+        "manual": {
+          "label": "ด้วยตนเอง",
+          "description": "ลำดับแบบลากแล้ววาง"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "ล้างการค้นหา",
+      "tasks": "งาน",
+      "createdAgo": "สร้างเมื่อ {{time}}",
+      "updatedAgo": "อัปเดตเมื่อ {{time}}",
+      "placeholder": "ค้นหางาน... (#id หรือข้อความ)"
+    },
+    "grid": {
+      "addTask": "เพิ่มงาน",
+      "noTasks": "ไม่มีงาน"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "กำลังตรวจสอบสถานะที่เก็บ Git สำหรับ worktree ของเพื่อนร่วมทีม...",
+    "ready": "Git worktree พร้อมแล้ว",
+    "readyOnBranch": "Git worktree พร้อมแล้วบนสาขา {{branch}}",
+    "needsSetup": "การแยก worktree ต้องตั้งค่า Git",
+    "initialCommitNotice": "การคอมมิตเริ่มต้นจะ stage และคอมมิตไฟล์ปัจจุบันทั้งหมดด้วยข้อความ",
+    "initializeRepository": "เริ่มต้นที่เก็บ Git",
+    "createInitialCommit": "สร้างคอมมิตเริ่มต้น",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "การตั้งค่า",
+    "autoAllowAllTools": "อนุญาตเครื่องมือทั้งหมดอัตโนมัติ",
+    "autoAllowFileEdits": "อนุญาตการแก้ไขไฟล์อัตโนมัติ (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "อนุญาตคำสั่งที่ปลอดภัยอัตโนมัติ (git, pnpm, npm, ls...)",
+    "onTimeout": "เมื่อหมดเวลา:",
+    "after": "หลังจาก",
+    "secondsShort": "วินาที",
+    "timeoutActions": {
+      "wait": "รอตลอดไป",
+      "allow": "อนุญาต",
+      "deny": "ปฏิเสธ"
+    },
+    "submit": "ส่ง",
+    "allow": "อนุญาต",
+    "deny": "ปฏิเสธ",
+    "allowAll": "อนุญาตทั้งหมด",
+    "pendingCount": "{{count}} รอดำเนินการ",
+    "autoActionIn": "อัตโนมัติ-{{action}} ใน {{time}}",
+    "diff": {
+      "previewChanges": "ดูตัวอย่างการเปลี่ยนแปลง",
+      "readingFile": "กำลังอ่านไฟล์...",
+      "binaryFile": "ไฟล์ไบนารี - ไม่สามารถดูตัวอย่างได้",
+      "truncated": "ไฟล์ถูกตัดทอนที่ 2MB - diff อาจไม่สมบูรณ์",
+      "newFile": "ไฟล์ใหม่"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "การซิงค์งานของสมาชิก",
+      "actionableItems": "รายการที่ดำเนินการได้",
+      "fingerprint": "ลายนิ้วมือ",
+      "report": "รายงาน",
+      "none": "ไม่มี",
+      "shadowWouldNudge": "Shadow จะกระตุ้น",
+      "yes": "ใช่",
+      "no": "ไม่",
+      "moreActionableItems": "รายการที่ดำเนินการได้อีก {{count}} รายการ",
+      "diagnostics": "การวินิจฉัย: {{diagnostics}}",
+      "autoResumeStopped": "การดำเนินการต่ออัตโนมัติหยุดแล้ว",
+      "continue": "ดำเนินการต่อ",
+      "stopAutoResume": "หยุดการทำงานต่ออัตโนมัติ",
+      "resumeAutoResume": "ทำงานต่ออัตโนมัติอีกครั้ง"
+    },
+    "title": "การซิงค์งานของสมาชิก",
+    "loadingDiagnostics": "กำลังโหลดการวินิจฉัยการซิงค์งานของสมาชิก",
+    "diagnosticsUnavailable": "การวินิจฉัยการซิงค์งานของสมาชิกไม่พร้อมใช้งาน"
+  },
+  "advancedCli": {
+    "title": "ขั้นสูง",
+    "useWorktree": "Worktree ของหัวหน้าทีม (แยกจาก worktree ของเพื่อนร่วมทีม)",
+    "recent": "ล่าสุด",
+    "commandPreview": "ตัวอย่างคำสั่ง",
+    "customArguments": "อาร์กิวเมนต์กำหนดเอง",
+    "validate": "ตรวจสอบ",
+    "validation": {
+      "allFlagsValid": "แฟล็กทั้งหมดถูกต้อง",
+      "unknownFlags": "ไม่ทราบ: {{flags}}",
+      "protectedFlags": "ที่ป้องกัน: {{flags}}",
+      "failed": "การตรวจสอบล้มเหลว"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} ที่แล้ว",
+    "stoppedAgo": "หยุดเมื่อ {{time}} ที่แล้ว",
+    "running": "กำลังทำงาน",
+    "stopped": "หยุดแล้ว",
+    "stopProcess": "หยุดกระบวนการ (SIGTERM)",
+    "kill": "Kill",
+    "openInBrowser": "เปิดในเบราว์เซอร์",
+    "open": "เปิด",
+    "pid": "PID{{pid}}",
+    "title": "กระบวนการ CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "กำลังโหลดรายละเอียดกิจกรรม...",
+    "contextUnavailable": "บริบททรานสคริปต์โดยละเอียดไม่พร้อมใช้งานสำหรับกิจกรรมนี้อีกต่อไป",
+    "loading": "กำลังโหลดกิจกรรมงาน...",
+    "lowSignalOnly": "ยังไม่พบกิจกรรมงานสำคัญ รายละเอียดการทำงานระดับล่างมีอยู่ด้านล่างในสตรีมบันทึกงาน",
+    "empty": "ยังไม่พบกิจกรรมงานที่ชัดเจนในทรานสคริปต์ที่มี บันทึกเซสชันที่เก่ากว่าหรือแบบฮิวริสติกอาจยังมีอยู่ด้านล่างในเซสชันการทำงาน",
+    "title": "กิจกรรมงาน",
+    "description": "กิจกรรมรันไทม์ที่ชัดเจนสำคัญซึ่งเชื่อมโยงกับงานนี้จากเมตาดาตาทรานสคริปต์"
+  },
+  "sendMessage": {
+    "title": "ส่งข้อความ",
+    "description": "ส่งข้อความโดยตรงถึงสมาชิกทีม",
+    "recipientLabel": "ผู้รับ",
+    "selectMemberPlaceholder": "เลือกสมาชิก...",
+    "messageLabel": "ข้อความ",
+    "placeholder": "เขียนข้อความของคุณ... (Enter เพื่อส่ง)",
+    "send": "ส่ง",
+    "sending": "กำลังส่ง...",
+    "charsLeft": "เหลือ {{count}} อักขระ",
+    "saved": "บันทึกแล้ว",
+    "attachments": {
+      "teamOnlineRequired": "ทีมต้องออนไลน์เพื่อแนบไฟล์",
+      "recipientUnsupported": "สามารถส่งไฟล์ไปยังหัวหน้าทีมหรือเพื่อนร่วมทีม OpenCode ได้",
+      "openCodeOnlineRequired": "ทีมต้องออนไลน์เพื่อแนบไฟล์สำหรับเพื่อนร่วมทีม OpenCode",
+      "disabledHint": "รองรับไฟล์แนบสำหรับหัวหน้าทีมออนไลน์และเพื่อนร่วมทีม OpenCode ออนไลน์ ลบไฟล์แนบหรือเปลี่ยนผู้รับ",
+      "attachFiles": "แนบไฟล์ (วางหรือลากแล้ววาง)",
+      "unavailable": "ไฟล์แนบไม่พร้อมใช้งาน"
+    },
+    "quote": {
+      "remove": "ลบคำอ้างอิง",
+      "replyingTo": "กำลังตอบกลับถึง"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "ยกเลิกการตอบกลับ",
+    "replyingTo": "กำลังตอบกลับถึง",
+    "placeholder": "เพิ่มความคิดเห็น... (Enter เพื่อส่ง)",
+    "attachFile": "แนบไฟล์ (หรือวาง)",
+    "voiceToText": "เสียงเป็นข้อความ",
+    "comment": "ความคิดเห็น",
+    "charsLeft": "เหลือ {{count}} อักขระ",
+    "saved": "บันทึกแล้ว",
+    "awaitingReplyFrom": "รอการตอบกลับจาก",
+    "or": "หรือ"
+  },
+  "taskAttachments": {
+    "dropImageHere": "วางภาพที่นี่",
+    "attachImage": "แนบภาพ",
+    "pasteOrDragDrop": "หรือวาง / ลากแล้ววาง",
+    "fromOriginalMessage": "จากข้อความต้นฉบับ",
+    "dropFilesHere": "วางไฟล์ที่นี่",
+    "loading": "กำลังโหลดไฟล์แนบ..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "อนุมัติเครื่องมือทั้งหมดอัตโนมัติ",
+    "autonomousModeDescription": "โหมดอัตโนมัติ: เครื่องมือทีมทำงานโดยไม่ต้องยืนยัน ระวังกับโค้ดที่ไม่น่าเชื่อถือ",
+    "manualModeDescription": "โหมดด้วยตนเอง: คุณจะอนุมัติหรือปฏิเสธการเรียกเครื่องมือแต่ละครั้งแบบเรียลไทม์"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "การทำงาน",
+      "process": "กระบวนการ"
+    },
+    "filters": {
+      "all": "ทั้งหมด"
+    },
+    "logs": {
+      "title": "บันทึก",
+      "loading": "กำลังโหลดสตรีมบันทึกของสมาชิก...",
+      "emptyTitle": "ยังไม่พบรายการสตรีมบันทึกสำหรับสมาชิกคนนี้",
+      "emptyDescription": "บันทึกทรานสคริปต์หรือรันไทม์ที่กำหนดขอบเขตต่อสมาชิกจะปรากฏที่นี่เมื่อมี"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "อธิบายสิ่งที่ต้องเปลี่ยน... (Enter เพื่อส่ง)",
+    "submit": "ส่ง",
+    "charsLeft": "เหลือ {{count}} อักขระ",
+    "saved": "บันทึกแล้ว",
+    "title": "ขอให้แก้ไข"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "เปิดแดชบอร์ด",
+      "openTeam": "เปิดทีม",
+      "cancel": "ยกเลิก"
+    },
+    "membersJson": {
+      "hide": "ซ่อน JSON"
+    },
+    "optional": {
+      "badge": "ไม่บังคับ"
+    }
+  },
+  "runningTeams": {
+    "title": "ทีมที่กำลังทำงาน",
     "status": {
       "active": "ใช้งานอยู่",
       "provisioning": "กำลังเริ่ม",

@@ -1531,27 +1531,27 @@
       "title": "Перезапуск перезапустить поточний запуск команди"
     },
     "schedule": {
-      "agentDescription": "Якщо команда вимкнена — запускає окремого агента; якщо працює — призначає завдання.",
-      "execution": "Виконання",
       "labelOptional": "Мітка (необов'язково)",
       "labelPlaceholder": "напр., Щоденний код-рев'ю, Нічні тести...",
-      "leadDefault": "Лід команди (типово)",
-      "legacyNotice": "Наявний одноразовий розклад: збереження не змінить його поведінку.",
       "maxBudgetUsd": "Макс. бюджет (USD)",
       "maxTurns": "Макс. ходів",
       "noLimit": "Без обмеження",
       "noMatches": "Жодна команда не відповідає вашому пошуку.",
       "noTeams": "Немає доступних команд. Спочатку створіть команду.",
-      "oneAgent": "Один агент",
       "searchTeams": "Пошук команд...",
       "selectTeam": "Виберіть команду...",
-      "target": "Виконавець, якщо команда працює",
       "team": "Команда",
-      "teamDescription": "Якщо команда вимкнена — запускає її; якщо працює — призначає завдання ліду. Використовує збережені налаштування.",
-      "teamPathMissing": "Збережіть папку проєкту команди, перш ніж планувати її запуск.",
       "title": "Розклад",
+      "execution": "Виконання",
+      "legacyNotice": "Наявний одноразовий розклад: збереження не змінить його поведінку.",
       "upgradeSmart": "Перейти на розумний розклад",
-      "wholeTeam": "Уся команда"
+      "oneAgent": "Один агент",
+      "wholeTeam": "Уся команда",
+      "target": "Виконавець, якщо команда працює",
+      "leadDefault": "Лід команди (типово)",
+      "agentDescription": "Якщо команда вимкнена — запускає окремого агента; якщо працює — призначає завдання.",
+      "teamDescription": "Якщо команда вимкнена — запускає її; якщо працює — призначає завдання ліду. Використовує збережені налаштування.",
+      "teamPathMissing": "Збережіть папку проєкту команди, перш ніж планувати її запуск."
     },
     "title": {
       "createSchedule": "Створити розклад",
@@ -2167,17 +2167,542 @@
       "disabled": "Вимкнено"
     },
     "runStatus": {
-      "cancelled": "Скасовано",
+      "pending": "В очікуванні",
+      "warmingUp": "Розігрів",
+      "warm": "Розігрітий",
+      "running": "Виконується",
       "completed": "Завершено",
-      "dispatched": "Передано",
       "failed": "Не вдалося",
       "interrupted": "Перервано",
-      "pending": "В очікуванні",
-      "running": "Виконується",
-      "skipped": "Пропущено",
-      "warm": "Розігрітий",
-      "warmingUp": "Розігрів"
+      "cancelled": "Скасовано",
+      "dispatched": "Передано",
+      "skipped": "Пропущено"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Локальні моделі OpenCode можуть використовувати бюджет контексту OpenCode замість лімітів лише для промпту.",
+    "description": "Додайте відповідні ліміти до конфігурації OpenCode для провайдера та моделі, які використовує цей учасник. Це допомагає OpenCode стискати й обрізати, перш ніж локальні моделі переповнять своє контекстне вікно.",
+    "replacePrefix": "Замініть",
+    "and": "та",
+    "replaceSuffix": "ідентифікаторами провайдера та моделі з вашого налаштування OpenCode. Інструкції в промпті, як-от",
+    "promptInstructionsSuffix": "слабші, бо запит збирається до того, як модель їх прочитає.",
+    "providerLimits": "Ліміти провайдера",
+    "compactionConfig": "Конфігурація стиснення"
+  },
+  "sessions": {
+    "noProjectPath": "Немає пов'язаного шляху проєкту",
+    "provisioningHint": "Сесії з'являться після розгортання команди",
+    "projectNotFound": "Проєкт не знайдено",
+    "loading": "Завантаження сесій...",
+    "empty": "Сесій не знайдено",
+    "showAllSessions": "Показати для всіх сесій",
+    "lead": "лідер",
+    "removeFilter": "Видалити фільтр",
+    "filterBySession": "Фільтрувати за цією сесією",
+    "openSession": "Відкрити сесію",
+    "title": "Сесії"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Скасувати",
+    "moreWarningsHidden": "{{count}} попереджень приховано",
+    "diagnostics": "Діагностика",
+    "liveOutput": "Живий вивід",
+    "diagnosticsCopied": "Діагностику скопійовано",
+    "copyDiagnostics": "Копіювати діагностику",
+    "copied": "Скопійовано",
+    "noOutput": "Поки не захоплено виводу.",
+    "cliLogs": "Журнали CLI",
+    "steps": {
+      "starting": "Запуск",
+      "configuring": "Налаштування команди",
+      "assembling": "Приєднання учасників",
+      "finalizing": "Завершення"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "перевірка...",
+        "ready": "OK",
+        "notes": "OK (примітки)",
+        "failed": "ПОМИЛКА",
+        "pending": "очікування"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Бінарний файл CLI відсутній",
+        "openCodeRuntimeMissing": "Середовище OpenCode відсутнє",
+        "openCodeWindowsAccessBlocked": "Доступ OpenCode у Windows заблоковано",
+        "openCodeNoOutput": "Перевірка середовища OpenCode не повернула виводу",
+        "openCodeMcpUnreachable": "Застосунок MCP OpenCode недосяжний",
+        "workingDirectoryMissing": "Робочий каталог відсутній",
+        "cliBinaryCouldNotStart": "Не вдалося запустити бінарний файл CLI",
+        "cliPreflightIncomplete": "Передперевірка CLI не завершилася",
+        "authenticationRequired": "Потрібна автентифікація",
+        "runtimeProviderNotConfigured": "Провайдер середовища не налаштовано",
+        "cliPreflightFailed": "Передперевірка CLI не вдалася",
+        "selectedModelCompatible": "Вибрана модель сумісна",
+        "selectedModelCompatibilityPending": "Сумісність вибраної моделі в очікуванні",
+        "selectedModelAvailable": "Вибрана модель доступна",
+        "selectedModelVerified": "Вибрану модель перевірено",
+        "selectedModelUnavailable": "Вибрана модель недоступна",
+        "selectedModelTimedOut": "Час перевірки вибраної моделі вичерпано",
+        "selectedModelCheckFailed": "Перевірка вибраної моделі не вдалася",
+        "selectedModelDeferred": "Перевірку вибраної моделі відкладено",
+        "selectedModelPingNotConfirmed": "Ping вибраної моделі не підтверджено",
+        "readyWithNotes": "Готово з примітками",
+        "needsAttention": "Потребує уваги"
+      },
+      "modelChecksSummary": "Перевірки вибраної моделі - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} модель недоступна",
+        "unavailable_one": "{{count}} модель недоступна",
+        "unavailable_other": "{{count}} моделей недоступні",
+        "checkFailed": "{{count}} перевірка моделі не вдалася",
+        "checkFailed_one": "{{count}} перевірка моделі не вдалася",
+        "checkFailed_other": "{{count}} перевірок моделей не вдалися",
+        "timedOut": "{{count}} модель завершилася за тайм-аутом",
+        "timedOut_one": "{{count}} модель завершилася за тайм-аутом",
+        "timedOut_other": "{{count}} моделей завершилися за тайм-аутом",
+        "deferred": "{{count}} перевірку відкладено",
+        "deferred_one": "{{count}} перевірку відкладено",
+        "deferred_other": "{{count}} перевірок відкладено",
+        "pingNotConfirmed": "{{count}} ping не підтверджено",
+        "pingNotConfirmed_one": "{{count}} ping не підтверджено",
+        "pingNotConfirmed_other": "{{count}} ping не підтверджено",
+        "compatibilityPending": "{{count}} сумісна, глибока перевірка в очікуванні",
+        "compatibilityPending_one": "{{count}} сумісна, глибока перевірка в очікуванні",
+        "compatibilityPending_other": "{{count}} сумісних, глибока перевірка в очікуванні",
+        "compatible": "{{count}} сумісна",
+        "compatible_one": "{{count}} сумісна",
+        "compatible_other": "{{count}} сумісних",
+        "checking": "{{count}} перевіряється",
+        "checking_one": "{{count}} перевіряється",
+        "checking_other": "{{count}} перевіряється",
+        "available": "{{count}} доступна",
+        "available_one": "{{count}} доступна",
+        "available_other": "{{count}} доступних",
+        "verified": "{{count}} перевірено",
+        "verified_one": "{{count}} перевірено",
+        "verified_other": "{{count}} перевірено",
+        "unavailable_few": "{{count}} моделі недоступні",
+        "unavailable_many": "{{count}} моделей недоступні",
+        "checkFailed_few": "{{count}} перевірки моделей не вдалися",
+        "checkFailed_many": "{{count}} перевірок моделей не вдалися",
+        "timedOut_few": "{{count}} моделі завершилися за тайм-аутом",
+        "timedOut_many": "{{count}} моделей завершилися за тайм-аутом",
+        "deferred_few": "{{count}} перевірки відкладено",
+        "deferred_many": "{{count}} перевірок відкладено",
+        "pingNotConfirmed_few": "{{count}} ping не підтверджено",
+        "pingNotConfirmed_many": "{{count}} ping не підтверджено",
+        "compatibilityPending_few": "{{count}} сумісні, глибока перевірка в очікуванні",
+        "compatibilityPending_many": "{{count}} сумісних, глибока перевірка в очікуванні",
+        "compatible_few": "{{count}} сумісні",
+        "compatible_many": "{{count}} сумісних",
+        "checking_few": "{{count}} перевіряється",
+        "checking_many": "{{count}} перевіряється",
+        "available_few": "{{count}} доступні",
+        "available_many": "{{count}} доступних",
+        "verified_few": "{{count}} перевірено",
+        "verified_many": "{{count}} перевірено"
+      },
+      "openProviderSettings": "Відкрити налаштування {{provider}}",
+      "copied": "Скопійовано",
+      "copyDiagnostics": "Копіювати діагностику",
+      "deepVerificationPending": "Глибока перевірка ще триває. Безплатні моделі OpenCode можуть зайняти близько 20 секунд.",
+      "progress": {
+        "checkingSelectedProviders": "Перевірка вибраних провайдерів паралельно...",
+        "checkingProvider": "Перевірка провайдера {{provider}}...",
+        "checkingProviders": "Перевірка {{providers}} провайдерів..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Виправте права доступу до теки чи перемістіть проєкт у теку з правом запису для користувача. Запуск від імені адміністратора - лише тимчасовий обхід.",
+        "openCodeBridgeNoOutput": "Перезапустіть застосунок і середовище OpenCode, потім повторіть. Якщо повторюється, скопіюйте діагностику.",
+        "workingDirectoryMissing": "Виберіть наявний робочий каталог, потім відкрийте цей діалог знову.",
+        "authenticationRequired": "Авторизуйте потрібного провайдера в налаштованому для нього runtime, потім знову відкрийте цей діалог.",
+        "runtimeProviderNotConfigured": "Налаштуйте середовище вибраного провайдера, потім відкрийте цей діалог знову.",
+        "openCodeRuntimeMissing": "Встановіть чи повторіть середовище OpenCode з картки статусу провайдера, потім відкрийте цей діалог знову.",
+        "openCodeAppMcpUnreachable": "Повторіть запуск, щоб оновити міст застосунку MCP OpenCode. Якщо повторюється, перезапустіть застосунок і середовище OpenCode.",
+        "cliBinaryMissing": "Переконайтеся, що необхідний локальний runtime установлено і його можна запустити, потім знову відкрийте цей діалог.",
+        "default": "Вирішіть проблему вище, потім відкрийте цей діалог знову.",
+        "openCodeNodeModulesSymlinkPermission": "Запустіть Agent Teams AI від імені адміністратора, потім повторіть запуск."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} учасник очікує затвердження дозволу",
+      "nameListWithMore": "{{names}}, +{{count}} ще",
+      "waitingForOpenCode": "Очікування OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap застряг: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Очікування OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap застряг",
+        "shellOnly": "Лише оболонка",
+        "waitingForBootstrap": "Очікування bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap не підтверджено",
+        "awaitingPermission": "Очікування дозволу",
+        "waitingForRuntime": "Очікування середовища",
+        "shellOnlyLower": "лише оболонка",
+        "waitingForBootstrapLower": "очікування bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap не підтверджено",
+        "awaitingPermissionLower": "очікування дозволу",
+        "waitingForRuntimeLower": "очікування середовища"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} не вдалося запустити",
+        "teammatesFailedToStart": "{{count}} учасників не вдалося запустити",
+        "teammatesFailedRatio": "{{count}}/{{total}} учасників не вдалося запустити"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} пропущено для цього запуску",
+        "memberSkippedWithReason": "{{name}} пропущено для цього запуску - {{reason}}",
+        "memberSkippedCompact": "{{name}} пропущено",
+        "teammatesSkipped": "{{count}} учасників пропущено",
+        "teammatesSkippedList": "Пропущені учасники: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} учасників пропущено для цього запуску"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} учасників усе ще приєднуються",
+        "teammatesStillJoining_one": "{{count}} учасник усе ще приєднується",
+        "teammatesStillJoining_few": "{{count}} учасники усе ще приєднуються",
+        "teammatesStillJoining_many": "{{count}} учасників усе ще приєднуються",
+        "teammatesStillJoining_other": "{{count}} учасників усе ще приєднуються",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} учасників підтверджено"
+      },
+      "ready": {
+        "leadOnline": "Лідер онлайн",
+        "allTeammatesJoined": "Усі {{count}} учасників приєдналися",
+        "teamProvisionedLeadOnline": "Команду розгорнуто - лідер онлайн",
+        "teamProvisionedAllJoined": "Команду розгорнуто - усі {{count}} учасників приєдналися",
+        "teamProvisionedStillJoining": "Команду розгорнуто - учасники все ще приєднуються",
+        "launchFinishedWithErrors": "Запуск завершено з помилками - {{count}}/{{total}} учасників не вдалося запустити",
+        "launchContinuedSkipped": "Запуск продовжено - {{count}}/{{total}} учасників пропущено",
+        "teamLaunchedLeadOnline": "Команду запущено - лідер онлайн",
+        "teamLaunchedAllJoined": "Команду запущено - усі {{count}} учасників приєдналися"
+      },
+      "panel": {
+        "launchFailed": "Запуск не вдався",
+        "launchDetails": "Деталі запуску",
+        "launchFinishedWithErrors": "Запуск завершено з помилками",
+        "launchContinuedSkipped": "Запуск продовжено з пропущеними учасниками",
+        "coreTeamReady": "Основна команда готова",
+        "finishingLaunch": "Завершення запуску",
+        "teamLaunched": "Команду запущено",
+        "launchingTeam": "Запуск команди"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Живий статус середовища",
+    "description": "Лише для відображення: серцебиття та стан запуску. Керування процесом залишається нижче.",
+    "source": "джерело: {{source}}",
+    "lane": "лінія {{lane}}",
+    "diagnosticOnly": "Лише діагностика",
+    "updated": "оновлено {{value}}",
+    "states": {
+      "running": "Виконується",
+      "starting": "Запускається",
+      "waiting": "Очікування",
+      "degraded": "Потребує уваги",
+      "stopped": "Зупинено",
+      "unknown": "Невідомо"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Точні журнали завдання",
+      "loading": "Завантаження точних журналів завдання...",
+      "description": "Точні фрагменти транскрипту, відрендерені з тими самими компонентами журналу виконання, що використовуються в «Журналах».",
+      "emptyTitle": "Поки немає точних журналів завдання",
+      "emptyDescription": "Точні пакети транскрипту з'являться тут, коли будуть доступні явні метадані транскрипту, пов'язані із завданням.",
+      "summaryOnly": "лише підсумок"
+    },
+    "executionSessions": {
+      "title": "Сесії виконання",
+      "online": "Онлайн",
+      "updating": "Оновлення...",
+      "description": "Застарілий перегляд і попередні перегляди транскриптів, орієнтованих на сесії."
+    },
+    "stream": {
+      "title": "Потік журналу завдання"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Скасувати завдання {{taskId}}",
+      "cancel": "Скасувати",
+      "moveBackToTodoConfirm": "Перемістити це завдання назад у TODO та сповістити команду?",
+      "confirm": "Підтвердити",
+      "keep": "Зберегти",
+      "changesNeedAttention": "Зміни потребують уваги",
+      "changes": "Зміни",
+      "deleteTask": "Видалити завдання",
+      "taskLogsActive": "Журнали завдання активні",
+      "newTaskLogsArriving": "Надходять нові журнали завдання",
+      "awaitingUser": "Очікування користувача",
+      "awaitingLead": "Очікування лідера",
+      "blockedBy": "Заблоковано",
+      "blocks": "Блокує",
+      "start": "Почати",
+      "complete": "Завершити",
+      "approve": "Затвердити",
+      "requestReview": "Запитати перегляд",
+      "manualReview": "Ручний перегляд",
+      "requestChanges": "Запитати зміни"
+    },
+    "filter": {
+      "title": "Фільтрувати завдання",
+      "session": "Сесія",
+      "allSessions": "Усі сесії",
+      "teammate": "Учасник",
+      "unassigned": "(не призначено)",
+      "column": "Стовпець",
+      "clearAll": "Очистити все"
+    },
+    "board": {
+      "addTask": "Додати завдання",
+      "noTasks": "Немає завдань",
+      "showMore": "Показати ще {{count}}",
+      "hiddenCount": "{{count}} приховано",
+      "trash": "Кошик",
+      "gridView": "Перегляд сіткою",
+      "columnsView": "Перегляд стовпцями"
+    },
+    "trash": {
+      "title": "Кошик",
+      "empty": "Немає видалених завдань",
+      "subject": "Тема",
+      "owner": "Власник",
+      "deleted": "Видалено",
+      "unassigned": "Не призначено",
+      "restoreTask": "Відновити завдання",
+      "restore": "Відновити",
+      "close": "Закрити"
+    },
+    "sort": {
+      "title": "Сортувати завдання",
+      "sortBy": "Сортувати за",
+      "reset": "Скинути",
+      "options": {
+        "updatedAt": {
+          "label": "Останнє оновлення",
+          "description": "Нещодавно оновлені спочатку"
+        },
+        "createdAt": {
+          "label": "Створено",
+          "description": "Найновіші спочатку"
+        },
+        "owner": {
+          "label": "Власник",
+          "description": "За абеткою за виконавцем"
+        },
+        "manual": {
+          "label": "Вручну",
+          "description": "Порядок перетягуванням"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Очистити пошук",
+      "tasks": "Завдання",
+      "createdAgo": "створено {{time}}",
+      "updatedAgo": "оновлено {{time}}",
+      "placeholder": "Пошук завдань... (#id або текст)"
+    },
+    "grid": {
+      "addTask": "Додати завдання",
+      "noTasks": "Немає завдань"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TODO",
+      "inProgress": "У ПРОЦЕСІ",
+      "review": "ПЕРЕГЛЯД",
+      "done": "ГОТОВО",
+      "approved": "ЗАТВЕРДЖЕНО"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Перевірка статусу репозиторію Git для worktree учасників...",
+    "ready": "Git worktree готові.",
+    "readyOnBranch": "Git worktree готові на гілці {{branch}}.",
+    "needsSetup": "Ізоляція worktree потребує налаштування Git",
+    "initialCommitNotice": "Дія початкового коміту індексує та комітить усі поточні файли з повідомленням",
+    "initializeRepository": "Ініціалізувати репозиторій Git",
+    "createInitialCommit": "Створити початковий коміт",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Налаштування",
+    "autoAllowAllTools": "Автоматично дозволяти всі інструменти",
+    "autoAllowFileEdits": "Автоматично дозволяти редагування файлів (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Автоматично дозволяти безпечні команди (git, pnpm, npm, ls...)",
+    "onTimeout": "При тайм-ауті:",
+    "after": "через",
+    "secondsShort": "с",
+    "timeoutActions": {
+      "wait": "Чекати завжди",
+      "allow": "Дозволити",
+      "deny": "Відхилити"
+    },
+    "submit": "Надіслати",
+    "allow": "Дозволити",
+    "deny": "Відхилити",
+    "allowAll": "Дозволити все",
+    "pendingCount": "{{count}} в очікуванні",
+    "autoActionIn": "Авто-{{action}} через {{time}}",
+    "diff": {
+      "previewChanges": "Переглянути зміни",
+      "readingFile": "Читання файлу...",
+      "binaryFile": "Бінарний файл - неможливо переглянути",
+      "truncated": "Файл скорочено на 2MB - відмінності можуть бути неповними",
+      "newFile": "Новий файл"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Синхронізація роботи учасника",
+      "actionableItems": "Дієві елементи",
+      "fingerprint": "Відбиток",
+      "report": "Звіт",
+      "none": "немає",
+      "shadowWouldNudge": "Тінь нагадала б",
+      "yes": "так",
+      "no": "ні",
+      "moreActionableItems": "ще {{count}} дієвих елементів",
+      "diagnostics": "Діагностика: {{diagnostics}}",
+      "autoResumeStopped": "Автоматичне продовження зупинено.",
+      "continue": "Продовжити",
+      "stopAutoResume": "Зупинити авто-відновлення",
+      "resumeAutoResume": "Відновити авто-відновлення"
+    },
+    "title": "Синхронізація роботи учасника",
+    "loadingDiagnostics": "Завантаження діагностики синхронізації роботи учасника.",
+    "diagnosticsUnavailable": "Діагностика синхронізації роботи учасника недоступна."
+  },
+  "advancedCli": {
+    "title": "Розширене",
+    "useWorktree": "Worktree лідера (окремо від worktree учасників)",
+    "recent": "Недавнє",
+    "commandPreview": "Перегляд команди",
+    "customArguments": "Власні аргументи",
+    "validate": "Перевірити",
+    "validation": {
+      "allFlagsValid": "Усі прапорці дійсні",
+      "unknownFlags": "Невідомі: {{flags}}",
+      "protectedFlags": "Захищені: {{flags}}",
+      "failed": "Перевірка не вдалася"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} тому",
+    "stoppedAgo": "зупинено {{time}} тому",
+    "running": "Виконується",
+    "stopped": "Зупинено",
+    "stopProcess": "Зупинити процес (SIGTERM)",
+    "kill": "Завершити",
+    "openInBrowser": "Відкрити в браузері",
+    "open": "Відкрити",
+    "pid": "PID{{pid}}",
+    "title": "Процеси CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "Завантаження деталей активності...",
+    "contextUnavailable": "Детальний контекст транскрипту для цієї активності більше недоступний.",
+    "loading": "Завантаження активності завдання...",
+    "lowSignalOnly": "Ключової активності завдання поки не знайдено. Низькорівневі деталі виконання доступні нижче в «Потоці журналу завдання».",
+    "empty": "У доступних транскриптах поки не знайдено явної активності завдання. Старіші чи евристичні журнали сесій можуть бути все ще доступні нижче в «Сесіях виконання».",
+    "title": "Активність завдання",
+    "description": "Ключова явна активність середовища, пов'язана з цим завданням, з метаданих транскрипту."
+  },
+  "sendMessage": {
+    "title": "Надіслати повідомлення",
+    "description": "Надіслати пряме повідомлення учаснику команди.",
+    "recipientLabel": "Отримувач",
+    "selectMemberPlaceholder": "Виберіть учасника...",
+    "messageLabel": "Повідомлення",
+    "placeholder": "Напишіть своє повідомлення... (Enter, щоб надіслати)",
+    "send": "Надіслати",
+    "sending": "Надсилання...",
+    "charsLeft": "залишилось {{count}} симв.",
+    "saved": "Збережено",
+    "attachments": {
+      "teamOnlineRequired": "Команда має бути онлайн, щоб прикріплювати файли",
+      "recipientUnsupported": "Файли можна надсилати лідеру команди чи учасникам OpenCode",
+      "openCodeOnlineRequired": "Команда має бути онлайн, щоб прикріплювати файли для учасників OpenCode",
+      "disabledHint": "Вкладення файлів підтримуються для онлайн лідера команди та онлайн учасників OpenCode. Видаліть вкладення чи змініть отримувача.",
+      "attachFiles": "Прикріпити файли (вставити або перетягнути)",
+      "unavailable": "Вкладення недоступні"
+    },
+    "quote": {
+      "remove": "Видалити цитату",
+      "replyingTo": "Відповідь на"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Скасувати відповідь",
+    "replyingTo": "Відповідь на",
+    "placeholder": "Додайте коментар... (Enter, щоб надіслати)",
+    "attachFile": "Прикріпити файл (або вставити)",
+    "voiceToText": "Голос у текст",
+    "comment": "Коментар",
+    "charsLeft": "залишилось {{count}} симв.",
+    "saved": "Збережено",
+    "awaitingReplyFrom": "Очікування відповіді від",
+    "or": "або"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Перетягніть зображення сюди",
+    "attachImage": "Прикріпити зображення",
+    "pasteOrDragDrop": "або вставте / перетягніть",
+    "fromOriginalMessage": "З оригінального повідомлення",
+    "dropFilesHere": "Перетягніть файли сюди",
+    "loading": "Завантаження вкладень..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Автоматично затверджувати всі інструменти",
+    "autonomousModeDescription": "Автономний режим: інструменти команди виконуються без підтвердження. Будьте обережні з ненадійним кодом.",
+    "manualModeDescription": "Ручний режим: ви будете дозволяти чи відхиляти кожен виклик інструмента в реальному часі."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Виконання",
+      "process": "Процес"
+    },
+    "filters": {
+      "all": "Усі"
+    },
+    "logs": {
+      "title": "Журнали",
+      "loading": "Завантаження потоку журналу учасника...",
+      "emptyTitle": "Для цього учасника поки не знайдено записів потоку журналу.",
+      "emptyDescription": "Журнали транскрипту чи середовища, орієнтовані на учасника, з'являться тут, коли стануть доступними."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Опишіть, що потрібно змінити... (Enter, щоб надіслати)",
+    "submit": "Надіслати",
+    "charsLeft": "залишилось {{count}} симв.",
+    "saved": "Збережено",
+    "title": "Запитати зміни"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Відкрити панель",
+      "openTeam": "Відкрити команду",
+      "cancel": "Скасувати"
+    },
+    "membersJson": {
+      "hide": "Сховати JSON"
+    },
+    "optional": {
+      "badge": "Необов'язково"
+    }
+  },
+  "runningTeams": {
+    "title": "Запущені команди",
     "status": {
       "active": "Активна",
       "provisioning": "Запуск",

@@ -1501,27 +1501,27 @@
       "title": "Khởi chạy lại sẽ khởi động lại lần chạy hiện tại của đội ngũ"
     },
     "schedule": {
-      "agentDescription": "Nếu nhóm đã dừng, chạy một tác nhân riêng; nếu đang chạy, giao một nhiệm vụ.",
-      "execution": "Cách thực thi",
       "labelOptional": "Nhãn (tùy chọn)",
       "labelPlaceholder": "vd: Xem xét mã hàng ngày, Kiểm thử ban đêm...",
-      "leadDefault": "Trưởng nhóm (mặc định)",
-      "legacyNotice": "Lịch chạy một lần hiện có: lưu sẽ không thay đổi cách hoạt động trước đây.",
       "maxBudgetUsd": "Ngân sách tối đa (USD)",
       "maxTurns": "Số lượt tối đa",
       "noLimit": "Không giới hạn",
       "noMatches": "Không có đội ngũ nào khớp với tìm kiếm của bạn.",
       "noTeams": "Không có đội ngũ nào khả dụng. Hãy tạo một đội ngũ trước.",
-      "oneAgent": "Một tác nhân",
       "searchTeams": "Tìm đội ngũ...",
       "selectTeam": "Chọn một đội ngũ...",
-      "target": "Người nhận khi nhóm đang chạy",
       "team": "Đội ngũ",
-      "teamDescription": "Nếu nhóm đã dừng, khởi động nhóm đã lưu; nếu đang chạy, giao nhiệm vụ cho trưởng nhóm. Dùng cài đặt đã lưu.",
-      "teamPathMissing": "Hãy lưu thư mục dự án của nhóm trước khi lên lịch khởi động.",
       "title": "Lịch",
+      "execution": "Cách thực thi",
+      "legacyNotice": "Lịch chạy một lần hiện có: lưu sẽ không thay đổi cách hoạt động trước đây.",
       "upgradeSmart": "Chuyển sang lịch thông minh",
-      "wholeTeam": "Cả nhóm"
+      "oneAgent": "Một tác nhân",
+      "wholeTeam": "Cả nhóm",
+      "target": "Người nhận khi nhóm đang chạy",
+      "leadDefault": "Trưởng nhóm (mặc định)",
+      "agentDescription": "Nếu nhóm đã dừng, chạy một tác nhân riêng; nếu đang chạy, giao một nhiệm vụ.",
+      "teamDescription": "Nếu nhóm đã dừng, khởi động nhóm đã lưu; nếu đang chạy, giao nhiệm vụ cho trưởng nhóm. Dùng cài đặt đã lưu.",
+      "teamPathMissing": "Hãy lưu thư mục dự án của nhóm trước khi lên lịch khởi động."
     },
     "title": {
       "createSchedule": "Tạo lịch",
@@ -2137,17 +2137,542 @@
       "disabled": "Đã tắt"
     },
     "runStatus": {
-      "cancelled": "Đã hủy",
+      "pending": "Đang chờ",
+      "warmingUp": "Đang khởi động",
+      "warm": "Đã sẵn sàng",
+      "running": "Đang chạy",
       "completed": "Hoàn thành",
-      "dispatched": "Đã giao",
       "failed": "Thất bại",
       "interrupted": "Bị gián đoạn",
-      "pending": "Đang chờ",
-      "running": "Đang chạy",
-      "skipped": "Đã bỏ qua",
-      "warm": "Đã sẵn sàng",
-      "warmingUp": "Đang khởi động"
+      "cancelled": "Đã hủy",
+      "dispatched": "Đã giao",
+      "skipped": "Đã bỏ qua"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "Các mô hình OpenCode cục bộ có thể dùng ngân sách ngữ cảnh OpenCode thay vì giới hạn chỉ-prompt.",
+    "description": "Thêm các giới hạn tương ứng vào cấu hình OpenCode cho nhà cung cấp và mô hình mà thành viên này dùng. Điều này giúp OpenCode nén và cắt tỉa trước khi các mô hình cục bộ tràn cửa sổ ngữ cảnh của chúng.",
+    "replacePrefix": "Thay thế",
+    "and": "và",
+    "replaceSuffix": "bằng ID nhà cung cấp và mô hình từ thiết lập OpenCode của bạn. Các hướng dẫn prompt như",
+    "promptInstructionsSuffix": "yếu hơn vì yêu cầu được lắp ráp trước khi mô hình đọc chúng.",
+    "providerLimits": "Giới hạn nhà cung cấp",
+    "compactionConfig": "Cấu hình nén"
+  },
+  "sessions": {
+    "noProjectPath": "Không có đường dẫn dự án nào được liên kết",
+    "provisioningHint": "Các phiên sẽ xuất hiện sau khi tạo đội ngũ",
+    "projectNotFound": "Không tìm thấy dự án",
+    "loading": "Đang tải phiên...",
+    "empty": "Không tìm thấy phiên nào",
+    "showAllSessions": "Hiện cho tất cả phiên",
+    "lead": "trưởng nhóm",
+    "removeFilter": "Xóa bộ lọc",
+    "filterBySession": "Lọc theo phiên này",
+    "openSession": "Mở phiên",
+    "title": "Phiên"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Hủy",
+    "moreWarningsHidden": "{{count}} cảnh báo nữa bị ẩn",
+    "diagnostics": "Chẩn đoán",
+    "liveOutput": "Kết quả trực tiếp",
+    "diagnosticsCopied": "Đã sao chép chẩn đoán",
+    "copyDiagnostics": "Sao chép chẩn đoán",
+    "copied": "Đã sao chép",
+    "noOutput": "Chưa có kết quả nào được ghi lại.",
+    "cliLogs": "Nhật ký CLI",
+    "steps": {
+      "starting": "Đang khởi động",
+      "configuring": "Thiết lập đội ngũ",
+      "assembling": "Thành viên đang tham gia",
+      "finalizing": "Đang hoàn tất"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "đang kiểm tra...",
+        "ready": "OK",
+        "notes": "OK (ghi chú)",
+        "failed": "LỖI",
+        "pending": "đang chờ"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "Thiếu tệp nhị phân CLI",
+        "openCodeRuntimeMissing": "Thiếu runtime OpenCode",
+        "openCodeWindowsAccessBlocked": "Truy cập Windows của OpenCode bị chặn",
+        "openCodeNoOutput": "Kiểm tra runtime OpenCode không trả về kết quả nào",
+        "openCodeMcpUnreachable": "Không thể tiếp cận MCP ứng dụng OpenCode",
+        "workingDirectoryMissing": "Thiếu thư mục làm việc",
+        "cliBinaryCouldNotStart": "Không thể khởi động tệp nhị phân CLI",
+        "cliPreflightIncomplete": "Kiểm tra trước CLI chưa hoàn tất",
+        "authenticationRequired": "Cần xác thực",
+        "runtimeProviderNotConfigured": "Nhà cung cấp runtime chưa được cấu hình",
+        "cliPreflightFailed": "Kiểm tra trước CLI thất bại",
+        "selectedModelCompatible": "Mô hình đã chọn tương thích",
+        "selectedModelCompatibilityPending": "Đang chờ kiểm tra tương thích mô hình đã chọn",
+        "selectedModelAvailable": "Mô hình đã chọn khả dụng",
+        "selectedModelVerified": "Mô hình đã chọn đã được xác minh",
+        "selectedModelUnavailable": "Mô hình đã chọn không khả dụng",
+        "selectedModelTimedOut": "Xác minh mô hình đã chọn hết thời gian chờ",
+        "selectedModelCheckFailed": "Kiểm tra mô hình đã chọn thất bại",
+        "selectedModelDeferred": "Xác minh mô hình đã chọn bị hoãn",
+        "selectedModelPingNotConfirmed": "Ping mô hình đã chọn chưa được xác nhận",
+        "readyWithNotes": "Sẵn sàng kèm ghi chú",
+        "needsAttention": "Cần chú ý"
+      },
+      "modelChecksSummary": "Kiểm tra mô hình đã chọn - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} mô hình không khả dụng",
+        "unavailable_one": "{{count}} mô hình không khả dụng",
+        "unavailable_other": "{{count}} mô hình không khả dụng",
+        "checkFailed": "{{count}} mô hình kiểm tra thất bại",
+        "checkFailed_one": "{{count}} mô hình kiểm tra thất bại",
+        "checkFailed_other": "{{count}} mô hình kiểm tra thất bại",
+        "timedOut": "{{count}} mô hình hết thời gian chờ",
+        "timedOut_one": "{{count}} mô hình hết thời gian chờ",
+        "timedOut_other": "{{count}} mô hình hết thời gian chờ",
+        "deferred": "{{count}} xác minh bị hoãn",
+        "deferred_one": "{{count}} xác minh bị hoãn",
+        "deferred_other": "{{count}} xác minh bị hoãn",
+        "pingNotConfirmed": "{{count}} ping chưa được xác nhận",
+        "pingNotConfirmed_one": "{{count}} ping chưa được xác nhận",
+        "pingNotConfirmed_other": "{{count}} ping chưa được xác nhận",
+        "compatibilityPending": "{{count}} tương thích, đang chờ xác minh sâu",
+        "compatibilityPending_one": "{{count}} tương thích, đang chờ xác minh sâu",
+        "compatibilityPending_other": "{{count}} tương thích, đang chờ xác minh sâu",
+        "compatible": "{{count}} tương thích",
+        "compatible_one": "{{count}} tương thích",
+        "compatible_other": "{{count}} tương thích",
+        "checking": "{{count}} đang kiểm tra",
+        "checking_one": "{{count}} đang kiểm tra",
+        "checking_other": "{{count}} đang kiểm tra",
+        "available": "{{count}} khả dụng",
+        "available_one": "{{count}} khả dụng",
+        "available_other": "{{count}} khả dụng",
+        "verified": "{{count}} đã xác minh",
+        "verified_one": "{{count}} đã xác minh",
+        "verified_other": "{{count}} đã xác minh",
+        "unavailable_few": "{{count}} mô hình không khả dụng",
+        "unavailable_many": "{{count}} mô hình không khả dụng",
+        "checkFailed_few": "{{count}} mô hình kiểm tra thất bại",
+        "checkFailed_many": "{{count}} mô hình kiểm tra thất bại",
+        "timedOut_few": "{{count}} mô hình hết thời gian chờ",
+        "timedOut_many": "{{count}} mô hình hết thời gian chờ",
+        "deferred_few": "{{count}} xác minh bị hoãn",
+        "deferred_many": "{{count}} xác minh bị hoãn",
+        "pingNotConfirmed_few": "{{count}} ping chưa được xác nhận",
+        "pingNotConfirmed_many": "{{count}} ping chưa được xác nhận",
+        "compatibilityPending_few": "{{count}} tương thích, đang chờ xác minh sâu",
+        "compatibilityPending_many": "{{count}} tương thích, đang chờ xác minh sâu",
+        "compatible_few": "{{count}} tương thích",
+        "compatible_many": "{{count}} tương thích",
+        "checking_few": "{{count}} đang kiểm tra",
+        "checking_many": "{{count}} đang kiểm tra",
+        "available_few": "{{count}} khả dụng",
+        "available_many": "{{count}} khả dụng",
+        "verified_few": "{{count}} đã xác minh",
+        "verified_many": "{{count}} đã xác minh"
+      },
+      "openProviderSettings": "Mở cài đặt {{provider}}",
+      "copied": "Đã sao chép",
+      "copyDiagnostics": "Sao chép chẩn đoán",
+      "deepVerificationPending": "Xác minh sâu vẫn đang chạy. Các mô hình OpenCode miễn phí có thể mất khoảng 20 giây.",
+      "progress": {
+        "checkingSelectedProviders": "Đang kiểm tra các nhà cung cấp đã chọn song song...",
+        "checkingProvider": "Đang kiểm tra nhà cung cấp {{provider}}...",
+        "checkingProviders": "Đang kiểm tra {{providers}} nhà cung cấp..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Hãy sửa quyền thư mục hoặc chuyển dự án sang một thư mục mà người dùng có thể ghi. Chạy với quyền quản trị viên chỉ là cách khắc phục tạm thời.",
+        "openCodeBridgeNoOutput": "Hãy khởi động lại ứng dụng và runtime OpenCode, rồi thử lại. Nếu lặp lại, hãy sao chép chẩn đoán.",
+        "workingDirectoryMissing": "Hãy chọn một thư mục làm việc đang tồn tại, rồi mở lại hộp thoại này.",
+        "authenticationRequired": "Xác thực nhà cung cấp cần thiết trong runtime đã được cấu hình cho nhà cung cấp đó, rồi mở lại hộp thoại này.",
+        "runtimeProviderNotConfigured": "Hãy cấu hình runtime của nhà cung cấp đã chọn, rồi mở lại hộp thoại này.",
+        "openCodeRuntimeMissing": "Hãy cài đặt hoặc thử lại runtime OpenCode từ thẻ trạng thái nhà cung cấp, rồi mở lại hộp thoại này.",
+        "openCodeAppMcpUnreachable": "Hãy thử khởi chạy lại để làm mới cầu nối MCP ứng dụng OpenCode. Nếu lặp lại, hãy khởi động lại ứng dụng và runtime OpenCode.",
+        "cliBinaryMissing": "Đảm bảo runtime cục bộ cần thiết đã được cài đặt và có thể khởi động, rồi mở lại hộp thoại này.",
+        "default": "Hãy giải quyết vấn đề ở trên, rồi mở lại hộp thoại này.",
+        "openCodeNodeModulesSymlinkPermission": "Hãy chạy Agent Teams AI với quyền Quản trị viên, rồi thử khởi chạy lại."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} thành viên đang chờ phê duyệt quyền",
+      "nameListWithMore": "{{names}}, +{{count}} nữa",
+      "waitingForOpenCode": "Đang chờ OpenCode: {{names}}",
+      "bootstrapStalled": "Khởi tạo bị đình trệ: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Đang chờ OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Khởi tạo bị đình trệ",
+        "shellOnly": "Chỉ shell",
+        "waitingForBootstrap": "Đang chờ khởi tạo",
+        "bootstrapUnconfirmed": "Khởi tạo chưa được xác nhận",
+        "awaitingPermission": "Đang chờ phê duyệt quyền",
+        "waitingForRuntime": "Đang chờ runtime",
+        "shellOnlyLower": "chỉ shell",
+        "waitingForBootstrapLower": "đang chờ khởi tạo",
+        "bootstrapUnconfirmedLower": "khởi tạo chưa được xác nhận",
+        "awaitingPermissionLower": "đang chờ phê duyệt quyền",
+        "waitingForRuntimeLower": "đang chờ runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} không khởi động được",
+        "teammatesFailedToStart": "{{count}} thành viên không khởi động được",
+        "teammatesFailedRatio": "{{count}}/{{total}} thành viên không khởi động được"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} bị bỏ qua cho lần khởi chạy này",
+        "memberSkippedWithReason": "{{name}} bị bỏ qua cho lần khởi chạy này - {{reason}}",
+        "memberSkippedCompact": "{{name}} bị bỏ qua",
+        "teammatesSkipped": "{{count}} thành viên bị bỏ qua",
+        "teammatesSkippedList": "Thành viên bị bỏ qua: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} thành viên bị bỏ qua cho lần khởi chạy này"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} thành viên vẫn đang tham gia",
+        "teammatesStillJoining_one": "{{count}} thành viên vẫn đang tham gia",
+        "teammatesStillJoining_few": "{{count}} thành viên vẫn đang tham gia",
+        "teammatesStillJoining_many": "{{count}} thành viên vẫn đang tham gia",
+        "teammatesStillJoining_other": "{{count}} thành viên vẫn đang tham gia",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} thành viên đã được xác nhận"
+      },
+      "ready": {
+        "leadOnline": "Trưởng nhóm trực tuyến",
+        "allTeammatesJoined": "Tất cả {{count}} thành viên đã tham gia",
+        "teamProvisionedLeadOnline": "Đội ngũ đã được tạo - trưởng nhóm trực tuyến",
+        "teamProvisionedAllJoined": "Đội ngũ đã được tạo - tất cả {{count}} thành viên đã tham gia",
+        "teamProvisionedStillJoining": "Đội ngũ đã được tạo - các thành viên vẫn đang tham gia",
+        "launchFinishedWithErrors": "Khởi chạy hoàn tất với lỗi - {{count}}/{{total}} thành viên không khởi động được",
+        "launchContinuedSkipped": "Khởi chạy tiếp tục - {{count}}/{{total}} thành viên bị bỏ qua",
+        "teamLaunchedLeadOnline": "Đội ngũ đã khởi chạy - trưởng nhóm trực tuyến",
+        "teamLaunchedAllJoined": "Đội ngũ đã khởi chạy - tất cả {{count}} thành viên đã tham gia"
+      },
+      "panel": {
+        "launchFailed": "Khởi chạy thất bại",
+        "launchDetails": "Chi tiết khởi chạy",
+        "launchFinishedWithErrors": "Khởi chạy hoàn tất với lỗi",
+        "launchContinuedSkipped": "Khởi chạy tiếp tục với các thành viên bị bỏ qua",
+        "coreTeamReady": "Đội ngũ nòng cốt sẵn sàng",
+        "finishingLaunch": "Đang hoàn tất khởi chạy",
+        "teamLaunched": "Đội ngũ đã khởi chạy",
+        "launchingTeam": "Đang khởi chạy đội ngũ"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Trạng thái runtime trực tiếp",
+    "description": "Nhịp tim và trạng thái khởi chạy chỉ-hiển thị. Các điều khiển tiến trình vẫn ở bên dưới.",
+    "source": "nguồn: {{source}}",
+    "lane": "luồng {{lane}}",
+    "diagnosticOnly": "Chỉ chẩn đoán",
+    "updated": "đã cập nhật {{value}}",
+    "states": {
+      "running": "Đang chạy",
+      "starting": "Đang khởi động",
+      "waiting": "Đang chờ",
+      "degraded": "Cần chú ý",
+      "stopped": "Đã dừng",
+      "unknown": "Không xác định"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Nhật ký tác vụ chính xác",
+      "loading": "Đang tải nhật ký tác vụ chính xác...",
+      "description": "Các lát cắt bản ghi chính xác được hiển thị với cùng các thành phần nhật ký thực thi dùng trong Nhật ký.",
+      "emptyTitle": "Chưa có nhật ký tác vụ chính xác nào",
+      "emptyDescription": "Các gói bản ghi chính xác sẽ xuất hiện ở đây khi có sẵn metadata bản ghi liên kết tác vụ rõ ràng.",
+      "summaryOnly": "chỉ tóm tắt"
+    },
+    "executionSessions": {
+      "title": "Phiên thực thi",
+      "online": "Trực tuyến",
+      "updating": "Đang cập nhật...",
+      "description": "Duyệt và xem trước bản ghi theo phiên kiểu cũ."
+    },
+    "stream": {
+      "title": "Luồng nhật ký tác vụ"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Hủy tác vụ {{taskId}}",
+      "cancel": "Hủy",
+      "moveBackToTodoConfirm": "Chuyển tác vụ này trở lại CẦN LÀM và thông báo cho đội ngũ?",
+      "confirm": "Xác nhận",
+      "keep": "Giữ",
+      "changesNeedAttention": "Các thay đổi cần chú ý",
+      "changes": "Thay đổi",
+      "deleteTask": "Xóa tác vụ",
+      "taskLogsActive": "Nhật ký tác vụ đang hoạt động",
+      "newTaskLogsArriving": "Nhật ký tác vụ mới đang đến",
+      "awaitingUser": "Đang chờ người dùng",
+      "awaitingLead": "Đang chờ trưởng nhóm",
+      "blockedBy": "Bị chặn bởi",
+      "blocks": "Chặn",
+      "start": "Bắt đầu",
+      "complete": "Hoàn thành",
+      "approve": "Duyệt",
+      "requestReview": "Yêu cầu xem xét",
+      "manualReview": "Xem xét thủ công",
+      "requestChanges": "Yêu cầu thay đổi"
+    },
+    "filter": {
+      "title": "Lọc tác vụ",
+      "session": "Phiên",
+      "allSessions": "Tất cả phiên",
+      "teammate": "Thành viên",
+      "unassigned": "(chưa phân công)",
+      "column": "Cột",
+      "clearAll": "Xóa tất cả"
+    },
+    "board": {
+      "addTask": "Thêm tác vụ",
+      "noTasks": "Không có tác vụ",
+      "showMore": "Hiện thêm {{count}}",
+      "hiddenCount": "{{count}} bị ẩn",
+      "trash": "Thùng rác",
+      "gridView": "Chế độ xem lưới",
+      "columnsView": "Chế độ xem cột"
+    },
+    "trash": {
+      "title": "Thùng rác",
+      "empty": "Không có tác vụ đã xóa",
+      "subject": "Chủ đề",
+      "owner": "Chủ sở hữu",
+      "deleted": "Đã xóa",
+      "unassigned": "Chưa phân công",
+      "restoreTask": "Khôi phục tác vụ",
+      "restore": "Khôi phục",
+      "close": "Đóng"
+    },
+    "sort": {
+      "title": "Sắp xếp tác vụ",
+      "sortBy": "Sắp xếp theo",
+      "reset": "Đặt lại",
+      "options": {
+        "updatedAt": {
+          "label": "Cập nhật gần nhất",
+          "description": "Cập nhật gần đây lên đầu"
+        },
+        "createdAt": {
+          "label": "Đã tạo",
+          "description": "Mới nhất lên đầu"
+        },
+        "owner": {
+          "label": "Chủ sở hữu",
+          "description": "Theo thứ tự bảng chữ cái theo người được giao"
+        },
+        "manual": {
+          "label": "Thủ công",
+          "description": "Thứ tự kéo-thả"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Xóa tìm kiếm",
+      "tasks": "Tác vụ",
+      "createdAgo": "đã tạo {{time}}",
+      "updatedAgo": "đã cập nhật {{time}}",
+      "placeholder": "Tìm tác vụ... (#id hoặc văn bản)"
+    },
+    "grid": {
+      "addTask": "Thêm tác vụ",
+      "noTasks": "Không có tác vụ"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "CẦN LÀM",
+      "inProgress": "ĐANG LÀM",
+      "review": "XEM XÉT",
+      "done": "HOÀN THÀNH",
+      "approved": "ĐÃ DUYỆT"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Đang kiểm tra trạng thái kho lưu trữ Git cho các worktree của thành viên...",
+    "ready": "Các git worktree đã sẵn sàng.",
+    "readyOnBranch": "Các git worktree đã sẵn sàng trên nhánh {{branch}}.",
+    "needsSetup": "Cô lập worktree cần thiết lập Git",
+    "initialCommitNotice": "Hành động commit ban đầu sẽ stage và commit tất cả tệp hiện tại với thông điệp",
+    "initializeRepository": "Khởi tạo kho lưu trữ Git",
+    "createInitialCommit": "Tạo commit ban đầu",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Cài đặt",
+    "autoAllowAllTools": "Tự động cho phép tất cả công cụ",
+    "autoAllowFileEdits": "Tự động cho phép chỉnh sửa tệp (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Tự động cho phép các lệnh an toàn (git, pnpm, npm, ls...)",
+    "onTimeout": "Khi hết thời gian chờ:",
+    "after": "sau",
+    "secondsShort": "giây",
+    "timeoutActions": {
+      "wait": "Chờ mãi mãi",
+      "allow": "Cho phép",
+      "deny": "Từ chối"
+    },
+    "submit": "Gửi",
+    "allow": "Cho phép",
+    "deny": "Từ chối",
+    "allowAll": "Cho phép tất cả",
+    "pendingCount": "{{count}} đang chờ",
+    "autoActionIn": "Tự động {{action}} sau {{time}}",
+    "diff": {
+      "previewChanges": "Xem trước thay đổi",
+      "readingFile": "Đang đọc tệp...",
+      "binaryFile": "Tệp nhị phân - không thể xem trước",
+      "truncated": "Tệp bị cắt ở 2MB - phần khác biệt có thể không đầy đủ",
+      "newFile": "Tệp mới"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Đồng bộ công việc thành viên",
+      "actionableItems": "Mục có thể hành động",
+      "fingerprint": "Dấu vân tay",
+      "report": "Báo cáo",
+      "none": "không có",
+      "shadowWouldNudge": "Shadow sẽ nhắc",
+      "yes": "có",
+      "no": "không",
+      "moreActionableItems": "{{count}} mục có thể hành động nữa",
+      "diagnostics": "Chẩn đoán: {{diagnostics}}",
+      "autoResumeStopped": "Tiếp tục tự động đã dừng.",
+      "continue": "Tiếp tục",
+      "stopAutoResume": "Dừng tự động tiếp tục",
+      "resumeAutoResume": "Tiếp tục tự động"
+    },
+    "title": "Đồng bộ công việc thành viên",
+    "loadingDiagnostics": "Đang tải chẩn đoán đồng bộ công việc thành viên.",
+    "diagnosticsUnavailable": "Chẩn đoán đồng bộ công việc thành viên không khả dụng."
+  },
+  "advancedCli": {
+    "title": "Nâng cao",
+    "useWorktree": "Worktree của trưởng nhóm (tách biệt với worktree của thành viên)",
+    "recent": "Gần đây",
+    "commandPreview": "Xem trước lệnh",
+    "customArguments": "Đối số tùy chỉnh",
+    "validate": "Xác thực",
+    "validation": {
+      "allFlagsValid": "Tất cả cờ đều hợp lệ",
+      "unknownFlags": "Không xác định: {{flags}}",
+      "protectedFlags": "Được bảo vệ: {{flags}}",
+      "failed": "Xác thực thất bại"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} trước",
+    "stoppedAgo": "đã dừng {{time}} trước",
+    "running": "Đang chạy",
+    "stopped": "Đã dừng",
+    "stopProcess": "Dừng tiến trình (SIGTERM)",
+    "kill": "Kết thúc",
+    "openInBrowser": "Mở trong trình duyệt",
+    "open": "Mở",
+    "pid": "PID{{pid}}",
+    "title": "Tiến trình CLI"
+  },
+  "taskActivity": {
+    "loadingDetails": "Đang tải chi tiết hoạt động...",
+    "contextUnavailable": "Ngữ cảnh bản ghi chi tiết không còn khả dụng cho hoạt động này.",
+    "loading": "Đang tải hoạt động tác vụ...",
+    "lowSignalOnly": "Chưa tìm thấy hoạt động tác vụ quan trọng nào. Các chi tiết thực thi cấp thấp có sẵn bên dưới trong Luồng nhật ký tác vụ.",
+    "empty": "Chưa tìm thấy hoạt động tác vụ rõ ràng nào trong các bản ghi có sẵn. Các nhật ký phiên cũ hơn hoặc theo phỏng đoán vẫn có thể có sẵn bên dưới trong Phiên thực thi.",
+    "title": "Hoạt động tác vụ",
+    "description": "Hoạt động runtime rõ ràng quan trọng được liên kết với tác vụ này từ metadata bản ghi."
+  },
+  "sendMessage": {
+    "title": "Gửi tin nhắn",
+    "description": "Gửi một tin nhắn trực tiếp đến một thành viên đội ngũ.",
+    "recipientLabel": "Người nhận",
+    "selectMemberPlaceholder": "Chọn thành viên...",
+    "messageLabel": "Tin nhắn",
+    "placeholder": "Viết tin nhắn của bạn... (Enter để gửi)",
+    "send": "Gửi",
+    "sending": "Đang gửi...",
+    "charsLeft": "Còn {{count}} ký tự",
+    "saved": "Đã lưu",
+    "attachments": {
+      "teamOnlineRequired": "Đội ngũ phải trực tuyến để đính kèm tệp",
+      "recipientUnsupported": "Tệp có thể được gửi đến trưởng nhóm hoặc thành viên OpenCode",
+      "openCodeOnlineRequired": "Đội ngũ phải trực tuyến để đính kèm tệp cho thành viên OpenCode",
+      "disabledHint": "Tệp đính kèm được hỗ trợ cho trưởng nhóm trực tuyến và thành viên OpenCode trực tuyến. Hãy xóa tệp đính kèm hoặc đổi người nhận.",
+      "attachFiles": "Đính kèm tệp (dán hoặc kéo & thả)",
+      "unavailable": "Tệp đính kèm không khả dụng"
+    },
+    "quote": {
+      "remove": "Xóa trích dẫn",
+      "replyingTo": "Đang trả lời"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Hủy trả lời",
+    "replyingTo": "Đang trả lời",
+    "placeholder": "Thêm bình luận... (Enter để gửi)",
+    "attachFile": "Đính kèm tệp (hoặc dán)",
+    "voiceToText": "Giọng nói thành văn bản",
+    "comment": "Bình luận",
+    "charsLeft": "Còn {{count}} ký tự",
+    "saved": "Đã lưu",
+    "awaitingReplyFrom": "Đang chờ phản hồi từ",
+    "or": "hoặc"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Thả hình ảnh vào đây",
+    "attachImage": "Đính kèm hình ảnh",
+    "pasteOrDragDrop": "hoặc dán / kéo-thả",
+    "fromOriginalMessage": "Từ tin nhắn gốc",
+    "dropFilesHere": "Thả tệp vào đây",
+    "loading": "Đang tải tệp đính kèm..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Tự động phê duyệt tất cả công cụ",
+    "autonomousModeDescription": "Chế độ tự chủ: các công cụ đội ngũ thực thi mà không cần xác nhận. Hãy cẩn thận với mã không đáng tin cậy.",
+    "manualModeDescription": "Chế độ thủ công: bạn sẽ phê duyệt hoặc từ chối từng lệnh gọi công cụ theo thời gian thực."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Thực thi",
+      "process": "Tiến trình"
+    },
+    "filters": {
+      "all": "Tất cả"
+    },
+    "logs": {
+      "title": "Nhật ký",
+      "loading": "Đang tải luồng nhật ký thành viên...",
+      "emptyTitle": "Chưa tìm thấy mục luồng nhật ký nào cho thành viên này.",
+      "emptyDescription": "Nhật ký bản ghi hoặc runtime theo phạm vi thành viên sẽ xuất hiện ở đây khi có sẵn."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Mô tả những gì cần thay đổi... (Enter để gửi)",
+    "submit": "Gửi",
+    "charsLeft": "Còn {{count}} ký tự",
+    "saved": "Đã lưu",
+    "title": "Yêu cầu thay đổi"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Mở Bảng điều khiển",
+      "openTeam": "Mở đội ngũ",
+      "cancel": "Hủy"
+    },
+    "membersJson": {
+      "hide": "Ẩn JSON"
+    },
+    "optional": {
+      "badge": "Tùy chọn"
+    }
+  },
+  "runningTeams": {
+    "title": "Đội ngũ đang chạy",
     "status": {
       "active": "Đang hoạt động",
       "provisioning": "Đang khởi chạy",

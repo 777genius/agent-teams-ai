@@ -1501,27 +1501,27 @@
       "title": "Opnieuw starten herstart de huidige teamuitvoering"
     },
     "schedule": {
-      "agentDescription": "Als het team uitstaat, start een losse agent; anders wordt een taak toegewezen.",
-      "execution": "Uitvoering",
       "labelOptional": "Label (optioneel)",
       "labelPlaceholder": "bijv. Dagelijkse codereview, nachtelijke tests...",
-      "leadDefault": "Teamleider (standaard)",
-      "legacyNotice": "Bestaande eenmalige planning: opslaan verandert het huidige gedrag niet.",
       "maxBudgetUsd": "Max. budget (USD)",
       "maxTurns": "Max. beurten",
       "noLimit": "Geen limiet",
       "noMatches": "Geen teams komen overeen met je zoekopdracht.",
       "noTeams": "Geen teams beschikbaar. Maak eerst een team aan.",
-      "oneAgent": "Eén agent",
       "searchTeams": "Teams zoeken...",
       "selectTeam": "Selecteer een team...",
-      "target": "Ontvanger wanneer het team actief is",
       "team": "Team",
-      "teamDescription": "Als het team uitstaat, wordt het gestart; anders krijgt de teamleider een taak. Opgeslagen instellingen worden gebruikt.",
-      "teamPathMissing": "Sla eerst de projectmap van het team op voordat je een start plant.",
       "title": "Planning",
+      "execution": "Uitvoering",
+      "legacyNotice": "Bestaande eenmalige planning: opslaan verandert het huidige gedrag niet.",
       "upgradeSmart": "Overschakelen naar slimme planning",
-      "wholeTeam": "Hele team"
+      "oneAgent": "Eén agent",
+      "wholeTeam": "Hele team",
+      "target": "Ontvanger wanneer het team actief is",
+      "leadDefault": "Teamleider (standaard)",
+      "agentDescription": "Als het team uitstaat, start een losse agent; anders wordt een taak toegewezen.",
+      "teamDescription": "Als het team uitstaat, wordt het gestart; anders krijgt de teamleider een taak. Opgeslagen instellingen worden gebruikt.",
+      "teamPathMissing": "Sla eerst de projectmap van het team op voordat je een start plant."
     },
     "title": {
       "createSchedule": "Planning aanmaken",
@@ -2137,17 +2137,542 @@
       "disabled": "Uitgeschakeld"
     },
     "runStatus": {
-      "cancelled": "Geannuleerd",
+      "pending": "In behandeling",
+      "warmingUp": "Opwarmen",
+      "warm": "Warm",
+      "running": "Actief",
       "completed": "Voltooid",
-      "dispatched": "Verzonden",
       "failed": "Mislukt",
       "interrupted": "Onderbroken",
-      "pending": "In behandeling",
-      "running": "Actief",
-      "skipped": "Overgeslagen",
-      "warm": "Warm",
-      "warmingUp": "Opwarmen"
+      "cancelled": "Geannuleerd",
+      "dispatched": "Verzonden",
+      "skipped": "Overgeslagen"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode-lokale modellen kunnen een OpenCode-contextbudget gebruiken in plaats van alleen-prompt-limieten.",
+    "description": "Voeg overeenkomende limieten toe aan de OpenCode-config voor de provider en het model die door dit teamlid worden gebruikt. Dit helpt OpenCode te compacteren en te snoeien voordat lokale modellen hun contextvenster overschrijden.",
+    "replacePrefix": "Vervang",
+    "and": "en",
+    "replaceSuffix": "door de provider- en model-ID's uit je OpenCode-configuratie. Promptinstructies zoals",
+    "promptInstructionsSuffix": "zijn zwakker omdat het verzoek wordt samengesteld voordat het model ze leest.",
+    "providerLimits": "Providerlimieten",
+    "compactionConfig": "Compactatieconfiguratie"
+  },
+  "sessions": {
+    "noProjectPath": "Geen projectpad gekoppeld",
+    "provisioningHint": "Sessies verschijnen na de teamprovisioning",
+    "projectNotFound": "Project niet gevonden",
+    "loading": "Sessies laden...",
+    "empty": "Geen sessies gevonden",
+    "showAllSessions": "Voor alle sessies tonen",
+    "lead": "lead",
+    "removeFilter": "Filter verwijderen",
+    "filterBySession": "Filteren op deze sessie",
+    "openSession": "Sessie openen",
+    "title": "Sessies"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "Annuleren",
+    "moreWarningsHidden": "{{count}} meer waarschuwingen verborgen",
+    "diagnostics": "Diagnostiek",
+    "liveOutput": "Live uitvoer",
+    "diagnosticsCopied": "Diagnostiek gekopieerd",
+    "copyDiagnostics": "Diagnostiek kopiëren",
+    "copied": "Gekopieerd",
+    "noOutput": "Nog geen uitvoer vastgelegd.",
+    "cliLogs": "CLI-logboeken",
+    "steps": {
+      "starting": "Starten",
+      "configuring": "Teamconfiguratie",
+      "assembling": "Leden sluiten zich aan",
+      "finalizing": "Afronden"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "controleren...",
+        "ready": "OK",
+        "notes": "OK (opmerkingen)",
+        "failed": "FOUT",
+        "pending": "wachten"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI-binary ontbreekt",
+        "openCodeRuntimeMissing": "OpenCode-runtime ontbreekt",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows-toegang geblokkeerd",
+        "openCodeNoOutput": "OpenCode-runtimecontrole gaf geen uitvoer",
+        "openCodeMcpUnreachable": "OpenCode-app-MCP onbereikbaar",
+        "workingDirectoryMissing": "Werkdirectory ontbreekt",
+        "cliBinaryCouldNotStart": "CLI-binary kon niet worden gestart",
+        "cliPreflightIncomplete": "CLI-preflight is niet voltooid",
+        "authenticationRequired": "Authenticatie vereist",
+        "runtimeProviderNotConfigured": "Runtime-provider is niet geconfigureerd",
+        "cliPreflightFailed": "CLI-preflight mislukt",
+        "selectedModelCompatible": "Geselecteerd model compatibel",
+        "selectedModelCompatibilityPending": "Compatibiliteit van geselecteerd model in behandeling",
+        "selectedModelAvailable": "Geselecteerd model beschikbaar",
+        "selectedModelVerified": "Geselecteerd model geverifieerd",
+        "selectedModelUnavailable": "Geselecteerd model niet beschikbaar",
+        "selectedModelTimedOut": "Verificatie van geselecteerd model verlopen",
+        "selectedModelCheckFailed": "Controle van geselecteerd model mislukt",
+        "selectedModelDeferred": "Verificatie van geselecteerd model uitgesteld",
+        "selectedModelPingNotConfirmed": "Ping van geselecteerd model niet bevestigd",
+        "readyWithNotes": "Gereed met opmerkingen",
+        "needsAttention": "Aandacht nodig"
+      },
+      "modelChecksSummary": "Controles geselecteerd model - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} model niet beschikbaar",
+        "unavailable_one": "{{count}} model niet beschikbaar",
+        "unavailable_other": "{{count}} modellen niet beschikbaar",
+        "checkFailed": "{{count}} modelcontrole mislukt",
+        "checkFailed_one": "{{count}} modelcontrole mislukt",
+        "checkFailed_other": "{{count}} modelcontroles mislukt",
+        "timedOut": "{{count}} model verlopen",
+        "timedOut_one": "{{count}} model verlopen",
+        "timedOut_other": "{{count}} modellen verlopen",
+        "deferred": "{{count}} verificatie uitgesteld",
+        "deferred_one": "{{count}} verificatie uitgesteld",
+        "deferred_other": "{{count}} verificaties uitgesteld",
+        "pingNotConfirmed": "{{count}} ping niet bevestigd",
+        "pingNotConfirmed_one": "{{count}} ping niet bevestigd",
+        "pingNotConfirmed_other": "{{count}} pings niet bevestigd",
+        "compatibilityPending": "{{count}} compatibel, diepe verificatie in behandeling",
+        "compatibilityPending_one": "{{count}} compatibel, diepe verificatie in behandeling",
+        "compatibilityPending_other": "{{count}} compatibel, diepe verificatie in behandeling",
+        "compatible": "{{count}} compatibel",
+        "compatible_one": "{{count}} compatibel",
+        "compatible_other": "{{count}} compatibel",
+        "checking": "{{count}} controleren",
+        "checking_one": "{{count}} controleren",
+        "checking_other": "{{count}} controleren",
+        "available": "{{count}} beschikbaar",
+        "available_one": "{{count}} beschikbaar",
+        "available_other": "{{count}} beschikbaar",
+        "verified": "{{count}} geverifieerd",
+        "verified_one": "{{count}} geverifieerd",
+        "verified_other": "{{count}} geverifieerd",
+        "unavailable_few": "{{count}} modellen niet beschikbaar",
+        "unavailable_many": "{{count}} modellen niet beschikbaar",
+        "checkFailed_few": "{{count}} modelcontroles mislukt",
+        "checkFailed_many": "{{count}} modelcontroles mislukt",
+        "timedOut_few": "{{count}} modellen verlopen",
+        "timedOut_many": "{{count}} modellen verlopen",
+        "deferred_few": "{{count}} verificaties uitgesteld",
+        "deferred_many": "{{count}} verificaties uitgesteld",
+        "pingNotConfirmed_few": "{{count}} pings niet bevestigd",
+        "pingNotConfirmed_many": "{{count}} pings niet bevestigd",
+        "compatibilityPending_few": "{{count}} compatibel, diepe verificatie in behandeling",
+        "compatibilityPending_many": "{{count}} compatibel, diepe verificatie in behandeling",
+        "compatible_few": "{{count}} compatibel",
+        "compatible_many": "{{count}} compatibel",
+        "checking_few": "{{count}} controleren",
+        "checking_many": "{{count}} controleren",
+        "available_few": "{{count}} beschikbaar",
+        "available_many": "{{count}} beschikbaar",
+        "verified_few": "{{count}} geverifieerd",
+        "verified_many": "{{count}} geverifieerd"
+      },
+      "openProviderSettings": "{{provider}}-instellingen openen",
+      "copied": "Gekopieerd",
+      "copyDiagnostics": "Diagnostiek kopiëren",
+      "deepVerificationPending": "Diepe verificatie loopt nog. Gratis OpenCode-modellen kunnen ongeveer 20 seconden duren.",
+      "progress": {
+        "checkingSelectedProviders": "Geselecteerde providers parallel controleren...",
+        "checkingProvider": "{{provider}}-provider controleren...",
+        "checkingProviders": "{{providers}}-providers controleren..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "Herstel de mapmachtigingen of verplaats het project naar een door de gebruiker beschrijfbare map. Als administrator uitvoeren is slechts een tijdelijke oplossing.",
+        "openCodeBridgeNoOutput": "Start de app en de OpenCode-runtime opnieuw en probeer het opnieuw. Als het zich herhaalt, kopieer dan de diagnostiek.",
+        "workingDirectoryMissing": "Kies een bestaande werkdirectory en open dit dialoogvenster opnieuw.",
+        "authenticationRequired": "Verifieer de vereiste provider in de daarvoor geconfigureerde runtime en open dit dialoogvenster opnieuw.",
+        "runtimeProviderNotConfigured": "Configureer de geselecteerde provider-runtime en open dit dialoogvenster opnieuw.",
+        "openCodeRuntimeMissing": "Installeer of probeer de OpenCode-runtime opnieuw vanuit de providerstatuskaart en open dit dialoogvenster opnieuw.",
+        "openCodeAppMcpUnreachable": "Probeer de start opnieuw om de OpenCode-app-MCP-bridge te vernieuwen. Als het zich herhaalt, start dan de app en de OpenCode-runtime opnieuw.",
+        "cliBinaryMissing": "Controleer of de vereiste lokale runtime is geïnstalleerd en kan worden gestart en open dit dialoogvenster opnieuw.",
+        "default": "Los het bovenstaande probleem op en open dit dialoogvenster opnieuw.",
+        "openCodeNodeModulesSymlinkPermission": "Voer Agent Teams AI uit als administrator en probeer de start opnieuw."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} teamlid wacht op machtigingsgoedkeuring",
+      "nameListWithMore": "{{names}}, +{{count}} meer",
+      "waitingForOpenCode": "Wachten op OpenCode: {{names}}",
+      "bootstrapStalled": "Bootstrap vastgelopen: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; Wachten op OpenCode: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "Bootstrap vastgelopen",
+        "shellOnly": "Alleen-shell",
+        "waitingForBootstrap": "Wachten op bootstrap",
+        "bootstrapUnconfirmed": "Bootstrap onbevestigd",
+        "awaitingPermission": "Wachten op machtiging",
+        "waitingForRuntime": "Wachten op runtime",
+        "shellOnlyLower": "alleen-shell",
+        "waitingForBootstrapLower": "wachten op bootstrap",
+        "bootstrapUnconfirmedLower": "bootstrap onbevestigd",
+        "awaitingPermissionLower": "wachten op machtiging",
+        "waitingForRuntimeLower": "wachten op runtime"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} kon niet starten",
+        "teammatesFailedToStart": "{{count}} teamleden konden niet starten",
+        "teammatesFailedRatio": "{{count}}/{{total}} teamleden konden niet starten"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} overgeslagen voor deze start",
+        "memberSkippedWithReason": "{{name}} overgeslagen voor deze start - {{reason}}",
+        "memberSkippedCompact": "{{name}} overgeslagen",
+        "teammatesSkipped": "{{count}} teamleden overgeslagen",
+        "teammatesSkippedList": "Overgeslagen teamleden: {{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} teamleden overgeslagen voor deze start"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} teamleden sluiten zich nog aan",
+        "teammatesStillJoining_one": "{{count}} teamlid sluit zich nog aan",
+        "teammatesStillJoining_few": "{{count}} teamleden sluiten zich nog aan",
+        "teammatesStillJoining_many": "{{count}} teamleden sluiten zich nog aan",
+        "teammatesStillJoining_other": "{{count}} teamleden sluiten zich nog aan",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} teamleden bevestigd"
+      },
+      "ready": {
+        "leadOnline": "Lead online",
+        "allTeammatesJoined": "Alle {{count}} teamleden aangesloten",
+        "teamProvisionedLeadOnline": "Team geprovisioneerd - lead online",
+        "teamProvisionedAllJoined": "Team geprovisioneerd - alle {{count}} teamleden aangesloten",
+        "teamProvisionedStillJoining": "Team geprovisioneerd - teamleden sluiten zich nog aan",
+        "launchFinishedWithErrors": "Start voltooid met fouten - {{count}}/{{total}} teamleden konden niet starten",
+        "launchContinuedSkipped": "Start voortgezet - {{count}}/{{total}} teamleden overgeslagen",
+        "teamLaunchedLeadOnline": "Team gestart - lead online",
+        "teamLaunchedAllJoined": "Team gestart - alle {{count}} teamleden aangesloten"
+      },
+      "panel": {
+        "launchFailed": "Start mislukt",
+        "launchDetails": "Startdetails",
+        "launchFinishedWithErrors": "Start voltooid met fouten",
+        "launchContinuedSkipped": "Start voortgezet met overgeslagen teamleden",
+        "coreTeamReady": "Kernteam gereed",
+        "finishingLaunch": "Start afronden",
+        "teamLaunched": "Team gestart",
+        "launchingTeam": "Team starten"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "Live runtimestatus",
+    "description": "Alleen-weergave heartbeat en startstatus. Procesbedieningen blijven hieronder.",
+    "source": "bron: {{source}}",
+    "lane": "{{lane}}-lane",
+    "diagnosticOnly": "Alleen diagnostisch",
+    "updated": "bijgewerkt {{value}}",
+    "states": {
+      "running": "Actief",
+      "starting": "Starten",
+      "waiting": "Wachten",
+      "degraded": "Aandacht nodig",
+      "stopped": "Gestopt",
+      "unknown": "Onbekend"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "Exacte taaklogboeken",
+      "loading": "Exacte taaklogboeken laden...",
+      "description": "Exacte transcriptfragmenten gerenderd met dezelfde uitvoeringslogboekcomponenten die in Logboeken worden gebruikt.",
+      "emptyTitle": "Nog geen exacte taaklogboeken",
+      "emptyDescription": "Exacte transcriptbundels verschijnen hier wanneer expliciete taakgekoppelde transcriptmetadata beschikbaar is.",
+      "summaryOnly": "alleen samenvatting"
+    },
+    "executionSessions": {
+      "title": "Uitvoeringssessies",
+      "online": "Online",
+      "updating": "Bijwerken...",
+      "description": "Legacy sessiegericht transcriptbladeren en voorbeelden."
+    },
+    "stream": {
+      "title": "Taaklogboekstream"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "Taak {{taskId}} annuleren",
+      "cancel": "Annuleren",
+      "moveBackToTodoConfirm": "Deze taak terugzetten naar TE DOEN en het team op de hoogte stellen?",
+      "confirm": "Bevestigen",
+      "keep": "Behouden",
+      "changesNeedAttention": "Wijzigingen hebben aandacht nodig",
+      "changes": "Wijzigingen",
+      "deleteTask": "Taak verwijderen",
+      "taskLogsActive": "Taaklogboeken actief",
+      "newTaskLogsArriving": "Nieuwe taaklogboeken komen binnen",
+      "awaitingUser": "Wachten op gebruiker",
+      "awaitingLead": "Wachten op lead",
+      "blockedBy": "Geblokkeerd door",
+      "blocks": "Blokkeert",
+      "start": "Starten",
+      "complete": "Voltooien",
+      "approve": "Goedkeuren",
+      "requestReview": "Review aanvragen",
+      "manualReview": "Handmatige review",
+      "requestChanges": "Wijzigingen aanvragen"
+    },
+    "filter": {
+      "title": "Taken filteren",
+      "session": "Sessie",
+      "allSessions": "Alle sessies",
+      "teammate": "Teamlid",
+      "unassigned": "(niet toegewezen)",
+      "column": "Kolom",
+      "clearAll": "Alles wissen"
+    },
+    "board": {
+      "addTask": "Taak toevoegen",
+      "noTasks": "Geen taken",
+      "showMore": "{{count}} meer tonen",
+      "hiddenCount": "{{count}} verborgen",
+      "trash": "Prullenbak",
+      "gridView": "Rasterweergave",
+      "columnsView": "Kolomweergave"
+    },
+    "trash": {
+      "title": "Prullenbak",
+      "empty": "Geen verwijderde taken",
+      "subject": "Onderwerp",
+      "owner": "Eigenaar",
+      "deleted": "Verwijderd",
+      "unassigned": "Niet toegewezen",
+      "restoreTask": "Taak herstellen",
+      "restore": "Herstellen",
+      "close": "Sluiten"
+    },
+    "sort": {
+      "title": "Taken sorteren",
+      "sortBy": "Sorteren op",
+      "reset": "Resetten",
+      "options": {
+        "updatedAt": {
+          "label": "Laatst bijgewerkt",
+          "description": "Recent bijgewerkt eerst"
+        },
+        "createdAt": {
+          "label": "Aangemaakt",
+          "description": "Nieuwste eerst"
+        },
+        "owner": {
+          "label": "Eigenaar",
+          "description": "Alfabetisch op toegewezene"
+        },
+        "manual": {
+          "label": "Handmatig",
+          "description": "Sleepvolgorde"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "Zoekopdracht wissen",
+      "tasks": "Taken",
+      "createdAgo": "aangemaakt {{time}}",
+      "updatedAgo": "bijgewerkt {{time}}",
+      "placeholder": "Taken zoeken... (#id of tekst)"
+    },
+    "grid": {
+      "addTask": "Taak toevoegen",
+      "noTasks": "Geen taken"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "TE DOEN",
+      "inProgress": "BEZIG",
+      "review": "REVIEW",
+      "done": "KLAAR",
+      "approved": "GOEDGEKEURD"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "Git-repositorystatus controleren voor teamlid-worktrees...",
+    "ready": "Git-worktrees zijn gereed.",
+    "readyOnBranch": "Git-worktrees zijn gereed op branch {{branch}}.",
+    "needsSetup": "Worktree-isolatie vereist Git-configuratie",
+    "initialCommitNotice": "De actie voor de initiële commit staget en commit alle huidige bestanden met het bericht",
+    "initializeRepository": "Git-repository initialiseren",
+    "createInitialCommit": "Initiële commit aanmaken",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "Instellingen",
+    "autoAllowAllTools": "Alle tools automatisch toestaan",
+    "autoAllowFileEdits": "Bestandsbewerkingen automatisch toestaan (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "Veilige commando's automatisch toestaan (git, pnpm, npm, ls...)",
+    "onTimeout": "Bij time-out:",
+    "after": "na",
+    "secondsShort": "sec",
+    "timeoutActions": {
+      "wait": "Voor altijd wachten",
+      "allow": "Toestaan",
+      "deny": "Weigeren"
+    },
+    "submit": "Verzenden",
+    "allow": "Toestaan",
+    "deny": "Weigeren",
+    "allowAll": "Alles toestaan",
+    "pendingCount": "{{count}} in behandeling",
+    "autoActionIn": "Automatisch {{action}} over {{time}}",
+    "diff": {
+      "previewChanges": "Wijzigingen bekijken",
+      "readingFile": "Bestand lezen...",
+      "binaryFile": "Binair bestand - kan geen voorbeeld tonen",
+      "truncated": "Bestand ingekort op 2MB - diff is mogelijk onvolledig",
+      "newFile": "Nieuw bestand"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "Werksynchronisatie lid",
+      "actionableItems": "Actiepunten",
+      "fingerprint": "Vingerafdruk",
+      "report": "Rapport",
+      "none": "geen",
+      "shadowWouldNudge": "Shadow zou aansporen",
+      "yes": "ja",
+      "no": "nee",
+      "moreActionableItems": "{{count}} extra actiepunt(en)",
+      "diagnostics": "Diagnostiek: {{diagnostics}}",
+      "autoResumeStopped": "Automatische voortzetting is gestopt.",
+      "continue": "Doorgaan",
+      "stopAutoResume": "Automatisch hervatten stoppen",
+      "resumeAutoResume": "Automatisch hervatten"
+    },
+    "title": "Werksynchronisatie lid",
+    "loadingDiagnostics": "Diagnostiek werksynchronisatie lid laden.",
+    "diagnosticsUnavailable": "Diagnostiek werksynchronisatie lid is niet beschikbaar."
+  },
+  "advancedCli": {
+    "title": "Geavanceerd",
+    "useWorktree": "Worktree van de teamleider (apart van de worktrees van teamleden)",
+    "recent": "Recent",
+    "commandPreview": "Commandovoorbeeld",
+    "customArguments": "Aangepaste argumenten",
+    "validate": "Valideren",
+    "validation": {
+      "allFlagsValid": "Alle flags geldig",
+      "unknownFlags": "Onbekend: {{flags}}",
+      "protectedFlags": "Beschermd: {{flags}}",
+      "failed": "Validatie mislukt"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} geleden",
+    "stoppedAgo": "gestopt {{time}} geleden",
+    "running": "Actief",
+    "stopped": "Gestopt",
+    "stopProcess": "Proces stoppen (SIGTERM)",
+    "kill": "Beëindigen",
+    "openInBrowser": "Openen in browser",
+    "open": "Openen",
+    "pid": "PID{{pid}}",
+    "title": "CLI-processen"
+  },
+  "taskActivity": {
+    "loadingDetails": "Activiteitsdetails laden...",
+    "contextUnavailable": "Gedetailleerde transcriptcontext is niet meer beschikbaar voor deze activiteit.",
+    "loading": "Taakactiviteit laden...",
+    "lowSignalOnly": "Er is nog geen belangrijke taakactiviteit gevonden. Uitvoeringsdetails op laag niveau zijn hieronder beschikbaar in de Taaklogboekstream.",
+    "empty": "Er is nog geen expliciete taakactiviteit gevonden in de beschikbare transcripties. Oudere of heuristische sessielogboeken zijn mogelijk nog beschikbaar hieronder in Uitvoeringssessies.",
+    "title": "Taakactiviteit",
+    "description": "Belangrijke expliciete runtime-activiteit die aan deze taak is gekoppeld vanuit transcriptmetadata."
+  },
+  "sendMessage": {
+    "title": "Bericht verzenden",
+    "description": "Stuur een direct bericht naar een teamlid.",
+    "recipientLabel": "Ontvanger",
+    "selectMemberPlaceholder": "Lid selecteren...",
+    "messageLabel": "Bericht",
+    "placeholder": "Schrijf je bericht... (Enter om te verzenden)",
+    "send": "Verzenden",
+    "sending": "Verzenden...",
+    "charsLeft": "{{count}} tekens over",
+    "saved": "Opgeslagen",
+    "attachments": {
+      "teamOnlineRequired": "Team moet online zijn om bestanden bij te voegen",
+      "recipientUnsupported": "Bestanden kunnen worden verzonden naar de teamlead of OpenCode-teamleden",
+      "openCodeOnlineRequired": "Team moet online zijn om bestanden bij te voegen voor OpenCode-teamleden",
+      "disabledHint": "Bestandsbijlagen worden ondersteund voor de online teamlead en online OpenCode-teamleden. Verwijder bijlagen of wijzig de ontvanger.",
+      "attachFiles": "Bestanden bijvoegen (plakken of slepen)",
+      "unavailable": "Bijlagen zijn niet beschikbaar"
+    },
+    "quote": {
+      "remove": "Citaat verwijderen",
+      "replyingTo": "Reageert op"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "Reactie annuleren",
+    "replyingTo": "Reageert op",
+    "placeholder": "Voeg een opmerking toe... (Enter om te verzenden)",
+    "attachFile": "Bestand bijvoegen (of plakken)",
+    "voiceToText": "Spraak naar tekst",
+    "comment": "Opmerking",
+    "charsLeft": "{{count}} tekens over",
+    "saved": "Opgeslagen",
+    "awaitingReplyFrom": "Wachten op antwoord van",
+    "or": "of"
+  },
+  "taskAttachments": {
+    "dropImageHere": "Sleep afbeelding hierheen",
+    "attachImage": "Afbeelding bijvoegen",
+    "pasteOrDragDrop": "of plakken / slepen",
+    "fromOriginalMessage": "Uit oorspronkelijk bericht",
+    "dropFilesHere": "Sleep bestanden hierheen",
+    "loading": "Bijlagen laden..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "Alle tools automatisch goedkeuren",
+    "autonomousModeDescription": "Autonome modus: teamtools worden zonder bevestiging uitgevoerd. Wees voorzichtig met niet-vertrouwde code.",
+    "manualModeDescription": "Handmatige modus: je keurt elke toolaanroep in realtime goed of weigert deze."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "Uitvoering",
+      "process": "Proces"
+    },
+    "filters": {
+      "all": "Alle"
+    },
+    "logs": {
+      "title": "Logboeken",
+      "loading": "Logboekstream van lid laden...",
+      "emptyTitle": "Er zijn nog geen logboekstream-vermeldingen gevonden voor dit lid.",
+      "emptyDescription": "Ledengerichte transcript- of runtimelogboeken verschijnen hier wanneer ze beschikbaar zijn."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "Beschrijf wat er moet veranderen... (Enter om te verzenden)",
+    "submit": "Verzenden",
+    "charsLeft": "{{count}} tekens over",
+    "saved": "Opgeslagen",
+    "title": "Wijzigingen aanvragen"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "Dashboard openen",
+      "openTeam": "Team openen",
+      "cancel": "Annuleren"
+    },
+    "membersJson": {
+      "hide": "JSON verbergen"
+    },
+    "optional": {
+      "badge": "Optioneel"
+    }
+  },
+  "runningTeams": {
+    "title": "Actieve teams",
     "status": {
       "active": "Actief",
       "provisioning": "Starten",

@@ -1501,27 +1501,27 @@
       "title": "మళ్లీ లాంచ్ ప్రస్తుత టీమ్ రన్‌ను పునఃప్రారంభిస్తుంది"
     },
     "schedule": {
-      "agentDescription": "బృందం ఆగి ఉంటే ప్రత్యేక ఏజెంట్‌ను ప్రారంభిస్తుంది; నడుస్తుంటే పనిని కేటాయిస్తుంది.",
-      "execution": "అమలు",
       "labelOptional": "లేబుల్ (ఐచ్ఛికం)",
       "labelPlaceholder": "ఉదా., రోజువారీ కోడ్ సమీక్ష, నైట్లీ టెస్ట్‌లు...",
-      "leadDefault": "బృంద నాయకుడు (డిఫాల్ట్)",
-      "legacyNotice": "ఇప్పటికే ఉన్న ఒక్కసారి షెడ్యూల్: సేవ్ చేసినా పాత ప్రవర్తన మారదు.",
       "maxBudgetUsd": "గరిష్ట బడ్జెట్ (USD)",
       "maxTurns": "గరిష్ట టర్న్‌లు",
       "noLimit": "పరిమితి లేదు",
       "noMatches": "మీ శోధనకు ఏ టీమ్‌లు సరిపోలడం లేదు.",
       "noTeams": "టీమ్‌లు అందుబాటులో లేవు. మొదట ఒక టీమ్‌ను సృష్టించండి.",
-      "oneAgent": "ఒక ఏజెంట్",
       "searchTeams": "టీమ్‌లను శోధించండి...",
       "selectTeam": "ఒక టీమ్‌ను ఎంచుకోండి...",
-      "target": "బృందం నడుస్తున్నప్పుడు బాధ్యత వహించేవారు",
       "team": "టీమ్",
-      "teamDescription": "బృందం ఆగి ఉంటే సేవ్ చేసిన బృందాన్ని ప్రారంభిస్తుంది; నడుస్తుంటే నాయకుడికి పనిని కేటాయిస్తుంది. సేవ్ చేసిన సెట్టింగ్‌లను ఉపయోగిస్తుంది.",
-      "teamPathMissing": "ప్రారంభాన్ని షెడ్యూల్ చేసే ముందు బృంద ప్రాజెక్ట్ ఫోల్డర్‌ను సేవ్ చేయండి.",
       "title": "షెడ్యూల్",
+      "execution": "అమలు",
+      "legacyNotice": "ఇప్పటికే ఉన్న ఒక్కసారి షెడ్యూల్: సేవ్ చేసినా పాత ప్రవర్తన మారదు.",
       "upgradeSmart": "స్మార్ట్ షెడ్యూల్‌కు మారండి",
-      "wholeTeam": "మొత్తం బృందం"
+      "oneAgent": "ఒక ఏజెంట్",
+      "wholeTeam": "మొత్తం బృందం",
+      "target": "బృందం నడుస్తున్నప్పుడు బాధ్యత వహించేవారు",
+      "leadDefault": "బృంద నాయకుడు (డిఫాల్ట్)",
+      "agentDescription": "బృందం ఆగి ఉంటే ప్రత్యేక ఏజెంట్‌ను ప్రారంభిస్తుంది; నడుస్తుంటే పనిని కేటాయిస్తుంది.",
+      "teamDescription": "బృందం ఆగి ఉంటే సేవ్ చేసిన బృందాన్ని ప్రారంభిస్తుంది; నడుస్తుంటే నాయకుడికి పనిని కేటాయిస్తుంది. సేవ్ చేసిన సెట్టింగ్‌లను ఉపయోగిస్తుంది.",
+      "teamPathMissing": "ప్రారంభాన్ని షెడ్యూల్ చేసే ముందు బృంద ప్రాజెక్ట్ ఫోల్డర్‌ను సేవ్ చేయండి."
     },
     "title": {
       "createSchedule": "షెడ్యూల్ సృష్టించు",
@@ -2137,17 +2137,542 @@
       "disabled": "నిలిపివేయబడింది"
     },
     "runStatus": {
-      "cancelled": "రద్దు చేయబడింది",
+      "pending": "పెండింగ్",
+      "warmingUp": "వార్మింగ్ అప్",
+      "warm": "వార్మ్",
+      "running": "రన్ అవుతోంది",
       "completed": "పూర్తయింది",
-      "dispatched": "అప్పగించబడింది",
       "failed": "విఫలమైంది",
       "interrupted": "అంతరాయం కలిగింది",
-      "pending": "పెండింగ్",
-      "running": "రన్ అవుతోంది",
-      "skipped": "దాటవేయబడింది",
-      "warm": "వార్మ్",
-      "warmingUp": "వార్మింగ్ అప్"
+      "cancelled": "రద్దు చేయబడింది",
+      "dispatched": "అప్పగించబడింది",
+      "skipped": "దాటవేయబడింది"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode స్థానిక మోడల్‌లు ప్రాంప్ట్-మాత్రమే పరిమితులకు బదులుగా OpenCode కాంటెక్స్ట్ బడ్జెట్‌ను ఉపయోగించవచ్చు.",
+    "description": "ఈ టీమ్‌మేట్ ఉపయోగించే ప్రొవైడర్ మరియు మోడల్ కోసం OpenCode కాన్ఫిగ్‌కు సరిపోలే పరిమితులను జోడించండి. స్థానిక మోడల్‌లు తమ కాంటెక్స్ట్ విండోను ఓవర్‌ఫ్లో చేయడానికి ముందు OpenCode కంపాక్ట్ చేయడానికి మరియు ప్రూన్ చేయడానికి ఇది సహాయపడుతుంది.",
+    "replacePrefix": "భర్తీ చేయి",
+    "and": "మరియు",
+    "replaceSuffix": "మీ OpenCode సెటప్ నుండి ప్రొవైడర్ మరియు మోడల్ ID లతో. వంటి ప్రాంప్ట్ సూచనలు",
+    "promptInstructionsSuffix": "బలహీనంగా ఉంటాయి ఎందుకంటే మోడల్ వాటిని చదవడానికి ముందే అభ్యర్థన అసెంబుల్ చేయబడుతుంది.",
+    "providerLimits": "ప్రొవైడర్ పరిమితులు",
+    "compactionConfig": "కంపాక్షన్ కాన్ఫిగ్"
+  },
+  "sessions": {
+    "noProjectPath": "ప్రాజెక్ట్ మార్గం లింక్ చేయబడలేదు",
+    "provisioningHint": "టీమ్ ప్రొవిజనింగ్ తర్వాత సెషన్‌లు కనిపిస్తాయి",
+    "projectNotFound": "ప్రాజెక్ట్ కనుగొనబడలేదు",
+    "loading": "సెషన్‌లను లోడ్ చేస్తోంది...",
+    "empty": "సెషన్‌లు కనుగొనబడలేదు",
+    "showAllSessions": "అన్ని సెషన్‌ల కోసం చూపించు",
+    "lead": "లీడ్",
+    "removeFilter": "ఫిల్టర్‌ను తీసివేయి",
+    "filterBySession": "ఈ సెషన్ ద్వారా ఫిల్టర్ చేయి",
+    "openSession": "సెషన్‌ను తెరువు",
+    "title": "సెషన్‌లు"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "రద్దు చేయి",
+    "moreWarningsHidden": "{{count}} మరిన్ని హెచ్చరికలు దాచబడ్డాయి",
+    "diagnostics": "డయాగ్నొస్టిక్‌లు",
+    "liveOutput": "లైవ్ అవుట్‌పుట్",
+    "diagnosticsCopied": "డయాగ్నొస్టిక్‌లు కాపీ చేయబడ్డాయి",
+    "copyDiagnostics": "డయాగ్నొస్టిక్‌లను కాపీ చేయి",
+    "copied": "కాపీ చేయబడింది",
+    "noOutput": "ఇంకా అవుట్‌పుట్ క్యాప్చర్ చేయబడలేదు.",
+    "cliLogs": "CLI లాగ్‌లు",
+    "steps": {
+      "starting": "ప్రారంభమవుతోంది",
+      "configuring": "టీమ్ సెటప్",
+      "assembling": "సభ్యులు చేరుతున్నారు",
+      "finalizing": "ఖరారు చేస్తోంది"
     },
+    "providerStatus": {
+      "status": {
+        "checking": "తనిఖీ చేస్తోంది...",
+        "ready": "సరే",
+        "notes": "సరే (గమనికలు)",
+        "failed": "లోపం",
+        "pending": "వేచి ఉంది"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI బైనరీ లేదు",
+        "openCodeRuntimeMissing": "OpenCode రన్‌టైమ్ లేదు",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows యాక్సెస్ నిరోధించబడింది",
+        "openCodeNoOutput": "OpenCode రన్‌టైమ్ తనిఖీ అవుట్‌పుట్ ఏదీ ఇవ్వలేదు",
+        "openCodeMcpUnreachable": "OpenCode యాప్ MCP చేరుకోలేదు",
+        "workingDirectoryMissing": "వర్కింగ్ డైరెక్టరీ లేదు",
+        "cliBinaryCouldNotStart": "CLI బైనరీని ప్రారంభించలేకపోయింది",
+        "cliPreflightIncomplete": "CLI ప్రీఫ్లైట్ పూర్తి కాలేదు",
+        "authenticationRequired": "ప్రామాణీకరణ అవసరం",
+        "runtimeProviderNotConfigured": "రన్‌టైమ్ ప్రొవైడర్ కాన్ఫిగర్ చేయబడలేదు",
+        "cliPreflightFailed": "CLI ప్రీఫ్లైట్ విఫలమైంది",
+        "selectedModelCompatible": "ఎంచుకున్న మోడల్ అనుకూలం",
+        "selectedModelCompatibilityPending": "ఎంచుకున్న మోడల్ అనుకూలత పెండింగ్",
+        "selectedModelAvailable": "ఎంచుకున్న మోడల్ అందుబాటులో ఉంది",
+        "selectedModelVerified": "ఎంచుకున్న మోడల్ ధృవీకరించబడింది",
+        "selectedModelUnavailable": "ఎంచుకున్న మోడల్ అందుబాటులో లేదు",
+        "selectedModelTimedOut": "ఎంచుకున్న మోడల్ ధృవీకరణ టైమ్ అవుట్ అయింది",
+        "selectedModelCheckFailed": "ఎంచుకున్న మోడల్ తనిఖీ విఫలమైంది",
+        "selectedModelDeferred": "ఎంచుకున్న మోడల్ ధృవీకరణ వాయిదా వేయబడింది",
+        "selectedModelPingNotConfirmed": "ఎంచుకున్న మోడల్ ping ధృవీకరించబడలేదు",
+        "readyWithNotes": "గమనికలతో సిద్ధం",
+        "needsAttention": "శ్రద్ధ అవసరం"
+      },
+      "modelChecksSummary": "ఎంచుకున్న మోడల్ తనిఖీలు - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} మోడల్ అందుబాటులో లేదు",
+        "unavailable_one": "{{count}} మోడల్ అందుబాటులో లేదు",
+        "unavailable_other": "{{count}} మోడల్‌లు అందుబాటులో లేవు",
+        "checkFailed": "{{count}} మోడల్ తనిఖీ విఫలమైంది",
+        "checkFailed_one": "{{count}} మోడల్ తనిఖీ విఫలమైంది",
+        "checkFailed_other": "{{count}} మోడల్‌ల తనిఖీ విఫలమైంది",
+        "timedOut": "{{count}} మోడల్ టైమ్ అవుట్ అయింది",
+        "timedOut_one": "{{count}} మోడల్ టైమ్ అవుట్ అయింది",
+        "timedOut_other": "{{count}} మోడల్‌లు టైమ్ అవుట్ అయ్యాయి",
+        "deferred": "{{count}} ధృవీకరణ వాయిదా వేయబడింది",
+        "deferred_one": "{{count}} ధృవీకరణ వాయిదా వేయబడింది",
+        "deferred_other": "{{count}} ధృవీకరణలు వాయిదా వేయబడ్డాయి",
+        "pingNotConfirmed": "{{count}} ping ధృవీకరించబడలేదు",
+        "pingNotConfirmed_one": "{{count}} ping ధృవీకరించబడలేదు",
+        "pingNotConfirmed_other": "{{count}} pings ధృవీకరించబడలేదు",
+        "compatibilityPending": "{{count}} అనుకూలం, లోతైన ధృవీకరణ పెండింగ్",
+        "compatibilityPending_one": "{{count}} అనుకూలం, లోతైన ధృవీకరణ పెండింగ్",
+        "compatibilityPending_other": "{{count}} అనుకూలం, లోతైన ధృవీకరణ పెండింగ్",
+        "compatible": "{{count}} అనుకూలం",
+        "compatible_one": "{{count}} అనుకూలం",
+        "compatible_other": "{{count}} అనుకూలం",
+        "checking": "{{count}} తనిఖీ చేస్తోంది",
+        "checking_one": "{{count}} తనిఖీ చేస్తోంది",
+        "checking_other": "{{count}} తనిఖీ చేస్తోంది",
+        "available": "{{count}} అందుబాటులో ఉంది",
+        "available_one": "{{count}} అందుబాటులో ఉంది",
+        "available_other": "{{count}} అందుబాటులో ఉన్నాయి",
+        "verified": "{{count}} ధృవీకరించబడింది",
+        "verified_one": "{{count}} ధృవీకరించబడింది",
+        "verified_other": "{{count}} ధృవీకరించబడ్డాయి",
+        "unavailable_few": "{{count}} మోడల్‌లు అందుబాటులో లేవు",
+        "unavailable_many": "{{count}} మోడల్‌లు అందుబాటులో లేవు",
+        "checkFailed_few": "{{count}} మోడల్‌ల తనిఖీ విఫలమైంది",
+        "checkFailed_many": "{{count}} మోడల్‌ల తనిఖీ విఫలమైంది",
+        "timedOut_few": "{{count}} మోడల్‌లు టైమ్ అవుట్ అయ్యాయి",
+        "timedOut_many": "{{count}} మోడల్‌లు టైమ్ అవుట్ అయ్యాయి",
+        "deferred_few": "{{count}} ధృవీకరణలు వాయిదా వేయబడ్డాయి",
+        "deferred_many": "{{count}} ధృవీకరణలు వాయిదా వేయబడ్డాయి",
+        "pingNotConfirmed_few": "{{count}} pings ధృవీకరించబడలేదు",
+        "pingNotConfirmed_many": "{{count}} pings ధృవీకరించబడలేదు",
+        "compatibilityPending_few": "{{count}} అనుకూలం, లోతైన ధృవీకరణ పెండింగ్",
+        "compatibilityPending_many": "{{count}} అనుకూలం, లోతైన ధృవీకరణ పెండింగ్",
+        "compatible_few": "{{count}} అనుకూలం",
+        "compatible_many": "{{count}} అనుకూలం",
+        "checking_few": "{{count}} తనిఖీ చేస్తోంది",
+        "checking_many": "{{count}} తనిఖీ చేస్తోంది",
+        "available_few": "{{count}} అందుబాటులో ఉన్నాయి",
+        "available_many": "{{count}} అందుబాటులో ఉన్నాయి",
+        "verified_few": "{{count}} ధృవీకరించబడ్డాయి",
+        "verified_many": "{{count}} ధృవీకరించబడ్డాయి"
+      },
+      "openProviderSettings": "{{provider}} సెట్టింగ్‌లను తెరువు",
+      "copied": "కాపీ చేయబడింది",
+      "copyDiagnostics": "డయాగ్నొస్టిక్‌లను కాపీ చేయి",
+      "deepVerificationPending": "లోతైన ధృవీకరణ ఇంకా రన్ అవుతోంది. OpenCode ఉచిత మోడల్‌లకు సుమారు 20 సెకన్లు పట్టవచ్చు.",
+      "progress": {
+        "checkingSelectedProviders": "ఎంచుకున్న ప్రొవైడర్లను సమాంతరంగా తనిఖీ చేస్తోంది...",
+        "checkingProvider": "{{provider}} ప్రొవైడర్‌ను తనిఖీ చేస్తోంది...",
+        "checkingProviders": "{{providers}} ప్రొవైడర్లను తనిఖీ చేస్తోంది..."
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "ఫోల్డర్ అనుమతులను సరిచేయండి లేదా ప్రాజెక్ట్‌ను యూజర్-రైటబుల్ ఫోల్డర్‌కు తరలించండి. Administrator గా రన్ చేయడం తాత్కాలిక పరిష్కారం మాత్రమే.",
+        "openCodeBridgeNoOutput": "యాప్ మరియు OpenCode రన్‌టైమ్‌ను పునఃప్రారంభించి, ఆపై మళ్లీ ప్రయత్నించండి. ఇది పునరావృతమైతే, డయాగ్నొస్టిక్‌లను కాపీ చేయండి.",
+        "workingDirectoryMissing": "ప్రస్తుత వర్కింగ్ డైరెక్టరీని ఎంచుకోండి, ఆపై ఈ డైలాగ్‌ను మళ్లీ తెరవండి.",
+        "authenticationRequired": "అవసరమైన ప్రొవైడర్‌ను దాని కోసం కాన్ఫిగర్ చేసిన runtimeలో ప్రామాణీకరించి, ఆపై ఈ dialogను మళ్లీ తెరవండి.",
+        "runtimeProviderNotConfigured": "ఎంచుకున్న ప్రొవైడర్ రన్‌టైమ్‌ను కాన్ఫిగర్ చేయండి, ఆపై ఈ డైలాగ్‌ను మళ్లీ తెరవండి.",
+        "openCodeRuntimeMissing": "ప్రొవైడర్ స్థితి కార్డు నుండి OpenCode రన్‌టైమ్‌ను ఇన్‌స్టాల్ చేయండి లేదా మళ్లీ ప్రయత్నించండి, ఆపై ఈ డైలాగ్‌ను మళ్లీ తెరవండి.",
+        "openCodeAppMcpUnreachable": "OpenCode యాప్ MCP వంతెనను రిఫ్రెష్ చేయడానికి లాంచ్ మళ్లీ ప్రయత్నించండి. ఇది పునరావృతమైతే, యాప్ మరియు OpenCode రన్‌టైమ్‌ను పునఃప్రారంభించండి.",
+        "cliBinaryMissing": "అవసరమైన local runtime ఇన్‌స్టాల్ అయి, ప్రారంభించగలిగేలా ఉందని నిర్ధారించుకుని, ఆపై ఈ dialogను మళ్లీ తెరవండి.",
+        "default": "పై సమస్యను పరిష్కరించండి, ఆపై ఈ డైలాగ్‌ను మళ్లీ తెరవండి.",
+        "openCodeNodeModulesSymlinkPermission": "Agent Teams AI ను Administrator గా రన్ చేయండి, ఆపై లాంచ్ మళ్లీ ప్రయత్నించండి."
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} టీమ్‌మేట్ అనుమతి ఆమోదం కోసం వేచి ఉంది",
+      "nameListWithMore": "{{names}}, +{{count}} మరిన్ని",
+      "waitingForOpenCode": "OpenCode కోసం వేచి ఉంది: {{names}}",
+      "bootstrapStalled": "బూట్‌స్ట్రాప్ నిలిచిపోయింది: {{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}}; OpenCode కోసం వేచి ఉంది: {{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "బూట్‌స్ట్రాప్ నిలిచిపోయింది",
+        "shellOnly": "షెల్-మాత్రమే",
+        "waitingForBootstrap": "బూట్‌స్ట్రాప్ కోసం వేచి ఉంది",
+        "bootstrapUnconfirmed": "బూట్‌స్ట్రాప్ ధృవీకరించబడలేదు",
+        "awaitingPermission": "అనుమతి కోసం వేచి ఉంది",
+        "waitingForRuntime": "రన్‌టైమ్ కోసం వేచి ఉంది",
+        "shellOnlyLower": "షెల్-మాత్రమే",
+        "waitingForBootstrapLower": "బూట్‌స్ట్రాప్ కోసం వేచి ఉంది",
+        "bootstrapUnconfirmedLower": "బూట్‌స్ట్రాప్ ధృవీకరించబడలేదు",
+        "awaitingPermissionLower": "అనుమతి కోసం వేచి ఉంది",
+        "waitingForRuntimeLower": "రన్‌టైమ్ కోసం వేచి ఉంది"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} ప్రారంభించడంలో విఫలమైంది",
+        "teammatesFailedToStart": "{{count}} టీమ్‌మేట్‌లు ప్రారంభించడంలో విఫలమయ్యాయి",
+        "teammatesFailedRatio": "{{count}}/{{total}} టీమ్‌మేట్‌లు ప్రారంభించడంలో విఫలమయ్యాయి"
+      },
+      "skipped": {
+        "memberSkipped": "ఈ లాంచ్ కోసం {{name}} దాటవేయబడింది",
+        "memberSkippedWithReason": "ఈ లాంచ్ కోసం {{name}} దాటవేయబడింది - {{reason}}",
+        "memberSkippedCompact": "{{name}} దాటవేయబడింది",
+        "teammatesSkipped": "{{count}} టీమ్‌మేట్‌లు దాటవేయబడ్డాయి",
+        "teammatesSkippedList": "దాటవేయబడిన టీమ్‌మేట్‌లు: {{list}}",
+        "teammatesSkippedRatio": "ఈ లాంచ్ కోసం {{count}}/{{total}} టీమ్‌మేట్‌లు దాటవేయబడ్డాయి"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} టీమ్‌మేట్‌లు ఇంకా చేరుతున్నారు",
+        "teammatesStillJoining_one": "{{count}} టీమ్‌మేట్ ఇంకా చేరుతోంది",
+        "teammatesStillJoining_few": "{{count}} టీమ్‌మేట్‌లు ఇంకా చేరుతున్నారు",
+        "teammatesStillJoining_many": "{{count}} టీమ్‌మేట్‌లు ఇంకా చేరుతున్నారు",
+        "teammatesStillJoining_other": "{{count}} టీమ్‌మేట్‌లు ఇంకా చేరుతున్నారు",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} టీమ్‌మేట్‌లు ధృవీకరించబడ్డాయి"
+      },
+      "ready": {
+        "leadOnline": "లీడ్ ఆన్‌లైన్",
+        "allTeammatesJoined": "మొత్తం {{count}} టీమ్‌మేట్‌లు చేరారు",
+        "teamProvisionedLeadOnline": "టీమ్ ప్రొవిజన్ చేయబడింది - లీడ్ ఆన్‌లైన్",
+        "teamProvisionedAllJoined": "టీమ్ ప్రొవిజన్ చేయబడింది - మొత్తం {{count}} టీమ్‌మేట్‌లు చేరారు",
+        "teamProvisionedStillJoining": "టీమ్ ప్రొవిజన్ చేయబడింది - టీమ్‌మేట్‌లు ఇంకా చేరుతున్నారు",
+        "launchFinishedWithErrors": "లాంచ్ లోపాలతో పూర్తయింది - {{count}}/{{total}} టీమ్‌మేట్‌లు ప్రారంభించడంలో విఫలమయ్యాయి",
+        "launchContinuedSkipped": "లాంచ్ కొనసాగింది - {{count}}/{{total}} టీమ్‌మేట్‌లు దాటవేయబడ్డాయి",
+        "teamLaunchedLeadOnline": "టీమ్ లాంచ్ చేయబడింది - లీడ్ ఆన్‌లైన్",
+        "teamLaunchedAllJoined": "టీమ్ లాంచ్ చేయబడింది - మొత్తం {{count}} టీమ్‌మేట్‌లు చేరారు"
+      },
+      "panel": {
+        "launchFailed": "లాంచ్ విఫలమైంది",
+        "launchDetails": "లాంచ్ వివరాలు",
+        "launchFinishedWithErrors": "లాంచ్ లోపాలతో పూర్తయింది",
+        "launchContinuedSkipped": "దాటవేయబడిన టీమ్‌మేట్‌లతో లాంచ్ కొనసాగింది",
+        "coreTeamReady": "కోర్ టీమ్ సిద్ధం",
+        "finishingLaunch": "లాంచ్‌ను పూర్తి చేస్తోంది",
+        "teamLaunched": "టీమ్ లాంచ్ చేయబడింది",
+        "launchingTeam": "టీమ్‌ను లాంచ్ చేస్తోంది"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "లైవ్ రన్‌టైమ్ స్థితి",
+    "description": "ప్రదర్శన-మాత్రమే హార్ట్‌బీట్ మరియు లాంచ్ స్థితి. ప్రాసెస్ నియంత్రణలు దిగువన ఉంటాయి.",
+    "source": "మూలం: {{source}}",
+    "lane": "{{lane}} లేన్",
+    "diagnosticOnly": "డయాగ్నొస్టిక్ మాత్రమే",
+    "updated": "{{value}} అప్‌డేట్ అయింది",
+    "states": {
+      "running": "రన్ అవుతోంది",
+      "starting": "ప్రారంభమవుతోంది",
+      "waiting": "వేచి ఉంది",
+      "degraded": "శ్రద్ధ అవసరం",
+      "stopped": "ఆగిపోయింది",
+      "unknown": "తెలియదు"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "ఖచ్చితమైన టాస్క్ లాగ్‌లు",
+      "loading": "ఖచ్చితమైన టాస్క్ లాగ్‌లను లోడ్ చేస్తోంది...",
+      "description": "Logs లో ఉపయోగించే అదే అమలు-లాగ్ కాంపోనెంట్‌లతో రెండర్ చేయబడిన ఖచ్చితమైన ట్రాన్స్‌క్రిప్ట్ స్లైస్‌లు.",
+      "emptyTitle": "ఇంకా ఖచ్చితమైన టాస్క్ లాగ్‌లు లేవు",
+      "emptyDescription": "స్పష్టమైన టాస్క్-లింక్డ్ ట్రాన్స్‌క్రిప్ట్ మెటాడేటా అందుబాటులో ఉన్నప్పుడు ఖచ్చితమైన ట్రాన్స్‌క్రిప్ట్ బండిల్‌లు ఇక్కడ కనిపిస్తాయి.",
+      "summaryOnly": "సారాంశం మాత్రమే"
+    },
+    "executionSessions": {
+      "title": "అమలు సెషన్‌లు",
+      "online": "ఆన్‌లైన్",
+      "updating": "అప్‌డేట్ చేస్తోంది...",
+      "description": "లెగసీ సెషన్-కేంద్రిత ట్రాన్స్‌క్రిప్ట్ బ్రౌజింగ్ మరియు ప్రివ్యూలు."
+    },
+    "stream": {
+      "title": "టాస్క్ లాగ్ స్ట్రీమ్"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "టాస్క్ {{taskId}} ను రద్దు చేయి",
+      "cancel": "రద్దు చేయి",
+      "moveBackToTodoConfirm": "ఈ టాస్క్‌ను తిరిగి TODO కు తరలించి టీమ్‌కు తెలియజేయాలా?",
+      "confirm": "నిర్ధారించు",
+      "keep": "ఉంచు",
+      "changesNeedAttention": "మార్పులకు శ్రద్ధ అవసరం",
+      "changes": "మార్పులు",
+      "deleteTask": "టాస్క్‌ను తొలగించు",
+      "taskLogsActive": "టాస్క్ లాగ్‌లు క్రియాశీలం",
+      "newTaskLogsArriving": "కొత్త టాస్క్ లాగ్‌లు వస్తున్నాయి",
+      "awaitingUser": "యూజర్ కోసం వేచి ఉంది",
+      "awaitingLead": "లీడ్ కోసం వేచి ఉంది",
+      "blockedBy": "దీని ద్వారా నిరోధించబడింది",
+      "blocks": "నిరోధిస్తుంది",
+      "start": "ప్రారంభించు",
+      "complete": "పూర్తి చేయి",
+      "approve": "ఆమోదించు",
+      "requestReview": "సమీక్షను అభ్యర్థించు",
+      "manualReview": "మాన్యువల్ సమీక్ష",
+      "requestChanges": "మార్పులను అభ్యర్థించు"
+    },
+    "filter": {
+      "title": "టాస్క్‌లను ఫిల్టర్ చేయి",
+      "session": "సెషన్",
+      "allSessions": "అన్ని సెషన్‌లు",
+      "teammate": "టీమ్‌మేట్",
+      "unassigned": "(కేటాయించబడలేదు)",
+      "column": "కాలమ్",
+      "clearAll": "అన్నీ క్లియర్ చేయి"
+    },
+    "board": {
+      "addTask": "టాస్క్ జోడించు",
+      "noTasks": "టాస్క్‌లు లేవు",
+      "showMore": "{{count}} మరిన్ని చూపించు",
+      "hiddenCount": "{{count}} దాచబడ్డాయి",
+      "trash": "ట్రాష్",
+      "gridView": "గ్రిడ్ వీక్షణ",
+      "columnsView": "కాలమ్‌ల వీక్షణ"
+    },
+    "trash": {
+      "title": "ట్రాష్",
+      "empty": "తొలగించిన టాస్క్‌లు లేవు",
+      "subject": "విషయం",
+      "owner": "యజమాని",
+      "deleted": "తొలగించబడింది",
+      "unassigned": "కేటాయించబడలేదు",
+      "restoreTask": "టాస్క్‌ను పునరుద్ధరించు",
+      "restore": "పునరుద్ధరించు",
+      "close": "మూసివేయి"
+    },
+    "sort": {
+      "title": "టాస్క్‌లను క్రమబద్ధీకరించు",
+      "sortBy": "దీని ప్రకారం క్రమబద్ధీకరించు",
+      "reset": "రీసెట్ చేయి",
+      "options": {
+        "updatedAt": {
+          "label": "చివరిగా అప్‌డేట్ చేయబడింది",
+          "description": "ఇటీవల అప్‌డేట్ చేసినవి మొదట"
+        },
+        "createdAt": {
+          "label": "సృష్టించబడింది",
+          "description": "కొత్తవి మొదట"
+        },
+        "owner": {
+          "label": "యజమాని",
+          "description": "కేటాయించబడినవారి ప్రకారం అక్షర క్రమంలో"
+        },
+        "manual": {
+          "label": "మాన్యువల్",
+          "description": "డ్రాగ్-అండ్-డ్రాప్ క్రమం"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "శోధనను క్లియర్ చేయి",
+      "tasks": "టాస్క్‌లు",
+      "createdAgo": "{{time}} సృష్టించబడింది",
+      "updatedAgo": "{{time}} అప్‌డేట్ చేయబడింది",
+      "placeholder": "టాస్క్‌లను శోధించండి... (#id లేదా టెక్స్ట్)"
+    },
+    "grid": {
+      "addTask": "టాస్క్ జోడించు",
+      "noTasks": "టాస్క్‌లు లేవు"
+    },
+    "title": "Kanban",
+    "columns": {
+      "todo": "చేయవలసినవి",
+      "inProgress": "ప్రోగ్రెస్‌లో",
+      "review": "సమీక్ష",
+      "done": "పూర్తయింది",
+      "approved": "ఆమోదించబడింది"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "టీమ్‌మేట్ worktrees కోసం Git రిపోజిటరీ స్థితిని తనిఖీ చేస్తోంది...",
+    "ready": "Git worktrees సిద్ధం.",
+    "readyOnBranch": "{{branch}} బ్రాంచ్‌లో Git worktrees సిద్ధం.",
+    "needsSetup": "Worktree ఐసొలేషన్‌కు Git సెటప్ అవసరం",
+    "initialCommitNotice": "ప్రారంభ కమిట్ చర్య అన్ని ప్రస్తుత ఫైల్‌లను సందేశంతో స్టేజ్ చేసి కమిట్ చేస్తుంది",
+    "initializeRepository": "Git రిపోజిటరీని ప్రారంభించు",
+    "createInitialCommit": "ప్రారంభ కమిట్‌ను సృష్టించు",
+    "initialCommitMessage": "chore: initial commit"
+  },
+  "toolApproval": {
+    "settings": "సెట్టింగ్‌లు",
+    "autoAllowAllTools": "అన్ని టూల్స్‌ను ఆటో-అనుమతించు",
+    "autoAllowFileEdits": "ఫైల్ సవరణలను ఆటో-అనుమతించు (Edit, Write, NotebookEdit)",
+    "autoAllowSafeCommands": "సురక్షిత కమాండ్‌లను ఆటో-అనుమతించు (git, pnpm, npm, ls...)",
+    "onTimeout": "టైమ్‌అవుట్‌లో:",
+    "after": "తర్వాత",
+    "secondsShort": "సెకన్లు",
+    "timeoutActions": {
+      "wait": "శాశ్వతంగా వేచి ఉండు",
+      "allow": "అనుమతించు",
+      "deny": "తిరస్కరించు"
+    },
+    "submit": "సమర్పించు",
+    "allow": "అనుమతించు",
+    "deny": "తిరస్కరించు",
+    "allowAll": "అన్నీ అనుమతించు",
+    "pendingCount": "{{count}} పెండింగ్",
+    "autoActionIn": "{{time}} లో ఆటో-{{action}}",
+    "diff": {
+      "previewChanges": "మార్పులను ప్రివ్యూ చేయి",
+      "readingFile": "ఫైల్‌ను చదువుతోంది...",
+      "binaryFile": "బైనరీ ఫైల్ - ప్రివ్యూ చేయలేరు",
+      "truncated": "ఫైల్ 2MB వద్ద కుదించబడింది - diff అసంపూర్ణంగా ఉండవచ్చు",
+      "newFile": "కొత్త ఫైల్"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "సభ్యుని వర్క్ సింక్",
+      "actionableItems": "చర్య తీసుకోదగిన అంశాలు",
+      "fingerprint": "ఫింగర్‌ప్రింట్",
+      "report": "నివేదిక",
+      "none": "ఏదీ లేదు",
+      "shadowWouldNudge": "షాడో నడ్జ్ చేస్తుంది",
+      "yes": "అవును",
+      "no": "లేదు",
+      "moreActionableItems": "{{count}} మరిన్ని చర్య తీసుకోదగిన అంశం(లు)",
+      "diagnostics": "డయాగ్నొస్టిక్‌లు: {{diagnostics}}",
+      "autoResumeStopped": "స్వయంచాలక కొనసాగింపు ఆపబడింది.",
+      "continue": "కొనసాగించు",
+      "stopAutoResume": "స్వయం-పునఃప్రారంభాన్ని ఆపు",
+      "resumeAutoResume": "స్వయం-పునఃప్రారంభాన్ని కొనసాగించు"
+    },
+    "title": "సభ్యుని వర్క్ సింక్",
+    "loadingDiagnostics": "సభ్యుని వర్క్ సింక్ డయాగ్నొస్టిక్‌లను లోడ్ చేస్తోంది.",
+    "diagnosticsUnavailable": "సభ్యుని వర్క్ సింక్ డయాగ్నొస్టిక్‌లు అందుబాటులో లేవు."
+  },
+  "advancedCli": {
+    "title": "ఆధునిక",
+    "useWorktree": "టీమ్ లీడ్‌ను ప్రత్యేక worktreeలో రన్ చేయండి. టీమ్ సభ్యుల worktrees పైన కాన్ఫిగర్ చేయబడతాయి.",
+    "recent": "ఇటీవలి",
+    "commandPreview": "కమాండ్ ప్రివ్యూ",
+    "customArguments": "కస్టమ్ ఆర్గ్యుమెంట్‌లు",
+    "validate": "ధృవీకరించు",
+    "validation": {
+      "allFlagsValid": "అన్ని ఫ్లాగ్‌లు చెల్లుబాటు అయ్యేవి",
+      "unknownFlags": "తెలియనివి: {{flags}}",
+      "protectedFlags": "రక్షితం: {{flags}}",
+      "failed": "ధృవీకరణ విఫలమైంది"
+    },
+    "placeholders": {
+      "worktreeName": "worktree-name"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} క్రితం",
+    "stoppedAgo": "{{time}} క్రితం ఆగిపోయింది",
+    "running": "రన్ అవుతోంది",
+    "stopped": "ఆగిపోయింది",
+    "stopProcess": "ప్రాసెస్‌ను ఆపు (SIGTERM)",
+    "kill": "Kill",
+    "openInBrowser": "బ్రౌజర్‌లో తెరువు",
+    "open": "తెరువు",
+    "pid": "PID{{pid}}",
+    "title": "CLI ప్రాసెస్‌లు"
+  },
+  "taskActivity": {
+    "loadingDetails": "కార్యకలాప వివరాలను లోడ్ చేస్తోంది...",
+    "contextUnavailable": "ఈ కార్యకలాపం కోసం వివరణాత్మక ట్రాన్స్‌క్రిప్ట్ కాంటెక్స్ట్ ఇకపై అందుబాటులో లేదు.",
+    "loading": "టాస్క్ కార్యకలాపాన్ని లోడ్ చేస్తోంది...",
+    "lowSignalOnly": "ఇంకా ఏ ముఖ్య టాస్క్ కార్యకలాపం కనుగొనబడలేదు. తక్కువ-స్థాయి అమలు వివరాలు Task Log Stream లో దిగువన అందుబాటులో ఉన్నాయి.",
+    "empty": "అందుబాటులో ఉన్న ట్రాన్స్‌క్రిప్ట్‌లలో ఇంకా ఏ స్పష్టమైన టాస్క్ కార్యకలాపం కనుగొనబడలేదు. పాత లేదా హ్యూరిస్టిక్ సెషన్ లాగ్‌లు ఇంకా Execution Sessions లో దిగువన అందుబాటులో ఉండవచ్చు.",
+    "title": "టాస్క్ కార్యకలాపం",
+    "description": "ట్రాన్స్‌క్రిప్ట్ మెటాడేటా నుండి ఈ టాస్క్‌కు లింక్ చేయబడిన ముఖ్య స్పష్టమైన రన్‌టైమ్ కార్యకలాపం."
+  },
+  "sendMessage": {
+    "title": "సందేశం పంపు",
+    "description": "ఒక టీమ్ సభ్యునికి నేరుగా సందేశం పంపండి.",
+    "recipientLabel": "గ్రహీత",
+    "selectMemberPlaceholder": "సభ్యుడిని ఎంచుకోండి...",
+    "messageLabel": "సందేశం",
+    "placeholder": "మీ సందేశాన్ని రాయండి... (పంపడానికి Enter)",
+    "send": "పంపు",
+    "sending": "పంపుతోంది...",
+    "charsLeft": "{{count}} అక్షరాలు మిగిలి ఉన్నాయి",
+    "saved": "సేవ్ చేయబడింది",
+    "attachments": {
+      "teamOnlineRequired": "ఫైల్‌లను జతచేయడానికి టీమ్ ఆన్‌లైన్‌లో ఉండాలి",
+      "recipientUnsupported": "ఫైల్‌లను టీమ్ లీడ్ లేదా OpenCode టీమ్‌మేట్‌లకు పంపవచ్చు",
+      "openCodeOnlineRequired": "OpenCode టీమ్‌మేట్‌ల కోసం ఫైల్‌లను జతచేయడానికి టీమ్ ఆన్‌లైన్‌లో ఉండాలి",
+      "disabledHint": "ఆన్‌లైన్ టీమ్ లీడ్ మరియు ఆన్‌లైన్ OpenCode టీమ్‌మేట్‌లకు ఫైల్ అటాచ్‌మెంట్‌లు మద్దతిస్తాయి. అటాచ్‌మెంట్‌లను తీసివేయండి లేదా గ్రహీతను మార్చండి.",
+      "attachFiles": "ఫైల్‌లను జతచేయి (పేస్ట్ చేయండి లేదా డ్రాగ్ & డ్రాప్)",
+      "unavailable": "అటాచ్‌మెంట్‌లు అందుబాటులో లేవు"
+    },
+    "quote": {
+      "remove": "కోట్‌ను తీసివేయి",
+      "replyingTo": "దీనికి ప్రత్యుత్తరం ఇస్తోంది"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "ప్రత్యుత్తరం రద్దు చేయి",
+    "replyingTo": "దీనికి ప్రత్యుత్తరం ఇస్తోంది",
+    "placeholder": "వ్యాఖ్యను జోడించండి... (పంపడానికి Enter)",
+    "attachFile": "ఫైల్‌ను జతచేయి (లేదా పేస్ట్ చేయండి)",
+    "voiceToText": "వాయిస్ టు టెక్స్ట్",
+    "comment": "వ్యాఖ్య",
+    "charsLeft": "{{count}} అక్షరాలు మిగిలి ఉన్నాయి",
+    "saved": "సేవ్ చేయబడింది",
+    "awaitingReplyFrom": "దీని నుండి ప్రత్యుత్తరం కోసం వేచి ఉంది",
+    "or": "లేదా"
+  },
+  "taskAttachments": {
+    "dropImageHere": "ఇమేజ్‌ను ఇక్కడ వదలండి",
+    "attachImage": "ఇమేజ్‌ను జతచేయి",
+    "pasteOrDragDrop": "లేదా పేస్ట్ చేయండి / డ్రాగ్-డ్రాప్",
+    "fromOriginalMessage": "అసలు సందేశం నుండి",
+    "dropFilesHere": "ఫైల్‌లను ఇక్కడ వదలండి",
+    "loading": "అటాచ్‌మెంట్‌లను లోడ్ చేస్తోంది..."
+  },
+  "permissions": {
+    "autoApproveAllTools": "అన్ని టూల్స్‌ను ఆటో-ఆమోదించు",
+    "autonomousModeDescription": "స్వయంప్రతిపత్తి మోడ్: టీమ్ టూల్స్ నిర్ధారణ లేకుండా అమలవుతాయి. విశ్వసనీయం కాని కోడ్‌తో జాగ్రత్తగా ఉండండి.",
+    "manualModeDescription": "మాన్యువల్ మోడ్: మీరు ప్రతి టూల్ కాల్‌ను రియల్ టైమ్‌లో ఆమోదిస్తారు లేదా తిరస్కరిస్తారు."
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "అమలు",
+      "process": "ప్రాసెస్"
+    },
+    "filters": {
+      "all": "అన్నీ"
+    },
+    "logs": {
+      "title": "లాగ్‌లు",
+      "loading": "సభ్యుని లాగ్ స్ట్రీమ్‌ను లోడ్ చేస్తోంది...",
+      "emptyTitle": "ఈ సభ్యుని కోసం ఇంకా లాగ్ స్ట్రీమ్ ఎంట్రీలు కనుగొనబడలేదు.",
+      "emptyDescription": "అందుబాటులో ఉన్నప్పుడు సభ్యుని-స్కోప్ చేసిన ట్రాన్స్‌క్రిప్ట్ లేదా రన్‌టైమ్ లాగ్‌లు ఇక్కడ కనిపిస్తాయి."
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "ఏమి మార్చాలో వివరించండి... (సమర్పించడానికి Enter)",
+    "submit": "సమర్పించు",
+    "charsLeft": "{{count}} అక్షరాలు మిగిలి ఉన్నాయి",
+    "saved": "సేవ్ చేయబడింది",
+    "title": "మార్పులను అభ్యర్థించు"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "డాష్‌బోర్డ్ తెరువు",
+      "openTeam": "టీమ్‌ను తెరువు",
+      "cancel": "రద్దు చేయి"
+    },
+    "membersJson": {
+      "hide": "JSON దాచు"
+    },
+    "optional": {
+      "badge": "ఐచ్ఛికం"
+    }
+  },
+  "runningTeams": {
+    "title": "రన్ అవుతున్న టీమ్‌లు",
     "status": {
       "active": "క్రియాశీలం",
       "provisioning": "లాంచ్ చేస్తోంది",
