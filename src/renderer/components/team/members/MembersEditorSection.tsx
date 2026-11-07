@@ -1,10 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
-import { Checkbox } from '@renderer/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
 import { Label } from '@renderer/components/ui/label';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
@@ -12,7 +16,7 @@ import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { GitBranch, Plug, Plus } from 'lucide-react';
+import { Plus, Settings2 } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
@@ -455,16 +459,7 @@ export const MembersEditorSection = ({
     () => buildMemberDraftColorMap(members, existingMembers, existingMemberColorMap),
     [members, existingMembers, existingMemberColorMap]
   );
-  const worktreeDefaultControlId = useMemo(
-    () =>
-      `teammate-worktree-default-${(draftKeyPrefix ?? 'default').replace(/[^a-zA-Z0-9_-]/g, '-')}`,
-    [draftKeyPrefix]
-  );
-  const agentTeamsMcpDefaultControlId = useMemo(
-    () =>
-      `teammate-agent-teams-mcp-default-${(draftKeyPrefix ?? 'default').replace(/[^a-zA-Z0-9_-]/g, '-')}`,
-    [draftKeyPrefix]
-  );
+  const worktreeDescriptionId = useId();
 
   const mentionSuggestions = useMemo(
     () => buildMemberDraftSuggestions(members, memberColorMap),
@@ -494,52 +489,42 @@ export const MembersEditorSection = ({
     ) : null;
   const masterRosterControls =
     showWorktreeIsolationControls && !singleMemberMode ? (
-      <>
-        {activeMembers.length > 0 ? (
-          <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex min-w-0 items-center gap-2">
-                  <Checkbox
-                    id={worktreeDefaultControlId}
-                    checked={teammateWorktreeDefaultChecked}
-                    disabled={worktreeDefaultDisabled}
-                    aria-describedby={`${worktreeDefaultControlId}-description`}
-                    onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
-                  />
-                  <Label
-                    htmlFor={worktreeDefaultControlId}
-                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-                  >
-                    {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
-                    <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
-                  </Label>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm text-xs">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Settings2 className="size-3.5" />
+            {t('toolApproval.settings')}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="max-w-sm">
+          {activeMembers.length > 0 ? (
+            <>
+              <DropdownMenuCheckboxItem
+                checked={teammateWorktreeDefaultChecked}
+                disabled={worktreeDefaultDisabled}
+                aria-describedby={worktreeDescriptionId}
+                onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+                onSelect={(event) => event.preventDefault()}
+              >
+                {t('members.editor.runInSeparateWorktrees')}
+              </DropdownMenuCheckboxItem>
+              <p
+                id={worktreeDescriptionId}
+                className="px-2 pb-1 pl-8 text-xs text-[var(--color-text-secondary)]"
+              >
                 {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
-              </TooltipContent>
-            </Tooltip>
-            <span id={`${worktreeDefaultControlId}-description`} className="sr-only">
-              {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
-            </span>
-          </>
-        ) : null}
-        <div className="flex shrink-0 items-center gap-2">
-          <Checkbox
-            id={agentTeamsMcpDefaultControlId}
+              </p>
+            </>
+          ) : null}
+          <DropdownMenuCheckboxItem
             checked={agentTeamsMcpLockedForAll}
             onCheckedChange={(checked) => updateAgentTeamsMcpLock(checked === true)}
-          />
-          <Label
-            htmlFor={agentTeamsMcpDefaultControlId}
-            className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+            onSelect={(event) => event.preventDefault()}
           >
-            {!isFlatRoster ? <Plug className="size-3.5 shrink-0" /> : null}
-            <span className="whitespace-nowrap">{t('members.editor.agentTeamsMcpOnly')}</span>
-          </Label>
-        </div>
-      </>
+            {t('members.editor.agentTeamsMcpOnly')}
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     ) : null;
 
   return (
@@ -583,10 +568,7 @@ export const MembersEditorSection = ({
             }
           >
             {showWorktreeIsolationControls && !isFlatRoster && !singleMemberMode ? (
-              <div
-                className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-2.5 py-2"
-                title={worktreeIsolationDisabledReason ?? undefined}
-              >
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-2.5 py-2">
                 {masterRosterControls}
               </div>
             ) : null}
