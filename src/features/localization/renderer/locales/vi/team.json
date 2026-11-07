@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} bị ẩn",
       "trash": "Thùng rác",
       "gridView": "Chế độ xem lưới",
-      "columnsView": "Chế độ xem cột"
+      "columnsView": "Chế độ xem cột",
+      "tableView": "Chế độ bảng",
+      "configureColumns": "Chọn cột"
     },
     "trash": {
       "title": "Thùng rác",

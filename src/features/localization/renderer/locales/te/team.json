@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} దాచబడ్డాయి",
       "trash": "ట్రాష్",
       "gridView": "గ్రిడ్ వీక్షణ",
-      "columnsView": "కాలమ్‌ల వీక్షణ"
+      "columnsView": "కాలమ్‌ల వీక్షణ",
+      "tableView": "పట్టిక వీక్షణ",
+      "configureColumns": "నిలువు వరుసలను ఎంచుకోండి"
     },
     "trash": {
       "title": "ట్రాష్",

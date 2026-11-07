@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} ที่ซ่อน",
       "trash": "ถังขยะ",
       "gridView": "มุมมองตาราง",
-      "columnsView": "มุมมองคอลัมน์"
+      "columnsView": "มุมมองคอลัมน์",
+      "tableView": "มุมมองตาราง",
+      "configureColumns": "เลือกคอลัมน์"
     },
     "trash": {
       "title": "ถังขยะ",

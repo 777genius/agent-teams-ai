@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} लपवले",
       "trash": "कचरा",
       "gridView": "ग्रिड दृश्य",
-      "columnsView": "स्तंभ दृश्य"
+      "columnsView": "स्तंभ दृश्य",
+      "tableView": "तक्ता दृश्य",
+      "configureColumns": "स्तंभ निवडा"
     },
     "trash": {
       "title": "कचरा",
