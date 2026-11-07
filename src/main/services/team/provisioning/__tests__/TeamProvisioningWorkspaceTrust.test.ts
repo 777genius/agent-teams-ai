@@ -102,6 +102,28 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     }
   });
 
+  it('resolves standalone Git directory metadata through managed Git from a nested checkout', async () => {
+    const temp = await mkdtemp(path.join(tmpdir(), 'agent-teams-separate-git-'));
+    const checkout = path.join(temp, 'checkout');
+    const nested = path.join(checkout, 'nested');
+    const gitDir = path.join(temp, 'metadata');
+    try {
+      await mkdir(nested, { recursive: true });
+      await mkdir(path.join(gitDir, 'objects'), { recursive: true });
+      await mkdir(path.join(gitDir, 'refs'), { recursive: true });
+      await writeFile(path.join(checkout, '.git'), `gitdir: ${gitDir}\n`);
+      await writeFile(path.join(gitDir, 'HEAD'), 'ref: refs/heads/main\n');
+      await writeFile(
+        path.join(gitDir, 'config'),
+        '[core]\n\trepositoryformatversion = 0\n\tbare = false\n'
+      );
+      const ports = createNodeWorkspaceTrustWorkspaceCollectionPorts();
+      await expect(ports.resolveGitRoot(nested)).resolves.toBe(await realpath(checkout));
+    } finally {
+      await rm(temp, { recursive: true, force: true });
+    }
+  });
+
   it('collects workspace trust candidates with injected path and git ports', async () => {
     const ports = createWorkspacePorts({
       resolveGitRoot: vi.fn(async (cwd) => (cwd === '/repo/worktree' ? '/repo/.git/worktree' : '/repo')),

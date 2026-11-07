@@ -77,7 +77,10 @@ async function isValidGitMarker(root: string): Promise<boolean> {
   }
 }
 
-export async function resolveWorkspaceTrustFilesystemGitRoot(cwd: string): Promise<string | null> {
+export async function resolveWorkspaceTrustFilesystemGitRoot(
+  cwd: string,
+  verifyGitFile?: (candidateRoot: string) => Promise<boolean>
+): Promise<string | null> {
   let current = path.resolve(cwd);
   const root = path.parse(current).root;
   try {
@@ -91,6 +94,18 @@ export async function resolveWorkspaceTrustFilesystemGitRoot(cwd: string): Promi
 
   while (true) {
     if (await isValidGitMarker(current)) return current;
+    // Standalone git init --separate-git-dir metadata has no core.worktree.
+    // Verify only otherwise untrusted .git files with the managed Git binary.
+    // Normal directories and absent markers must never trigger a Git process.
+    if (verifyGitFile) {
+      try {
+        if ((await fs.lstat(path.join(current, '.git'))).isFile() && await verifyGitFile(current)) {
+          return current;
+        }
+      } catch {
+        // Invalid or unreadable metadata is not a trust root.
+      }
+    }
 
     if (current === root) {
       return null;

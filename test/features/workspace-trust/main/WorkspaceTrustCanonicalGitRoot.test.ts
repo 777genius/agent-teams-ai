@@ -6,7 +6,7 @@ import {
   resolveWorkspaceTrustCanonicalGitRoot,
   resolveWorkspaceTrustFilesystemGitRoot,
 } from '@features/workspace-trust/main';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 let tmpDir: string | null = null;
 
@@ -78,6 +78,25 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
     await fs.mkdir(nested);
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+  });
+
+  it('needs explicit proof before trusting a standalone Git metadata pointer', async () => {
+    const dir = await makeTmpDir();
+    const checkout = path.join(dir, 'checkout');
+    const nested = path.join(checkout, 'nested');
+    const gitDir = path.join(dir, 'metadata');
+    await fs.mkdir(nested, { recursive: true });
+    await fs.mkdir(gitDir);
+    await fs.writeFile(path.join(checkout, '.git'), `gitdir: ${gitDir}\n`);
+    await fs.writeFile(path.join(gitDir, 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(gitDir, 'config'), '[core]\n\tbare = false\n');
+
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
+    const denied = vi.fn(async () => false);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested, denied)).resolves.toBeNull();
+    const verified = vi.fn(async (candidate: string) => candidate === checkout);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested, verified)).resolves.toBe(checkout);
+    expect(verified).toHaveBeenCalledWith(checkout);
   });
 
   it('rejects forged .git pointers to another repository', async () => {
