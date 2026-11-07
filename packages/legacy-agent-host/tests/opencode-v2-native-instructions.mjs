@@ -28,7 +28,8 @@ const env = {
   HOME: join(root,'home'), XDG_CONFIG_HOME: join(root,'config'),
   XDG_CACHE_HOME: join(root,'cache'), XDG_DATA_HOME: join(root,'data'),
   XDG_STATE_HOME: join(root,'state'), TMPDIR: join(root,'temp'),
-  OPENCODE_SERVER_PASSWORD: password, CI: 'true', NO_COLOR: '1',
+  OPENCODE_SERVER_PASSWORD: password, OPENCODE_DISABLE_MODELS_FETCH: 'true',
+  CI: 'true', NO_COLOR: '1',
 };
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 let child, startTicks, stopRequested = false, nativeSessionId, endpoint;
@@ -192,6 +193,7 @@ try {
   if(!isOwnedNativeSessionSnapshot(ownedSnapshot,nativeSessionId,workspace,permissionRules))
     throw Error('native_TEST_session_workspace_or_permission_mismatch');
   receipt.steps.push('native_TEST_session_workspace_and_permissions_attested');
+  const outsideResource=join(root,'temp','TEST-owned-outside-workspace');
   // Real native ordering negative: a later allow must defeat an earlier deny
   // for this disposable second TEST session, and the Host must refuse it.
   // Never execute a model turn or create out-of-workspace files.
@@ -214,9 +216,20 @@ try {
     unsafeRead.data.data.permissions,'deny');
   if(unsafePolicy.kind!=='hold'||unsafePolicy.reason!=='external-directory')
     throw Error('Host_accepted_native_later_allow_override');
+  receipt.steps.push('real_native_later_allow_override_refused_by_Host');
+  // Probe the actual V2 native Permission.Service, not just persisted order.
+  // This disposable session is unsafe, but Host already refused its policy.
+  const allowDecision=await native(unsafePath+'/permission','POST',
+    {action:'external_directory',resources:[outsideResource]});
+  if(allowDecision.status!==200||allowDecision.data?.data?.effect!=='allow')
+    throw Error('native_last_matching_allow_not_effective');
+  const allowPending=await native(unsafePath+'/permission');
+  if(allowPending.status!==200||!Array.isArray(allowPending.data?.data)||
+     allowPending.data.data.length!==0)
+    throw Error('native_allow_created_unexpected_permission_request');
+  receipt.steps.push('real_native_later_allow_effect_verified_and_Host_refused');
   const unsafeDelete=await native(unsafePath,'DELETE');
   if(unsafeDelete.status!==204)throw Error('native_second_TEST_session_delete_failed');
-  receipt.steps.push('real_native_later_allow_override_refused_by_Host');
   // Native positive readback for V2's ordered ASK shape, isolated from the
   // captured DENY session. This proves only config/order preservation, NOT
   // actual model/tool permission enforcement (which remains a HOLD).
@@ -243,9 +256,30 @@ try {
     askRead.data.data.permissions,'deny');
   if(denyGuard.kind!=='hold'||denyGuard.reason!=='external-directory')
     throw Error('Host_weakened_captured_deny_to_ask');
+  receipt.steps.push('real_native_ordered_ask_readback_without_tool_execution');
+  // Native ASK must create one session-scoped permission. Reject it exactly
+  // once. No model, tool, grant, unknown-response retry, or user state.
+  const askDecision=await native(askPath+'/permission','POST',
+    {action:'external_directory',resources:[outsideResource]});
+  const pendingId=askDecision.data?.data?.id;
+  if(askDecision.status!==200||askDecision.data?.data?.effect!=='ask'||
+     !/^per[A-Za-z0-9_-]+$/.test(pendingId||''))
+    throw Error('native_last_matching_ask_not_effective');
+  const pendingAsk=await native(askPath+'/permission');
+  if(pendingAsk.status!==200||!Array.isArray(pendingAsk.data?.data)||
+     pendingAsk.data.data.length!==1||pendingAsk.data.data[0]?.id!==pendingId||
+     pendingAsk.data.data[0]?.sessionID!==askId)
+    throw Error('native_ask_permission_not_owned');
+  const rejected=await native(askPath+'/permission/'+encodeURIComponent(pendingId)+'/reply',
+    'POST',{decision:'reject'});
+  if(rejected.status!==204)throw Error('native_ask_reject_not_confirmed');
+  const afterReject=await native(askPath+'/permission');
+  if(afterReject.status!==200||!Array.isArray(afterReject.data?.data)||
+     afterReject.data.data.length!==0)
+    throw Error('native_rejected_permission_remains_pending');
+  receipt.steps.push('real_native_ask_permission_rejected_without_tool_execution');
   if((await native(askPath,'DELETE')).status!==204)
     throw Error('native_ask_TEST_session_delete_failed');
-  receipt.steps.push('real_native_ordered_ask_readback_without_tool_execution');
   const sessionPath='/api/session/'+encodeURIComponent(nativeSessionId);
   const instructions='TEST-only Host role, team and workspace. Do not execute real tools.';
   const context={request:{
@@ -339,6 +373,20 @@ try {
   receipt.nativePermissionReadbacks=nativePermissionReads;
   receipt.steps.push('Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck');
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
+  // Re-confirm the selected Host session's DENY with the real native resolver
+  // after binary/PID/readiness re-attestation; never execute a model or tool.
+  const denyDecision=await native(sessionPath+'/permission','POST',
+    {action:'external_directory',resources:[outsideResource]});
+  if(denyDecision.status!==200||denyDecision.data?.data?.effect!=='deny')
+    throw Error('native_Host_captured_external_deny_not_effective');
+  const denyPending=await native(sessionPath+'/permission');
+  if(denyPending.status!==200||!Array.isArray(denyPending.data?.data)||
+     denyPending.data.data.length!==0)
+    throw Error('native_Host_deny_created_unexpected_permission_request');
+  receipt.nativePolicyDecisions={capturedDeny:denyDecision.data.data.effect,
+    laterAllow:allowDecision.data.data.effect,laterAsk:askDecision.data.data.effect,
+    askRejected:rejected.status===204,pendingAfterReject:afterReject.data.data.length};
+  receipt.steps.push('real_native_Host_captured_external_deny_effect_verified');
   // Stock V2 can ACK a prompt without retaining durable session events.
   // Read the real pinned native session log BEFORE any model/tool execution:
   // this is a cursor observation, never an authorization to submit a turn.
