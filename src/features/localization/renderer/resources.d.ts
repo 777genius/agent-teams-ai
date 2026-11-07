@@ -4412,10 +4412,12 @@ export default interface Resources {
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",
+        "configureColumns": "Choose columns",
         "gridView": "Grid view",
         "hiddenCount": "{{count}} hidden",
         "noTasks": "No tasks",
         "showMore": "Show {{count}} more",
+        "tableView": "Table view",
         "trash": "Trash"
       },
       "columns": {
