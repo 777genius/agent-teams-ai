@@ -569,7 +569,12 @@ export function useRuntimeProviderManagement(
           cursor,
           refresh: refreshDirectoryData,
         });
-        if (!requestIsCurrent()) {
+        // A credential mutation can invalidate this read without changing the
+        // request sequence. Never paint its pre-mutation directory into local state.
+        if (
+          !requestIsCurrent() ||
+          getRuntimeProviderDirectoryReadToken(projectContext.path) !== readToken
+        ) {
           return false;
         }
         if (response.error) {
@@ -615,7 +620,10 @@ export function useRuntimeProviderManagement(
         );
         return true;
       } catch (loadError) {
-        if (requestIsCurrent()) {
+        if (
+          requestIsCurrent() &&
+          getRuntimeProviderDirectoryReadToken(projectContext.path) === readToken
+        ) {
           setDirectoryError(
             loadError instanceof Error ? loadError.message : 'Failed to load provider directory'
           );
