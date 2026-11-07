@@ -1,0 +1,84 @@
+name: Teams creation page Electron E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/teams-create-page-desktop-e2e.yml'
+      - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'src/renderer/components/team/**'
+      - 'src/features/organizations/**'
+      - 'src/features/team-templates/**'
+      - 'src/features/gateway-provider/renderer/**'
+      - 'src/renderer/hooks/useCreateTeamDraft.ts'
+      - 'src/renderer/services/createTeamDraftStorage.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/teams-create-page-desktop-e2e.yml'
+      - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'src/renderer/components/team/**'
+      - 'src/features/organizations/**'
+      - 'src/features/team-templates/**'
+      - 'src/features/gateway-provider/renderer/**'
+      - 'src/renderer/hooks/useCreateTeamDraft.ts'
+      - 'src/renderer/services/createTeamDraftStorage.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  creation-page:
+    name: Creation page (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      TEAMS_CREATE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/teams-create-page-evidence
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare Linux virtual display
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a node scripts/e2e/teams-create-page-desktop.mjs
+          else
+            node scripts/e2e/teams-create-page-desktop.mjs
+          fi
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-create-page-${{ matrix.os }}-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/teams-create-page-evidence/*.png
+            ${{ runner.temp }}/teams-create-page-evidence/*.json
