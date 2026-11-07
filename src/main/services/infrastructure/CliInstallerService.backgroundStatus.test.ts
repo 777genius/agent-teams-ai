@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { createDefaultProviderStatus } from '../runtime/providerStatusCheckContract';
+import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 
 import { CliInstallerService } from './CliInstallerService';
 
@@ -10,6 +11,10 @@ interface CliInstallerServiceInternals {
   statusGatherGeneration: number;
   latestStatusSnapshot: CliInstallationStatus | null;
   multimodelBridgeService: {
+    getProviderStatus: (
+      binaryPath: string,
+      providerId: CliProviderId
+    ) => Promise<CliProviderStatus>;
     getProviderStatuses: (
       binaryPath: string,
       onUpdate?: (providers: CliProviderStatus[], providerId?: CliProviderId) => void
@@ -30,6 +35,51 @@ afterEach(() => {
 });
 
 describe('CliInstallerService background provider status', () => {
+  test('resolves the runtime when a provider check races initial discovery', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    internals.latestStatusSnapshot = internals.createInitialStatus();
+    vi.spyOn(ClaudeBinaryResolver, 'resolve').mockResolvedValue('/fake/runtime');
+    const provider = createDefaultProviderStatus('opencode');
+    const check = vi
+      .spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+      .mockResolvedValue(provider);
+
+    const result = await service.getProviderStatus('opencode');
+
+    expect(check).toHaveBeenCalledWith('/fake/runtime', 'opencode', expect.any(Function));
+    expect(result?.providerId).toBe('opencode');
+    expect(result?.statusMessage).not.toBe('Provider runtime missing');
+  });
+
+  test('still reports a missing runtime when discovery finds none', async () => {
+    const service = new CliInstallerService();
+    vi.spyOn(ClaudeBinaryResolver, 'resolve').mockResolvedValue(null);
+
+    const result = await service.getProviderStatus('opencode');
+
+    expect(result?.detailMessage).toContain('Provider runtime missing');
+  });
+
+  test('does not use a runtime discovered before status was invalidated', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    let finish!: (path: string | null) => void;
+    vi.spyOn(ClaudeBinaryResolver, 'resolve').mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
+    const check = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus');
+    const pending = service.getProviderStatus('opencode');
+    await Promise.resolve();
+    service.invalidateStatusCache();
+    finish('/fake/stale-runtime');
+    const result = await pending;
+    expect(check).not.toHaveBeenCalled();
+    expect(result?.detailMessage).toContain('runtime changed during status check');
+  });
+
   test('publishes provider completion after the initial status budget expires', async () => {
     vi.useFakeTimers();
     const internals = new CliInstallerService() as unknown as CliInstallerServiceInternals;
