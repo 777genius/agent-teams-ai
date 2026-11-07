@@ -99,7 +99,7 @@ export async function runProcessQualification(inputsDirectory: string) {
     const providerRoot = await realpath(join(repository, 'packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations'));
     const sdkRoot = await realpath(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
     const sdkPackage = await json(join(sdkRoot, 'package.json'));
-    assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk'); assert.equal(sdkPackage.version, '0.3.405');
+    assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk'); assert.equal(sdkPackage.version, '0.3.305');
     const claude = await pin(await realpath(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude')));
     const codex = await pin(await realpath(join(inputsDirectory, 'codex/codex-aarch64-apple-darwin')));
     const codeModeHost = (await captureDesktopCodexNativeInputs(codex.path))[1]!;
@@ -125,7 +125,7 @@ export async function runProcessQualification(inputsDirectory: string) {
     assert.equal(await digest(terminalArchive), terminalAsset.sha256);
     const terminalRoot = join(repository, 'resources/terminal-platform');
     const terminalBinary = await pin(join(terminalRoot, 'terminal-daemon'));
-    assert.ok((await readFile(join(terminalRoot, 'VERSION'), 'utf8')).includes('0.3.4'));
+    assert.equal((await readFile(join(terminalRoot, 'VERSION'), 'utf8')).trim(), terminalLock.version);
     proof.terminalPlatform = { archive: await pin(terminalArchive), binary: terminalBinary };
     const headersArchive = join(inputsDirectory, 'node-v24.21.0-headers.tar.gz');
     assert.equal(await digest(headersArchive), '57c6bee2e30bbbee5bd51d6cc343eb992e174b56a2a1d0eab7a7510771c20ea2');
