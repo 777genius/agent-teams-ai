@@ -155,6 +155,18 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).not.toHaveBeenCalled();
   });
 
+  it('does not auto-reattach a possibly shared OpenCode runtime', async () => {
+    const offline = runtimeMembers(false);
+    offline.members.alice = { ...offline.members.alice, providerId: 'opencode', laneKind: 'secondary' };
+    port.getRuntime = vi.fn(async () => offline);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' }, 'open-code-run', active
+    );
+    expect(result.kind).toBe('skipped');
+    expect(port.attachMember).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
   it('respects a deliberately skipped teammate', async () => {
     port.getRuntime = vi.fn(async () => runtimeMembers(false));
     port.getMemberStatuses = vi.fn(async () => ({
