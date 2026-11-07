@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -6,6 +6,7 @@ import { JsonMemberWorkSyncReportJournal } from '@features/member-work-sync/main
 import { buildPendingReportIntentId, JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import * as atomicWrite from '@main/utils/atomicWrite';
+import * as durableFileSync from '@main/utils/durableFileSync';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberWorkSyncReportJournalInput } from '@features/member-work-sync/core/application/MemberWorkSyncReportJournalPort';
@@ -294,6 +295,7 @@ describe('strict JSON report journal', () => {
     });
     vi.restoreAllMocks();
     const write = vi.spyOn(atomicWrite, 'atomicWriteAsync');
+    const sync = vi.spyOn(durableFileSync, 'syncFile');
     const journalBytes = await readFile(reportsPath, 'utf8');
     const proved = await journal.ensure({
       ...input,
@@ -306,8 +308,31 @@ describe('strict JSON report journal', () => {
       intent: { recordedAt: input.receivedAt, journal: { firstRecordedAt: input.receivedAt } },
     });
     expect(write.mock.calls.every(([path]) => path !== reportsPath)).toBe(true);
+    const reportsProofCalls = sync.mock.calls.filter(([filePath]) => filePath === reportsPath);
+    if (process.platform === 'win32') expect(reportsProofCalls).toContainEqual([reportsPath, true]);
+    else expect(reportsProofCalls).toEqual([]);
     expect(await readFile(reportsPath, 'utf8')).toBe(journalBytes);
   });
+  it.skipIf(process.platform !== 'win32')(
+    'returns commit_unknown if a Windows retry cannot sync the existing journal file',
+    async () => {
+      expect((await journal.ensure(input)).state).toBe('present');
+      vi.spyOn(durableFileSync, 'syncFile').mockRejectedValueOnce(new Error('fsync failed'));
+      expect((await journal.ensure(input)).state).toBe('commit_unknown');
+      expect((await journal.read(input)).state).toBe('present');
+    }
+  );
+  it.skipIf(process.platform === 'win32')(
+    'can prove an unchanged read-only journal on Unix without rewriting it',
+    async () => {
+      expect((await journal.ensure(input)).state).toBe('present');
+      const reportsPath = paths.getMemberReportsPath(input.teamName, input.memberName);
+      const before = await readFile(reportsPath, 'utf8');
+      await chmod(reportsPath, 0o444);
+      expect((await journal.ensure(input)).state).toBe('present');
+      expect(await readFile(reportsPath, 'utf8')).toBe(before);
+    }
+  );
   it('keeps commit_unknown when a later durability proof itself fails', async () => {
     const originalWrite = atomicWrite.atomicWriteAsync;
     const reportsPath = paths.getMemberReportsPath(input.teamName, input.memberName);
