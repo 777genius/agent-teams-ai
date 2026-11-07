@@ -13,9 +13,6 @@ import { randomUUID } from 'crypto';
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 
-import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
-import type { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
-import type { ScheduleRepository } from './ScheduleRepository';
 import type {
   CreateScheduleInput,
   Schedule,
@@ -24,6 +21,9 @@ import type {
   ScheduleRunStatus,
   UpdateSchedulePatch,
 } from '@shared/types';
+import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
+import type { ScheduleRepository } from './ScheduleRepository';
+import type { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 
 const logger = createLogger('Service:Scheduler');
 
