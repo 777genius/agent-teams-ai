@@ -14,8 +14,8 @@ This is a qualification of Stage 1 V1 against current product main, not Stage 2 
 - Preserve Stage1 Team/Task/Message owner and V1 provider/existing UI paths.
 - Preserve recent main changes to schedules, provider readiness, managed Git, and TanStack task view.
 - Port fixes to extracted owners rather than reintroducing duplicate legacy writer/source files.
-- Require fresh exact-merged-tree typecheck, tests, CI/CodeQL and selected native/packed Windows/macOS E2E.
+- Require fresh exact-merged-tree typecheck, tests, `pnpm lint`, `pnpm lint:mcp`, full-scope CI/CodeQL and selected native/packed Windows/macOS E2E.
 - Reconcile source branch and re-run gates if main advances; never infer PASS from older SHAs.
 - All unknown delivery/process custody remains UNKNOWN; no native mutation replay, shared-process stop or credential access.
 
-No merge into main, release, Stage2 core switch, or V2 default without separately accepted gates.
+This integration slice targets **Stage 1 Draft #982 only**. Merging #982 into `main`, releasing Stage 1, or activating Stage 1 V1 as the default requires a **separate owner decision and qualification**; none is authorized here. Stage 2 core switching and OpenCode V2 default activation are also outside this slice.
