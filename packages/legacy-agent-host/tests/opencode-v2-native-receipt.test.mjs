@@ -2,14 +2,14 @@
 // Deliberately fail before process allocation; never open user configuration.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { isCompleteNativeHostReceipt, REQUIRED_NATIVE_HOST_STEPS } from './opencode-v2-native-receipt-verify.mjs';
-import { parseOwnedDurableLog } from './opencode-v2-native-log-parse.mjs';
+import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
 
 test('a failed native Host proof publishes only sanitized diagnostics and no raw paths', () => {
   const root = mkdtempSync(join(tmpdir(), 'TEST-v2-host-failure-receipt-'));
@@ -200,4 +200,38 @@ test('native durable SSE proof rejects foreign, incomplete and reordered events'
   for (const stream of bad)
     assert.throws(() => parseOwnedDurableLog(stream,id,dir),
       /native_durable_log_identity_or_cursor_mismatch/);
+});
+
+
+test('cold native log proof compares retained event content, not only counts and watermark', () => {
+  const sessionId = 'ses_TEST123', directory = '/TEST/workspace';
+  const frame = value => 'data: ' + JSON.stringify(value) + '\\n\\n';
+  const event = (seq, id, content) => ({
+    id, type: seq === 0 ? 'session.created' : 'session.updated',
+    durable: { aggregateID: sessionId, seq },
+    data: { sessionID: sessionId, content },
+    location: { directory },
+  });
+  const sync = seq => ({ type: 'log.synced', aggregateID: sessionId, seq });
+  const read = (events, watermark) => {
+    const fingerprints = [];
+    const body = events.map(frame).join('') + frame(sync(watermark));
+    const cursor = parseOwnedDurableLog(body, sessionId, directory,
+      value => fingerprints.push(createHash('sha256').update(JSON.stringify(value)).digest('hex')));
+    return { ...cursor, fingerprints };
+  };
+  const original = read([event(0, 'evt-0', 'TEST-A')], 2);
+  const unchanged = read([event(0, 'evt-0', 'TEST-A')], 2);
+  const appended = read([event(0, 'evt-0', 'TEST-A'), event(3, 'evt-3', 'TEST-B')], 3);
+  const replacedId = read([event(0, 'evt-foreign', 'TEST-A')], 2);
+  const alteredContent = read([event(0, 'evt-0', 'TEST-CHANGED')], 2);
+  const regressed = read([event(0, 'evt-0', 'TEST-A')], 1);
+  assert.equal(retainsOwnedDurablePrefix(original, unchanged), true);
+  assert.equal(retainsOwnedDurablePrefix(original, appended), true);
+  assert.equal(retainsOwnedDurablePrefix(original, replacedId), false,
+    'same watermark/count must not certify a different event');
+  assert.equal(retainsOwnedDurablePrefix(original, alteredContent), false,
+    'same event ID with changed payload must not certify the old durable prefix');
+  assert.equal(retainsOwnedDurablePrefix(original, regressed), false);
+  assert.equal(retainsOwnedDurablePrefix(original, { watermark: 2, eventCount: 1 }), false);
 });

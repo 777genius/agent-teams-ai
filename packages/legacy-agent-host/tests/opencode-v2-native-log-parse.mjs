@@ -5,7 +5,7 @@ const limit = () => { throw new Error('native_durable_log_limit_exceeded'); };
 const safePosition = value => Number.isSafeInteger(value) && value >= 0;
 const ownedString = value => typeof value === 'string' && value.length > 0 && value.length <= 4096;
 
-export function parseOwnedDurableLog(body, sessionId, directory) {
+export function parseOwnedDurableLog(body, sessionId, directory, onEvent) {
   if (typeof body !== 'string' || !ownedString(sessionId) || !ownedString(directory)) invalid();
   const frames = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n\n');
   if (frames.at(-1) !== '') invalid();
@@ -41,7 +41,24 @@ export function parseOwnedDurableLog(body, sessionId, directory) {
     ids.add(event.id);
     previous = seq;
     eventCount++;
+    // Retain the full event identity in memory for an optional TEST-only
+    // cold-restart comparison. Never copy native event content into receipts.
+    onEvent?.(event);
   }
   if (!synced) invalid();
   return { watermark, eventCount };
+}
+
+// Native cold restart must retain the SAME previously observed events, not
+// merely an equal count or watermark. New events may be appended afterwards.
+export function retainsOwnedDurablePrefix(fresh, recovered) {
+  return Number.isSafeInteger(fresh?.watermark) && fresh.watermark >= 0 &&
+    Number.isSafeInteger(recovered?.watermark) && recovered.watermark >= fresh.watermark &&
+    Number.isSafeInteger(fresh?.eventCount) && fresh.eventCount >= 0 &&
+    Number.isSafeInteger(recovered?.eventCount) && recovered.eventCount >= fresh.eventCount &&
+    Array.isArray(fresh?.fingerprints) && Array.isArray(recovered?.fingerprints) &&
+    fresh.fingerprints.length === fresh.eventCount &&
+    recovered.fingerprints.length === recovered.eventCount &&
+    fresh.fingerprints.every((fingerprint, i) =>
+      typeof fingerprint === 'string' && fingerprint === recovered.fingerprints[i]);
 }

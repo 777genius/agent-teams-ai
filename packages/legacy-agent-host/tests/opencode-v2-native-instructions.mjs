@@ -11,7 +11,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createOpenCodeV2MemberProvider } from '../dist/adapters/providers/OpenCodeV2MemberProvider.js';
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
-import { parseOwnedDurableLog } from './opencode-v2-native-log-parse.mjs';
+import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
 
 const version = '2.0.21';
 const pinnedLinuxX64Avx2Digest = 'f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7';
@@ -116,7 +116,10 @@ async function readOwnedDurableLog(sessionId) {
   });
   if(response.status!==200)throw Error('native_durable_log_read_unconfirmed');
   const body=await readBoundedNativeBody(response,'native_durable_log_read_unconfirmed');
-  return parseOwnedDurableLog(body,sessionId,workspace);
+  const fingerprints=[];
+  const cursor=parseOwnedDurableLog(body,sessionId,workspace,
+    event=>fingerprints.push(digest(JSON.stringify(event))));
+  return {...cursor,fingerprints};
 }
 try {
   if (process.platform !== 'linux' || process.arch !== 'x64' ||
@@ -331,7 +334,8 @@ try {
   // this is a cursor observation, never an authorization to submit a turn.
   const freshLog=await readOwnedDurableLog(nativeSessionId);
   // Only schema, count and watermark may enter a publicly downloadable receipt.
-  receipt.nativeLogReadback={readOnly:true,synced:true,...freshLog,modelTurnProven:false};
+  receipt.nativeLogReadback={readOnly:true,synced:true,watermark:freshLog.watermark,
+    eventCount:freshLog.eventCount,modelTurnProven:false};
   receipt.steps.push('real_native_fresh_session_durable_log_cursor_read_only');
   // Seal is synchronous revocation. The exact owner must initiate the real
   // native process-group stop before driver.close()/cleanup() are requested.
@@ -421,10 +425,10 @@ try {
   // Reopen the EXACT same durable log against a different, freshly attested
   // TEST-owned PID. No prompt, permissions reply or instruction mutation occurs.
   const recoveredLog=await readOwnedDurableLog(nativeSessionId);
-  if(recoveredLog.watermark<freshLog.watermark||
-     recoveredLog.eventCount<freshLog.eventCount)
-    throw Error('native_cold_restart_durable_log_cursor_regressed');
-  receipt.restartLogReadback={readOnly:true,synced:true,...recoveredLog,modelTurnProven:false};
+  if(!retainsOwnedDurablePrefix(freshLog,recoveredLog))
+    throw Error('native_cold_restart_durable_log_prefix_mismatch');
+  receipt.restartLogReadback={readOnly:true,synced:true,watermark:recoveredLog.watermark,
+    eventCount:recoveredLog.eventCount,modelTurnProven:false};
   receipt.steps.push('native_cold_restart_durable_log_cursor_read_only');
   if(!await stopOwned())throw Error('restarted_native_process_tree_cleanup_unconfirmed');
   receipt.steps.push('same_TEST_native_owner_restart_cleanup_confirmed');
