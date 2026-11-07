@@ -505,7 +505,9 @@ export const MembersEditorSection = ({
                 disabled={worktreeDefaultDisabled}
                 aria-describedby={worktreeDescriptionId}
                 onCheckedChange={(checked) =>
-                  updateTeammateWorktreeDefault(worktreeIsolationDisabledReason ? false : checked === true)
+                  updateTeammateWorktreeDefault(
+                    worktreeIsolationDisabledReason ? false : checked === true
+                  )
                 }
                 onSelect={(event) => event.preventDefault()}
               >
@@ -527,7 +529,7 @@ export const MembersEditorSection = ({
                 >
                   {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
                 </p>
-               )}
+              )}
             </>
           ) : null}
           <DropdownMenuCheckboxItem
