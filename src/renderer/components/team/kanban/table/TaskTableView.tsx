@@ -235,7 +235,11 @@ export const TaskTableView = memo(function TaskTableView({
                   onClick={() => onTaskClick?.(row.original.task)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="h-12 overflow-hidden px-3 align-middle">
+                    <td
+                        key={cell.id}
+                        data-testid={'team-task-table-cell-' + cell.column.id}
+                        className="h-12 overflow-hidden px-3 align-middle"
+                      >
                       <table.FlexRender cell={cell} />
                     </td>
                   ))}

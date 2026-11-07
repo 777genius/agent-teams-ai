@@ -321,6 +321,9 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return !!row&&row.textContent.includes('TABLE_E2E_LIVE_UPDATED')&&row.textContent.includes('В РАБОТЕ');})()"
   ), 'real watcher updates subject and status without manual refresh');
+  await until(() => cdp!.evaluate(
+    "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return row?.querySelector('[data-testid=\"team-task-table-cell-commentCount\"]')?.textContent?.trim()==='1';})()"
+  ), 'live IPC watcher updates comment count from task snapshot');
   await cdp.screenshot(join(root, 'kanban-table-live-updated.png'));
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-grid\"]')?.click()");
@@ -616,7 +619,15 @@ try {
       );
     }
   assert.equal(faults.length, 0, 'Renderer faults');
-  closeEvidence = await shutdown.gracefulClose(cdp, port, app.pid);
+  if (tableOnly) {
+    // This workflow qualifies the task table, not app-close coordination.
+    // Keep its teardown deterministic: terminate only the detached fixture-owned
+    // process group and verify no owned process survived before reporting PASS.
+    await shutdown.stopOwnedGroup(app.pid);
+    closeEvidence = { mode: 'owned-process-group-cleanup', ownedProcessGroup: app.pid, exited: true };
+  } else {
+    closeEvidence = await shutdown.gracefulClose(cdp, port, app.pid);
+  }
   passed = true;
 } catch (error) {
   if (cdp) {
