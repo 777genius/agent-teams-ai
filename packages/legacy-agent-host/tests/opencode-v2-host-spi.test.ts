@@ -615,6 +615,35 @@ test('sealing aborts an in-flight V2 native probe before permission or context i
   assert.equal(await provider.cleanup(), true);
 });
 
+test('initial native V2 readiness cannot ACK after progress revokes Host authority',
+  { timeout: 3000 }, async () => {
+    const { captured, calls } = owner(true);
+    let hostCurrent = true;
+    let progress = 0;
+    const host = {
+      ...context(),
+      isCurrent: () => hostCurrent,
+      // Progress is a Host callback, not a grant. A synchronous lease
+      // revocation during the FIRST probe must not return a ready V2 driver.
+      onProgress: () => { progress++; hostCurrent = false; },
+    };
+    const provider = createOpenCodeV2MemberProvider(host, captured);
+    await assert.rejects(() => provider.factory.open(request()),
+      /opencode.driver.dependency-unavailable/);
+    assert.equal(progress, 1, 'native probe reached the progress callback');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.probe, 1);
+    assert.equal(calls.context, 1, 'native instructions are never replayed');
+    assert.equal(calls.password, 0, 'no native credentials after lease loss');
+    assert.equal(calls.stop, 1, 'only the captured TEST-owned child is stopped');
+    assert.equal(calls.stopped, 1);
+    hostCurrent = true;
+    assert.equal(provider.isReady(), false, 'renewed lease cannot revive retired capture');
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'cleanup must not signal the process twice');
+  });
+
 test('late native readiness ACK cannot restore revoked Host authority or hide UNKNOWN cleanup',
   { timeout: 3000 }, async () => {
     for (const stopConfirmed of [true, false]) {
