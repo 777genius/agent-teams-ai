@@ -522,6 +522,42 @@ describe('TeamModelSelector disabled Codex models', () => {
     vi.unstubAllGlobals();
   });
 
+  it('shows OpenCode source discovery while Codex is selected and clears it when loading ends', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.cliProviderStatusLoading = { opencode: true };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+
+    await act(async () => {
+      render();
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+    ).not.toBeNull();
+
+    storeState.cliProviderStatusLoading = {};
+    await act(async () => {
+      render();
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+    ).toBeNull();
+    await act(async () => root.unmount());
+  });
+
   it('requests only the selected deferred Codex provider once across rerenders', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const providers = ['anthropic', 'codex', 'opencode'].map((providerId) => ({
