@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} oculto",
       "trash": "Lixo",
       "gridView": "Visão da grade",
-      "columnsView": "Vista das colunas"
+      "columnsView": "Vista das colunas",
+      "tableView": "Vista de tabela",
+      "configureColumns": "Escolher colunas",
+      "resizeColumn": "Redimensionar {{column}}"
     },
     "trash": {
       "title": "Lixo",

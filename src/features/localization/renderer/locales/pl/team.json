@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} ukrytych",
       "trash": "Kosz",
       "gridView": "Widok siatki",
-      "columnsView": "Widok kolumn"
+      "columnsView": "Widok kolumn",
+      "tableView": "Widok tabeli",
+      "configureColumns": "Wybierz kolumny",
+      "resizeColumn": "Zmień szerokość: {{column}}"
     },
     "trash": {
       "title": "Kosz",

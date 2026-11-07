@@ -49,6 +49,7 @@ interface Cdp {
 }
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const sha = process.argv[2];
+const tableOnly = process.argv.includes('--table-only');
 assert(sha && /^[a-f0-9]{40}$/.test(sha), 'Supply the exact integrated source SHA');
 assert.equal(process.platform, 'linux', 'Hosted Linux desktop harness');
 assert(process.env.DISPLAY, 'Supply an isolated Xvfb DISPLAY');
@@ -70,6 +71,27 @@ const runtime = JSON.parse(await readFile(join(repo, 'runtime.lock.json'), 'utf8
 };
 const fixture: Fixture = prepareTaskTabsFixture(scratch, sha, runtime.version);
 const root = fixture.root;
+// Use isolated real files, not mocked React props, for the table smoke.
+const tableTeam = fixture.teams[0];
+const tableTaskPath = join(dirname(tableTeam.taskFile), '2.json');
+const tableStamp = new Date().toISOString();
+if (tableOnly) {
+for (const [id, status, subject] of [
+  ['2', 'pending', 'TABLE_E2E_PENDING'],
+  ['3', 'completed', 'TABLE_E2E_REVIEW'],
+  ['4', 'completed', 'TABLE_E2E_APPROVED'],
+] as const) {
+  await writeFile(join(dirname(tableTaskPath), id + '.json'), JSON.stringify({
+    id, displayId: id, subject, status, owner: tableTeam.secondOwner,
+    blockedBy: id === '2' ? ['1'] : [], blocks: [], related: [],
+    createdAt: tableStamp, comments: [],
+  }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+}
+const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8'));
+tableKanbanState.tasks['3'] = { column: 'review', movedAt: tableStamp };
+tableKanbanState.tasks['4'] = { column: 'approved', movedAt: tableStamp };
+await writeFile(tableTeam.kanbanFile, JSON.stringify(tableKanbanState, null, 2) + '\n', { flag: 'w', mode: 0o600 });
+}
 console.log(JSON.stringify({ fixture: root, testedSourceCommit: sha, fullTaskTabsE2E: false }));
 const transport = (await import(
   pathToFileURL(join(repo, 'scripts/e2e/comment-notification/cdp.mjs')).href
@@ -130,9 +152,10 @@ async function receipt() {
     receiptPath,
     JSON.stringify(
       {
-        kind: 'task-detail-tabs-desktop-v1',
+        kind: tableOnly ? 'kanban-table-desktop-v1' : 'task-detail-tabs-desktop-v1',
         testedSourceCommit: sha,
-        fullTaskTabsE2E: passed,
+        fullTaskTabsE2E: passed && !tableOnly,
+        tableModeE2E: passed && tableOnly,
         passed,
         root,
         rendererPort,
@@ -217,6 +240,101 @@ try {
       throw e;
     }
   }, 'real IPC startup ready');
+  if (tableOnly) {
+  // Real TeamDetailView -> Kanban -> Table: UI, IPC watcher, and legacy modes.
+  const startedTableNavigationAt = Date.now();
+  const initialRendererOrigin = await cdp.evaluate('performance.timeOrigin') as number;
+  const navigateToTeam = async (): Promise<unknown> => cdp!.evaluate(
+    '(async()=>{if(!window.__agentTeamsDevStore || !window.electronAPI?.startup) return null;const ready=await window.electronAPI.startup.getStatus();if(!ready.ready) return null;const s=window.__agentTeamsDevStore.getState();await s.fetchTeams();await s.selectTeam(' +
+    JSON.stringify(tableTeam.teamName) +
+    ',{skipProjectAutoSelect:true});s.openTeamTab(' + JSON.stringify(tableTeam.teamName) +
+    ');const current=window.__agentTeamsDevStore.getState();const pane=current.paneLayout.panes.find(p=>p.id===current.paneLayout.focusedPaneId);return {origin:performance.timeOrigin,selectedTeamName:current.selectedTeamName,error:current.selectedTeamError,activeTab:pane?.tabs.find(t=>t.id===pane.activeTabId)?.type,activeTeam:pane?.tabs.find(t=>t.id===pane.activeTabId)?.teamName};})()'
+  );
+  const initialTeamNavigation = await navigateToTeam();
+  diagnostics.push({ kind: 'table-navigation', result: initialTeamNavigation });
+  assert.deepEqual(
+    { type: (initialTeamNavigation as { activeTab?: string }).activeTab, team: (initialTeamNavigation as { activeTeam?: string }).activeTeam },
+    { type: 'team', team: tableTeam.teamName },
+    'Actual team tab must be active before testing table'
+  );
+  // Vite can fully reload the renderer when lazy TeamDetailView / table dependencies
+  // are prebundled for the first time. Reopen only after observing a new document
+  // origin and a lost team tab; never retry ordinary navigation indefinitely.
+  let restoredAfterViteReload = 0;
+  await until(async () => {
+    try {
+      const probe = await cdp!.evaluate(`(()=>{
+        const s=window.__agentTeamsDevStore?.getState();
+        const pane=s?.paneLayout.panes.find(p=>p.id===s.paneLayout.focusedPaneId);
+        const active=pane?.tabs.find(t=>t.id===pane.activeTabId);
+        return {
+          origin:performance.timeOrigin,
+          tableButton:!!document.querySelector('[data-testid="kanban-view-table"]'),
+          activeType:active?.type,
+          activeTeam:active?.teamName,
+          selectedTeamName:s?.selectedTeamName,
+        };
+      })()`) as {
+        origin: number; tableButton: boolean; activeType?: string;
+        activeTeam?: string; selectedTeamName?: string;
+      };
+      if (probe.tableButton) return true;
+      if (
+        probe.origin !== initialRendererOrigin &&
+        probe.activeTeam !== tableTeam.teamName &&
+        restoredAfterViteReload < 2 &&
+        Date.now() - startedTableNavigationAt > 2500
+      ) {
+        const restored = await navigateToTeam();
+        if (restored) {
+          restoredAfterViteReload += 1;
+          diagnostics.push({ kind: 'vite-renderer-reload-navigation', attempt: restoredAfterViteReload, probe, restored });
+        }
+      }
+      return false;
+    } catch (error) {
+      if (/Execution context|Cannot find context|Cannot find object/i.test(String(error))) return false;
+      throw error;
+    }
+  }, 'real team Kanban view switch after Vite dependency optimization', 90000);
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]').click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length>=4&&[...root.querySelectorAll('[data-testid=\"team-task-table-row\"]')].some(r=>r.textContent.includes('TABLE_E2E_REVIEW')&&r.textContent.includes('РЕВЬЮ'));})()"
+  ), 'render four real task rows with authoritative review state');
+  await cdp.screenshot(join(root, 'kanban-table-dark.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-header-status\"] button')?.click()");
+  await until(() => cdp!.evaluate(
+    "document.querySelector('[data-testid=\"team-task-table-header-status\"]')?.getAttribute('aria-sort')!=='none'"
+  ), 'interactive table header sorting');
+  await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-settings\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"team-task-table-settings\"][data-state=\"open\"]')"
+  ), 'column customization opens');
+
+  const live = JSON.parse(await readFile(tableTaskPath, 'utf8'));
+  live.subject = 'TABLE_E2E_LIVE_UPDATED';
+  live.status = 'in_progress';
+  live.comments = [{ id: 'TABLE_E2E_COMMENT', author: 'user', createdAt: tableStamp, type: 'regular', text: 'live change' }];
+  const liveTemp = tableTaskPath + '.table-live.tmp';
+  await writeFile(liveTemp, JSON.stringify(live, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+  await rename(liveTemp, tableTaskPath);
+  await until(() => cdp!.evaluate(
+    "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return !!row&&row.textContent.includes('TABLE_E2E_LIVE_UPDATED')&&row.textContent.includes('В РАБОТЕ');})()"
+  ), 'real watcher updates subject and status without manual refresh');
+  await cdp.screenshot(join(root, 'kanban-table-live-updated.png'));
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-grid\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"team-task-table\"]') && !!document.querySelector('[data-testid=\"kanban-view-grid\"][aria-pressed=\"true\"]')"
+  ), 'return to legacy grid mode');
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-columns\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
+  ), 'legacy columns mode works');
+  reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true });
+  }
+
+  if (!tableOnly) {
   await cdp.evaluate('window.__agentTeamsDevStore.getState().fetchAllTasks()');
   const names = fixture.teams.map((t) => t.teamName);
   await until(
@@ -464,6 +582,7 @@ try {
   await runTaskDeletionCases(cdp, fixture, (value) => reads.push(value));
   await cdp.evaluate('window.__taskTabsColdPageUnsubscribe?.()');
   await cdp.screenshot(join(root, 'electron-cold-page-v3.png'));
+  }
   const audit = (await readFile(join(root, 'runtime-audit.ndjson'), 'utf8')).trim();
   if (audit)
     for (const line of audit.split('\n')) {
@@ -532,5 +651,5 @@ try {
   }
   await writeFile(join(root, 'electron-cold-page-v3.log'), logs, { mode: 0o600 });
   await receipt();
-  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed }));
+  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed && !tableOnly, tableModeE2E: passed && tableOnly }));
 }

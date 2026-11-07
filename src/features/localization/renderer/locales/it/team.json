@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} nascosti",
       "trash": "Cestino",
       "gridView": "Vista griglia",
-      "columnsView": "Vista colonne"
+      "columnsView": "Vista colonne",
+      "tableView": "Vista tabella",
+      "configureColumns": "Scegli colonne",
+      "resizeColumn": "Ridimensiona {{column}}"
     },
     "trash": {
       "title": "Cestino",

@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} پوشیدہ",
       "trash": "ترش",
       "gridView": "وائیرڈ نظریہ",
-      "columnsView": "رنگ"
+      "columnsView": "رنگ",
+      "tableView": "جدول منظر",
+      "configureColumns": "کالم منتخب کریں",
+      "resizeColumn": "{{column}} کی چوڑائی تبدیل کریں"
     },
     "trash": {
       "title": "ترش",

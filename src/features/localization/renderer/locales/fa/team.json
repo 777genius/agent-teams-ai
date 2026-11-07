@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} پنهان",
       "trash": "سطل زباله",
       "gridView": "نمای شبکه‌ای",
-      "columnsView": "نمای ستونی"
+      "columnsView": "نمای ستونی",
+      "tableView": "نمای جدول",
+      "configureColumns": "انتخاب ستون‌ها",
+      "resizeColumn": "تغییر عرض {{column}}"
     },
     "trash": {
       "title": "سطل زباله",

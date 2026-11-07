@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} छिपा हुआ",
       "trash": "ट्रैश",
       "gridView": "ग्रिड दृश्य",
-      "columnsView": "कॉलम view"
+      "columnsView": "कॉलम view",
+      "tableView": "तालिका दृश्य",
+      "configureColumns": "कॉलम चुनें",
+      "resizeColumn": "{{column}} की चौड़ाई बदलें"
     },
     "trash": {
       "title": "ट्रैश",

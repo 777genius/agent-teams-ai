@@ -2423,7 +2423,10 @@
       "hiddenCount": "{{count}} مخبأ",
       "trash": "Trash",
       "gridView": "رؤية غريد",
-      "columnsView": "رؤية كولومز"
+      "columnsView": "رؤية كولومز",
+      "tableView": "عرض الجدول",
+      "configureColumns": "اختيار الأعمدة",
+      "resizeColumn": "تغيير عرض {{column}}"
     },
     "trash": {
       "title": "Trash",
