@@ -294,6 +294,37 @@ try {
   receipt.nativePermissionReadbacks=nativePermissionReads;
   receipt.steps.push('Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck');
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
+  // Stock V2 can ACK a prompt without retaining durable session events.
+  // Read the real pinned native session log BEFORE any model/tool execution:
+  // this is a cursor observation, never an authorization to submit a turn.
+  const nativeLogPath='/api/experimental/session/'+encodeURIComponent(nativeSessionId)+
+    '/log?follow=false';
+  const logResponse=await fetch(endpoint+nativeLogPath, {
+    redirect:'error',signal:AbortSignal.timeout(12000),
+    headers:{authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64')},
+  });
+  const logText=await logResponse.text();
+  if(logResponse.status!==200||Buffer.byteLength(logText)>1024*1024)
+    throw Error('native_durable_log_read_unconfirmed');
+  const logFrames=logText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n\n')
+    .flatMap(frame=>{
+      const data=frame.split('\n').filter(line=>line.startsWith('data:'))
+        .map(line=>line.slice(5).trimStart()).join('\n');
+      return data?[JSON.parse(data)]:[];
+    });
+  const logSync=logFrames.at(-1);
+  const logEvents=logFrames.slice(0,-1);
+  if(logFrames.length<1||logFrames.length>4097||
+     logSync?.type!=='log.synced'||logSync.aggregateID!==nativeSessionId||
+     !Number.isSafeInteger(logSync.seq)||logSync.seq<0||
+     logEvents.some(event=>event?.durable?.aggregateID!==nativeSessionId||
+       event?.data?.sessionID!==nativeSessionId))
+    throw Error('native_durable_log_identity_or_cursor_mismatch');
+  // Only schema, count and watermark may enter the public receipt. A native
+  // SSE body might include provider data and must never be serialized.
+  receipt.nativeLogReadback={readOnly:true,synced:true,watermark:logSync.seq,
+    eventCount:logEvents.length,modelTurnProven:false};
+  receipt.steps.push('real_native_fresh_session_durable_log_cursor_read_only');
   // Seal is synchronous revocation. The exact owner must initiate the real
   // native process-group stop before driver.close()/cleanup() are requested.
   // No shared/user process is touched and no native mutation is replayed.
