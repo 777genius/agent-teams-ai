@@ -482,7 +482,7 @@ export const CreateTeamDialog = ({
             : undefined) ??
           payload.organizations[0] ??
           null;
-        if (!restoredFromStorage || preferredPlacement) {
+        if (!restoredFromStorage) {
           setOrganizationPlacementEnabled(Boolean(preferredPlacement));
           setOrganizationPlacementOrganizationId(organization?.id ?? '');
           setOrganizationPlacementParentId(
@@ -1420,6 +1420,12 @@ export const CreateTeamDialog = ({
       return;
     }
 
+    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
+      const draftProviderId = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
+      setSelectedProviderIdRaw(draftProviderId);
+      setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
+    }
+
     if (initialData) {
       if (!consumeTeamCopySeedOnce(initialData)) return;
       const nextSyncModelsWithLead =
@@ -1481,12 +1487,6 @@ export const CreateTeamDialog = ({
       );
       setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
       return;
-    }
-
-    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
-      const draftProviderId = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
-      setSelectedProviderIdRaw(draftProviderId);
-      setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
     }
 
     if (members.length > 0) {

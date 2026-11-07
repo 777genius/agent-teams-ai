@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Disposable Electron renderer E2E proving the member profile dialog has no
-// Member work sync card. Seeds an isolated team/project, launches `pnpm dev:mcp`,
-// opens the member profile dialog, and asserts the work sync card is absent.
+// Disposable Electron E2E for the Teams creation page. Seeds an isolated
+// team/project, exercises Back/resume, tab switches, process restart, copy and
+// config-only creation, and verifies launch still opens its original dialog.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -89,7 +89,7 @@ async function seedFixture() {
   );
   await chmod(fixture.runtimeWrapperPath, 0o755);
   await writeFile(fixture.runtimeLedgerPath, '');
-  await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Member Dialog E2E\n');
+  await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Teams Creation Page E2E\n');
   const member = {
     name: fixture.memberName,
     agentId: `${fixture.memberName}@${fixture.teamName}`,
@@ -109,7 +109,7 @@ async function seedFixture() {
   });
   await json(path.join(teamDir, 'config.json'), {
     name: fixture.teamName,
-    description: 'Disposable member dialog E2E fixture',
+    description: 'Disposable Teams creation E2E fixture',
     color: 'blue',
     language: 'en',
     createdAt: Date.now(),
@@ -444,9 +444,7 @@ async function dumpRenderer(client, label) {
       return {
         label: ${JSON.stringify(label)},
         dialog: Boolean(dialog),
-        workSyncMarkers: Array.from(
-          document.querySelectorAll('[data-testid^="member-work-sync-"]')
-        ).map((element) => element.getAttribute('data-testid')),
+        creationPageName: document.querySelector('[data-testid="create-team-page"] #team-name')?.value ?? null,
         bodyText: (document.body?.innerText ?? '').slice(0, 800),
       };
     })()`);
@@ -492,7 +490,7 @@ async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
   let failure = null;
-  const log = (step) => process.stdout.write(`STEP: ${step}\\n`);
+  const log = (step) => process.stdout.write(`STEP: ${step}\n`);
   const renderSnapshot = async (client) => {
     return client.evaluate(`(() => {
       const page = document.querySelector('[data-testid="create-team-page"]');
