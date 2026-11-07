@@ -2366,7 +2366,7 @@ export const CreateTeamDialog = ({
         }
       }}
     >
-      <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled && launchPreflightSelectionReady} projectPath={effectiveCwd}>
+      <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled} projectPath={effectiveCwd}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
         <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         <DialogHeader>

@@ -29,6 +29,38 @@ beforeEach(() => {
 });
 
 describe('OpenCodeSourceDirectoryProvider', () => {
+  it('starts global source discovery on open before a project is selected', async () => {
+    const root = createRoot(document.createElement('div'));
+    try {
+      await act(async () => {
+        root.render(
+          <OpenCodeSourceDirectoryProvider enabled projectPath={null}>
+            <span>Dialog</span>
+          </OpenCodeSourceDirectoryProvider>
+        );
+      });
+      expect(quickConnect).toHaveBeenLastCalledWith({
+        enabled: true,
+        projectPath: null,
+        runtimeRevision: '1.17.18',
+      });
+      await act(async () => {
+        root.render(
+          <OpenCodeSourceDirectoryProvider enabled projectPath="/tmp/selected-project">
+            <span>Dialog</span>
+          </OpenCodeSourceDirectoryProvider>
+        );
+      });
+      expect(quickConnect).toHaveBeenLastCalledWith({
+        enabled: true,
+        projectPath: '/tmp/selected-project',
+        runtimeRevision: '1.17.18',
+      });
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('subscribes once to a lightweight directory read for the exact project', async () => {
     const root = createRoot(document.createElement('div'));
     try {

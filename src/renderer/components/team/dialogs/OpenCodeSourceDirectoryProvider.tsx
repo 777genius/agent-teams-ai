@@ -42,7 +42,7 @@ export function OpenCodeSourceDirectoryProvider({
   const normalizedPath = projectPath?.trim() || null;
   const runtimeRevision = useStore((state) => state.openCodeRuntimeStatus?.version ?? null);
   const directory = useRuntimeProviderQuickConnect({
-    enabled: enabled && normalizedPath !== null,
+    enabled,
     projectPath: normalizedPath,
     runtimeRevision,
   });
@@ -51,7 +51,7 @@ export function OpenCodeSourceDirectoryProvider({
     <OpenCodeSourceDirectoryContext.Provider
       value={{
         ...directory,
-        enabled: enabled && normalizedPath !== null,
+        enabled,
         projectPath: normalizedPath,
       }}
     >
