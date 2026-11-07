@@ -227,7 +227,7 @@ try {
   if(allowPending.status!==200||!Array.isArray(allowPending.data?.data)||
      allowPending.data.data.length!==0)
     throw Error('native_allow_created_unexpected_permission_request');
-  receipt.steps.push('real_native_later_allow_effect_verified_and_Host_refused');
+  receipt.steps.push('real_native_later_allow_resolver_observed_and_Host_refused');
   const unsafeDelete=await native(unsafePath,'DELETE');
   if(unsafeDelete.status!==204)throw Error('native_second_TEST_session_delete_failed');
   // Native positive readback for V2's ordered ASK shape, isolated from the
@@ -385,8 +385,9 @@ try {
     throw Error('native_Host_deny_created_unexpected_permission_request');
   receipt.nativePolicyDecisions={capturedDeny:denyDecision.data.data.effect,
     laterAllow:allowDecision.data.data.effect,laterAsk:askDecision.data.data.effect,
-    askRejected:rejected.status===204,pendingAfterReject:afterReject.data.data.length};
-  receipt.steps.push('real_native_Host_captured_external_deny_effect_verified');
+    askRejected:rejected.status===204,pendingAfterReject:afterReject.data.data.length,
+    resolverOnly:true,toolEnforcementProven:false};
+  receipt.steps.push('real_native_Host_captured_external_deny_resolver_observed');
   // Stock V2 can ACK a prompt without retaining durable session events.
   // Read the real pinned native session log BEFORE any model/tool execution:
   // this is a cursor observation, never an authorization to submit a turn.
