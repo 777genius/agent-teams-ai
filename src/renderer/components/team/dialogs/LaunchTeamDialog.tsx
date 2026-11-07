@@ -396,6 +396,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const [scheduleTargetMember, setScheduleTargetMember] = useState('');
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
+  // A newly selected team must not inherit the former team's target member.
+  useEffect(() => {
+    if (isSchedule && !isEditing) setScheduleTargetMember('');
+  }, [effectiveTeamName, isEditing, isSchedule]);
   const [schedLabel, setSchedLabel] = useState('');
   const [schedExpanded, setSchedExpanded] = useState(true);
   const [cronExpression, setCronExpression] = useState('0 9 * * 1-5');
