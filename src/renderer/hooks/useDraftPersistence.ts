@@ -13,6 +13,8 @@ interface UseDraftPersistenceResult {
   value: string;
   setValue: (v: string) => void;
   isSaved: boolean;
+  /** True once persisted text has been read (or the read has failed). */
+  isLoaded: boolean;
   clearDraft: () => void;
 }
 
@@ -24,6 +26,7 @@ export function useDraftPersistence({
 }: UseDraftPersistenceOptions): UseDraftPersistenceResult {
   const [value, setValueState] = useState(initialValue ?? '');
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingValueRef = useRef<{ key: string; value: string } | null>(null);
   const keyRef = useRef(key);
@@ -67,18 +70,25 @@ export function useDraftPersistence({
     setValueState(initialValue ?? '');
 
     setIsSaved(false);
+    setIsLoaded(false);
 
-    if (!enabled)
+    if (!enabled) {
+      setIsLoaded(true);
       return () => {
         cancelled = true;
       };
+    }
     const loadRevision = editRevisionRef.current;
     void (async () => {
-      const draft = await draftStorage.loadDraft(key);
-      if (cancelled || editRevisionRef.current !== loadRevision) return;
-      if (draft != null && initialValue == null) {
-        setValueState(draft);
-        setIsSaved(true);
+      try {
+        const draft = await draftStorage.loadDraft(key);
+        if (cancelled || editRevisionRef.current !== loadRevision) return;
+        if (draft != null && initialValue == null) {
+          setValueState(draft);
+          setIsSaved(true);
+        }
+      } finally {
+        if (!cancelled) setIsLoaded(true);
       }
     })();
 
@@ -140,5 +150,5 @@ export function useDraftPersistence({
     }
   }, [enabled]);
 
-  return { value, setValue, isSaved, clearDraft };
+  return { value, setValue, isSaved, isLoaded, clearDraft };
 }
