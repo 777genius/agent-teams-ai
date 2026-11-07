@@ -527,7 +527,7 @@ export const MembersEditorSection = ({
                 >
                   {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
                 </p>
-              )>
+               )}
             </>
           ) : null}
           <DropdownMenuCheckboxItem
