@@ -51,7 +51,18 @@ export const TaskTableView = memo(function TaskTableView({
   const initialPrefs = useMemo(() => loadTaskTablePreferences(storageKey), [storageKey]);
   const [visibility, setVisibility] = useState(initialPrefs.visibility);
   const [sizing, setSizing] = useState(initialPrefs.sizing);
+  const [scrollerWidth, setScrollerWidth] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const measure = (): void => setScrollerWidth(scroller.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     saveTaskTablePreferences(storageKey, { visibility, sizing });
@@ -126,6 +137,9 @@ export const TaskTableView = memo(function TaskTableView({
       ? Math.max(0, virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end)
       : 0;
   const visibleColumnCount = table.getVisibleLeafColumns().length;
+  const naturalTableWidth = table.getTotalSize();
+  // Preserve optional-column sizing; only the task column absorbs spare space.
+  const taskExtraWidth = Math.max(0, scrollerWidth - naturalTableWidth);
 
   return (
     <section
@@ -194,11 +208,14 @@ export const TaskTableView = memo(function TaskTableView({
       >
         <table
           className="table-fixed border-collapse text-start"
-          style={{ width: table.getTotalSize() }}
+          style={{ width: naturalTableWidth + taskExtraWidth }}
         >
           <colgroup>
             {table.getVisibleLeafColumns().map((column) => (
-              <col key={column.id} style={{ width: column.getSize() }} />
+              <col
+                key={column.id}
+                style={{ width: column.getSize() + (column.id === 'task' ? taskExtraWidth : 0) }}
+              />
             ))}
           </colgroup>
           <thead className="sticky top-0 z-10 bg-[var(--color-surface-raised)]">
@@ -224,7 +241,7 @@ export const TaskTableView = memo(function TaskTableView({
                           ? 'sticky start-0 z-20 bg-[var(--color-surface-raised)]'
                           : 'relative',
                       ].join(' ')}
-                      style={{ width: header.getSize() }}
+                      style={{ width: header.getSize() + (header.column.id === 'task' ? taskExtraWidth : 0) }}
                     >
                       <button
                         type="button"
