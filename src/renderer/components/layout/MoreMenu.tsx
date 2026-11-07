@@ -130,20 +130,6 @@ export const MoreMenu = ({
 
   // Build menu sections
   const topItems: MenuItem[] = [
-    ...(isElectronMode()
-      ? [
-          {
-            id: 'news',
-            label: t('announcements.title'),
-            icon: Newspaper,
-            onClick: () => {
-              setIsOpen(false);
-              triggerRef.current?.focus();
-              openAnnouncementHistory();
-            },
-          },
-        ]
-      : []),
     {
       id: 'teams',
       label: t('layout.menu.teams'),
@@ -207,6 +193,23 @@ export const MoreMenu = ({
         void handleOpenDocs();
       },
     },
+  ];
+
+  const newsItems: MenuItem[] = [
+    ...(isElectronMode()
+      ? [
+          {
+            id: 'news',
+            label: t('announcements.title'),
+            icon: Newspaper,
+            onClick: () => {
+              setIsOpen(false);
+              triggerRef.current?.focus();
+              openAnnouncementHistory();
+            },
+          },
+        ]
+      : []),
   ];
 
   const sessionItems: MenuItem[] = isSessionWithData
@@ -311,6 +314,7 @@ export const MoreMenu = ({
               {sessionItems.map(renderItem)}
             </>
           )}
+          {newsItems.map(renderItem)}
         </div>
       )}
     </div>
