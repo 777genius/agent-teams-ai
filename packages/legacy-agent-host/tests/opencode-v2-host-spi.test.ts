@@ -167,6 +167,47 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
   assert.deepEqual(calls, { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 });
 });
 
+test('inherited OPENCODE_BIN_PATH refuses V2 admission before owner access', () => {
+  const previous = process.env.OPENCODE_BIN_PATH;
+  try {
+    process.env.OPENCODE_BIN_PATH = '/TEST-parent/foreign-engine';
+    const { captured, calls } = owner(true);
+    assert.throws(() => createOpenCodeV2MemberProvider(context(), captured),
+      /separate native profile/);
+    assert.deepEqual(calls,
+      { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 });
+  } finally {
+    if (previous === undefined) delete process.env.OPENCODE_BIN_PATH;
+    else process.env.OPENCODE_BIN_PATH = previous;
+  }
+});
+
+test('inherited OPENCODE_BIN_PATH appearing after readiness permanently revokes V2 owner', async () => {
+  const previous = process.env.OPENCODE_BIN_PATH;
+  delete process.env.OPENCODE_BIN_PATH;
+  const { captured, calls } = owner(true);
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  let opened: Awaited<ReturnType<typeof provider.factory.open>> | undefined;
+  try {
+    opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    process.env.OPENCODE_BIN_PATH = '/TEST-parent/late-foreign-engine';
+    assert.equal((await opened.driver.checkReadiness()).ok, false);
+    assert.equal(provider.isReady(), false);
+    delete process.env.OPENCODE_BIN_PATH;
+    assert.equal((await opened.driver.checkReadiness()).ok, false,
+      'clearing an inherited override cannot revive the old native lease');
+    assert.equal(calls.context, 1, 'never replay native instructions');
+    assert.equal(calls.stop, 1, 'only the captured TEST owner is stopped once');
+  } finally {
+    if (previous === undefined) delete process.env.OPENCODE_BIN_PATH;
+    else process.env.OPENCODE_BIN_PATH = previous;
+    if (opened) await opened.driver.close();
+    await provider.cleanup();
+  }
+  assert.equal(calls.stopped, 1, 'physical stop confirmation must be observed');
+});
+
 test('V2 private SPI refuses mismatched request before native probe and credentials', async () => {
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(), captured);
