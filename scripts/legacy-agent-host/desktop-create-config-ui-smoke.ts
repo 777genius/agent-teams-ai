@@ -28,7 +28,7 @@ export async function runDesktopCreateConfigUiSmoke(
     status: "INCOMPLETE",
     steps,
     scope:
-      "Original CreateTeamDialog save-only → Main captured owner → durable Host Team registry → canonical existing Team view → renderer reload",
+      "Original Teams Create Page save-only → Main captured owner → durable Host Team registry → canonical existing Team view → renderer reload",
     excluded: [
       "launch after Create",
       "selected Resume/relaunch",
@@ -48,33 +48,33 @@ export async function runDesktopCreateConfigUiSmoke(
   const workspace = join(options.fixture.root, "workspace");
   await openOriginalCreateForm(cdp, ui, workspace, "test-created-from-dialog");
   await ui.scrollTo(
-    '[role="dialog"] #launch-team',
+    '[data-testid="create-team-page"] #launch-team',
     "original Run command after create",
   );
   const launch = await cdp.evaluate(
-    `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')`,
+    `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')`,
   );
   assert.equal(launch, "checked");
   await ui.click(
-    '[role="dialog"] #launch-team',
+    '[data-testid="create-team-page"] #launch-team',
     "disable immediate launch through original checkbox",
   );
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
+    `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
     "save-only selected",
   );
   await ui.scrollTo(
-    '[role="dialog"] button',
+    '[data-testid="create-team-page"] button',
     "original Create save control",
     "Create",
   );
   await ui.click(
-    '[role="dialog"] button',
+    '[data-testid="create-team-page"] button',
     "save original Create once",
     "Create",
   );
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"] #team-name')`,
+    `!document.querySelector('[data-testid="create-team-page"] #team-name')`,
     "original Create closes after saved outcome",
     60_000,
   );
@@ -212,10 +212,10 @@ export async function openOriginalCreateForm(
   );
   await ui.click("button", "open original Create Team dialog", "Create Team");
   await ui.waitRead(
-    `Boolean(document.querySelector('[role="dialog"] #team-name'))`,
+    `Boolean(document.querySelector('[data-testid="create-team-page"] #team-name'))`,
     "original Create Team form",
   );
-  await ui.click('[role="dialog"] #team-name', "focus original team name");
+  await ui.click('[data-testid="create-team-page"] #team-name', "focus original team name");
   await cdp.send("Input.dispatchKeyEvent", {
     type: "keyDown",
     key: "a",
@@ -231,30 +231,30 @@ export async function openOriginalCreateForm(
   });
   await cdp.send("Input.insertText", { text: teamName });
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #team-name')?.value===${JSON.stringify(teamName)}`,
+    `document.querySelector('[data-testid="create-team-page"] #team-name')?.value===${JSON.stringify(teamName)}`,
     "typed original team name",
   );
   await ui.scrollTo(
-    '[role="dialog"] button',
+    '[data-testid="create-team-page"] button',
     "original custom project mode",
     "Custom path",
   );
   await ui.click(
-    '[role="dialog"] button',
+    '[data-testid="create-team-page"] button',
     "choose original custom project mode",
     "Custom path",
   );
   await ui.scrollTo(
-    '[role="dialog"] input[placeholder="/absolute/path/to/project"]',
+    '[data-testid="create-team-page"] input[placeholder="/absolute/path/to/project"]',
     "original custom working directory",
   );
   await ui.click(
-    '[role="dialog"] input[placeholder="/absolute/path/to/project"]',
+    '[data-testid="create-team-page"] input[placeholder="/absolute/path/to/project"]',
     "type TEST workspace",
   );
   await cdp.send("Input.insertText", { text: workspace });
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] input[placeholder="/absolute/path/to/project"]')?.value===${JSON.stringify(workspace)}`,
+    `document.querySelector('[data-testid="create-team-page"] input[placeholder="/absolute/path/to/project"]')?.value===${JSON.stringify(workspace)}`,
     "sandbox custom path retained",
   );
 }

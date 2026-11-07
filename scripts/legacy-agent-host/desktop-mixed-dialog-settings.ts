@@ -24,19 +24,19 @@ export const mixedConfiguredMembers = [
 ] as const;
 export const mixedDescription = 'TEST mixed Create saved settings and Launch hydration';
 
-async function expand(cdp: UiCdpPort, ui: Controls, title: string) {
+async function expand(cdp: UiCdpPort, ui: Controls, title: string, scope = '[role="dialog"]') {
   const value = record(
     await ui.waitRead(
-      `(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')].filter(e=>e.textContent.includes(${desktopJsLiteral(title)}));return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`,
+      `(()=>{const rows=[...document.querySelectorAll(${desktopJsLiteral(`${scope} button[aria-controls]`)})].filter(e=>e.textContent.includes(${desktopJsLiteral(title)}));return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`,
       title
     )
   );
   if (value.expanded !== 'true') {
-    const selector = `[role="dialog"] button[aria-controls=${JSON.stringify(value.id)}]`;
+    const selector = `${scope} button[aria-controls=${JSON.stringify(value.id)}]`;
     await ui.scrollTo(selector, title);
     await ui.click(selector, title);
   }
-  const expansionState = `document.querySelector('[role="dialog"] button[aria-controls='+${desktopJsLiteral(JSON.stringify(value.id))}+']')?.getAttribute('aria-expanded')`;
+  const expansionState = `document.querySelector(${desktopJsLiteral(`${scope} button[aria-controls=${JSON.stringify(value.id)}]`)})?.getAttribute('aria-expanded')`;
   await ui.waitRead(`${expansionState} === 'true'`, title + ' expanded after one click');
   assert.equal(await cdp.evaluate(expansionState), 'true');
 }
@@ -86,76 +86,76 @@ async function checked(cdp: UiCdpPort, ui: Controls, selector: string, value: bo
 /** Original controls only. Called before switching the visible Create form to save-only. */
 export async function configureMixedCreateSettings(cdp: UiCdpPort, ui: Controls) {
   await ui.scrollTo(
-    '[role="dialog"] button[aria-label*=" provider,"]',
+    '[data-testid="create-team-page"] button[aria-label*=" provider,"]',
     'original explicit lead model'
   );
-  if (!(await cdp.evaluate(`Boolean(document.querySelector('[role="dialog"] #lead-effort'))`)))
+  if (!(await cdp.evaluate(`Boolean(document.querySelector('[data-testid="create-team-page"] #lead-effort'))`)))
     await ui.click(
-      '[role="dialog"] button[aria-label*=" provider,"]',
+      '[data-testid="create-team-page"] button[aria-label*=" provider,"]',
       'expand original lead model'
     );
   await ui.scrollTo(
-    '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
+    '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
     'original Opus4.6 choice'
   );
   await ui.click(
-    '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
+    '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
     'select original Opus4.6'
   );
-  await ui.scrollTo('[role="dialog"] button', 'original Medium effort', 'Medium');
-  await ui.click('[role="dialog"] button', 'select original Medium effort', 'Medium');
-  await checked(cdp, ui, '[role="dialog"] #lead-limit-context', true);
-  const leadSelector = '[role="dialog"] button[aria-label*=" provider,"]';
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'original Medium effort', 'Medium');
+  await ui.click('[data-testid="create-team-page"] button', 'select original Medium effort', 'Medium');
+  await checked(cdp, ui, '[data-testid="create-team-page"] #lead-limit-context', true);
+  const leadSelector = '[data-testid="create-team-page"] button[aria-label*=" provider,"]';
   const leadIdentity = `(()=>{const rows=[...document.querySelectorAll(${desktopJsLiteral(leadSelector)})];return rows.length===1&&/^Anthropic provider, Opus 4\\.6$/i.test(rows[0].getAttribute('aria-label')??'')})()`;
   assert.equal(await cdp.evaluate(leadIdentity), true, 'original explicit Anthropic Opus4.6 retained');
   assert.equal(
-    await cdp.evaluate(`document.querySelector('[role="dialog"] #lead-effort')?.textContent.trim()`),
+    await cdp.evaluate(`document.querySelector('[data-testid="create-team-page"] #lead-effort')?.textContent.trim()`),
     'Medium',
     'original explicit Medium effort retained'
   );
   await ui.scrollTo(leadSelector, 'original configured lead model toggle');
   await ui.click(leadSelector, 'collapse original configured lead model');
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"] #lead-effort')`,
+    `!document.querySelector('[data-testid="create-team-page"] #lead-effort')`,
     'original lead model accordion closed'
   );
   assert.equal(await cdp.evaluate(leadIdentity), true, 'collapsed original lead binding retained');
-  await expand(cdp, ui, 'Optional launch settings');
+  await expand(cdp, ui, 'Optional launch settings', '[data-testid="create-team-page"]');
   // Explicit Off preserves a known supported setting, rather than assuming the TEST default.
   await ui.scrollTo(
-    '[role="dialog"] div:has(> #create-fast-mode) > button',
+    '[data-testid="create-team-page"] div:has(> #create-fast-mode) > button',
     'original Fast mode Off',
     'Off'
   );
   await ui.click(
-    '[role="dialog"] div:has(> #create-fast-mode) > button',
+    '[data-testid="create-team-page"] div:has(> #create-fast-mode) > button',
     'original Fast mode Off',
     'Off'
   );
   assert.equal(await cdp.evaluate(leadIdentity), true, 'original lead binding before permissions');
   assert.equal(
-    await cdp.evaluate(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')].filter(e=>e.textContent.includes('Optional launch settings'));return rows.length===1&&rows[0].getAttribute('aria-expanded')==='true'})()`),
+    await cdp.evaluate(`(()=>{const rows=[...document.querySelectorAll('[data-testid="create-team-page"] button[aria-controls]')].filter(e=>e.textContent.includes('Optional launch settings'));return rows.length===1&&rows[0].getAttribute('aria-expanded')==='true'})()`),
     true,
     'original launch settings remain expanded before permissions'
   );
-  await checked(cdp, ui, '[role="dialog"] #create-skip-permissions', true);
+  await checked(cdp, ui, '[data-testid="create-team-page"] #create-skip-permissions', true);
   await replace(
     cdp,
     ui,
-    '[role="dialog"] #team-prompt',
+    '[data-testid="create-team-page"] #team-prompt',
     'NATIVE_TEAM_ONE',
     'original saved initial lead prompt'
   );
-  await expand(cdp, ui, 'Optional team details');
+  await expand(cdp, ui, 'Optional team details', '[data-testid="create-team-page"]');
   await replace(
     cdp,
     ui,
-    '[role="dialog"] #team-description',
+    '[data-testid="create-team-page"] #team-description',
     mixedDescription,
     'original team description'
   );
-  await ui.scrollTo('[role="dialog"] button[title="blue"]', 'original blue Team color');
-  await ui.click('[role="dialog"] button[title="blue"]', 'original blue Team color');
+  await ui.scrollTo('[data-testid="create-team-page"] button[title="blue"]', 'original blue Team color');
+  await ui.click('[data-testid="create-team-page"] button[title="blue"]', 'original blue Team color');
 }
 
 /** Check configured intent independently of effective provider recipes. */
