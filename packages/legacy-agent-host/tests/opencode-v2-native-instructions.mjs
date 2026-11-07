@@ -373,7 +373,8 @@ try {
   receipt.steps.push('Host_native_readiness_recheck_no_instruction_replay');
   // A separate live TEST session may own a real pending native permission.
   // The selected Host has never accepted that session's input or interaction:
-  // an attempted cross-session grant must remain STALE before any native POST.
+  // a synthetic, unregistered reference must remain STALE before native POST.
+  // This does NOT prove authorization for a registered cross-session interaction.
   const foreignSession=await native('/api/session','POST',{
     location:{directory:workspace},permissions:askRules,
   });
@@ -382,6 +383,9 @@ try {
      [nativeSessionId,unsafeId,askId].includes(foreignId))
     throw Error('native_foreign_TEST_session_missing');
   const foreignPath='/api/session/'+encodeURIComponent(foreignId);
+  const foreignRead=await native(foreignPath);
+  if(!isOwnedNativeSessionSnapshot(foreignRead,foreignId,workspace,askRules))
+    throw Error('native_foreign_TEST_session_workspace_or_permission_mismatch');
   const foreignAsk=await native(foreignPath+'/permission','POST',
     {action:'external_directory',resources:[outsideResource]});
   const foreignPermissionId=foreignAsk.data?.data?.id;
@@ -413,9 +417,12 @@ try {
      foreignAfterReject.data.data.length!==0||
      (await native(foreignPath,'DELETE')).status!==204)
     throw Error('native_foreign_TEST_permission_cleanup_unconfirmed');
-  receipt.crossSessionPermission={hostRefused:true,foreignPendingUnchanged:true,
-    owningSessionRejected:true,toolEnforcementProven:false};
-  receipt.steps.push('Host_live_foreign_native_permission_stale_no_grant');
+  // The Host received no registered interaction for this foreign native request.
+  // Never present this stale synthetic reference as cross-session grant enforcement.
+  receipt.unregisteredPermissionProbe={unregisteredReferenceStale:true,
+    foreignPendingUnchanged:true,nativeCleanupRejected:true,
+    sessionAuthorityProven:false,toolEnforcementProven:false};
+  receipt.steps.push('Host_unregistered_permission_reference_stale_no_native_change');
   // Re-confirm the selected Host session's DENY with the real native resolver
   // after binary/PID/readiness re-attestation; never execute a model or tool.
   const denyDecision=await native(sessionPath+'/permission','POST',

@@ -19,7 +19,7 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "Host_existing_Session_SPI_ready_with_real_native_attestation",
   "Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck",
   "Host_native_readiness_recheck_no_instruction_replay",
-  "Host_live_foreign_native_permission_stale_no_grant",
+  "Host_unregistered_permission_reference_stale_no_native_change",
   "real_native_Host_captured_external_deny_resolver_observed",
   "real_native_fresh_session_durable_log_cursor_read_only",
   "Host_seal_started_real_native_owned_stop_before_close",
@@ -51,12 +51,13 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     policy.laterAsk === 'ask' && policy.askRejected === true &&
     policy.pendingAfterReject === 0 &&
     policy.resolverOnly === true && policy.toolEnforcementProven === false &&
-    r.crossSessionPermission !== undefined && r.crossSessionPermission !== null &&
-    typeof r.crossSessionPermission === 'object' && !Array.isArray(r.crossSessionPermission) &&
-    r.crossSessionPermission.hostRefused === true &&
-    r.crossSessionPermission.foreignPendingUnchanged === true &&
-    r.crossSessionPermission.owningSessionRejected === true &&
-    r.crossSessionPermission.toolEnforcementProven === false &&
+    r.unregisteredPermissionProbe !== undefined && r.unregisteredPermissionProbe !== null &&
+    typeof r.unregisteredPermissionProbe === 'object' && !Array.isArray(r.unregisteredPermissionProbe) &&
+    r.unregisteredPermissionProbe.unregisteredReferenceStale === true &&
+    r.unregisteredPermissionProbe.foreignPendingUnchanged === true &&
+    r.unregisteredPermissionProbe.nativeCleanupRejected === true &&
+    r.unregisteredPermissionProbe.sessionAuthorityProven === false &&
+    r.unregisteredPermissionProbe.toolEnforcementProven === false &&
     log !== undefined && log !== null && typeof log === 'object' && !Array.isArray(log) &&
     log.readOnly === true && log.synced === true &&
     Number.isSafeInteger(log.watermark) && log.watermark >= 0 &&
