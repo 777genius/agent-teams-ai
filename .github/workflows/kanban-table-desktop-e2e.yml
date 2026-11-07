@@ -1,0 +1,53 @@
+name: Kanban Table Desktop E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    paths:
+      - 'src/renderer/components/team/kanban/**'
+      - 'src/renderer/components/team/TeamDetailView.tsx'
+      - 'scripts/e2e/task-detail-tabs-desktop.ts'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/kanban-table-desktop-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kanban-table-desktop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  table-desktop:
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare isolated Linux display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          sudo mkdir -p /srv/workers
+          sudo chown "$(id -u):$(id -g)" /srv/workers
+      - name: Install dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Run real Electron + IPC + table smoke
+        run: |
+          xvfb-run -a env TASK_TABS_E2E_SCRATCH=/srv/workers node --experimental-strip-types scripts/e2e/task-detail-tabs-desktop.ts "$(git rev-parse HEAD)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kanban-table-desktop-${{ github.event.pull_request.head.sha }}
+          path: |
+            /srv/workers/task-tabs-TEST-*/kanban-table-*.png
+            /srv/workers/task-tabs-TEST-*/electron-watcher-*.json
+            /srv/workers/task-tabs-TEST-*/failed.png
+          if-no-files-found: warn
