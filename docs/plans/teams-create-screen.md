@@ -30,8 +30,10 @@ preflight, permission checks and request construction.
 - Ordinary/copy/template/organization entries into the same creation editor.
 - Duplicate-editor, stale-callback and unresolved-submission guards.
 - Targeted regressions, creation-selector updates in existing desktop E2E and i18n.
-- A narrowly scoped creation-owned gateway draft lifetime, if needed; the shared
-  launch/add-member cleanup policy must remain the default and retain its tests.
+- A narrowly scoped creation-owned gateway draft lifetime within the same renderer;
+  the shared launch/add-member cleanup policy remains the default and retains its tests.
+- Explicit reconnect state when existing main-process recovery has reclaimed an
+  unsaved gateway binding after renderer replacement or application restart.
 
 ### Out of scope
 
@@ -45,6 +47,8 @@ preflight, permission checks and request construction.
   in renderer draft storage. Never claim a renderer-local guard is a cross-window lock.
 - No dependency upgrades, broad formatting, unrelated fixes or raised source-size caps.
 - No authorization bypasses, fabricated checks, forced merge or release.
+- No disabling main-process provisional-binding recovery or promoting unsaved
+  bindings to saved team credentials merely to preserve a form across restart.
 
 LaunchTeamDialog and launch-only helpers should remain byte-identical to the
 baseline as a result of this PR. Necessary shared-control changes require explicit
@@ -64,13 +68,19 @@ preserve an old checksum when rebasing.
 | `CreateTeamDialog.tsx` | Copy/organization initialization depends on open/load | Consume seed once, never replay on return |
 | `useGatewayMemberBindings.ts:71-77` | Unmount calls `session.discard()` | Back/tab switch must not discard creation-owned bindings |
 | `GatewayBindingDraft.ts:99-114` | Discard retires receipt generation and removes uncommitted bindings | Keep receipt ownership; preserve launch cancellation safety |
+| `src/features/gateway-provider/main/application/GatewayProviderService.ts:350+` | Recovery reclaims abandoned unsaved document-owned receipts | Restart restores form intent, not guaranteed gateway credentials; preserve backend recovery |
 
 Paths abbreviated above are under `src/renderer/components/team/` unless otherwise
-specified. Gateway files are under `src/features/gateway-provider/renderer/hooks/`.
+specified. Gateway hook files are under `src/features/gateway-provider/renderer/hooks/`.
 
 The gateway cleanup consequence was confirmed with a pure-source probe using a
 mock unbind callback: a newly acquired receipt is removed by `discard()`. This is
 not an Electron UI reproduction or a claim that current dialog cancellation is a bug.
+Main-process recovery has existing tests in
+`src/features/gateway-provider/__tests__/GatewayDraftRecovery.test.ts` and is wired
+for document loss in `main/adapters/input/registerGatewayProviderIpc.ts` within that
+feature. A renderer-only change cannot promise to retain every provisional binding
+across process restart without changing this separate protective contract.
 
 Other source-level risks requiring tests: auto-description can race text hydration;
 late copy/catalog responses can overwrite newer selections; a late creation result
@@ -91,7 +101,7 @@ must preserve explicit unresolved provider intent and must not launch on applica
 | Back | Save pending edits, return to list, retain draft |
 | Switch tab and return | Same creation screen and edits; no initialization replay |
 | Close Teams and reopen | List with visible Continue creation action |
-| Restart and resume | Restore committed fields, revalidate project/providers |
+| Restart and resume | Restore committed fields, revalidate project/providers; explicitly reconnect any reclaimed provisional gateway binding |
 | Start over / copy over existing work | Explicit replace or continue decision |
 | Apply template | Preserve documented field ownership; confirm destructive replacement |
 | Create from Organizations | Same editor with explicit placement context |
@@ -140,7 +150,8 @@ Before extraction, map every visible field to reader, writer and persistence sco
 name; members/roles/workflows and workflow chips; explicit/inherited provider,
 backend/model/effort/fast intent; sync; solo; launch toggle; project/custom cwd;
 prompt/chips; description/color; lead/teammate worktree options; extra CLI arguments;
-permission/context settings; organization placement.
+permission/context settings; organization placement; non-secret gateway selection
+intent sufficient to distinguish a missing binding from an intentional direct provider.
 
 Separate durable user-authored draft, last-used defaults and transient UI/runtime
 state. Catalogs, checks, errors, loading and authentication/readiness are transient.
@@ -189,16 +200,27 @@ Back: either change would weaken existing launch/add-member cancellation semanti
 
 Prefer a small opt-in creation-owned draft/session passed through the existing
 boundary; launch callers retain their default local ownership. Preserve exact
-binding receipt identity for cleanup (`teamName`, member, `usageRef`, `boundAt`),
-not just a member name. Persist only necessary non-secret ownership metadata when
-restart restoration requires it. Never infer ownership from all bindings returned
+binding receipt identity for cleanup (`teamName`, `memberName`, `gatewayUsageRef`,
+`boundAt`), not just a member name. Never infer ownership from all bindings returned
 by `listGatewayBindings`, and never delete a replacement/pre-existing receipt.
 
-Back/tab switch/close retains creation ownership; explicit discard reconciles only
-that draft's owned receipts; accepted create transfers ownership to the team. A
-failed/late binding operation cannot attach to a replacement draft. Revalidate
-restored receipts and surface missing bindings without claiming credentials are valid.
-Do not implement a backend binding lifecycle redesign inside this UI PR.
+Within the same live renderer document, Back/tab switch/closing a Teams tab retains
+the creation session; explicit discard reconciles only that draft's owned receipts;
+accepted create transfers ownership to the team. A failed/late binding operation
+cannot attach to a replacement draft. Do not use a saved flag to bypass cleanup.
+
+Renderer reload, crash and application restart are different: the existing main
+recovery may reclaim provisional receipts. Restore the non-secret form and gateway
+selection intent, refresh binding facts, and show a reconnect action for affected
+members. A missing intended gateway binding must not silently switch that member
+to a direct provider or submit a different runtime/model. Keep submission blocked
+for that unresolved selection until the user reconnects or explicitly changes it.
+Persisting an old receipt does not restore its authorization or prove it survived.
+
+No new durable gateway ownership protocol, credential copying, IPC method or
+main-process recovery change is in scope. Transparent survival of provisional
+credentials across process restart would require a separate explicitly approved
+backend design. This page move must preserve the current protective cleanup.
 
 ## 6. UI extraction and DRY
 
@@ -244,8 +266,10 @@ The user should see the warning rather than only a console message.
 
 1. Publish plan immediately, then four independent plan critiques on exact commits.
    Apply and push corrections after each round; record actual model/effort evidence.
-2. Characterize risky behavior and harden creation-only draft/storage lifetime,
-   with UI unchanged. Keep existing creation/launch/gateway regression suites green.
+   Test-only characterization of existing behavior may prepare that review; it is
+   not the feature implementation or a substitute for the four independent rounds.
+2. Harden creation-only draft/storage lifetime with UI unchanged. Keep existing
+   creation/launch/gateway regression suites green.
 3. Add Teams page owner/shell and wire fresh/copy/organization entries. Remove the
    second writable creation modal path; keep launch/relaunch modal paths.
 4. Add deterministic regressions, adapt only creation E2E selectors, run isolated
@@ -292,10 +316,21 @@ providers stay visible in the ledger, not converted to approvals.
 - Project A draft after sidebar B navigation; deleted/inaccessible directory.
 - Double submit, rejection, unknown acceptance, accepted run and late success.
 - Placement failure leaves one created team and an actionable warning.
-- Gateway Back/resume/restart retains valid owned receipt; discard removes only
+- Same-document gateway Back/resume retains ownership; discard removes only the
   exact owned receipt; late binding and replacement races remain protected.
+- Restart preserves non-secret gateway intent, respects main recovery and asks for
+  reconnect when the binding is absent; no silent direct-provider fallback.
 - Existing launch/relaunch/add-member cleanup and payload/preferences/schedules
   remain unchanged. Creation and launch operate in the same app session safely.
+
+The hook-level characterization file
+`src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.lifecycle.test.tsx`
+exercises the real hook under React StrictMode for both roster and addition mode:
+exact receipt cleanup, pre-existing binding preservation, accepted save, unresolved
+save across unmount (success/rejection), late binding after unmount, and saved
+members surviving a later launch failure. These default dialog cases must remain
+green when introducing creation-specific ownership. Mocked gateway calls do not
+prove Electron IPC, main-process recovery or the new page's retention behavior.
 
 ### Electron proof using only disposable fixtures
 
@@ -356,7 +391,7 @@ prerequisites to be implemented in this feature PR.
   and architecture guards. Full qualification was not attained; overall CI was not
   green. This is not evidence for a future implementation commit.
 
-| Existing test file | Passed tests |
+| Existing test file | Passed tests in original baseline |
 | --- | ---: |
 | `src/renderer/hooks/useCreateTeamDraft.test.tsx` | 6 |
 | `test/renderer/store/teamSlice.test.ts` | 246 |
@@ -366,8 +401,23 @@ prerequisites to be implemented in this feature PR.
 | `src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.test.tsx` | 4 |
 
 The 100-test dialog file covers mixed creation/launch cases; it is not 100 isolated
-launch-only tests. The temporary task workflow was removed after capturing evidence
-so this plan does not ship a new CI/reviewer subsystem.
+launch-only tests. The first temporary task workflow was removed after capturing
+evidence; task-specific verification workflows must not ship as a reviewer subsystem.
+
+### Follow-up characterization, not feature implementation
+
+- `48caad5802399ae9df209f7b7aebfec6fab3757e` adds 14 hook lifecycle cases without
+  changing production behavior. This is additional protection for current dialogs.
+- [Follow-up run 42377246207](https://github.com/777genius/agent-teams-ai/actions/runs/42377246207)
+  tests exact head `17f97ccf897d45d5606f3f4ded5f5379ffab7101`, including the new hook
+  cases, the six original suites and existing main-process recovery tests. Read
+  its actual terminal result/artifact; triggering it alone is not a pass.
+- Main-process recovery inspection corrected the earlier ambiguous restart promise:
+  form restoration and same-document binding retention are in scope; transparent
+  provisional credential survival across a new renderer/process is not.
+- Local execution still has no authenticated critic launcher; installed integration
+  discovery did not expose one. The configured ReviewRouter interaction runtime
+  remains the legacy pin previously rejected below. No unchanged-auth retry is counted.
 
 ### Independent review attempts — neither produced a model review
 
@@ -393,11 +443,12 @@ included here.
 | --- | --- |
 | Detailed plan published and source-informed refinements | Done, awaiting independent critique |
 | Independent critic rounds 1–4 | 0/4; authorization failures above |
-| Existing regression baseline | 374 passed; scoped evidence only |
+| Original regression baseline | 374 passed; scoped evidence only |
+| Additional hook characterization | Added; terminal evidence is in the linked follow-up run |
 | Feature implementation | Not started |
 | New-screen tests / Electron visual E2E | Not run |
 | Independent implementation review | Not started |
 | Exact implementation-head qualification / merge / post-merge | Not performed |
 
-The PR stays Draft. Product source, including launch/relaunch dialogs, has not been
-changed by this branch. Completion of the requested feature is not claimed.
+The PR stays Draft. Production behavior, including launch/relaunch dialogs, has
+not been changed by this branch. Completion of the requested feature is not claimed.
