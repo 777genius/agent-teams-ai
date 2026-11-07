@@ -2124,7 +2124,7 @@ export const CreateTeamDialog = ({
     }
     await resetFormState();
     if (!stillOwnsCreatePage(generation + 1)) return;
-    const tab = useStore.getState().getActiveTab();
+    const tab = presentation === 'page' ? useStore.getState().getActiveTab() : null;
     if (presentation !== 'page' || (tab?.type === 'teams' && tab.teamsCreationPage)) {
       onOpenTeam(name, cwd);
     }
