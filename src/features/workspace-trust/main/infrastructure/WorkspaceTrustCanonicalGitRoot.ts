@@ -77,6 +77,30 @@ async function isValidGitMarker(root: string): Promise<boolean> {
   }
 }
 
+/**
+ * The managed Git fallback is only for `git init --separate-git-dir`, whose
+ * metadata does not carry a worktree backlink. Never bypass an invalid linked
+ * worktree or submodule backlink: Git rev-parse accepts borrowed metadata.
+ */
+async function isStandaloneGitFile(root: string): Promise<boolean> {
+  const marker = path.join(root, '.git');
+  const content = await readTrimmedFileOrNull(marker);
+  const match = /^gitdir:\\s*(.+)$/.exec(content ?? '');
+  if (!match || /[\\r\\n]/.test(match[1])) return false;
+  const gitDir = path.resolve(root, match[1]);
+  const config = await readTrimmedFileOrNull(path.join(gitDir, 'config'));
+  if (!config || /(?:^|\\n)\\s*worktree\\s*=/im.test(config)) return false;
+  for (const name of ['commondir', 'gitdir']) {
+    try {
+      await fs.lstat(path.join(gitDir, name));
+      return false;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return false;
+    }
+  }
+  return true;
+}
+
 export async function resolveWorkspaceTrustFilesystemGitRoot(
   cwd: string,
   verifyGitFile?: (candidateRoot: string) => Promise<boolean>
@@ -99,7 +123,11 @@ export async function resolveWorkspaceTrustFilesystemGitRoot(
     // Normal directories and absent markers must never trigger a Git process.
     if (verifyGitFile) {
       try {
-        if ((await fs.lstat(path.join(current, '.git'))).isFile() && await verifyGitFile(current)) {
+        if (
+          (await fs.lstat(path.join(current, '.git'))).isFile() &&
+          (await isStandaloneGitFile(current)) &&
+          (await verifyGitFile(current))
+        ) {
           return current;
         }
       } catch {

@@ -111,6 +111,25 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
   });
 
+  it('never passes a forged linked-worktree pointer through the standalone Git fallback', async () => {
+    const dir = await makeTmpDir();
+    const repository = path.join(dir, 'repository');
+    const validWorktree = path.join(dir, 'worktree');
+    const forged = path.join(dir, 'forged');
+    await fs.mkdir(path.join(repository, '.git'), { recursive: true });
+    await createSyntheticWorktree({ repoDir: repository, worktreeDir: validWorktree, name: 'alice' });
+    await fs.mkdir(forged);
+    await fs.writeFile(
+      path.join(forged, '.git'),
+      `gitdir: ${path.join(repository, '.git', 'worktrees', 'alice')}\\n`
+    );
+    // A managed git rev-parse call can accept this foreign pointer, but it
+    // must not override the failed backlink validation.
+    const unsafeGitProbe = vi.fn(async () => true);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(forged, unsafeGitProbe)).resolves.toBeNull();
+    expect(unsafeGitProbe).not.toHaveBeenCalled();
+  });
+
   it('finds a git root from nested paths without spawning git', async () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
