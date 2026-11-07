@@ -1467,7 +1467,6 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
             })()}
           </section>
         ))}
-
         {deletedFiltered.length > 0 && (
           <>
             <div className="my-6 flex items-center gap-3">
@@ -1545,7 +1544,6 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
       </>
     );
   };
-
   return (
     <TooltipProvider delayDuration={300}>
       {createPageOpen ? (
