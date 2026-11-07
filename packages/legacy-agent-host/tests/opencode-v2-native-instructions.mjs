@@ -11,6 +11,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createOpenCodeV2MemberProvider } from '../dist/adapters/providers/OpenCodeV2MemberProvider.js';
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
+import { parseOwnedDurableLog } from './opencode-v2-native-log-parse.mjs';
 
 const version = '2.0.21';
 const pinnedLinuxX64Avx2Digest = 'f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7';
@@ -115,20 +116,7 @@ async function readOwnedDurableLog(sessionId) {
   });
   if(response.status!==200)throw Error('native_durable_log_read_unconfirmed');
   const body=await readBoundedNativeBody(response,'native_durable_log_read_unconfirmed');
-  const frames=body.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n\n')
-    .flatMap(frame=>{
-      const data=frame.split('\n').filter(line=>line.startsWith('data:'))
-        .map(line=>line.slice(5).trimStart()).join('\n');
-      return data?[JSON.parse(data)]:[];
-    });
-  const sync=frames.at(-1), events=frames.slice(0,-1);
-  if(frames.length<1||frames.length>4097||
-     sync?.type!=='log.synced'||sync.aggregateID!==sessionId||
-     !Number.isSafeInteger(sync.seq)||sync.seq<0||
-     events.some(event=>event?.durable?.aggregateID!==sessionId||
-       event?.data?.sessionID!==sessionId))
-    throw Error('native_durable_log_identity_or_cursor_mismatch');
-  return {watermark:sync.seq,eventCount:events.length};
+  return parseOwnedDurableLog(body,sessionId,workspace);
 }
 try {
   if (process.platform !== 'linux' || process.arch !== 'x64' ||
