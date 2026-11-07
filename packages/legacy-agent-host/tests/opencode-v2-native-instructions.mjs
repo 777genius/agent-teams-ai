@@ -214,8 +214,9 @@ try {
   const unsafePolicy=preflightOpenCodeV2EffectiveExternalDirectory(
     unsafeRead.data.data.permissions,'deny');
   if(unsafePolicy.kind!=='hold'||unsafePolicy.reason!=='external-directory')
-    throw Error('Host_accepted_native_later_allow_override');
-  receipt.steps.push('real_native_later_allow_preflight_hold');
+    throw Error('source_preflight_did_not_classify_later_allow_as_hold');
+  // This is a source-only decision: no Host owner was allocated for this session.
+  receipt.steps.push('source_preflight_classified_later_allow_as_hold');
   // Probe the actual V2 native Permission.Service, not just persisted order.
   // This disposable session is unsafe; source preflight classified it HOLD.
   const allowDecision=await native(unsafePath+'/permission','POST',
