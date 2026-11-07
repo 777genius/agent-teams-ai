@@ -118,7 +118,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).toHaveBeenCalledWith('test-team', expect.objectContaining({
       owner: 'lead',
       startImmediately: true,
-      command: { commandId: 'schedule:run-2', idempotencyKey: 'schedule:run-2' },
+      command: { commandId: 'run-2', idempotencyKey: 'schedule:run-2' },
     }));
     expect(port.runOneShot).not.toHaveBeenCalled();
     expect(port.launchTeam).not.toHaveBeenCalled();
