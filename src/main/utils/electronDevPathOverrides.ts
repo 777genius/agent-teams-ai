@@ -35,6 +35,14 @@ function normalizeAbsolutePath(value: string | undefined): string | null {
 
 function ensureDirectory(dirPath: string, warnings: string[], envName: string): boolean {
   try {
+    // The write probe itself must never follow a symlink into another profile.
+    try {
+      if (fs.lstatSync(dirPath).isSymbolicLink()) {
+        throw new Error(`${envName} must be a real directory, not a symlink or junction`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     fs.mkdirSync(dirPath, { recursive: true });
     // Existing folders can be read-only; verify real file creation before startup.
     const probe = path.join(dirPath, `.agent-teams-write-probe-${randomUUID()}`);
