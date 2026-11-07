@@ -12,7 +12,7 @@ Preserve every already-saved schedule's execution, retry, CLI arguments, logs, e
 ## Compatibility contract (P0)
 - Add optional `executionMode?: 'agent' | 'team'` and `targetMember?: string` to `Schedule` and input/patch types.
 - **Missing `executionMode` means `legacy_one_shot`**, not the new default. An existing JSON record continues to execute via `ScheduledTaskExecutor`; do not rewrite records on read/save. Updating a legacy schedule's prompt/time must not change its mode.
-- New schedule creation writes `executionMode: 'agent'` explicitly. Legacy edits display a clear “Existing one-shot behavior” notice and allow deliberate opt-in to a new mode; never silently switch on Save.
+- New schedule creation persists the selected execution mode explicitly: `agent` by default, or `team` when Whole team is selected. Legacy edits display a clear “Existing one-shot behavior” notice and allow deliberate opt-in to a new mode; never silently switch on Save.
 - Keep `launchConfig` as-is; persist no extra serialized team launch state. Existing JSON repository, cron timing and historical runs remain readable.
 - No new recurring daemon, databases, IPC surface for team operations, scheduler rewrite, or speculative orchestration framework.
 
