@@ -3268,7 +3268,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                   sessionsError={sessionsError}
                   leadSessionId={data.config.leadSessionId}
                   selectedSessionId={kanbanFilter.sessionId}
-                  onSelectSession={(id) => setKanbanFilter((prev) => ({ ...prev, sessionId: id }))}
+                  onSelectSession={(id) => {
+                    setKanbanFilter((prev) => ({ ...prev, sessionId: id }));
+                    contentRef.current
+                      ?.querySelector<HTMLElement>('[data-section-id="kanban"]')
+                      ?.dispatchEvent(new CustomEvent('team-section-navigate'));
+                  }}
                   projectPath={data.config.projectPath}
                 />
               </CollapsibleTeamSection>

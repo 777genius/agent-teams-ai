@@ -1259,7 +1259,7 @@ export const MemberCard = memo(function MemberCard({
           </div>
           <div className="flex shrink-0 items-center gap-2.5 justify-self-end">
             {!isRemoved && !passive && (
-              <div className="pointer-events-none opacity-0 group-focus-within/member:pointer-events-auto group-focus-within/member:opacity-100 group-hover/member:pointer-events-auto group-hover/member:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+              <div className="hidden group-focus-within/member:block group-hover/member:block [@media(hover:none)]:block">
                 <MemberQuickActions
                   onSendMessage={onSendMessage}
                   onAssignTask={onAssignTask}

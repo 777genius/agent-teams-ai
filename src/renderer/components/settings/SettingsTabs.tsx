@@ -57,7 +57,7 @@ export const SettingsTabs = ({
   return (
     <nav
       aria-label={t('view.title')}
-      className="flex w-48 shrink-0 flex-col gap-1 border-e border-border p-3 max-sm:w-36 max-sm:p-2"
+      className="flex min-h-0 w-48 shrink-0 flex-col gap-1 overflow-y-auto overscroll-contain border-e border-border p-3 max-sm:w-36 max-sm:p-2"
     >
       {sections
         .filter((section) => !section.electronOnly || isElectron)
