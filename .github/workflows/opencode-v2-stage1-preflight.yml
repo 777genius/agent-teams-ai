@@ -14,6 +14,13 @@ on:
       - pnpm-workspace.yaml
       - packages/legacy-agent-host/package.json
       - packages/legacy-agent-host/tsconfig*.json
+      # These directly imported Host SPI/identity/context contracts can change
+      # the V2 native proof without touching the adapter itself.
+      - packages/legacy-agent-host/src/runtime/identity.ts
+      - packages/legacy-agent-host/src/runtime/contracts.ts
+      - packages/legacy-agent-host/src/team-launch/context.ts
+      - packages/legacy-agent-host/src/team-launch/contracts.ts
+      - packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts
       - packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts
       - packages/legacy-agent-host/src/composition/runtimeProfile.ts
       - packages/legacy-agent-host/src/composition/launchConfiguration.ts
