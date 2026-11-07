@@ -584,7 +584,24 @@ if (mode === 'seed-packaged') {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
-      if (scenario !== cleanupScenario) await enterProviderSettings(evaluate, send);
+      if (scenario !== cleanupScenario) {
+        try {
+          await enterProviderSettings(evaluate, send);
+        } catch (navigationError) {
+          // Keep a real screenshot when the app has not completed its native
+          // startup or the new Settings route cannot become visible.
+          try {
+            const screenshot = await send('Page.captureScreenshot');
+            await writeFile(
+              path.join(root, `navigation-failure-${scenario}.png`),
+              Buffer.from(screenshot.data, 'base64')
+            );
+          } catch {
+            /* Keep the original navigation failure. */
+          }
+          throw navigationError;
+        }
+      }
       if (scenario === cleanupScenario) {
         await verifyStartupCleanup({ root, evaluate, send });
       } else if (catalogScenarios.includes(scenario)) {

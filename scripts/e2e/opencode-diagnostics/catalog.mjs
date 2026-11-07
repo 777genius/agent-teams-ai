@@ -157,7 +157,8 @@ export async function enterProviderSettings(evaluate, send) {
   const page = `document.querySelector('[data-testid="provider-settings-page"]')`;
   const dashboardButton = `document.querySelector('[data-testid="dashboard-manage-providers"]')`;
   let clicked = false;
-  for (let attempt = 0; attempt < 120; attempt++) {
+  // First app launch includes native service startup before React mounts.
+  for (let attempt = 0; attempt < 480; attempt++) {
     if (await evaluate(`Boolean(${page}?.getClientRects().length)`)) return;
     if (!clicked && await evaluate(`Boolean(${dashboardButton}?.getClientRects().length && !${dashboardButton}?.disabled)`)) {
       assert(
@@ -169,7 +170,14 @@ export async function enterProviderSettings(evaluate, send) {
     }
     await pause(250);
   }
-  assert.fail('Providers page did not become visible after dashboard navigation');
+  const diagnostic = await evaluate(`(async () => ({
+    splash: Boolean(document.getElementById('splash')),
+    text: document.body.innerText.slice(0, 450),
+    dashboardAction: Boolean(${dashboardButton}),
+    settingsPage: Boolean(${page}),
+    startup: await window.electronAPI?.startup?.getStatus?.()
+  }))()`);
+  assert.fail(`Providers page did not become visible: ${JSON.stringify(diagnostic).slice(0, 1500)}`);
 }
 
 export function correlateReport(copied, logs) {
