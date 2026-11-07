@@ -16,6 +16,7 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "Host_existing_Session_SPI_ready_with_real_native_attestation",
   "Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck",
   "Host_native_readiness_recheck_no_instruction_replay",
+  "real_native_fresh_session_durable_log_cursor_read_only",
   "Host_seal_started_real_native_owned_stop_before_close",
   "real_native_seal_refused_retained_SPI_mutations_and_checkpoint",
   "same_TEST_native_owner_closed_without_replay",
@@ -28,13 +29,18 @@ const ticks = value => typeof value === 'string' && /^[1-9][0-9]*$/.test(value);
 
 export function isCompleteNativeHostReceipt(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const r = value, restarted = r.restart;
+  const r = value, restarted = r.restart, log = r.nativeLogReadback;
   return r.kind === 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS' && r.version === '2.0.21' &&
     r.cleanup === true && r.error === undefined && r.cleanupError === undefined &&
     r.qualified === false && r.productQualified === false &&
     r.packagedElectronQualified === false &&
     sha256(r.binarySha256) && pid(r.pid) && ticks(r.processStartTicks) &&
     r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
+    log && typeof log === 'object' && !Array.isArray(log) &&
+    log.readOnly === true && log.synced === true &&
+    Number.isSafeInteger(log.watermark) && log.watermark >= 0 &&
+    Number.isSafeInteger(log.eventCount) && log.eventCount >= 0 &&
+    log.eventCount <= 4096 && log.modelTurnProven === false &&
     Array.isArray(r.steps) && r.steps.length === REQUIRED_NATIVE_HOST_STEPS.length &&
     r.steps.every((step, index) => step === REQUIRED_NATIVE_HOST_STEPS[index]) &&
     restarted && typeof restarted === 'object' && !Array.isArray(restarted) &&
