@@ -463,7 +463,8 @@ export class TeamInboxReader {
    */
   async listInboxNames(teamName: string): Promise<string[]> {
     return (await this.listInboxFileNames(teamName)).filter(
-      (name) => name.length > 0 && name.trim() === name && validateTeamMemberNameFormat(name) === null
+      (name) =>
+        name.length > 0 && name.trim() === name && validateTeamMemberNameFormat(name) === null
     );
   }
 
