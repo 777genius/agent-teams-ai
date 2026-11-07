@@ -121,7 +121,9 @@ import {
   getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
+import { shouldLoadOpenCodeDialogCatalog } from './openCodeDialogCatalogGate';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeSourceDirectoryProvider } from './OpenCodeSourceDirectoryProvider';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { resolvePersistedTeamModel } from './persistedTeamModel';
@@ -451,8 +453,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       effectiveCwd,
       open && launchPreflightSelectionReady && requestedMemberProviders.includes('anthropic')
     );
-  const openCodeCatalogEnabled =
-    open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
+  const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
+    open, isLaunchMode, multimodelEnabled, requestedMemberProviders
+  );
   const {
     effectiveMemberDrafts,
     effectiveSelectedModel,
@@ -649,7 +652,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const createSchedule = useStore((s) => s.createSchedule);
   const updateSchedule = useStore((s) => s.updateSchedule);
   // localStorage persistence wrappers
-
   const setWorktreeEnabled = (value: boolean): void => {
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${effectiveTeamName}`, String(value));
@@ -722,7 +724,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
   };
-
   const autoResetSelectedEffort = (): void => {
     // EffortLevelSelector clears an unavailable effort through this callback. That
     // programmatic reset is not a user edit: no hydration cancel, no dirty mark.
@@ -2415,7 +2416,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const submitLabel = t(labelKeys.submit);
   const submittingLabel = t(labelKeys.submitting);
-
   return (
     <Dialog
       open={open}
@@ -2425,6 +2425,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
       }}
     >
+      <OpenCodeSourceDirectoryProvider enabled={open && isLaunchMode && multimodelEnabled} projectPath={effectiveCwd}>
       <DialogContent
         className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
       >
@@ -2433,7 +2434,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
           <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>
         </DialogHeader>
-
         {isRelaunch ? (
           <div
             className="rounded-md border p-3 text-xs"
@@ -2452,7 +2452,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           </div>
         ) : null}
-
         {/* Launch-only: Conflict warning */}
         {isLaunchMode && conflictingTeam && !conflictDismissed ? (
           <div
@@ -2485,7 +2484,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           </div>
         ) : null}
-
         <div className="space-y-4">
           {/* ═══════════════════════════════════════════════════════════════════
               Schedule-only: Team selector (standalone mode)
@@ -3234,6 +3232,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           />
         </DialogFooter>
       </DialogContent>
+      </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
         openProviderId={providerSettingsProviderId}
         onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}

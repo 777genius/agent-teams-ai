@@ -158,7 +158,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
         isPaneFocused={isPaneFocused}
       />
     ) : tab.type === 'teams' ? (
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4">
         <TeamListSkeleton label={t('list.loading')} />
       </div>
     ) : (
