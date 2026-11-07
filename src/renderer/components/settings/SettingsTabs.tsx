@@ -67,6 +67,7 @@ export const SettingsTabs = ({
           return (
             <button
               key={section.id}
+              data-testid={`settings-nav-${section.id}`}
               type="button"
               aria-current={isActive ? 'page' : undefined}
               onClick={() => onSectionChange(section.id)}

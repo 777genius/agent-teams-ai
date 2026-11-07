@@ -411,6 +411,30 @@ try {
   ), 'virtualizer reaches distant rows without mounting the whole table');
   await cdp.screenshot(join(root, 'kanban-table-1000-rows.png'));
   reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true, taskDetail: true, searchCounts: [0, 1, 50], virtualizedTasks: 1004 });
+  // Qualify Appearance navigation and theme persistence in the same real Electron renderer.
+  await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('appearance')");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-appearance"][aria-current="page"]\') && !!document.querySelector(\'[data-testid="appearance-theme-light"]\')'
+  ), 'Appearance page loads from Settings navigation');
+  const previousTheme = await cdp.evaluate('window.electronAPI.config.get().then(c=>c.general.theme)') as string;
+  assert(['dark', 'light', 'system'].includes(previousTheme), 'Known initial theme');
+  const targetTheme = previousTheme === 'light' ? 'dark' : 'light';
+  await cdp.evaluate(`document.querySelector('[data-testid="appearance-theme-${targetTheme}"]').click()`);
+  await until(() => cdp!.evaluate(`(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===${JSON.stringify(targetTheme)}&&document.documentElement.classList.contains(${JSON.stringify(targetTheme)});})()`),
+    'Appearance saves and applies theme through real Electron IPC');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-general\"]').click()");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-general"][aria-current="page"]\')'
+  ), 'General settings tab opens');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-appearance\"]').click()");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-appearance"][aria-current="page"]\')'
+  ), 'Appearance reopens with the persisted selection');
+  await cdp.screenshot(join(root, 'settings-appearance-desktop.png'));
+  await cdp.evaluate(`document.querySelector('[data-testid="appearance-theme-${previousTheme}"]').click()`);
+  await until(() => cdp!.evaluate(`(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===${JSON.stringify(previousTheme)};})()`),
+    'Appearance restores fixture theme');
+  reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
   }
 
   if (!tableOnly) {

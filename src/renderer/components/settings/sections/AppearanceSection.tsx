@@ -42,6 +42,7 @@ export const AppearanceSection = ({
           {themeOptions.map((opt) => (
             <button
               key={opt.value}
+              data-testid={`appearance-theme-${opt.value}`}
               type="button"
               disabled={saving}
               className={cn(
