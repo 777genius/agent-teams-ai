@@ -36,12 +36,9 @@ async function expand(cdp: UiCdpPort, ui: Controls, title: string) {
     await ui.scrollTo(selector, title);
     await ui.click(selector, title);
   }
-  assert.equal(
-    await cdp.evaluate(
-      `document.querySelector('[role="dialog"] button[aria-controls='+${desktopJsLiteral(JSON.stringify(value.id))}+']')?.getAttribute('aria-expanded')`
-    ),
-    'true'
-  );
+  const expansionState = `document.querySelector('[role="dialog"] button[aria-controls='+${desktopJsLiteral(JSON.stringify(value.id))}+']')?.getAttribute('aria-expanded')`;
+  await ui.waitRead(`${expansionState} === 'true'`, title + ' expanded after one click');
+  assert.equal(await cdp.evaluate(expansionState), 'true');
 }
 async function replace(
   cdp: UiCdpPort,

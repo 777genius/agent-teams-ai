@@ -273,7 +273,12 @@ export async function runDesktopTaskBoardAttachmentsUi(
     'prepared original file preserves exact DOM and controller comment text'
   );
   await ui.scrollTo('[role="dialog"] button', 'original Comment submit', 'Comment');
-  assert.ok(commentReady(await readCommentInput('immediately before submit'), commentText, 1),
+  const beforeSubmit = await options.waitProduct(
+    () => readCommentInput('immediately before submit'),
+    (value) => Boolean(commentReady(value, commentText, 1)),
+    'exact original text and prepared file remain current after submit-button scroll'
+  );
+  assert.ok(commentReady(beforeSubmit, commentText, 1),
     'exact original text and prepared file are still current before the one Comment click');
   await ui.click('[role="dialog"] button', 'submit original comment and file once', 'Comment');
   const commentedTask = await options.waitProduct(
