@@ -243,7 +243,13 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     const pending: { resolve?: (task: TeamTask) => void } = {};
     port.createTask = vi.fn(() => new Promise<TeamTask>((resolve) => { pending.resolve = resolve; }));
     const first = dispatch.dispatch(makeSchedule('team'), 'run-10', active);
-    const second = await dispatch.dispatch(makeSchedule('agent'), 'run-11', active);
+    // Different cwd bypasses the scheduler's path lock. The dispatcher must
+    // still serialize by team until the original task write settles.
+    const anotherSchedule = {
+      ...makeSchedule('agent'),
+      launchConfig: { ...makeSchedule('agent').launchConfig, cwd: '/tmp/other-project' },
+    };
+    const second = await dispatch.dispatch(anotherSchedule, 'run-11', active);
     expect(second.kind).toBe('skipped');
     // The first dispatch is waiting for the one task write to finish.
     await vi.waitFor(() => expect(port.createTask).toHaveBeenCalledOnce());
