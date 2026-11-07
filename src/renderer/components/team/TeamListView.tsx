@@ -436,7 +436,7 @@ const ActiveTeamCard = ({
   );
 };
 
-export const TeamListView = memo(function TeamListView({ tabId }: { tabId: string }): React.JSX.Element {
+export const TeamListView = memo(function TeamListView({ tabId, isActive }: { tabId: string; isActive: boolean }): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -1095,7 +1095,7 @@ export const TeamListView = memo(function TeamListView({ tabId }: { tabId: strin
     >
       <CreateTeamDialog
         key={createSeed?.id ?? 'new'}
-        presentation="page"
+        presentation="page" active={isActive}
         open={createPageOpen}
         canCreate={canCreate}
         provisioningErrorsByTeam={provisioningErrorByTeam}
