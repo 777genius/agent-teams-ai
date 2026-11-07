@@ -1,0 +1,160 @@
+name: Build Hetzner landing and docs release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - 'docs/screenshots/**'
+      - 'scripts/announcements/**'
+      - 'scripts/ci/transitive-security*'
+      - 'scripts/ci/audit-dependencies.mjs'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.node-version'
+      - '.github/workflows/landing-hetzner-release.yml'
+  pull_request:
+    paths:
+      - 'landing/**'
+      - 'docs/screenshots/**'
+      - 'scripts/announcements/**'
+      - 'scripts/ci/transitive-security*'
+      - 'scripts/ci/audit-dependencies.mjs'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.node-version'
+      - '.github/workflows/landing-hetzner-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  build:
+    name: Exact-SHA production-domain static artifacts
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - name: Install root announcement dependencies
+        run: pnpm install --filter agent-teams-ai --prod --frozen-lockfile --ignore-scripts
+      - name: Install landing dependencies
+        working-directory: landing
+        run: npm ci
+      - name: Audit landing dependencies
+        working-directory: landing
+        run: node ../scripts/ci/audit-dependencies.mjs --npm
+      - name: Generate landing for production apex
+        working-directory: landing
+        env:
+          NUXT_APP_BASE_URL: /
+          NUXT_PUBLIC_SITE_URL: https://agentteams.live
+          NUXT_PUBLIC_LANDING_SITE_URL: https://agentteams.live
+          NUXT_PUBLIC_DOCS_SITE_URL: https://docs.agentteams.live
+          NUXT_PUBLIC_ROBOTS: index, follow
+        run: npm run generate
+      - name: Generate separate production docs site
+        working-directory: landing
+        env:
+          NUXT_APP_BASE_URL: /
+          NUXT_PUBLIC_SITE_URL: https://agentteams.live
+          VITEPRESS_BASE: /
+          VITEPRESS_SITE_URL: https://docs.agentteams.live
+          VITEPRESS_LANDING_SITE_URL: https://agentteams.live
+        run: npm run docs:build
+      - name: Package and verify isolated immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$RUNNER_TEMP/agent-teams-static"
+          mkdir -p "$release/landing" "$release/docs"
+          cp -a landing/.output/public/. "$release/landing/"
+          cp -a landing/product-docs/.vitepress/dist/. "$release/docs/"
+          printf '%s' "$GITHUB_SHA" > "$release/landing/deployment-sha.txt"
+          printf '%s' "$GITHUB_SHA" > "$release/docs/deployment-sha.txt"
+          test ! -e "$release/landing/agent-teams-ai/index.html"
+          test -f "$release/landing/index.html"
+          test -f "$release/docs/index.html"
+          test -f "$release/docs/guide/installation.html"
+          ! find "$release" -type l | grep -q .
+          grep -Fq 'OpenRig' "$release/landing/index.html"
+          grep -Fq 'Supported desktop platforms' "$release/landing/index.html"
+          python3 - "$release" <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import sys
+
+          class Canonical(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+              def handle_starttag(self, tag, attrs):
+                  a = dict(attrs)
+                  if tag == "link" and a.get("rel") == "canonical":
+                      self.urls.append(a.get("href"))
+
+          root = Path(sys.argv[1])
+          expected = {
+              "landing/index.html": "https://agentteams.live/",
+              "docs/index.html": "https://docs.agentteams.live/",
+              "landing/docs/index.html": "https://docs.agentteams.live/",
+          }
+          for path, url in expected.items():
+              parser = Canonical()
+              parser.feed((root / path).read_text())
+              if parser.urls != [url]:
+                  raise SystemExit(f"{path}: unexpected canonical: {parser.urls!r}")
+          print("Exact production canonical URLs verified")
+
+          class CardLinks(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.hrefs = []
+              def handle_starttag(self, tag, attrs):
+                  a = dict(attrs)
+                  if tag == "a" and "docs-card" in (a.get("class") or "").split():
+                      self.hrefs.append(a.get("href"))
+
+          links = 0
+          docs = root / "docs"
+          for index in [docs / "index.html", *sorted(docs.glob("??/index.html"))]:
+              parser = CardLinks()
+              parser.feed(index.read_text())
+              for href in parser.hrefs:
+                  if not href or not href.startswith("/") or ".." in href.split("/"):
+                      raise SystemExit(f"{index}: invalid docs card link {href!r}")
+                  path = href.split("#", 1)[0].split("?", 1)[0]
+                  target = docs / (path.lstrip("/") + ("index.html" if path.endswith("/") else ".html"))
+                  if not target.is_file():
+                      raise SystemExit(f"{index}: missing docs card target {href!r}")
+                  links += 1
+          if links == 0:
+              raise SystemExit("No generated docs card links found")
+          print(f"Verified {links} generated docs card links")
+          PY
+          tar -C "$release" -czf "$RUNNER_TEMP/agent-teams-static.tar.gz" landing docs
+          cd "$RUNNER_TEMP"
+          sha256sum agent-teams-static.tar.gz > agent-teams-static.tar.gz.sha256
+          cat agent-teams-static.tar.gz.sha256
+      - uses: actions/upload-artifact@v5
+        with:
+          name: agent-teams-hetzner-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/agent-teams-static.tar.gz
+            ${{ runner.temp }}/agent-teams-static.tar.gz.sha256

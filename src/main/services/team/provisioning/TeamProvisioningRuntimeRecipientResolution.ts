@@ -117,6 +117,11 @@ export function resolveRuntimeRecipientProviderIdFromSources(input: {
       `Ambiguous runtime recipient provider identity for ${configMember?.name ?? metaMember?.name ?? normalizedMemberName}: config=${configProviderId}, metadata=${metaProviderId}`
     );
   }
+  if (!input.config && metaProviderId === 'opencode') {
+    throw new Error(
+      `OpenCode runtime recipient ${metaMember?.name ?? normalizedMemberName} cannot be verified: team config.json is unavailable`
+    );
+  }
   if (!configMember && metaProviderId === 'opencode') {
     throw new MissingOpenCodeRuntimeConfigIdentityError(
       metaMember?.name ?? normalizedMemberName
