@@ -578,7 +578,7 @@ async function main() {
     log('render creation page in both themes and at 200% CSS zoom');
     for (const theme of ['light', 'dark']) {
       await cdp.evaluate(
-        "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig.general, theme: " +
+        "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig?.general, theme: " +
           JSON.stringify(theme) + " } } }))"
       );
       await cdp.waitFor(
@@ -863,6 +863,12 @@ async function main() {
       configOnlyCreatedThroughUi: true,
       copiedTeamUsesSharedEditor: true,
       copiedDraftDoesNotReplaySeed: true,
+      templateReplacementCancelledAndConfirmed: true,
+      organizationPlacementPersistedViaNativeApi: true,
+      duplicateNameValidationRecovered: true,
+      themeDarkLightRendered: true,
+      cssZoom200Rendered: true,
+      splitPaneSingleEditor: true,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
@@ -873,6 +879,9 @@ async function main() {
   } catch (error) {
     failure = error;
     await dumpRenderer(cdp, 'teams-create-page-failure');
+    if (cdp) {
+      try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }
+    }
   } finally {
     await cleanup(fixture);
   }
