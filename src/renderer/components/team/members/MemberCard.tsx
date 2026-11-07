@@ -1258,6 +1258,16 @@ export const MemberCard = memo(function MemberCard({
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2.5 justify-self-end">
+            {!isRemoved && !passive && (
+              <div className="pointer-events-none opacity-0 group-focus-within/member:pointer-events-auto group-focus-within/member:opacity-100 group-hover/member:pointer-events-auto group-hover/member:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+                <MemberQuickActions
+                  onSendMessage={onSendMessage}
+                  onAssignTask={onAssignTask}
+                  onEditMember={onEditMember}
+                  editDisabled={isTeamProvisioning}
+                />
+              </div>
+            )}
             {showLaunchBadge ? (
               <span
                 className="flex shrink-0 items-center gap-1"
@@ -1498,16 +1508,6 @@ export const MemberCard = memo(function MemberCard({
               totalTasks={totalTasks}
               progressPercent={progressPercent}
             />
-            {!isRemoved && !passive && (
-              <div className="pointer-events-none -ml-2.5 max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity,margin] group-focus-within/member:pointer-events-auto group-focus-within/member:ml-0 group-focus-within/member:max-w-24 group-focus-within/member:opacity-100 group-hover/member:pointer-events-auto group-hover/member:ml-0 group-hover/member:max-w-24 group-hover/member:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:ml-0 [@media(hover:none)]:max-w-24 [@media(hover:none)]:opacity-100">
-                <MemberQuickActions
-                  onSendMessage={onSendMessage}
-                  onAssignTask={onAssignTask}
-                  onEditMember={onEditMember}
-                  editDisabled={isTeamProvisioning}
-                />
-              </div>
-            )}
             {canRestoreMember ? (
               <Tooltip>
                 <TooltipTrigger asChild>
