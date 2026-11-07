@@ -78,6 +78,8 @@ export interface TeamsCreationSeed {
   id: string;
   copyData?: TeamCopyData;
   placement?: OrganizationPlacementSelection;
+  /** Return here on Back, not after successful creation. */
+  originTabId?: string;
 }
 
 export interface Tab {
