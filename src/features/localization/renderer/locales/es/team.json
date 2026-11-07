@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} oculto",
       "trash": "Trash",
       "gridView": "Vista a la parrilla",
-      "columnsView": "Vista de las columnas"
+      "columnsView": "Vista de las columnas",
+      "tableView": "Vista de tabla",
+      "configureColumns": "Elegir columnas"
     },
     "trash": {
       "title": "Trash",

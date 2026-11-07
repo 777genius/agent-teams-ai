@@ -2423,7 +2423,9 @@
       "hiddenCount": "{{count}} verborgen",
       "trash": "Prullenbak",
       "gridView": "Rasterweergave",
-      "columnsView": "Kolomweergave"
+      "columnsView": "Kolomweergave",
+      "tableView": "Tabelweergave",
+      "configureColumns": "Kolommen kiezen"
     },
     "trash": {
       "title": "Prullenbak",
