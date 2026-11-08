@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 
 import {
   groupMembers,
+  isCapturedOriginalNodeZombie,
   observeOriginalAppReap,
   portOccupied,
   processTable,
@@ -76,9 +77,31 @@ export async function finishDesktopOwnerRoutingEpoch(options: {
         if (reaped.settled) remaining = reaped.remaining!;
       }
       if (remaining.length) {
-        assert.equal(
-          observedIdentity,
-          appIdentity,
+        let originalZombie = false;
+        if (observedIdentity !== appIdentity) {
+          // No command-alias shortcut: a macOS zombie is still the original
+          // unreaped child with its captured birth, group, and harness parent.
+          // Any live changed command or missing evidence refuses all signals.
+          const state = execFileSync(
+            '/bin/ps',
+            ['-p', String(group), '-o', 'stat='],
+            { encoding: 'utf8', timeout: 3000 }
+          ).trim();
+          originalZombie = isCapturedOriginalNodeZombie({
+            expectedIdentity: appIdentity,
+            observedIdentity,
+            state,
+            childPid: app.pid,
+            group,
+            leader: groupMembers(group).find((entry) => entry.pid === group),
+            parentPid: process.pid,
+          });
+          if (originalZombie) {
+            epoch.originalZombieGuard = { group, state, status: 'verified-original-zombie' };
+          }
+        }
+        assert.ok(
+          observedIdentity === appIdentity || originalZombie,
           'original epoch invocation identity remains current'
         );
         signalAttempted = true;
