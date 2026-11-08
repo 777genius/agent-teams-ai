@@ -141,6 +141,40 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
   }
 
+  it.each([true, false])(
+    'does not assign a second task while selected member is already working (team live: %s)',
+    async (live) => {
+      enableTaskFirstPorts();
+      port.isTeamAlive = vi.fn(() => live);
+      port.hasActiveOwnedTask = vi.fn((_team, member) => member === 'alice');
+      const outcome = await dispatch.dispatch(
+        { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+        'busy-member', active
+      );
+      expect(outcome.kind).toBe('skipped');
+      if (outcome.kind !== 'skipped') throw new Error('Expected skipped outcome');
+      expect(outcome.summary).toContain('already working');
+      expect(port.createTask).not.toHaveBeenCalled();
+      expect(port.launchTeam).not.toHaveBeenCalled();
+      expect(port.startTaskByUser).not.toHaveBeenCalled();
+    }
+  );
+
+  it('leaves the saved task visible if another task becomes active before scheduled start', async () => {
+    enableTaskFirstPorts();
+    port.startTaskByUser = vi.fn(async () => {
+      throw new Error('Scheduled recipient is already working');
+    });
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'member-became-busy', active
+    );
+    expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    if (outcome.kind !== 'skipped') throw new Error('Expected skipped outcome');
+    expect(outcome.summary).toContain('already working');
+    expect(port.createTask).toHaveBeenCalledOnce();
+  });
+
   it('creates one pending task before bootstrap-only launch and starts the exact teammate after readiness', async () => {
     enableTaskFirstPorts();
     let running = false;
@@ -409,6 +443,25 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.launchTeam).not.toHaveBeenCalled();
   });
 
+
+  it('allows a reviewed old prompt without executing it on bootstrap', async () => {
+    enableTaskFirstPorts();
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => ({
+      teamName: 'test-team', cwd: '/tmp/saved-team', providerId: 'anthropic' as const,
+      prompt: 'Old one-time work', members: [{ name: 'alice' }],
+    }));
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true, reviewedSavedPrompt: true },
+      'reviewed-old-instructions', active
+    );
+    expect(outcome).toMatchObject({ taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledOnce();
+    expect(port.launchTeam).toHaveBeenCalledWith(expect.objectContaining({
+      bootstrapOnly: true, prompt: undefined,
+    }));
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
 
   it('does not create a stopped-team task after cancellation during metadata reads', async () => {
     enableTaskFirstPorts();

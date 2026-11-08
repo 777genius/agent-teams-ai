@@ -15,7 +15,7 @@ export function createSchedulerService(
   apis: Pick<TeamIpcHandlerApis, 'runtime' | 'provisioningRun' | 'diagnostics' | 'memberLifecycle'>,
   data: Pick<
     TeamDataService,
-    'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser'
+    'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser' | 'hasActiveOwnedTask'
   >,
   provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>
 ): SchedulerService {
@@ -30,6 +30,7 @@ export function createSchedulerService(
     getMemberStatuses: (teamName) => apis.memberLifecycle.getMemberSpawnStatuses(teamName),
     getLeadName: (teamName) => data.getLeadMemberName(teamName),
     getSavedRequest: (teamName) => data.getSavedRequest(teamName),
+    hasActiveOwnedTask: (teamName, memberName) => data.hasActiveOwnedTask(teamName, memberName),
     hasRunnableConfig: async (teamName) => {
       const config = await configReader.getConfig(teamName);
       return Boolean(config && !config.deletedAt);

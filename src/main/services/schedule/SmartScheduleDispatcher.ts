@@ -35,6 +35,7 @@ export interface SmartScheduleRuntimePort {
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   /** Required only for opt-in task-first schedules; old adapters remain compatible. */
   hasRunnableConfig?(teamName: string): Promise<boolean>;
+  hasActiveOwnedTask?(teamName: string, owner: string): boolean;
   getPreviousRuns?(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
   getTask?(teamName: string, taskId: string): Promise<TeamTask | null>;
   startTaskByUser?(
@@ -66,6 +67,13 @@ function readyMember(entry: TeamAgentRuntimeEntry | undefined): boolean {
 
 function skipped(reason: string, taskId?: string): SmartScheduleOutcome {
   return { kind: 'skipped', summary: reason, ...(taskId ? { taskId } : {}) };
+}
+
+function startFailed(error: unknown, taskId: string): SmartScheduleOutcome {
+  if (error instanceof Error && error.message === 'Scheduled recipient is already working') {
+    return skipped('Task saved; selected agent is already working on another task', taskId);
+  }
+  return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', taskId);
 }
 
 function teamLaunchRequest(saved: TeamCreateRequest, prompt: string): TeamLaunchRequest {
@@ -215,7 +223,7 @@ export class SmartScheduleDispatcher {
     if (!saved?.cwd || !saved.providerId || !(await hasRunnableConfig(schedule.teamName))) {
       return skipped('Finish team setup before assigning scheduled work');
     }
-    if (saved.prompt?.trim()) {
+    if (saved.prompt?.trim() && !schedule.reviewedSavedPrompt) {
       return skipped('Review historical team instructions before enabling task-first launch');
     }
     const leadName = await this.runtime.getLeadName(schedule.teamName);
@@ -224,6 +232,9 @@ export class SmartScheduleDispatcher {
     const owner = selected?.toLowerCase() === leadName.toLowerCase() ? leadName : selected || leadName;
     if (owner !== leadName && !saved.members.some((member) => member.name === owner)) {
       return skipped(`Member "${owner}" is not configured in this team`);
+    }
+    if (this.runtime.hasActiveOwnedTask?.(schedule.teamName, owner)) {
+      return skipped(`Member "${owner}" is already working on another task`);
     }
 
     if (
@@ -295,8 +306,8 @@ export class SmartScheduleDispatcher {
       if (!notified) {
         return skipped('Task saved; start did not confirm a task owner. Inspect the task', task.id);
       }
-    } catch {
-      return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', task.id);
+    } catch (error) {
+      return startFailed(error, task.id);
     }
     return {
       kind: 'dispatched',
@@ -330,6 +341,9 @@ export class SmartScheduleDispatcher {
     const saved = await this.runtime.getSavedRequest(team);
     const configured = memberName === leadName || saved?.members.some((m) => m.name === memberName);
     if (!configured) return skipped(`Member "${memberName}" is not configured in this team`);
+    if (schedule.taskFirst && this.runtime.hasActiveOwnedTask?.(team, memberName)) {
+      return skipped(`Member "${memberName}" is already working on another task`);
+    }
 
     const entry = runtime.members[memberName];
     if (!readyMember(entry)) {
@@ -408,8 +422,8 @@ export class SmartScheduleDispatcher {
         if (!notified) {
           return skipped('Task saved; start did not confirm a task owner. Inspect the task', task.id);
         }
-      } catch {
-        return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', task.id);
+      } catch (error) {
+        return startFailed(error, task.id);
       }
     }
     return {

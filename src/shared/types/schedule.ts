@@ -41,6 +41,8 @@ export interface Schedule {
   targetMember?: string;
   /** Opt-in only: board task first, bootstrap-only launch if stopped; absent preserves old behavior. */
   taskFirst?: true;
+  /** Explicit review: saved one-time prompt stays on disk but is never replayed. */
+  reviewedSavedPrompt?: true;
   label?: string;
   cronExpression: string;
   timezone: string;
@@ -117,6 +119,7 @@ export interface CreateScheduleInput {
   teamName: string;
   executionMode?: ScheduleExecutionMode;
   taskFirst?: true;
+  reviewedSavedPrompt?: true;
   targetMember?: string;
   label?: string;
   cronExpression: string;
@@ -128,6 +131,8 @@ export interface CreateScheduleInput {
 }
 
 export interface UpdateSchedulePatch {
+  /** Explicit user approval; may only be added to an existing task-first schedule. */
+  reviewedSavedPrompt?: true;
   executionMode?: ScheduleExecutionMode;
   targetMember?: string;
   label?: string;
