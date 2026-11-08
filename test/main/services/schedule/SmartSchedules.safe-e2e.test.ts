@@ -237,6 +237,24 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(oneShot).not.toHaveBeenCalled();
   });
 
+  it('persists a selected teammate HOLD without silently spawning a standalone agent', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: 'alice', label: 'Alice backlog',
+    });
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'skipped');
+    expect(run.summary).toContain('Selected teammate "alice" cannot run');
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+    await scheduler.stop();
+    await scheduler.start();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('skipped');
+    expect((await repository.getSchedule(schedule.id))?.targetMember).toBe('alice');
+  });
+
   it('persists a skipped run after a scheduled agent team is deleted', async () => {
     const schedule = await scheduler.createSchedule({
       ...input(), executionMode: 'agent', targetMember: 'alice',

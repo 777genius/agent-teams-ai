@@ -152,6 +152,13 @@ export class SmartScheduleDispatcher {
           ) {
             return skipped('Team state changed while validating scheduled agent; no work was submitted');
           }
+          // One-shot CLI has no teammate owner/role/provider/workflow contract.
+          // Running it for a selected non-lead would silently execute as an
+          // unrelated standalone agent. Keep the schedule and fail closed until
+          // an owner-aware offline teammate route is explicitly qualified.
+          if (memberName !== leadName) {
+            return skipped(`Selected teammate "${memberName}" cannot run while the team is stopped; start the team first`);
+          }
           const result = await this.runtime.runOneShot({
             runId,
             config: schedule.launchConfig,

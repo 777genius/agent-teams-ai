@@ -175,6 +175,32 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).not.toHaveBeenCalled();
   });
 
+  it('fails closed for a configured selected teammate when the team is stopped', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' }, 'selected-alice-offline', active
+    );
+    expect(result).toMatchObject({
+      kind: 'skipped',
+      summary: expect.stringContaining('Selected teammate "alice" cannot run'),
+    });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('preserves the separate offline lead one-shot path without a team launch', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'LEAD' }, 'selected-lead-offline', active
+    );
+    expect(result.kind).toBe('one_shot');
+    expect(port.runOneShot).toHaveBeenCalledOnce();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
   it('skips an offline one-agent schedule if its selected member was removed', async () => {
     port.isTeamAlive = vi.fn(() => false);
     const result = await dispatch.dispatch(
