@@ -48,6 +48,7 @@ const RETRYABLE_DOWNLOAD_CODES = new Set([
   'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT',
 ]);
 
+/** Only a finite set of transient transport failures permits another pinned archive GET. */
 function isRetryableDownloadFailure(error) {
   let cause = error;
   for (let depth = 0; depth < 4 && cause && typeof cause === 'object'; depth += 1) {
@@ -63,6 +64,16 @@ function isRetryableDownloadFailure(error) {
     }
     if (RETRYABLE_DOWNLOAD_CODES.has(cause.code) || cause.name === 'TimeoutError') {
       return true;
+    }
+    if (
+      cause instanceof AggregateError &&
+      cause.errors.some(
+        (entry) =>
+          entry && typeof entry === 'object' &&
+          (RETRYABLE_DOWNLOAD_CODES.has(entry.code) || entry.name === 'TimeoutError')
+      )
+    ) {
+      return true; // Node can aggregate an earlier refusal with a later timeout.
     }
     cause = cause.cause;
   }
