@@ -211,7 +211,12 @@ if (mode === 'seed-packaged') {
   console.log(dir);
 } else if (mode === 'seed-real') {
   assert(root === undefined, 'Seed real provider test only in a fresh sandbox');
-  const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-')));
+  // The test-only screenshot and sanitized receipt must live under runner.temp,
+  // not os.tmpdir() (which can be /tmp on Linux cloud runners).
+  const tempParent = process.env.RUNNER_TEMP && path.isAbsolute(process.env.RUNNER_TEMP)
+    ? process.env.RUNNER_TEMP
+    : os.tmpdir();
+  const dir = await realpath(await mkdtemp(path.join(tempParent, 'opencode-diagnostics-e2e-')));
   const data = {
     root: dir,
     home: path.join(dir, 'TEST-home'),
