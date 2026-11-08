@@ -2675,7 +2675,10 @@ export default interface Resources {
             "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
             "cancel": "Cancel",
             "save": "Save themes",
-            "conflict": "Themes changed in another tab. Close and reopen the editor to avoid overwriting newer changes."
+            "conflict": "Themes changed in another tab. Your JSON draft is preserved; review it or explicitly overwrite the newer themes.",
+            "overwrite": "Overwrite newer themes",
+            "invalidJson": "Invalid JSON syntax",
+            "invalidTheme": "Invalid theme palette. Check the fields, colors, and contrast."
           }
         },
         "uiScale": {
