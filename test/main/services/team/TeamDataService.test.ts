@@ -456,6 +456,45 @@ describe('TeamDataService task projection cache invalidation', () => {
     expect(invalidateSpy).toHaveBeenCalledTimes(14);
   });
 
+  it.each([
+    { scenario: 'completed', change: { status: 'completed' as const } },
+    { scenario: 'reassigned', change: { owner: 'bob' } },
+  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change }) => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Scheduled assignment',
+      owner: 'alice',
+      status: 'pending',
+    };
+    const taskBoard = {
+      getTask: vi.fn(() => task),
+      startTask: vi.fn(),
+    };
+    const service = new TeamDataService(
+      { getConfig: vi.fn(async () => buildDefaultTeamConfig()) } as never,
+      { getTasks: vi.fn(async () => [task]) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      (() => ({ taskBoard })) as never
+    );
+    await expect(
+      service.startTaskByUser('my-team', task.id, {
+        expectedOwner: 'alice',
+        canStart: async () => {
+          Object.assign(task, change);
+          return true;
+        },
+      })
+    ).rejects.toThrow('Scheduled task start superseded');
+    expect(taskBoard.startTask).not.toHaveBeenCalled();
+  });
+
   it('removes detached trees, never recursively removes public paths, and stays idempotent', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-delete-cache-'));
     tempPaths.push(claudeRoot);

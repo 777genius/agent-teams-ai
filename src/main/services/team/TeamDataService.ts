@@ -2370,8 +2370,15 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
     // Revalidate after async reads, before the irreversible board write.
-    if (admission && (task.owner !== admission.expectedOwner || !(await admission.canStart()))) {
-      throw new Error('Scheduled task start superseded');
+    if (admission) {
+      if (task.owner !== admission.expectedOwner || !(await admission.canStart())) {
+        throw new Error('Scheduled task start superseded');
+      }
+      // The admission check awaits runtime I/O: task state may change in the meantime.
+      const latestTask = this.getTaskBoard(teamName).getTask(taskId) as TeamTask;
+      if (latestTask.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
+        throw new Error('Scheduled task start superseded');
+      }
     }
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
