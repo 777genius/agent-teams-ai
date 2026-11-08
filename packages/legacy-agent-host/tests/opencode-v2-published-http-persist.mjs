@@ -74,6 +74,13 @@ if (process.argv[2] === '--worker') {
     // read-only dependency link; removing root does not remove its target.
     symlinkSync(join(canonicalPrefix, 'node_modules'), join(root, 'node_modules'), 'dir');
     copyFileSync(fileURLToPath(import.meta.url),worker);
+    // TEST-only fault injection after copying into the owned root. Never
+    // touch the shared pinned SDK package directory on setup failure.
+    if (process.env.OPENCODE_V2_TEST_ABORT_AFTER_COPY === '1') {
+      receipt.testOwnedWorkerPath = worker;
+      receipt.testOwnedWorkerCopySha256 = hash(readFileSync(worker));
+      throw Error('TEST_owned_worker_postcopy_failure');
+    }
     password = randomBytes(24).toString('hex');
     env = { PATH:process.env.PATH || '/usr/bin:/bin', HOME:join(root,'home'),
       XDG_CONFIG_HOME:join(root,'config'), XDG_CACHE_HOME:join(root,'cache'),
