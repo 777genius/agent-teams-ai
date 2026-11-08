@@ -177,6 +177,18 @@ own the behavior.
 | M18 | IPC/HTTP, feeds and Quit            | requires new capability | requires new capability | Keep existing public Desktop API; immutable routing and no rollback replay  |
 | M19 | Background registry/process stop    | requires new capability | requires new capability | Captured TEST child only; stale binding cannot cause OS kill                |
 
+
+**Stage 1 M03 product-shape refresh (8 Nov 2026, source `7eb74a4e`):**
+The [actual task snapshot projector](https://github.com/777genius/agent-teams-ai/blob/7eb74a4e2d052707bca6eaa6748d9116e2c36e09/src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts)
+now retains recorded `historyEvents` (eight canonical workflow transitions),
+`workIntervals` and `reviewIntervals`, while dropping private native fields.
+The [Stage 1 negative/positive tests](https://github.com/777genius/agent-teams-ai/blob/7eb74a4e2d052707bca6eaa6748d9116e2c36e09/test/features/agent-backend/hostTaskWorkflowHistoryProjection.test.ts)
+require invalid transitions/intervals to fail closed and absent history not to
+be invented. **M03 target parity therefore includes these observed, ordered
+product history fields**, not merely Task CRUD or final status; no new
+Orchestrator producer, public API or target E2E is inferred from this Desktop
+projection. Reuse the Stage 1 oracle; do not duplicate its tests.
+
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution
 Observation**. Agent Runtime separately owns provider output, technical event
