@@ -34,7 +34,7 @@ export function patchCreateTeamAdvancedSession(
 ): void {
   advancedSession = {
     worktreeEnabled: false, worktreeName: '', customArgs: '',
-    ...advancedSession, ...patch, edited: true,
+    ...(advancedSession ?? {}), ...patch, edited: true,
   };
 }
 
