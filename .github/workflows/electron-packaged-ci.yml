@@ -3,39 +3,8 @@ name: Electron packaged CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
-    paths:
-      - '.github/workflows/electron-packaged-ci.yml'
-      - 'scripts/ci/packaged-ci-*.mts'
-      - 'scripts/ci/packaged-ci-provider-integrity.ts'
-      - 'scripts/ci/packaged-ci-provider-integrity.test.ts'
-      - 'scripts/ci/verify-bundled-undici.cjs'
-      - 'test/scripts/verify-bundled-undici.test.cjs'
-      - '.node-version'
-      - 'scripts/ci/ci-change-scope.mts'
-      - 'scripts/ci/verify-dmg-artwork.mts'
-      - 'resources/dmg/**'
-      - 'scripts/tsconfig/tsconfig.packaged-ci.json'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'scripts/electron-builder/**'
-      - 'runtime.lock.json'
-      - 'scripts/stage-runtime.mjs'
-      - 'scripts/lib/github-release-download-error.mjs'
-      - 'scripts/lib/runtime-archive-checksum.mjs'
-      - 'scripts/lib/runtime-payload-cache.mjs'
-      - 'scripts/lib/runtime-payload-inventory.mts'
-      - 'scripts/lib/runtime-windows-zip-extraction.mts'
-      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
-      - 'scripts/lib/runtime-archive-extraction.mts'
-      - 'scripts/ensure-electron-install.cjs'
-      - 'scripts/prepare-cpu-features-rebuild.cjs'
-      - 'scripts/postinstall-electron.cjs'
-      - 'src/main/ipc/window.ts'
-      # Host/V2 source or pinned provider archive changes invalidate packaged app proof.
-      # These tests verify packaging only; they do not qualify a V2 model turn.
-      - 'packages/legacy-agent-host/**'
-      - 'vendor/provider-migration/**'
+    # No GitHub paths filter: its 3,000-file cap can silently skip Host/provider changes.
+    # The checked-out exact local git diff is classified by packaged-ci-cli.mts.
 
 permissions:
   contents: read

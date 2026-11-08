@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -27,6 +27,20 @@ function event(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+
+test('unfiltered PR trigger reaches the local classifier beyond GitHub’s 3000-file limit', () => {
+  const workflow = readFileSync(new URL('../../.github/workflows/electron-packaged-ci.yml', import.meta.url), 'utf8');
+  const trigger = workflow.split('\npermissions:')[0] ?? '';
+  assert.match(trigger, /^  pull_request:\\s*$/m);
+  assert.doesNotMatch(trigger, /^    paths:\\s*$/m, 'GitHub paths filter can omit the later-than-3000th change');
+  const firstThreeThousand = Array.from({ length: 3000 }, (_, i) =>
+    raw('A', [`src/main/ordinary-${i}.ts`])
+  ).join('');
+  assert.equal(classifyPackagedPr('pull_request', event(), firstThreeThousand).scope, 'app');
+  const hostChange = raw('M', ['packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts']);
+  assert.equal(classifyPackagedPr('pull_request', event(), firstThreeThousand + hostChange).scope, 'full');
+});
 
 // This contract turns red if ordinary source/test work loses APP or packaging inputs gain it.
 test('draft regular source/test changes may accompany the existing window trigger', () => {
