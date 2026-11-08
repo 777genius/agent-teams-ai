@@ -444,6 +444,25 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   });
 
 
+  it('allows a reviewed old prompt without executing it on bootstrap', async () => {
+    enableTaskFirstPorts();
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => ({
+      teamName: 'test-team', cwd: '/tmp/saved-team', providerId: 'anthropic' as const,
+      prompt: 'Old one-time work', members: [{ name: 'alice' }],
+    }));
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true, reviewedSavedPrompt: true },
+      'reviewed-old-instructions', active
+    );
+    expect(outcome).toMatchObject({ taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledOnce();
+    expect(port.launchTeam).toHaveBeenCalledWith(expect.objectContaining({
+      bootstrapOnly: true, prompt: undefined,
+    }));
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
   it('does not create a stopped-team task after cancellation during metadata reads', async () => {
     enableTaskFirstPorts();
     port.isTeamAlive = vi.fn(() => false);

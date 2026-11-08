@@ -183,7 +183,7 @@ export class SchedulerService {
       id: randomUUID(),
       teamName: input.teamName,
       ...(input.executionMode && { executionMode: input.executionMode }),
-      ...(input.taskFirst && { taskFirst: true as const }),
+      ...(input.taskFirst && { taskFirst: true as const, reviewedSavedPrompt: input.reviewedSavedPrompt }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
       cronExpression: input.cronExpression,

@@ -223,7 +223,7 @@ export class SmartScheduleDispatcher {
     if (!saved?.cwd || !saved.providerId || !(await hasRunnableConfig(schedule.teamName))) {
       return skipped('Finish team setup before assigning scheduled work');
     }
-    if (saved.prompt?.trim()) {
+    if (saved.prompt?.trim() && !schedule.reviewedSavedPrompt) {
       return skipped('Review historical team instructions before enabling task-first launch');
     }
     const leadName = await this.runtime.getLeadName(schedule.teamName);
