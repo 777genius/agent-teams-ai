@@ -88,7 +88,10 @@ export function catalogRefreshEvidence(calls, { requireSummary = false } = {}) {
     !directory.start.args.includes('--summary')
   )
     return null;
-  const models = sources.map((source) =>
+  const expectedSources = calls.some((call) => call.scenario === 'connected-summary')
+    ? [...sources, 'fixture-connected']
+    : sources;
+  const models = expectedSources.map((source) =>
     requests
       .filter(
         (r) =>
@@ -266,11 +269,11 @@ export async function verifyCatalog({
         );
         // Read-only DOM observation on opposite sides of a held filtered response.
         if (first?.response && !connected?.response && !second?.response &&
-            !/^\D*3\D*$/.test(label.trim())) {
+            !/^\D*4\D*$/.test(label.trim())) {
           beforeFilteredCount = { label, at: Date.now(), firstPageAt: first.response.at };
         }
         if (beforeFilteredCount && connected?.response && !second?.response &&
-            /^\D*3\D*$/.test(label.trim())) {
+            /^\D*4\D*$/.test(label.trim())) {
           filteredBeforeSecondPage = {
             before: beforeFilteredCount, after: { label, at: Date.now() },
             connectedResponseAt: connected.response.at,
@@ -341,7 +344,7 @@ export async function verifyCatalog({
         if (allFirst && allSecond &&
           allSecond.response.response.directory.cursor === '100' &&
           allSecond.response.response.directory.nextCursor === null &&
-          connected && /^\D*3\D*$/.test(renderedCount.trim())) {
+          connected && /^\D*4\D*$/.test(renderedCount.trim())) {
           proof = { allFirst, allSecond, connected, renderedCount };
           break;
         }
@@ -358,9 +361,9 @@ export async function verifyCatalog({
         (entry) => entry.state === 'connected').length, 0);
       assert.equal(proof.allSecond.response.response.directory.returnedCount, 5);
       assert.equal(proof.allSecond.response.response.directory.entries.filter(
-        (entry) => entry.state === 'connected').length, 4);
-      assert.equal(proof.connected.response.response.directory.totalCount, 4);
-      assert.equal(proof.connected.response.response.directory.returnedCount, 4);
+        (entry) => entry.state === 'connected').length, 5);
+      assert.equal(proof.connected.response.response.directory.totalCount, 5);
+      assert.equal(proof.connected.response.response.directory.returnedCount, 5);
       assert.equal(proof.connected.response.response.directory.nextCursor, null);
       assert(proof.connected.response.response.directory.entries.every(
         (entry) => entry.state === 'connected'
@@ -435,7 +438,7 @@ export async function verifyCatalog({
             .filter((c) => c.event === 'response' && c.operation === 'models' && !c.failed)
             .map((c) => c.source)
         ).size,
-        4
+        scenario === 'connected-summary' ? 5 : 4
       );
     }
     if (scenario === 'partial-success' || !expectedFailures)

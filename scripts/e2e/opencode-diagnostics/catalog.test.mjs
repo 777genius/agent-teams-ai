@@ -104,8 +104,8 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     assert.equal(second.returnedCount, 5);
     assert.equal(second.cursor, '100');
     assert.equal(second.nextCursor, null);
-    assert.equal(second.entries.filter((entry) => entry.state === 'available').length, 1);
-    assert.equal(second.entries.filter((entry) => entry.state === 'connected').length, 4);
+    assert.equal(second.entries.filter((entry) => entry.state === 'available').length, 0);
+    assert.equal(second.entries.filter((entry) => entry.state === 'connected').length, 5);
 
     // The real Windows startup-cleanup path requests a 250-row summary.
     // This is read-only and must not appear as a forbidden mutation.
@@ -126,12 +126,12 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     assert.equal(connectedPage.status, 0, connectedPage.stderr);
     const connected = JSON.parse(connectedPage.stdout).directory;
     assert.equal(connected.filter, 'connected');
-    assert.equal(connected.totalCount, 4);
-    assert.equal(connected.returnedCount, 4);
+    assert.equal(connected.totalCount, 5);
+    assert.equal(connected.returnedCount, 5);
     assert.equal(connected.cursor, null);
     assert.equal(connected.nextCursor, null);
     assert.deepEqual(connected.entries.map((entry) => entry.providerId), [
-      'opencode', 'anthropic', 'google', 'openrouter',
+      'opencode', 'anthropic', 'google', 'openrouter', 'fixture-connected',
     ]);
     assert(connected.entries.every((entry) => entry.state === 'connected'));
 

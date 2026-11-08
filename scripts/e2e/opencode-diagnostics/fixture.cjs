@@ -144,8 +144,12 @@ function catalogCommand(operation) {
   }
   if (flags.get('--runtime') !== 'opencode' || flags.get('--json') !== true) return refuse();
   const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
+  // A fifth connected source distinguishes this scenario from the retained prior count.
+  const catalogSources = scenario === 'connected-summary'
+    ? [...sources, 'fixture-connected']
+    : sources;
   const source = flags.get('--provider');
-  if (operation === 'models' && !sources.includes(source)) return refuse();
+  if (operation === 'models' && !catalogSources.includes(source)) return refuse();
   if (operation === 'directory' && source) return refuse();
   const filter = flags.get('--filter') || 'all';
   const limit = flags.has('--limit') ? Number(flags.get('--limit')) : 100;
@@ -174,7 +178,7 @@ function catalogCommand(operation) {
         message: `Fixture ${operation} ${source || 'directory'} failed api_key=DO_NOT_COPY_THIS_SECRET`,
       };
     else if (operation === 'directory') {
-      const connectedEntries = sources.map((providerId) => ({
+      const connectedEntries = catalogSources.map((providerId) => ({
         providerId,
         displayName: providerId,
         state: 'connected',
@@ -199,7 +203,7 @@ function catalogCommand(operation) {
       // This one scenario forces QuickConnect's incomplete all-summary branch.
       // Available-only providers are not model sources or authenticated counts.
       const availableEntries = scenario === 'connected-summary'
-        ? Array.from({ length: 101 }, (_, index) => ({
+        ? Array.from({ length: 100 }, (_, index) => ({
             ...connectedEntries[0],
             providerId: `fixture-available-${String(index).padStart(3, '0')}`,
             displayName: `Available fixture ${index}`,
