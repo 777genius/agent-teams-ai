@@ -4600,6 +4600,7 @@ export default interface Resources {
       "schedule": {
         "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
         "execution": "Execution",
+        "executionLimitsNote": "These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.",
         "labelOptional": "Label (optional)",
         "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
         "leadDefault": "Team lead (default)",
@@ -6440,7 +6441,9 @@ export default interface Resources {
       "status": {
         "active": "Active",
         "disabled": "Disabled",
-        "paused": "Paused"
+        "hostUnsupported": "Host scheduling unavailable",
+        "paused": "Paused",
+        "saved": "Saved"
       },
       "title": "Schedules"
     },
