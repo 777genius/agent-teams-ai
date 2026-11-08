@@ -201,7 +201,25 @@
           "system": "Sistem"
         }
       },
-      "title": "Görünüm"
+      "title": "Görünüm",
+      "customThemes": {
+        "label": "Özel temalar",
+        "description": "Koyu veya açık temayı temel alan adlandırılmış JSON renk paletleri.",
+        "none": "Yerleşik tema",
+        "edit": "JSON düzenle",
+        "localOnly": "Temalar ve ölçek yalnızca bu tarayıcıda veya cihazda saklanır.",
+        "editor": {
+          "title": "Temaları düzenle (JSON)",
+          "description": "En fazla 8 tema. Renkler #RRGGBB olmalı. Yalnızca geçerli JSON uygulanır; boş themes dizisi temaları siler.",
+          "cancel": "İptal",
+          "save": "Temaları kaydet"
+        }
+      },
+      "uiScale": {
+        "label": "Arayüz ölçeği",
+        "description": "Sistem veya tarayıcı yakınlaştırmasını değiştirmeden tüm uygulamayı ölçeklendirin.",
+        "reset": "Sıfırla"
+      }
     },
     "browserAccess": {
       "serverMode": {

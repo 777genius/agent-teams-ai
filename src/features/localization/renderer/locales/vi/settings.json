@@ -201,7 +201,25 @@
           "system": "Hệ thống"
         }
       },
-      "title": "Giao diện"
+      "title": "Giao diện",
+      "customThemes": {
+        "label": "Chủ đề tùy chỉnh",
+        "description": "Bảng màu JSON có tên dựa trên giao diện sáng hoặc tối.",
+        "none": "Chủ đề mặc định",
+        "edit": "Sửa JSON",
+        "localOnly": "Chủ đề và tỷ lệ chỉ được lưu trên thiết bị hoặc trình duyệt này.",
+        "editor": {
+          "title": "Sửa chủ đề (JSON)",
+          "description": "Tối đa 8 chủ đề. Màu dạng #RRGGBB. Chỉ áp dụng JSON hợp lệ; mảng themes trống sẽ xóa tất cả.",
+          "cancel": "Hủy",
+          "save": "Lưu chủ đề"
+        }
+      },
+      "uiScale": {
+        "label": "Tỷ lệ giao diện",
+        "description": "Thay đổi tỷ lệ toàn bộ ứng dụng mà không đổi độ thu phóng hệ thống hoặc trình duyệt.",
+        "reset": "Đặt lại"
+      }
     },
     "browserAccess": {
       "serverMode": {

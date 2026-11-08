@@ -201,7 +201,25 @@
           "system": "システム"
         }
       },
-      "title": "インフォメーション"
+      "title": "インフォメーション",
+      "customThemes": {
+        "label": "カスタムテーマ",
+        "description": "ライトまたはダークをベースにした名前付きJSONカラーパレット。",
+        "none": "標準テーマ",
+        "edit": "JSONを編集",
+        "localOnly": "テーマと拡大率は、このブラウザーまたは端末にのみ保存されます。",
+        "editor": {
+          "title": "テーマを編集（JSON）",
+          "description": "テーマは最大8個。色は #RRGGBB 形式。正しいJSONのみ適用され、空のthemes配列ですべて削除できます。",
+          "cancel": "キャンセル",
+          "save": "テーマを保存"
+        }
+      },
+      "uiScale": {
+        "label": "画面の拡大率",
+        "description": "OSやブラウザーのズームを変更せずにアプリ全体を拡大・縮小します。",
+        "reset": "リセット"
+      }
     },
     "browserAccess": {
       "serverMode": {
