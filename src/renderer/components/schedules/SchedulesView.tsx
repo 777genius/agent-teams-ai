@@ -37,6 +37,11 @@ const LaunchTeamDialog = lazy(() =>
     default: m.LaunchTeamDialog,
   }))
 );
+const TaskScheduleDialog = lazy(() =>
+  import('@renderer/components/team/schedule/TaskScheduleDialog').then((m) => ({
+    default: m.TaskScheduleDialog,
+  }))
+);
 
 // =============================================================================
 // Constants
@@ -599,13 +604,22 @@ export const SchedulesView = (): React.JSX.Element => {
             />
           }
         >
-          <LaunchTeamDialog
-            mode="schedule"
-            open={dialogOpen}
-            teamName={editingSchedule?.teamName}
-            schedule={editingSchedule}
-            onClose={handleClose}
-          />
+          {!editingSchedule || editingSchedule.taskFirst ? (
+            <TaskScheduleDialog
+              open={dialogOpen}
+              fixedTeamName={editingSchedule?.teamName}
+              schedule={editingSchedule}
+              onClose={handleClose}
+            />
+          ) : (
+            <LaunchTeamDialog
+              mode="schedule"
+              open={dialogOpen}
+              teamName={editingSchedule.teamName}
+              schedule={editingSchedule}
+              onClose={handleClose}
+            />
+          )}
         </Suspense>
       )}
     </div>
