@@ -1306,6 +1306,80 @@ describe('useCodexAccountSnapshot', () => {
       root.unmount();
     });
   });
+  it('revalidates a stale API-key account after an in-flight rate-limit read settles', async () => {
+    const priorVisibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    vi.useFakeTimers();
+    const initial = withSnapshotOverrides(createSnapshot(), {
+      preferredAuthMode: 'api_key',
+      effectiveAuthMode: 'api_key',
+      launchReadinessState: 'ready_api_key',
+      managedAccount: null,
+      apiKey: { available: true, source: 'env', sourceLabel: 'OPENAI_API_KEY' },
+    });
+    const changed = withSnapshotOverrides(initial, {
+      effectiveAuthMode: 'chatgpt',
+      managedAccount: { type: 'chatgpt', email: 'changed@example.com', planType: 'pro' },
+      updatedAt: new Date(Date.now() + 60_001).toISOString(),
+    });
+    const inFlight = createDeferred<CodexAccountSnapshotDto>();
+    apiMocks.refreshCodexAccountSnapshot
+      .mockResolvedValueOnce(initial)
+      .mockReturnValueOnce(inFlight.promise)
+      .mockResolvedValueOnce(changed);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    function Harness({ active }: { active: boolean }): React.ReactElement {
+      const account = useCodexAccountSnapshot({
+        enabled: true, includeRateLimits: true, passivePollingEnabled: active,
+      });
+      return React.createElement('div', null,
+        account.snapshot?.managedAccount?.email ?? account.snapshot?.effectiveAuthMode ?? 'empty');
+    }
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness, { active: true }));
+        await Promise.resolve();
+      });
+      expect(host.textContent).toBe('api_key');
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+
+      // A normal active-page rate-limit read starts before the page is hidden.
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(2);
+
+      await act(async () => root.render(React.createElement(Harness, { active: false })));
+      await act(async () => root.render(React.createElement(Harness, { active: true })));
+      // Do not start an overlapping read merely because the page reopened.
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(2);
+
+      // The older in-flight result must not consume the requested revalidation.
+      await act(async () => {
+        inFlight.resolve(initial);
+        await inFlight.promise;
+        await Promise.resolve();
+      });
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(3);
+      expect(host.textContent).toBe('changed@example.com');
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(3);
+      await act(async () => root.render(React.createElement(Harness, { active: false })));
+      await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(3);
+    } finally {
+      await act(async () => root.unmount());
+      if (priorVisibility) {
+        Object.defineProperty(document, 'visibilityState', priorVisibility);
+      } else {
+        Reflect.deleteProperty(document, 'visibilityState');
+      }
+      vi.useRealTimers();
+    }
+  });
+
   it('pauses hidden passive checks but continues observing an in-progress login', async () => {
     const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
     Object.defineProperty(document, 'visibilityState', {

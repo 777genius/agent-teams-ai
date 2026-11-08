@@ -115,6 +115,7 @@ export function useCodexAccountSnapshot(options: {
   const rateLimitsLoadingTokensRef = useRef(new Set<symbol>());
   const mountedRef = useRef(true);
   const passivePollingWasEnabled = useRef(false);
+  const pendingResumeRevalidation = useRef(false);
   const enabledRef = useRef(false);
   const lifecycleIdRef = useRef(0);
   const snapshotRevisionRef = useRef(0);
@@ -390,17 +391,34 @@ export function useCodexAccountSnapshot(options: {
     const active = enabled && options.passivePollingEnabled !== false;
     const wasActive = passivePollingWasEnabled.current;
     passivePollingWasEnabled.current = active;
+    if (!active) {
+      pendingResumeRevalidation.current = false;
+      return;
+    }
+    // Preserve the request across an already-running rate-limit/account read.
+    // That read might have started before Providers reopened and seen old auth.
     if (
-      !active || wasActive || loginPending || !initialRefreshAttempted || !snapshot ||
+      !wasActive && snapshot &&
+      lastUpdatedAtRef.current !== null &&
+      Date.now() - lastUpdatedAtRef.current >= CODEX_VISIBLE_STANDARD_REFRESH_MS
+    ) {
+      pendingResumeRevalidation.current = true;
+    }
+    if (!pendingResumeRevalidation.current) return;
+    if (loginPending) {
+      // Login has its own 3s checks and account-change notification.
+      pendingResumeRevalidation.current = false;
+      return;
+    }
+    if (
+      !initialRefreshAttempted ||
       (options.includeRateLimits === true && !initialRateLimitsAttemptedRef.current) ||
-      rateLimitsLoadingTokensRef.current.size > 0 ||
-      loadingTokensRef.current.size > 0 ||
-      lastUpdatedAtRef.current === null ||
-      Date.now() - lastUpdatedAtRef.current < CODEX_VISIBLE_STANDARD_REFRESH_MS
+      loading || rateLimitsLoading
     ) return;
+    pendingResumeRevalidation.current = false;
     void refresh({ includeRateLimits: options.includeRateLimits, silent: true });
   }, [
-    enabled, initialRefreshAttempted, loginPending,
+    enabled, initialRefreshAttempted, loading, loginPending, rateLimitsLoading,
     options.passivePollingEnabled, options.includeRateLimits, refresh, snapshot,
   ]);
 
