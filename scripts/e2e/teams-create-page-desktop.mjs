@@ -411,7 +411,7 @@ class CdpClient {
     if (!(await entireValueSelected()) && mac) {
       await this.send('Input.dispatchKeyEvent', {
         type: 'keyDown', key: 'a', code: 'KeyA',
-        windowsVirtualKeyCode: 65, modifiers: 4, commands: ['selectAll:'],
+        windowsVirtualKeyCode: 65, modifiers: 4, commands: ['selectAll'],
       });
       await this.send('Input.dispatchKeyEvent', {
         type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 4,
