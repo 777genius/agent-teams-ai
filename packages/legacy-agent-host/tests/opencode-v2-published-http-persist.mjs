@@ -321,8 +321,8 @@ if (process.argv[2] === '--worker') {
     receipt.nativePermissionReplyRejectNoReplayProven=true;
     receipt.steps.push('TEST_published_native_permission_resolver_and_nonreplay');
     // A cold native restart must never let an old permission prompt grant a
-    // new process authority. Keep one isolated pending TEST request across
-    // restart and attempt only a DENIAL against its stale identifier.
+    // new process authority. Capture three independent TEST permissions
+    // before restart, then test reject/once/always against different stale IDs.
     // Every native stale reply is sent only once, against its own captured
     // permission ID. Never turn a lost-ACK retry into a passing test.
     // In particular, a stale `once`/`always` must not grant on a cold owner.
