@@ -290,6 +290,34 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).not.toHaveBeenCalled();
   });
 
+  it('propagates the outstanding task through a launching-team early skip', async () => {
+    enableTaskFirstPorts();
+    port.isTeamLaunching = vi.fn(() => true);
+    port.getPreviousRuns = vi.fn(async (): Promise<ScheduleRun[]> => [{
+      id: 'earlier-run',
+      scheduleId: 'schedule-1',
+      teamName: 'test-team',
+      status: 'skipped',
+      scheduledFor: new Date().toISOString(),
+      startedAt: new Date().toISOString(),
+      retryCount: 0,
+      linkedTaskId: 'still-active',
+    }]);
+    port.getTask = vi.fn(async () => ({
+      id: 'still-active',
+      subject: 'Unfinished work',
+      status: 'pending',
+    } as TeamTask));
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true },
+      'early-skip',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', taskId: 'still-active' });
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+  });
+
   it('recovers an unlinked task created before its prior schedule run was interrupted', async () => {
     enableTaskFirstPorts();
     const now = new Date().toISOString();
