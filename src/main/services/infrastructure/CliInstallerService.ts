@@ -877,12 +877,12 @@ export class CliInstallerService {
         new Error('Provider runtime changed during status check. Refresh to retry.')
       );
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
-    // A provider check may race the initial status discovery. Resolve the runtime
-    // directly in that case instead of reporting a transient empty snapshot as
-    // a missing installation. Do not replace a concurrently populated snapshot.
+    // Explicit project-scoped preflight can race initial runtime discovery.
+    // Keep background/global status polling passive: it must not spawn shell
+    // discovery or invalidate an authoritative cached status.
     const snapshot = this.latestStatusSnapshot;
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
-    if (!snapshot?.binaryPath) {
+    if (options.projectPath && !snapshot?.binaryPath) {
       const binaryPath = await ClaudeBinaryResolver.resolve();
       if (generation !== this.statusGatherGeneration) return obsoleteStatus();
       const latest = this.latestStatusSnapshot;

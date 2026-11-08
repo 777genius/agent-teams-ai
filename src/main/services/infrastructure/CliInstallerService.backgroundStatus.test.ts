@@ -35,7 +35,8 @@ afterEach(() => {
 });
 
 describe('CliInstallerService background provider status', () => {
-  test('resolves the runtime when a provider check races initial discovery', async () => {
+  const projectPath = '/tmp/TEST-opencode-preflight';
+  test('resolves the runtime when project-scoped preflight races initial discovery', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
     internals.latestStatusSnapshot = internals.createInitialStatus();
@@ -45,18 +46,32 @@ describe('CliInstallerService background provider status', () => {
       .spyOn(internals.multimodelBridgeService, 'getProviderStatus')
       .mockResolvedValue(provider);
 
-    const result = await service.getProviderStatus('opencode');
+    const result = await service.getProviderStatus('opencode', { projectPath });
 
-    expect(check).toHaveBeenCalledWith('/fake/runtime', 'opencode', expect.any(Function));
+    expect(check).toHaveBeenCalledWith('/fake/runtime', 'opencode', undefined, { projectPath });
     expect(result?.providerId).toBe('opencode');
     expect(result?.statusMessage).not.toBe('Provider runtime missing');
+  });
+
+  test('keeps passive provider polling cold before initial runtime discovery', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    internals.latestStatusSnapshot = internals.createInitialStatus();
+    const discover = vi.spyOn(ClaudeBinaryResolver, 'resolve').mockResolvedValue('/fake/runtime');
+    const check = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus');
+
+    const result = await service.getProviderStatus('opencode');
+
+    expect(result?.detailMessage).toContain('Provider runtime missing');
+    expect(discover).not.toHaveBeenCalled();
+    expect(check).not.toHaveBeenCalled();
   });
 
   test('still reports a missing runtime when discovery finds none', async () => {
     const service = new CliInstallerService();
     vi.spyOn(ClaudeBinaryResolver, 'resolve').mockResolvedValue(null);
 
-    const result = await service.getProviderStatus('opencode');
+    const result = await service.getProviderStatus('opencode', { projectPath });
 
     expect(result?.detailMessage).toContain('Provider runtime missing');
   });
@@ -71,7 +86,7 @@ describe('CliInstallerService background provider status', () => {
       })
     );
     const check = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus');
-    const pending = service.getProviderStatus('opencode');
+    const pending = service.getProviderStatus('opencode', { projectPath });
     await Promise.resolve();
     service.invalidateStatusCache();
     finish('/fake/stale-runtime');
