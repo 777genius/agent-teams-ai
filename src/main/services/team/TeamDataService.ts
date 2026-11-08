@@ -81,7 +81,7 @@ import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
-import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
+import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
 import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
@@ -2356,6 +2356,13 @@ export class TeamDataService {
   }
 
   /** Start a user task and notify its owner, including the solo lead. */
+  /** Consult the existing board rather than spawning a second execution for a busy member. */
+  hasActiveOwnedTask(teamName: string, owner: string): boolean {
+    return (this.getTaskBoard(teamName).listTasks() as TeamTask[]).some(
+      (task) => task.owner === owner && isTeamTaskActivelyWorked(task)
+    );
+  }
+
   async startTaskByUser(
     teamName: string,
     taskId: string,
@@ -2375,9 +2382,15 @@ export class TeamDataService {
         throw new Error('Scheduled task start superseded');
       }
       // The admission check awaits runtime I/O: task state may change in the meantime.
-      const latestTask = this.getTaskBoard(teamName).getTask(taskId) as TeamTask | null;
+      const board = this.getTaskBoard(teamName);
+      const latestTask = board.getTask(taskId) as TeamTask | null;
       if (!latestTask || latestTask.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
         throw new Error('Scheduled task start superseded');
+      }
+      if ((board.listTasks() as TeamTask[]).some(
+        (other) => other.id !== taskId && other.owner === admission.expectedOwner && isTeamTaskActivelyWorked(other)
+      )) {
+        throw new Error('Scheduled recipient is already working');
       }
       task = latestTask; // Notify using the actual post-admission task contents.
     }

@@ -141,6 +141,38 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
   }
 
+  it.each([true, false])(
+    'does not assign a second task while selected member is already working (team live: %s)',
+    async (live) => {
+      enableTaskFirstPorts();
+      port.isTeamAlive = vi.fn(() => live);
+      port.hasActiveOwnedTask = vi.fn((_team, member) => member === 'alice');
+      const outcome = await dispatch.dispatch(
+        { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+        'busy-member', active
+      );
+      expect(outcome.kind).toBe('skipped');
+      expect(outcome.summary).toContain('already working');
+      expect(port.createTask).not.toHaveBeenCalled();
+      expect(port.launchTeam).not.toHaveBeenCalled();
+      expect(port.startTaskByUser).not.toHaveBeenCalled();
+    }
+  );
+
+  it('leaves the saved task visible if another task becomes active before scheduled start', async () => {
+    enableTaskFirstPorts();
+    port.startTaskByUser = vi.fn(async () => {
+      throw new Error('Scheduled recipient is already working');
+    });
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'member-became-busy', active
+    );
+    expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    expect(outcome.summary).toContain('already working');
+    expect(port.createTask).toHaveBeenCalledOnce();
+  });
+
   it('creates one pending task before bootstrap-only launch and starts the exact teammate after readiness', async () => {
     enableTaskFirstPorts();
     let running = false;
