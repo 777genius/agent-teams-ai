@@ -23,7 +23,7 @@ export function verifySelectedProviderArchives(root: string): void {
     const [, selectedPath, integrity, lockedPath] = matches[0]!;
     if (
       selectedPath !== lockedPath ||
-      !/^vendor\/provider-migration\/[a-z0-9-]+\/[a-z0-9-]+\.tgz$/.test(selectedPath!)
+      !/^vendor\/provider-migration\/[a-z0-9-]+\/[a-z0-9.-]+\.tgz$/.test(selectedPath!)
     ) {
       throw new Error('Invalid provider archive path: ' + name);
     }
