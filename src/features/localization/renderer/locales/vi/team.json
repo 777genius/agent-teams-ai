@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 phút",
         "fifteenMinutes": "15 phút",
         "thirtyMinutes": "30 phút"
-      }
+      },
+      "time": "Thời gian"
     },
     "empty": {
       "title": "Chưa có lịch nào",
@@ -2147,7 +2148,11 @@
       "cancelled": "Đã hủy",
       "dispatched": "Đã giao",
       "skipped": "Đã bỏ qua"
-    }
+    },
+    "taskFirstAgentDescription": "Nhiệm vụ được giao cho thành viên đã chọn. Nhóm sẽ khởi động trước nếu cần.",
+    "taskFirstTeamDescription": "Trưởng nhóm điều phối nhiệm vụ này. Nhóm sẽ khởi động trước nếu cần.",
+    "taskFirstDesktopRequired": "Lịch chỉ chạy khi Agent Teams đang mở.",
+    "taskFirstHistoricPrompt": "Nhóm này có lời nhắc khởi chạy đã lưu. Hãy xem lại trong phần cài đặt nhóm trước khi lên lịch tự động."
   },
   "openCodeContextConfigHint": {
     "summary": "Các mô hình OpenCode cục bộ có thể dùng ngân sách ngữ cảnh OpenCode thay vì giới hạn chỉ-prompt.",
