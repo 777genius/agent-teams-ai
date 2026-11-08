@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 minit",
         "fifteenMinutes": "15 minit",
         "thirtyMinutes": "30 minit"
-      }
+      },
+      "time": "Masa"
     },
     "empty": {
       "title": "Belum ada jadual",
@@ -2147,7 +2148,11 @@
       "cancelled": "Dibatalkan",
       "dispatched": "Dihantar",
       "skipped": "Dilangkau"
-    }
+    },
+    "taskFirstAgentDescription": "Tugas diberikan kepada ahli pasukan yang dipilih. Pasukan akan dimulakan dahulu jika perlu.",
+    "taskFirstTeamDescription": "Ketua pasukan menyelaraskan tugas ini. Pasukan akan dimulakan dahulu jika perlu.",
+    "taskFirstDesktopRequired": "Jadual hanya berjalan apabila Agent Teams dibuka.",
+    "taskFirstHistoricPrompt": "Pasukan ini mempunyai prompt pelancaran yang disimpan. Semaknya dalam tetapan pasukan sebelum menjadualkan kerja automatik."
   },
   "openCodeContextConfigHint": {
     "summary": "Model OpenCode tempatan boleh menggunakan belanjawan konteks OpenCode dan bukannya had prompt sahaja.",
