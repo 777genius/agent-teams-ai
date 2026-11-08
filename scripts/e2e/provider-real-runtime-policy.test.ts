@@ -62,3 +62,15 @@ test('never report duplicated ids, a response error, or malformed JSON', () => {
     page('all', [{ providerId: 'OPENROUTER', state: 'connected' },
       { providerId: 'openrouter', state: 'connected' }]), 'all'));
 });
+
+test('unfiltered native inventory may change while connected summary stays authoritative', () => {
+  const all = parseProviderDirectory(page('all', rows,
+    { totalCount: 4, nextCursor: '3' }), 'all');
+  const connected = parseProviderDirectory(page('connected', rows.slice(0, 2)), 'connected');
+  const warmAll = parseProviderDirectory(page('all', rows.slice(0, 2)), 'all');
+  const warmConnected = parseProviderDirectory(
+    page('connected', rows.slice(0, 2)), 'connected');
+  assert.notEqual(all.totalCount, warmAll.totalCount);
+  assert.equal(validateConnectedSummary(all, connected), 1);
+  assert.equal(validateConnectedSummary(warmAll, warmConnected), 1);
+});
