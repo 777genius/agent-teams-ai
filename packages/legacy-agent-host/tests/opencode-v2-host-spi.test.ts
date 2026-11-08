@@ -193,7 +193,7 @@ test('old pinned V2 driver does not qualify canonical Windows directory (expecte
   assert.equal(runtimeProfileSchema.safeParse({ members: [profile] }).success, true);
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(profile), captured);
-  await assert.rejects(provider.factory.open(request()), /opencode\\.driver\\.invalid-config/);
+  await assert.rejects(provider.factory.open(request()), /opencode\.driver\.invalid-config/);
   assert.equal(calls.probe, 0, 'old vendor must refuse before native probe');
   assert.equal(calls.password, 0, 'old vendor must refuse before credential read');
 });
