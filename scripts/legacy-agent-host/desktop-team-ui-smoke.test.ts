@@ -379,6 +379,21 @@ test('Task attachment comment waits for its original focused owner after one cli
     };
     const ready = {
       owner,
+      inputProbe: {
+        present: true,
+        connected: true,
+        disabled: false,
+        focused: true,
+        ownerSurfaceId: owner.surfaceId,
+        ownerRevision: owner.ownerRevision,
+        expectedSurfaceId: owner.surfaceId,
+        detailPhase: 'ready',
+        refreshPending: false,
+        taskStatus: 'in_progress',
+        taskId: 'TEST-task',
+        activeContextId: owner.identity.contextId,
+        contextSwitching: false,
+      },
       settled: true,
       domValue: '',
       inputEnabled: true,
@@ -387,12 +402,25 @@ test('Task attachment comment waits for its original focused owner after one cli
       documentFocused: true,
     };
     const afterFocus = [
-      { ...ready, owner: null, settled: false, domValue: null, inputEnabled: false },
+      {
+        ...ready,
+        owner: null,
+        inputProbe: {
+          ...ready.inputProbe,
+          present: false,
+          connected: false,
+          ownerRevision: null,
+          focused: false,
+        },
+        settled: false,
+        domValue: null,
+        inputEnabled: false,
+      },
       {
         ...ready,
         owner: { ...owner, selector: '[role="dialog"] textarea[id="TEST-rebound-comment"]' },
       },
-      { ...ready, focused: false },
+      { ...ready, focused: false, inputProbe: { ...ready.inputProbe, focused: false } },
       ready,
     ];
     let focused = false,
