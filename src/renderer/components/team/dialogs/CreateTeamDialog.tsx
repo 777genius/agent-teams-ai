@@ -452,7 +452,7 @@ export const CreateTeamDialog = ({
   const [copySeedReady, setCopySeedReady] = useState(!initialData);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
-  const advancedPreferencesLoadedRef = useRef(false);
+  const advancedPreferencesEditedRef = useRef(false);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
   const [worktreeName, setWorktreeNameRaw] = useState('');
   const [customArgs, setCustomArgsRaw] = useState('');
@@ -513,9 +513,8 @@ export const CreateTeamDialog = ({
     };
   }, [draftLoaded, initialOrganizationPlacement, open, restoredFromStorage, setOrganizationPlacementEnabled, setOrganizationPlacementOrganizationId, setOrganizationPlacementParentId]);
   useEffect(() => {
-    // Load once after draft/copy hydration. A rename must not erase live CLI edits.
-    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesLoadedRef.current) return;
-    advancedPreferencesLoadedRef.current = true;
+    // Restore per-name defaults until Advanced CLI has been manually edited.
+    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesEditedRef.current) return;
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
     const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
@@ -543,7 +542,7 @@ export const CreateTeamDialog = ({
     setWorkflowMentionSuggestionsEnabled(true);
   }, []);
   const setWorktreeEnabled = (value: boolean): void => {
-    advancedPreferencesLoadedRef.current = true;
+    advancedPreferencesEditedRef.current = true;
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
     if (!value) {
@@ -552,12 +551,12 @@ export const CreateTeamDialog = ({
     }
   };
   const setWorktreeName = (value: string): void => {
-    advancedPreferencesLoadedRef.current = true;
+    advancedPreferencesEditedRef.current = true;
     setWorktreeNameRaw(value);
     localStorage.setItem(`team:lastWorktreeName:${advancedKey}`, value);
   };
   const setCustomArgs = (value: string): void => {
-    advancedPreferencesLoadedRef.current = true;
+    advancedPreferencesEditedRef.current = true;
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${advancedKey}`, value);
   };
