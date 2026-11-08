@@ -179,6 +179,13 @@ async function checkScenario(name: 'clean' | 'configured',
   const connected = await directory('connected', true, null, cwd, env, probes,
     name + '-summary-connected');
   const summaryCount = validateConnectedSummary(all, connected);
+  if (configured) {
+    assert(connectedProviderIds(connected.entries).includes('deepinfra'),
+      'Configured loopback provider missing from real CLI connected summary');
+    assert(summaryCount > 0, 'No positive connected-filter evidence');
+  } else {
+    assert.equal(summaryCount, 0, 'Credential-free baseline unexpectedly connected');
+  }
   // Repeat the same real command in the same isolated project to time warm reads.
   const warmAll = await directory('all', true, null, cwd, env, probes,
     name + '-summary-all-warm');
