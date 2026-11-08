@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { nativeProcessProfileSchema } from './nativeProcessProfile.js';
 import { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';
+import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
 
 const id = z.string().min(1).max(256);
@@ -135,8 +136,15 @@ const codex = common
   })
   .strict();
 
+// V2's native paths are OS-specific. Keep the historical POSIX-only V1
+// capture intact, but admit canonical Windows paths for a separately selected V2
+// engine; the common nativeProcessProfileSchema remains unchanged for others.
 const opencode = common
   .extend({
+    cwd: z.string().min(1).max(8192),
+    executable: common.shape.executable.extend({
+      path: z.string().min(1).max(8192),
+    }),
     provider: z.literal('opencode'),
     // Explicit trusted generation; absent remains the historical V1 profile.
     // V2 uses its own adapter, protocol and permission model.
@@ -163,13 +171,9 @@ const opencode = common
           .max(256 * 1024),
       })
       .strict(),
-    environment: common.shape.environment.refine(
-      (value) =>
-        ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME'].every(
-          (key) => path.safeParse(value[key]).success
-        ),
-      'Captured OpenCode HOME/XDG namespace paths are required'
-    ),
+    // Validate HOME/XDG together with nativeGeneration below, not with the
+    // POSIX-only common path rule. Windows V2 cannot use a fake /cwd alias.
+    environment: common.shape.environment,
     nativeOptions: z
       .object({
         providerId: id,
@@ -183,7 +187,23 @@ const opencode = common
       })
       .strict(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const nativePath = value.nativeGeneration === 'v2'
+      ? (candidate: string) =>
+          isCanonicalOpenCodeV2Directory(`${process.platform}-${process.arch}`, candidate)
+      : (candidate: string) => path.safeParse(candidate).success;
+    const requiredPaths = [
+      value.cwd, value.executable.path,
+      ...['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+        .map((key) => value.environment[key]),
+    ];
+    if (!requiredPaths.every((candidate) =>
+        typeof candidate === 'string' && nativePath(candidate))) {
+      ctx.addIssue({ code: 'custom',
+        message: 'OpenCode native paths must match captured generation and operating system' });
+    }
+  });
 
 /** Captured host configuration only. These fields never come from a runtime RPC. */
 export const runtimeMemberProfileSchema = z.discriminatedUnion('provider', [
