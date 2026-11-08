@@ -159,6 +159,19 @@ Exact reviewed sources:
   #42530733914](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42530733914)
   each reached the unchanged Host M08 failure (**33 PASS, 1 deliberately RED
   FAIL, zero skips**), proving only this SQL fixture executed before that failure.
+  **Operation identity regression (9 Nov 2026):** The initial disposable SQL
+  spike incorrectly included attempt and request in its unique claim key,
+  permitting a fresh attempt or changed payload to reserve the same UNKNOWN
+  operation again. Runtime #260 [TEST-only `c693c066`](https://github.com/agent-teams-ai/agent-runtime/commit/c693c06613ace4950b9929c6b7480f734b0a7005)
+  now keys this isolated claim by captured scope plus stable operation, and
+  retains original attempt and request fingerprint as immutable readback evidence.
+  [Exact-head real PostgreSQL 18 #42536846605](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42536846605)
+  on Node 24 and 26 completed the SQL assertions before the unchanged cross-process
+  Host-B **RED** oracle (each 33 PASS, 1 deliberate FAIL, 0 skipped):
+  new attempt and drifted request cannot reclaim UNKNOWN, while a distinct
+  operation and foreign scope remain independently admissible. These are
+  disposable SQL semantics only; operation-level effect identity, generation,
+  credential/route authority and production Host admission remain unqualified.
   There is still no installed Runtime pre-effect admission owner.
   The existing synchronous `HostHttpConsumptionJournal.consume()` and
   `routeFirstWrite` first-byte lease must not be quietly replaced with an
