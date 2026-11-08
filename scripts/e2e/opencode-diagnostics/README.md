@@ -66,10 +66,15 @@ listener ancestry is checked before CDP HTTP and WebSocket access.
 ## Catalog extension (desktop catalog PR641)
 
 The runner now retains the three version scenarios and then runs `delayed8s`,
-`directory-error`, `models-four-errors`, `partial-success`, `catalog-retry`, and
-`connected-summary`, and `catalog-timeout` in that order. Sources are opencode, anthropic, google and
-openrouter. Partial success retains the opencode model with three source errors;
-retry requires four successful model responses and disappearance of the alert.\n`connected-summary` supplies 105 catalog entries (four connected and 101 available-only),\npaginates all-provider reads at 100, returns four results for `--filter connected`,\nand asserts the real filtered subprocess plus the three-source OpenCode header.\nIt does not access real credentials or add model requests for available-only entries.
+`directory-error`, `models-four-errors`, `partial-success`, `catalog-retry`,
+`connected-summary`, and `catalog-timeout` in that order. Sources are opencode,
+anthropic, google and openrouter. Partial success retains the opencode model with
+three source errors; retry requires four successful model responses and
+an absent error alert. `connected-summary` supplies 105 directory entries
+(four connected and 101 available-only), paginates at 100, returns four
+entries for `--filter connected`, and asserts the filtered subprocess plus
+the three-source OpenCode header. No real credentials are used and no models
+are requested for available-only entries.
 The delayed summary really sleeps eight seconds in the fixture subprocess. The
 catalog timeout really exceeds the normal 30-second main command deadline.
 

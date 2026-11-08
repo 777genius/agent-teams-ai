@@ -264,6 +264,32 @@ test('catalog completion requires its own summary then a complete fresh director
   }
 });
 
+test('filtered count requests cannot replace the fresh unfiltered catalog generation', () => {
+  const all = refreshTimeline({ summary: true });
+  const last = all.at(-1);
+  const filteredStart = {
+    event: 'start', scenario: 'delayed8s', pid: 200,
+    at: last.at + 1,
+    args: ['runtime', 'providers', 'directory', '--runtime', 'opencode',
+      '--json', '--summary', '--filter', 'connected', '--limit', '100'],
+  };
+  const filteredResponse = {
+    event: 'response', scenario: 'delayed8s', pid: 200,
+    at: last.at + 2, operation: 'directory', source: null, failed: false,
+    response: { directory: {
+      runtimeId: 'opencode', filter: 'connected', totalCount: 4,
+      returnedCount: 4, cursor: null, nextCursor: null,
+    } },
+  };
+  const evidence = catalogRefreshEvidence(
+    [...all, filteredStart, filteredResponse],
+    { requireSummary: true }
+  );
+  assert(evidence, 'Completed model catalog should survive a later count-only read');
+  assert.notEqual(evidence.directory.start.pid, 200);
+  assert.equal(evidence.models.length, 4);
+});
+
 test('catalog pairing uses the latest preceding start when Windows reuses a PID', () => {
   const calls = refreshTimeline();
   const model = calls.at(-2);
