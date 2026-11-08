@@ -29,13 +29,22 @@ function validHead(head: string | null): boolean {
 async function isValidGitMarker(root: string): Promise<boolean> {
   const marker = path.join(root, '.git');
   try {
-    const stat = await fs.lstat(marker);
+    // Git recognizes .git directory symlinks, but HEAD/config alone is not a repository.
+    // A genuine non-bare gitdir has both refs/ and objects/, including packed-ref repos.
+    const stat = await fs.stat(marker);
     if (stat.isDirectory()) {
-      const [head, config] = await Promise.all([
+      const [head, config, refs, objects] = await Promise.all([
         readTrimmedFileOrNull(path.join(marker, 'HEAD')),
         readTrimmedFileOrNull(path.join(marker, 'config')),
+        fs.stat(path.join(marker, 'refs')).catch(() => null),
+        fs.stat(path.join(marker, 'objects')).catch(() => null),
       ]);
-      return validHead(head) && /(?:^|\n)\s*\[core\]\s*(?=\n|$)/i.test(config ?? '');
+      return (
+        validHead(head) &&
+        /(?:^|\n)\s*\[core\]\s*(?=\n|$)/i.test(config ?? '') &&
+        refs?.isDirectory() === true &&
+        objects?.isDirectory() === true
+      );
     }
     if (!stat.isFile()) return false;
     const contents = await readTrimmedFileOrNull(marker);

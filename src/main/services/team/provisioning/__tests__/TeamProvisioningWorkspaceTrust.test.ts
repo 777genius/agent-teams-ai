@@ -77,6 +77,9 @@ describe('TeamProvisioningWorkspaceTrust', () => {
       const nested = path.join(repo, 'packages', 'app');
       const worktree = path.join(repo, 'teammate');
       await mkdir(path.join(repo, '.git', 'worktrees', 'teammate'), { recursive: true });
+      // Git rejects HEAD/config-only directories. Keep the fixture a real gitdir.
+      await mkdir(path.join(repo, '.git', 'refs'), { recursive: true });
+      await mkdir(path.join(repo, '.git', 'objects'), { recursive: true });
       await writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
       await writeFile(path.join(repo, '.git', 'config'), '[core]\n');
       await mkdir(nested, { recursive: true });
@@ -143,6 +146,25 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     expect(ports.realpath).toHaveBeenCalledWith('/repo');
     expect(ports.resolveCanonicalGitRoot).toHaveBeenCalledWith('/real/repo');
     expect(ports.resolveCanonicalGitRoot).toHaveBeenCalledWith('/real/repo/.git/worktree');
+  });
+
+  it('does not promote a stale Git root when its canonical path is unreadable', async () => {
+    const ports = createWorkspacePorts({
+      realpath: vi.fn(async (value) =>
+        value === '/stale/git-root' ? null : `/real${value}`
+      ),
+      resolveGitRoot: vi.fn(async () => '/stale/git-root'),
+    });
+
+    const workspaces = await collectWorkspaceTrustWorkspaces({
+      cwd: '/repo',
+      members: [],
+      ports,
+    });
+
+    expect(workspaces.some((workspace) => workspace.source === 'team-root')).toBe(true);
+    expect(workspaces.some((workspace) => workspace.source === 'git-root')).toBe(false);
+    expect(ports.resolveCanonicalGitRoot).not.toHaveBeenCalled();
   });
 
   it('falls back to empty args-only plan when coordinator planning fails', async () => {

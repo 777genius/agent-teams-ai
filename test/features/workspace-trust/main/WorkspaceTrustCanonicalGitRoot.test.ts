@@ -35,6 +35,13 @@ async function createSyntheticWorktree(input: {
   );
 }
 
+async function createGitDirectoryLayout(root: string): Promise<void> {
+  // Real Git rejects a HEAD/config-only directory. Give positive fixtures the
+  // refs and objects structure produced by git init.
+  await fs.mkdir(path.join(root, '.git', 'refs'), { recursive: true });
+  await fs.mkdir(path.join(root, '.git', 'objects'), { recursive: true });
+}
+
 afterEach(async () => {
   if (tmpDir) {
     await fs.rm(tmpDir, { recursive: true, force: true });
@@ -47,7 +54,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repo = path.join(dir, 'parent');
     const nested = path.join(repo, 'nested');
-    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repo);
     await fs.mkdir(nested);
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
     await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
@@ -55,11 +62,40 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
   });
 
+  it('does not trust a HEAD/config-only directory that Git itself refuses', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'incomplete');
+    const nested = path.join(repo, 'nested');
+    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await fs.mkdir(nested);
+    await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
+    await createGitDirectoryLayout(repo);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+  });
+
+  it('recognizes a real .git directory symlink as a repository marker', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'source');
+    const alias = path.join(dir, 'linked');
+    await createGitDirectoryLayout(repo);
+    await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
+    await fs.mkdir(alias);
+    await fs.symlink(
+      path.join(repo, '.git'),
+      path.join(alias, '.git'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(alias)).resolves.toBe(alias);
+  });
+
   it('accepts valid symbolic HEAD names beginning with underscore, Unicode or dot', async () => {
     const dir = await makeTmpDir();
     const repo = path.join(dir, 'repo');
     const nested = path.join(repo, 'nested');
-    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repo);
     await fs.mkdir(nested);
     await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
 
@@ -73,7 +109,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repo = path.join(dir, 'Cafe\u0301');
     const nested = path.join(repo, 'nested');
-    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repo);
     await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repo, '.git', 'config'), '[core]\n');
     await fs.mkdir(nested);
@@ -84,7 +120,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repo = path.join(dir, 'upper-core');
     const nested = path.join(repo, 'nested');
-    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repo);
     await fs.mkdir(nested);
     await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repo, '.git', 'config'), '[CORE]\n\tbare = false\n');
@@ -142,7 +178,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const repository = path.join(dir, 'repository');
     const validWorktree = path.join(dir, 'worktree');
     const forged = path.join(dir, 'forged');
-    await fs.mkdir(path.join(repository, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repository);
     await createSyntheticWorktree({ repoDir: repository, worktreeDir: validWorktree, name: 'alice' });
     await fs.mkdir(forged);
     await fs.writeFile(
@@ -160,7 +196,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
     const nestedDir = path.join(repoDir, 'packages', 'app');
-    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repoDir);
     await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await fs.mkdir(nestedDir, { recursive: true });
@@ -172,7 +208,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
     const missingDir = path.join(repoDir, 'packages', 'missing');
-    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repoDir);
     await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
 
@@ -185,7 +221,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const submodule = path.join(superproject, 'app#1');
     const nested = path.join(submodule, 'src');
     const submoduleGitDir = path.join(superproject, '.git', 'modules', 'app#1');
-    await fs.mkdir(path.join(superproject, '.git'), { recursive: true });
+    await createGitDirectoryLayout(superproject);
     await fs.writeFile(path.join(superproject, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(superproject, '.git', 'config'), '[core]\n');
     await fs.mkdir(nested, { recursive: true });
@@ -203,7 +239,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
     const worktreeDir = path.join(dir, 'worktrees', 'alice');
-    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repoDir);
     await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice' });
@@ -215,7 +251,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'Cafe\u0301');
     const worktreeDir = path.join(dir, 'worktree');
-    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repoDir);
     await createSyntheticWorktree({ repoDir, worktreeDir, name: 'unicode' });
     await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
   });
@@ -224,7 +260,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const repoDir = path.join(dir, 'repo');
     const worktreeDir = path.join(dir, 'worktrees', 'alice');
-    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(repoDir);
     await fs.writeFile(path.join(repoDir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
     await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice', relativeBacklink: true });
@@ -239,7 +275,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const dir = await makeTmpDir();
     const trustedRepoDir = path.join(dir, 'trusted-repo');
     const forgedDir = path.join(dir, 'forged');
-    await fs.mkdir(path.join(trustedRepoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(trustedRepoDir);
     await fs.mkdir(forgedDir, { recursive: true });
     await fs.writeFile(
       path.join(forgedDir, '.git'),
@@ -255,7 +291,7 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     const trustedRepoDir = path.join(dir, 'trusted-repo');
     const forgedDir = path.join(dir, 'forged');
     const borrowedWorktreeGitDir = path.join(trustedRepoDir, '.git', 'worktrees', 'alice');
-    await fs.mkdir(path.join(trustedRepoDir, '.git'), { recursive: true });
+    await createGitDirectoryLayout(trustedRepoDir);
     await fs.mkdir(forgedDir, { recursive: true });
     await fs.mkdir(borrowedWorktreeGitDir, { recursive: true });
     await fs.writeFile(
