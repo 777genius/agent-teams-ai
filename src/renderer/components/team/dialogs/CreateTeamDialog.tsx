@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import {
   reconcileAnthropicRuntimeSelections,
   resolveAnthropicFastMode,
@@ -220,7 +221,6 @@ const TEAM_COLOR_NAMES = [
   'orange',
   'pink',
 ] as const;
-
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
 

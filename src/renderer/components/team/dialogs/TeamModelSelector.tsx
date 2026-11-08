@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+
 import {
   CodexRuntimeUpdateDialog,
   CodexRuntimeUpdateNotice,
@@ -79,6 +80,7 @@ import {
   Star,
   X,
 } from 'lucide-react';
+
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
 import { OpenCodeAuthRequiredModelsNotice } from './OpenCodeAuthRequiredModelsNotice';
@@ -156,8 +158,11 @@ export {
   getTeamModelLabel,
   getTeamProviderLabel,
 } from './teamModelSummary';
+
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
+
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
+
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
@@ -242,15 +247,12 @@ interface OpenCodeModelCostRates {
   cacheRead: number | null;
   cacheWrite: number | null;
 }
-
 interface OpenCodeModelPricingInfo {
   free: boolean;
   summary: string | null;
   title: string | undefined;
 }
-
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
-
 const MODEL_GRID_RESPONSIVE_HEIGHT_CLASS = 'h-[clamp(320px,calc(100vh-300px),520px)]';
 const OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD = 80;
 const OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX = 38;
@@ -261,7 +263,6 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'codex', label: 'Codex', comingSoon: false },
   { id: 'opencode', label: 'OpenCode', comingSoon: false },
 ];
-
 const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'cursor-acp', label: 'Cursor' },
   { sourceId: 'github-copilot', label: 'GitHub Copilot' },
@@ -271,7 +272,6 @@ const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'zai-coding-plan', label: 'Z.AI' },
   { sourceId: 'minimax-coding-plan', label: 'MiniMax' },
 ] as const;
-
 const OPEN_CODE_ROUTE_FILTER_TAG_ORDER: readonly OpenCodeRouteFilterTag[] = [
   'local',
   'configured',
