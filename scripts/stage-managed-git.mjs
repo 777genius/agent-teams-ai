@@ -54,8 +54,12 @@ function isRetryableDownloadFailure(error) {
     if (typeof cause.httpStatus === 'number') {
       return RETRYABLE_DOWNLOAD_HTTP.has(cause.httpStatus);
     }
-    if (cause.code === 'ERR_HTTP2_STREAM_ERROR' && cause.http2ErrorCode === 7) {
-      return true; // NGHTTP2_REFUSED_STREAM, before the remote stream was accepted.
+    if (
+      cause.code === 'ERR_HTTP2_STREAM_ERROR' &&
+      (cause.http2ErrorCode === 7 ||
+        (typeof cause.message === 'string' && cause.message.includes('NGHTTP2_REFUSED_STREAM')))
+    ) {
+      return true; // Only a refused HTTP/2 GET stream is safe to retry.
     }
     if (RETRYABLE_DOWNLOAD_CODES.has(cause.code) || cause.name === 'TimeoutError') {
       return true;
