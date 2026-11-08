@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "e.g., 매일 코드 검토, 야간 테스트...",
       "maxBudgetUsd": "최대 예산 (USD)",
       "maxTurns": "최대 회전",
+      "executionLimitsNote": "이러한 제한은 독립적인 일회성 실행에만 적용됩니다. 이미 실행 중인 팀에 할당된 작업에는 적용되지 않습니다.",
       "noLimit": "제한 없음",
       "noMatches": "어떤 팀이 검색합니다.",
       "noTeams": "팀 없음. 먼저 팀 만들기.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "지원하다",
       "paused": "뚱 베어",
-      "disabled": "지원하다"
+      "disabled": "지원하다",
+      "hostUnsupported": "Host  예약 실행을 사용할 수 없습니다",
+      "saved": "저장됨"
     },
     "runStatus": {
       "pending": "뚱 베어",

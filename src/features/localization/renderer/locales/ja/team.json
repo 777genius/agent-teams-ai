@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "例:毎日コードレビュー、夜テスト...",
       "maxBudgetUsd": "最高の予算(USD)",
       "maxTurns": "最高の回転",
+      "executionLimitsNote": "これらの上限は単独の一回限りの実行にのみ適用されます。実行中のチームに割り当てたタスクには適用されません。",
       "noLimit": "制限なし",
       "noMatches": "チームが検索にマッチしません。",
       "noTeams": "チームなし チームを最初に作成します。",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "アクティブ",
       "paused": "パユース",
-      "disabled": "バリアフリー"
+      "disabled": "バリアフリー",
+      "hostUnsupported": "Host のスケジュール機能は利用できません",
+      "saved": "保存済み"
     },
     "runStatus": {
       "pending": "ペンディング",

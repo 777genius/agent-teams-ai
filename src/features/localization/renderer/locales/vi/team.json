@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "vd: Xem xét mã hàng ngày, Kiểm thử ban đêm...",
       "maxBudgetUsd": "Ngân sách tối đa (USD)",
       "maxTurns": "Số lượt tối đa",
+      "executionLimitsNote": "Các giới hạn này chỉ áp dụng cho lần chạy độc lập một lần. Chúng không áp dụng cho tác vụ được giao cho nhóm đang hoạt động.",
       "noLimit": "Không giới hạn",
       "noMatches": "Không có đội ngũ nào khớp với tìm kiếm của bạn.",
       "noTeams": "Không có đội ngũ nào khả dụng. Hãy tạo một đội ngũ trước.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "Đang hoạt động",
       "paused": "Đã tạm dừng",
-      "disabled": "Đã tắt"
+      "disabled": "Đã tắt",
+      "hostUnsupported": "Không có tính năng lên lịch cho Host",
+      "saved": "Đã lưu"
     },
     "runStatus": {
       "pending": "Đang chờ",

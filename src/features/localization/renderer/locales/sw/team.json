@@ -1507,6 +1507,7 @@
       "labelPlaceholder": "k.m., Mapitio ya msimbo ya kila siku, Majaribio ya usiku...",
       "maxBudgetUsd": "Bajeti ya juu (USD)",
       "maxTurns": "Zamu za juu",
+      "executionLimitsNote": "Vikomo hivi vinatumika tu kwa utekelezaji wa kujitegemea wa mara moja. Havitumiki kwa kazi zilizopewa timu ambayo tayari inaendelea.",
       "noLimit": "Hakuna kikomo",
       "noMatches": "Hakuna timu zinazolingana na utafutaji wako.",
       "noTeams": "Hakuna timu zinazopatikana. Unda timu kwanza.",
@@ -2136,7 +2137,9 @@
     "status": {
       "active": "Hai",
       "paused": "Imesitishwa",
-      "disabled": "Imezimwa"
+      "disabled": "Imezimwa",
+      "hostUnsupported": "Upangaji wa Host haupatikani",
+      "saved": "Imehifadhiwa"
     },
     "runStatus": {
       "pending": "Inasubiri",

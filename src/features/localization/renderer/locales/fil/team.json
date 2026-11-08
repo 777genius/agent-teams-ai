@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "hal., Araw-araw na code review, Gabing test...",
       "maxBudgetUsd": "Max na badyet (USD)",
       "maxTurns": "Max na turn",
+      "executionLimitsNote": "Ang mga limitasyong ito ay para lamang sa hiwalay na isang beses na pagpapatakbo. Hindi ito nalalapat sa mga gawaing itinalaga sa tumatakbong team.",
       "noLimit": "Walang limitasyon",
       "noMatches": "Walang team na tumutugma sa iyong paghahanap.",
       "noTeams": "Walang available na team. Lumikha muna ng team.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "Aktibo",
       "paused": "Naka-pause",
-      "disabled": "Naka-disable"
+      "disabled": "Naka-disable",
+      "hostUnsupported": "Hindi magagamit ang pag-iskedyul sa Host",
+      "saved": "Naka-save"
     },
     "runStatus": {
       "pending": "Nakabinbin",

@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "Por ejemplo, revisión diaria del código, pruebas nocturnas...",
       "maxBudgetUsd": "Presupuesto máximo (USD)",
       "maxTurns": "Max gira",
+      "executionLimitsNote": "Estos límites solo se aplican a ejecuciones independientes y puntuales. No se aplican a tareas asignadas a un equipo que ya está en ejecución.",
       "noLimit": "No hay límite",
       "noMatches": "Ningún equipo coincide con tu búsqueda.",
       "noTeams": "No hay equipos disponibles. Crea un equipo primero.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "Activo",
       "paused": "Pausa",
-      "disabled": "Discapacitados"
+      "disabled": "Discapacitados",
+      "hostUnsupported": "La programación de Host no está disponible",
+      "saved": "Guardado"
     },
     "runStatus": {
       "pending": "Pendiente",

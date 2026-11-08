@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "z.B., Tägliche Code-Bewertung, nächtliche Tests...",
       "maxBudgetUsd": "Max Budget (USD)",
       "maxTurns": "Max dreht",
+      "executionLimitsNote": "Diese Limits gelten nur für eigenständige einmalige Ausführungen. Sie gelten nicht für Aufgaben, die einem bereits laufenden Team zugewiesen werden.",
       "noLimit": "Keine Begrenzung",
       "noMatches": "Keine Teams passen zu Ihrer Suche.",
       "noTeams": "Keine Teams verfügbar. Erstellen Sie zuerst ein Team.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "Aktiv",
       "paused": "Ausgewählt",
-      "disabled": "Behinderte"
+      "disabled": "Behinderte",
+      "hostUnsupported": "Host-Zeitplanung nicht verfügbar",
+      "saved": "Gespeichert"
     },
     "runStatus": {
       "pending": "Ausgaben",

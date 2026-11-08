@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "bijv. Dagelijkse codereview, nachtelijke tests...",
       "maxBudgetUsd": "Max. budget (USD)",
       "maxTurns": "Max. beurten",
+      "executionLimitsNote": "Deze limieten gelden alleen voor zelfstandige eenmalige uitvoeringen. Ze gelden niet voor taken die aan een al actief team worden toegewezen.",
       "noLimit": "Geen limiet",
       "noMatches": "Geen teams komen overeen met je zoekopdracht.",
       "noTeams": "Geen teams beschikbaar. Maak eerst een team aan.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "Actief",
       "paused": "Gepauzeerd",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "hostUnsupported": "Host-planning niet beschikbaar",
+      "saved": "Opgeslagen"
     },
     "runStatus": {
       "pending": "In behandeling",

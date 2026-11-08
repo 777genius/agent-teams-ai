@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "mis., Ulasan kode harian, Tes Nightly...",
       "maxBudgetUsd": "Anggaran maksimum (USD)",
       "maxTurns": "Max ternyata",
+      "executionLimitsNote": "Batas ini hanya berlaku untuk eksekusi mandiri satu kali. Batas ini tidak berlaku untuk tugas yang diberikan kepada tim yang sedang berjalan.",
       "noLimit": "Tanpa batas",
       "noMatches": "Tak ada tim yang cocok dengan pencarianmu.",
       "noTeams": "Tidak ada tim yang tersedia. Buat tim dulu.",
@@ -2134,7 +2135,9 @@
     "status": {
       "active": "Aktif",
       "paused": "Ditahan",
-      "disabled": "Dinonaktifkan"
+      "disabled": "Dinonaktifkan",
+      "hostUnsupported": "Penjadwalan Host tidak tersedia",
+      "saved": "Tersimpan"
     },
     "runStatus": {
       "pending": "Menunggu",
