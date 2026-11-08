@@ -39,15 +39,17 @@ test('a full catalog with 200 entries is not misread as a complete 100-entry pag
 });
 
 test('partial, inconsistent and misleading filtered responses fail closed', () => {
-  const cases = [
-    page('connected', [rows[1]], { totalCount: 2, nextCursor: '1' }),
-    page('connected', [rows[1]], { returnedCount: 0 }),
-    page('connected', [rows[2]]),
-    page('all', rows, { diagnostics: ['OpenCode inventory probe timed out'] }),
-    page('all', rows, { cursor: '100' }),
+  const incomplete = parseProviderDirectory(
+    page('connected', [rows[1]], { totalCount: 2, nextCursor: '1' }), 'connected');
+  assert.equal(completeConnectedCount(incomplete), null);
+  const cases: Array<[string, 'all' | 'connected']> = [
+    [page('connected', [rows[1]], { returnedCount: 0 }), 'connected'],
+    [page('connected', [rows[2]]), 'connected'],
+    [page('all', rows, { diagnostics: ['OpenCode inventory probe timed out'] }), 'all'],
+    [page('all', rows, { cursor: '100' }), 'all'],
   ];
-  for (const [i, raw] of cases.entries()) {
-    assert.throws(() => parseProviderDirectory(raw, i < 3 ? 'connected' : 'all'));
+  for (const [raw, filter] of cases) {
+    assert.throws(() => parseProviderDirectory(raw, filter));
   }
 });
 
