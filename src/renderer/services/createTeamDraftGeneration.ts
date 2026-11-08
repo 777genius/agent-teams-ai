@@ -7,6 +7,37 @@
  */
 let generation = 0;
 
+/** Create-only, in-memory Advanced CLI edits; never copied into persisted draft storage. */
+interface AdvancedCreateSession {
+  worktreeEnabled: boolean;
+  worktreeName: string;
+  customArgs: string;
+  edited: boolean;
+}
+
+let advancedSession: AdvancedCreateSession | null = null;
+
+export function readCreateTeamAdvancedSession(): Readonly<AdvancedCreateSession> | null {
+  return advancedSession;
+}
+
+export function restoreCreateTeamAdvancedDefaults(
+  worktreeEnabled: boolean,
+  worktreeName: string,
+  customArgs: string
+): void {
+  advancedSession = { worktreeEnabled, worktreeName, customArgs, edited: false };
+}
+
+export function patchCreateTeamAdvancedSession(
+  patch: Partial<Omit<AdvancedCreateSession, 'edited'>>
+): void {
+  advancedSession = {
+    worktreeEnabled: false, worktreeName: '', customArgs: '',
+    ...advancedSession, ...patch, edited: true,
+  };
+}
+
 export function currentCreateTeamDraftGeneration(): number {
   return generation;
 }
@@ -17,4 +48,5 @@ export function isCreateTeamDraftGenerationCurrent(expected: number): boolean {
 
 export function retireCreateTeamDraftGeneration(): void {
   generation += 1;
+  advancedSession = null;
 }
