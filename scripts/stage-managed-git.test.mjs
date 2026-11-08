@@ -66,8 +66,8 @@ test('retries only an HTTP/2 REFUSED_STREAM transport failure', async () => {
   await withArchiveDestination(async (destination) => {
     let requests = 0;
     const refused = new TypeError('fetch failed', {
-      cause: Object.assign(new Error('stream refused'), {
-        code: 'ERR_HTTP2_STREAM_ERROR', http2ErrorCode: 7,
+      cause: Object.assign(new Error('Stream closed with error code NGHTTP2_REFUSED_STREAM'), {
+        code: 'ERR_HTTP2_STREAM_ERROR',
       }),
     });
     await downloadArchive('https://example.invalid/asset.tar.gz', destination, {
@@ -117,8 +117,8 @@ test('non-refused HTTP/2 stream errors do not retry', async () => {
       request: async () => {
         requests += 1;
         throw new TypeError('fetch failed', {
-          cause: Object.assign(new Error('stream error'), {
-            code: 'ERR_HTTP2_STREAM_ERROR', http2ErrorCode: 2,
+          cause: Object.assign(new Error('Stream closed with error code NGHTTP2_INTERNAL_ERROR'), {
+            code: 'ERR_HTTP2_STREAM_ERROR',
           }),
         });
       },
