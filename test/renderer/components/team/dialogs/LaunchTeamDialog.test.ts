@@ -7048,6 +7048,12 @@ describe('LaunchTeamDialog', () => {
     localStorage.setItem('team:lastSelectedModel:anthropic', 'sonnet');
     createTeamDraftMock.state.soloTeam = true;
     const originalName = createTeamDraftMock.state.teamName;
+    const originalEffort = createTeamDraftMock.state.selectedEffort;
+    // This test uses a plain-object useCreateTeamDraft mock. Make its setter
+    // preserve the requested value, then explicitly render as the real hook does.
+    createTeamDraftMock.state.setSelectedEffort.mockImplementation((value: string) => {
+      createTeamDraftMock.state.selectedEffort = value;
+    });
     const provider = createAuthoritativeProviderStatus('anthropic', ['sonnet', 'claude-opus-4-6']);
     provider.modelCatalog!.models.forEach((model) => {
       model.supportedReasoningEfforts = ['low', 'medium', 'high', 'max'];
@@ -7131,10 +7137,16 @@ describe('LaunchTeamDialog', () => {
       await settle();
       await act(async () => {
         teamRosterEditorSectionMock.lastProps.onModelChange('claude-opus-4-6');
-        teamRosterEditorSectionMock.lastProps.onEffortChange('medium');
         await flush();
       });
       await settle();
+      await act(async () => {
+        teamRosterEditorSectionMock.lastProps.onEffortChange('medium');
+        render();
+        await flush();
+      });
+      await settle();
+      expect(teamRosterEditorSectionMock.lastProps.effort).toBe('medium');
       await act(async () => {
         const textarea = host.querySelector<HTMLTextAreaElement>('#team-prompt')!;
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
@@ -7186,6 +7198,8 @@ describe('LaunchTeamDialog', () => {
       );
     } finally {
       createTeamDraftMock.state.teamName = originalName;
+      createTeamDraftMock.state.selectedEffort = originalEffort;
+      createTeamDraftMock.state.setSelectedEffort.mockReset();
       vi.mocked(api.teams.prepareProvisioning).mockImplementation(originalPrepare);
       await act(async () => root.unmount());
     }

@@ -107,12 +107,12 @@ import {
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
-import { CreateTeamSurface } from './CreateTeamSurface';
 import {
   sanitizeTeamName,
   validateRequest,
   validateTeamNameInline,
 } from './createTeamSubmissionValidation';
+import { CreateTeamSurface } from './CreateTeamSurface';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
