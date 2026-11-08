@@ -902,7 +902,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent).toContain('unknown');
+    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
+      .toContain('Checking providers...');
     expect(host.textContent).toContain('Checking...');
     expect(host.textContent).not.toContain('Providers: 0 connected');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
@@ -1478,7 +1479,9 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('Checking...');
-    expect(host.textContent).toContain('Checking providers...');
+    // Account snapshot is loading, but there is no confirmed CLI connection count.
+    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
+      .toContain('unknown');
     expect(host.textContent).not.toContain('Codex CLI not found');
     expect(host.textContent).not.toContain('Ready to run agents');
     expect(host.textContent).not.toContain('Connect a provider to get started');
@@ -3310,8 +3313,11 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('Providers: 1 connected');
-    expect(host.textContent).not.toContain('Anthropic');
-    expect(host.textContent).not.toContain('Manage');
+    // The header is still labelled Anthropic / Codex, while provider cards are hidden.
+    expect(host.textContent).toContain('Anthropic / Codex');
+    expect(host.textContent).not.toContain('Connected via Anthropic subscription');
+    expect(host.querySelector('[data-testid="runtime-provider-quick-connect"]')?.closest('.hidden'))
+      .not.toBeNull();
     expect(
       host.querySelector('[role="button"][aria-label="Expand provider details"]')
     ).not.toBeNull();

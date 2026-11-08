@@ -129,11 +129,11 @@ import {
   shouldShowOpenCodeRuntimeError,
 } from './runtimeInstallActionUi';
 import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
-import { useProviderConnectionSummary } from './useProviderConnectionSummary';
 import {
   useDashboardProviderRefresh,
   useOpenCodeDashboardStatus,
 } from './useOpenCodeDashboardStatus';
+import { useProviderConnectionSummary } from './useProviderConnectionSummary';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';

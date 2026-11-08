@@ -11,7 +11,7 @@ import {
   publishRuntimeProviderConnectedCount,
 } from '../runtimeProviderDirectoryCache';
 
-import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
+import type { RuntimeProviderDirectoryEntryDto } from '@features/runtime-provider-management/contracts';
 
 interface UseRuntimeProviderQuickConnectOptions {
   enabled: boolean;

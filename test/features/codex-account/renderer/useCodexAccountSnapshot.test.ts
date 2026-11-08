@@ -1356,10 +1356,12 @@ describe('useCodexAccountSnapshot', () => {
     expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
 
     await act(async () => root.render(React.createElement(Harness, { active: true })));
+    // Stale state is refreshed on resume, before the next regular interval.
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
-    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());
     vi.useRealTimers();
   });

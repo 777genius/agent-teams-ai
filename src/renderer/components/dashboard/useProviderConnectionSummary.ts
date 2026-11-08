@@ -5,9 +5,9 @@ import {
   useRuntimeProviderDirectoryCache,
 } from '@features/runtime-provider-management/renderer';
 import { useStore } from '@renderer/store';
+import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 
 import type { CliInstallationStatus } from '@shared/types';
-import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 
 import {
   DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS,
