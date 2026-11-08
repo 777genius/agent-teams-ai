@@ -10,6 +10,13 @@ const TERMINAL_INSTALL_ERROR =
 const ENGINE_FAILURE = /\bUnsupported engine\b/i;
 const ENGINE_WARNING = /(?:\[\s*WARN(?:ING)?\s*\]|\bWARN(?:ING)?)\s*Unsupported engine\b/i;
 
+// pnpm colors warnings and HTTP diagnostics when a terminal is detected.
+const ANSI_COLORS = /\x1b\[[0-9;]*m/g;
+
+function stripColorCodes(output) {
+  return output.replace(ANSI_COLORS, '');
+}
+
 function hasTerminalInstallFailure(output) {
   // pnpm may warn about an unrelated workspace's Node engine before a
   // transient Electron download 5xx. A warning must not suppress retries.
@@ -18,7 +25,8 @@ function hasTerminalInstallFailure(output) {
 }
 
 export function isRetryableInstallFailure(output) {
-  return RETRYABLE_NETWORK_ERROR.test(output) && !hasTerminalInstallFailure(output);
+  const normalized = stripColorCodes(output);
+  return RETRYABLE_NETWORK_ERROR.test(normalized) && !hasTerminalInstallFailure(normalized);
 }
 
 function runInstall() {
@@ -40,8 +48,9 @@ function runInstall() {
       stream.on('data', (chunk) => {
         const text = chunk.toString('utf8');
         const combinedOutput = outputTail + text;
-        retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(combinedOutput);
-        terminalFailureSeen ||= hasTerminalInstallFailure(combinedOutput);
+        const normalized = stripColorCodes(combinedOutput);
+        retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(normalized);
+        terminalFailureSeen ||= hasTerminalInstallFailure(normalized);
         outputTail = (outputTail + text).slice(-256);
         const destination = stream === child.stdout ? process.stdout : process.stderr;
         destination.write(chunk);
