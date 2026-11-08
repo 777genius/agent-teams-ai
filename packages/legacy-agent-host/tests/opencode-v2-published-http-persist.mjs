@@ -119,20 +119,24 @@ if (process.argv[2] === '--worker') {
   }
   // A CI cancellation must not orphan this TEST-owned detached worker group.
   // Validate its PID/start identity before any signal, as normal stop() does.
-  let interruptionStarted = false;
-  async function interruptOwned(signal) {
-    if (interruptionStarted) return;
-    interruptionStarted = true;
-    receipt.failure = 'TEST_interrupted_' + signal;
-    let cleaned = false;
-    try {
-      cleaned = await stop();
-      if (cleaned) rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
-    } catch { cleaned = false; }
-    receipt.cleanup = cleaned;
-    try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
-    catch { /* Failed receipt persistence cannot qualify this TEST. */ }
-    process.exit(signal === 'SIGINT' ? 130 : 143);
+  // Share one cancellation promise with normal catch/finally: stopping the
+  // worker may reject an in-flight HTTP request. That rejection must neither
+  // overwrite the interrupted receipt nor terminate the parent before reaping.
+  let interruptionTask;
+  function interruptOwned(signal) {
+    if (interruptionTask) return;
+    interruptionTask = (async () => {
+      receipt.failure = 'TEST_interrupted_' + signal;
+      let cleaned = false;
+      try {
+        cleaned = await stop();
+        if (cleaned) rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+      } catch { cleaned = false; }
+      receipt.cleanup = cleaned;
+      try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
+      catch { /* Failed receipt persistence cannot qualify this TEST. */ }
+      process.exit(signal === 'SIGINT' ? 130 : 143);
+    })();
   }
   process.once('SIGINT', () => { void interruptOwned('SIGINT'); });
   process.once('SIGTERM', () => { void interruptOwned('SIGTERM'); });
@@ -424,13 +428,18 @@ if (process.argv[2] === '--worker') {
       throw Error('TEST_Host_SPI_own_process_cleanup_unconfirmed');
     receipt.steps.push('TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay');
   } catch (e) {
+    if (interruptionTask) await interruptionTask;
     receipt.failure = /^TEST_[A-Za-z0-9_]+$/.test(e?.message || '')
       ? e.message : 'TEST_published_HTTP_persist_unqualified';
     throw Error(receipt.failure);
   } finally {
-    receipt.cleanup=await stop().catch(()=>false);
-    if(receipt.cleanup)rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
-    writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');
+    if (interruptionTask) {
+      await interruptionTask;
+    } else {
+      receipt.cleanup=await stop().catch(()=>false);
+      if(receipt.cleanup)rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+      writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');
+    }
   }
   if(!receipt.cleanup)throw Error('TEST_worker_cleanup_unknown');
 }
