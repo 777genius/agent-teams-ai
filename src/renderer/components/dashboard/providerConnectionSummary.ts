@@ -1,4 +1,7 @@
-import type { RuntimeProviderDirectoryCacheSnapshot } from '@features/runtime-provider-management/renderer';
+import type {
+  RuntimeProviderConnectedCountObservation,
+  RuntimeProviderDirectoryCacheSnapshot,
+} from '@features/runtime-provider-management/renderer';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import type { CliProviderId, CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
@@ -31,6 +34,7 @@ interface ConnectionSummaryInput {
   projectPath: string | null;
   globalDirectory: Directory | null;
   projectDirectory: Directory | null;
+  observedOpenCodeCount?: RuntimeProviderConnectedCountObservation | null;
   runtimeStatus: Pick<
     OpenCodeRuntimeStatus,
     'installed' | 'state' | 'version' | 'binaryPath'
@@ -81,6 +85,7 @@ export function getDashboardConnectionSummary({
   projectPath,
   globalDirectory,
   projectDirectory,
+  observedOpenCodeCount,
   runtimeStatus,
   nowMs = Date.now(),
 }: ConnectionSummaryInput): DashboardConnectionSummary {
@@ -120,6 +125,24 @@ export function getDashboardConnectionSummary({
     runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
       ? JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null])
       : null;
+  // A complete connected-only observation is scoped and independent of the
+  // full provider/model directory. It never grants permission to launch.
+  const countFetchedAt = Date.parse(observedOpenCodeCount?.fetchedAt ?? '');
+  if (
+    runtimeRevision &&
+    observedOpenCodeCount?.runtimeRevision === runtimeRevision &&
+    Number.isFinite(countFetchedAt) &&
+    countFetchedAt <= nowMs &&
+    nowMs - countFetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS
+  ) {
+    return {
+      cliConnected,
+      cliCountComplete,
+      cliCountPending,
+      openCodeConnected: observedOpenCodeCount.connected,
+    };
+  }
+
   const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision, nowMs);
   const projectComplete =
     projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
