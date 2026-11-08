@@ -361,9 +361,13 @@ export class SmartScheduleDispatcher {
     for (let i = 0; i < READY_CHECK_ATTEMPTS; i++) {
       if (isCancelled()) return false;
       const alive = this.runtime.isTeamAlive(teamName);
-      if (!alive && !(allowStarting && this.runtime.isTeamLaunching(teamName))) return false;
+      if (!alive && !allowStarting) return false;
       const current = await this.runtime.getRuntime(teamName);
-      if (current.runId !== expectedRunId && (!allowStarting || current.runId)) return false;
+      // A newly accepted launch may be invisible to liveness snapshots for
+      // several reads. Never mistake that delay for a failed launch, but
+      // immediately reject proof of a *different* run.
+      if (current.runId && current.runId !== expectedRunId) return false;
+      if (!allowStarting && current.runId !== expectedRunId) return false;
       if (alive && current.runId === expectedRunId && readyMember(current.members[memberName])) {
         return true;
       }
