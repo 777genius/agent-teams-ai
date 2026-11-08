@@ -380,6 +380,30 @@ if (process.argv[2] === '--worker') {
       if(stillEmpty.status!==200||!Array.isArray(stillEmpty.data?.data)||
          stillEmpty.data.data.length!==0)
         throw Error('TEST_cold_restart_stale_reply_created_permission');
+      // A stale `always` must not create a persistent grant even if the
+      // endpoint returned 404. Query the real native permission resolver with
+      // a NEW external TEST resource; it must still ask on this same session.
+      const freshAsk=await call(claim.path+'/permission','POST',{
+        action:'external_directory',
+        resources:[join(root,'temp','TEST-fresh-'+claim.decision)],
+      });
+      const freshId=freshAsk.data?.data?.id;
+      if(freshAsk.status!==200||freshAsk.data?.data?.effect!=='ask'||
+         !/^per[A-Za-z0-9_-]+$/.test(freshId||'')||
+         freshId===claim.permissionId)
+        throw Error('TEST_cold_restart_stale_grant_changed_effective_policy');
+      const freshPending=await call(claim.path+'/permission');
+      if(freshPending.status!==200||!Array.isArray(freshPending.data?.data)||
+         freshPending.data.data.length!==1||
+         freshPending.data.data[0]?.id!==freshId)
+        throw Error('TEST_cold_restart_fresh_ask_identity_invalid');
+      if((await call(claim.path+'/permission/'+encodeURIComponent(freshId)+
+         '/reply','POST',{decision:'reject'})).status!==204)
+        throw Error('TEST_cold_restart_fresh_ask_reject_failed');
+      const finalPending=await call(claim.path+'/permission');
+      if(finalPending.status!==200||!Array.isArray(finalPending.data?.data)||
+         finalPending.data.data.length!==0)
+        throw Error('TEST_cold_restart_fresh_ask_not_closed');
       if((await call(claim.path,'DELETE')).status!==204)
         throw Error('TEST_stale_permission_session_cleanup_failed');
     }
