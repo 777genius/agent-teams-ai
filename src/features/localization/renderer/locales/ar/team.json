@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 دقائق",
         "fifteenMinutes": "15 دقيقة",
         "thirtyMinutes": "30 دقيقة"
-      }
+      },
+      "time": "الوقت"
     },
     "empty": {
       "title": "لا جداول بعد",
@@ -2147,7 +2148,11 @@
       "cancelled": "ألغيت",
       "dispatched": "تم الإرسال",
       "skipped": "تم التخطي"
-    }
+    },
+    "taskFirstAgentDescription": "تُسند المهمة إلى عضو الفريق المحدد. يبدأ الفريق أولاً إذا لزم الأمر.",
+    "taskFirstTeamDescription": "ينسّق قائد الفريق هذه المهمة. يبدأ الفريق أولاً إذا لزم الأمر.",
+    "taskFirstDesktopRequired": "لا تعمل الجداول إلا أثناء فتح Agent Teams.",
+    "taskFirstHistoricPrompt": "يحتوي هذا الفريق على مطالبة تشغيل محفوظة. راجعها في إعدادات الفريق قبل جدولة العمل التلقائي."
   },
   "openCodeContextConfigHint": {
     "summary": "ويمكن للنماذج المحلية المفتوحة أن تستخدم ميزانية السياق العام المفتوح بدلا من الحدود الفورية.",
