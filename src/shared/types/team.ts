@@ -921,6 +921,8 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   savedRosterCommandId?: string;
   cwd: string;
   prompt?: string;
+  /** Explicit opt-in: start the configured runtime without replaying saved one-time work. */
+  bootstrapOnly?: true;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
   model?: string;

@@ -1505,13 +1505,24 @@
       "labelPlaceholder": "cth., Semakan kod harian, Ujian malam...",
       "maxBudgetUsd": "Belanjawan maksimum (USD)",
       "maxTurns": "Giliran maksimum",
+      "executionLimitsNote": "Had ini hanya terpakai pada pelaksanaan kendiri sekali sahaja. Had ini tidak terpakai pada tugasan yang diberikan kepada pasukan yang sedang berjalan.",
       "noLimit": "Tiada had",
       "noMatches": "Tiada pasukan sepadan dengan carian anda.",
       "noTeams": "Tiada pasukan tersedia. Cipta pasukan dahulu.",
       "searchTeams": "Cari pasukan...",
       "selectTeam": "Pilih pasukan...",
       "team": "Pasukan",
-      "title": "Jadual"
+      "title": "Jadual",
+      "execution": "Pelaksanaan",
+      "legacyNotice": "Jadual sekali jalan sedia ada: menyimpan tidak mengubah kelakuan asal.",
+      "upgradeSmart": "Tukar kepada jadual pintar",
+      "oneAgent": "Seorang ejen",
+      "wholeTeam": "Seluruh pasukan",
+      "target": "Penerima ketika pasukan aktif",
+      "leadDefault": "Ketua pasukan (lalai)",
+      "agentDescription": "Jika pasukan berhenti, jalankan ejen berasingan; jika aktif, berikan tugasan.",
+      "teamDescription": "Jika pasukan berhenti, mulakan pasukan yang disimpan; jika aktif, berikan tugasan kepada ketua. Gunakan tetapan tersimpan.",
+      "teamPathMissing": "Simpan folder projek pasukan sebelum menjadualkan pelancarannya."
     },
     "title": {
       "createSchedule": "Cipta Jadual",
@@ -2124,7 +2135,9 @@
     "status": {
       "active": "Aktif",
       "paused": "Dijeda",
-      "disabled": "Dilumpuhkan"
+      "disabled": "Dilumpuhkan",
+      "hostUnsupported": "Penjadualan Host tidak tersedia",
+      "saved": "Disimpan"
     },
     "runStatus": {
       "pending": "Tertangguh",
@@ -2134,7 +2147,9 @@
       "completed": "Selesai",
       "failed": "Gagal",
       "interrupted": "Terganggu",
-      "cancelled": "Dibatalkan"
+      "cancelled": "Dibatalkan",
+      "dispatched": "Dihantar",
+      "skipped": "Dilangkau"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2438,10 @@
       "hiddenCount": "{{count}} tersembunyi",
       "trash": "Tong Sampah",
       "gridView": "Paparan grid",
-      "columnsView": "Paparan lajur"
+      "columnsView": "Paparan lajur",
+      "tableView": "Paparan jadual",
+      "configureColumns": "Pilih lajur",
+      "resizeColumn": "Ubah lebar {{column}}"
     },
     "trash": {
       "title": "Tong Sampah",

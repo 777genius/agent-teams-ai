@@ -140,9 +140,8 @@ import {
   setTeamWatchScopeChangeListener,
 } from '@main/services/infrastructure/teamWatchScope';
 import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
-import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
-import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
-import { SchedulerService } from '@main/services/schedule/SchedulerService';
+import { createSchedulerService } from '@main/services/schedule/createSchedulerService';
+import type { SchedulerService } from '@main/services/schedule/SchedulerService';
 import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/JsonTaskChangePresenceRepository';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
@@ -2108,18 +2107,10 @@ async function initializeServices(): Promise<void> {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
-  // Create SchedulerService for cron-based task execution
-  const scheduleRepository = new JsonScheduleRepository();
-  const scheduledTaskExecutor = new ScheduledTaskExecutor();
-  schedulerService = new SchedulerService(
-    scheduleRepository,
-    scheduledTaskExecutor,
-    async (cwd: string) => {
-      const result = await teamProvisioningService.prepareForProvisioning(cwd, {
-        forceFresh: true,
-      });
-      return { ready: result.ready, message: result.message };
-    }
+  schedulerService = createSchedulerService(
+    teamIpcHandlerApis,
+    teamDataService,
+    teamProvisioningService
   );
   // Extension Store services
   const pluginCatalogService = new PluginCatalogService();

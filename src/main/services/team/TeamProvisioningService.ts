@@ -7,6 +7,8 @@ import {
 } from './provisioning/TeamProvisioningLeadRuntimeRestart';
 import { hasLiveOpenCodeMcpConsumers } from './provisioning/TeamProvisioningMcpConsumerQuery';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from './provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade';
+import { hasCommittedOpenCodeRuntimeBootstrapSessionEvidence } from './provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
+import { resolveOpenCodeRecipientIdentityForUserSend } from './provisioning/TeamProvisioningOpenCodeRecipientIdentityForUserSend';
 import { killTeamProcessAndWait } from './provisioning/TeamProvisioningRunProgress';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
@@ -117,6 +119,37 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   /** Synchronous twin for passes that cannot await, such as the quit-time backup. */
   isTeamManagedByThisProfileSync(teamName: string): boolean {
     return this.profileOwnership.isManagedByThisProfileSync(teamName);
+  }
+
+  /** Explicit user-send command; the ordinary recipient query remains read-only. */
+  async resolveRuntimeRecipientProviderIdForUserSend(
+    teamName: string,
+    memberName: string
+  ): Promise<TeamProviderId | undefined> {
+    return resolveOpenCodeRecipientIdentityForUserSend(
+      { teamName, memberName },
+      {
+        resolveProviderId: (name, member) => super.resolveRuntimeRecipientProviderId(name, member),
+        getTrackedRunId: (name) => this.runTracking.getTrackedRunId(name),
+        getRun: (runId) => this.runs.get(runId),
+        readMetaMembers: (name) => this.membersMetaStore.getMembers(name),
+        readPersistedLaunchState: (name) => this.launchStateStore.read(name),
+        isTeamOwned: (name) => this.profileOwnership.isManagedByThisProfile(name),
+        isTeamStopped: (name) => this.launchStateStore.isStopped(name),
+        isRuntimeReachable: (name) => this.runTracking.canDeliverToOpenCodeRuntimeForTeam(name),
+        resolveActiveLaneRunId: (name, lane) =>
+          this.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(name, lane),
+        hasCommittedRecipientSession: (input) =>
+          hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
+            input,
+            this.bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
+          ),
+        getStopEpoch: (name) =>
+          `${this.stopAllTeamsGeneration}:${this.getStopTeamGeneration(name)}`,
+        materializeLaunchRoster: (input) =>
+          this.compatibilityDelegation.configFacade.materializeLaunchRoster(input),
+      }
+    );
   }
 
   /**

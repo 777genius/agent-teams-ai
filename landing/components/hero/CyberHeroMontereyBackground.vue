@@ -247,7 +247,7 @@ function syncMotionState() {
 
 onMounted(() => {
   motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mobileQuery = window.matchMedia("(max-width: 700px)");
+  mobileQuery = window.matchMedia("(max-width: 767px)");
   motionQuery.addEventListener("change", syncMotionState);
   mobileQuery.addEventListener("change", syncMotionState);
 
@@ -317,3 +317,15 @@ onBeforeUnmount(() => {
     <canvas ref="canvasRef" class="cyber-hero__monterey-canvas" />
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 767px) {
+  /* Video and canvas are off on phones: no 1600px video poster fetch. */
+  .cyber-hero__monterey-video {
+    background: var(--cyber-monterey-bg);
+    filter: none;
+    transform: none;
+    will-change: auto;
+  }
+}
+</style>

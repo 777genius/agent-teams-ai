@@ -40,12 +40,6 @@ export interface WorkspaceTrustPlanningLogger {
   warn(message: string): void;
 }
 
-export interface WorkspaceTrustGitRootResolutionPorts {
-  resolveGitTopLevel(cwd: string): Promise<string | null>;
-  resolveFilesystemGitRoot(cwd: string): Promise<string | null>;
-  isAbsolutePath(value: string): boolean;
-}
-
 export interface WorkspaceTrustWorkspaceCollectionPorts {
   getHomeDir(): string;
   realpath(value: string): Promise<string | null>;
@@ -146,20 +140,6 @@ export function collectWorkspaceTrustProviders(input: {
   return providerOrder.filter((provider) => providers.has(provider));
 }
 
-export async function resolveWorkspaceTrustGitRoot(
-  cwd: string,
-  ports: WorkspaceTrustGitRootResolutionPorts
-): Promise<string | null> {
-  const normalizedCwd = cwd.trim();
-  if (!normalizedCwd) {
-    return null;
-  }
-  const gitRoot = (await ports.resolveGitTopLevel(normalizedCwd))?.trim() ?? null;
-  return gitRoot && ports.isAbsolutePath(gitRoot)
-    ? gitRoot
-    : ports.resolveFilesystemGitRoot(normalizedCwd);
-}
-
 export async function collectWorkspaceTrustWorkspaces(input: {
   cwd: string;
   members: TeamCreateRequest['members'];
@@ -178,9 +158,11 @@ export async function collectWorkspaceTrustWorkspaces(input: {
     if (gitRoot === undefined) {
       const resolvedGitRoot = await input.ports.resolveGitRoot(cwd);
       const realGitRoot = resolvedGitRoot ? await input.ports.realpath(resolvedGitRoot) : null;
+      // A root that disappeared or cannot be resolved is not trust evidence.
+      // Never promote the earlier unverified spelling after a failed realpath.
       gitRoot = realGitRoot
         ? await input.ports.resolveCanonicalGitRoot(realGitRoot)
-        : resolvedGitRoot;
+        : null;
       gitRootCache.set(cwd, gitRoot);
     }
     candidates.push(

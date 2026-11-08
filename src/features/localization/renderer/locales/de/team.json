@@ -1505,13 +1505,24 @@
       "labelPlaceholder": "z.B., Tägliche Code-Bewertung, nächtliche Tests...",
       "maxBudgetUsd": "Max Budget (USD)",
       "maxTurns": "Max dreht",
+      "executionLimitsNote": "Diese Limits gelten nur für eigenständige einmalige Ausführungen. Sie gelten nicht für Aufgaben, die einem bereits laufenden Team zugewiesen werden.",
       "noLimit": "Keine Begrenzung",
       "noMatches": "Keine Teams passen zu Ihrer Suche.",
       "noTeams": "Keine Teams verfügbar. Erstellen Sie zuerst ein Team.",
       "searchTeams": "Suchteams...",
       "selectTeam": "Wählen Sie ein Team aus...",
       "team": "Team",
-      "title": "Fälligkeitsplan"
+      "title": "Fälligkeitsplan",
+      "execution": "Ausführung",
+      "legacyNotice": "Bestehender einmaliger Zeitplan: Speichern ändert das bisherige Verhalten nicht.",
+      "upgradeSmart": "Zur intelligenten Planung wechseln",
+      "oneAgent": "Ein Agent",
+      "wholeTeam": "Gesamtes Team",
+      "target": "Zuständig bei laufendem Team",
+      "leadDefault": "Teamleitung (Standard)",
+      "agentDescription": "Ist das Team gestoppt, wird ein eigenständiger Agent gestartet; andernfalls wird eine Aufgabe zugewiesen.",
+      "teamDescription": "Ist das Team gestoppt, wird es gestartet; andernfalls erhält die Teamleitung eine Aufgabe. Gespeicherte Einstellungen werden verwendet.",
+      "teamPathMissing": "Speichere den Projektordner des Teams, bevor du einen Start planst."
     },
     "title": {
       "createSchedule": "Plan erstellen",
@@ -2124,7 +2135,9 @@
     "status": {
       "active": "Aktiv",
       "paused": "Ausgewählt",
-      "disabled": "Behinderte"
+      "disabled": "Behinderte",
+      "hostUnsupported": "Host-Zeitplanung nicht verfügbar",
+      "saved": "Gespeichert"
     },
     "runStatus": {
       "pending": "Ausgaben",
@@ -2134,7 +2147,9 @@
       "completed": "abgeschlossen",
       "failed": "Versäumt",
       "interrupted": "Unterbrechung",
-      "cancelled": "gekündigt"
+      "cancelled": "gekündigt",
+      "dispatched": "Übergeben",
+      "skipped": "Übersprungen"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2438,10 @@
       "hiddenCount": "{{count}} versteckt",
       "trash": "Müll",
       "gridView": "Blick auf das Netz",
-      "columnsView": "Ansicht der Kolumnen"
+      "columnsView": "Ansicht der Kolumnen",
+      "tableView": "Tabellenansicht",
+      "configureColumns": "Spalten auswählen",
+      "resizeColumn": "Breite ändern: {{column}}"
     },
     "trash": {
       "title": "Müll",

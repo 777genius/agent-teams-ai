@@ -15,6 +15,9 @@ import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy'
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { del, get, set } from 'idb-keyval';
 
+import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
+
+import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   TeamFastMode,
   TeamMemberMcpPolicy,
@@ -37,6 +40,7 @@ export interface SerializedMemberDraft {
   roleSelection: string;
   customRole: string;
   workflow?: string;
+  workflowChips?: InlineChip[];
   isolation?: 'worktree';
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
@@ -57,10 +61,21 @@ export interface CreateTeamDraftSnapshot {
   teammateWorktreeDefault?: boolean;
   cwdMode: 'project' | 'custom';
   selectedProjectPath: string;
+  /** Old drafts have no provenance; treat their selection conservatively. */
+  projectSelectionExplicit?: boolean;
   customCwd: string;
   soloTeam: boolean;
   launchTeam: boolean;
   teamColor: string;
+  /** Optional, for backwards-compatible restoration of old creation drafts. */
+  limitContext?: boolean;
+  skipPermissions?: boolean;
+  selectedEffort?: string;
+  selectedFastMode?: TeamFastMode;
+  /** Optional for backward-compatible v1 draft restoration. */
+  organizationPlacementEnabled?: boolean;
+  organizationPlacementOrganizationId?: string;
+  organizationPlacementParentId?: string;
   updatedAt: number;
 }
 
@@ -86,6 +101,21 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
     typeof obj.name === 'string' &&
     typeof obj.roleSelection === 'string' &&
     typeof obj.customRole === 'string' &&
+    (obj.workflowChips === undefined ||
+      (Array.isArray(obj.workflowChips) &&
+        obj.workflowChips.every((chip: unknown) => {
+          if (!chip || typeof chip !== 'object') return false;
+          const c = chip as Record<string, unknown>;
+          return (
+            typeof c.id === 'string' &&
+            typeof c.filePath === 'string' &&
+            typeof c.fileName === 'string' &&
+            (c.fromLine === null || typeof c.fromLine === 'number') &&
+            (c.toLine === null || typeof c.toLine === 'number') &&
+            typeof c.codeText === 'string' &&
+            typeof c.language === 'string'
+          );
+        }))) &&
     (obj.isolation === undefined || obj.isolation === 'worktree') &&
     (obj.providerId === undefined || isTeamProviderId(obj.providerId)) &&
     (obj.providerBackendId === undefined ||
@@ -120,10 +150,21 @@ function isValidSnapshot(data: unknown): data is CreateTeamDraftSnapshot {
       typeof obj.teammateWorktreeDefault === 'boolean') &&
     (obj.cwdMode === 'project' || obj.cwdMode === 'custom') &&
     typeof obj.selectedProjectPath === 'string' &&
+    (obj.projectSelectionExplicit === undefined || typeof obj.projectSelectionExplicit === 'boolean') &&
     typeof obj.customCwd === 'string' &&
     typeof obj.soloTeam === 'boolean' &&
     typeof obj.launchTeam === 'boolean' &&
     typeof obj.teamColor === 'string' &&
+    (obj.limitContext === undefined || typeof obj.limitContext === 'boolean') &&
+    (obj.skipPermissions === undefined || typeof obj.skipPermissions === 'boolean') &&
+    (obj.selectedEffort === undefined || typeof obj.selectedEffort === 'string') &&
+    (obj.selectedFastMode === undefined || ['inherit', 'on', 'off'].includes(obj.selectedFastMode as string)) &&
+    (obj.organizationPlacementEnabled === undefined ||
+      typeof obj.organizationPlacementEnabled === 'boolean') &&
+    (obj.organizationPlacementOrganizationId === undefined ||
+      typeof obj.organizationPlacementOrganizationId === 'string') &&
+    (obj.organizationPlacementParentId === undefined ||
+      typeof obj.organizationPlacementParentId === 'string') &&
     typeof obj.updatedAt === 'number'
   );
 }
@@ -150,20 +191,36 @@ function markIdbUnavailable(): void {
 // Core API
 // ---------------------------------------------------------------------------
 
-async function saveSnapshot(snapshot: CreateTeamDraftSnapshot): Promise<void> {
-  if (idbUnavailable) {
-    fallbackStore.set(STORAGE_KEY, snapshot);
-    return;
-  }
-  try {
-    await set(STORAGE_KEY, snapshot);
-  } catch {
-    markIdbUnavailable();
-    fallbackStore.set(STORAGE_KEY, snapshot);
-  }
+// IndexedDB set/del are asynchronous. Serialize mutations so a late debounced
+// save cannot resurrect a draft that was cleared after successful creation.
+let pendingMutation: Promise<void> = Promise.resolve();
+function serializeMutation(operation: () => Promise<void>): Promise<void> {
+  const next = pendingMutation.then(operation);
+  pendingMutation = next.catch(() => undefined);
+  return next;
+}
+
+async function saveSnapshot(
+  snapshot: CreateTeamDraftSnapshot,
+  generation?: number
+): Promise<void> {
+  return serializeMutation(async () => {
+    if (generation !== undefined && !isCreateTeamDraftGenerationCurrent(generation)) return;
+    if (idbUnavailable) {
+      fallbackStore.set(STORAGE_KEY, snapshot);
+      return;
+    }
+    try {
+      await set(STORAGE_KEY, snapshot);
+    } catch {
+      markIdbUnavailable();
+      fallbackStore.set(STORAGE_KEY, snapshot);
+    }
+  });
 }
 
 async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
+  await pendingMutation;
   if (idbUnavailable) {
     return fallbackStore.get(STORAGE_KEY) ?? null;
   }
@@ -171,8 +228,8 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
     const data = await get<unknown>(STORAGE_KEY);
     if (data == null) return null;
     if (isValidSnapshot(data)) return data;
-    // Invalid shape — discard silently
-    void del(STORAGE_KEY);
+    // Unknown/future data must not be deleted on read: preserve user work
+    // for a compatible recovery path rather than racing a newer edit.
     return null;
   } catch {
     markIdbUnavailable();
@@ -180,17 +237,20 @@ async function loadSnapshot(): Promise<CreateTeamDraftSnapshot | null> {
   }
 }
 
-async function deleteSnapshot(): Promise<void> {
-  if (idbUnavailable) {
-    fallbackStore.delete(STORAGE_KEY);
-    return;
-  }
-  try {
-    await del(STORAGE_KEY);
-  } catch {
-    markIdbUnavailable();
-    fallbackStore.delete(STORAGE_KEY);
-  }
+async function deleteSnapshot(generation?: number): Promise<void> {
+  return serializeMutation(async () => {
+    if (generation !== undefined && !isCreateTeamDraftGenerationCurrent(generation)) return;
+    if (idbUnavailable) {
+      fallbackStore.delete(STORAGE_KEY);
+      return;
+    }
+    try {
+      await del(STORAGE_KEY);
+    } catch {
+      markIdbUnavailable();
+      fallbackStore.delete(STORAGE_KEY);
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +270,9 @@ function emptySnapshot(): CreateTeamDraftSnapshot {
     soloTeam: false,
     launchTeam: true,
     teamColor: '',
+    organizationPlacementEnabled: false,
+    organizationPlacementOrganizationId: '',
+    organizationPlacementParentId: '',
     updatedAt: Date.now(),
   };
 }

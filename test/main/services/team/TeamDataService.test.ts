@@ -10,6 +10,7 @@ import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitId
 import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
+import { TeamDraftPreflightCollisionError } from '../../../../src/main/services/team/createDraftTeamConfig';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
@@ -663,8 +664,10 @@ describe('TeamDataService draft metadata', () => {
 
     await expect(
       new TeamDataService().createTeamConfig({ teamName: 'draft-team', members: [] })
-    ).rejects.toThrow('Team already exists');
+    ).rejects.toBeInstanceOf(TeamDraftPreflightCollisionError);
+    // Collision is detected before this team receives any directory or metadata.
     await expect(fs.access(path.join(claudeRoot, 'teams', 'draft-team'))).rejects.toThrow();
+    await expect(fs.access(path.join(claudeRoot, 'tasks', 'draft-team'))).resolves.toBeUndefined();
   });
 
   it('allows exactly one of two concurrent creates for the same team name', async () => {

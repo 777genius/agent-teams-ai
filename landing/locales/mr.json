@@ -136,7 +136,16 @@
       "launchProof": "सहकारी लॉन्च स्थिती",
       "orgGovernance": "संस्था आणि संपूर्ण आढावा",
       "budgetControls": "बजेट नियंत्रणे",
-      "price": "किंमत"
+      "price": "किंमत",
+      "desktopPlatforms": "समर्थित डेस्कटॉप प्लॅटफॉर्म"
+    },
+    "platforms": {
+      "desktopApp": "(डेस्कटॉप अॅप)",
+      "cliBinaries": "(CLI बायनरी)",
+      "noNativeDesktop": "नेटिव्ह डेस्कटॉप अॅप नाही (स्वतः होस्ट केलेले पॅनेल)",
+      "desktopIde": "(डेस्कटॉप IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 द्वारे (नेटिव्ह नाही)"
     }
   },
   "screenshots": {

@@ -98,39 +98,39 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const workspace = join(fixture.root, 'workspace');
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   await configureMixedCreateSettings(cdp, ui);
-  await ui.scrollTo('[role="dialog"] #launch-team', 'original Create save-only checkbox');
+  await ui.scrollTo('[data-testid="create-team-page"] #launch-team', 'original Create save-only checkbox');
   if (
     await cdp.evaluate(
-      `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='checked'`
+      `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='checked'`
     )
   )
-    await ui.click('[role="dialog"] #launch-team', 'original Create save-only checkbox');
+    await ui.click('[data-testid="create-team-page"] #launch-team', 'original Create save-only checkbox');
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
+    `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
     'Create save-only retained'
   );
   await ui.scrollTo(
-    '[role="dialog"] #sync-models-with-lead',
+    '[data-testid="create-team-page"] #sync-models-with-lead',
     'original independent provider settings'
   );
   if (
     await cdp.evaluate(
-      `document.querySelector('[role="dialog"] #sync-models-with-lead')?.getAttribute('data-state')==='checked'`
+      `document.querySelector('[data-testid="create-team-page"] #sync-models-with-lead')?.getAttribute('data-state')==='checked'`
     )
   )
     await ui.click(
-      '[role="dialog"] #sync-models-with-lead',
+      '[data-testid="create-team-page"] #sync-models-with-lead',
       'disable original provider/model synchronization'
     );
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #sync-models-with-lead')?.getAttribute('data-state')==='unchecked'`,
+    `document.querySelector('[data-testid="create-team-page"] #sync-models-with-lead')?.getAttribute('data-state')==='unchecked'`,
     'original independent provider settings retained'
   );
-  await ui.scrollTo('[role="dialog"] button', 'existing member JSON editor', 'Edit as JSON');
-  await ui.click('[role="dialog"] button', 'open existing member JSON editor', 'Edit as JSON');
-  await ui.scrollTo('[role="dialog"] .cm-editor', 'original member JSON input');
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'existing member JSON editor', 'Edit as JSON');
+  await ui.click('[data-testid="create-team-page"] button', 'open existing member JSON editor', 'Edit as JSON');
+  await ui.scrollTo('[data-testid="create-team-page"] .cm-editor', 'original member JSON input');
   await ui.click(
-    '[role="dialog"] .cm-editor .cm-content .cm-line:first-child',
+    '[data-testid="create-team-page"] .cm-editor .cm-content .cm-line:first-child',
     'focus original member JSON input'
   );
   await cdp.send('Input.dispatchKeyEvent', {
@@ -150,17 +150,17 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     text: JSON.stringify(mixedConfiguredMembers, null, 2),
   });
   await ui.waitRead(
-    `(() => {const rows=[...document.querySelectorAll('[role="dialog"] [data-role="member-row"] input[aria-label^="Member "]')]; return rows.length===2&&rows[0].value==='bob'&&rows[1].value==='carol'})()`,
+    `(() => {const rows=[...document.querySelectorAll('[data-testid="create-team-page"] [data-role="member-row"] input[aria-label^="Member "]')]; return rows.length===2&&rows[0].value==='bob'&&rows[1].value==='carol'})()`,
     'original form renders the two entered provider rows'
   );
-  await ui.scrollTo('[role="dialog"] button', 'original save-only Create control', 'Create');
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'original save-only Create control', 'Create');
   await ui.click(
-    '[role="dialog"] button',
+    '[data-testid="create-team-page"] button',
     'Create the original saved3-member roster once',
     'Create'
   );
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"] #team-name')`,
+    `!document.querySelector('[data-testid="create-team-page"] #team-name')`,
     'original Create closes',
     90_000
   );

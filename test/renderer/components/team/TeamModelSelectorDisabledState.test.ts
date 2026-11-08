@@ -260,6 +260,7 @@ vi.mock('@tanstack/react-virtual', () => ({
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
 import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
@@ -520,6 +521,153 @@ describe('TeamModelSelector disabled Codex models', () => {
     useVirtualizerMock.mockClear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('shows OpenCode source discovery while Codex is selected and clears it when loading ends', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.cliProviderStatusLoading = { opencode: true };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+
+    await act(async () => {
+      render();
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+    ).not.toBeNull();
+
+    storeState.cliProviderStatusLoading = {};
+    await act(async () => {
+      render();
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+    ).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it('settles source discovery, failures, and empty state without switching away from Codex', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const projectPath = '/tmp/sidebar-directory-project';
+    const directory = {
+      enabled: true,
+      projectPath,
+      entries: [],
+      loading: true,
+      loaded: false,
+      authoritativeLoaded: false,
+      authoritativePending: true,
+      error: null as string | null,
+      refresh: vi.fn(),
+    };
+    const render = (state: typeof directory, providerId: 'codex' | 'opencode' = 'codex') =>
+      root.render(
+        React.createElement(
+          OpenCodeSourceDirectoryContext.Provider,
+          { value: state },
+          React.createElement(TeamModelSelector, {
+            providerId,
+            projectPath,
+            onProviderChange: () => undefined,
+            onValueChange: () => undefined,
+            value: '',
+          })
+        )
+      );
+
+    try {
+      await act(async () => {
+        render(directory);
+        await Promise.resolve();
+      });
+      expect(
+        host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+      ).not.toBeNull();
+
+      await act(async () => {
+        render({ ...directory, loading: false, authoritativePending: false, error: 'Directory lookup failed' });
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Directory lookup failed');
+      expect(
+        host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+      ).toBeNull();
+
+      const settled = { ...directory, loading: false, authoritativePending: false, loaded: true };
+      await act(async () => {
+        render(settled);
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('No sources found.');
+
+      await act(async () => {
+        render(settled, 'opencode');
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('No sources found.');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('does not apply an in-flight project A directory to project B', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.cliProviderStatusLoading = { opencode: true };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const oldProjectDirectory = {
+      enabled: true,
+      projectPath: '/tmp/source-project-A',
+      entries: [],
+      loading: true,
+      loaded: false,
+      authoritativeLoaded: false,
+      authoritativePending: true,
+      error: null,
+      refresh: vi.fn(),
+    };
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(
+            OpenCodeSourceDirectoryContext.Provider,
+            { value: oldProjectDirectory },
+            React.createElement(TeamModelSelector, {
+              providerId: 'codex',
+              projectPath: '/tmp/source-project-B',
+              onProviderChange: () => undefined,
+              onValueChange: () => undefined,
+              value: '',
+            })
+          )
+        );
+        await Promise.resolve();
+      });
+      expect(
+        host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
+      ).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('requests only the selected deferred Codex provider once across rerenders', async () => {

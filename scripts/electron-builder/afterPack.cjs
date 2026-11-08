@@ -1,3 +1,4 @@
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -410,13 +411,31 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
 // inherits this allowance through validateNativeBinaries.
 const OPENCODE_CONSOLE_WRAPPER_PATH = 'resources/runtime/opencode-console/opencode.exe';
 
-function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform) {
+function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, clrManaged = false, targetArch = null) {
   const normalizedPath = relativePath.split(path.sep).join('/');
+  // Git Credential Manager ships portable CLR assemblies that have an ia32 PE
+  // header even in the macOS/Linux Git distributions. This is not native x86.
+  const managedGitLibrary =
+    /^(?:(?:[^/]+\.app\/)?Contents\/Resources\/git|resources\/git)\/(?:libexec\/git-core|(?:ucrt64|clangarm64)\/(?:libexec\/git-core|bin))\/(?:[^/]+\/)*[^/]+\.dll$/i.test(normalizedPath);
+  if (managedGitLibrary && clrManaged && format === 'pe') {
+    return true;
+  }
+  // Dugite's pinned Windows ARM64 distribution intentionally ships x64 MSYS2
+  // command-line helpers in usr/. Do not relax the architecture guard elsewhere.
+  if (
+    targetPlatform === 'win32' &&
+    targetArch === 'arm64' &&
+    /^resources\/git\/usr\/(?:bin|lib|libexec)\/(?:[^/]+\/)*[^/]+\.(?:exe|dll)$/i.test(normalizedPath) &&
+    format === 'pe' && archs.size === 1 && archs.has('x64')
+  ) return true;
+
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
   const isAllowedIa32Path =
     normalizedPath === ssh2PageantPath ||
     normalizedPath.endsWith(`/${ssh2PageantPath}`) ||
-    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH;
+    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
+    // Git for Windows contains this one 32-bit MSYS helper even in 64-bit archives.
+    normalizedPath === 'resources/git/usr/libexec/getprocaddr32.exe';
 
   return (
     targetPlatform === 'win32' &&
@@ -609,7 +628,22 @@ function parsePortableExecutable(buffer) {
             ? 'armv7l'
             : null;
 
-  return arch ? { format: 'pe', archs: new Set([arch]) } : null;
+  if (!arch) return null;
+  // IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR (index 14) identifies CLR assemblies.
+  // A native PE that merely has a .dll extension must never bypass the
+  // existing platform/architecture guard.
+  const optionalHeader = peOffset + 24;
+  const headerSize = buffer.length >= optionalHeader ? buffer.readUInt16LE(peOffset + 20) : 0;
+  const magic = buffer.length >= optionalHeader + 2 ? buffer.readUInt16LE(optionalHeader) : 0;
+  const directoryStart = optionalHeader + (magic === 0x10b ? 96 : magic === 0x20b ? 112 : -1000);
+  const clrOffset = directoryStart + 14 * 8;
+  const isClrManaged =
+    (magic === 0x10b || magic === 0x20b) &&
+    headerSize >= clrOffset - optionalHeader + 8 &&
+    buffer.length >= clrOffset + 8 &&
+    buffer.readUInt32LE(clrOffset) !== 0 &&
+    buffer.readUInt32LE(clrOffset + 4) !== 0;
+  return { format: 'pe', archs: new Set([arch]), ...(isClrManaged ? { clrManaged: true } : {}) };
 }
 
 async function detectBinaryMetadata(filePath) {
@@ -652,7 +686,9 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
     }
 
     if (
-      isKnownAllowedNativeMismatch(relativePath, metadata.format, metadata.archs, targetPlatform)
+      isKnownAllowedNativeMismatch(
+        relativePath, metadata.format, metadata.archs, targetPlatform, metadata.clrManaged, targetArch
+      )
     ) {
       continue;
     }
@@ -665,6 +701,42 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
   }
 
   return mismatches;
+}
+
+/**
+ * electron-builder signs the outer .app but embedded command-line Git helpers
+ * live in Contents/Resources. Sign these Mach-O files before the outer app.
+ * The existing signing qualification scans EVERY Mach-O and verifies Team ID.
+ */
+async function signManagedGitBinaries(context) {
+  if (context.electronPlatformName !== 'darwin') return;
+  const identity = context.packager?.platformSpecificBuildOptions?.identity;
+  if (!identity || identity === '-') return; // Unsigned packaged PR smoke.
+  // Lazily initializes CSC_LINK's temporary signing keychain before afterPack.
+  // This is the same keychain electron-builder uses when it signs the outer app.
+  const keychain = (await context.packager.codeSigningInfo.value)?.keychainFile;
+  const selected = await context.packager.helper.findSigningIdentity(
+    false, false, identity, keychain, context.packager.platformSpecificBuildOptions
+  );
+  if (!selected) throw new Error('No trusted macOS signing identity for bundled Git');
+  const root = path.join(context.appOutDir, 'Agent Teams AI.app', 'Contents', 'Resources', 'git');
+  if (!fs.existsSync(root)) throw new Error('Bundled Git is missing before macOS signing');
+  const files = await walkFiles(root);
+  let count = 0;
+  for (const file of files) {
+    const metadata = await detectBinaryMetadata(file);
+    if (metadata?.format !== 'mach-o') continue;
+    const result = spawnSync('codesign', [
+      '--force', '--options', 'runtime', '--timestamp',
+      ...(keychain ? ['--keychain', keychain] : []),
+      '--sign', selected.name, file,
+    ], { encoding: 'utf8', timeout: 120_000 });
+    if (result.error || result.status !== 0) {
+      throw new Error(`Failed to sign bundled Git ${file}: ${result.stderr || result.error?.message}`);
+    }
+    count += 1;
+  }
+  console.log(`[afterPack] signed ${count} embedded Git Mach-O binaries`);
 }
 
 async function afterPack(context) {
@@ -687,6 +759,8 @@ async function afterPack(context) {
       `Found incompatible native binaries in ${targetPlatform}-${targetArch} bundle after pruning.\n${details}`
     );
   }
+
+  await signManagedGitBinaries(context);
 
   if (removedPaths.length > 0) {
     console.log(

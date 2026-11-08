@@ -1505,13 +1505,24 @@
       "labelPlaceholder": "hal., Araw-araw na code review, Gabing test...",
       "maxBudgetUsd": "Max na badyet (USD)",
       "maxTurns": "Max na turn",
+      "executionLimitsNote": "Ang mga limitasyong ito ay para lamang sa hiwalay na isang beses na pagpapatakbo. Hindi ito nalalapat sa mga gawaing itinalaga sa tumatakbong team.",
       "noLimit": "Walang limitasyon",
       "noMatches": "Walang team na tumutugma sa iyong paghahanap.",
       "noTeams": "Walang available na team. Lumikha muna ng team.",
       "searchTeams": "Maghanap ng mga team...",
       "selectTeam": "Pumili ng team...",
       "team": "Team",
-      "title": "Schedule"
+      "title": "Schedule",
+      "execution": "Pagpapatakbo",
+      "legacyNotice": "Umiiral na isang-beses na iskedyul: hindi mababago ng pag-save ang dating kilos nito.",
+      "upgradeSmart": "Lumipat sa matalinong iskedyul",
+      "oneAgent": "Isang agent",
+      "wholeTeam": "Buong team",
+      "target": "Tatanggap kapag tumatakbo ang team",
+      "leadDefault": "Team lead (default)",
+      "agentDescription": "Kapag hindi tumatakbo ang team, maglulunsad ng hiwalay na agent; kung aktibo, magtatalaga ng gawain.",
+      "teamDescription": "Kapag hindi tumatakbo ang team, sisimulan ito; kung aktibo, magtatalaga ng gawain sa lead. Gagamitin ang naka-save na setting.",
+      "teamPathMissing": "I-save muna ang project folder ng team bago mag-iskedyul ng paglulunsad."
     },
     "title": {
       "createSchedule": "Lumikha ng Schedule",
@@ -2124,7 +2135,9 @@
     "status": {
       "active": "Aktibo",
       "paused": "Naka-pause",
-      "disabled": "Naka-disable"
+      "disabled": "Naka-disable",
+      "hostUnsupported": "Hindi magagamit ang pag-iskedyul sa Host",
+      "saved": "Naka-save"
     },
     "runStatus": {
       "pending": "Nakabinbin",
@@ -2134,7 +2147,9 @@
       "completed": "Tapos na",
       "failed": "Nabigo",
       "interrupted": "Naantala",
-      "cancelled": "Kinansela"
+      "cancelled": "Kinansela",
+      "dispatched": "Naipadala",
+      "skipped": "Nilaktawan"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2438,10 @@
       "hiddenCount": "{{count}} nakatago",
       "trash": "Trash",
       "gridView": "Grid view",
-      "columnsView": "Columns view"
+      "columnsView": "Columns view",
+      "tableView": "View ng talahanayan",
+      "configureColumns": "Piliin ang mga column",
+      "resizeColumn": "Baguhin ang lapad ng {{column}}"
     },
     "trash": {
       "title": "Trash",

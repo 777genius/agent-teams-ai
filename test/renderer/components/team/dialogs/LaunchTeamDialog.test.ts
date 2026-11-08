@@ -78,6 +78,20 @@ const createTeamDraftMock = vi.hoisted(() => ({
     setLaunchTeam: vi.fn(),
     teamColor: 'slate',
     setTeamColor: vi.fn(),
+    limitContext: false,
+    setLimitContext: vi.fn(),
+    skipPermissions: true,
+    setSkipPermissions: vi.fn(),
+    selectedEffort: '' as string,
+    setSelectedEffort: vi.fn(),
+    selectedFastMode: 'inherit' as 'inherit' | 'on' | 'off',
+    setSelectedFastMode: vi.fn(),
+    organizationPlacementEnabled: false,
+    setOrganizationPlacementEnabled: vi.fn(),
+    organizationPlacementOrganizationId: '',
+    setOrganizationPlacementOrganizationId: vi.fn(),
+    organizationPlacementParentId: '',
+    setOrganizationPlacementParentId: vi.fn(),
     isLoaded: true,
     clearDraft: vi.fn(),
   },
@@ -2153,6 +2167,10 @@ describe('LaunchTeamDialog', () => {
           await flush();
         });
         await flushCustomFolderProbe();
+        // Billing and launch semantics depend on the actual provider and live-team state.
+        // Never show a stale separate Agent SDK credit warning or claim every run is claude -p.
+        expect(host.textContent).not.toContain('Starting June 15, 2026');
+        expect(host.textContent).not.toContain('claude -p');
         const submit = Array.from(host.querySelectorAll('button')).find(
           (button) => button.textContent?.trim() === 'Save Changes'
         )!;
@@ -5854,12 +5872,15 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).toContain('model:claude-opus-4-6');
     expect(host.textContent).toContain('effort:max');
     expect(host.textContent).toContain('fast:on');
-    expect(host.textContent).toContain('monthly Agent SDK credit');
+    // Only legacy one-shot schedules have an effective CLI warm-up option.
+    expect(host.textContent).toContain('Warm-up time');
+    expect(host.textContent).not.toContain('monthly Agent SDK credit');
+    expect(host.textContent).not.toContain('claude -p');
     expect(
       host.querySelector(
         'a[href="https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan"]'
       )
-    ).toBeTruthy();
+    ).toBeNull();
 
     await flushCustomFolderProbe();
 
@@ -5874,6 +5895,8 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(updateSchedule).toHaveBeenCalledTimes(1);
+    // Editing a persisted record without executionMode must not upgrade it.
+    expect(updateSchedule.mock.calls[0]?.[1]).not.toHaveProperty('executionMode');
     expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
       launchConfig: {
         cwd: '/tmp/project',
@@ -5891,6 +5914,101 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('saves an explicitly selected whole-team mode without a migration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'schedule',
+            open: true,
+            teamName: 'team-alpha',
+            onClose: vi.fn(),
+            schedule: {
+              id: 'smart-schedule-1',
+              teamName: 'team-alpha',
+              executionMode: 'agent',
+              targetMember: 'alice',
+              cronExpression: '0 9 * * 1-5',
+              timezone: 'UTC',
+              status: 'active',
+              warmUpMinutes: 15,
+              maxConsecutiveFailures: 3,
+              consecutiveFailures: 0,
+              maxTurns: 50,
+              createdAt: '2026-11-07T00:00:00.000Z',
+              updatedAt: '2026-11-07T00:00:00.000Z',
+              launchConfig: {
+                cwd: '/tmp/project',
+                prompt: 'Review open PRs',
+                providerId: 'anthropic',
+                model: 'sonnet',
+              },
+            } as any,
+          })
+        );
+        await flush();
+      });
+
+      const recipientSelect = host.querySelector(
+        'button[role="combobox"][aria-label="Target when team is running"]'
+      );
+      expect(recipientSelect).toBeTruthy();
+      expect(recipientSelect?.textContent).toContain('alice');
+      const wholeTeam = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Whole team'
+      );
+      expect(wholeTeam).toBeTruthy();
+
+      await act(async () => {
+        wholeTeam?.click();
+        await flush();
+      });
+      expect(wholeTeam?.getAttribute('aria-pressed')).toBe('true');
+      expect(host.textContent).not.toContain('Warm-up time');
+
+      const save = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        members: [{ name: 'alice' }],
+      });
+      await act(async () => {
+        save?.click();
+        await flush();
+      });
+
+      expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+      expect(updateSchedule).toHaveBeenCalledOnce();
+      expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
+        executionMode: 'team',
+        targetMember: 'alice',
+        warmUpMinutes: 0,
+        launchConfig: { cwd: '/tmp/project', prompt: 'Review open PRs' },
+      });
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
   });
 
   it('preserves Codex schedule backend lane and effort and defaults missing fast mode to off', async () => {
@@ -6930,6 +7048,12 @@ describe('LaunchTeamDialog', () => {
     localStorage.setItem('team:lastSelectedModel:anthropic', 'sonnet');
     createTeamDraftMock.state.soloTeam = true;
     const originalName = createTeamDraftMock.state.teamName;
+    const originalEffort = createTeamDraftMock.state.selectedEffort;
+    // This test uses a plain-object useCreateTeamDraft mock. Make its setter
+    // preserve the requested value, then explicitly render as the real hook does.
+    createTeamDraftMock.state.setSelectedEffort.mockImplementation((value: string) => {
+      createTeamDraftMock.state.selectedEffort = value;
+    });
     const provider = createAuthoritativeProviderStatus('anthropic', ['sonnet', 'claude-opus-4-6']);
     provider.modelCatalog!.models.forEach((model) => {
       model.supportedReasoningEfforts = ['low', 'medium', 'high', 'max'];
@@ -7013,10 +7137,16 @@ describe('LaunchTeamDialog', () => {
       await settle();
       await act(async () => {
         teamRosterEditorSectionMock.lastProps.onModelChange('claude-opus-4-6');
-        teamRosterEditorSectionMock.lastProps.onEffortChange('medium');
         await flush();
       });
       await settle();
+      await act(async () => {
+        teamRosterEditorSectionMock.lastProps.onEffortChange('medium');
+        render();
+        await flush();
+      });
+      await settle();
+      expect(teamRosterEditorSectionMock.lastProps.effort).toBe('medium');
       await act(async () => {
         const textarea = host.querySelector<HTMLTextAreaElement>('#team-prompt')!;
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
@@ -7068,6 +7198,8 @@ describe('LaunchTeamDialog', () => {
       );
     } finally {
       createTeamDraftMock.state.teamName = originalName;
+      createTeamDraftMock.state.selectedEffort = originalEffort;
+      createTeamDraftMock.state.setSelectedEffort.mockReset();
       vi.mocked(api.teams.prepareProvisioning).mockImplementation(originalPrepare);
       await act(async () => root.unmount());
     }
@@ -7682,8 +7814,13 @@ describe('LaunchTeamDialog', () => {
       await createPromise;
       await flush();
     });
-    expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
-    expect(onClose).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(onOpenTeam, (host.textContent ?? '').slice(-1200)).toHaveBeenCalledWith(
+        'team-alpha',
+        '/tmp/project'
+      );
+      expect(onClose).toHaveBeenCalledOnce();
+    });
 
     await act(async () => {
       root.unmount();

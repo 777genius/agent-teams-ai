@@ -11,6 +11,7 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  resolveManagedGitTarget,
   isRetryableAppleNotaryNetworkFailure,
   isRetryableDmgDetachFailure,
   runElectronBuilderOnce,
@@ -19,6 +20,18 @@ const {
 } = require('../../../scripts/electron-builder/dist-invocations.cjs');
 
 describe('electron-builder dist wrapper', () => {
+  it('stages one matching managed Git runtime per packaging invocation', () => {
+    expect(resolveManagedGitTarget(['--mac', '--arm64'], 'darwin', 'x64')).toBe('darwin-arm64');
+    expect(resolveManagedGitTarget(['--win', '--x64'], 'linux', 'x64')).toBe('win32-x64');
+    expect(resolveManagedGitTarget(['--win', 'nsis:arm64'], 'linux', 'x64')).toBe('win32-arm64');
+    expect(resolveManagedGitTarget(['--linux'], 'linux', 'x64')).toBe('linux-x64');
+    expect(packageJson.build.extraResources).toContainEqual({
+      from: 'resources/git',
+      to: 'git',
+      filter: ['**/*'],
+    });
+  });
+
   it('splits multi-platform builds so Linux-only package name overrides do not affect macOS or Windows', async () => {
     expect(
       buildElectronBuilderInvocations(

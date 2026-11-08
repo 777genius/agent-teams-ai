@@ -1505,13 +1505,24 @@
       "labelPlaceholder": "es. Revisione del codice quotidiana, Test notturni...",
       "maxBudgetUsd": "Budget massimo (USD)",
       "maxTurns": "Turni massimi",
+      "executionLimitsNote": "Questi limiti si applicano solo alle esecuzioni autonome una tantum. Non si applicano alle attività assegnate a un team già in esecuzione.",
       "noLimit": "Nessun limite",
       "noMatches": "Nessun team corrisponde alla tua ricerca.",
       "noTeams": "Nessun team disponibile. Crea prima un team.",
       "searchTeams": "Cerca team...",
       "selectTeam": "Seleziona un team...",
       "team": "Team",
-      "title": "Pianificazione"
+      "title": "Pianificazione",
+      "execution": "Esecuzione",
+      "legacyNotice": "Pianificazione singola esistente: il salvataggio non ne cambia il comportamento.",
+      "upgradeSmart": "Passa alla pianificazione intelligente",
+      "oneAgent": "Un agente",
+      "wholeTeam": "Tutto il team",
+      "target": "Destinatario quando il team è attivo",
+      "leadDefault": "Responsabile del team (predefinito)",
+      "agentDescription": "Se il team è fermo, avvia un agente separato; se è attivo, assegna un'attività.",
+      "teamDescription": "Se il team è fermo, lo avvia; se è attivo, assegna un'attività al responsabile. Usa le impostazioni salvate.",
+      "teamPathMissing": "Salva la cartella del progetto del team prima di pianificarne l'avvio."
     },
     "title": {
       "createSchedule": "Crea pianificazione",
@@ -2124,7 +2135,9 @@
     "status": {
       "active": "Attiva",
       "paused": "Sospesa",
-      "disabled": "Disabilitata"
+      "disabled": "Disabilitata",
+      "hostUnsupported": "Pianificazione Host non disponibile",
+      "saved": "Salvato"
     },
     "runStatus": {
       "pending": "In attesa",
@@ -2134,7 +2147,9 @@
       "completed": "Completata",
       "failed": "Non riuscita",
       "interrupted": "Interrotta",
-      "cancelled": "Annullata"
+      "cancelled": "Annullata",
+      "dispatched": "Inviato",
+      "skipped": "Saltato"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2438,10 @@
       "hiddenCount": "{{count}} nascosti",
       "trash": "Cestino",
       "gridView": "Vista griglia",
-      "columnsView": "Vista colonne"
+      "columnsView": "Vista colonne",
+      "tableView": "Vista tabella",
+      "configureColumns": "Scegli colonne",
+      "resizeColumn": "Ridimensiona {{column}}"
     },
     "trash": {
       "title": "Cestino",

@@ -554,7 +554,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -608,7 +608,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
     try {
       await act(async () => {
-        root.render(React.createElement(CliStatusBanner));
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
         await Promise.resolve();
       });
       await act(async () => {
@@ -671,7 +671,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -699,7 +699,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -726,7 +726,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -750,7 +750,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -778,7 +778,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await flushLazyImports();
     });
 
@@ -813,7 +813,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await flushLazyImports();
     });
 
@@ -858,7 +858,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await flushLazyImports();
     });
 
@@ -898,7 +898,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -953,7 +953,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1041,7 +1041,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1131,7 +1131,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1182,7 +1182,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1262,7 +1262,7 @@ describe('CLI status visibility during completed install state', () => {
       const root = createRoot(host);
       try {
         await act(async () => {
-          root.render(React.createElement(CliStatusBanner));
+          root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
           await Promise.resolve();
         });
         const row = host
@@ -1344,7 +1344,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1401,7 +1401,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1472,7 +1472,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1521,7 +1521,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1618,7 +1618,7 @@ describe('CLI status visibility during completed install state', () => {
       const root = createRoot(host);
 
       await act(async () => {
-        root.render(React.createElement(CliStatusBanner));
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
         await Promise.resolve();
       });
 
@@ -1685,7 +1685,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1832,7 +1832,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -1958,7 +1958,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2050,7 +2050,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2090,7 +2090,7 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
       expect(host.textContent).toContain('Unable to verify');
       expect(host.textContent).not.toContain(diagnostic);
       expect(host.textContent).not.toContain('Models unavailable for this runtime build');
@@ -2131,7 +2131,7 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
       expect(host.textContent).not.toContain('No models from connected providers');
       expect(host.textContent).not.toContain('Models unavailable for this runtime build');
       expect(host.textContent).toContain('minimax-m2.5-free');
@@ -2192,7 +2192,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2208,7 +2208,7 @@ describe('CLI status visibility during completed install state', () => {
 
     storeState.cliStatusLoading = true;
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
     expect(openCodeCatalogHookInputs.at(-1)).toMatchObject({
@@ -2219,7 +2219,7 @@ describe('CLI status visibility during completed install state', () => {
     storeState.cliStatusLoading = false;
     storeState.cliProviderStatusLoading = { opencode: true };
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
     expect(openCodeCatalogHookInputs.at(-1)).toMatchObject({
@@ -2229,7 +2229,7 @@ describe('CLI status visibility during completed install state', () => {
 
     storeState.cliProviderStatusLoading = {};
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
     expect(openCodeCatalogHookInputs.at(-1)).toMatchObject({
@@ -2291,7 +2291,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2345,7 +2345,7 @@ describe('CLI status visibility during completed install state', () => {
       document.body.appendChild(host);
       const root = createRoot(host);
       try {
-        act(() => root.render(React.createElement(CliStatusBanner)));
+        act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
         expect(host.textContent).toContain(`v${version} → v${latestVersion}`);
 
         storeState.openCodeRuntimeStatus = {
@@ -2353,7 +2353,7 @@ describe('CLI status visibility during completed install state', () => {
           state: 'failed',
           error: 'TEST native download failed',
         };
-        act(() => root.render(React.createElement(CliStatusBanner)));
+        act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
         expect(host.textContent).toContain('Retry install');
         expect(host.querySelector('[role="alert"]')?.textContent).toContain(
           'TEST native download failed'
@@ -2373,7 +2373,7 @@ describe('CLI status visibility during completed install state', () => {
           updateAvailable: false,
           state: 'ready',
         };
-        act(() => root.render(React.createElement(CliStatusBanner)));
+        act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
         expect(host.textContent).not.toContain(`v${version} → v${latestVersion}`);
         expect(
           Array.from(host.querySelectorAll('button')).some((button) =>
@@ -2418,7 +2418,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2429,7 +2429,7 @@ describe('CLI status visibility during completed install state', () => {
 
     storeState.cliStatus = createStatus(['gpt-5.5'], 'ready');
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2526,7 +2526,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2652,7 +2652,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2703,7 +2703,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2747,7 +2747,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2800,7 +2800,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await flushLazyImports();
     });
 
@@ -2876,7 +2876,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -2929,7 +2929,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3011,14 +3011,18 @@ describe('CLI status visibility during completed install state', () => {
 
     try {
       await act(async () => {
-        root.render(React.createElement(CliStatusBanner));
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: false }));
         await Promise.resolve();
       });
 
+      await act(async () => {
+        vi.advanceTimersByTime(60_000);
+        await Promise.resolve();
+      });
       expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
 
       await act(async () => {
-        vi.advanceTimersByTime(60_000);
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
         await Promise.resolve();
       });
 
@@ -3101,7 +3105,7 @@ describe('CLI status visibility during completed install state', () => {
 
     try {
       await act(async () => {
-        root.render(React.createElement(CliStatusBanner));
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
         await Promise.resolve();
       });
 
@@ -3150,7 +3154,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3228,7 +3232,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3285,7 +3289,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3385,7 +3389,7 @@ describe('CLI status visibility during completed install state', () => {
     const firstRoot = createRoot(firstHost);
 
     await act(async () => {
-      firstRoot.render(React.createElement(CliStatusBanner));
+      firstRoot.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3409,7 +3413,7 @@ describe('CLI status visibility during completed install state', () => {
     const secondRoot = createRoot(secondHost);
 
     await act(async () => {
-      secondRoot.render(React.createElement(CliStatusBanner));
+      secondRoot.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3445,7 +3449,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3700,7 +3704,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3742,7 +3746,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3812,7 +3816,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3854,7 +3858,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -3990,7 +3994,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4023,7 +4027,7 @@ describe('CLI status visibility during completed install state', () => {
       rateLimits: null,
     };
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4036,7 +4040,7 @@ describe('CLI status visibility during completed install state', () => {
 
     codexAccountHookState.rateLimitsLoading = false;
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4065,7 +4069,7 @@ describe('CLI status visibility during completed install state', () => {
       updatedAt: new Date(Date.now() + 1_000).toISOString(),
     };
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -4139,7 +4143,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4441,7 +4445,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4493,7 +4497,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4570,7 +4574,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4666,7 +4670,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4771,7 +4775,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4880,7 +4884,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
@@ -4904,12 +4908,12 @@ describe('CLI status visibility during completed install state', () => {
     storeState.cliInstallerState = 'idle';
     const root = createRoot(document.createElement('div'));
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
       storeState.bootstrapCliStatus.mockClear();
       for (let minute = 1; minute < 10; minute++) {
         await act(async () => vi.advanceTimersByTime(60_000));
         storeState.cliStatus = { ...storeState.cliStatus };
-        await act(async () => root.render(React.createElement(CliStatusBanner)));
+        await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
       }
       expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
       await act(async () => vi.advanceTimersByTime(60_000));
@@ -4928,7 +4932,7 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
       storeState.fetchOpenCodeRuntimeStatus.mockClear();
       expect(quickConnectRefreshKeys.at(-1)).toBe(0);
       expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
@@ -4978,7 +4982,7 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
       storeState.fetchCliProviderStatus.mockClear();
       await act(async () => {
         (host.querySelector('[title="Re-check Codex"]') as HTMLButtonElement).click();
@@ -5074,7 +5078,7 @@ describe('CLI status visibility during completed install state', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(CliStatusBanner));
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
       await Promise.resolve();
     });
 
