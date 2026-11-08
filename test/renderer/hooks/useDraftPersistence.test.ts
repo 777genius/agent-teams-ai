@@ -189,6 +189,35 @@ describe('draft hydration ordering', () => {
     vi.unstubAllGlobals();
   });
 
+  it('does not show Saved for a superseded create-team prompt write', async () => {
+    let releaseSave!: () => void;
+    const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const save = vi.spyOn(draftStorage, 'saveDraft')
+      .mockImplementationOnce(() => oldWrite)
+      .mockResolvedValue(undefined);
+    let draft!: ReturnType<typeof useDraftPersistence>;
+    function Input(): ReactElement {
+      draft = useDraftPersistence({ key: 'createTeam:prompt', debounceMs: 5 });
+      return createElement('textarea', { value: draft.value, readOnly: true });
+    }
+    const root = createRoot(document.createElement('div'));
+    vi.useFakeTimers();
+    try {
+      await act(async () => { root.render(createElement(Input)); });
+      await act(async () => { draft.setValue('older prompt'); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { draft.setValue('newer prompt'); });
+      await act(async () => { releaseSave(); await Promise.resolve(); });
+      expect(draft.value).toBe('newer prompt');
+      expect(draft.isSaved).toBe(false);
+    } finally {
+      await act(async () => { root.unmount(); });
+      vi.useRealTimers();
+      save.mockRestore();
+    }
+  });
+
   it('preserves fresh input and its pending save when an older draft finishes loading', async () => {
     let finishLoad!: (value: string | null) => void;
     const load = vi.spyOn(draftStorage, 'loadDraft').mockImplementation(
