@@ -212,7 +212,8 @@
           "title": "Edit tema (JSON)",
           "description": "Sehingga 8 tema. Warna mesti #RRGGBB. Hanya JSON sah digunakan; tatasusunan themes kosong memadam semuanya.",
           "cancel": "Batal",
-          "save": "Simpan tema"
+          "save": "Simpan tema",
+          "conflict": "Tema telah berubah di tab lain. Tutup dan buka semula editor supaya perubahan baharu tidak ditimpa."
         }
       },
       "uiScale": {

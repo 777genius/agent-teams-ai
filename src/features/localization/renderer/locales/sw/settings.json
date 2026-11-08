@@ -227,7 +227,8 @@
           "title": "Hariri mandhari (JSON)",
           "description": "Hadi mandhari 8. Rangi ziwe #RRGGBB. JSON halali pekee itatumika; orodha tupu ya themes hufuta mandhari zote.",
           "cancel": "Ghairi",
-          "save": "Hifadhi mandhari"
+          "save": "Hifadhi mandhari",
+          "conflict": "Mandhari zimebadilika katika kichupo kingine. Funga na ufungue tena kihariri ili usipoteze mabadiliko mapya."
         }
       },
       "uiScale": {
