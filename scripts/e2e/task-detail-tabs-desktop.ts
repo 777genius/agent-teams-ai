@@ -441,6 +441,54 @@ try {
   await until(() => cdp!.evaluate(
     `(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===window.__taskTabsAppearanceInitialTheme;})()`
   ), 'Appearance restores fixture theme');
+  // Custom Appearance E2E: exercise the actual Electron renderer, IPC and persisted
+  // local preference store (never synthetic React props or fabricated E2E receipts).
+  await cdp.evaluate(
+    "(()=>{const select=document.querySelector('[data-testid=\"appearance-ui-scale\"]');if(!(select instanceof HTMLSelectElement))throw Error('Missing interface scale');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;if(!setter)throw Error('No native select setter');setter.call(select,'125');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===125&&Math.abs(zoom-1.25)<0.02;})()"
+  ), 'Appearance applies and saves 125% through native Electron zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-125-desktop.png'));
+  await cdp.evaluate(
+    "(()=>{const select=document.querySelector('[data-testid=\"appearance-ui-scale\"]');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'200');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===200&&Math.abs(zoom-2)<0.02;})()"
+  ), 'Appearance applies and saves 200% through native Electron zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
+  await cdp.evaluate(
+    "(()=>{const select=document.querySelector('[data-testid=\"appearance-ui-scale\"]');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'100');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===100&&Math.abs(zoom-1)<0.02;})()"
+  ), 'Appearance resets native scale to 100%');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme editor missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Appearance JSON editor opens with real CodeMirror');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme save missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-custom-theme-select\"] option[value=\"my-theme\"]') && !document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Valid JSON theme is persisted and editor closes');
+  await cdp.evaluate(
+    "(()=>{const select=document.querySelector('[data-testid=\"appearance-custom-theme-select\"]');if(!(select instanceof HTMLSelectElement))throw Error('Custom theme selector missing');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'my-theme');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#818cf8';})()"
+  ), 'Custom theme applies CSS semantic tokens on the real root');
+  await cdp.screenshot(join(root, 'settings-appearance-custom-theme-desktop.png'));
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-dark\"]');if(!(button instanceof HTMLButtonElement))throw Error('Built-in theme missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId===null&&!document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='';})()"
+  ), 'Returning to built-in themes fully clears custom CSS overrides');
+  reads.push({ kind: 'appearance-custom-theme-and-zoom-real-electron', customJsonSaved: true, cssApplied: true, builtinsRestored: true, scales: [100,125,200] });
   reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
   }
 
