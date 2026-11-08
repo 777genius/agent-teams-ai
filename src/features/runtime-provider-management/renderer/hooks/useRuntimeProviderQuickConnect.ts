@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
@@ -9,7 +10,6 @@ import {
   publishRuntimeProviderDirectoryCache,
   publishRuntimeProviderConnectedCount,
 } from '../runtimeProviderDirectoryCache';
-import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 

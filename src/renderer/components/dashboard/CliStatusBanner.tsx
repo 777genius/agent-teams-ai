@@ -115,8 +115,8 @@ import {
   hasAvailableFreeOpenCodeDashboardModel,
 } from './openCodeDashboardCatalogPolicy';
 import { OpenCodeFreeTierUpdateAction } from './OpenCodeFreeTierUpdateAction';
-import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import { ProviderConnectionCounts } from './ProviderConnectionCounts';
+import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,

@@ -1,8 +1,9 @@
+import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+
 import type {
   RuntimeProviderConnectedCountObservation,
   RuntimeProviderDirectoryCacheSnapshot,
 } from '@features/runtime-provider-management/renderer';
-import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import type { CliProviderId, CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
 export const DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS = 2 * 60_000;

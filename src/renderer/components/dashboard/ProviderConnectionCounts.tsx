@@ -4,19 +4,19 @@ import type { DashboardConnectionSummary } from './providerConnectionSummary';
 import type { CliInstallationStatus } from '@shared/types';
 
 interface ProviderConnectionCountsProps {
-  summary: DashboardConnectionSummary;
-  cliStatus: Pick<CliInstallationStatus, 'installed' | 'authLoggedIn'> | null;
-  cliStatusLoading: boolean;
-  multimodelEnabled: boolean;
+  readonly summary: DashboardConnectionSummary;
+  readonly cliStatus: Pick<CliInstallationStatus, 'installed' | 'authLoggedIn'> | null;
+  readonly cliStatusLoading: boolean;
+  readonly multimodelEnabled: boolean;
 }
 
 /** Shared compact evidence labels: never initiate checks or infer launch readiness. */
-export function ProviderConnectionCounts({
+export const ProviderConnectionCounts = ({
   summary,
   cliStatus,
   cliStatusLoading,
   multimodelEnabled,
-}: ProviderConnectionCountsProps): React.JSX.Element {
+}: ProviderConnectionCountsProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const unknown = settingsT('runtimeProvider.badges.unknown');
@@ -39,7 +39,7 @@ export function ProviderConnectionCounts({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
       <span data-testid="dashboard-main-provider-count" className={summary.cliCountComplete && (summary.cliConnected ?? 0) > 0 ? 'text-green-400' : undefined}>
-        {multimodelEnabled ? 'CLI · ' : null}{cliText}
+        {multimodelEnabled ? 'Anthropic / Codex · ' : null}{cliText}
       </span>
       {multimodelEnabled && (
         <span data-testid="dashboard-opencode-provider-count" className={summary.openCodeConnected != null && summary.openCodeConnected > 0 ? 'text-green-400' : undefined}>
@@ -49,5 +49,4 @@ export function ProviderConnectionCounts({
         </span>
       )}
     </div>
-  );
-}
+  );};
