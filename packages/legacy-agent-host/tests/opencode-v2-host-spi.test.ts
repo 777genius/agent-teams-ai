@@ -52,6 +52,21 @@ function v2Profile() {
   };
 }
 
+// The runtime schema is intentionally stricter than the old vendor's
+// source-only test fixture. Windows must not be approved by a POSIX mock.
+function nativeV2Profile() {
+  const original = v2Profile();
+  if (process.platform !== 'win32') return original;
+  const separator = String.fromCharCode(92);
+  const root = 'C:' + separator + 'TEST-only-opencode-v2';
+  return {
+    ...original, cwd: root,
+    executable: { ...original.executable, path: root + separator + 'native-engine' },
+    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+      .map((key) => [key, root + separator + key])),
+  };
+}
+
 // The existing V1 capture stays POSIX-only even on Windows.
 function v1Profile() {
   return {
@@ -117,7 +132,7 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
 }
 
 test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv or version', () => {
-  const valid = v2Profile();
+  const valid = nativeV2Profile();
   assert.equal(runtimeProfileSchema.safeParse({ members: [valid] }).success, true);
   for (const invalid of [
     { ...valid, protocolRevision: '1.19.4' },
@@ -199,7 +214,7 @@ test('old pinned V2 driver does not qualify canonical Windows directory (expecte
 });
 
 test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
-  const base = runtimeProfileSchema.parse({ members: [v2Profile()] }).members[0]!;
+  const base = runtimeProfileSchema.parse({ members: [nativeV2Profile()] }).members[0]!;
   for (const permissions of ['manual', 'bypass'] as const) {
     assert.throws(() => applyLaunchConfiguration(base, { permissions }), (error: unknown) =>
       error instanceof Error && 'code' in error && error.code === 'invalid' &&
