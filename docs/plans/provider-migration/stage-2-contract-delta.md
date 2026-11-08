@@ -140,6 +140,20 @@ Exact reviewed sources:
   FAIL, 0 skipped). This is **only SQL feasibility**, not a production
   admission/route/generation owner; the independent Host B still redispatches.
   [Exact-head limitations](https://github.com/agent-teams-ai/agent-runtime/pull/260#issuecomment-6727117034).
+  **Pre-effect abort proof (8 Nov 2026):** A later Runtime #260 TEST-only
+  [commit `2c1e5a7d`](https://github.com/agent-teams-ai/agent-runtime/commit/2c1e5a7db5c7e737c4ff3d7111f3113bb663197b)
+  terminates an actual PostgreSQL backend holding an **uncommitted** unique claim,
+  then proves that a second backend can reserve the now-aborted intent once,
+  with further reservations denied. The [native PG18 E2E
+  #42527429133](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42527429133)
+  checked out that exact source on Node 24 and 26: each completed the new
+  SQL-only crash exercise and reached the unchanged cross-process Host M08
+  security oracle (**33 PASS, 1 deliberate RED FAIL, zero skips**). Neither
+  provider dispatch nor credential materialization occurs in this SQL-only
+  rollback case; it cannot authorize retries for uncertain external effects.
+  The existing synchronous `HostHttpConsumptionJournal.consume()` and
+  `routeFirstWrite` first-byte lease must not be quietly replaced with an
+  asynchronous SQL call. Production authority and reconciliation stay HOLD.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
