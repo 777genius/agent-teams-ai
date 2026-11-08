@@ -20,12 +20,12 @@ const { applyLaunchConfiguration } = await import(sourceMode
   ? '../src/composition/launchConfiguration.ts'
   : '../dist/composition/launchConfiguration.js');
 
-// Source-only SPI fixture uses the *old pinned provider's* POSIX test path.
-// That vendor rejects canonical C:\\ paths on Windows. Native Windows remains
-// HOLD until the corrected provider PR #2 package is pinned with its lockfile.
+// Synthetic TEST-only fixtures use canonical paths of the current OS.
+// These do not attest a real native process or qualify the Desktop product.
 function v2Profile() {
-  const separator = '/';
-  const root = '/TEST-only-opencode-v2';
+  const separator = process.platform === 'win32' ? String.fromCharCode(92) : '/';
+  const root = process.platform === 'win32'
+    ? 'C:' + separator + 'TEST-only-opencode-v2' : '/TEST-only-opencode-v2';
   return {
     provider: 'opencode' as const,
     nativeGeneration: 'v2' as const,
@@ -201,23 +201,23 @@ test('native V2 captures canonical OS paths without widening legacy V1 paths', (
   }
 });
 
-test('old pinned V2 driver does not qualify canonical Windows directory (expected HOLD)', async () => {
+test('corrected private V2 driver accepts canonical Windows TEST profile after captured owner proof', async () => {
   if (process.platform !== 'win32') return;
-  const separator = String.fromCharCode(92);
-  const native = v2Profile();
-  const root = 'C:' + separator + 'TEST-owned-v2';
-  const profile = {
-    ...native, cwd: root,
-    executable: { ...native.executable, path: root + separator + 'native.exe' },
-    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
-      .map((key) => [key, root + separator + key])),
-  };
+  const profile = nativeV2Profile();
   assert.equal(runtimeProfileSchema.safeParse({ members: [profile] }).success, true);
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(profile), captured);
-  await assert.rejects(provider.factory.open(request()), /opencode\.driver\.invalid-config/);
-  assert.equal(calls.probe, 0, 'old vendor must refuse before native probe');
-  assert.equal(calls.password, 0, 'old vendor must refuse before credential read');
+  const opened = await provider.factory.open(request());
+  try {
+    assert.equal(provider.isReady(), true, 'synthetic owner admission, not native qualification');
+    assert.equal(calls.probe, 1, 'corrected private driver reaches captured TEST owner');
+    assert.equal(calls.context, 1, 'initial TEST context attested once');
+    assert.equal(calls.stop, 0, 'no premature stop on valid canonical path');
+    assert.equal(calls.password, 0, 'TEST admission does not touch credentials');
+  } finally {
+    await opened.driver.close();
+    assert.equal(await provider.cleanup(), true);
+  }
 });
 
 test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
@@ -1346,18 +1346,16 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
   });
 
-// Pinned private PR #1 uses config.directory.startsWith('/') even on Windows.
-// This is a source-grounded qualification HOLD, not a native Windows test.
-// Do not replace the synthetic late-ACK fixture's path with a Windows drive
-// until the versioned private transport is independently qualified and pinned.
-test('pinned private V2 PR1 refuses Windows native cwd before network access (HOLD)',
+// Even though the corrected V2 driver admits canonical Windows directories,
+// drive-relative paths must fail before a native probe or credential access.
+test('private V2 driver refuses drive-relative Windows cwd before network access',
   { skip: process.platform !== 'win32' }, async () => {
-    const fixture = v2Profile();
-    fixture.cwd = String.raw`C:\TEST-only-opencode-v2`;
+    const fixture = nativeV2Profile();
+    fixture.cwd = 'C:TEST-only-opencode-v2';
     const { captured, calls } = owner(true);
     const provider = createOpenCodeV2MemberProvider(context(fixture), captured);
     await assert.rejects(() => provider.factory.open(request()), /opencode.driver.invalid-config/);
-    assert.equal(calls.probe, 0, 'unqualified Windows native path cannot reach a probe');
+    assert.equal(calls.probe, 0, 'drive-relative path cannot reach a native probe');
     assert.equal(calls.password, 0, 'no native credentials');
     assert.equal(calls.stop, 1, 'only this TEST-owned capture is retired');
     assert.equal(await provider.cleanup(), true);
@@ -1393,14 +1391,13 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
           res.end(JSON.stringify(value));
         };
         if (req.method === 'GET' && url.pathname === sessionPath) {
-          // This legacy pinned PR1 synthetic peer deliberately returns flat
-          // GET JSON. Official native V2 returns {data: ...}; the separate
-          // regression below records the current source-level HOLD.
-          json({
+          // Synthetic disposable TEST peer with pinned V2 {data} envelope:
+          // no actual native engine/tool execution or qualification implied.
+          json({ data: {
             id: profile.nativeSessionId, location: { directory: profile.cwd },
             agent: 'TEST-agent', model: { providerID: 'TEST-provider', id: 'TEST-model' },
             time: { created: 1 },
-          });
+          } });
           return;
         }
         if (req.method === 'GET' &&
