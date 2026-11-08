@@ -20,6 +20,7 @@ on:
       - packages/legacy-agent-host/tests/**
       - vendor/provider-migration/**
       - scripts/ci/install-dependencies-with-retry.mjs
+      - test/scripts/installDependenciesWithRetry.test.mjs
       - .github/workflows/opencode-v2-stage1-preflight.yml
 
 # Canonical PR supersession; never cancel main/tag/manual evidence.
@@ -71,6 +72,8 @@ jobs:
         with:
           node-version: 24.21.0
           cache: pnpm
+      - name: Prove retry classification on the exact source HEAD
+        run: node --test test/scripts/installDependenciesWithRetry.test.mjs
       - name: Install pinned workspace dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Build Stage1 Host without launching providers
