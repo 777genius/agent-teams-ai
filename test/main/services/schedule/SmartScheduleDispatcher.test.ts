@@ -152,6 +152,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
         'busy-member', active
       );
       expect(outcome.kind).toBe('skipped');
+      if (outcome.kind !== 'skipped') throw new Error('Expected skipped outcome');
       expect(outcome.summary).toContain('already working');
       expect(port.createTask).not.toHaveBeenCalled();
       expect(port.launchTeam).not.toHaveBeenCalled();
@@ -169,6 +170,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
       'member-became-busy', active
     );
     expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    if (outcome.kind !== 'skipped') throw new Error('Expected skipped outcome');
     expect(outcome.summary).toContain('already working');
     expect(port.createTask).toHaveBeenCalledOnce();
   });
