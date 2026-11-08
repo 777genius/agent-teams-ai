@@ -234,6 +234,8 @@ jobs:
                r.nativeSessionPermissionOrderReadbackProven!==true ||
                r.nativePermissionResolverProven!==true ||
                r.nativePermissionReplyRejectNoReplayProven!==true ||
+               r.nativeUnauthenticatedDeleteRejected!==true ||
+               r.nativeUnauthenticatedPermissionGrantRejected!==true ||
                r.nativeStalePermissionAfterRestartRejected!==true ||
                r.nativeStaleGrantAfterRestartRejected!==true ||
                r.failure !== undefined) process.exit(1);
@@ -242,6 +244,7 @@ jobs:
             const requiredSteps=[
               'TEST_published_server_real_authenticated_HTTP_ready',
               'TEST_no_unauthenticated_HTTP_access',
+              'TEST_native_unauthenticated_mutations_rejected',
               'TEST_published_native_permission_resolver_and_nonreplay',
               'TEST_real_pending_permission_exists_before_cold_restart',
               'TEST_official_HTTP_session_created_event_persisted',

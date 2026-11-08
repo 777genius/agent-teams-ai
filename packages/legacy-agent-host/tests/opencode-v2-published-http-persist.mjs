@@ -227,6 +227,22 @@ if (process.argv[2] === '--worker') {
     const sessionId=created.data?.data?.id;
     if(created.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(sessionId||''))
       throw Error('TEST_session_create_unqualified');
+    // The actual V2 HTTP engine must reject an unauthenticated destructive
+    // request BEFORE route handling. A 401 alone is insufficient: read back
+    // the same TEST session to prove the unauthenticated DELETE did not act.
+    const anonymousDelete=await fetch('http://127.0.0.1:'+port+
+      '/api/session/'+encodeURIComponent(sessionId),{
+      method:'DELETE',redirect:'error',signal:AbortSignal.timeout(7000),
+    });
+    if(anonymousDelete.status!==401)
+      throw Error('TEST_native_unauthenticated_delete_not_rejected');
+    const afterAnonymousDelete=await call('/api/session/'+encodeURIComponent(sessionId));
+    if(afterAnonymousDelete.status!==200||
+       afterAnonymousDelete.data?.data?.id!==sessionId||
+       afterAnonymousDelete.data?.data?.permissions?.[0]?.action!=='external_directory'||
+       afterAnonymousDelete.data?.data?.permissions?.[0]?.effect!=='deny')
+      throw Error('TEST_native_unauthenticated_delete_changed_session');
+    receipt.nativeUnauthenticatedDeleteRejected=true;
     // A real native session round-trip of ordered permission rules, NOT a
     // tool-execution or fully assembled agent/global policy certificate.
     // Late wildcard grants must never be promoted to the captured Host deny.
@@ -304,6 +320,23 @@ if (process.argv[2] === '--worker') {
            still.data.data[0]?.id!==permissionId)
           throw Error('TEST_foreign_permission_changed_owner');
         const reply=base+'/permission/'+encodeURIComponent(permissionId)+'/reply';
+        // The unauthorized caller must not grant a pending native permission.
+        // Confirm the original ID is still pending before the authorized reject.
+        const anonymousGrant=await fetch('http://127.0.0.1:'+port+reply,{
+          method:'POST',redirect:'error',signal:AbortSignal.timeout(7000),
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({decision:'always'}),
+        });
+        if(anonymousGrant.status!==401)
+          throw Error('TEST_native_unauthenticated_permission_grant_not_rejected');
+        const afterAnonymousGrant=await call(base+'/permission');
+        if(afterAnonymousGrant.status!==200||
+           !Array.isArray(afterAnonymousGrant.data?.data)||
+           afterAnonymousGrant.data.data.length!==1||
+           afterAnonymousGrant.data.data[0]?.id!==permissionId||
+           afterAnonymousGrant.data.data[0]?.sessionID!==id)
+          throw Error('TEST_native_unauthenticated_permission_grant_changed_pending');
+        receipt.nativeUnauthenticatedPermissionGrantRejected=true;
         if((await call(reply,'POST',{decision:'reject'})).status!==204)
           throw Error('TEST_native_permission_reject_failed');
         if((await call(reply,'POST',{decision:'once'})).status!==404)
@@ -317,6 +350,10 @@ if (process.argv[2] === '--worker') {
         throw Error('TEST_native_resolver_session_cleanup_failed');
     }
     if(!rejectNoReplay)throw Error('TEST_native_permission_negative_not_executed');
+    if(receipt.nativeUnauthenticatedDeleteRejected!==true||
+       receipt.nativeUnauthenticatedPermissionGrantRejected!==true)
+      throw Error('TEST_native_unauthenticated_mutation_negative_incomplete');
+    receipt.steps.push('TEST_native_unauthenticated_mutations_rejected');
     receipt.nativePermissionResolverProven=true;
     receipt.nativePermissionReplyRejectNoReplayProven=true;
     receipt.steps.push('TEST_published_native_permission_resolver_and_nonreplay');
