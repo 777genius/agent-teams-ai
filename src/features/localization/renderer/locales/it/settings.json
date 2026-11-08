@@ -212,7 +212,8 @@
           "title": "Modifica temi (JSON)",
           "description": "Fino a 8 temi. I colori devono essere #RRGGBB. Si applica solo JSON valido; un array themes vuoto elimina tutti i temi.",
           "cancel": "Annulla",
-          "save": "Salva temi"
+          "save": "Salva temi",
+          "conflict": "I temi sono cambiati in un'altra scheda. Chiudi e riapri l'editor per non sovrascrivere le modifiche."
         }
       },
       "uiScale": {

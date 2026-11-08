@@ -212,7 +212,8 @@
           "title": "Editar temas (JSON)",
           "description": "Até 8 temas. Cores no formato #RRGGBB. Só o JSON válido é aplicado; uma lista themes vazia remove os temas.",
           "cancel": "Cancelar",
-          "save": "Guardar temas"
+          "save": "Guardar temas",
+          "conflict": "Os temas foram alterados noutro separador. Feche e reabra o editor para não substituir as alterações."
         }
       },
       "uiScale": {

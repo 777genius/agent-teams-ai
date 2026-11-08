@@ -231,7 +231,8 @@
           "title": "Edit custom themes (JSON)",
           "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
           "cancel": "Cancel",
-          "save": "Save themes"
+          "save": "Save themes",
+          "conflict": "Themes changed in another tab. Close and reopen the editor to avoid overwriting newer changes."
         }
       },
       "uiScale": {

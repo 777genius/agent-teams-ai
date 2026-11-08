@@ -227,7 +227,8 @@
           "title": "Editează temele (JSON)",
           "description": "Poți edita până la 8 teme. Culorile folosesc formatul #RRGGBB. Se aplică doar JSON valid; lista themes goală elimină toate temele.",
           "cancel": "Anulează",
-          "save": "Salvează temele"
+          "save": "Salvează temele",
+          "conflict": "Temele s-au schimbat în altă filă. Închide și redeschide editorul pentru a evita suprascrierea modificărilor."
         }
       },
       "uiScale": {

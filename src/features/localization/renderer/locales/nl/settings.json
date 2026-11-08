@@ -212,7 +212,8 @@
           "title": "Thema's bewerken (JSON)",
           "description": "Bewerk maximaal 8 thema's. Kleuren moeten #RRGGBB zijn. Alleen geldige JSON wordt opgeslagen; een lege themes-lijst verwijdert alles.",
           "cancel": "Annuleren",
-          "save": "Thema's opslaan"
+          "save": "Thema's opslaan",
+          "conflict": "Thema's zijn gewijzigd in een ander tabblad. Sluit en heropen de editor om wijzigingen niet te overschrijven."
         }
       },
       "uiScale": {

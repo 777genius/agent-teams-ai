@@ -212,7 +212,8 @@
           "title": "Editar temas (JSON)",
           "description": "Edita hasta 8 temas. Usa colores #RRGGBB. Solo se aplica JSON válido; un arreglo themes vacío elimina todos los temas.",
           "cancel": "Cancelar",
-          "save": "Guardar temas"
+          "save": "Guardar temas",
+          "conflict": "Los temas cambiaron en otra pestaña. Cierra y vuelve a abrir el editor para no sobrescribir los cambios."
         }
       },
       "uiScale": {
