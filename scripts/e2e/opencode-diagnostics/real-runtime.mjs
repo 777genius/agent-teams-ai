@@ -105,7 +105,7 @@ export function verifyRealProviderCountResponse(directory) {
 /** The exact OpenCode count element has one numeric count in every locale. */
 export function hasOneVisibleOpenCodeConnection(text) {
   if (typeof text !== 'string' || !text.trim().startsWith('OpenCode')) return false;
-  const numericTokens = text.match(/\\d+/g);
+  const numericTokens = text.match(/[0-9]+/g);
   return numericTokens?.length === 1 && numericTokens[0] === '1';
 }
 
