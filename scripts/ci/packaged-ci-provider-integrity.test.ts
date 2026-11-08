@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import test from 'node:test';
@@ -93,4 +93,20 @@ test('symlinked provider archive and symlinked parent fail closed with matching 
   rmSync(dirname(archive), { recursive: true, force: true });
   symlinkSync(otherDir, dirname(archive), 'dir');
   assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive/);
+});
+
+test('symlinked vendor root cannot relocate correctly hashed locked archives', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink fixture; Windows archive integrity is checked separately');
+    return;
+  }
+  const { root } = fixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const vendor = join(root, 'vendor');
+  const elsewhere = join(root, 'relocated-vendor');
+  // Before the root guard, both real paths followed this symlink and were
+  // compared inside the relocated directory, so identical bytes passed.
+  renameSync(vendor, elsewhere);
+  symlinkSync(elsewhere, vendor, 'dir');
+  assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive root/);
 });
