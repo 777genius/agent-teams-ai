@@ -127,3 +127,72 @@ test('non-refused HTTP/2 stream errors do not retry', async () => {
     assert.equal(requests, 1);
   });
 });
+
+test('retries if a native AggregateError contains a transient timeout', async () => {
+  await withArchiveDestination(async (destination) => {
+    let requests = 0;
+    const connectErrors = new AggregateError([
+      Object.assign(new Error('connection refused'), { code: 'ECONNREFUSED' }),
+      Object.assign(new Error('connection timed out'), { code: 'ETIMEDOUT' }),
+    ], 'Multiple connection attempts failed');
+    await downloadArchive('https://example.invalid/asset.tar.gz', destination, {
+      request: async () => {
+        requests += 1;
+        if (requests === 1) throw new TypeError('fetch failed', { cause: connectErrors });
+        return new Response('recovered aggregate download');
+      },
+      pause: async () => {},
+    });
+    assert.equal(requests, 2);
+    assert.equal(await readFile(destination, 'utf8'), 'recovered aggregate download');
+  });
+});
+
+test('does not retry an AggregateError containing only permanent connection failures', async () => {
+  await withArchiveDestination(async (destination) => {
+    let requests = 0;
+    await assert.rejects(downloadArchive('https://example.invalid/asset.tar.gz', destination, {
+      request: async () => {
+        requests += 1;
+        throw new TypeError('fetch failed', { cause: new AggregateError([
+          Object.assign(new Error('name not found'), { code: 'ENOTFOUND' }),
+          Object.assign(new Error('certificate invalid'), { code: 'ERR_TLS_CERT_ALTNAME_INVALID' }),
+        ], 'Permanent failures') });
+      },
+      pause: async () => { throw new Error('unexpected retry'); },
+    }), /fetch failed/);
+    assert.equal(requests, 1);
+    await assert.rejects(readFile(destination), { code: 'ENOENT' });
+  });
+});
+
+test('clears a partial response body before a successful transport retry', async () => {
+  await withArchiveDestination(async (destination) => {
+    let requests = 0;
+    await downloadArchive('https://example.invalid/asset.tar.gz', destination, {
+      request: async () => {
+        requests += 1;
+        if (requests !== 1) {
+          await assert.rejects(readFile(destination), { code: 'ENOENT' });
+          return new Response('complete archive after retry');
+        }
+        let sent = false;
+        return new Response(new ReadableStream({
+          pull(controller) {
+            if (!sent) {
+              sent = true;
+              controller.enqueue(new TextEncoder().encode('partial stale archive bytes'));
+            } else {
+              controller.error(Object.assign(new Error('connection reset mid-response'), {
+                code: 'ECONNRESET',
+              }));
+            }
+          },
+        }), { status: 200 });
+      },
+      pause: async () => {},
+    });
+    assert.equal(requests, 2);
+    assert.equal(await readFile(destination, 'utf8'), 'complete archive after retry');
+  });
+});
