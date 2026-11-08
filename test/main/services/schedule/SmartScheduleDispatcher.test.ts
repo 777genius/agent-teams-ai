@@ -161,6 +161,51 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).not.toHaveBeenCalled();
   });
 
+  it('skips a retained one-agent schedule if its team was deleted', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => null);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' },
+      'orphaned-team',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('configuration is missing') });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('skips an offline one-agent schedule if its selected member was removed', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'removed-member' },
+      'orphaned-member',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('not configured') });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('does not run an offline agent with missing verified launch configuration', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasLaunchConfig = vi.fn(async () => false);
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'missing-config', active);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('rechecks stop/cancel admission after validating the saved offline recipient', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    let cancelled = false;
+    port.getLeadName = vi.fn(async () => {
+      cancelled = true;
+      return 'lead';
+    });
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'cancelled-during-lookup', () => cancelled);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
   it('rejects a lead without current process evidence even when alive is claimed', async () => {
     const snapshot = runtimeMembers(true);
     snapshot.members.lead = { ...snapshot.members.lead, pidSource: undefined, pid: undefined };

@@ -237,6 +237,22 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(oneShot).not.toHaveBeenCalled();
   });
 
+  it('persists a skipped run after a scheduled agent team is deleted', async () => {
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: 'alice',
+    });
+    // Schedule JSON survives team removal, but must not execute instructions.
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => null);
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'skipped');
+    expect(run.summary).toContain('configuration is missing');
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('skipped');
+  });
+
   it('starts a stopped team once from its saved provider profile without a second task', async () => {
     port.isTeamAlive = vi.fn(() => false);
     const schedule = await scheduler.createSchedule({

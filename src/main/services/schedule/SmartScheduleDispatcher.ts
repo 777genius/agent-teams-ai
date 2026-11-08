@@ -128,6 +128,30 @@ export class SmartScheduleDispatcher {
           return skipped('Team state changed while scheduling; no action was submitted');
         }
         if (schedule.executionMode === 'agent') {
+          // An offline one-agent run must still refer to a real configured team
+          // and recipient. Deleted teams retain independent schedule records.
+          const saved = await this.runtime.getSavedRequest(team);
+          if (!saved || !(await this.runtime.hasLaunchConfig(team))) {
+            return skipped('Team configuration is missing; no standalone agent was started');
+          }
+          const leadName = await this.runtime.getLeadName(team);
+          if (!leadName) return skipped('Team lead cannot be resolved');
+          const requestedMember = schedule.targetMember?.trim() || leadName;
+          const memberName =
+            requestedMember.toLowerCase() === leadName.toLowerCase()
+              ? leadName
+              : requestedMember;
+          if (memberName !== leadName && !saved.members.some((member) => member.name === memberName)) {
+            return skipped(`Member "${memberName}" is not configured in this team`);
+          }
+          if (
+            isCancelled() ||
+            this.runtime.isTeamLaunching(team) ||
+            this.runtime.isTeamBusy(team) ||
+            this.runtime.isTeamAlive(team)
+          ) {
+            return skipped('Team state changed while validating scheduled agent; no work was submitted');
+          }
           const result = await this.runtime.runOneShot({
             runId,
             config: schedule.launchConfig,
