@@ -224,7 +224,7 @@ async function startApp(fixture) {
   const windows = process.platform === 'win32';
   appProcess = spawn(
     windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
-    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp'] : ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
+    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp --inspect=5858'] : ['dev:mcp', '--inspect=5858', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
     {
       cwd: repoRoot,
       detached: !windows,
@@ -261,7 +261,23 @@ async function startApp(fixture) {
   })();
   const port = await Promise.race([ownedPort, exitedBeforeRenderer]);
   const renderer = await Promise.race([waitForRenderer(port), exitedBeforeRenderer]);
-  return { port, renderer };
+  // electron-vite --inspect exposes the *main process* on loopback; renderer
+  // CDP cannot access BrowserWindow.webContents.zoomFactor or menu accelerators.
+  const inspectorWebSocketDebuggerUrl = await Promise.race([
+    (async () => {
+      const deadline = Date.now() + 90_000;
+      while (Date.now() < deadline) {
+        const matched = appLogTail.find((line) =>
+          /Debugger listening on ws:\/\/127\.0\.0\.1:5858\//.test(line)
+        )?.match(/(ws:\/\/127\.0\.0\.1:5858\/[a-z0-9-]+)/i);
+        if (matched) return matched[1];
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      throw new Error('Main-process loopback V8 inspector was not started');
+    })(),
+    exitedBeforeRenderer,
+  ]);
+  return { port, renderer, inspectorWebSocketDebuggerUrl };
 }
 
 class CdpClient {
@@ -675,73 +691,51 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'css-zoom-200');
     await cdp.evaluate("document.documentElement.style.zoom = ''");
 
-    log('verify native Electron zoom at approximately 200% with real keyboard shortcuts');
+    log('verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process');
     const zoomBaseline = await cdp.evaluate(
       "window.electronAPI.getZoomFactor().then(factor => ({ factor, innerWidth: window.innerWidth }))"
     );
-    await cdp.evaluate(
-      "window.__nativeZoomEvents = []; window.__stopNativeZoomEvents = " +
-      "window.electronAPI.onZoomFactorChanged(factor => window.__nativeZoomEvents.push(factor));"
-    );
     assert(zoomBaseline.factor >= 0.95 && zoomBaseline.factor <= 1.05,
       'Electron test must start at 100% native zoom');
-    const mac = process.platform === 'darwin';
-    const mod = mac ? 4 : 2;
-    const modKey = mac ? 'Meta' : 'Control';
-    const modCode = mac ? 'MetaLeft' : 'ControlLeft';
-    const modVk = mac ? 91 : 17;
-    const sendNativeZoomShortcut = async (key, code, virtualKey) => {
-      const plus = key === '+';
-      const modifiers = mod | (plus ? 8 : 0);
-      await cdp.send('Input.dispatchKeyEvent', {
-        type: 'rawKeyDown', key: modKey, code: modCode,
-        windowsVirtualKeyCode: modVk, modifiers: mod,
-      });
-      if (plus) {
-        await cdp.send('Input.dispatchKeyEvent', {
-          type: 'rawKeyDown', key: 'Shift', code: 'ShiftLeft',
-          windowsVirtualKeyCode: 16, modifiers,
-        });
-      }
-      await cdp.send('Input.dispatchKeyEvent', {
-        type: 'keyDown', key, code, windowsVirtualKeyCode: virtualKey, modifiers,
-      });
-      await cdp.send('Input.dispatchKeyEvent', {
-        type: 'keyUp', key, code, windowsVirtualKeyCode: virtualKey, modifiers,
-      });
-      if (plus) {
-        await cdp.send('Input.dispatchKeyEvent', {
-          type: 'keyUp', key: 'Shift', code: 'ShiftLeft',
-          windowsVirtualKeyCode: 16, modifiers: mod,
-        });
-      }
-      await cdp.send('Input.dispatchKeyEvent', {
-        type: 'keyUp', key: modKey, code: modCode, windowsVirtualKeyCode: modVk,
-      });
-      // Electron main publishes the real BrowserWindow zoom factor asynchronously.
-      await new Promise((resolve) => setTimeout(resolve, 220));
+    // This local inspector is enabled only in the disposable E2E launch. It
+    // changes a *real* BrowserWindow property, not CSS zoom or CDP pinch scale.
+    const inspector = await CdpClient.connect(started.inspectorWebSocketDebuggerUrl);
+    const setActualZoom = async (factor) => {
+      return inspector.evaluate(
+        "(() => {" +
+        "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
+        "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
+        "const { BrowserWindow } = moduleRequire('electron');" +
+        "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
+        "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
+        "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
+        "return win.webContents.getZoomFactor();" +
+        "})()"
+      );
     };
-    let nativeZoomFactor = zoomBaseline.factor;
-    for (let attempt = 0; attempt < 10 && nativeZoomFactor < 1.95; attempt++) {
-      await sendNativeZoomShortcut('+', 'Equal', 187);
-      nativeZoomFactor = await cdp.evaluate('window.electronAPI.getZoomFactor()');
+    try {
+      await inspector.send('Runtime.enable');
+      const actualFactor = await setActualZoom(2);
+      assert(Math.abs(actualFactor - 2) <= 0.05,
+        'BrowserWindow did not accept native 200% zoom');
+      await cdp.waitFor(
+        "window.innerWidth < " + JSON.stringify(zoomBaseline.innerWidth * 0.70),
+        'actual Electron zoom narrowed layout viewport'
+      );
+      const visibleAtZoom = await cdp.evaluate(
+        "document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')?.getBoundingClientRect().width > 0"
+      );
+      assert(visibleAtZoom, 'Back button disappeared at native Electron 200% zoom');
+      await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
+      assert(Math.abs((await setActualZoom(1)) - 1) <= 0.05,
+        'BrowserWindow did not restore 100% zoom');
+      await cdp.waitFor(
+        "window.innerWidth >= " + JSON.stringify(zoomBaseline.innerWidth * 0.95),
+        'actual Electron layout restored after native zoom reset'
+      );
+    } finally {
+      inspector.close();
     }
-    const nativeZoomEvents = await cdp.evaluate('window.__nativeZoomEvents');
-    assert(nativeZoomFactor >= 1.95 && nativeZoomFactor <= 2.12,
-      `Native Electron zoom shortcut never reached ~200%; actual factor: ${nativeZoomFactor}; main zoom notifications: ${JSON.stringify(nativeZoomEvents)}`);
-    const atNativeZoom = await cdp.evaluate(
-      "({ innerWidth: window.innerWidth, backVisible: " +
-      "document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')?.getBoundingClientRect().width > 0 })"
-    );
-    assert(atNativeZoom.backVisible, 'Back button disappeared at native 200% zoom');
-    assert(atNativeZoom.innerWidth < zoomBaseline.innerWidth * 0.70,
-      'BrowserWindow zoom did not reduce the effective layout viewport');
-    await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
-    await sendNativeZoomShortcut('0', 'Digit0', 48);
-    assert(
-      Math.abs((await cdp.evaluate('window.electronAPI.getZoomFactor()')) - 1) < 0.05,
-      'Native Electron zoom reset shortcut failed'
-    );
     assert.equal(
       await cdp.evaluate("document.querySelector('#team-name')?.value"),
       unique, 'Native zoom and reset changed unsaved draft'
