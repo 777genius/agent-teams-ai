@@ -33,7 +33,7 @@ export interface SmartScheduleRuntimePort {
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   /** Required only for opt-in task-first schedules; old adapters remain compatible. */
   hasRunnableConfig?(teamName: string): Promise<boolean>;
-  getPreviousRun?(scheduleId: string, runId: string): Promise<ScheduleRun | null>;
+  getPreviousRuns?(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
   getTask?(teamName: string, taskId: string): Promise<TeamTask | null>;
   startTaskByUser?(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }>;
   attachMember(teamName: string, memberName: string): Promise<void>;
@@ -164,16 +164,20 @@ export class SmartScheduleDispatcher {
     runId: string,
     isCancelled: () => boolean
   ): Promise<SmartScheduleOutcome> {
-    const { getPreviousRun, getTask, hasRunnableConfig, startTaskByUser } = this.runtime;
-    if (!getPreviousRun || !getTask || !hasRunnableConfig || !startTaskByUser) {
+    const { getPreviousRuns, getTask, hasRunnableConfig, startTaskByUser } = this.runtime;
+    if (!getPreviousRuns || !getTask || !hasRunnableConfig || !startTaskByUser) {
       return skipped('Task-first scheduling is unavailable in this runtime');
     }
 
-    // The task ID equals the stable run command UUID. A skipped run carries
-    // its predecessor's linked ID so repeated ticks cannot hide active work.
-    const previous = await getPreviousRun(schedule.id, runId);
-    if (previous) {
-      const prior = await getTask(schedule.teamName, previous.linkedTaskId ?? previous.id);
+    // A crash may leave a task without a linked receipt, and skipped occurrences
+    // have no task at all. Examine bounded run history, never just the latest tick.
+    const priorRuns = await getPreviousRuns(schedule.id, runId);
+    const seenTasks = new Set<string>();
+    for (const previous of priorRuns) {
+      const taskId = previous.linkedTaskId ?? previous.id;
+      if (seenTasks.has(taskId)) continue;
+      seenTasks.add(taskId);
+      const prior = await getTask(schedule.teamName, taskId);
       if (prior && prior.status !== 'completed' && prior.status !== 'deleted') {
         return skipped(`Previous task #${prior.displayId || prior.id} is still active`, prior.id);
       }
