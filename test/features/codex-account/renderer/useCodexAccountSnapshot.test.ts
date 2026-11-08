@@ -1315,7 +1315,7 @@ describe('useCodexAccountSnapshot', () => {
       effectiveAuthMode: 'api_key',
       launchReadinessState: 'ready_api_key',
       managedAccount: null,
-      apiKey: { available: true, source: 'env', sourceLabel: 'OPENAI_API_KEY' },
+      apiKey: { available: true, source: 'environment', sourceLabel: 'OPENAI_API_KEY' },
     });
     const changed = withSnapshotOverrides(initial, {
       effectiveAuthMode: 'chatgpt',
