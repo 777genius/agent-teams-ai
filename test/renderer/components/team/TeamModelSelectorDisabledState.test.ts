@@ -1516,11 +1516,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     const authNotice = host.querySelector(
       '[data-testid="team-model-selector-opencode-auth-required"]'
     );
-    expect(authNotice?.textContent).toContain('Models requiring a provider connection: 1');
+    expect(authNotice?.textContent).toContain('1 OpenCode catalog models require an account or API key');
 
     await act(async () => {
       Array.from(authNotice?.querySelectorAll('button') ?? [])
-        .find((button) => button.textContent?.includes('Show these models'))
+        .find((button) => button.textContent?.includes('Show unavailable models'))
         ?.click();
       await Promise.resolve();
     });
@@ -1552,7 +1552,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
     await act(async () => {
       Array.from(authNotice?.querySelectorAll('button') ?? [])
-        .find((button) => button.textContent?.includes('Hide these models'))
+        .find((button) => button.textContent?.includes('Hide unavailable models'))
         ?.click();
       await Promise.resolve();
     });

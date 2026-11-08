@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-
 import {
   CodexRuntimeUpdateDialog,
   CodexRuntimeUpdateNotice,
@@ -80,7 +79,6 @@ import {
   Star,
   X,
 } from 'lucide-react';
-
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
 import { OpenCodeAuthRequiredModelsNotice } from './OpenCodeAuthRequiredModelsNotice';
@@ -158,11 +156,8 @@ export {
   getTeamModelLabel,
   getTeamProviderLabel,
 } from './teamModelSummary';
-
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
-
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
@@ -212,7 +207,6 @@ interface OpenCodeModelGroup {
 }
 type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
 type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
-
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
@@ -228,13 +222,11 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
 interface OpenCodeVirtualHeadingRow {
   kind: 'heading';
   key: string;
   group: OpenCodeModelGroup;
 }
-
 interface OpenCodeVirtualModelRow {
   kind: 'models';
   key: string;
@@ -243,9 +235,7 @@ interface OpenCodeVirtualModelRow {
 }
 type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
 type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
-
 interface OpenCodeModelCostRates {
   input: number | null;
   output: number | null;
@@ -3152,14 +3142,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               aria-label="Model providers"
               className="h-full min-h-full w-full flex-col items-stretch justify-start gap-1 overflow-visible rounded-none border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] p-2"
             >
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                data-testid="team-model-selector-manage-providers"
+              <Button type="button" variant="outline" size="sm" data-testid="team-model-selector-manage-providers"
                 className="mb-1 h-8 w-full justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                onClick={() => openSettingsTab('providers')}
-              >
+                onClick={() => openSettingsTab('providers')}>
                 <Settings2 className="size-4 shrink-0" aria-hidden="true" />
                 {dashboardT('cliStatus.actions.manageProviders')}
               </Button>

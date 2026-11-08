@@ -151,6 +151,19 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
   }
 });
 
+// Mock the separate read-only connected-summary IPC, not a model/launch request.
+function connectedSummaryProbe() {
+  return { done: true, value: {
+    schemaVersion: 1, runtimeId: 'opencode',
+    directory: {
+      runtimeId: 'opencode', filter: 'connected',
+      entries: ['opencode', 'anthropic', 'google', 'openrouter']
+        .map((providerId) => ({ providerId, state: 'connected' })),
+      totalCount: 4, returnedCount: 4, nextCursor: null,
+    },
+  } };
+}
+
 const catalogSources = ['opencode', 'anthropic', 'google', 'openrouter'];
 function refreshTimeline({
   scenario = 'delayed8s',
@@ -294,6 +307,8 @@ test('ready drains old requests then performs its own summary/catalog recovery b
         }
         if (expression === 'window.__catalogProbe')
           return { done: probe, value: { schemaVersion: 1 } };
+        if (expression.startsWith('window.__connectedSummaryProbe =')) return;
+        if (expression === 'window.__connectedSummaryProbe') return connectedSummaryProbe();
         throw new Error(`Unexpected expression: ${expression}`);
       },
     }).then(() => {
@@ -356,6 +371,8 @@ test('real catalog verifier waits past old models and unfinished summary for the
         }
         if (expression === 'window.__catalogProbe')
           return { done: probe, value: { schemaVersion: 1 } };
+        if (expression.startsWith('window.__connectedSummaryProbe =')) return;
+        if (expression === 'window.__connectedSummaryProbe') return connectedSummaryProbe();
         throw new Error(`Unexpected expression: ${expression}`);
       },
     });
@@ -475,6 +492,8 @@ test(
           if (expression === 'window.__catalogProbe')
             return { done: true, value: { schemaVersion: 1 } };
           if (expression.startsWith('window.__catalogProbe =')) return undefined;
+          if (expression.startsWith('window.__connectedSummaryProbe =')) return undefined;
+          if (expression === 'window.__connectedSummaryProbe') return connectedSummaryProbe();
           if (expression.includes('opencode-catalog-error')) return '';
           throw new Error(`Unexpected catalog probe: ${expression}`);
         },

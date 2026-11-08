@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
 import {
   reconcileAnthropicRuntimeSelections,
   resolveAnthropicFastMode,
@@ -2474,8 +2473,7 @@ export const CreateTeamDialog = ({
           </div>
           <div className="space-y-4 md:col-span-2">
             <div className="w-full max-w-[26rem]">
-              <TeamTemplatePicker
-                confirmBeforeApply
+              <TeamTemplatePicker confirmBeforeApply
               disabled={!draftLoaded || !descriptionDraft.isLoaded || !promptDraft.isLoaded}
               onApply={(draft) => {
                 setRuntimeSelection(1);
