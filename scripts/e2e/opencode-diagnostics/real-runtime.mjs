@@ -91,7 +91,7 @@ export function verifyRealProviderCountResponse(directory) {
   assert.equal(directory.returnedCount, directory.entries?.length);
   assert(Array.isArray(directory.diagnostics));
   assert(!directory.diagnostics.some(message =>
-    /timed?\\s*out|timeout|partial|incomplete|probe failed|unavailable/i.test(message)
+    /timed?\s*out|timeout|partial|incomplete|probe failed|unavailable/i.test(message)
   ), 'Partial connected directory');
   const identities = directory.entries.map(entry => {
     assert.equal(entry.state, 'connected', 'Unconnected entry in filtered summary');
@@ -109,10 +109,10 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     header = await evaluate(
       "document.querySelector('[data-testid=\"dashboard-opencode-provider-count\"]')?.textContent || ''"
     );
-    if (/OpenCode.*Providers:\\s*1 connected/i.test(header)) break;
+    if (/OpenCode.*Providers:\s*1 connected/i.test(header)) break;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  assert.match(header, /OpenCode.*Providers:\\s*1 connected/i,
+  assert.match(header, /OpenCode.*Providers:\s*1 connected/i,
     'Real runtime connected count was not shown in the Settings header');
 
   // This invokes Electron preload → IPC → main CLI client → genuine published
