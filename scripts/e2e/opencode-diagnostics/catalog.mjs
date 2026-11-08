@@ -295,8 +295,9 @@ export async function verifyCatalog({
           .filter((event) => event.scenario === scenario && event.at >= started);
         const records = catalogFixtureRequests(recorded);
         const directoryReads = records.filter((record) => record.operation === 'directory');
-        // Use the latest *completed* refresh, not pages from an earlier attempt.
-        const allSecond = catalogRefreshEvidence(recorded)?.directory;
+        // Anchor both pages to the refresh that actually qualified all model reads.
+        // An unrelated later background refresh must not replace that evidence.
+        const allSecond = completedCatalog?.directory;
         const allFirst = directoryReads.filter((record) =>
           record.response?.response.directory?.filter === 'all' &&
           record.response.response.directory.nextCursor === '100' &&
