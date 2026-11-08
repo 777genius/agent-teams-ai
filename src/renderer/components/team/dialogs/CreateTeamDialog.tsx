@@ -543,6 +543,7 @@ export const CreateTeamDialog = ({
     setWorkflowMentionSuggestionsEnabled(true);
   }, []);
   const setWorktreeEnabled = (value: boolean): void => {
+    advancedPreferencesLoadedRef.current = true;
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
     if (!value) {
@@ -551,10 +552,12 @@ export const CreateTeamDialog = ({
     }
   };
   const setWorktreeName = (value: string): void => {
+    advancedPreferencesLoadedRef.current = true;
     setWorktreeNameRaw(value);
     localStorage.setItem(`team:lastWorktreeName:${advancedKey}`, value);
   };
   const setCustomArgs = (value: string): void => {
+    advancedPreferencesLoadedRef.current = true;
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${advancedKey}`, value);
   };
@@ -570,7 +573,6 @@ export const CreateTeamDialog = ({
     setAllowExperimentalLocalModels(false);
     setConflictDismissed(false);
   };
-
   const resetFormState = async (): Promise<void> => {
     gatewayBindings.releaseRetained();
     clearDraft();
@@ -581,7 +583,6 @@ export const CreateTeamDialog = ({
     resetUIState();
     if (presentation === 'page') await resetCreateTeamDraft();
   };
-
   const persistCurrentMemberRuntimePreferences = useCallback(
     (nextMembers: readonly MemberDraft[] = members): void => {
       setStoredCreateTeamMemberRuntimePreferences(nextMembers);
@@ -798,7 +799,6 @@ export const CreateTeamDialog = ({
       selectedEffort,
     ]
   );
-
   const runtimeProviderLoadingById = useMemo(
     () =>
       new Map(
