@@ -882,9 +882,7 @@ export class CliInstallerService {
         ? this.getProviderStatus(providerId, options, true)
         : obsoleteStatus();
     if (generation !== this.statusGatherGeneration) return retryOrObsolete();
-    // Explicit project-scoped preflight can race initial runtime discovery.
-    // Keep background/global status polling passive: it must not spawn shell
-    // discovery or invalidate an authoritative cached status.
+    // Background polling remains passive; only explicit project preflight discovers a runtime.
     const snapshot = this.latestStatusSnapshot;
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
     if (options.projectPath && !snapshot?.binaryPath) {
