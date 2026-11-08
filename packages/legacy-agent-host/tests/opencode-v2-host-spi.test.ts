@@ -126,6 +126,43 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
   ] }).success, true, 'unchanged V1 default remains valid');
 });
 
+test('native V2 captures canonical OS paths without widening legacy V1 paths', () => {
+  const base = v2Profile();
+  const windows = process.platform === 'win32';
+  const root = windows ? 'C:\\\\TEST-owned-v2' : '/TEST-owned-v2';
+  const namespace = (suffix: string) => root + (windows ? '\\\\' : '/') + suffix;
+  const selected = {
+    ...base, cwd: root, executable: { ...base.executable, path: namespace('opencode.exe') },
+    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+      .map((key) => [key, namespace(key)])),
+  };
+  assert.equal(runtimeProfileSchema.safeParse({ members: [selected] }).success, true,
+    'V2 needs a canonical, real native path on its own OS');
+  // A normalized path cannot stand in for a trusted captured workspace.
+  for (const invalid of [
+    { ...selected, cwd: namespace('..') },
+    { ...selected, executable: { ...selected.executable, path: namespace('..') } },
+    { ...selected, environment: { ...selected.environment, HOME: namespace('..') } },
+    ...(windows ? [
+      { ...selected, cwd: 'C:\\\\TEST-owned-v2\\\\trailing. ' },
+      { ...selected, executable: { ...selected.executable, path: 'C:relative.exe' } },
+      { ...selected, environment: { ...selected.environment, XDG_CACHE_HOME: '\\\\server\\\\share' } },
+    ] : []),
+  ]) assert.equal(runtimeProfileSchema.safeParse({ members: [invalid] }).success, false,
+    'V2 must reject noncanonical native namespace paths');
+  const legacy = { ...selected, nativeGeneration: undefined, protocolRevision: '1.19.4',
+    nativeSessionId: undefined };
+  if (windows) {
+    assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, false,
+      'do not expand legacy V1 path policy for Windows');
+    const v1Posix = { ...legacy, cwd: base.cwd, executable: base.executable,
+      environment: base.environment };
+    assert.equal(runtimeProfileSchema.safeParse({ members: [v1Posix] }).success, true);
+  } else {
+    assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true);
+  }
+});
+
 test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
   const base = runtimeProfileSchema.parse({ members: [v2Profile()] }).members[0]!;
   for (const permissions of ['manual', 'bypass'] as const) {
