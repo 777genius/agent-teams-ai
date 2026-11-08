@@ -216,12 +216,44 @@ export async function runDesktopTaskBoardAttachmentsUi(
     const observed = row(await cdp.evaluate(`(async()=>{
       const settled=await ${readyCommentExpression},owner=${commentExpression};
       const input=owner?document.querySelector(owner.selector):null,active=document.activeElement;
-      return {owner,settled:Boolean(settled&&owner&&settled.inputId===owner.inputId&&settled.ownerRevision===owner.ownerRevision),
+      // Read-only diagnostic: no DOM input or product state mutation.
+      const state=window.__agentTeamsDevStore?.getState();
+      const identity=${desktopJsLiteral(originalCommentOwner.identity)};
+      const key=JSON.stringify([identity.contextId,identity.teamName,identity.taskId]);
+      const currentSession=state?.taskDetailSessionById?.[key],detail=state?.taskDetailById?.[key];
+      const originalInput=document.querySelector(${desktopJsLiteral(commentInput)});
+      const inputProbe={
+        present:Boolean(originalInput),connected:originalInput?.isConnected??false,
+        disabled:originalInput instanceof HTMLTextAreaElement?originalInput.disabled:null,
+        focused:originalInput===active,
+        ownerSurfaceId:currentSession?.ownerSurfaceId??null,
+        ownerRevision:currentSession?.ownerRevision??null,
+        expectedSurfaceId:${desktopJsLiteral(String(originalCommentOwner.surfaceId))},
+        detailPhase:detail?.phase??null,refreshPending:detail?.refreshPending??null,
+        taskStatus:detail?.full?.status??null,taskId:detail?.full?.id??null,
+        activeContextId:state?.activeContextId??null,contextSwitching:state?.isContextSwitching??null,
+      };
+      return {owner,inputProbe,settled:Boolean(settled&&owner&&settled.inputId===owner.inputId&&settled.ownerRevision===owner.ownerRevision),
         domValue:input?.value??null,inputEnabled:input instanceof HTMLTextAreaElement&&!input.disabled,
         focused:input!==null&&active===input,documentFocused:document.hasFocus(),visibility:document.visibilityState,
         activeElement:active?{tag:active.tagName,id:active.id}:null,timeMs:Math.round(performance.now())};
     })()`));
     commentInputObservations[stage] = observed;
+    const historyKey = `${stage} transitions`;
+    const history = (commentInputObservations[historyKey] ??= []) as Row[];
+    const last = history.at(-1);
+    const currentProbe = row(observed.inputProbe);
+    if (
+      !last ||
+      last.ownerPresent !== Boolean(observed.owner) ||
+      row(last.inputProbe).focused !== currentProbe.focused ||
+      row(last.inputProbe).disabled !== currentProbe.disabled ||
+      row(last.inputProbe).ownerRevision !== currentProbe.ownerRevision ||
+      row(last.inputProbe).detailPhase !== currentProbe.detailPhase ||
+      row(last.inputProbe).refreshPending !== currentProbe.refreshPending
+    ) {
+      if (history.length < 12) history.push({ ownerPresent: Boolean(observed.owner), inputProbe: currentProbe });
+    }
     return observed;
   };
   const commentReady = (observed: Row, expectedText: string, attachmentCount: number) => {
