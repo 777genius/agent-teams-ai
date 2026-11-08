@@ -1,8 +1,16 @@
-import type { RuntimeProviderDirectoryCacheSnapshot } from '@features/runtime-provider-management/renderer';
+import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+
+import type {
+  RuntimeProviderConnectedCountObservation,
+  RuntimeProviderDirectoryCacheSnapshot,
+} from '@features/runtime-provider-management/renderer';
 import type { CliProviderId, CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
 export const DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS = 2 * 60_000;
-const MAIN_PROVIDER_IDS = ['anthropic', 'codex', 'gemini'] as const;
+// Gemini is deliberately unavailable in the current UI: never wait for its status.
+const MAIN_PROVIDER_IDS: readonly CliProviderId[] = isGeminiUiFrozen()
+  ? ['anthropic', 'codex']
+  : ['anthropic', 'codex', 'gemini'];
 
 type MainProvider = Pick<
   CliProviderStatus,
@@ -27,6 +35,8 @@ interface ConnectionSummaryInput {
   projectPath: string | null;
   globalDirectory: Directory | null;
   projectDirectory: Directory | null;
+  observedOpenCodeCount?: RuntimeProviderConnectedCountObservation | null;
+  countInvalidated?: boolean;
   runtimeStatus: Pick<
     OpenCodeRuntimeStatus,
     'installed' | 'state' | 'version' | 'binaryPath'
@@ -77,6 +87,8 @@ export function getDashboardConnectionSummary({
   projectPath,
   globalDirectory,
   projectDirectory,
+  observedOpenCodeCount,
+  countInvalidated = false,
   runtimeStatus,
   nowMs = Date.now(),
 }: ConnectionSummaryInput): DashboardConnectionSummary {
@@ -116,11 +128,38 @@ export function getDashboardConnectionSummary({
     runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
       ? JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null])
       : null;
+  // A complete connected-only observation is scoped and independent of the
+  // full provider/model directory. It never grants permission to launch.
+  const countFetchedAt = Date.parse(observedOpenCodeCount?.fetchedAt ?? '');
   const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision, nowMs);
   const projectComplete =
     projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
+  // Newer global evidence may revoke inherited project credentials even when
+  // the project directory is still incomplete. Never keep its older count.
+  const newerGlobalEvidence =
+    globalComplete && Date.parse(globalDirectory.fetchedAt) > countFetchedAt;
+  const newerProjectEvidence =
+    projectPath !== null && projectComplete && projectDirectory !== null &&
+    Date.parse(projectDirectory.fetchedAt) > countFetchedAt;
+  const newerCompleteDirectory = newerGlobalEvidence || newerProjectEvidence;
+  if (
+    !countInvalidated &&
+    !newerCompleteDirectory &&
+    runtimeRevision &&
+    observedOpenCodeCount?.runtimeRevision === runtimeRevision &&
+    Number.isFinite(countFetchedAt) &&
+    countFetchedAt <= nowMs &&
+    nowMs - countFetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS
+  ) {
+    return {
+      cliConnected,
+      cliCountComplete,
+      cliCountPending,
+      openCodeConnected: observedOpenCodeCount.connected,
+    };
+  }
 
-  if (!globalComplete || !projectComplete) {
+  if (countInvalidated || !globalComplete || !projectComplete) {
     return { cliConnected, cliCountComplete, cliCountPending, openCodeConnected: null };
   }
 

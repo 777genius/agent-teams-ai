@@ -116,6 +116,7 @@ import {
 } from './openCodeDashboardCatalogPolicy';
 import { OpenCodeFreeTierUpdateAction } from './OpenCodeFreeTierUpdateAction';
 import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
+import { ProviderConnectionCounts } from './ProviderConnectionCounts';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
@@ -132,6 +133,7 @@ import {
   useDashboardProviderRefresh,
   useOpenCodeDashboardStatus,
 } from './useOpenCodeDashboardStatus';
+import { useProviderConnectionSummary } from './useProviderConnectionSummary';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -846,6 +848,7 @@ const InstalledBanner = ({
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
+  const { summary: sharedConnectionSummary, multimodelEnabled } = useProviderConnectionSummary(cliStatus);
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
@@ -1018,19 +1021,18 @@ const InstalledBanner = ({
                   {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
                 </span>
               ) : null}
-              {runtimeAuthSummary && (
-                <span
-                  className="text-xs"
-                  style={{
-                    color:
-                      isMultimodelRuntimeStatus(cliStatus) && !hasConnectedMultimodelProvider
-                        ? 'var(--color-text-muted)'
-                        : 'var(--color-positive-text)',
-                  }}
-                >
+              {isMultimodelRuntimeStatus(cliStatus) ? (
+                <ProviderConnectionCounts
+                  summary={sharedConnectionSummary}
+                  cliStatus={cliStatus}
+                  cliStatusLoading={cliStatusLoading}
+                  multimodelEnabled={multimodelEnabled}
+                />
+              ) : runtimeAuthSummary ? (
+                <span className="text-xs" style={{ color: 'var(--color-positive-text)' }}>
                   {runtimeAuthSummary}
                 </span>
-              )}
+              ) : null}
             </div>
             {cliStatus.showBinaryPath && cliStatus.binaryPath && (
               <button
@@ -1647,6 +1649,7 @@ export const CliStatusBanner = ({
     // Keep account login observation alive across tab switches, but stop heavy
     // subscription rate-limit polling while the provider page is hidden.
     includeRateLimits: isDashboardActive,
+    passivePollingEnabled: isDashboardActive,
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
