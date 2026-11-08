@@ -368,6 +368,7 @@ export class SmartScheduleDispatcher {
       prompt,
       owner: memberName,
       startImmediately: !schedule.taskFirst,
+      ...(schedule.taskFirst ? { notifyOwner: false as const } : {}),
     });
     if (schedule.taskFirst) {
       const afterWrite = await this.runtime.getRuntime(team);
