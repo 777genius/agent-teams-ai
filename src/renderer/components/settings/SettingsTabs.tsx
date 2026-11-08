@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import { Bell, Cable, Palette, Plug, Settings, Wrench } from 'lucide-react';
+import { Bell, Cable, Network, Palette, Plug, Settings, Wrench } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -11,6 +11,7 @@ export type SettingsSection =
   | 'appearance'
   | 'connection'
   | 'providers'
+  | 'gatewayProviders'
   | 'externalAgentConnection'
   | 'notifications'
   | 'advanced';
@@ -26,6 +27,7 @@ interface SectionConfig {
     | 'general.appearance.title'
     | 'tabs.advanced.label'
     | 'runtimeProvider.tabs.providers'
+    | 'tabs.gatewayProviders.label'
     | 'tabs.general.label'
     | 'tabs.notifications.label'
     | 'general.externalAgentConnection.title';
@@ -38,6 +40,7 @@ const sections: SectionConfig[] = [
   { id: 'appearance', labelKey: 'general.appearance.title', icon: Palette },
   { id: 'notifications', labelKey: 'tabs.notifications.label', icon: Bell },
   { id: 'providers', labelKey: 'runtimeProvider.tabs.providers', icon: Plug, electronOnly: true },
+  { id: 'gatewayProviders', labelKey: 'tabs.gatewayProviders.label', icon: Network, electronOnly: true },
   {
     id: 'externalAgentConnection',
     labelKey: 'general.externalAgentConnection.title',
