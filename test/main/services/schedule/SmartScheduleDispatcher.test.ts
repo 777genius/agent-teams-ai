@@ -185,10 +185,53 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(result).toMatchObject({ kind: 'dispatched', taskId: 'task-1' });
     expect(port.createTask).toHaveBeenCalledExactlyOnceWith(
       'test-team',
-      expect.objectContaining({ owner: 'lead', startImmediately: true })
+      expect.objectContaining({ owner: 'lead', startImmediately: false })
     );
+    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith('test-team', 'task-1');
     expect(port.launchTeam).not.toHaveBeenCalled();
     expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('retains a pending task if the live runtime changes after durable creation', async () => {
+    enableTaskFirstPorts();
+    let reads = 0;
+    port.getRuntime = vi.fn(async () => {
+      reads++;
+      return { ...runtimeMembers(true), runId: reads > 2 ? 'replacement-run' : 'team-run-1' };
+    });
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'live-task-run-changed',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledWith(
+      'test-team',
+      expect.objectContaining({ owner: 'alice', startImmediately: false })
+    );
+    expect(port.startTaskByUser).not.toHaveBeenCalled();
+  });
+
+  it('never starts a saved offline task against a replaced runtime generation', async () => {
+    enableTaskFirstPorts();
+    let running = false;
+    port.isTeamAlive = vi.fn(() => running);
+    let reads = 0;
+    port.getRuntime = vi.fn(async () => {
+      reads++;
+      return { ...runtimeMembers(true), runId: reads > 1 ? 'replacement-run' : 'launched-1' };
+    });
+    port.launchTeam = vi.fn(async () => {
+      running = true;
+      return { runId: 'launched-1', launchStatus: 'started' as const };
+    });
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'offline-task-run-changed',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    expect(port.startTaskByUser).not.toHaveBeenCalled();
   });
 
   it('never creates more work while the previous scheduled board task is unfinished', async () => {
