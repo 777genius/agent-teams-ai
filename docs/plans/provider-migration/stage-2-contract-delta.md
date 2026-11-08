@@ -113,14 +113,17 @@ Exact reviewed sources:
   qualified as replay-safe**. A storage receipt written after provider effects
   is not pre-dispatch idempotency authority. This missing guarantee is now
   **reproduced**, not only inferred: isolated [Runtime RED Draft #260](https://github.com/agent-teams-ai/agent-runtime/pull/260)
-  at [`ecc0a184`](https://github.com/agent-teams-ai/agent-runtime/commit/ecc0a18483b35ae48e040c8ca4e09eb5cb64b7b9)
-  now launches Host B as a **separate Node OS process** (not merely another
+  at [`65dd4d38`](https://github.com/agent-teams-ai/agent-runtime/commit/65dd4d3880ca169ca9f9700e8310a9c30de503ef)
+  launches Host B as a **separate Node OS process** (not merely another
   JS session), with its own PostgreSQL 18 pool and valid bearer, after Host
-  A's lost-COMMIT-ACK. [Exact-head Node 24/26 native E2E](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42496033296)
-  each report **33 PASS, 1 deliberate RED FAIL, 0 skipped**; checked-out SHA
-  matches the PR, the different-process PID check passes, but the second
-  provider-fixture dispatch is still **actual 1, required 0**. The negative deliberately stays RED; deterministic
-  upstreams do not demonstrate a production exploit. [Owning gap #257](https://github.com/agent-teams-ai/agent-runtime/issues/257)
+  A's lost-COMMIT-ACK. [Exact-head Node 24/26 native E2E](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42506721779)
+  each report **33 PASS, 1 deliberate RED FAIL, 0 skipped**; both logs verify
+  checkout of `65dd4d38`. The test asserts immutable original SQL receipt
+  **before** its aggregate negative verdict, which reports all three observed
+  provider-fixture violations: **duplicate dispatch 1 (required 0)**,
+  **extra provider materialization 1 (required 0)** and **second completed
+  outcome true (required false)**. The negative deliberately stays RED;
+  deterministic upstreams do not demonstrate a production exploit. [Owning gap #257](https://github.com/agent-teams-ai/agent-runtime/issues/257)
   still requires real interprocess intent/route admission and reconciliation
   before claiming M08 or S2.1. ReviewRouter reported **INCOMPLETE 0/2**;
   the recorded scoped author review is not an independent approval and CodeQL
