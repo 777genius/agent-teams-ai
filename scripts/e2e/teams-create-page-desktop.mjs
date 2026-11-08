@@ -195,6 +195,10 @@ async function waitForRenderer(port) {
 }
 
 async function startApp(fixture) {
+  // Never use a previous process's DevTools URL while launching the new one.
+  appLogTail.length = 0;
+  appLogRemainder.stdout = '';
+  appLogRemainder.stderr = '';
   const nodeBinary = await realpath(process.execPath);
   const env = {
     ...process.env,
@@ -544,11 +548,28 @@ async function captureScreenshot(client, fixture, label) {
   await writeFile(path.join(dir, `teams-create-${label}.png`), Buffer.from(result.data, 'base64'));
 }
 
-async function initializeTeams(client, fixture) {
+async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
   await client.send('Runtime.enable');
   await client.send('Page.enable');
-  await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
-    'native API and dev store', 60_000);
+  try {
+    // Windows CI needs longer to reopen the *same* profile after taskkill.
+    // Keep real renderer and IPC readiness mandatory; never skip a failed boot.
+    await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
+      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 60_000);
+  } catch (error) {
+    let startupStatus = null;
+    try {
+      startupStatus = await client.evaluate(
+        "window.electronAPI?.startup?.getStatus?.().catch(() => null) ?? null"
+      );
+    } catch {
+      // The renderer may not have a working preload at all.
+    }
+    throw new Error(
+      `Electron renderer did not initialize after ${afterRestart ? 'process restart' : 'cold start'}; ` +
+        `startup status: ${JSON.stringify(startupStatus)}. ${String(error)}`
+    );
+  }
   const names = await client.evaluate(
     `window.electronAPI.teams.list().then(rows => rows.map(team => team.teamName))`);
   assert(names.includes(fixture.teamName), 'Sandbox team is missing from native API');
@@ -686,7 +707,7 @@ async function main() {
     // Graceful rebuild of the renderer with the same IndexedDB profile.
     started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
-    await initializeTeams(cdp, fixture);
+    await initializeTeams(cdp, fixture, { afterRestart: true });
     const restored = await cdp.evaluate(`(() => {
       const el = document.querySelector('[data-testid=create-team-page] #team-name');
       return el ? { inPage: true, value: el.value } : { inPage: false, value: null };
