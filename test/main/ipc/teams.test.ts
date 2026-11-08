@@ -1116,6 +1116,10 @@ describe('ipc teams handlers', () => {
       },
     });
     expect(service.createTeamConfig).toHaveBeenCalledOnce();
+    expect(vi.mocked(console.error).mock.calls).toEqual([
+      ['[IPC:teams]', '[teams:createConfig] Team already exists: test-created'],
+    ]);
+    vi.mocked(console.error).mockClear();
   });
 
   it('keeps a post-allocation duplicate-name failure unqualified', async () => {
@@ -1128,6 +1132,10 @@ describe('ipc teams handlers', () => {
     expect(result).toMatchObject({ success: false, error: 'Team already exists: test-created' });
     expect(result).not.toHaveProperty('failure');
     expect(service.createTeamConfig).toHaveBeenCalledOnce();
+    expect(vi.mocked(console.error).mock.calls).toEqual([
+      ['[IPC:teams]', '[teams:createConfig] Team already exists: test-created'],
+    ]);
+    vi.mocked(console.error).mockClear();
   });
 
   it.each([TEAM_CREATE, TEAM_CREATE_CONFIG])(
