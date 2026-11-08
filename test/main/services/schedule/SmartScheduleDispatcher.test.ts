@@ -7,6 +7,7 @@ import {
 
 import type {
   Schedule,
+  ScheduleRun,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
@@ -192,7 +193,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
 
   it('never creates more work while the previous scheduled board task is unfinished', async () => {
     enableTaskFirstPorts();
-    port.getPreviousRuns = vi.fn(async () => [{
+    port.getPreviousRuns = vi.fn(async (): Promise<ScheduleRun[]> => [{
       id: 'prior-run', scheduleId: 'schedule-1', teamName: 'test-team', status: 'dispatched',
       scheduledFor: new Date().toISOString(), startedAt: new Date().toISOString(),
       retryCount: 0, linkedTaskId: 'prior-task',
@@ -206,6 +207,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
       active
     );
     expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'prior-task' });
+    if (outcome.kind !== 'skipped') throw new Error('Expected unfinished task to skip');
     expect(outcome.summary).toMatch(/still active/);
     expect(port.createTask).not.toHaveBeenCalled();
     expect(port.launchTeam).not.toHaveBeenCalled();
@@ -236,7 +238,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     enableTaskFirstPorts();
     port.isTeamAlive = vi.fn(() => false);
     port.hasRunnableConfig = vi.fn(async () => false);
-    const schedule = { ...makeSchedule('team'), taskFirst: true };
+    const schedule = { ...makeSchedule('team'), taskFirst: true as const };
     expect((await dispatch.dispatch(schedule, 'draft', active)).kind).toBe('skipped');
     port.hasRunnableConfig = vi.fn(async () => true);
     port.getSavedRequest = vi.fn(async () => ({
