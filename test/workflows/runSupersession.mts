@@ -35,6 +35,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'prepare-updater-native-inputs',
     'runtime-bootstrap-smoke',
     'sentry-owned-process-native',
+    'teams-create-page-desktop-e2e',
     'updater-linux-packages',
     'updater-native-feasibility',
     'updater-windows',
