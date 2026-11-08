@@ -110,6 +110,21 @@ describe('MemberSelect', () => {
     );
   });
 
+  it('labels a stale selected recipient without changing its saved identity', async () => {
+    await act(async () => {
+      root.render(
+        <MemberSelect members={[member('alice')]} value="retired-member" onChange={vi.fn()}
+          unavailableLabel="This recipient is no longer available." />
+      );
+      await flush();
+    });
+    const button = host.querySelector('button[role="combobox"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-invalid')).toBe('true');
+    expect(button.textContent).toContain('retired-member');
+    expect(button.textContent).toContain('no longer available');
+    expect(button.title).toContain('no longer available');
+  });
+
   it('supports custom log-source labels, descriptions, search text, and selection', async () => {
     const onChange = vi.fn();
 

@@ -26,6 +26,8 @@ interface MemberSelectProps<T extends SelectableMember> {
   value: string | null;
   onChange: (value: string | null) => void;
   placeholder?: string;
+  /** Localized warning for a saved recipient no longer present in the roster. */
+  unavailableLabel?: string;
   /** Show "Unassigned" option at the top of the list */
   allowUnassigned?: boolean;
   /** Size variant */
@@ -49,6 +51,7 @@ export const MemberSelect = <T extends SelectableMember>({
   value,
   onChange,
   placeholder = 'Select member...',
+  unavailableLabel,
   allowUnassigned = false,
   size = 'sm',
   triggerVariant = 'default',
@@ -101,6 +104,7 @@ export const MemberSelect = <T extends SelectableMember>({
         : allowUnassigned
           ? t('members.unassigned')
           : placeholder;
+  const unavailableSelection = Boolean(value && !selectedMember);
   const triggerAriaLabel =
     ariaLabel ?? (isAvatarTrigger ? `Select member: ${selectedLabel}` : undefined);
 
@@ -152,7 +156,8 @@ export const MemberSelect = <T extends SelectableMember>({
           aria-expanded={open}
           aria-controls={listboxId}
           aria-label={triggerAriaLabel}
-          title={isAvatarTrigger ? selectedLabel : undefined}
+          aria-invalid={unavailableSelection || undefined}
+          title={unavailableSelection ? unavailableLabel : isAvatarTrigger ? selectedLabel : undefined}
           disabled={disabled}
           className={cn(
             isAvatarTrigger
@@ -179,7 +184,7 @@ export const MemberSelect = <T extends SelectableMember>({
                     {t('members.unassigned')}
                   </span>
                 ) : (
-                  <span className="text-[var(--color-text-muted)]">{value ? selectedLabel : placeholder}</span>
+                  <span className="text-[var(--color-text-muted)]">{unavailableSelection && unavailableLabel ? `${selectedLabel} — ${unavailableLabel}` : value ? selectedLabel : placeholder}</span>
                 )}
               </span>
               <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />

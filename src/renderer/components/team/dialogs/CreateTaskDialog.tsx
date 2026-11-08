@@ -257,6 +257,7 @@ export const CreateTaskDialog = ({
             : t('tasks.createTask.selectMemberOptional')
         }
         allowUnassigned={!requiresOwner}
+        unavailableLabel={t('messages.manualQueue.recipientUnavailable')}
       />
     </div>
   );
