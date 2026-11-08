@@ -151,6 +151,15 @@ Exact reviewed sources:
   security oracle (**33 PASS, 1 deliberate RED FAIL, zero skips**). Neither
   provider dispatch nor credential materialization occurs in this SQL-only
   rollback case; it cannot authorize retries for uncertain external effects.
+  **Post-COMMIT backend crash qualification (8 Nov 2026 UTC):**
+  Runtime [TEST-only #260 HEAD `e865666`](https://github.com/agent-teams-ai/agent-runtime/commit/e865666d2a5e85abb827993cc5105c7cfa9cedd6)
+  separately commits a claim, terminates that actual PostgreSQL backend, then
+  confirms from a different connection that the original owner remains intact
+  and a new claim is refused. [Exact-head PG18 Node 24/26
+  #42530733914](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42530733914)
+  each reached the unchanged Host M08 failure (**33 PASS, 1 deliberately RED
+  FAIL, zero skips**), proving only this SQL fixture executed before that failure.
+  There is still no installed Runtime pre-effect admission owner.
   The existing synchronous `HostHttpConsumptionJournal.consume()` and
   `routeFirstWrite` first-byte lease must not be quietly replaced with an
   asynchronous SQL call. Production authority and reconciliation stay HOLD.
