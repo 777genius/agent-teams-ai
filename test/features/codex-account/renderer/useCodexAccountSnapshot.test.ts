@@ -1307,6 +1307,11 @@ describe('useCodexAccountSnapshot', () => {
     });
   });
   it('pauses hidden passive checks but continues observing an in-progress login', async () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
     vi.useFakeTimers();
     const initial = createSnapshot();
     apiMocks.getCodexAccountSnapshot.mockResolvedValue(initial);
@@ -1325,45 +1330,53 @@ describe('useCodexAccountSnapshot', () => {
       return React.createElement('div', null, 'mounted');
     }
 
-    await act(async () => {
-      root.render(React.createElement(Harness, { active: false }));
-      await Promise.resolve();
-    });
-    expect(apiMocks.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(120_000);
-    });
-    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
-
-    await act(async () => {
-      publish?.(null, {
-        ...initial, updatedAt: new Date(Date.now() + 1000).toISOString(),
-        login: { status: 'pending', error: null, startedAt: new Date().toISOString() },
+    try {
+      await act(async () => {
+        root.render(React.createElement(Harness, { active: false }));
+        await Promise.resolve();
       });
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3000);
-    });
-    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+      expect(apiMocks.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120_000);
+      });
+      expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
 
-    await act(async () => {
-      publish?.(null, { ...initial, updatedAt: new Date(Date.now() + 2000).toISOString() });
-    });
-    apiMocks.refreshCodexAccountSnapshot.mockClear();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(120_000);
-    });
-    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+      await act(async () => {
+        publish?.(null, {
+          ...initial, updatedAt: new Date(Date.now() + 1000).toISOString(),
+          login: { status: 'pending', error: null, startedAt: new Date().toISOString() },
+        });
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
 
-    await act(async () => root.render(React.createElement(Harness, { active: true })));
-    // Stale state is refreshed on resume, before the next regular interval.
-    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(2);
-    await act(async () => root.unmount());
-    vi.useRealTimers();
+      await act(async () => {
+        publish?.(null, { ...initial, updatedAt: new Date(Date.now() + 2000).toISOString() });
+      });
+      apiMocks.refreshCodexAccountSnapshot.mockClear();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120_000);
+      });
+      expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+
+      await act(async () => root.render(React.createElement(Harness, { active: true })));
+      // Stale state is refreshed on resume, before the next regular interval.
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(2);
+    } finally {
+      await act(async () => root.unmount());
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+      } else {
+        Reflect.deleteProperty(document, 'visibilityState');
+      }
+      vi.useRealTimers();
+    }
   });
 
 });

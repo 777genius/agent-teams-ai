@@ -109,11 +109,31 @@ function regularElectronProfilePaths(app: ElectronDevPathOverrideApp): [string, 
   const cliSelected =
     app.commandLine?.hasSwitch('user-data-dir') === true ||
     process.argv.some((arg) => arg === '--user-data-dir' || arg.startsWith('--user-data-dir='));
-  const userDataPath =
-    cliSelected && app.getName
-      ? path.join(regularAppDataPath(getPath), app.getName())
-      : getPath('userData');
-  const otherPaths: [string, string][] = cliSelected
+  const regularNamedProfile = (): string => {
+    if (!app.getName) throw new Error('Cannot derive the regular Electron profile name');
+    const name = app.getName();
+    if (!name.trim() || name === '.' || name === '..' || path.basename(name) !== name) {
+      throw new Error('Cannot derive the regular Electron profile path');
+    }
+    return path.join(regularAppDataPath(getPath), name);
+  };
+  // On early Windows startup Electron can throw for userData before app.ready,
+  // even though APPDATA and the application name identify the normal profile.
+  // Preserve the normal-profile overlap guard: never fall back to the isolated root.
+  let deriveDefaultPaths = cliSelected && Boolean(app.getName);
+  let userDataPath: string;
+  if (deriveDefaultPaths) {
+    userDataPath = regularNamedProfile();
+  } else {
+    try {
+      userDataPath = getPath('userData');
+    } catch (error) {
+      if (process.platform !== 'win32' || !app.getName) throw error;
+      userDataPath = regularNamedProfile();
+      deriveDefaultPaths = true;
+    }
+  }
+  const otherPaths: [string, string][] = deriveDefaultPaths
     ? [
         ['sessionData', userDataPath],
         ['logs', path.join(userDataPath, 'logs')],
