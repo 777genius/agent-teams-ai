@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 describe('CliInstallerService background provider status', () => {
-  const projectPath = '/tmp/TEST-opencode-preflight';
+  const projectPath = '/sandbox/TEST-opencode-preflight';
   test('resolves the runtime when project-scoped preflight races initial discovery', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
