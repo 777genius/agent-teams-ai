@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Ora"
     },
     "empty": {
       "title": "Ancora nessuna pianificazione",
@@ -2147,7 +2148,11 @@
       "cancelled": "Annullata",
       "dispatched": "Inviato",
       "skipped": "Saltato"
-    }
+    },
+    "taskFirstAgentDescription": "L'attività viene assegnata al membro selezionato. Se necessario, il team viene avviato prima.",
+    "taskFirstTeamDescription": "Il responsabile coordina questa attività. Se necessario, il team viene avviato prima.",
+    "taskFirstDesktopRequired": "Le attività pianificate vengono eseguite solo mentre Agent Teams è aperto.",
+    "taskFirstHistoricPrompt": "Questo team ha un prompt di avvio salvato. Controllalo nelle impostazioni del team prima di pianificare attività automatiche."
   },
   "openCodeContextConfigHint": {
     "summary": "I modelli locali OpenCode possono usare un budget di contesto OpenCode invece di limiti solo sul prompt.",
