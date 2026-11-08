@@ -10,7 +10,7 @@ import { projectTeamPosition } from './projectTeamChanges';
 import { projectTeamLifecycleSnapshot } from './projectTeamLifecycle';
 
 import type { BackendTeamSnapshot } from '../../../contracts/teamSnapshot';
-import type { KanbanState, TaskComment, TeamTaskWithKanban } from '@shared/types/team';
+import type { KanbanState, TaskComment, TaskHistoryEvent, TaskReviewInterval, TaskWorkInterval, TeamTaskWithKanban } from '@shared/types/team';
 
 function row(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -58,6 +58,64 @@ function comment(value: unknown): TaskComment {
       : { attachments: projectAttachmentMetadata(source.attachments) }),
   };
 }
+const taskStates = ['pending', 'in_progress', 'completed', 'deleted'] as const;
+const reviewStates = ['none', 'review', 'needsFix', 'approved'] as const;
+
+function workInterval(value: unknown): TaskWorkInterval {
+  const source = row(value);
+  return {
+    startedAt: text(source.startedAt),
+    ...(source.completedAt === undefined ? {} : { completedAt: text(source.completedAt) }),
+  };
+}
+function reviewInterval(value: unknown): TaskReviewInterval {
+  const source = row(value);
+  return {
+    reviewer: text(source.reviewer),
+    ...workInterval(source),
+  };
+}
+function workflowEvent(value: unknown): TaskHistoryEvent {
+  const source = row(value);
+  const base = {
+    id: text(source.id),
+    timestamp: text(source.timestamp),
+    ...(source.actor === undefined ? {} : { actor: text(source.actor) }),
+  };
+  switch (source.type) {
+    case 'task_created':
+      return { ...base, type: 'task_created', status: choice(source.status, taskStates) };
+    case 'status_changed':
+      return { ...base, type: 'status_changed',
+        from: choice(source.from, taskStates), to: choice(source.to, taskStates) };
+    case 'owner_changed':
+      return { ...base, type: 'owner_changed',
+        ...(source.from === undefined ? {} : { from: text(source.from) }),
+        ...(source.to === undefined ? {} : { to: text(source.to) }) };
+    case 'review_requested':
+      return { ...base, type: 'review_requested', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['review'] as const),
+        ...(source.reviewer === undefined ? {} : { reviewer: text(source.reviewer) }),
+        ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_changes_requested':
+      return { ...base, type: 'review_changes_requested', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['needsFix'] as const),
+        ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_approved':
+      return { ...base, type: 'review_approved', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['approved'] as const),
+        ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_disapproved':
+      return { ...base, type: 'review_disapproved',
+        from: choice(source.from, ['approved'] as const),
+        to: choice(source.to, ['none'] as const) };
+    case 'review_started':
+      return { ...base, type: 'review_started', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['review'] as const) };
+    default:
+      throw new Error('Invalid task workflow event');
+  }
+}
 export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithKanban {
   const source = row(value);
   const result: TeamTaskWithKanban = {
@@ -86,6 +144,12 @@ export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithK
   if (source.descriptionTaskRefs !== undefined)
     result.descriptionTaskRefs = refs(source.descriptionTaskRefs);
   if (source.promptTaskRefs !== undefined) result.promptTaskRefs = refs(source.promptTaskRefs);
+  if (source.workIntervals !== undefined)
+    result.workIntervals = array(source.workIntervals, workInterval);
+  if (source.reviewIntervals !== undefined)
+    result.reviewIntervals = array(source.reviewIntervals, reviewInterval);
+  if (source.historyEvents !== undefined)
+    result.historyEvents = array(source.historyEvents, workflowEvent);
   if (source.comments !== undefined) result.comments = array(source.comments, comment);
   if (source.attachments !== undefined)
     result.attachments = projectAttachmentMetadata(source.attachments);
