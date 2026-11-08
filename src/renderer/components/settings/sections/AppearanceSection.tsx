@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
 import { useAppearancePreferences } from '@renderer/hooks/useAppearance';
 import { cn } from '@renderer/lib/utils';
 import {
@@ -21,6 +22,7 @@ import type { AppConfig } from '@shared/types/notifications';
 import type { SafeConfig } from '../hooks/useSettingsConfig';
 
 const THEME_OPTIONS = ['dark', 'light', 'system'] as const;
+const BUILTIN_THEME_OPTION = '__builtin__';
 
 interface AppearanceSectionProps {
   safeConfig: SafeConfig;
@@ -97,20 +99,34 @@ export const AppearanceSection = ({
         description={t('general.appearance.customThemes.description')}
       >
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <select
-            data-testid="appearance-custom-theme-select"
-            value={activeCustomThemeId ?? ''}
-            aria-label={t('general.appearance.customThemes.label')}
-            className="max-w-44 rounded border border-border bg-surface-raised px-2 py-1.5 text-xs text-text"
-            onChange={(event) =>
-              changeLocalPreference(() => setActiveCustomTheme(event.target.value || null))
+          <Select
+            value={activeCustomThemeId ?? BUILTIN_THEME_OPTION}
+            onValueChange={(value) =>
+              changeLocalPreference(() => setActiveCustomTheme(value === BUILTIN_THEME_OPTION ? null : value))
             }
           >
-            <option value="">{t('general.appearance.customThemes.none')}</option>
-            {themes.map((theme) => (
-              <option key={theme.id} value={theme.id}>{theme.name}</option>
-            ))}
-          </select>
+            <SelectTrigger
+              data-testid="appearance-custom-theme-select"
+              aria-label={t('general.appearance.customThemes.label')}
+              className="h-8 w-44 bg-surface-raised text-xs text-text"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={BUILTIN_THEME_OPTION}>
+                {t('general.appearance.customThemes.none')}
+              </SelectItem>
+              {themes.map((theme) => (
+                <SelectItem
+                  key={theme.id}
+                  value={theme.id}
+                  data-testid={`appearance-custom-theme-option-${theme.id}`}
+                >
+                  {theme.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <button
             type="button"
             data-testid="appearance-edit-custom-themes"
@@ -130,19 +146,31 @@ export const AppearanceSection = ({
         description={t('general.appearance.uiScale.description')}
       >
         <div className="flex items-center gap-2">
-          <select
-            data-testid="appearance-ui-scale"
-            value={zoomPercent}
-            aria-label={t('general.appearance.uiScale.label')}
-            className="rounded border border-border bg-surface-raised px-2 py-1.5 text-xs text-text"
-            onChange={(event) =>
-              changeLocalPreference(() => setAppearanceZoom(Number(event.target.value)))
+          <Select
+            value={String(zoomPercent)}
+            onValueChange={(value) =>
+              changeLocalPreference(() => setAppearanceZoom(Number(value)))
             }
           >
-            {zoomOptions.map((value) => (
-              <option key={value} value={value}>{value}%</option>
-            ))}
-          </select>
+            <SelectTrigger
+              data-testid="appearance-ui-scale"
+              aria-label={t('general.appearance.uiScale.label')}
+              className="h-8 w-24 bg-surface-raised text-xs text-text"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {zoomOptions.map((value) => (
+                <SelectItem
+                  key={value}
+                  value={String(value)}
+                  data-testid={`appearance-ui-scale-option-${value}`}
+                >
+                  {value}%
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <button
             type="button"
             disabled={zoomPercent === 100}

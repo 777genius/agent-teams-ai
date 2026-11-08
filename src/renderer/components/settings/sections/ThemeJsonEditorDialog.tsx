@@ -35,13 +35,13 @@ export const ThemeJsonEditorDialog = ({
   onSave,
 }: ThemeJsonEditorDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
 
   useEffect(() => {
-    if (!open || !containerRef.current) return;
+    if (!open || !container) return;
     const view = new EditorView({
       state: EditorState.create({
         doc: formatCustomThemesJson(themes),
@@ -68,7 +68,7 @@ export const ThemeJsonEditorDialog = ({
           }),
         ],
       }),
-      parent: containerRef.current,
+      parent: container,
     });
     viewRef.current = view;
     view.focus();
@@ -76,7 +76,7 @@ export const ThemeJsonEditorDialog = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [open, themes]);
+  }, [open, themes, container]);
 
   const apply = (forceOverwrite = false): void => {
     if (!viewRef.current) return;
@@ -122,7 +122,7 @@ export const ThemeJsonEditorDialog = ({
           </DialogDescription>
         </DialogHeader>
         <div
-          ref={containerRef}
+          ref={setContainer}
           data-testid="appearance-custom-theme-json"
           className="config-editor-container min-h-[240px] flex-1 overflow-hidden px-2 py-3"
         />
