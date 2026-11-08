@@ -1,8 +1,12 @@
 import type { RuntimeProviderDirectoryCacheSnapshot } from '@features/runtime-provider-management/renderer';
+import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import type { CliProviderId, CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
 export const DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS = 2 * 60_000;
-const MAIN_PROVIDER_IDS = ['anthropic', 'codex', 'gemini'] as const;
+// Gemini is deliberately unavailable in the current UI: never wait for its status.
+const MAIN_PROVIDER_IDS: readonly CliProviderId[] = isGeminiUiFrozen()
+  ? ['anthropic', 'codex']
+  : ['anthropic', 'codex', 'gemini'];
 
 type MainProvider = Pick<
   CliProviderStatus,

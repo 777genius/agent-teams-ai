@@ -43,7 +43,7 @@ const input = {
 
 describe('getDashboardConnectionSummary (no IPC)', () => {
   it('counts verified CLI logins separately from complete OpenCode directory connections', () => {
-    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 2, cliCountComplete: true, cliCountPending: false, openCodeConnected: 2 });
+    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 1, cliCountComplete: true, cliCountPending: false, openCodeConnected: 2 });
   });
 
   it('never counts an OpenCode host or inventory-only fallback as a separate CLI credential', () => {
@@ -54,7 +54,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ),
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toEqual({
-      cliConnected: 1,
+      cliConnected: 0,
       cliCountComplete: true,
       cliCountPending: false,
       openCodeConnected: 2,
@@ -77,13 +77,13 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ),
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toMatchObject({
-      cliConnected: 2,
+      cliConnected: 1,
       cliCountComplete: false,
     });
     expect(getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliCountComplete).toBe(false);
   });
 
-  it('shows the settled zero as a lower bound when Gemini is frozen, not checking forever', () => {
+  it('ignores disabled Gemini even when its status is missing or marked loading', () => {
     const cliStatus = {
       ...baseCliStatus,
       providers: baseCliStatus.providers
@@ -92,7 +92,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toMatchObject({
       cliConnected: 0,
-      cliCountComplete: false,
+      cliCountComplete: true,
       cliCountPending: false,
     });
     expect(getDashboardConnectionSummary({
@@ -100,9 +100,9 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       cliStatus,
       providerStatusLoading: { gemini: true },
     })).toMatchObject({
-      cliConnected: null,
-      cliCountComplete: false,
-      cliCountPending: true,
+      cliConnected: 0,
+      cliCountComplete: true,
+      cliCountPending: false,
     });
   });
 
