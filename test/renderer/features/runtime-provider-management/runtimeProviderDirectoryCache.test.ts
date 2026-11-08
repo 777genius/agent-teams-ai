@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runtimeProviderDirectoryInteraction } from '../../../../src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction';
 
 import {
+  getRuntimeProviderConnectedCountEvidence,
+  getRuntimeProviderConnectedCountObservation,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryCache,
@@ -10,6 +12,7 @@ import {
   markRuntimeProviderDirectoryScopeUnverified,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   observeRuntimeProviderDirectoryRevision,
+  publishRuntimeProviderConnectedCount,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
@@ -41,6 +44,34 @@ const providerEntry = {
 describe('runtimeProviderDirectoryCache', () => {
   afterEach(() => {
     resetRuntimeProviderDirectoryCacheForTests();
+  });
+
+  it('fences count-only observations across project switches, credential writes and global logout', () => {
+    const revision = JSON.stringify(['ready', '1.2.3', '/bin/opencode']);
+    observeRuntimeProviderDirectoryRevision(revision);
+    const tokenA = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const tokenB = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    const input = {
+      connected: 3,
+      runtimeRevision: revision,
+      fetchedAt: new Date().toISOString(),
+      source: 'summary-connected' as const,
+    };
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-a', readToken: tokenA });
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-b', readToken: tokenB });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-a')?.connected).toBe(3);
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')?.connected).toBe(3);
+
+    invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-a')).toBeNull();
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')?.connected).toBe(3);
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-a', readToken: tokenA });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-a')).toBeNull();
+
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')).toBeNull();
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-b', readToken: tokenB });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')).toBeNull();
   });
 
   it('rejects stale in-flight reads after a credential change without touching other scopes', () => {
@@ -87,6 +118,7 @@ describe('runtimeProviderDirectoryCache', () => {
     const previousToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
     invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/project-a').invalidated).toBe(true);
     publishRuntimeProviderDirectoryCache({
       projectPath: '/tmp/project-a',
       entries: [{ ...providerEntry, state: 'not-connected' }],
