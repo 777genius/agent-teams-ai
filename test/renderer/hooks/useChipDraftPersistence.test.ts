@@ -1,3 +1,7 @@
+import { act, createElement, type ReactElement } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock idb-keyval before importing draftStorage
@@ -86,6 +90,37 @@ describe('chip draft persistence via draftStorage', () => {
     // Raw value is returned; consumer (useChipDraftPersistence) handles parse errors
     expect(raw).toBe('not valid json{{{');
     expect(() => JSON.parse(raw!)).toThrow();
+  });
+
+  it('does not show Saved when an older chip write finishes after an edit', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let releaseSave!: () => void;
+    const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const save = vi.spyOn(draftStorage, 'saveDraft')
+      .mockImplementationOnce(() => oldWrite)
+      .mockResolvedValue(undefined);
+    let draft!: ReturnType<typeof useChipDraftPersistence>;
+    function Input(): ReactElement {
+      draft = useChipDraftPersistence('createTeam:prompt:chips');
+      return createElement('span', { 'data-saved': draft.isSaved });
+    }
+    const root = createRoot(document.createElement('div'));
+    vi.useFakeTimers();
+    try {
+      await act(async () => { root.render(createElement(Input)); });
+      await act(async () => { draft.setChips([makeChip()]); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { draft.setChips([makeChip({ id: 'newer-chip' })]); });
+      await act(async () => { releaseSave(); await Promise.resolve(); });
+      expect(draft.chips[0]?.id).toBe('newer-chip');
+      expect(draft.isSaved).toBe(false);
+    } finally {
+      await act(async () => { root.unmount(); });
+      vi.useRealTimers();
+      save.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('handles empty array', async () => {
