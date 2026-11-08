@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Uhrzeit"
     },
     "empty": {
       "title": "Noch keine Termine",
@@ -2147,7 +2148,11 @@
       "cancelled": "gekündigt",
       "dispatched": "Übergeben",
       "skipped": "Übersprungen"
-    }
+    },
+    "taskFirstAgentDescription": "Die Aufgabe wird dem ausgewählten Teammitglied zugewiesen. Falls nötig, wird das Team zuerst gestartet.",
+    "taskFirstTeamDescription": "Die Teamleitung koordiniert diese Aufgabe. Falls nötig, wird das Team zuerst gestartet.",
+    "taskFirstDesktopRequired": "Zeitpläne werden nur ausgeführt, solange Agent Teams geöffnet ist.",
+    "taskFirstHistoricPrompt": "Für dieses Team ist ein früherer Start-Prompt gespeichert. Prüfe ihn in den Teameinstellungen, bevor du automatische Aufgaben planst."
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode lokale Modelle können ein OpenCode-Kontextbudget anstelle von zeitnahen Limits verwenden.",
