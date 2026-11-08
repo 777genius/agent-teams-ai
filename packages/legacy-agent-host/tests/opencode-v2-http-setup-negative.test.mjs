@@ -45,6 +45,8 @@ test('failed published V2 SDK setup emits HOLD receipt and cleans only its TEST 
     assert.deepEqual(receipt.steps, []);
     assert.deepEqual(readdirSync(isolatedTemp), before,
       'failed setup must leave no TEST server root');
+    assert.deepEqual(readdirSync(emptySdkPrefix), [],
+      'a failed TEST setup must not write into the shared SDK prefix');
   } finally {
     rmSync(fixture, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
