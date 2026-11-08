@@ -18,9 +18,11 @@ on:
 permissions:
   contents: read
 
+# Canonical run supersession: each PR cancels only itself; a default-branch
+# push retains independent post-merge evidence instead of cancelling it.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
   real-runtime:
