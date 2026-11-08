@@ -115,7 +115,25 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
   useEffect(() => {
     if (!state.isOpen) return;
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') close(false);
+      if (e.key === 'Escape') {
+        close(false);
+        return;
+      }
+      // aria-modal must keep Tab inside the confirmation so the background
+      // team form cannot be edited during an unresolved destructive action.
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      const controls = dialog?.querySelectorAll<HTMLButtonElement>(
+        'button:not([disabled]):not([tabindex="-1"])'
+      );
+      if (!dialog || !controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      const outside = !dialog.contains(document.activeElement);
+      if (e.shiftKey ? outside || document.activeElement === first : outside || document.activeElement === last) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
