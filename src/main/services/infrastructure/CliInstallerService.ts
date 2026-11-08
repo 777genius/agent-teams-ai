@@ -868,6 +868,14 @@ export class CliInstallerService {
     providerId: CliProviderId,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
+    return this.getProviderStatusWithBoundedRetry(providerId, options, false);
+  }
+
+  private async getProviderStatusWithBoundedRetry(
+    providerId: CliProviderId,
+    options: CliProviderStatusRequestOptions,
+    retried: boolean
+  ): Promise<CliProviderStatus | null> {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
     await this.refreshInvalidatedRuntime(generation);
@@ -876,7 +884,13 @@ export class CliInstallerService {
         providerId,
         new Error('Provider runtime changed during status check. Refresh to retry.')
       );
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    // A changed generation invalidates the discovered path. Explicit project
+    // preflight may retry once against the new generation; passive reads never do.
+    const retryOrObsolete = () =>
+      options.projectPath && !retried
+        ? this.getProviderStatusWithBoundedRetry(providerId, options, true)
+        : obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return retryOrObsolete();
     // Explicit project-scoped preflight can race initial runtime discovery.
     // Keep background/global status polling passive: it must not spawn shell
     // discovery or invalidate an authoritative cached status.
@@ -884,7 +898,7 @@ export class CliInstallerService {
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
     if (options.projectPath && !snapshot?.binaryPath) {
       const binaryPath = await ClaudeBinaryResolver.resolve();
-      if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+      if (generation !== this.statusGatherGeneration) return retryOrObsolete();
       const latest = this.latestStatusSnapshot;
       passiveRuntime = resolvePassiveProviderRuntime(
         latest?.binaryPath
@@ -923,7 +937,7 @@ export class CliInstallerService {
           providerId,
           handleCatalogUpdate
         );
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return retryOrObsolete();
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;
