@@ -129,8 +129,9 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
 test('native V2 captures canonical OS paths without widening legacy V1 paths', () => {
   const base = v2Profile();
   const windows = process.platform === 'win32';
-  const root = windows ? 'C:\\\\TEST-owned-v2' : '/TEST-owned-v2';
-  const namespace = (suffix: string) => root + (windows ? '\\\\' : '/') + suffix;
+  const winSep = String.fromCharCode(92);
+  const root = windows ? 'C:' + winSep + 'TEST-owned-v2' : '/TEST-owned-v2';
+  const namespace = (suffix: string) => root + (windows ? winSep : '/') + suffix;
   const selected = {
     ...base, cwd: root, executable: { ...base.executable, path: namespace('opencode.exe') },
     environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
@@ -144,9 +145,9 @@ test('native V2 captures canonical OS paths without widening legacy V1 paths', (
     { ...selected, executable: { ...selected.executable, path: namespace('..') } },
     { ...selected, environment: { ...selected.environment, HOME: namespace('..') } },
     ...(windows ? [
-      { ...selected, cwd: 'C:\\\\TEST-owned-v2\\\\trailing. ' },
+      { ...selected, cwd: root + winSep + 'trailing. ' },
       { ...selected, executable: { ...selected.executable, path: 'C:relative.exe' } },
-      { ...selected, environment: { ...selected.environment, XDG_CACHE_HOME: '\\\\server\\\\share' } },
+      { ...selected, environment: { ...selected.environment, XDG_CACHE_HOME: winSep.repeat(2) + 'server' + winSep + 'share' } },
     ] : []),
   ]) assert.equal(runtimeProfileSchema.safeParse({ members: [invalid] }).success, false,
     'V2 must reject noncanonical native namespace paths');
