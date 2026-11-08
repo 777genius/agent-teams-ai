@@ -42,4 +42,18 @@ describe('install-dependencies-with-retry', () => {
       'HTTPError: Response code 503\nERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile';
     assert.equal(isRetryableInstallFailure(output), false);
   });
+
+  it('does not treat a non-fatal engine warning as a reason to suppress a 5xx retry', () => {
+    const output = [
+      'packages/legacy-agent-host | WARN Unsupported engine: wanted Node >=24 <25',
+      '. postinstall: HTTPError: Response code 503 while downloading Electron',
+    ].join('\n');
+    assert.equal(isRetryableInstallFailure(output), true);
+  });
+
+  it('still refuses retries after a fatal pnpm engine error', () => {
+    const output =
+      'HTTPError: Response code 503\nERR_PNPM_UNSUPPORTED_ENGINE Cannot install this package';
+    assert.equal(isRetryableInstallFailure(output), false);
+  });
 });
