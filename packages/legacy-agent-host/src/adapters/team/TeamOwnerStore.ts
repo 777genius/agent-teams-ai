@@ -10,7 +10,7 @@ import {
   readSync,
   constants,
 } from 'node:fs';
-import { isAbsolute, join, parse, resolve } from 'node:path';
+import { isAbsolute, join, parse, resolve, sep } from 'node:path';
 
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest, safeSegment } from '../../team/identity.js';
@@ -32,7 +32,7 @@ export class TeamOwnerStore implements TeamStore {
     this.directory = join(root, 'teams', safeSegment(teamName), '.host-owner');
     this.teamName = teamName;
     let part = parse(this.directory).root;
-    for (const segment of this.directory.slice(part.length).split('/')) {
+    for (const segment of this.directory.slice(part.length).split(sep)) {
       part = join(part, segment);
       try {
         const stat = lstatSync(part);
@@ -67,7 +67,7 @@ export class TeamOwnerStore implements TeamStore {
   private validateNamespace(): void {
     const directoryPath = (target: string, required = false): void => {
       let part = parse(target).root;
-      for (const segment of target.slice(part.length).split('/')) {
+      for (const segment of target.slice(part.length).split(sep)) {
         part = join(part, segment);
         try {
           const stat = lstatSync(part);
