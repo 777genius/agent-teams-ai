@@ -86,6 +86,8 @@ export function isCodexAccountSnapshotPending(
 export function useCodexAccountSnapshot(options: {
   enabled: boolean;
   includeRateLimits?: boolean;
+  /** Disable passive timers while Providers is hidden; keep active login observation. */
+  passivePollingEnabled?: boolean;
   initialRefreshDelayMs?: number;
   initialRefreshMaxDelayMs?: number;
 }): {
@@ -126,6 +128,8 @@ export function useCodexAccountSnapshot(options: {
   const [initialRefreshAttempted, setInitialRefreshAttempted] = useState(false);
   const [initialRateLimitsAttempted, setInitialRateLimitsAttempted] = useState(false);
   const enabled = electronMode && options.enabled;
+  const loginPending = snapshot?.login.status === 'pending' || snapshot?.login.status === 'starting';
+  const mayPollAccount = options.passivePollingEnabled !== false || loginPending || loading;
 
   useEffect(() => {
     const loadingTokens = loadingTokensRef.current;
@@ -378,7 +382,7 @@ export function useCodexAccountSnapshot(options: {
   ]);
 
   useEffect(() => {
-    if (!electronMode || !options.enabled || typeof document === 'undefined') {
+    if (!electronMode || !options.enabled || !mayPollAccount || typeof document === 'undefined') {
       return;
     }
 
@@ -420,6 +424,7 @@ export function useCodexAccountSnapshot(options: {
     electronMode,
     initialRefreshAttempted,
     initialRefreshDelayMs,
+    mayPollAccount,
     options.enabled,
     options.includeRateLimits,
     refresh,
@@ -427,7 +432,7 @@ export function useCodexAccountSnapshot(options: {
   ]);
 
   useEffect(() => {
-    if (!electronMode || !options.enabled) {
+    if (!electronMode || !options.enabled || !mayPollAccount) {
       return;
     }
     if (snapshot === null && !initialRefreshAttempted) {
@@ -453,6 +458,7 @@ export function useCodexAccountSnapshot(options: {
     electronMode,
     initialRefreshAttempted,
     initialRefreshDelayMs,
+    mayPollAccount,
     options.enabled,
     options.includeRateLimits,
     refresh,

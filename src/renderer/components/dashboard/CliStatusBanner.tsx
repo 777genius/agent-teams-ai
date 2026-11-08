@@ -1649,6 +1649,7 @@ export const CliStatusBanner = ({
     // Keep account login observation alive across tab switches, but stop heavy
     // subscription rate-limit polling while the provider page is hidden.
     includeRateLimits: isDashboardActive,
+    passivePollingEnabled: isDashboardActive,
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });

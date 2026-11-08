@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   cliProviderStatusLoading: {},
   openCodeRuntimeStatus: null,
   openSettingsTab: vi.fn(),
+  openTab: vi.fn(),
   selectedProjectId: null,
   projects: [],
   repositoryGroups: [],
@@ -27,6 +28,7 @@ vi.mock('@features/localization/renderer', () => ({
 }));
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   useRuntimeProviderDirectoryCache: () => state.directoryReads() ?? null,
+  useRuntimeProviderConnectedCount: () => null,
 }));
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
