@@ -66,6 +66,7 @@ export function publishDefaultFullCatalogPage(input: {
   totalCount: number | null;
   nextCursor: string | null;
   runtimeRevision?: string | null;
+  readToken?: string;
 }): void {
   if (input.entries.length === 0 || !isDefaultFullCatalogPage(input)) {
     return;
@@ -78,6 +79,7 @@ export function publishDefaultFullCatalogPage(input: {
     totalCount: input.totalCount,
     nextCursor: input.nextCursor,
     runtimeRevision: input.runtimeRevision,
+    readToken: input.readToken,
   });
 }
 
@@ -97,6 +99,7 @@ export function commitDirectoryPageLoad(input: {
   };
   presentEntry: (entry: RuntimeProviderDirectoryEntryDto) => RuntimeProviderDirectoryEntryDto;
   runtimeRevision?: string | null;
+  readToken?: string;
 }):
   | { action: 'retain' }
   | {
@@ -128,6 +131,7 @@ export function commitDirectoryPageLoad(input: {
     totalCount: input.directory.totalCount,
     nextCursor: input.directory.nextCursor,
     runtimeRevision: input.runtimeRevision,
+    readToken: input.readToken,
   });
   return {
     action: 'replace',

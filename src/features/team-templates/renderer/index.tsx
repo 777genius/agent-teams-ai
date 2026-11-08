@@ -1,4 +1,7 @@
+import { useEffect, useRef } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import {
   Select,
   SelectContent,
@@ -15,16 +18,51 @@ import type { TeamProviderId } from '@shared/types';
 
 export const TeamTemplatePicker = ({
   onApply,
+  confirmBeforeApply = false,
+  disabled = false,
 }: {
   onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
+  /** Creation has an editable roster; replacing it requires an explicit decision. */
+  confirmBeforeApply?: boolean;
+  /** Prevent replacement while persisted form fields are hydrating. */
+  disabled?: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
+  const confirmationOwner = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const owner = new AbortController();
+    confirmationOwner.current = owner;
+    return () => {
+      owner.abort();
+      if (confirmationOwner.current === owner) confirmationOwner.current = null;
+    };
+  }, []);
   return (
     <Select
+      disabled={disabled}
       value=""
       onValueChange={(id) => {
         const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
-        if (template) onApply(applyTeamTemplate(template));
+        if (!template) return;
+        if (!confirmBeforeApply) {
+          onApply(applyTeamTemplate(template));
+          return;
+        }
+        const owner = confirmationOwner.current;
+        if (!owner || owner.signal.aborted) return;
+        void (async () => {
+          const accepted = await confirm({
+            title: t('templates.confirmTitle', { defaultValue: 'Apply team template?' }),
+            message: t('templates.confirmMessage', {
+              defaultValue: 'This replaces the description, prompt and teammates, resets runtime selection, disables Run after create and Solo team, and enables model sync. Continue?',
+            }),
+            confirmLabel: t('templates.confirmAction', { defaultValue: 'Apply template' }),
+            cancelLabel: tCommon('actions.cancel'),
+            signal: owner.signal,
+          });
+          if (accepted && !owner.signal.aborted) onApply(applyTeamTemplate(template));
+        })();
       }}
     >
       <SelectTrigger aria-label={t('templates.label')}>

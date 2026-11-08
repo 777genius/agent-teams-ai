@@ -20,6 +20,7 @@ interface PublishRuntimeProviderDirectoryCacheInput {
   runtimeRevision?: string | null;
   totalCount?: number | null;
   nextCursor?: string | null;
+  readToken?: string;
 }
 
 const GLOBAL_SCOPE_KEY = '\u0000global';
@@ -38,6 +39,13 @@ const mergedFallbackByScope = new Map<
 let globalFallbackSource: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let globalFallbackSnapshot: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let observedRuntimeRevision: string | null = null;
+let invalidationEpoch = 0;
+const generationByScope = new Map<string, number>;
+
+/** Reject directory reads started before a credential mutation. */
+export function getRuntimeProviderDirectoryReadToken(projectPath?: string | null): string {
+  return `${invalidationEpoch}:${generationByScope.get(getScopeKey(projectPath)) ?? 0}`;
+}
 
 function getScopeKey(projectPath?: string | null): string {
   return projectPath?.trim() || GLOBAL_SCOPE_KEY;
@@ -197,7 +205,9 @@ export function publishRuntimeProviderDirectoryCache({
   totalCount,
   nextCursor,
   runtimeRevision,
+  readToken,
 }: PublishRuntimeProviderDirectoryCacheInput): void {
+  if (readToken !== undefined && readToken !== getRuntimeProviderDirectoryReadToken(projectPath)) return;
   if (runtimeRevision && observedRuntimeRevision && runtimeRevision !== observedRuntimeRevision) {
     return; // An in-flight response from a replaced binary is stale.
   }
@@ -261,6 +271,35 @@ export function publishRuntimeProviderDirectoryCache({
   notifyScope(scopeKey);
 }
 
+/** Reject reads started before a credential mutation. Global credentials can
+ * be inherited by every project: retain display rows, but require revalidation
+ * before any project snapshot can claim an exact connected-provider count. */
+export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: string | null): void {
+  const scopeKey = getScopeKey(projectPath);
+  generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
+  if (scopeKey !== GLOBAL_SCOPE_KEY) return;
+  // Fence even project requests that have not published a first snapshot.
+  invalidationEpoch += 1;
+  mergedFallbackByScope.clear();
+  for (const [projectScope, snapshot] of snapshotsByScope) {
+    if (projectScope === GLOBAL_SCOPE_KEY || !snapshot.authoritative) continue;
+    // Keep verified provider rows for display, but never present inherited
+    // credentials as a fresh, authoritative project count after global logout.
+    snapshotsByScope.set(projectScope, { ...snapshot, authoritative: false });
+    notifyScope(projectScope);
+  }
+}
+
+export function markRuntimeProviderDirectoryScopeUnverified(projectPath?: string | null): void {
+  invalidateRuntimeProviderDirectoryScopeReads(projectPath);
+  const scopeKey = getScopeKey(projectPath);
+  const current = snapshotsByScope.get(scopeKey);
+  if (!current?.authoritative) return;
+  touchScope(scopeKey, { ...current, authoritative: false });
+  mergedFallbackByScope.clear();
+  notifyScope(scopeKey);
+}
+
 export function useRuntimeProviderDirectoryCache(
   projectPath?: string | null
 ): RuntimeProviderDirectoryCacheSnapshot | null {
@@ -307,6 +346,8 @@ export function observeRuntimeProviderDirectoryRevision(revision: string | null)
 
 /** Drop provider inventory when the installed OpenCode runtime identity changes. */
 export function invalidateRuntimeProviderDirectoryCache(): void {
+  invalidationEpoch += 1;
+  generationByScope.clear();
   snapshotsByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;

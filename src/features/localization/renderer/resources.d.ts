@@ -3902,6 +3902,7 @@ export default interface Resources {
     },
     "create": {
       "actions": {
+        "backToTeams": "Back to teams",
         "create": "Create",
         "creating": "Creating...",
         "openExisting": "Open Existing Team",
@@ -3922,6 +3923,11 @@ export default interface Resources {
       "description": {
         "copy": "Create a new team based on an existing one.",
         "create": "Set up your team and choose how it starts."
+      },
+      "draft": {
+        "continue": "Continue creating",
+        "replace": "Replace draft",
+        "replaceConfirmation": "You have an unfinished team draft. Starting this action will replace it. Continue?"
       },
       "errors": {
         "createConfigFailed": "Failed to create team config",
@@ -3966,6 +3972,7 @@ export default interface Resources {
         "groupOrRootHelp": "Choose a group, or keep the organization root.",
         "groupOrRootLabel": "Group or root",
         "groupOrRootPlaceholder": "Root or group",
+        "invalidSelection": "Choose a valid organization and destination before creating the team.",
         "kind": {
           "group": "Group",
           "root": "Root"
@@ -3978,6 +3985,11 @@ export default interface Resources {
       "placeholders": {
         "description": "Brief description of the team purpose",
         "prompt": "Instructions for the team lead during provisioning..."
+      },
+      "placementFailure": {
+        "acknowledge": "Got it",
+        "message": "Team {{teamName}} was created. Assign it from the Organization Map; do not create it again.",
+        "title": "Team created, but not added to the organization"
       },
       "prepare": {
         "checkingProviders": "Checking selected providers...",
@@ -4412,10 +4424,13 @@ export default interface Resources {
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",
+        "configureColumns": "Choose columns",
         "gridView": "Grid view",
         "hiddenCount": "{{count}} hidden",
         "noTasks": "No tasks",
+        "resizeColumn": "Resize {{column}}",
         "showMore": "Show {{count}} more",
+        "tableView": "Table view",
         "trash": "Trash"
       },
       "columns": {
@@ -4583,17 +4598,28 @@ export default interface Resources {
         "title": "Relaunch will restart the current team run"
       },
       "schedule": {
+        "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
+        "execution": "Execution",
+        "executionLimitsNote": "These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.",
         "labelOptional": "Label (optional)",
         "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
+        "leadDefault": "Team lead (default)",
+        "legacyNotice": "Existing one-shot schedule — saving keeps its current behavior.",
         "maxBudgetUsd": "Max budget (USD)",
         "maxTurns": "Max turns",
         "noLimit": "No limit",
         "noMatches": "No teams match your search.",
         "noTeams": "No teams available. Create a team first.",
+        "oneAgent": "One agent",
         "searchTeams": "Search teams...",
         "selectTeam": "Select a team...",
+        "target": "Target when team is running",
         "team": "Team",
-        "title": "Schedule"
+        "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
+        "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
+        "title": "Schedule",
+        "upgradeSmart": "Switch to smart scheduling",
+        "wholeTeam": "Whole team"
       },
       "title": {
         "createSchedule": "Create Schedule",
@@ -6403,17 +6429,21 @@ export default interface Resources {
       "runStatus": {
         "cancelled": "Cancelled",
         "completed": "Completed",
+        "dispatched": "Dispatched",
         "failed": "Failed",
         "interrupted": "Interrupted",
         "pending": "Pending",
         "running": "Running",
+        "skipped": "Skipped",
         "warm": "Warm",
         "warmingUp": "Warming up"
       },
       "status": {
         "active": "Active",
         "disabled": "Disabled",
-        "paused": "Paused"
+        "hostUnsupported": "Host scheduling unavailable",
+        "paused": "Paused",
+        "saved": "Saved"
       },
       "title": "Schedules"
     },

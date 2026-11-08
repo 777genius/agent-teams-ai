@@ -379,6 +379,39 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
   });
 
+  it('does not overwrite saved one-time work when launching bootstrap-only', async () => {
+    const writeMeta = vi.fn(async () => undefined);
+    await persistDeterministicLaunchMetadata(
+      {
+        request: { ...request, bootstrapOnly: true, prompt: undefined },
+        syntheticRequest,
+        launchIdentity,
+        allEffectiveMemberSpecs: syntheticRequest.members,
+        configuredMemberSpecs: syntheticRequest.members,
+      },
+      {
+        teamMetaStore: {
+          writeMeta,
+          getMeta: async () => ({
+            version: 1,
+            cwd: '/repo',
+            prompt: 'Legacy saved prompt stays on disk, but is not executed',
+            createdAt: 77,
+          }),
+        },
+        membersMetaStore: { getMembers: async () => [], writeMembers: async () => undefined },
+        nowMs: () => 123,
+      }
+    );
+    expect(writeMeta).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining({
+        prompt: 'Legacy saved prompt stays on disk, but is not executed',
+        createdAt: 77,
+      })
+    );
+  });
+
   it('persists normalized synthetic metadata and tombstones when the relaunch request is sparse', async () => {
     const sparseRequest: TeamLaunchRequest = {
       teamName: 'demo',

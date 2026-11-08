@@ -29,13 +29,13 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.18.6 (Planned CPU mitigation candidate)
+## v2.18.6 (Preparing draft)
 
-Target branch: `main`. The existing `v2.18.5` draft and immutable tag contain an earlier build and must not be republished as the CPU mitigation. Build a fresh `v2.18.6` draft from the reviewed source commit after runtime `0.0.156` verification. Sign and qualify platform artifacts before any publication. This candidate addresses a reproduced fallback path; the original 2.18.4 user's CPU source remains unconfirmed (issue #1098).
+Target branch: `main`. Build a fresh `v2.18.6` draft after runtime `0.0.157` is verified and publicly available, then pin its exact manifest in `runtime.lock.json`. The earlier `v2.18.5` draft is superseded; preserve its immutable tag. Notes cover the shipped changes since public `v2.18.4`. Sign and qualify all platform artifacts before any publication. The original 2.18.4 user's CPU source remains unconfirmed (issue #1098).
 
 <!-- RELEASE_BODY_START v2.18.6 -->
 
-Large team histories now avoid repeated full scans when file watching reaches operating-system limits. OpenCode setup also shows clearer progress and recovery steps.
+OpenCode provider lists update after connection changes, and silent group notifications no longer block later messages. Setup shows clearer progress, while large team histories avoid repeated scans when file watching reaches system limits.
 
 ### What's New
 
@@ -43,15 +43,18 @@ Large team histories now avoid repeated full scans when file watching reaches op
 - Track OpenCode V2 download progress and reinstall when recovery is needed.
 - Find free models with provider badges and clearer compatibility labels.
 - See which group-chat recipient has an unconfirmed message delivery.
+- See loading placeholders while team cards load.
 
 ### Fixes
 
-- Reduce repeated disk scans after file-watcher limits are reached, while keeping active team updates timely.
-- Keep unrelated app profiles from triggering unnecessary startup, background and Quit work.
-- Prevent oversized OpenUI chat visualizations from exhausting renderer resources.
-- Fix stalled OpenCode V2 startup on macOS and recover interrupted installs.
-- Restore Codex conversations, show team loading progress and keep provider selection responsive.
+- Prevent repeated history scans and oversized chat visualizations from overloading the app.
+- Refresh OpenCode provider lists after connecting or removing credentials.
+- Prevent silent OpenCode group notifications from blocking later messages.
+- Give slow OpenCode startups more time and recover interrupted setup.
+- Restore saved Codex conversations.
 - Include Electron and bundled dependency security fixes.
+
+OpenCode V2 is available on Apple Silicon Macs, Windows, and Linux x64. Intel Macs use OpenCode V1.
 
 ### macOS installation
 
@@ -102,6 +105,7 @@ If you have signed macOS 2.17.1 installed, quit the app and install the appropri
 </td>
 </tr>
 </table>
+
 <!-- RELEASE_BODY_END v2.18.6 -->
 
 ## v2.18.5 (Prepared draft)

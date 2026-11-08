@@ -3,11 +3,17 @@ import {
   mdiBookOpenPageVariantOutline,
   mdiDownload,
 } from "@mdi/js";
-import { getLocalizedHeroMessages, type HeroMessagePhase } from "~/data/heroScene";
+import { getLocalizedHeroMessages, heroAgents, type HeroMessagePhase } from "~/data/heroScene";
 import { buildDocsHref } from "~/utils/docsUrl";
 
 const { content } = useLandingContent();
 const { t, locale } = useI18n();
+const leadAvatar = heroAgents.find(agent => agent.id === "lead")?.asset;
+// Fetch the mobile LCP candidate while parsing the document rather than
+// after the larger JS/CSS bundles. The same image is visible on desktop.
+if (leadAvatar) {
+  useHead({ link: [{ rel: "preload", as: "image", href: leadAvatar, fetchpriority: "high" }] });
+}
 const runtimeConfig = useRuntimeConfig();
 const { baseURL } = runtimeConfig.app;
 const heroRef = ref<HTMLElement | null>(null);

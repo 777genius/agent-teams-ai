@@ -17,6 +17,8 @@ describe('install-dependencies-with-retry', () => {
     'HTTPError: Response code 504\nELIFECYCLE Command failed with exit code 1',
     'gyp ERR! stack TypeError: terminated',
     'SocketError: other side closed',
+    '. postinstall: TypeError: fetch failed\n. postinstall: Electron installer failed with exit code 1',
+    '[23] The operation was aborted due to timeout\nTimeoutError: The operation was aborted due to timeout',
   ]) {
     it(`retries transient network failure: ${output}`, () => {
       assert.equal(isRetryableInstallFailure(output), true);
@@ -27,6 +29,7 @@ describe('install-dependencies-with-retry', () => {
     'ERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile',
     'Unsupported engine: wanted node >=99',
     'Lifecycle script failed with exit code 1',
+    'TypeError: fetch failed without pnpm postinstall context',
     'HTTPError: Response code 404 (Not Found)',
   ]) {
     it(`does not retry deterministic failure: ${output}`, () => {
@@ -37,6 +40,20 @@ describe('install-dependencies-with-retry', () => {
   it('lets a later deterministic error override an earlier transient marker', () => {
     const output =
       'HTTPError: Response code 503\nERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile';
+    assert.equal(isRetryableInstallFailure(output), false);
+  });
+
+  it('does not treat a non-fatal engine warning as a reason to suppress a 5xx retry', () => {
+    const output = [
+      'packages/legacy-agent-host | WARN Unsupported engine: wanted Node >=24 <25',
+      '. postinstall: HTTPError: Response code 503 while downloading Electron',
+    ].join('\n');
+    assert.equal(isRetryableInstallFailure(output), true);
+  });
+
+  it('still refuses retries after a fatal pnpm engine error', () => {
+    const output =
+      'HTTPError: Response code 503\nERR_PNPM_UNSUPPORTED_ENGINE Cannot install this package';
     assert.equal(isRetryableInstallFailure(output), false);
   });
 });

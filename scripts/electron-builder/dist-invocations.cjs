@@ -238,6 +238,15 @@ function buildElectronBuilderInvocations(argv, hostPlatform, hostArch) {
   });
 }
 
+function resolveManagedGitTarget(args, hostPlatform, hostArch) {
+  const explicit = [...new Set(args.flatMap(resolvePlatformTargets))];
+  if (explicit.length > 1) {
+    throw new Error('One platform per packaged Git stage is required');
+  }
+  const name = { mac: 'darwin', win: 'win32', linux: 'linux' }[explicit[0]] || hostPlatform;
+  return `${name}-${resolveTargetArch(args, hostArch)}`;
+}
+
 function buildNativeRebuildPlan(args, hostPlatform, hostArch) {
   const explicitPlatforms = args.flatMap(resolvePlatformTargets);
   const isWindowsTarget =
@@ -405,6 +414,7 @@ module.exports = {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  resolveManagedGitTarget,
   isRetryableAppleNotaryNetworkFailure,
   isRetryableDmgDetachFailure,
   runElectronBuilderOnce,

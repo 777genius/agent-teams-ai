@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { draftStorage } from '@renderer/services/draftStorage';
+import { set as idbSet } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock idb-keyval before importing draftStorage
@@ -52,6 +53,38 @@ describe('draftStorage', () => {
     });
   });
 
+  describe('create-team save/clear ordering', () => {
+    it('does not resurrect creation text after an earlier save finishes late', async () => {
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => { releaseSave = resolve; });
+      vi.mocked(idbSet).mockImplementationOnce(async (key, value) => {
+        await saveGate;
+        store.set(String(key), value);
+      });
+      const save = draftStorage.saveDraft('createTeam:prompt', 'unsent prompt');
+      const clear = draftStorage.deleteDraft('createTeam:prompt');
+      await Promise.resolve();
+      releaseSave();
+      await Promise.all([save, clear]);
+      expect(await draftStorage.loadDraft('createTeam:prompt')).toBeNull();
+    });
+
+    it('waits for an in-flight creation save before attempting to restore it', async () => {
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => { releaseSave = resolve; });
+      vi.mocked(idbSet).mockImplementationOnce(async (key, value) => {
+        await saveGate;
+        store.set(String(key), value);
+      });
+      const save = draftStorage.saveDraft('createTeam:description', 'late update');
+      const restoring = draftStorage.loadDraft('createTeam:description');
+      await Promise.resolve();
+      releaseSave();
+      await save;
+      expect(await restoring).toBe('late update');
+    });
+  });
+
   describe('deleteDraft', () => {
     it('should delete a draft', async () => {
       await draftStorage.saveDraft('test:field', 'to delete');
@@ -66,6 +99,20 @@ describe('draftStorage', () => {
   });
 
   describe('TTL expiry', () => {
+    it.each(['createTeam:description', 'createTeam:prompt', 'createTeam:prompt:chips'])(
+      'retains unfinished creation data past the generic 24-hour TTL (%s)',
+      async (key) => {
+        await draftStorage.saveDraft(key, 'unfinished team work');
+        const fullKey = `draft:${key}`;
+        const stored = store.get(fullKey) as { value: string; timestamp: number };
+        store.set(fullKey, { ...stored, timestamp: Date.now() - 30 * 86400000 });
+
+        await draftStorage.cleanupExpired();
+
+        expect(await draftStorage.loadDraft(key)).toBe('unfinished team work');
+      }
+    );
+
     it('should return null for expired drafts', async () => {
       // Save a draft, then manually set old timestamp
       await draftStorage.saveDraft('test:field', 'old data');
@@ -172,7 +219,7 @@ describe('draft hydration ordering', () => {
       await act(async () => {
         root.unmount();
       });
-      expect(save).toHaveBeenCalledWith('sandbox:prompt-hydration', 'Freshly typed request');
+      expect(save).toHaveBeenCalledWith('sandbox:prompt-hydration', 'Freshly typed request', undefined);
     } finally {
       await act(async () => {
         root.unmount();

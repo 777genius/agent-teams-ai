@@ -19,6 +19,8 @@ export type ScheduleRunStatus =
   | 'warm'
   | 'running'
   | 'completed'
+  | 'dispatched'
+  | 'skipped'
   | 'failed'
   | 'failed_interrupted'
   | 'cancelled';
@@ -27,9 +29,16 @@ export type ScheduleRunStatus =
 // Core Entities
 // =============================================================================
 
+/** Omitted means a legacy standalone one-shot schedule; never infer a new mode on read. */
+export type ScheduleExecutionMode = 'agent' | 'team';
+
 export interface Schedule {
   id: string;
   teamName: string;
+  /** Optional for existing persisted JSON schedules. */
+  executionMode?: ScheduleExecutionMode;
+  /** Empty/missing means the team's current lead when executionMode is agent. */
+  targetMember?: string;
   label?: string;
   cronExpression: string;
   timezone: string;
@@ -102,6 +111,8 @@ export interface ScheduleChangeEvent {
 
 export interface CreateScheduleInput {
   teamName: string;
+  executionMode?: ScheduleExecutionMode;
+  targetMember?: string;
   label?: string;
   cronExpression: string;
   timezone: string;
@@ -112,6 +123,8 @@ export interface CreateScheduleInput {
 }
 
 export interface UpdateSchedulePatch {
+  executionMode?: ScheduleExecutionMode;
+  targetMember?: string;
   label?: string;
   cronExpression?: string;
   timezone?: string;

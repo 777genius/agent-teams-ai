@@ -29,24 +29,26 @@ pnpm announcements:check --base <available-base-sha>
 pnpm announcements:generate
 ```
 
-The check fails if the Git base is absent/unavailable. CI checks PR source at the actual head SHA against the PR base, and `main` pushes against the previous pushed SHA. It runs without path skips, including generator/workflow changes, so Render cannot mistake a skipped content job for a passing validation. Require `announcements-content-check` in branch protection. Do not bypass it with a force push or manual deploy. Workflow dispatch without a base intentionally fails; use a normal PR/push for publication.
+The check fails if the Git base is absent/unavailable. CI checks PR source at the actual head SHA against the PR base, and `main` pushes against the previous pushed SHA. It runs without path skips, including generator/workflow changes, so a deployment cannot mistake a skipped content job for a passing validation. Require `announcements-content-check` in PR branch protection. The Pages workflow currently runs independently of the `main` push check, so a successful Pages job alone does not prove the deployed commit passed this validation. Do not bypass the check with a force push or manual deploy. Workflow dispatch without a base intentionally fails; use a normal PR/push for publication.
 
 `generateAnnouncements({ sourceDir, outputDir, repoDir, baseRef, checkOnly })` is also exported by `generate.mjs` for isolated fixtures. CLI overrides: `--source`, `--output`, `--repo`, `--base`, `--check`. `--check` validates without writing and always requires a base. The generator only replaces its dedicated output directory after all sources pass validation.
 
 Output uses `/announcements/feed.v1.json` and `/announcements/content/<id>/<bundle-sha256>/body.md`. The bundle digest includes names and hashes of the emitted referenced/hero assets and body bytes. Image-only changes change the bundle URL; bodySha256 hashes exactly the served body bytes. Revision hashes canonical normalized feed contents, with deterministic ordering. No build timestamp enters either hash. Old bundles can disappear at the next static deploy; the client must refresh a stale feed after 404, never substitute a different body under an old URL.
 
-## Render configuration and verification
+## Static hosting and verification
 
-The documented Render command in `landing/README.md` invokes `pnpm --filter agent-teams-landing generate`; that script now generates announcements before Nuxt. `build` and `generate:all` do likewise. Publish `landing/.output/public`. Do not call `nuxt generate` directly to bypass validation. GitHub Pages is a separate deployment and does not prove production Render behavior.
+The [GitHub Pages workflow](../../.github/workflows/landing.yml) runs `npm run generate:all`, which generates announcements before Nuxt and publishes `landing/.output/public`. Do not run `nuxt generate` directly to bypass announcement validation. Pages publishes this repository at `/agent-teams-ai/`; this workflow does not establish the hosting behind `agentteams.live`.
 
-Before first publication, configure the actual Render landing service (a separate operator action, not performed by this implementation):
+Before enabling production announcements on **any** host:
 
-- Auto-Deploy: **After CI Checks Pass**. Confirm `announcements-content-check` succeeds on the exact deploy SHA; Render also accepts skipped/neutral checks, which is why this job has no path/step skips.
-- Ensure build filters include `landing/**`, `scripts/announcements/**` and `.github/workflows/announcements-content.yml`.
-- Remove any catch-all rewrite to `/index.html` covering announcements. Missing announcement paths must return 404, including after content withdrawal. Existing files take precedence over Render rewrites, but missing files do not.
-- Set the following response headers using Render Static Site Headers. A committed `_headers` file is not Render configuration.
+- Confirm `announcements-content-check` passed on the **exact deployed `main` commit** before enabling production announcements. PR branch protection alone is insufficient: the current Pages workflow does not wait for that push check. Treat failed or skipped checks as unqualified deployments.
+- Verify all announcement URLs under the actual deployment base. Missing or withdrawn announcement paths must return HTTP 404, never a catch-all `index.html` response.
+- Check GET/HEAD responses for appropriate content types, caching and `X-Content-Type-Options: nosniff` on the target host. GitHub Pages does not provide configurable arbitrary response headers; do not assume a committed `_headers` file configures it.
+- Confirm the public feed returns JSON, a content URL returns Markdown matching its recorded SHA-256, and asset URLs are served successfully.
 
-| Path                             | Header                   | Value                                             |
+Desired response behavior (path examples are relative to the site's deployment base):
+
+| Path                             | Header                   | Desired value                                     |
 | -------------------------------- | ------------------------ | ------------------------------------------------- |
 | `/announcements/feed.v1.json`    | `Content-Type`           | `application/json; charset=utf-8`                 |
 | `/announcements/feed.v1.json`    | `Cache-Control`          | `public, max-age=0, s-maxage=60, must-revalidate` |
@@ -54,8 +56,6 @@ Before first publication, configure the actual Render landing service (a separat
 | `/announcements/content/**/*.md` | `Content-Type`           | `text/markdown; charset=utf-8`                    |
 | `/announcements/*`               | `X-Content-Type-Options` | `nosniff`                                         |
 
-After a separately authorized deployment, use GET/HEAD to verify the real feed URL returns JSON, a body URL returns Markdown whose SHA matches, asset paths load, headers match, and a nonexistent announcement returns 404 rather than HTML 200. Keep `autoShowEnabled: false` until production paths are proven. Then enabling auto display is a separate content change. Roll back by setting it false or withdrawing a post, publishing normally, and checking the served feed. Neither action erases local handled IDs.
-
-Official references checked 2026-09-04: [Render headers](https://render.com/docs/static-site-headers), [rewrites](https://render.com/docs/redirects-rewrites), [CI gated deploys](https://render.com/docs/deploys#integrating-with-ci).
+Keep `autoShowEnabled: false` until the actual production host is verified. Enabling automatic display is then a separate content change. Roll back by setting it false or withdrawing a post, publishing normally, and checking the served feed. Neither action erases local handled IDs.
 
 Temporary audience metadata: `macosManualUpdate2171Only: true` targets macOS app version 2.17.1 in clients that support the flag. It is immutable after publication. Shipped 2.17.1 ignores it; see the [recovery limitation and unpublished draft](../../docs/announcements-macos-2171-recovery.md) before publishing.

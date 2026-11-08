@@ -5,13 +5,19 @@
  * Uses one-shot `claude -p` executor (NOT launchTeam stream-json).
  */
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
+import { completeScheduleRun } from './completeScheduleRun';
+import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
+import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
+
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
+import type { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 import type {
   CreateScheduleInput,
   Schedule,
@@ -26,6 +32,14 @@ const logger = createLogger('Service:Scheduler');
 // =============================================================================
 // Constants
 // =============================================================================
+
+// A captured Host handle is not a legacy team name. Until an owner-aware
+// scheduling port is qualified, refuse before creating any native/legacy effect.
+const HOST_SCHEDULE_UNSUPPORTED = 'Schedules for Host-backed teams require owner-aware scheduling';
+
+function assertSupportedScheduledTeam(teamName: string): void {
+  if (isHostTeamSelectionKey(teamName)) throw new Error(HOST_SCHEDULE_UNSUPPORTED);
+}
 
 const WARMUP_RETRY_DELAY_MS = 60_000;
 const WARMUP_MAX_RETRIES = 3;
@@ -49,6 +63,7 @@ export class SchedulerService {
   private repository: ScheduleRepository;
   private executor: ScheduledTaskExecutor;
   private warmUpFn: WarmUpFn;
+  private smartDispatcher: SmartScheduleDispatcher | null;
   private changeEmitter: ChangeEmitter | null = null;
 
   // Croner jobs keyed by schedule ID
@@ -72,10 +87,12 @@ export class SchedulerService {
   constructor(
     repository: ScheduleRepository,
     executor: ScheduledTaskExecutor,
-    warmUpFn?: WarmUpFn
+    warmUpFn?: WarmUpFn,
+    smartDispatcher?: SmartScheduleDispatcher
   ) {
     this.repository = repository;
     this.executor = executor;
+    this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
 
@@ -93,14 +110,17 @@ export class SchedulerService {
     this.stopped = false;
 
     // Recovery: mark interrupted runs from previous session
-    await this.recoverInterruptedRuns();
+    const recoveredCount = await recoverInterruptedScheduleRuns(this.repository);
+    if (recoveredCount > 0) {
+      logger.info(`Recovered ${recoveredCount} interrupted runs as failed_interrupted`);
+    }
 
     // Load all schedules and create cron jobs for active ones
     const schedules = await this.repository.listSchedules();
     let activeCount = 0;
 
     for (const schedule of schedules) {
-      if (schedule.status === 'active') {
+      if (schedule.status === 'active' && !isHostTeamSelectionKey(schedule.teamName)) {
         this.createCronJob(schedule);
         activeCount++;
       }
@@ -165,10 +185,14 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    assertSupportedScheduledTeam(input.teamName);
+    await this.smartDispatcher?.assertCanSchedule(input);
     const now = new Date().toISOString();
     const schedule: Schedule = {
       id: randomUUID(),
       teamName: input.teamName,
+      ...(input.executionMode && { executionMode: input.executionMode }),
+      ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
       cronExpression: input.cronExpression,
       timezone: input.timezone,
@@ -184,7 +208,7 @@ export class SchedulerService {
     };
 
     // Compute nextRunAt before saving
-    schedule.nextRunAt = this.computeNextRunAt(schedule) ?? undefined;
+    schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
 
     await this.repository.saveSchedule(schedule);
     this.createCronJob(schedule);
@@ -205,9 +229,12 @@ export class SchedulerService {
     if (!existing) {
       throw new Error(`Schedule not found: ${id}`);
     }
+    assertSupportedScheduledTeam(existing.teamName);
 
     const updated: Schedule = {
       ...existing,
+      ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
+      ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
       ...(patch.label !== undefined && { label: patch.label }),
       ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
       ...(patch.timezone !== undefined && { timezone: patch.timezone }),
@@ -220,13 +247,16 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
 
+    await this.smartDispatcher?.assertCanSchedule(updated);
+
     // Reschedule cron job if expression or timezone changed
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
 
-    if (cronChanged || patch.warmUpMinutes !== undefined) {
+    const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
+    if (reschedule) {
       this.removeCronJob(id);
       if (updated.status === 'active') {
-        updated.nextRunAt = this.computeNextRunAt(updated) ?? undefined;
+        updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
         this.createCronJob(updated);
       }
     }
@@ -304,6 +334,9 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
 
+    // A retained Host schedule cannot be armed against the legacy executor.
+    assertSupportedScheduledTeam(existing.teamName);
+    await this.smartDispatcher?.assertCanSchedule(existing);
     // Remove old job and recreate to get fresh next-run timing
     this.removeCronJob(id);
 
@@ -314,7 +347,7 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
 
-    updated.nextRunAt = this.computeNextRunAt(updated) ?? undefined;
+    updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
     this.createCronJob(updated);
 
     await this.repository.saveSchedule(updated);
@@ -352,6 +385,9 @@ export class SchedulerService {
     if (!schedule) {
       throw new Error(`Schedule not found: ${id}`);
     }
+
+    // Reject foreign owner keys before allocating an execution record.
+    assertSupportedScheduledTeam(schedule.teamName);
 
     // Check locks
     if (this.activeRuns.has(id)) {
@@ -400,6 +436,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private createCronJob(schedule: Schedule): void {
+    if (isHostTeamSelectionKey(schedule.teamName)) return;
     if (this.cronJobs.has(schedule.id)) {
       this.removeCronJob(schedule.id);
     }
@@ -439,7 +476,9 @@ export class SchedulerService {
   private scheduleWarmUp(schedule: Schedule): void {
     this.clearWarmUpTimer(schedule.id);
 
-    if (schedule.warmUpMinutes <= 0) return;
+    // Smart jobs dispatch through existing runtime services; warming up the
+    // one-shot CLI needlessly can alter a live team and is not required.
+    if (schedule.executionMode || schedule.warmUpMinutes <= 0) return;
 
     const job = this.cronJobs.get(schedule.id);
     if (!job) return;
@@ -511,8 +550,8 @@ export class SchedulerService {
 
   private async onCronTick(scheduleId: string): Promise<void> {
     const schedule = await this.repository.getSchedule(scheduleId);
-    if (schedule?.status !== 'active') {
-      logger.debug(`Cron tick for ${scheduleId} skipped (not active)`);
+    if (schedule?.status !== 'active' || isHostTeamSelectionKey(schedule.teamName)) {
+      logger.debug(`Cron tick for ${scheduleId} skipped (not active or unsupported owner)`);
       return;
     }
 
@@ -555,6 +594,12 @@ export class SchedulerService {
   // ===========================================================================
 
   private async executeRunInBackground(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    // Also guard an already-queued callback from before this code was deployed.
+    // A Host selection key must never reach the legacy one-shot or team runtime.
+    if (isHostTeamSelectionKey(schedule.teamName)) {
+      await this.completeRun(run, 'skipped', null, HOST_SCHEDULE_UNSUPPORTED);
+      return;
+    }
     const { id: scheduleId, launchConfig } = schedule;
 
     // Acquire locks
@@ -564,30 +609,51 @@ export class SchedulerService {
     let retriedInternally = false;
 
     try {
-      const result = await this.executor.execute({
-        runId: run.id,
-        config: launchConfig,
-        maxTurns: schedule.maxTurns,
-        maxBudgetUsd: schedule.maxBudgetUsd,
-      });
-
-      if (result.exitCode === 0) {
-        // Success — save logs, complete run
-        await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
-        await this.completeRun(run, 'completed', result.exitCode, result.summary);
-        await this.resetConsecutiveFailures(schedule);
-        logger.info(
-          `[${scheduleId}] Run ${run.id} completed successfully (${result.durationMs}ms)`
-        );
+      const outcome = schedule.executionMode
+        ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
+            this.stopped || this.activeRuns.get(scheduleId)?.id !== run.id
+          )
+        : {
+            kind: 'one_shot' as const,
+            result: await this.executor.execute({
+              runId: run.id,
+              config: launchConfig,
+              maxTurns: schedule.maxTurns,
+              maxBudgetUsd: schedule.maxBudgetUsd,
+            }),
+          };
+      if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
+      if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
+        await this.completeRun(run, outcome.kind, null, outcome.summary);
+        if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
-        // Failure — save logs before handling
+        const result = outcome.result;
         await this.repository.saveRunLogs(scheduleId, run.id, result.stdout, result.stderr);
-        const errorMsg = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
-        retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+        if (result.exitCode === 0) {
+          await this.completeRun(run, 'completed', result.exitCode, result.summary);
+          await this.resetConsecutiveFailures(schedule);
+          logger.info(
+            `[${scheduleId}] Run ${run.id} completed successfully (${result.durationMs}ms)`
+          );
+        } else {
+          const errorMsg = result.stderr.slice(0, 500) || `Exit code: ${result.exitCode}`;
+          if (schedule.executionMode) {
+            await this.completeRun(run, 'failed', result.exitCode, undefined, errorMsg);
+            await this.incrementConsecutiveFailures(schedule);
+          } else {
+            retriedInternally = await this.handleRunFailure(schedule, run, result.exitCode, errorMsg);
+          }
+        }
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      retriedInternally = await this.handleRunFailure(schedule, run, null, errorMsg);
+      if (schedule.executionMode) {
+        // Never blindly retry a task write or a team launch: ACK may have been lost.
+        await this.completeRun(run, 'failed', null, undefined, errorMsg);
+        await this.incrementConsecutiveFailures(schedule);
+      } else {
+        retriedInternally = await this.handleRunFailure(schedule, run, null, errorMsg);
+      }
     } finally {
       // Skip cleanup if retry took over — retry's own finally will handle it
       if (retriedInternally) return;
@@ -608,6 +674,7 @@ export class SchedulerService {
       }
     }
   }
+
 
   /**
    * Handle a failed run. Returns `true` if a retry was dispatched
@@ -682,29 +749,10 @@ export class SchedulerService {
     summary?: string,
     error?: string
   ): Promise<void> {
-    const completedAt = new Date().toISOString();
-    const startedAt = new Date(run.startedAt).getTime();
-    const durationMs = Date.now() - startedAt;
-
-    const updatedRun: ScheduleRun = {
-      ...run,
-      status,
-      completedAt,
-      durationMs,
-      exitCode,
-      summary: summary ?? run.summary,
-      error: error ?? run.error,
-    };
-
-    await this.repository.saveRun(updatedRun);
-
-    const eventType = status === 'completed' ? 'run-completed' : 'run-failed';
-    this.emitChange({
-      type: eventType,
-      scheduleId: run.scheduleId,
-      teamName: run.teamName,
-      detail: error,
-    });
+    await completeScheduleRun(
+      this.repository, (event) => this.emitChange(event),
+      run, status, exitCode, summary, error
+    );
   }
 
   // ===========================================================================
@@ -762,7 +810,7 @@ export class SchedulerService {
     if (!fresh) return;
 
     const now = new Date().toISOString();
-    const nextRunAt = this.computeNextRunAt(fresh);
+    const nextRunAt = computeScheduleNextRunAt(fresh);
 
     const updated: Schedule = {
       ...fresh,
@@ -780,57 +828,9 @@ export class SchedulerService {
   }
 
   // ===========================================================================
-  // Recovery
-  // ===========================================================================
-
-  private async recoverInterruptedRuns(): Promise<void> {
-    const schedules = await this.repository.listSchedules();
-    let recoveredCount = 0;
-
-    for (const schedule of schedules) {
-      const runs = await this.repository.listRuns(schedule.id, { limit: 5 });
-
-      for (const run of runs) {
-        if (
-          run.status === 'warming_up' ||
-          run.status === 'warm' ||
-          run.status === 'running' ||
-          run.status === 'pending'
-        ) {
-          const updated: ScheduleRun = {
-            ...run,
-            status: 'failed_interrupted',
-            completedAt: new Date().toISOString(),
-            error: 'Interrupted by app restart',
-          };
-          await this.repository.saveRun(updated);
-          recoveredCount++;
-        }
-      }
-    }
-
-    if (recoveredCount > 0) {
-      logger.info(`Recovered ${recoveredCount} interrupted runs as failed_interrupted`);
-    }
-  }
-
-  // ===========================================================================
   // Helpers
   // ===========================================================================
 
-  private computeNextRunAt(schedule: Schedule): string | null {
-    try {
-      const job = new Cron(schedule.cronExpression, {
-        timezone: schedule.timezone,
-        paused: true,
-      });
-      const next = job.nextRun();
-      job.stop();
-      return next?.toISOString() ?? null;
-    } catch {
-      return null;
-    }
-  }
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);

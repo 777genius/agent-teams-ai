@@ -5,6 +5,7 @@ export {
   isOpenCodeRuntimeUsable,
   isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
 } from '../core/domain';
 export { CapturedClaudeAuthenticationPanel } from './CapturedClaudeAuthenticationPanel';
 export type { OpenCodeCatalogFailure } from './hooks/catalogFailure';
@@ -31,6 +32,7 @@ export {
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
+export { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
 export { isOpenCodeSupportInstallProgress } from './openCodeInstallLabels';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';

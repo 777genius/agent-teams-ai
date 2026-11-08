@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { isDeepStrictEqual } from 'node:util';
-import { clickControl, correlateReport } from './catalog.mjs';
+import { clickControl, correlateReport, enterProviderSettings } from './catalog.mjs';
 import { v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
 import {
   runtimeProvenance,
@@ -1011,6 +1011,8 @@ export async function verifyPackaged({
       bootstrapDeadline - Date.now(),
       catalogExpectation
     );
+    // Open the existing full provider controls through the compact dashboard.
+    await enterProviderSettings(evaluate, send);
     // The preparation gate subsumes the warm-start catalog/refresh-control polling:
     // it rejects disabled/hidden/zero-size/disconnected controls and loading/empty
     // catalogs with a bounded budget and a recorded reason.

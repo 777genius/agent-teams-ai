@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
 import { withFileLock } from '../../adapters/cross-team/fileLock.js';
-import { atomicWriteAsync, syncDirectoryDurably } from '@agent-teams/task-change-ledger/review-io';
+import { atomicWriteAsync, syncDirectoryDurably, syncFile } from '@agent-teams/task-change-ledger/review-io';
 
 import { decodeMemberWorkSyncReportJournalMetadata } from '../policy/core/domain/MemberWorkSyncReportJournalMetadata.js';
 
@@ -200,13 +200,17 @@ export class JsonMemberWorkSyncReportJournal implements MemberWorkSyncReportJour
                   }
                   this.assertCurrent?.();
                   if (provingExisting) {
-                    // Windows requires a writable file handle for a strict durability proof.
-                    // The same journal bytes remain immutable; a failed fsync is UNKNOWN.
-                    const handle = await open(path, process.platform === 'win32' ? 'r+' : 'r');
-                    try {
-                      await handle.sync();
-                    } finally {
-                      await handle.close();
+                    if (process.platform === 'win32') {
+                      // Windows requires a writable handle; failed fsync remains UNKNOWN.
+                      await syncFile(path, true);
+                    } else {
+                      // On Unix, prove the existing bytes without write permission.
+                      const handle = await open(path, 'r');
+                      try {
+                        await handle.sync();
+                      } finally {
+                        await handle.close();
+                      }
                     }
                     this.assertCurrent?.();
                   } else

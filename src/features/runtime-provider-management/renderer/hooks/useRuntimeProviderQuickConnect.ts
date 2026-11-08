@@ -4,6 +4,7 @@ import { api } from '@renderer/api';
 
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  getRuntimeProviderDirectoryReadToken,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
@@ -126,6 +127,7 @@ export function useRuntimeProviderQuickConnect({
     setAuthoritativePending(true);
 
     const loadDirectory = async (): Promise<void> => {
+      const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
       setLoading(true);
       setError(null);
 
@@ -158,6 +160,7 @@ export function useRuntimeProviderQuickConnect({
           fetchedAt: response.directory.fetchedAt,
           authoritative: false,
           runtimeRevision: requestRuntimeRevision,
+          readToken,
         });
         setError(null);
         setLoaded(true);
