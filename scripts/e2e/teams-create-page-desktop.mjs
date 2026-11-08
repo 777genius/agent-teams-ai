@@ -739,7 +739,27 @@ async function main() {
     );
     if (launchChecked)
       await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
-    await cdp.waitFor(createButtonExpression('Create'), 'config-only Create is enabled', 45_000);
+    log('native config-only save rejection retains the editor and its working directory');
+    const rejectedName = `blocked-create-e2e-${randomUUID().slice(0, 8)}`;
+    const rejectedTasksDir = path.join(fixture.claudeRoot, 'tasks', rejectedName);
+    // A dangling tasks directory forces a real native createConfig rejection.
+    // This is disposable fixture state, not a mocked renderer promise.
+    await mkdir(rejectedTasksDir, { recursive: true });
+    await cdp.fill('#team-name', rejectedName);
+    await cdp.waitFor(createButtonExpression('Create'), 'rejection scenario Create enabled');
+    await cdp.click(createButtonExpression('Create'));
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]')?.textContent.includes('Team already exists')",
+      'native creation error visible without closing editor', 45_000
+    );
+    assert.equal(
+      await cdp.evaluate("document.querySelector('[data-testid=create-team-page] #team-name')?.value"),
+      rejectedName, 'Failed native creation discarded user-entered team name'
+    );
+    await captureScreenshot(cdp, fixture, 'save-rejected');
+    await rm(rejectedTasksDir, { recursive: true, force: true });
+    await cdp.fill('#team-name', unique);
+    await cdp.waitFor(createButtonExpression('Create'), 'retry after rejection enabled', 45_000);
     await cdp.click(createButtonExpression('Create'));
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
       'config-only team created through real IPC', 45_000);
@@ -846,42 +866,58 @@ async function main() {
     );
     assert(organization?.id && organization?.rootNodeId,
       'Native organization fixture has no root');
-    // Opening a previously unused lazy Organizations route can trigger Vite's
-    // dev-only dependency optimization and reload the renderer. Re-enter that
-    // route (max 3 attempts) rather than treating hot reload as a product error.
-    let mapReady = false;
+    // Opening a new lazy Organizations route can trigger a dev-only Vite reload.
+    // Retry only the navigation/selection sequence, never the team creation itself.
+    const confirmOrgReplace = "document.querySelector('[role=dialog] button[data-confirm-btn]')";
+    const orgSelector =
+      "Array.from(document.querySelectorAll('button[role=combobox]'))" +
+      ".find(button => button.classList.contains('w-44') && !button.disabled && button.getBoundingClientRect().width > 0)";
+    const organizationOption =
+      "Array.from(document.querySelectorAll('[role=option]'))" +
+      ".find(option => option.textContent?.trim() === " + JSON.stringify(organizationName) + ")";
+    let organizationEntryReady = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       await cdp.waitFor(
         "window.__agentTeamsDevStore?.getState",
-        'renderer after potential Vite reload', 30_000
+        'renderer after potential Vite reload', 45_000
       );
-      await cdp.evaluate(
-        "window.__agentTeamsDevStore.getState().openTab({ type: 'organizations', label: 'Organizations' })"
-      );
+      await cdp.evaluate("(() => {" +
+        "const s = window.__agentTeamsDevStore.getState();" +
+        "const tab = s.getAllPaneTabs().find(t => t.type === 'organizations');" +
+        "if (tab) s.setActiveTab(tab.id);" +
+        "else s.openTab({ type: 'organizations', label: 'Organizations' });" +
+      "})()");
       try {
-        await cdp.waitFor(createButtonExpression('Edit'), 'Organization Map Edit', 15_000);
-        mapReady = true;
+        await cdp.waitFor(
+          `(${createButtonExpression('Edit')}) || (${createButtonExpression('Editing')})`,
+          'Organization Map editor action', 20_000
+        );
+        if (!(await cdp.evaluate(`Boolean(${createButtonExpression('Editing')})`))) {
+          await cdp.click(createButtonExpression('Edit'));
+        }
+        // Wait for the organization structure to finish loading before clicking.
+        await cdp.waitFor(orgSelector, 'enabled Organization selector', 25_000);
+        await cdp.click(orgSelector);
+        await cdp.click(organizationOption);
+        await cdp.waitFor(
+          "Array.from(document.querySelectorAll('button[role=combobox]'))" +
+          ".some(button => button.classList.contains('w-44') && button.textContent?.includes(" +
+          JSON.stringify(organizationName) + "))",
+          'new organization selected'
+        );
+        await cdp.click(createButtonExpression('Team here'));
+        await cdp.waitFor(
+          confirmOrgReplace,
+          'replace-existing-draft confirmation from Organization Map', 20_000
+        );
+        organizationEntryReady = true;
         break;
       } catch (error) {
         if (attempt === 2) throw error;
-        log('development dependency optimization reloaded Organizations; retry navigation');
+        log('Organization Map reloaded or selector changed; retry staged navigation');
       }
     }
-    assert(mapReady, 'Organization Map did not become available');
-    await cdp.click(createButtonExpression('Edit'));
-    await cdp.click(
-      "Array.from(document.querySelectorAll('button[role=combobox]'))" +
-      ".find(button => button.classList.contains('w-44'))"
-    );
-    await cdp.click(
-      "Array.from(document.querySelectorAll('[role=option]'))" +
-      ".find(option => option.textContent?.trim() === " + JSON.stringify(organizationName) + ")"
-    );
-    await cdp.click(createButtonExpression('Team here'));
-    await cdp.waitFor(
-      "document.querySelector('[role=dialog] button[data-confirm-btn]')",
-      'replace-existing-draft confirmation from Organization Map'
-    );
+    assert(organizationEntryReady, 'Organization Map entry could not open the creation page');
     await cdp.click("document.querySelector('[role=dialog] button[data-confirm-btn]')");
     await cdp.waitFor(
       "document.querySelector('[data-testid=create-team-page] input#team-name')",
@@ -938,6 +974,7 @@ async function main() {
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,
+      nativeConfigOnlyRejectionKeepsDraft: true,
       copiedTeamUsesSharedEditor: true,
       copiedDraftDoesNotReplaySeed: true,
       templateReplacementCancelledAndConfirmed: true,
