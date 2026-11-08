@@ -2,7 +2,6 @@
 
 > **Status correction — 2026-11-08 (post-merge follow-up):** Feature PR [#1125](https://github.com/777genius/agent-teams-ai/pull/1125) **merged** as `df26d00a38f2bb983f889950ac6cbeb55d72ad38`. [Main post-merge CI](https://github.com/777genius/agent-teams-ai/actions/runs/42422713898) and [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42422713884) **passed** on that exact merge commit; all 29 inline threads were resolved. Earlier sections below are a historical execution ledger and their "Draft / pending merge" rows no longer describe the current PR state. The [Linux Electron create-page E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129) passed on the earlier `57a0231d`, **not** the final merged SHA. The Windows packaged suite exercised model-selection behavior, **not** the complete create-page matrix. Four independent strongest-model `xhigh` review rounds remained **0/4**; four source-informed *author* passes are not four independent reviews. The follow-up branch `test/teams-creation-e2e-cross-platform-20261108` extends multi-OS E2E **and changes production template UX** (cancelable confirmation, draft-hydration gate, and removal of stale prompt chips); it does not modify `LaunchTeamDialog`, provider routing, or main-process Gateway recovery. Main-process recovery may reclaim **abandoned unsaved** provisional Gateway bindings after an Electron restart; a binding for a member already committed to a saved team roster is retained by recovery and may be used without reconnecting when it remains present. The current creation snapshot stores the non-secret roster but **does not store Gateway binding profile/selection identity**; the creation roster currently does not expose the previous Gateway selector. Do **not** claim that binding intent is restored, that a reconnect action is available there, or that the binding survives a restart. The user may need to set up the Gateway binding separately. This unverified UX limitation needs a dedicated follow-up before an automatic reconnect guarantee.
 
-
 Status (verified 2026-11-08): **#1125 and #1136 merged to `main`**. Follow-up #1136 was merged as `d7f56e5fb1f4bc380052a41f6f782ef23b26c845` after exact-head Linux/macOS/Windows Electron E2E, full PR CI and CodeQL passed. [Post-merge E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42434369262), [CI](https://github.com/777genius/agent-teams-ai/actions/runs/42434369276) and [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42434369307) also passed on that exact merge SHA. Four independent `xhigh` reviews remain unverified (0/4); four author review passes are recorded separately.
 PR: [#1125](https://github.com/777genius/agent-teams-ai/pull/1125).
 Inspected production baseline: `9959d667ae348356f4402bfa5d5d185a7388c8d6`.
@@ -60,18 +59,18 @@ preserve an old checksum when rebasing.
 
 ## 2. Source facts and concrete risks
 
-| Source | Observed behavior | Required protection |
-| --- | --- | --- |
-| `src/renderer/components/layout/PaneContent.tsx` | Inactive Teams content unmounts | Route and draft must outlive the component; no global keep-alive change |
-| `src/renderer/store/slices/teamSlice.ts` | `openTeamsTab` deduplicates within the focused pane | Prevent independent writable creation editors across panes |
-| `src/renderer/hooks/useCreateTeamDraft.ts` | One snapshot key, 400ms debounce, unmount flush | Order save/clear; capture draft identity; handle persistence failure |
-| `src/renderer/services/createTeamDraftStorage.ts` | Version-1 snapshot, memory fallback, not all visible fields | Explicit migration and honest durability status |
-| `CreateTeamDialog.tsx` | Text/chips use separate 24-hour storage; other values use preferences | Coherent creation snapshot without changing other draft TTLs |
-| `dialogs/projectPathOptions.ts` | Default project can override restored selection on a remount | Separate fresh entry from resume; saved selection wins on resume |
-| `CreateTeamDialog.tsx` | Copy/organization initialization depends on open/load | Consume seed once, never replay on return |
-| `useGatewayMemberBindings.ts:71-77` | Unmount calls `session.discard()` | Back/tab switch must not discard creation-owned bindings |
-| `GatewayBindingDraft.ts:99-114` | Discard retires receipt generation and removes uncommitted bindings | Keep receipt ownership; preserve launch cancellation safety |
-| `src/features/gateway-provider/main/application/GatewayProviderService.ts:350+` | Recovery reclaims abandoned unsaved document-owned receipts | Restart restores form intent, not guaranteed gateway credentials; preserve backend recovery |
+| Source                                                                          | Observed behavior                                                     | Required protection                                                                         |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `src/renderer/components/layout/PaneContent.tsx`                                | Inactive Teams content unmounts                                       | Route and draft must outlive the component; no global keep-alive change                     |
+| `src/renderer/store/slices/teamSlice.ts`                                        | `openTeamsTab` deduplicates within the focused pane                   | Prevent independent writable creation editors across panes                                  |
+| `src/renderer/hooks/useCreateTeamDraft.ts`                                      | One snapshot key, 400ms debounce, unmount flush                       | Order save/clear; capture draft identity; handle persistence failure                        |
+| `src/renderer/services/createTeamDraftStorage.ts`                               | Version-1 snapshot, memory fallback, not all visible fields           | Explicit migration and honest durability status                                             |
+| `CreateTeamDialog.tsx`                                                          | Text/chips use separate 24-hour storage; other values use preferences | Coherent creation snapshot without changing other draft TTLs                                |
+| `dialogs/projectPathOptions.ts`                                                 | Default project can override restored selection on a remount          | Separate fresh entry from resume; saved selection wins on resume                            |
+| `CreateTeamDialog.tsx`                                                          | Copy/organization initialization depends on open/load                 | Consume seed once, never replay on return                                                   |
+| `useGatewayMemberBindings.ts:71-77`                                             | Unmount calls `session.discard()`                                     | Back/tab switch must not discard creation-owned bindings                                    |
+| `GatewayBindingDraft.ts:99-114`                                                 | Discard retires receipt generation and removes uncommitted bindings   | Keep receipt ownership; preserve launch cancellation safety                                 |
+| `src/features/gateway-provider/main/application/GatewayProviderService.ts:350+` | Recovery reclaims abandoned unsaved document-owned receipts           | Restart restores form intent, not guaranteed gateway credentials; preserve backend recovery |
 
 Paths abbreviated above are under `src/renderer/components/team/` unless otherwise
 specified. Gateway hook files are under `src/features/gateway-provider/renderer/hooks/`.
@@ -97,24 +96,24 @@ must preserve explicit unresolved provider intent and must not launch on applica
 
 ## 3. User-visible contract
 
-| Action | Required result |
-| --- | --- |
-| Create without a draft | Existing safe defaults on the creation screen |
-| Create with unfinished work | Resume; no silent replacement |
-| Back | Save pending edits, return to list, retain draft |
-| Switch tab and return | Same creation screen and edits; no initialization replay |
-| Close Teams and reopen | List with visible Continue creation action |
-| Restart and resume | Restore committed fields, revalidate project/providers; explicitly reconnect any reclaimed provisional gateway binding |
-| Start over / copy over existing work | Explicit replace or continue decision |
-| Apply template | Preserve documented field ownership; confirm destructive replacement |
-| Create from Organizations | Same editor with explicit placement context |
-| Return from organization entry | Original tab if still present, otherwise Teams |
-| Change sidebar project | Do not silently replace draft working directory |
-| Open creation in another pane | Focus existing owner rather than another writer |
-| Rejection before creation is accepted | Keep values, display actionable error |
-| Accepted creation / saved config | Retire submitted draft, open existing team/progress UI |
-| Runtime later fails | Existing team/provisioning recovery; do not resurrect another form |
-| Launch / relaunch | Existing dialogs and behavior |
+| Action                                | Required result                                                                                                        |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Create without a draft                | Existing safe defaults on the creation screen                                                                          |
+| Create with unfinished work           | Resume; no silent replacement                                                                                          |
+| Back                                  | Save pending edits, return to list, retain draft                                                                       |
+| Switch tab and return                 | Same creation screen and edits; no initialization replay                                                               |
+| Close Teams and reopen                | List with visible Continue creation action                                                                             |
+| Restart and resume                    | Restore committed fields, revalidate project/providers; explicitly reconnect any reclaimed provisional gateway binding |
+| Start over / copy over existing work  | Explicit replace or continue decision                                                                                  |
+| Apply template                        | Preserve documented field ownership; confirm destructive replacement                                                   |
+| Create from Organizations             | Same editor with explicit placement context                                                                            |
+| Return from organization entry        | Original tab if still present, otherwise Teams                                                                         |
+| Change sidebar project                | Do not silently replace draft working directory                                                                        |
+| Open creation in another pane         | Focus existing owner rather than another writer                                                                        |
+| Rejection before creation is accepted | Keep values, display actionable error                                                                                  |
+| Accepted creation / saved config      | Retire submitted draft, open existing team/progress UI                                                                 |
+| Runtime later fails                   | Existing team/provisioning recovery; do not resurrect another form                                                     |
+| Launch / relaunch                     | Existing dialogs and behavior                                                                                          |
 
 Automatically suggested names/descriptions are not meaningful user edits. Do not
 add confirmation on every ordinary navigation. Escape closes nested menus/dialogs
@@ -297,12 +296,12 @@ that authorized environment with `xhigh`, recording actual configuration/run/com
 A model request, CLI startup, self-review or failed provider call is not a completed
 critic. No silent lower-model fallback. Author checks are explicitly separate.
 
-| Round | Focus | Exit evidence |
-| --- | --- | --- |
-| 1 | Scope, DRY, launch/relaunch compatibility, smallest design | Source-backed findings and amended plan |
-| 2 | Complete draft/migration, save/read races, gateway receipt lifetime | Failure sequences and required tests |
-| 3 | Panes, copy/template/organization, submission/context races | State transitions and fixes |
-| 4 | Testability, accessibility, remaining launch regressions, simplification | Finding dispositions and final plan verdict |
+| Round | Focus                                                                    | Exit evidence                               |
+| ----- | ------------------------------------------------------------------------ | ------------------------------------------- |
+| 1     | Scope, DRY, launch/relaunch compatibility, smallest design               | Source-backed findings and amended plan     |
+| 2     | Complete draft/migration, save/read races, gateway receipt lifetime      | Failure sequences and required tests        |
+| 3     | Panes, copy/template/organization, submission/context races              | State transitions and fixes                 |
+| 4     | Testability, accessibility, remaining launch regressions, simplification | Finding dispositions and final plan verdict |
 
 After implementation, independent code reviews inspect the final diff. Address
 confirmed issues, add tests where practical and re-review risky fixes. Do not resolve
@@ -399,14 +398,14 @@ prerequisites to be implemented in this feature PR.
   and architecture guards. Full qualification was not attained; overall CI was not
   green. This is not evidence for a future implementation commit.
 
-| Existing test file | Passed tests in original baseline |
-| --- | ---: |
-| `src/renderer/hooks/useCreateTeamDraft.test.tsx` | 6 |
-| `test/renderer/store/teamSlice.test.ts` | 246 |
-| `test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts` | 100 |
-| `test/renderer/components/team/dialogs/ProjectPathSelectorDeleted.test.tsx` | 5 |
-| `src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts` | 13 |
-| `src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.test.tsx` | 4 |
+| Existing test file                                                                         | Passed tests in original baseline |
+| ------------------------------------------------------------------------------------------ | --------------------------------: |
+| `src/renderer/hooks/useCreateTeamDraft.test.tsx`                                           |                                 6 |
+| `test/renderer/store/teamSlice.test.ts`                                                    |                               246 |
+| `test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts`                           |                               100 |
+| `test/renderer/components/team/dialogs/ProjectPathSelectorDeleted.test.tsx`                |                                 5 |
+| `src/features/gateway-provider/renderer/hooks/__tests__/GatewayBindingDraft.test.ts`       |                                13 |
+| `src/features/gateway-provider/renderer/hooks/__tests__/useGatewayMemberBindings.test.tsx` |                                 4 |
 
 The 100-test dialog file covers mixed creation/launch cases; it is not 100 isolated
 launch-only tests. The first temporary task workflow was removed after capturing
@@ -463,15 +462,15 @@ posting another review request, using a bot with unknown model/effort or perform
 author self-review does not satisfy it. No unrelated auth/infrastructure fix is
 included here.
 
-| Delivery gate | Current status |
-| --- | --- |
-| Detailed plan published and source-informed refinements | Published; four focused author review passes recorded below |
-| Independent critic rounds 1–4 | 0/4; authorization failures above |
-| Original regression baseline | 374 passed; scoped evidence only |
-| Additional hook characterization | Added; terminal evidence is in the linked follow-up run |
-| Feature implementation | Implemented in PR: creation/copy/organization use the shared in-Teams page; launch/relaunch remain modal |
-| New-screen tests / Electron visual E2E | PASS on `57a0231d`: [Electron E2E 42394931129](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129), including real UI, draft resume, restart, native config-only creation, copy and unchanged launch modal |
-| Independent implementation review | CodeRabbit findings reviewed and fixed; strongest-model/xhigh independent reviews unavailable (0/4) |
+| Delivery gate                                                | Current status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Detailed plan published and source-informed refinements      | Published; four focused author review passes recorded below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Independent critic rounds 1–4                                | 0/4; authorization failures above                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Original regression baseline                                 | 374 passed; scoped evidence only                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Additional hook characterization                             | Added; terminal evidence is in the linked follow-up run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Feature implementation                                       | Implemented in PR: creation/copy/organization use the shared in-Teams page; launch/relaunch remain modal                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| New-screen tests / Electron visual E2E                       | PASS on `57a0231d`: [Electron E2E 42394931129](https://github.com/777genius/agent-teams-ai/actions/runs/42394931129), including real UI, draft resume, restart, native config-only creation, copy and unchanged launch modal                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Independent implementation review                            | CodeRabbit findings reviewed and fixed; strongest-model/xhigh independent reviews unavailable (0/4)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Exact implementation-head qualification / merge / post-merge | **#1125 merged** as `df26d00a` ([main CI](https://github.com/777genius/agent-teams-ai/actions/runs/42422713898), [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42422713884): PASS). **#1136 merged** as `d7f56e5fb1f4`: [exact-head Linux/macOS/Windows Electron E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42431800514), [full PR CI](https://github.com/777genius/agent-teams-ai/actions/runs/42431800551), [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42431800479), [Windows packaged smoke](https://github.com/777genius/agent-teams-ai/actions/runs/42431800506): PASS. [Main post-merge E2E](https://github.com/777genius/agent-teams-ai/actions/runs/42434369262), [CI](https://github.com/777genius/agent-teams-ai/actions/runs/42434369276), [CodeQL](https://github.com/777genius/agent-teams-ai/actions/runs/42434369307): PASS. Main push CI skips reusable test/lint shards by its workflow policy; all four test and three lint shards passed on final PR HEAD. 15/15 inline review threads resolved. |
 
 Historical entry superseded: #1125 and #1136 are both merged and post-merge verified. #1136 adds bounded template UX protection, cross-platform Electron E2E and documentation; it does not change `LaunchTeamDialog` or main-process Gateway credential recovery. The current non-secret draft does **not** guarantee restoration of an unsaved provisional Gateway binding after restart. External independent `xhigh` reviews are still 0/4, not silently counted as author reviews.
