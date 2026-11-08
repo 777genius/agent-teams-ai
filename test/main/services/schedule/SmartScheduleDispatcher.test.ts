@@ -170,7 +170,10 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
         prompt: undefined,
       })
     );
-    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith('test-team', 'task-1');
+    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith(
+      'test-team', 'task-1',
+      expect.objectContaining({ expectedOwner: 'alice', canStart: expect.any(Function) })
+    );
     expect(port.runOneShot).not.toHaveBeenCalled();
     expect(port.attachMember).not.toHaveBeenCalled();
   });
@@ -187,7 +190,10 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
       'test-team',
       expect.objectContaining({ owner: 'lead', startImmediately: false })
     );
-    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith('test-team', 'task-1');
+    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith(
+      'test-team', 'task-1',
+      expect.objectContaining({ expectedOwner: 'lead', canStart: expect.any(Function) })
+    );
     expect(port.launchTeam).not.toHaveBeenCalled();
     expect(port.runOneShot).not.toHaveBeenCalled();
   });
@@ -402,6 +408,82 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).not.toHaveBeenCalled();
     expect(port.launchTeam).not.toHaveBeenCalled();
   });
+
+
+  it('does not create a stopped-team task after cancellation during metadata reads', async () => {
+    enableTaskFirstPorts();
+    port.isTeamAlive = vi.fn(() => false);
+    let cancelled = false;
+    port.getLeadName = vi.fn(async () => {
+      cancelled = true;
+      return 'lead';
+    });
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true }, 'cancel-during-read', () => cancelled
+    );
+    expect(outcome.kind).toBe('skipped');
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+  });
+
+  it('fences scheduled work against a runtime replaced during the task-service read', async () => {
+    enableTaskFirstPorts();
+    let replaced = false;
+    port.getRuntime = vi.fn(async () => ({
+      ...runtimeMembers(true),
+      runId: replaced ? 'replacement-run' : 'team-run-1',
+    }));
+    port.startTaskByUser = vi.fn(async (
+      _team: string,
+      _taskId: string,
+      admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    ) => {
+      replaced = true;
+      if (!(await admission?.canStart())) throw new Error('Scheduled task start superseded');
+      return { notifiedOwner: true };
+    });
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'superseded-during-read', active
+    );
+    expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    expect(port.startTaskByUser).toHaveBeenCalledWith(
+      'test-team', 'task-1',
+      expect.objectContaining({ expectedOwner: 'alice', canStart: expect.any(Function) })
+    );
+    expect(port.createTask).toHaveBeenCalledOnce();
+  });
+
+  it('does not claim dispatch when a pending task loses its owner before start', async () => {
+    enableTaskFirstPorts();
+    port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: false }));
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true }, 'owner-removed', active
+    );
+    expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledOnce();
+  });
+
+  it.each(['review', 'needsFix'] as const)(
+    'keeps a completed task awaiting %s open instead of creating duplicate work',
+    async (reviewState) => {
+      enableTaskFirstPorts();
+      const previous: ScheduleRun = {
+        id: 'earlier-task', scheduleId: 'schedule-1', teamName: 'test-team',
+        status: 'dispatched', scheduledFor: new Date().toISOString(),
+        startedAt: new Date().toISOString(), retryCount: 0, linkedTaskId: 'review-task',
+      };
+      port.getPreviousRuns = vi.fn(async () => [previous]);
+      port.getTask = vi.fn(async () => ({
+        id: 'review-task', subject: 'Waiting for review', status: 'completed', reviewState,
+      } as TeamTask));
+      const outcome = await dispatch.dispatch(
+        { ...makeSchedule('agent'), taskFirst: true }, 'next-after-review', active
+      );
+      expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'review-task' });
+      expect(port.createTask).not.toHaveBeenCalled();
+    }
+  );
 
   it('runs the old one-shot executor for a new agent schedule if the team is off', async () => {
     port.isTeamAlive = vi.fn(() => false);

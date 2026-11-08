@@ -175,6 +175,9 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
+      throw new Error('Task-first schedule requires agent or team executionMode');
+    }
     const now = new Date().toISOString();
     const schedule: Schedule = {
       id: randomUUID(),

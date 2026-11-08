@@ -4,6 +4,8 @@
  *
  * Legacy schedules never reach this class.
  */
+import { isTeamTaskDeleted, isTeamTaskFinishedForDependency } from '@shared/utils/teamTaskState';
+
 import type { ExecutionRequest, ScheduledTaskResult } from './ScheduledTaskExecutor';
 import type {
   CreateTaskRequest,
@@ -35,7 +37,11 @@ export interface SmartScheduleRuntimePort {
   hasRunnableConfig?(teamName: string): Promise<boolean>;
   getPreviousRuns?(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
   getTask?(teamName: string, taskId: string): Promise<TeamTask | null>;
-  startTaskByUser?(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }>;
+  startTaskByUser?(
+    teamName: string,
+    taskId: string,
+    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+  ): Promise<{ notifiedOwner: boolean }>;
   attachMember(teamName: string, memberName: string): Promise<void>;
   createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask>;
   launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse>;
@@ -182,7 +188,7 @@ export class SmartScheduleDispatcher {
       seenTasks.add(taskId);
       // Run IDs double as task command UUIDs after an interrupted write.
       const task = await getTask(schedule.teamName, taskId);
-      if (task && task.status !== 'completed' && task.status !== 'deleted') return task;
+      if (task && !isTeamTaskDeleted(task) && !isTeamTaskFinishedForDependency(task)) return task;
     }
     return null;
   }
@@ -218,6 +224,15 @@ export class SmartScheduleDispatcher {
     const owner = selected?.toLowerCase() === leadName.toLowerCase() ? leadName : selected || leadName;
     if (owner !== leadName && !saved.members.some((member) => member.name === owner)) {
       return skipped(`Member "${owner}" is not configured in this team`);
+    }
+
+    if (
+      isCancelled() ||
+      this.runtime.isTeamLaunching(schedule.teamName) ||
+      this.runtime.isTeamBusy(schedule.teamName) ||
+      this.runtime.isTeamAlive(schedule.teamName)
+    ) {
+      return skipped('Team state changed before task creation');
     }
 
     // A pending board task is the durable source of truth. No bootstrap prompt
@@ -274,7 +289,12 @@ export class SmartScheduleDispatcher {
       return skipped('Task saved; runtime changed before start', task.id);
     }
     try {
-      await startTaskByUser(schedule.teamName, task.id);
+      const notified = await this.startScheduledTask(
+        schedule.teamName, task.id, owner, launched.runId, isCancelled
+      );
+      if (!notified) {
+        return skipped('Task saved; start did not confirm a task owner. Inspect the task', task.id);
+      }
     } catch {
       return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', task.id);
     }
@@ -382,7 +402,12 @@ export class SmartScheduleDispatcher {
         return skipped('Task saved; runtime changed before start', task.id);
       }
       try {
-        await this.runtime.startTaskByUser?.(team, task.id);
+        const notified = await this.startScheduledTask(
+          team, task.id, memberName, runtime.runId, isCancelled
+        );
+        if (!notified) {
+          return skipped('Task saved; start did not confirm a task owner. Inspect the task', task.id);
+        }
       } catch {
         return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', task.id);
       }
@@ -392,6 +417,34 @@ export class SmartScheduleDispatcher {
       taskId: task.id,
       summary: `Task #${task.displayId || task.id} assigned to ${memberName}; work completion not yet verified`,
     };
+  }
+
+  /** Recheck cancellation, exact owner and runtime generation after the task service's async read. */
+  private async startScheduledTask(
+    teamName: string,
+    taskId: string,
+    memberName: string,
+    expectedRunId: string,
+    isCancelled: () => boolean
+  ): Promise<boolean> {
+    if (!this.runtime.startTaskByUser) return false;
+    const result = await this.runtime.startTaskByUser(teamName, taskId, {
+      expectedOwner: memberName,
+      canStart: async () => {
+        if (isCancelled() || this.runtime.isTeamBusy(teamName) || !this.runtime.isTeamAlive(teamName)) {
+          return false;
+        }
+        const current = await this.runtime.getRuntime(teamName);
+        return (
+          !isCancelled() &&
+          !this.runtime.isTeamBusy(teamName) &&
+          this.runtime.isTeamAlive(teamName) &&
+          current.runId === expectedRunId &&
+          readyMember(current.members[memberName])
+        );
+      },
+    });
+    return result.notifiedOwner;
   }
 
   private async waitForMember(

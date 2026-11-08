@@ -111,6 +111,11 @@ describe('Smart schedules filesystem safe E2E', () => {
     launchConfig: { cwd: '/tmp/e2e-project', prompt: 'Check open bugs', providerId: 'anthropic' as const },
   });
 
+  async function triggerWhenIdle(scheduleId: string) {
+    // The run can be persisted before its finally block releases the in-memory lock.
+    return vi.waitFor(() => scheduler.triggerNow(scheduleId), { timeout: 8000 });
+  }
+
   async function waitForRun(scheduleId: string, expected: string) {
     await vi.waitFor(async () => {
       const runs = await repository.listRuns(scheduleId);
@@ -147,6 +152,13 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(port.createTask).not.toHaveBeenCalled();
     expect(port.launchTeam).not.toHaveBeenCalled();
     expect((await repository.getRunLogs(legacy.id, run.id)).stdout).toBe('standalone executed');
+  });
+
+  it('rejects task-first persistence without an execution mode', async () => {
+    await expect(scheduler.createSchedule({ ...input(), taskFirst: true })).rejects.toThrow(
+      /requires agent or team executionMode/
+    );
+    expect(await scheduler.listSchedules()).toHaveLength(0);
   });
 
   it('creates an idempotent assigned task and never launches CLI for a running team', async () => {
@@ -221,7 +233,7 @@ describe('Smart schedules filesystem safe E2E', () => {
     await waitForRun(schedule.id, 'dispatched');
     port.isTeamLaunching = vi.fn(() => true);
     for (let i = 0; i < 53; i++) {
-      await scheduler.triggerNow(schedule.id);
+      await triggerWhenIdle(schedule.id);
       const run = await waitForRun(schedule.id, 'skipped');
       expect(run.linkedTaskId).toBe(unfinished.id);
     }
@@ -231,7 +243,7 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(port.createTask).toHaveBeenCalledOnce();
 
     port.isTeamLaunching = vi.fn(() => false);
-    await scheduler.triggerNow(schedule.id);
+    await triggerWhenIdle(schedule.id);
     expect((await waitForRun(schedule.id, 'skipped')).linkedTaskId).toBe(unfinished.id);
     expect(port.createTask).toHaveBeenCalledOnce();
   }, 20_000);
@@ -278,7 +290,10 @@ describe('Smart schedules filesystem safe E2E', () => {
         command: { commandId: run.id, idempotencyKey: `schedule:${run.id}` },
       })
     );
-    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith('e2e-team', 'e2e-task');
+    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith(
+      'e2e-team', 'e2e-task',
+      expect.objectContaining({ expectedOwner: 'alice', canStart: expect.any(Function) })
+    );
     expect(port.launchTeam).toHaveBeenCalledOnce();
     expect(port.runOneShot).not.toHaveBeenCalled();
   });

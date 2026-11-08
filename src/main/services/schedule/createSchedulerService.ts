@@ -1,5 +1,5 @@
-import { TeamConfigReader } from '../team/TeamConfigReader';
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
+import { TeamConfigReader } from '../team/TeamConfigReader';
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import { SchedulerService } from './SchedulerService';
@@ -46,7 +46,8 @@ export function createSchedulerService(
         throw error;
       }
     },
-    startTaskByUser: (teamName, taskId) => data.startTaskByUser(teamName, taskId),
+    startTaskByUser: (teamName, taskId, admission) =>
+      data.startTaskByUser(teamName, taskId, admission),
     attachMember: (teamName, memberName) =>
       apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
         reason: 'member_added',
