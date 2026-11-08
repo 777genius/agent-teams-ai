@@ -169,6 +169,36 @@ if (process.argv[2] === '--worker') {
     const sessionId=created.data?.data?.id;
     if(created.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(sessionId||''))
       throw Error('TEST_session_create_unqualified');
+    // A real native session round-trip of ordered permission rules, NOT a
+    // tool-execution or fully assembled agent/global policy certificate.
+    // Late wildcard grants must never be promoted to the captured Host deny.
+    const { preflightOpenCodeV2EffectiveExternalDirectory } =
+      await import('../dist/composition/openCodeV2StaticPreflight.js');
+    const guard = (action, effect) => ({ action, resource:'*', effect });
+    for (const { rules, admissible } of [
+      { rules:[guard('external_directory','deny'),guard('*','allow')],
+        admissible:false },
+      { rules:[guard('*','allow'),guard('external_directory','deny')],
+        admissible:true },
+    ]) {
+      const createdRules=await call('/api/session','POST',{
+        location:{directory:workspace},agent:'build',permissions:rules,
+      });
+      const testId=createdRules.data?.data?.id;
+      if(createdRules.status!==200 || !/^ses_[A-Za-z0-9_-]+$/.test(testId||''))
+        throw Error('TEST_native_ordered_session_create_unqualified');
+      const readback=await call('/api/session/'+encodeURIComponent(testId));
+      const nativeRules=readback.data?.data?.permissions;
+      if(readback.status!==200 || readback.data?.data?.id!==testId ||
+         !Array.isArray(nativeRules) || nativeRules.length!==rules.length ||
+         !rules.every((rule,index)=>Object.keys(nativeRules[index]||{}).length===3 &&
+           Object.entries(rule).every(([key,value])=>nativeRules[index]?.[key]===value)))
+        throw Error('TEST_native_permission_order_readback_unqualified');
+      const admission=preflightOpenCodeV2EffectiveExternalDirectory(nativeRules,'deny');
+      if((admission.kind==='policy-candidate')!==admissible)
+        throw Error('TEST_native_late_permission_override_not_fenced');
+    }
+    receipt.nativeSessionPermissionOrderReadbackProven=true;
     const before=await readLog(sessionId);
     receipt.steps.push('TEST_official_HTTP_session_created_event_persisted');
     if(!await stop())throw Error('TEST_first_process_cleanup_unknown');
