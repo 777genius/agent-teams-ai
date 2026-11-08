@@ -86,7 +86,7 @@ describe('install-dependencies-with-retry', () => {
 
   it('never loses a split fatal 404 when stderr interleaves a long chunk', () => {
     const tracker = createInstallFailureTracker();
-    tracker.observe('stdout', 'HTTPError: Response code 503\\nERR_PNPM_F');
+    tracker.observe('stdout', 'HTTPError: Response code 503\nERR_PNPM_F');
     tracker.observe('stderr', 'diagnostic '.repeat(100));
     tracker.observe('stdout', 'ETCH_404 GET https://registry.npmjs.org/absent');
     assert.deepEqual(tracker.snapshot(), {
@@ -99,14 +99,14 @@ describe('install-dependencies-with-retry', () => {
     const tracker = createInstallFailureTracker();
     tracker.observe('stderr', 'ERR_PNPM_FETCH_');
     tracker.observe('stdout', 'warning '.repeat(100));
-    tracker.observe('stderr', '504 fetching Electron\\n');
+    tracker.observe('stderr', '504 fetching Electron\n');
     assert.deepEqual(tracker.snapshot(), {
       retryableFailureSeen: true,
       terminalFailureSeen: false,
     });
-    tracker.observe('stdout', '\\x1b[31mERR_PNPM_FETCH_');
+    tracker.observe('stdout', '\x1b[31mERR_PNPM_FETCH_');
     tracker.observe('stderr', 'log '.repeat(100));
-    tracker.observe('stdout', '404\\x1b[0m');
+    tracker.observe('stdout', '404\x1b[0m');
     assert.equal(tracker.snapshot().terminalFailureSeen, true);
   });
 
