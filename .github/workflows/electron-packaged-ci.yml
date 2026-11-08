@@ -18,6 +18,10 @@ on:
       - 'pnpm-workspace.yaml'
       - 'scripts/electron-builder/**'
       - 'runtime.lock.json'
+      - 'scripts/e2e/opencode-project-path-packaged.mjs'
+      - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
+      - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'managed-git.lock.json'
       - 'scripts/stage-managed-git.mjs'
       - 'src/main/utils/managedGit.ts'
@@ -184,6 +188,9 @@ jobs:
       - name: Smoke packaged app
         if: matrix.os != 'linux'
         run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
+      - name: Qualify packaged macOS OpenCode project-path status and model list
+        if: matrix.os == 'darwin'
+        run: node scripts/e2e/opencode-project-path-packaged.mjs "${{ matrix.bundle }}"
       - name: Smoke packaged app under Xvfb
         if: matrix.os == 'linux'
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" linux
