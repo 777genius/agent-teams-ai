@@ -295,22 +295,26 @@ export async function verifyCatalog({
           .filter((event) => event.scenario === scenario && event.at >= started);
         const records = catalogFixtureRequests(recorded);
         const directoryReads = records.filter((record) => record.operation === 'directory');
-        const allFirst = directoryReads.find((record) =>
+        // Use the latest *completed* refresh, not pages from an earlier attempt.
+        const allSecond = catalogRefreshEvidence(recorded)?.directory;
+        const allFirst = directoryReads.filter((record) =>
           record.response?.response.directory?.filter === 'all' &&
-          record.response.response.directory.nextCursor === '100');
-        const allSecond = directoryReads.find((record) =>
-          record.response?.response.directory?.filter === 'all' &&
-          record.response.response.directory.cursor === '100' &&
-          record.response.response.directory.nextCursor === null);
-        const connected = directoryReads.find((record) =>
+          record.response.response.directory.nextCursor === '100' &&
+          record.response.index < (allSecond?.index ?? -1)).at(-1);
+        const connected = directoryReads.filter((record) =>
           record.start.args.includes('--summary') &&
           record.start.args.includes('--filter') &&
           record.start.args[record.start.args.indexOf('--filter') + 1] === 'connected' &&
-          record.response?.response.directory?.filter === 'connected');
+          record.response?.response.directory?.filter === 'connected' &&
+          record.response.index > (allFirst?.response?.index ?? -1)).at(-1);
         const renderedCount = await evaluate(
           `document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || ''`
         );
-        if (allFirst && allSecond && connected && /\b3 connected\b/.test(renderedCount)) {
+        // Only one numeric token, independent of the translated count label.
+        if (allFirst && allSecond &&
+          allSecond.response.response.directory.cursor === '100' &&
+          allSecond.response.response.directory.nextCursor === null &&
+          connected && /^\D*3\D*$/.test(renderedCount.trim())) {
           proof = { allFirst, allSecond, connected, renderedCount };
           break;
         }
