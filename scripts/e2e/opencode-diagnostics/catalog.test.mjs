@@ -79,6 +79,27 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
         if (value.models) assert.equal(value.models.models[0].providerId, source);
       }
     }
+    // A real subprocess must obey the connected filter; previously the fixture
+    // accepted --filter but always returned filter=all, hiding this regression.
+    await writeFile(path.join(root, 'scenario'), 'connected-filter');
+    const directoryArgs = (filter) => [
+      'runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+      '--summary', '--filter', filter, '--limit', '100',
+    ];
+    const all = JSON.parse(run(directoryArgs('all')).stdout).directory;
+    const connected = JSON.parse(run(directoryArgs('connected')).stdout).directory;
+    assert.equal(all.filter, 'all');
+    assert.equal(all.totalCount, 4);
+    assert.equal(all.entries.find((entry) => entry.providerId === 'google')?.state, 'available');
+    assert.equal(connected.filter, 'connected');
+    assert.equal(connected.totalCount, 3);
+    assert.equal(connected.returnedCount, connected.entries.length);
+    assert.equal(connected.nextCursor, null);
+    assert(connected.entries.every((entry) => entry.state === 'connected'));
+    assert(!connected.entries.some((entry) => entry.providerId === 'google'));
+    assert.equal(run(directoryArgs('unknown')).status, 64);
+    await writeFile(path.join(root, 'scenario'), 'catalog-retry');
+
     for (const args of [
       ['runtime', 'status', '--json', '--summary', '--provider', 'opencode'],
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],

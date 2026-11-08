@@ -41,6 +41,7 @@ if (
     'models-four-errors',
     'partial-success',
     'catalog-retry',
+    'connected-filter',
     'catalog-timeout',
   ].includes(scenario)
 )
@@ -143,6 +144,8 @@ function catalogCommand(operation) {
   }
   if (flags.get('--runtime') !== 'opencode' || flags.get('--json') !== true) return refuse();
   const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
+  const filter = flags.get('--filter') || 'all';
+  if (operation === 'directory' && !['all', 'connected'].includes(filter)) return refuse();
   const source = flags.get('--provider');
   if (operation === 'models' && !sources.includes(source)) return refuse();
   if (operation === 'directory' && source) return refuse();
@@ -159,22 +162,14 @@ function catalogCommand(operation) {
         recoverable: true,
         message: `Fixture ${operation} ${source || 'directory'} failed api_key=DO_NOT_COPY_THIS_SECRET`,
       };
-    else if (operation === 'directory')
-      response.directory = {
-        runtimeId: 'opencode',
-        totalCount: 4,
-        returnedCount: 4,
-        query: null,
-        filter: 'all',
-        limit: 100,
-        cursor: null,
-        nextCursor: null,
-        fetchedAt: new Date().toISOString(),
-        diagnostics: [],
-        entries: sources.map((providerId) => ({
+    else if (operation === 'directory') {
+      const entries = sources
+        .map((providerId) => ({
           providerId,
           displayName: providerId,
-          state: 'connected',
+          // A disconnected source is included in the unfiltered inventory only.
+          state: scenario === 'connected-filter' && providerId === 'google'
+            ? 'available' : 'connected',
           setupKind: 'connect-api-key',
           ownership: [],
           recommended: false,
@@ -192,9 +187,22 @@ function catalogCommand(operation) {
             supportedInlineAuth: true,
             configuredAuthless: false,
           },
-        })),
+        }))
+        .filter((entry) => filter !== 'connected' || entry.state === 'connected');
+      response.directory = {
+        runtimeId: 'opencode',
+        totalCount: entries.length,
+        returnedCount: entries.length,
+        query: null,
+        filter,
+        limit: 100,
+        cursor: null,
+        nextCursor: null,
+        fetchedAt: new Date().toISOString(),
+        diagnostics: [],
+        entries,
       };
-    else
+    } else
       response.models = {
         runtimeId: 'opencode',
         providerId: source,

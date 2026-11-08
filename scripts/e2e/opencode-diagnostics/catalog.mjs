@@ -420,6 +420,33 @@ export async function verifyCatalog({
         );
       ipc.push({ input, ...result });
     }
+    // Probe the connected-only summary through the actual packaged/preload
+    // IPC and orchestrator subprocess, separately from the UI's regular reads.
+    if (scenario === 'ready') {
+      const input = {
+        runtimeId: 'opencode', projectPath: null,
+        summary: true, filter: 'connected', limit: 100, query: null, cursor: null, refresh: false,
+      };
+      await evaluate(`window.__connectedSummaryProbe = {done:false};
+        window.electronAPI.runtimeProviderManagement.loadProviderDirectory(${JSON.stringify(input)})
+          .then(value => window.__connectedSummaryProbe = {done:true,value},
+                error => window.__connectedSummaryProbe = {done:true,error:String(error)});
+        void 0`);
+      let connected;
+      for (let i = 0; i < maxAttempts; i++) {
+        connected = await evaluate('window.__connectedSummaryProbe');
+        if (connected?.done) break;
+        await pause(500);
+      }
+      assert(connected?.done && !connected.error && !connected.value.error,
+        'Connected-only summary IPC failed');
+      const directory = connected.value.directory;
+      assert(directory && directory.filter === 'connected');
+      assert.equal(directory.totalCount, directory.returnedCount);
+      assert.equal(directory.nextCursor, null);
+      assert(directory.entries.every((entry) => entry.state === 'connected'));
+      await save('connected-summary-ipc.json', JSON.stringify(connected.value, null, 2));
+    }
     await save('ipc.json', JSON.stringify(ipc, null, 2));
     console.log(JSON.stringify({ passed: true, scenario, root }));
   } catch (error) {
