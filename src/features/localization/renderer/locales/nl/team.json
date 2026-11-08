@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Tijd"
     },
     "empty": {
       "title": "Nog geen planningen",
@@ -2147,7 +2148,11 @@
       "cancelled": "Geannuleerd",
       "dispatched": "Verzonden",
       "skipped": "Overgeslagen"
-    }
+    },
+    "taskFirstAgentDescription": "De taak gaat naar het geselecteerde teamlid. Indien nodig wordt het team eerst gestart.",
+    "taskFirstTeamDescription": "De teamleider coördineert deze taak. Indien nodig wordt het team eerst gestart.",
+    "taskFirstDesktopRequired": "Schema's worden alleen uitgevoerd zolang Agent Teams geopend is.",
+    "taskFirstHistoricPrompt": "Dit team heeft een opgeslagen opstartprompt. Controleer die in de teaminstellingen voordat je automatisch werk plant."
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode-lokale modellen kunnen een OpenCode-contextbudget gebruiken in plaats van alleen-prompt-limieten.",
