@@ -71,14 +71,30 @@ if (process.argv[2] === '--worker') {
     TMPDIR:join(root,'temp'), OPENCODE_DISABLE_MODELS_FETCH:'true',
     CI:'true', NO_COLOR:'1', TEST_V2_HTTP_DB:db,
     TEST_V2_HTTP_PASSWORD:password };
-  let child, port;
+  let child, port, startTicks, stopSignalSent = false;
+  function startIdentity(pid) {
+    try {
+      const stat=readFileSync('/proc/'+pid+'/stat','utf8');
+      const end=stat.lastIndexOf(') ');
+      if(end<0)throw Error('TEST_process_identity_invalid');
+      const fields=stat.slice(end+2).trim().split(/\s+/);
+      if(Number(fields[2])!==pid||Number(fields[3])!==pid||
+         !/^\d+$/.test(fields[19]||''))throw Error('TEST_process_not_isolated');
+      return fields[19];
+    } catch(e){if(e?.code==='ENOENT')return undefined;throw e;}
+  }
   const present = pid => { try {process.kill(pid,0);return true;}
     catch(e){if(e.code==='ESRCH')return false;throw e;} };
   async function stop() {
     if (!child?.pid) return true;
     const pid=child.pid;
-    if (present(-pid)) { try {process.kill(-pid,'SIGTERM');}
-      catch(e){if(e.code!=='ESRCH')throw e;} }
+    const actual=startIdentity(pid);
+    if(actual!==undefined && actual!==startTicks)return false;
+    if(!stopSignalSent && actual===startTicks) {
+      stopSignalSent=true;
+      try {process.kill(-pid,'SIGTERM');}
+      catch(e){if(e.code!=='ESRCH')throw e;}
+    }
     for (let n=0;n<60;n++) {
       if (!present(-pid)) {child=undefined;return true;}
       await delay(100);
@@ -110,10 +126,12 @@ if (process.argv[2] === '--worker') {
   }
   async function start() {
     port=await reservePort();env.TEST_V2_HTTP_PORT=String(port);
+    stopSignalSent=false;
     child=spawn(process.execPath,[worker,'--worker'],{
       cwd:workspace,env,detached:true,stdio:'ignore',
     });
-    if (!child.pid || readFileSync('/proc/'+child.pid+'/exe').length===0)
+    startTicks=child.pid?startIdentity(child.pid):undefined;
+    if (!startTicks || readFileSync('/proc/'+child.pid+'/exe').length===0)
       throw Error('TEST_owned_process_missing');
     const expected=hash(readFileSync(process.execPath));
     if (hash(readFileSync('/proc/'+child.pid+'/exe'))!==expected)
