@@ -1075,7 +1075,7 @@ export const MemberCard = memo(function MemberCard({
     >
       <div
         className={cn(
-          'group relative cursor-pointer overflow-hidden rounded py-1.5',
+          'group/member group relative cursor-pointer overflow-hidden rounded py-1.5',
           rowSurfaceBleedClass
         )}
         style={undefined}
@@ -1498,14 +1498,6 @@ export const MemberCard = memo(function MemberCard({
               totalTasks={totalTasks}
               progressPercent={progressPercent}
             />
-            {!isRemoved && !passive && (
-              <MemberQuickActions
-                onSendMessage={onSendMessage}
-                onAssignTask={onAssignTask}
-                onEditMember={onEditMember}
-                editDisabled={isTeamProvisioning}
-              />
-            )}
             {canRestoreMember ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1529,6 +1521,16 @@ export const MemberCard = memo(function MemberCard({
               </Tooltip>
             ) : null}
           </div>
+            {!isRemoved && !passive && (
+              <div className="col-span-3 hidden min-w-0 justify-end group-focus-within/member:flex group-hover/member:flex [@media(any-pointer:coarse)]:flex [@media(hover:none)]:flex">
+                <MemberQuickActions
+                  onSendMessage={onSendMessage}
+                  onAssignTask={onAssignTask}
+                  onEditMember={onEditMember}
+                  editDisabled={isTeamProvisioning}
+                />
+              </div>
+            )}
           {launchFailureReason ? (
             <div
               data-testid="member-launch-failure-reason"

@@ -2693,7 +2693,7 @@
       "addTask": "Add task",
       "noTasks": "No tasks"
     },
-    "title": "Kanban",
+    "title": "Tasks",
     "columns": {
       "todo": "TODO",
       "inProgress": "IN PROGRESS",
@@ -3307,6 +3307,9 @@
   "templates": {
     "label": "Team template",
     "placeholder": "Start from a team template",
+    "confirmTitle": "Apply team template?",
+    "confirmMessage": "This replaces the description, prompt and teammates, resets runtime selection, disables Run after create and Solo team, and enables model sync. Continue?",
+    "confirmAction": "Apply template",
     "names": {
       "software-product": "Software Product Team",
       "marketing": "Marketing Team",

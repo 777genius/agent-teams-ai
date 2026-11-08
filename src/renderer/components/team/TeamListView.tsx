@@ -1184,7 +1184,7 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
             api={api.externalAgentConnection}
             local={canCreate}
             isLight={isLight}
-            onSettings={() => useStore.getState().openSettingsTab('general')}
+            onSettings={() => useStore.getState().openSettingsTab('externalAgentConnection')}
           />
           <Button
             variant="outline"
