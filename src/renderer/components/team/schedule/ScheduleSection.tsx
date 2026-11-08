@@ -29,6 +29,11 @@ import { ScheduleStatusBadge } from './ScheduleStatusBadge';
 const LaunchTeamDialog = lazy(() =>
   import('../dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
+const TaskScheduleDialog = lazy(() =>
+  import('@renderer/components/team/schedule/TaskScheduleDialog').then((m) => ({
+    default: m.TaskScheduleDialog,
+  }))
+);
 
 import type { Schedule, ScheduleRun } from '@shared/types';
 
@@ -323,13 +328,22 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
             />
           }
         >
-          <LaunchTeamDialog
-            mode="schedule"
-            open={dialogOpen}
-            teamName={teamName}
-            schedule={editingSchedule}
-            onClose={handleClose}
-          />
+          {!editingSchedule || editingSchedule.taskFirst ? (
+            <TaskScheduleDialog
+              open={dialogOpen}
+              fixedTeamName={teamName}
+              schedule={editingSchedule}
+              onClose={handleClose}
+            />
+          ) : (
+            <LaunchTeamDialog
+              mode="schedule"
+              open={dialogOpen}
+              teamName={teamName}
+              schedule={editingSchedule}
+              onClose={handleClose}
+            />
+          )}
         </Suspense>
       )}
     </div>
