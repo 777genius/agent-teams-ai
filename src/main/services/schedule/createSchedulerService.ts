@@ -1,4 +1,5 @@
 import { TeamConfigReader } from '../team/TeamConfigReader';
+import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
 
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
@@ -33,9 +34,19 @@ export function createSchedulerService(
       const config = await configReader.getConfig(teamName);
       return Boolean(config && !config.deletedAt);
     },
-    getPreviousRun: async (scheduleId, runId) =>
-      (await repository.listRuns(scheduleId, { limit: 2 })).find((run) => run.id !== runId) ?? null,
-    getTask: (teamName, taskId) => data.getTask(teamName, taskId),
+    getPreviousRuns: async (scheduleId, runId) =>
+      (await repository.listRuns(scheduleId, { limit: 50 })).filter((run) => run.id !== runId),
+    getTask: async (teamName, taskId) => {
+      try {
+        return await data.getTask(teamName, taskId);
+      } catch (error) {
+        if (
+          isControllerTaskNotFoundError(error, taskId) ||
+          (error instanceof Error && 'code' in error && error.code === 'TASK_NOT_FOUND')
+        ) return null;
+        throw error;
+      }
+    },
     startTaskByUser: (teamName, taskId) => data.startTaskByUser(teamName, taskId),
     attachMember: (teamName, memberName) =>
       apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
