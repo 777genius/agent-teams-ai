@@ -552,10 +552,11 @@ async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
   await client.send('Runtime.enable');
   await client.send('Page.enable');
   try {
-    // Windows CI needs longer to reopen the *same* profile after taskkill.
-    // Keep real renderer and IPC readiness mandatory; never skip a failed boot.
+    // Cold macOS CI may finish Vite's dev renderer bundle after 60s while
+    // Electron main/preload are ready. Wait boundedly for the actual renderer;
+    // keep real IPC/store readiness mandatory, never bypass failed startup.
     await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
-      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 60_000);
+      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 150_000);
   } catch (error) {
     let startupStatus = null;
     try {
