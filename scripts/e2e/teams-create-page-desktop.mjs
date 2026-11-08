@@ -435,7 +435,15 @@ class CdpClient {
       inputSelectAllDomFallbacks++;
       // Fixture-only fallback; recorded in the E2E report, never treated as
       // evidence that the native macOS keyboard accelerator works.
-      await this.evaluate(`(() => { const input = ${expression}; input.focus(); input.select(); })()`);
+      // Pass the selector as data to CDP, never interpolate it into evaluated code.
+      const global = await this.send('Runtime.evaluate', { expression: 'window' });
+      assert(global.result?.objectId, 'No renderer global object for selection fallback');
+      const selected = await this.send('Runtime.callFunctionOn', {
+        objectId: global.result.objectId,
+        functionDeclaration: 'function(selector) { const input = document.querySelector(selector); input?.focus(); input?.select(); }',
+        arguments: [{ value: selector }],
+      });
+      assert(!selected.exceptionDetails, 'DOM selection fallback raised a renderer exception');
     }
     assert(await entireValueSelected(), `Input select-all failed for ${selector}`);
     await this.send('Input.insertText', { text: value });
