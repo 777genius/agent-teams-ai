@@ -185,6 +185,10 @@ jobs:
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check isolated durable-HTTP TEST harness syntax
         run: node --check packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs
+      - name: Negative SDK setup cleanup and HOLD receipt (no worker launch)
+        env:
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs
       - name: Install official pinned SDK without scripts in TEST-owned npm prefix
         shell: bash
         run: |
