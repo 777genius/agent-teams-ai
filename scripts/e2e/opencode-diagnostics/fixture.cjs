@@ -154,7 +154,9 @@ function catalogCommand(operation) {
     operation === 'directory' &&
     (
       !['all', 'connected'].includes(filter) ||
-      !Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+      // Native startup-cleanup requests 250 entries. Keep a bounded fixture
+      // page size without rejecting that production read.
+      !Number.isSafeInteger(limit) || limit < 1 || limit > 250 ||
       (cursor !== null && (!/^(0|[1-9]\d*)$/.test(cursor) || !Number.isSafeInteger(Number(cursor))))
     )
   ) return refuse();

@@ -106,6 +106,18 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     assert.equal(second.nextCursor, null);
     assert(second.entries.every((entry) => entry.state === 'available'));
 
+    // The real Windows startup-cleanup path requests a 250-row summary.
+    // This is read-only and must not appear as a forbidden mutation.
+    const startupDirectory = run([
+      'runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+      '--summary', '--filter', 'all', '--limit', '250',
+    ]);
+    assert.equal(startupDirectory.status, 0, startupDirectory.stderr);
+    const startupPage = JSON.parse(startupDirectory.stdout).directory;
+    assert.equal(startupPage.totalCount, 105);
+    assert.equal(startupPage.returnedCount, 105);
+    assert.equal(startupPage.nextCursor, null);
+
     const connectedPage = run([
       'runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
       '--summary', '--filter', 'connected', '--limit', '100',
@@ -129,6 +141,8 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
         '--filter', 'unknown'],
       ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
         '--limit', '0'],
+      ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+        '--limit', '251'],
     ]) assert.equal(run(invalid).status, 64);
     for (const args of [
       ['runtime', 'status', '--json', '--summary', '--provider', 'opencode'],
