@@ -479,7 +479,7 @@ try {
     "(()=>{const select=document.querySelector('[data-testid=\"appearance-custom-theme-select\"]');if(!(select instanceof HTMLSelectElement))throw Error('Custom theme selector missing');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'my-theme');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
   );
   await until(() => cdp!.evaluate(
-    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#818cf8';})()"
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#6366f1';})()"
   ), 'Custom theme applies CSS semantic tokens on the real root');
   await cdp.screenshot(join(root, 'settings-appearance-custom-theme-desktop.png'));
   await cdp.evaluate(
