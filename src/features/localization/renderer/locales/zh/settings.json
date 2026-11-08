@@ -212,7 +212,8 @@
           "title": "编辑主题（JSON）",
           "description": "最多编辑 8 个主题。颜色格式为 #RRGGBB。只应用有效 JSON；空 themes 数组会删除全部主题。",
           "cancel": "取消",
-          "save": "保存主题"
+          "save": "保存主题",
+          "conflict": "主题已在其他标签页中更改。请关闭并重新打开编辑器，以免覆盖新更改。"
         }
       },
       "uiScale": {

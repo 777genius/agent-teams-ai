@@ -212,7 +212,8 @@
           "title": "Sửa chủ đề (JSON)",
           "description": "Tối đa 8 chủ đề. Màu dạng #RRGGBB. Chỉ áp dụng JSON hợp lệ; mảng themes trống sẽ xóa tất cả.",
           "cancel": "Hủy",
-          "save": "Lưu chủ đề"
+          "save": "Lưu chủ đề",
+          "conflict": "Chủ đề đã thay đổi ở tab khác. Đóng rồi mở lại trình chỉnh sửa để không ghi đè thay đổi mới."
         }
       },
       "uiScale": {

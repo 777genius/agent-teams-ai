@@ -212,7 +212,8 @@
           "title": "Edytuj motywy (JSON)",
           "description": "Do 8 motywów. Kolory w formacie #RRGGBB. Zapisywany jest tylko poprawny JSON; pusta tablica themes usuwa motywy.",
           "cancel": "Anuluj",
-          "save": "Zapisz motywy"
+          "save": "Zapisz motywy",
+          "conflict": "Motywy zmieniono w innej karcie. Zamknij i otwórz edytor ponownie, aby nie nadpisać zmian."
         }
       },
       "uiScale": {

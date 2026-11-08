@@ -212,7 +212,8 @@
           "title": "Temaları düzenle (JSON)",
           "description": "En fazla 8 tema. Renkler #RRGGBB olmalı. Yalnızca geçerli JSON uygulanır; boş themes dizisi temaları siler.",
           "cancel": "İptal",
-          "save": "Temaları kaydet"
+          "save": "Temaları kaydet",
+          "conflict": "Temalar başka bir sekmede değişti. Yeni değişikliklerin üzerine yazmamak için düzenleyiciyi yeniden açın."
         }
       },
       "uiScale": {
