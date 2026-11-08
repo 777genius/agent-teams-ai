@@ -2318,7 +2318,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Time"
     },
     "empty": {
       "title": "No schedules yet",
@@ -2341,7 +2342,11 @@
       "failed": "Failed",
       "interrupted": "Interrupted",
       "cancelled": "Cancelled"
-    }
+    },
+    "taskFirstAgentDescription": "The selected teammate gets this task. The team starts first if needed.",
+    "taskFirstTeamDescription": "The lead coordinates this task. The team starts first if needed.",
+    "taskFirstDesktopRequired": "Schedules run only while Agent Teams is open.",
+    "taskFirstHistoricPrompt": "This team has a saved launch prompt. Review it in Team Settings before scheduling automatic work."
   },
   "openCodeLocalModelLimits": {
     "title": "Local model context budget",
