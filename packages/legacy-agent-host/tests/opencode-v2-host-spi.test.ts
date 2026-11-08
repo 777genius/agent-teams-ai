@@ -220,24 +220,38 @@ test('corrected private V2 driver accepts canonical Windows TEST profile after c
   }
 });
 
-test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
+test('V2 launch rejects unproven model/variant changes and V1 permission modes', () => {
   const base = runtimeProfileSchema.parse({ members: [nativeV2Profile()] }).members[0]!;
-  for (const permissions of ['manual', 'bypass'] as const) {
-    assert.throws(() => applyLaunchConfiguration(base, { permissions }), (error: unknown) =>
+  const unsupported = [
+    { permissions: 'manual' }, { permissions: 'bypass' },
+    { model: 'TEST-next-model' }, { model: 'TEST-provider/TEST-next-model' },
+    { model: 'FOREIGN-provider/TEST-model' },
+    { effort: 'high' }, { effort: 'none' },
+  ] as const;
+  for (const choice of unsupported) {
+    assert.throws(() => applyLaunchConfiguration(base, choice), (error: unknown) =>
       error instanceof Error && 'code' in error && error.code === 'invalid' &&
-      'reason' in error && error.reason === 'launch-option-unsupported');
+      'reason' in error && error.reason === 'launch-option-unsupported',
+    `Unattested V2 launch option was accepted: ${JSON.stringify(choice)}`);
   }
-  const selected = applyLaunchConfiguration(base, { model: 'TEST-next-model' });
-  assert.equal(selected.provider, 'opencode');
-  if (selected.provider !== 'opencode') throw new Error('Expected OpenCode profile');
-  assert.equal(selected.model, 'TEST-next-model');
-  assert.equal(selected.nativeOptions.toolApprovalMode, undefined,
-    'V2 model choice must not inject V1 approval semantics');
-
+  // An explicit app selection of the SAME captured model is safe. Its
+  // provider prefix must not be mistaken for an attempt to switch models.
+  for (const model of ['TEST-model', 'TEST-provider/TEST-model']) {
+    const selected = applyLaunchConfiguration(base, { model });
+    assert.equal(selected.provider, 'opencode');
+    if (selected.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+    assert.equal(selected.model, base.model);
+    assert.equal(selected.nativeOptions.toolApprovalMode, undefined);
+    assert.equal(selected.nativeOptions.variant, undefined);
+  }
   const v1 = runtimeProfileSchema.parse({ members: [v1Profile()] }).members[0]!;
-  const legacyChoice = applyLaunchConfiguration(v1, { permissions: 'manual' });
+  const legacyChoice = applyLaunchConfiguration(v1, {
+    model: 'TEST-next-model', effort: 'high', permissions: 'manual',
+  });
   assert.equal(legacyChoice.provider, 'opencode');
   if (legacyChoice.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+  assert.equal(legacyChoice.model, 'TEST-next-model');
+  assert.equal(legacyChoice.nativeOptions.variant, 'high');
   assert.equal(legacyChoice.nativeOptions.toolApprovalMode, 'manual',
     'historical V1 launch choices remain unchanged');
 });

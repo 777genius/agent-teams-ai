@@ -40,11 +40,19 @@ export function applyLaunchConfiguration(
   raw: unknown
 ): RuntimeMemberProfile {
   const selected = options.parse(raw);
-  // V2 uses ordered native permissions, not V1 toolApprovalMode. Reject the
-  // incompatible launch choice before launch.prepare can publish a selection.
-  if (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
-      selected.permissions !== undefined)
-    throw new TeamLaunchError('invalid', 'launch-option-unsupported');
+  // The owned V2 session was already captured with a native model/variant.
+  // Merely changing the Host profile cannot change that native session and
+  // would silently dispatch to a different model than the user's selection.
+  // Until native model/variant binding is attested, allow only an identical
+  // model selection; never reinterpret V1 permission or effort choices as V2.
+  if (base.provider === 'opencode' && base.nativeGeneration === 'v2') {
+    const prefix = `${base.nativeOptions.providerId}/`;
+    const requestedModel = selected.model?.startsWith(prefix)
+      ? selected.model.slice(prefix.length) : selected.model;
+    if (selected.permissions !== undefined || selected.effort !== undefined ||
+        (requestedModel !== undefined && requestedModel !== base.model))
+      throw new TeamLaunchError('invalid', 'launch-option-unsupported');
+  }
   const profile = structuredClone(base);
   if (selected.model !== undefined) {
     const prefix = profile.provider === 'opencode' ? `${profile.nativeOptions.providerId}/` : null;
