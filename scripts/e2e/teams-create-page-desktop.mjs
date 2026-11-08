@@ -627,6 +627,22 @@ async function main() {
     await cdp.fill('#team-name', unique);
     await captureScreenshot(cdp, fixture, 'edited');
 
+    log('renaming a team preserves in-progress Advanced CLI overrides');
+    await cdp.click(`Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.includes('Optional launch settings')
+        && button.getBoundingClientRect().width > 0)`);
+    await cdp.click(createButtonExpression('Advanced'));
+    const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
+    await cdp.fill(customArgsSelector, '--max-turns 5');
+    await cdp.fill('#team-name', unique + '-renamed');
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI input retained after team-name change'
+    );
+    // Do not let the optional fixture flag change subsequent config-only assertions.
+    await cdp.fill(customArgsSelector, ' ');
+    await cdp.fill('#team-name', unique);
+
     log('Back to Teams and resume saved draft');
     await cdp.click("document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')");
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
@@ -1013,6 +1029,7 @@ async function main() {
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
       retainedAcrossProcessRestart: true,
+      advancedCliRetainedAcrossRename: true,
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,
