@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           npm install --prefix "$RUNNER_TEMP/real-opencode-v1" --no-audit --no-fund opencode-ai@1.18.31
-          node -e "const fs = require('node:fs'); const path = require('node:path'); const name = process.platform === 'win32' ? 'opencode.cmd' : 'bin/opencode'; const binary = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1', name); if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('OpenCode V1 install missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'REAL_OPENCODE_TEST_BINARY=' + binary + '\\n');"
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const name = process.platform === 'win32' ? 'opencode.cmd' : 'bin/opencode'; const binary = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1', name); if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('OpenCode V1 install missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'REAL_OPENCODE_TEST_BINARY=' + binary + String.fromCharCode(10));"
       - name: Stage verified published runtime archive
         env:
           GH_TOKEN: ${{ github.token }}
