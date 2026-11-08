@@ -151,3 +151,69 @@ jobs:
           path: |
             opencode-v2-host-native-instructions.json
             ${{ runner.temp }}/opencode-v2-host-cli/package-lock.json
+
+  published-v2-http-persist:
+    name: Published V2.0.21 durable HTTP process (TEST discovery only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      npm_config_audit: 'false'
+      npm_config_fund: 'false'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require immutable PR source HEAD
+        shell: bash
+        env:
+          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Check isolated durable-HTTP TEST harness syntax
+        run: node --check packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs
+      - name: Install official pinned SDK without scripts in TEST-owned npm prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/opencode-v2-http-test"
+          npm install --prefix "$RUNNER_TEMP/opencode-v2-http-test" \
+            --save-exact --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/sdk@2.0.21
+          npm ls --prefix "$RUNNER_TEMP/opencode-v2-http-test" --depth=0 @opencode/sdk
+      - name: Probe actual published server HTTP durable-log and cold restart
+        env:
+          OPENCODE_V2_TEST_SDK_PREFIX: ${{ runner.temp }}/opencode-v2-http-test
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+          OPENCODE_V2_TEST_HTTP_RECEIPT: ${{ github.workspace }}/opencode-v2-http-persist.json
+        run: node packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs
+      - name: Require exact-HEAD TEST receipt (never a Host/model certificate)
+        shell: bash
+        env:
+          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test -s opencode-v2-http-persist.json
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            const r=JSON.parse(fs.readFileSync('opencode-v2-http-persist.json','utf8'));
+            if(r.sourceHead!==process.env.EXPECTED_PR_HEAD ||
+               r.kind!=='TEST_V2_HTTP_DURABLE_DISCOVERY' || r.qualified!==false ||
+               r.packagedElectronQualified!==false || r.modelTurnProven!==false ||
+               r.processCustodyQualified!==false || r.cleanup!==true ||
+               r.durableHTTPEvents!==1 || r.failure !== undefined ||
+               !Array.isArray(r.steps) || r.steps.length!==4) process.exit(1);
+          "
+      - name: Preserve TEST-only receipt on success or safe failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opencode-v2-published-http-persist-ubuntu
+          retention-days: 7
+          if-no-files-found: warn
+          path: opencode-v2-http-persist.json
