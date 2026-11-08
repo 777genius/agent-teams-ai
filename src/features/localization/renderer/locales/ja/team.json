@@ -2124,7 +2124,8 @@
         "tenMinutes": "10分",
         "fifteenMinutes": "15分",
         "thirtyMinutes": "30分"
-      }
+      },
+      "time": "時刻"
     },
     "empty": {
       "title": "予定なし",
@@ -2147,7 +2148,11 @@
       "cancelled": "キャンセル",
       "dispatched": "依頼済み",
       "skipped": "スキップ"
-    }
+    },
+    "taskFirstAgentDescription": "選択したチームメンバーにタスクを割り当てます。必要なら先にチームを起動します。",
+    "taskFirstTeamDescription": "リーダーがタスクを調整します。必要なら先にチームを起動します。",
+    "taskFirstDesktopRequired": "スケジュールは Agent Teams の起動中のみ実行されます。",
+    "taskFirstHistoricPrompt": "このチームには保存済みの起動プロンプトがあります。自動実行を設定する前にチーム設定で確認してください。"
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode ローカルモデルは、プロンプトのみの制限ではなく OpenCode コンテキスト予算を使用できます。",
