@@ -11,7 +11,11 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp, Settings2 } from 'lucide-react';
 
 import { createTaskTableColumns, taskTableFeatures } from './TaskTableColumns';
-import { loadTaskTablePreferences, saveTaskTablePreferences, taskTablePreferenceKey } from './taskTablePreferences';
+import {
+  loadTaskTablePreferences,
+  saveTaskTablePreferences,
+  taskTablePreferenceKey,
+} from './taskTablePreferences';
 import { buildTaskTableRows } from './taskTableProjection';
 
 import type { KanbanFilterState } from '../KanbanFilterPopover';
@@ -47,7 +51,18 @@ export const TaskTableView = memo(function TaskTableView({
   const initialPrefs = useMemo(() => loadTaskTablePreferences(storageKey), [storageKey]);
   const [visibility, setVisibility] = useState(initialPrefs.visibility);
   const [sizing, setSizing] = useState(initialPrefs.sizing);
+  const [scrollerWidth, setScrollerWidth] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const measure = (): void => setScrollerWidth(scroller.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     saveTaskTablePreferences(storageKey, { visibility, sizing });
@@ -59,25 +74,36 @@ export const TaskTableView = memo(function TaskTableView({
   );
   const memberColors = useMemo(() => buildMemberColorMap(members), [members]);
   const relativeTimeNowMs = useRelativeTimeClock(isActive && rows.some((row) => row.updatedAt > 0));
-  const labels = useMemo(() => ({
-    task: t('detail.actions.task'),
-    status: t('tasks.list.columns.status'),
-    owner: t('kanban.sort.options.owner.label'),
-    blocked: t('tasks.list.columns.blockedBy'),
-    updated: t('kanban.sort.options.updatedAt.label'),
-    comments: t('taskComments.comment'),
-    unassigned: t('kanban.filter.unassigned'),
-    needsFix: t('kanban.taskCard.changesNeedAttention'),
-    statusNames: {
-      todo: t('kanban.columns.todo'),
-      in_progress: t('kanban.columns.inProgress'),
-      review: t('kanban.columns.review'),
-      done: t('kanban.columns.done'),
-      approved: t('kanban.columns.approved'),
-    },
-  }), [t]);
+  const labels = useMemo(
+    () => ({
+      task: t('detail.actions.task'),
+      status: t('tasks.list.columns.status'),
+      owner: t('kanban.sort.options.owner.label'),
+      blocked: t('tasks.list.columns.blockedBy'),
+      updated: t('kanban.sort.options.updatedAt.label'),
+      comments: t('taskComments.comment'),
+      unassigned: t('kanban.filter.unassigned'),
+      needsFix: t('kanban.taskCard.changesNeedAttention'),
+      statusNames: {
+        todo: t('kanban.columns.todo'),
+        in_progress: t('kanban.columns.inProgress'),
+        review: t('kanban.columns.review'),
+        done: t('kanban.columns.done'),
+        approved: t('kanban.columns.approved'),
+      },
+    }),
+    [t]
+  );
   const columns = useMemo(
-    () => createTaskTableColumns(labels, teamName, resolvedLanguage, relativeTimeNowMs, memberColors, onTaskClick),
+    () =>
+      createTaskTableColumns(
+        labels,
+        teamName,
+        resolvedLanguage,
+        relativeTimeNowMs,
+        memberColors,
+        onTaskClick
+      ),
     [labels, teamName, resolvedLanguage, relativeTimeNowMs, memberColors, onTaskClick]
   );
 
@@ -106,13 +132,26 @@ export const TaskTableView = memo(function TaskTableView({
   });
   const virtualRows = virtualizer.getVirtualItems();
   const paddingTop = virtualRows[0]?.start ?? 0;
-  const paddingBottom = virtualRows.length > 0
-    ? Math.max(0, virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end)
-    : 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? Math.max(0, virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end)
+      : 0;
   const visibleColumnCount = table.getVisibleLeafColumns().length;
+  const naturalTableWidth = table.getTotalSize();
+  const taskColumn = table.getColumn('task');
+  const defaultTaskWidth = taskColumn?.columnDef.size ?? taskColumn?.getSize() ?? 0;
+  const otherColumnsWidth = naturalTableWidth - (taskColumn?.getSize() ?? 0);
+  // Size the empty-space fill from the default task width, not its user-resized width.
+  const taskExtraWidth = taskColumn
+    ? Math.max(0, scrollerWidth - otherColumnsWidth - defaultTaskWidth)
+    : 0;
 
   return (
-    <section data-testid="team-task-table" aria-label={t('kanban.board.tableView')} className="min-w-0 pt-2">
+    <section
+      data-testid="team-task-table"
+      aria-label={t('kanban.board.tableView')}
+      className="min-w-0 pt-2"
+    >
       <div className="flex items-center justify-end px-3 pb-2">
         <span
           data-testid="team-task-table-count"
@@ -138,7 +177,10 @@ export const TaskTableView = memo(function TaskTableView({
           <PopoverContent align="end" className="w-56 p-2">
             <div className="space-y-1">
               {table.getAllLeafColumns().map((column) => (
-                <label key={column.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-[var(--color-surface-raised)]">
+                <label
+                  key={column.id}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-[var(--color-surface-raised)]"
+                >
                   <Checkbox
                     checked={column.getIsVisible()}
                     disabled={!column.getCanHide()}
@@ -149,10 +191,15 @@ export const TaskTableView = memo(function TaskTableView({
               ))}
             </div>
             <div className="mt-2 flex justify-end border-t border-[var(--color-border)] pt-2">
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
-                setVisibility({});
-                setSizing({});
-              }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setVisibility({});
+                  setSizing({});
+                }}
+              >
                 {t('kanban.sort.reset')}
               </Button>
             </div>
@@ -165,12 +212,15 @@ export const TaskTableView = memo(function TaskTableView({
         className="max-h-[min(60vh,680px)] min-h-32 overflow-auto border-y border-[var(--color-border)]"
       >
         <table
-          className="w-full table-fixed border-collapse text-start"
-          style={{ minWidth: table.getTotalSize() }}
+          className="table-fixed border-collapse text-start"
+          style={{ width: naturalTableWidth + taskExtraWidth }}
         >
           <colgroup>
             {table.getVisibleLeafColumns().map((column) => (
-              <col key={column.id} style={{ width: column.getSize() }} />
+              <col
+                key={column.id}
+                style={{ width: column.getSize() + (column.id === 'task' ? taskExtraWidth : 0) }}
+              />
             ))}
           </colgroup>
           <thead className="sticky top-0 z-10 bg-[var(--color-surface-raised)]">
@@ -183,14 +233,20 @@ export const TaskTableView = memo(function TaskTableView({
                       key={header.id}
                       scope="col"
                       data-testid={'team-task-table-header-' + header.column.id}
-                      aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
+                      aria-sort={
+                        direction === 'asc'
+                          ? 'ascending'
+                          : direction === 'desc'
+                            ? 'descending'
+                            : 'none'
+                      }
                       className={[
                         'h-9 px-3 text-start text-[11px] font-medium text-[var(--color-text-muted)]',
                         header.column.id === 'task'
                           ? 'sticky start-0 z-20 bg-[var(--color-surface-raised)]'
                           : 'relative',
                       ].join(' ')}
-                      style={{ width: header.getSize() }}
+                      style={{ width: header.getSize() + (header.column.id === 'task' ? taskExtraWidth : 0) }}
                     >
                       <button
                         type="button"
@@ -198,8 +254,14 @@ export const TaskTableView = memo(function TaskTableView({
                         onClick={header.column.getToggleSortingHandler()}
                         className="flex max-w-full items-center gap-1 truncate text-start hover:text-[var(--color-text)] disabled:cursor-default"
                       >
-                        <span className="truncate"><table.FlexRender header={header} /></span>
-                        {direction === 'asc' ? <ArrowUp size={11} /> : direction === 'desc' ? <ArrowDown size={11} /> : null}
+                        <span className="truncate">
+                          <table.FlexRender header={header} />
+                        </span>
+                        {direction === 'asc' ? (
+                          <ArrowUp size={11} />
+                        ) : direction === 'desc' ? (
+                          <ArrowDown size={11} />
+                        ) : null}
                       </button>
                       {header.column.getCanResize() ? (
                         <button
@@ -215,11 +277,19 @@ export const TaskTableView = memo(function TaskTableView({
                             event.preventDefault();
                             const step = event.shiftKey ? 20 : 10;
                             const direction = event.key === 'ArrowRight' ? 1 : -1;
-                            const offset = direction * (table.options.columnResizeDirection === 'rtl' ? -step : step);
+                            const offset =
+                              direction *
+                              (table.options.columnResizeDirection === 'rtl' ? -step : step);
                             const min = header.column.columnDef.minSize ?? 20;
                             const max = header.column.columnDef.maxSize ?? 720;
-                            const width = Math.min(max, Math.max(min, header.column.getSize() + offset));
-                            table.setColumnSizing((prev) => ({ ...prev, [header.column.id]: width }));
+                            const width = Math.min(
+                              max,
+                              Math.max(min, header.column.getSize() + offset)
+                            );
+                            table.setColumnSizing((prev) => ({
+                              ...prev,
+                              [header.column.id]: width,
+                            }));
                           }}
                         />
                       ) : null}
@@ -231,7 +301,9 @@ export const TaskTableView = memo(function TaskTableView({
           </thead>
           <tbody>
             {paddingTop > 0 ? (
-              <tr aria-hidden="true"><td colSpan={visibleColumnCount} style={{ height: paddingTop, padding: 0 }} /></tr>
+              <tr aria-hidden="true">
+                <td colSpan={visibleColumnCount} style={{ height: paddingTop, padding: 0 }} />
+              </tr>
             ) : null}
             {virtualRows.map((virtualRow) => {
               const row = tableRows[virtualRow.index];
@@ -241,20 +313,20 @@ export const TaskTableView = memo(function TaskTableView({
                   key={row.id}
                   data-task-id={row.original.task.id}
                   data-testid="team-task-table-row"
-                  className="group h-12 cursor-pointer border-b border-[var(--color-border)] text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-raised)] focus-within:bg-[var(--color-surface-raised)]"
+                  className="group h-12 cursor-pointer border-b border-[var(--color-border)] text-[var(--color-text)] transition-colors focus-within:bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-raised)]"
                   onClick={() => onTaskClick?.(row.original.task)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
-                        key={cell.id}
-                        data-testid={'team-task-table-cell-' + cell.column.id}
-                        className={[
-                          'h-12 overflow-hidden whitespace-nowrap px-3 align-middle',
-                          cell.column.id === 'task'
-                            ? 'sticky start-0 z-[1] bg-[var(--color-surface)] group-hover:bg-[var(--color-surface-raised)]'
-                            : '',
-                        ].join(' ')}
-                      >
+                      key={cell.id}
+                      data-testid={'team-task-table-cell-' + cell.column.id}
+                      className={[
+                        'h-12 overflow-hidden whitespace-nowrap px-3 align-middle',
+                        cell.column.id === 'task'
+                          ? 'sticky start-0 z-[1] bg-[var(--color-surface)] transition-colors group-focus-within:bg-[var(--color-surface-raised)] group-hover:bg-[var(--color-surface-raised)]'
+                          : '',
+                      ].join(' ')}
+                    >
                       <table.FlexRender cell={cell} />
                     </td>
                   ))}
@@ -262,12 +334,19 @@ export const TaskTableView = memo(function TaskTableView({
               );
             })}
             {paddingBottom > 0 ? (
-              <tr aria-hidden="true"><td colSpan={visibleColumnCount} style={{ height: paddingBottom, padding: 0 }} /></tr>
+              <tr aria-hidden="true">
+                <td colSpan={visibleColumnCount} style={{ height: paddingBottom, padding: 0 }} />
+              </tr>
             ) : null}
             {tableRows.length === 0 ? (
-              <tr><td colSpan={visibleColumnCount} className="px-4 py-8 text-center text-xs text-[var(--color-text-muted)]">
-                {t('kanban.board.noTasks')}
-              </td></tr>
+              <tr>
+                <td
+                  colSpan={visibleColumnCount}
+                  className="px-4 py-8 text-center text-xs text-[var(--color-text-muted)]"
+                >
+                  {t('kanban.board.noTasks')}
+                </td>
+              </tr>
             ) : null}
           </tbody>
         </table>

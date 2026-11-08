@@ -58,6 +58,7 @@ jobs:
           name: kanban-table-desktop-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             /srv/workers/task-tabs-e2e-scratch/task-tabs-TEST-*/kanban-table-*.png
+            /srv/workers/task-tabs-e2e-scratch/task-tabs-TEST-*/settings-appearance-*.png
             /srv/workers/task-tabs-e2e-scratch/task-tabs-TEST-*/electron-watcher-*.json
             /srv/workers/task-tabs-e2e-scratch/task-tabs-TEST-*/failed.png
           if-no-files-found: warn

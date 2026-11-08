@@ -58,6 +58,7 @@ export const MoreMenu = ({
 }: Readonly<MoreMenuProps>): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
+  const [sessionActionsAtOpen, setSessionActionsAtOpen] = useState(false);
   const [buttonHover, setButtonHover] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,24 +127,12 @@ export const MoreMenu = ({
     setIsOpen(false);
   }, []);
 
-  const isSessionWithData = activeTab?.type === 'session' && activeTabSessionDetail != null;
+  const isSessionWithData = isOpen
+    ? sessionActionsAtOpen
+    : activeTab?.type === 'session' && activeTabSessionDetail != null;
 
   // Build menu sections
   const topItems: MenuItem[] = [
-    ...(isElectronMode()
-      ? [
-          {
-            id: 'news',
-            label: t('announcements.title'),
-            icon: Newspaper,
-            onClick: () => {
-              setIsOpen(false);
-              triggerRef.current?.focus();
-              openAnnouncementHistory();
-            },
-          },
-        ]
-      : []),
     {
       id: 'teams',
       label: t('layout.menu.teams'),
@@ -207,6 +196,23 @@ export const MoreMenu = ({
         void handleOpenDocs();
       },
     },
+  ];
+
+  const newsItems: MenuItem[] = [
+    ...(isElectronMode()
+      ? [
+          {
+            id: 'news',
+            label: t('announcements.title'),
+            icon: Newspaper,
+            onClick: () => {
+              setIsOpen(false);
+              triggerRef.current?.focus();
+              openAnnouncementHistory();
+            },
+          },
+        ]
+      : []),
   ];
 
   const sessionItems: MenuItem[] = isSessionWithData
@@ -277,7 +283,12 @@ export const MoreMenu = ({
         <TooltipTrigger asChild>
           <button
             ref={triggerRef}
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => {
+              if (!isOpen) {
+                setSessionActionsAtOpen(activeTab?.type === 'session' && activeTabSessionDetail != null);
+              }
+              setIsOpen(!isOpen);
+            }}
             onMouseEnter={() => setButtonHover(true)}
             onMouseLeave={() => setButtonHover(false)}
             className="rounded-md p-2 transition-colors"
@@ -297,7 +308,7 @@ export const MoreMenu = ({
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-md border py-1 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-1 max-h-[calc(100dvh-4.5rem)] w-64 overflow-y-auto overscroll-contain rounded-md border py-1 shadow-lg"
           style={{
             backgroundColor: 'var(--color-surface-overlay)',
             borderColor: 'var(--color-border)',
@@ -311,6 +322,7 @@ export const MoreMenu = ({
               {sessionItems.map(renderItem)}
             </>
           )}
+          {newsItems.map(renderItem)}
         </div>
       )}
     </div>
