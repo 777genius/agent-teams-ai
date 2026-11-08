@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Input } from '@renderer/components/ui/input';
@@ -66,6 +66,8 @@ interface CronScheduleInputProps {
   warmUpMinutes: number;
   onWarmUpMinutesChange: (value: number) => void;
   showWarmUp?: boolean;
+  /** New task schedules show presets and local time first; legacy forms stay unchanged. */
+  compact?: boolean;
 }
 
 // =============================================================================
@@ -80,8 +82,14 @@ export const CronScheduleInput = ({
   warmUpMinutes,
   onWarmUpMinutesChange,
   showWarmUp = true,
+  compact = false,
 }: CronScheduleInputProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const [showRawCron, setShowRawCron] = useState(false);
+  const simpleTime = useMemo(() => /^(\d{1,2}) (\d{1,2}) \* \* (\*|1-5|1)$/.exec(cronExpression.trim()), [cronExpression]);
+  const localTimezoneOption = TIMEZONE_PRESETS.some((item) => item.value === timezone)
+    ? null
+    : { value: timezone, label: timezone };
   // Parse and validate cron expression
   const cronInfo = useMemo(() => {
     if (!cronExpression.trim()) {
@@ -143,14 +151,13 @@ export const CronScheduleInput = ({
 
   return (
     <div className="space-y-3">
-      {/* Cron expression input */}
-      <div className="space-y-1.5">
-        <Label className="flex items-center gap-1.5">
-          <Calendar className="size-3.5" />
-          {t('schedule.cron.expression')}
-        </Label>
-
-        <div className="flex items-center gap-2">
+      {/* Keep raw cron opt-in on the compact new-task form. */}
+      {!compact || showRawCron ? (
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5">
+            <Calendar className="size-3.5" />
+            {t('schedule.cron.expression')}
+          </Label>
           <Input
             className="h-8 font-mono text-xs"
             value={cronExpression}
@@ -158,6 +165,25 @@ export const CronScheduleInput = ({
             placeholder="0 9 * * 1-5"
           />
         </div>
+      ) : null}
+      <div className="space-y-1.5">
+        {compact && simpleTime ? (
+          <div className="space-y-1">
+            <Label htmlFor="schedule-local-time">{t('schedule.cron.time')}</Label>
+            <Input
+              id="schedule-local-time"
+              type="time"
+              className="h-9 text-xs"
+              value={`${simpleTime[2].padStart(2, '0')}:${simpleTime[1].padStart(2, '0')}`}
+              onChange={(event) => {
+                const [hour, minute] = event.target.value.split(':');
+                if (hour && minute) {
+                  onCronExpressionChange(`${Number(minute)} ${Number(hour)} * * ${simpleTime[3]}`);
+                }
+              }}
+            />
+          </div>
+        ) : null}
 
         {/* Presets */}
         <div className="flex flex-wrap gap-1">
@@ -172,6 +198,12 @@ export const CronScheduleInput = ({
             </button>
           ))}
         </div>
+
+        {compact ? (
+          <button type="button" className="text-xs underline text-[var(--color-text-secondary)]" onClick={() => setShowRawCron((open) => !open)}>
+            {t('schedule.cron.expression')}
+          </button>
+        ) : null}
 
         {/* Description + validation */}
         {cronInfo.valid && cronInfo.description ? (
@@ -227,7 +259,7 @@ export const CronScheduleInput = ({
             <SelectValue placeholder={t('schedule.cron.selectTimezone')} />
           </SelectTrigger>
           <SelectContent>
-            {TIMEZONE_PRESETS.map((tz) => (
+            {[...TIMEZONE_PRESETS, ...(localTimezoneOption ? [localTimezoneOption] : [])].map((tz) => (
               <SelectItem key={tz.value} value={tz.value} className="text-xs">
                 {tz.label}
               </SelectItem>
