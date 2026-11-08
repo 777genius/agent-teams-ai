@@ -134,11 +134,14 @@ export function getDashboardConnectionSummary({
   const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision, nowMs);
   const projectComplete =
     projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
-  const newerCompleteDirectory =
-    globalComplete && projectComplete &&
-    (Date.parse(globalDirectory.fetchedAt) > countFetchedAt ||
-      (projectPath !== null && projectDirectory !== null &&
-        Date.parse(projectDirectory.fetchedAt) > countFetchedAt));
+  // Newer global evidence may revoke inherited project credentials even when
+  // the project directory is still incomplete. Never keep its older count.
+  const newerGlobalEvidence =
+    globalComplete && Date.parse(globalDirectory.fetchedAt) > countFetchedAt;
+  const newerProjectEvidence =
+    projectPath !== null && projectComplete && projectDirectory !== null &&
+    Date.parse(projectDirectory.fetchedAt) > countFetchedAt;
+  const newerCompleteDirectory = newerGlobalEvidence || newerProjectEvidence;
   if (
     !countInvalidated &&
     !newerCompleteDirectory &&

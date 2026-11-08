@@ -7,12 +7,12 @@ import {
 import { useStore } from '@renderer/store';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 
-import type { CliInstallationStatus } from '@shared/types';
-
 import {
   DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS,
   getDashboardConnectionSummary,
 } from './providerConnectionSummary';
+
+import type { CliInstallationStatus } from '@shared/types';
 
 /** Display-only selector: subscribing to snapshots never starts provider IPC. */
 export function useProviderConnectionSummary(cliStatusOverride?: CliInstallationStatus | null) {
@@ -42,14 +42,20 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
       ...(projectPath ? [projectDirectory?.fetchedAt] : []),
       observedOpenCodeCount?.fetchedAt,
     ];
+    // No provider read: this timer only expires the readiness title when
+    // authenticated model evidence stops authorizing launch.
+    const catalogExpiries = (cliStatus?.providers ?? [])
+      .map((provider) => Date.parse(provider.modelCatalog?.staleAt ?? ''))
+      .filter((time) => Number.isFinite(time) && time > Date.now());
     const expiries = snapshots
       .map((fetchedAt) => Date.parse(fetchedAt ?? '') + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS)
       .filter((time) => Number.isFinite(time) && time > Date.now());
-    if (expiries.length === 0) return;
-    const delay = Math.max(1, Math.min(...expiries) - Date.now() + 10);
+    const deadlines = [...expiries, ...catalogExpiries];
+    if (deadlines.length === 0) return;
+    const delay = Math.max(1, Math.min(...deadlines) - Date.now() + 10);
     const timer = window.setTimeout(() => expire((n) => n + 1), delay);
     return () => window.clearTimeout(timer);
-  }, [globalDirectory, projectDirectory, projectPath, observedOpenCodeCount, expiryRevision]);
+  }, [cliStatus, globalDirectory, projectDirectory, projectPath, observedOpenCodeCount, expiryRevision]);
 
   const summary = getDashboardConnectionSummary({
     cliStatus,

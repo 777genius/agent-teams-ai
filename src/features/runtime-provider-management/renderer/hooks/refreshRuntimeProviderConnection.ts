@@ -1,10 +1,12 @@
 import { api } from '@renderer/api';
 
+import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
 import {
   getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryScopeReads,
   markRuntimeProviderDirectoryScopeUnverified,
   publishRuntimeProviderDirectoryCache,
+  publishRuntimeProviderConnectedCount,
 } from '../runtimeProviderDirectoryCache';
 
 import { DEFAULT_DIRECTORY_FILTER } from './runtimeProviderDirectoryCatalogPolicy';
@@ -57,6 +59,20 @@ async function refreshSharedDirectory(input: ConnectionRefreshInput): Promise<bo
       runtimeRevision: input.runtimeRevision,
       readToken,
     });
+    // This existing post-credential-write summary may be the only complete
+    // read when a full directory refresh fails. Publish an exact display count
+    // without loading models or making another CLI request.
+    const connected = countCompleteDirectoryConnections(response.directory, 'all');
+    if (connected !== null && input.runtimeRevision) {
+      publishRuntimeProviderConnectedCount({
+        projectPath: input.projectPath,
+        readToken,
+        connected,
+        fetchedAt: response.directory.fetchedAt,
+        runtimeRevision: input.runtimeRevision,
+        source: 'summary-all',
+      });
+    }
     return true;
   } catch {
     if (input.isContextCurrent() && input.isRuntimeRevisionCurrent()) {
