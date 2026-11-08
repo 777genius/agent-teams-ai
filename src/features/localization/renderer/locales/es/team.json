@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 minutos",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Hora"
     },
     "empty": {
       "title": "Todavía no hay calendarios",
@@ -2147,7 +2148,11 @@
       "cancelled": "Cancelada",
       "dispatched": "Enviado",
       "skipped": "Omitido"
-    }
+    },
+    "taskFirstAgentDescription": "La tarea se asigna al compañero seleccionado. Si hace falta, primero se inicia el equipo.",
+    "taskFirstTeamDescription": "El líder coordina la tarea. Si hace falta, primero se inicia el equipo.",
+    "taskFirstDesktopRequired": "Las tareas programadas solo se ejecutan mientras Agent Teams esté abierto.",
+    "taskFirstHistoricPrompt": "Este equipo tiene una instrucción de inicio guardada. Revísala en la configuración del equipo antes de programar tareas automáticas."
   },
   "openCodeContextConfigHint": {
     "summary": "Los modelos locales de OpenCode pueden utilizar un presupuesto de contexto OpenCode en lugar de límites puntuales.",
