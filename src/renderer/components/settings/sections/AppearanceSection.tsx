@@ -6,6 +6,7 @@ import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { useAppearancePreferences } from '@renderer/hooks/useAppearance';
 import { cn } from '@renderer/lib/utils';
 import {
+  getLatestAppearance,
   setActiveCustomTheme,
   setAppearanceZoom,
   setCustomThemes,
@@ -199,8 +200,8 @@ export const AppearanceSection = ({
         onClose={() => setEditorOpen(false)}
         themes={editingThemes}
         focusReturnRef={editorTriggerRef}
-        onSave={(next) => {
-          if (JSON.stringify(themes) !== JSON.stringify(editingThemes)) {
+        onSave={(next, forceOverwrite) => {
+          if (!forceOverwrite && JSON.stringify(getLatestAppearance().themes) !== JSON.stringify(editingThemes)) {
             throw new Error(t('general.appearance.customThemes.editor.conflict'));
           }
           setCustomThemes(next);

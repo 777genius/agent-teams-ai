@@ -3,6 +3,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { api, isElectronMode } from '@renderer/api';
 import {
   getAppearanceSnapshot,
+  reflectNativeAppearanceZoom,
   setAppearanceZoom,
   subscribeAppearance,
 } from '@renderer/utils/appearancePreferences';
@@ -39,7 +40,8 @@ export function useAppearanceZoomController(): void {
       try {
         setAppearanceZoom(bounded);
       } catch {
-        // Keyboard zoom must still work if localStorage is unavailable.
+        // Native zoom has already changed; keep the settings display truthful.
+        reflectNativeAppearanceZoom(bounded);
       }
     });
   }, []);

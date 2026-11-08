@@ -219,6 +219,19 @@ function getStorage(): Storage {
   return window.localStorage;
 }
 
+/**
+ * Read the latest persisted record for read-modify-write operations.
+ * This prevents a not-yet-delivered cross-tab storage event from overwriting
+ * another tab's zoom or theme selection.
+ */
+export function getLatestAppearance(): AppearancePreferences {
+  try {
+    return readAppearance(getStorage());
+  } catch {
+    return getAppearanceSnapshot();
+  }
+}
+
 export function getAppearanceSnapshot(): AppearancePreferences {
   if (snapshot === null) {
     try {
@@ -255,12 +268,13 @@ export function setAppearanceZoom(zoomPercent: number): void {
   if (!Number.isFinite(next) || next < MIN_ZOOM || next > MAX_ZOOM) {
     throw new Error('UI scale must be between 70% and 200%');
   }
-  if (getAppearanceSnapshot().zoomPercent === next) return;
-  saveAppearance({ ...getAppearanceSnapshot(), zoomPercent: next });
+  const current = getLatestAppearance();
+  if (current.zoomPercent === next && getAppearanceSnapshot().zoomPercent === next) return;
+  saveAppearance({ ...current, zoomPercent: next });
 }
 
 export function setActiveCustomTheme(id: string | null): void {
-  const current = getAppearanceSnapshot();
+  const current = getLatestAppearance();
   if (id !== null && !current.themes.some((theme) => theme.id === id)) {
     throw new Error('Unknown custom theme');
   }
@@ -269,12 +283,20 @@ export function setActiveCustomTheme(id: string | null): void {
 }
 
 export function setCustomThemes(themes: CustomTheme[]): void {
-  const current = getAppearanceSnapshot();
+  const current = getLatestAppearance();
   const validated = validateCustomThemes(themes);
   const activeCustomThemeId = validated.some((theme) => theme.id === current.activeCustomThemeId)
     ? current.activeCustomThemeId
     : null;
   saveAppearance({ ...current, themes: validated, activeCustomThemeId });
+}
+
+/** Reflect a native shortcut when persistence is unavailable; UI must not lie. */
+export function reflectNativeAppearanceZoom(zoomPercent: number): void {
+  const bounded = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(zoomPercent)));
+  if (getAppearanceSnapshot().zoomPercent !== bounded) {
+    announceChange({ ...getAppearanceSnapshot(), zoomPercent: bounded });
+  }
 }
 
 export function applyCustomThemeToRoot(root: HTMLElement, theme: CustomTheme | null): void {

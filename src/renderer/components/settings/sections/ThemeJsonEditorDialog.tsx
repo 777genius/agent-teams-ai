@@ -20,7 +20,7 @@ interface ThemeJsonEditorDialogProps {
   onClose: () => void;
   themes: readonly CustomTheme[];
   focusReturnRef: RefObject<HTMLButtonElement | null>;
-  onSave: (themes: CustomTheme[]) => void;
+  onSave: (themes: CustomTheme[], forceOverwrite: boolean) => void;
 }
 
 /**
@@ -38,6 +38,7 @@ export const ThemeJsonEditorDialog = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
 
   useEffect(() => {
     if (!open || !containerRef.current) return;
@@ -60,7 +61,10 @@ export const ThemeJsonEditorDialog = ({
             '.cm-scroller': { overflow: 'auto' },
           }),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) setError(null);
+            if (update.docChanged) {
+              setError(null);
+              setConflict(false);
+            }
           }),
         ],
       }),
@@ -74,15 +78,26 @@ export const ThemeJsonEditorDialog = ({
     };
   }, [open, themes]);
 
-  const apply = (): void => {
+  const apply = (forceOverwrite = false): void => {
     if (!viewRef.current) return;
     try {
       const parsed = parseCustomThemesJson(viewRef.current.state.doc.toString());
-      onSave(parsed);
+      onSave(parsed, forceOverwrite);
       setError(null);
+      setConflict(false);
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      const message = cause instanceof Error ? cause.message : String(cause);
+      if (message === t('general.appearance.customThemes.editor.conflict')) {
+        setError(message);
+        setConflict(true);
+      } else {
+        setConflict(false);
+        const label = cause instanceof SyntaxError
+          ? t('general.appearance.customThemes.editor.invalidJson')
+          : t('general.appearance.customThemes.editor.invalidTheme');
+        setError(`${label}: ${message}`);
+      }
     }
   };
 
@@ -124,11 +139,21 @@ export const ThemeJsonEditorDialog = ({
           >
             {t('general.appearance.customThemes.editor.cancel')}
           </button>
+          {conflict && (
+            <button
+              type="button"
+              data-testid="appearance-theme-json-overwrite"
+              className="rounded border border-amber-500/40 px-3 py-1.5 text-xs text-text"
+              onClick={() => apply(true)}
+            >
+              {t('general.appearance.customThemes.editor.overwrite')}
+            </button>
+          )}
           <button
             type="button"
             data-testid="appearance-theme-json-save"
             className="rounded border border-border-emphasis bg-surface-raised px-3 py-1.5 text-xs font-medium text-text hover:opacity-80"
-            onClick={apply}
+            onClick={() => apply()}
           >
             {t('general.appearance.customThemes.editor.save')}
           </button>

@@ -7,12 +7,14 @@ import {
   EXAMPLE_THEME,
   formatCustomThemesJson,
   getAppearanceSnapshot,
+  getLatestAppearance,
   parseCustomThemesJson,
   readAppearance,
   saveAppearance,
   setActiveCustomTheme,
   setAppearanceZoom,
   setCustomThemes,
+  reflectNativeAppearanceZoom,
   subscribeAppearance,
   validateCustomThemes,
 } from '@renderer/utils/appearancePreferences';
@@ -119,6 +121,33 @@ describe('portable Appearance persistence', () => {
     localStorage.setItem(APPEARANCE_STORAGE_KEY, '{"version":2}');
     expect(readAppearance(localStorage)).toEqual(DEFAULT_APPEARANCE);
     expect(readAppearance({ getItem: () => { throw new Error('denied'); } })).toEqual(DEFAULT_APPEARANCE);
+  });
+
+  it('merges a stale tab theme save with the latest zoom', () => {
+    setCustomThemes([example()]);
+    setAppearanceZoom(125);
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      ...getAppearanceSnapshot(), zoomPercent: 175,
+    }));
+    expect(getLatestAppearance().zoomPercent).toBe(175);
+    setCustomThemes([]);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+    expect(getAppearanceSnapshot().themes).toEqual([]);
+  });
+
+  it('shows a native zoom when storage is unavailable', () => {
+    reflectNativeAppearanceZoom(175);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+    expect(readAppearance(localStorage).zoomPercent).toBe(100);
+  });
+
+  it('rejects palette borders indistinguishable from a surface or white accent', () => {
+    const noBorder = example();
+    noBorder.colors.border = noBorder.colors.surface;
+    expect(() => validateCustomThemes([noBorder])).toThrow(/border/);
+    const whiteAccent = example();
+    whiteAccent.colors.accent = '#ffffff';
+    expect(() => validateCustomThemes([whiteAccent])).toThrow(/accent/);
   });
 
   it('notifies subscribers for local theme and zoom selections', () => {
