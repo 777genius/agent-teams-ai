@@ -437,6 +437,10 @@ if (process.argv[2] === '--worker') {
       await interruptionTask;
     } else {
       receipt.cleanup=await stop().catch(()=>false);
+      // SIGINT/SIGTERM may arrive while stop() is awaiting worker exit.
+      // Its owner must finish the shared interruption receipt and process exit
+      // before normal cleanup can write a competing success/failure receipt.
+      if (interruptionTask) await interruptionTask;
       if(receipt.cleanup)rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
       writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');
     }
