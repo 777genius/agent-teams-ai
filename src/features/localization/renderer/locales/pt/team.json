@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Hora"
     },
     "empty": {
       "title": "Sem agendamentos ainda",
@@ -2147,7 +2148,11 @@
       "cancelled": "Cancelado",
       "dispatched": "Enviado",
       "skipped": "Ignorado"
-    }
+    },
+    "taskFirstAgentDescription": "A tarefa será atribuída ao integrante selecionado. A equipe será iniciada primeiro, se necessário.",
+    "taskFirstTeamDescription": "O líder coordena esta tarefa. A equipe será iniciada primeiro, se necessário.",
+    "taskFirstDesktopRequired": "Os agendamentos só são executados enquanto o Agent Teams está aberto.",
+    "taskFirstHistoricPrompt": "Esta equipe tem um prompt de inicialização salvo. Revise-o nas configurações da equipe antes de agendar tarefas automáticas."
   },
   "openCodeContextConfigHint": {
     "summary": "Os modelos locais do OpenCode podem usar um orçamento de contexto do OpenCode em vez de limites somente prompt.",
