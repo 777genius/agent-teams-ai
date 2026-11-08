@@ -77,7 +77,7 @@ const report: {
 };
 const evidencePath = process.env.PROVIDER_REAL_E2E_EVIDENCE;
 assert(evidencePath && path.isAbsolute(evidencePath), 'An absolute evidence path is required');
-const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-real-provider-TEST-'));
+const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-real-provider-'));
 let phase = 'start';
 let inferenceRequests = 0;
 let modelServer: ReturnType<typeof createServer> | null = null;
@@ -168,12 +168,12 @@ async function directory(
   return page;
 }
 
-async function checkScenario(name: 'clean' | 'configured',
+async function checkScenario(name: 'clean' | 'ambient' | 'configured',
   port: number): Promise<ScenarioEvidence> {
   const home = path.join(testRoot, name);
   const cwd = path.join(home, 'project');
   fs.mkdirSync(cwd, { recursive: true });
-  const configured = name === 'configured';
+  const configured = name !== 'clean';
   const env = isolatedEnv(home, configured);
   if (configured) {
     const configRoot = path.join(home, '.config/opencode');
@@ -189,8 +189,17 @@ async function checkScenario(name: 'clean' | 'configured',
       } },
     }));
   }
+  if (name === 'configured') {
+    // A nonsecret, purely synthetic credential exercises the real OpenCode
+    // saved-auth path on both OSes; all model endpoints stay on loopback.
+    const authDir = path.join(env.XDG_DATA_HOME!, 'opencode');
+    fs.mkdirSync(authDir, { recursive: true });
+    fs.writeFileSync(path.join(authDir, 'auth.json'),
+      JSON.stringify({ deepinfra: { type: 'api', key: 'TEST-nonsecret-local-catalog-only' } }),
+      { mode: 0o600, flag: 'wx' });
+  }
   const probes: Probe[] = [];
-  if (configured) {
+  if (name === 'ambient') {
     // Same disposable config and environment, but invoke OpenCode directly.
     // Never retain stdout/stderr, which could contain profile paths or secrets.
     phase = name + '-native-providers-list';
@@ -216,11 +225,11 @@ async function checkScenario(name: 'clean' | 'configured',
   const connected = await directory('connected', true, null, cwd, env, probes,
     name + '-summary-connected');
   const summaryCount = validateConnectedSummary(all, connected);
-  if (configured) {
+  if (name === 'configured') {
     assert(connectedProviderIds(connected.entries).includes('deepinfra'),
       'Configured loopback provider missing from real CLI connected summary');
     assert(summaryCount > 0, 'No positive connected-filter evidence');
-  } else {
+  } else if (name === 'clean') {
     assert.equal(summaryCount, 0, 'Credential-free baseline unexpectedly connected');
   }
   // Repeat the same real command in the same isolated project to time warm reads.
@@ -236,7 +245,7 @@ async function checkScenario(name: 'clean' | 'configured',
   let fullCatalogOver100: boolean | null = null;
   let connectedIdsMatchFull: boolean | null = null;
   let fullComparisonStatus: ScenarioEvidence['fullComparisonStatus'] = 'not_run';
-  if (configured) {
+  if (name === 'configured') {
     const full: ProviderDirectoryPage[] = [];
     const ids = new Set<string>();
     let cursor: string | null = null;
@@ -284,6 +293,11 @@ async function checkScenario(name: 'clean' | 'configured',
 }
 
 try {
+  if (process.platform === 'win32') {
+    // Reuse the existing reviewed TEST-only ACL boundary for native auth.json.
+    const { protectWindowsTestDirectory } = await import('./opencode-native-test-auth.ts');
+    await protectWindowsTestDirectory(testRoot);
+  }
   phase = 'version';
   const version = await runCommand(['--version'], testRoot, isolatedEnv(testRoot, false));
   assert(version.stdout.includes(lock.cliVersion), 'Wrong released runtime CLI version');
@@ -309,6 +323,9 @@ try {
   const address = modelServer.address();
   assert(address && typeof address === 'object');
   report.scenarios.push(await checkScenario('clean', address.port));
+  // Record the env-only path as an explicit observation: the shipped Windows
+  // V1 runtime may not count it even though Linux does. Do not mask divergence.
+  report.scenarios.push(await checkScenario('ambient', address.port));
   report.scenarios.push(await checkScenario('configured', address.port));
   report.inferenceRequests = inferenceRequests;
   assert.equal(inferenceRequests, 0, 'A nonmetadata local model request was attempted');
