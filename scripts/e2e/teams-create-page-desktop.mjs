@@ -719,9 +719,9 @@ async function main() {
       'BrowserWindow zoom did not reduce the effective layout viewport');
     await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
     await sendNativeZoomShortcut('0', 'Digit0', 48);
-    await cdp.waitFor(
-      "window.electronAPI.getZoomFactor().then(factor => Math.abs(factor - 1) < 0.05)",
-      'native Electron zoom restored to 100%'
+    assert(
+      Math.abs((await cdp.evaluate('window.electronAPI.getZoomFactor()')) - 1) < 0.05,
+      'Native Electron zoom reset shortcut failed'
     );
     assert.equal(
       await cdp.evaluate("document.querySelector('#team-name')?.value"),
