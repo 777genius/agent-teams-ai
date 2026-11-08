@@ -18,6 +18,7 @@ export const catalogScenarios = [
   'models-four-errors',
   'partial-success',
   'catalog-retry',
+  'connected-summary',
   'catalog-timeout',
 ];
 const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
@@ -75,6 +76,9 @@ export function catalogRefreshEvidence(calls, { requireSummary = false } = {}) {
     .filter(
       (r) =>
         r.operation === 'directory' &&
+        // Connected-only probes are count evidence, not model catalog pages.
+        (!r.start.args.includes('--filter') ||
+          r.start.args[r.start.args.indexOf('--filter') + 1] === 'all') &&
         (!requireSummary || (r.index > summary.response.index && r.start.at >= summary.response.at))
     )
     .at(-1);
@@ -279,6 +283,50 @@ export async function verifyCatalog({
         /fixture-model|Fixture .* model/.test(text)
       )
         break;
+    }
+    if (scenario === 'connected-summary') {
+      // This is a *real Electron -> preload -> IPC -> CLI subprocess* proof.
+      // >100 available-only rows force the active QuickConnect hook to probe
+      // --summary --filter connected; model catalog still walks all pages.
+      let proof = null;
+      for (let attempt = 0; attempt < 80; attempt++) {
+        const recorded = (await readPendingArtifact(path.join(root, 'calls.ndjson')))
+          .trim().split('\n').filter(Boolean).map(JSON.parse)
+          .filter((event) => event.scenario === scenario && event.at >= started);
+        const records = catalogFixtureRequests(recorded);
+        const directoryReads = records.filter((record) => record.operation === 'directory');
+        const allFirst = directoryReads.find((record) =>
+          record.response?.response.directory?.filter === 'all' &&
+          record.response.response.directory.nextCursor === '100');
+        const allSecond = directoryReads.find((record) =>
+          record.response?.response.directory?.filter === 'all' &&
+          record.response.response.directory.cursor === '100' &&
+          record.response.response.directory.nextCursor === null);
+        const connected = directoryReads.find((record) =>
+          record.start.args.includes('--summary') &&
+          record.start.args.includes('--filter') &&
+          record.start.args[record.start.args.indexOf('--filter') + 1] === 'connected' &&
+          record.response?.response.directory?.filter === 'connected');
+        const renderedCount = await evaluate(
+          `document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || ''`
+        );
+        if (allFirst && allSecond && connected && /3 connected/.test(renderedCount)) {
+          proof = { allFirst, allSecond, connected, renderedCount };
+          break;
+        }
+        await pause(250);
+      }
+      assert(proof, 'Filtered connected-summary subprocess and live header were not observed');
+      assert.equal(proof.allFirst.response.response.directory.totalCount, 105);
+      assert.equal(proof.allFirst.response.response.directory.returnedCount, 100);
+      assert.equal(proof.allSecond.response.response.directory.returnedCount, 5);
+      assert.equal(proof.connected.response.response.directory.totalCount, 4);
+      assert.equal(proof.connected.response.response.directory.returnedCount, 4);
+      assert.equal(proof.connected.response.response.directory.nextCursor, null);
+      assert(proof.connected.response.response.directory.entries.every(
+        (entry) => entry.state === 'connected'
+      ));
+      await save('connected-count-proof.json', JSON.stringify(proof, null, 2));
     }
     await save('ui.txt', text);
     await save('subprocess.json', JSON.stringify(calls, null, 2));

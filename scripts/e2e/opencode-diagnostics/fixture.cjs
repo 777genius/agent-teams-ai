@@ -155,7 +155,7 @@ function catalogCommand(operation) {
     (
       !['all', 'connected'].includes(filter) ||
       !Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
-      (cursor !== null && (!/^(0|[1-9]\\d*)$/.test(cursor) || !Number.isSafeInteger(Number(cursor))))
+      (cursor !== null && (!/^(0|[1-9]\d*)$/.test(cursor) || !Number.isSafeInteger(Number(cursor))))
     )
   ) return refuse();
   const emit = () => {
