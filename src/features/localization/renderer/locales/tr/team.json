@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 dk",
         "fifteenMinutes": "15 dk",
         "thirtyMinutes": "30 dk"
-      }
+      },
+      "time": "Saat"
     },
     "empty": {
       "title": "Henüz zamanlama yok",
@@ -2147,7 +2148,11 @@
       "cancelled": "İptal edildi",
       "dispatched": "İletildi",
       "skipped": "Atlandı"
-    }
+    },
+    "taskFirstAgentDescription": "Görev seçilen ekip üyesine atanır. Gerekirse önce ekip başlatılır.",
+    "taskFirstTeamDescription": "Ekip lideri bu görevi koordine eder. Gerekirse önce ekip başlatılır.",
+    "taskFirstDesktopRequired": "Zamanlanmış görevler yalnızca Agent Teams açıkken çalışır.",
+    "taskFirstHistoricPrompt": "Bu ekipte kayıtlı eski bir başlatma istemi var. Otomatik görevleri planlamadan önce ekip ayarlarında gözden geçirin."
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode yerel modelleri, yalnızca komut istemi limitleri yerine bir OpenCode bağlam bütçesi kullanabilir.",
