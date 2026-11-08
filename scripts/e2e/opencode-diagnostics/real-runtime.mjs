@@ -112,6 +112,7 @@ export function hasOneVisibleOpenCodeConnection(text) {
 export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
   let header = '';
+  const headerStarted = performance.now();
   for (let attempt = 0; attempt < 120; attempt++) {
     header = await evaluate(
       "document.querySelector('[data-testid=\"dashboard-opencode-provider-count\"]')?.textContent || ''"
@@ -121,9 +122,11 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
   }
   assert(hasOneVisibleOpenCodeConnection(header),
     'Real runtime connected count was not shown in the Settings header');
+  const headerReadyMs = Math.round(performance.now() - headerStarted);
 
   // This invokes Electron preload → IPC → main CLI client → genuine published
   // runtime. It cannot be fulfilled by a seeded React fixture.
+  const ipcStarted = performance.now();
   const observed = await evaluate('(async () => {' +
     'const bridge = window.electronAPI?.runtimeProviderManagement;' +
     'if (!bridge?.loadProviderDirectory) return { missingBridge: true };' +
@@ -132,6 +135,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
       'filter: "connected", limit: 100, cursor: null, refresh: false });' +
     'return { error: result?.error?.code || null, directory: result?.directory || null };' +
   '})()');
+  const ipcElapsedMs = Math.round(performance.now() - ipcStarted);
   assert(!observed?.missingBridge, 'Runtime provider preload bridge unavailable');
   assert.equal(observed.error, null, 'Genuine runtime IPC directory request failed');
   const count = verifyRealProviderCountResponse(observed.directory);
@@ -148,6 +152,8 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     realElectronIpc: true,
     connected: count,
     headerConnected: 1,
+    headerReadyMs,
+    ipcElapsedMs,
     fullCatalogReconciled: false,
     modelInferenceTested: false,
   }, null, 2));
