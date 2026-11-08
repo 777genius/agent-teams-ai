@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'scripts/e2e/teams-create-page-owned-processes.mjs'
+      - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
@@ -17,6 +19,8 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'scripts/e2e/teams-create-page-owned-processes.mjs'
+      - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
@@ -67,6 +71,8 @@ jobs:
       # Electron main bundle; installing alone does not produce dist/lifecycle.
       - name: Build isolated Host before Electron startup
         run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Verify owned Windows process census and fail-closed teardown invariants
+        run: node --test scripts/e2e/teams-create-page-owned-processes.test.mjs
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
         shell: bash
         env:
