@@ -1,25 +1,25 @@
 import { useRef, useState } from 'react';
 
-import { useAppTranslation } from '@features/localization/renderer';
-import { isElectronMode } from '@renderer/api';
-import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
-import { useAppearancePreferences } from '@renderer/hooks/useAppearance';
-import { cn } from '@renderer/lib/utils';
 import {
+  type CustomTheme,
   getLatestAppearance,
   setActiveCustomTheme,
   setAppearanceZoom,
   setCustomThemes,
+  ThemeJsonEditorDialog,
+  useAppearancePreferences,
   ZOOM_PRESETS,
-} from '@renderer/utils/appearancePreferences';
+} from '@features/appearance/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
+import { isElectronMode } from '@renderer/api';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
+import { cn } from '@renderer/lib/utils';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
 
-import { ThemeJsonEditorDialog } from './ThemeJsonEditorDialog';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';
-import type { CustomTheme } from '@renderer/utils/appearancePreferences';
 import type { AppConfig } from '@shared/types/notifications';
 
 const THEME_OPTIONS = ['dark', 'light', 'system'] as const;

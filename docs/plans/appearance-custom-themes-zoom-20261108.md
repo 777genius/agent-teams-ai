@@ -45,3 +45,17 @@ Status: implementation plan for this Draft PR. Scope is **custom visual themes +
 - Multiple named themes add/select/edit/delete. Invalid JSON/unsafe colors/duplicate IDs neither apply nor persist. Reload, independent browser profiles, storage failures and missing theme fallback.
 - 80..200% zoom applies to whole UI, persists and resets; keyboard/browser/Electron shortcuts remain functional; native macOS title buttons stay aligned.
 - Run native TypeScript, lint, focused Vitest, existing desktop E2E, browser E2E at 100/125/200%, light/dark/theme screenshots, contrast and focus checks. Review findings fixed in follow-up commits; no merge until checks prove ready.
+
+## Architecture review and viewport E2E update (2026-11-09)
+
+The new Appearance implementation follows a small feature slice at
+`src/features/appearance`: pure palette and preferences policy in `core/domain`,
+browser storage and CSS projection behind `renderer/adapters`, the JSON editor
+and hook behind the public `renderer` entrypoint, and native zoom IPC behind
+the public `main` entrypoint. The existing settings screen and app shell remain
+thin consumers. Legacy imports are compatibility re-exports only.
+
+The desktop E2E exercises real Radix selectors, theme saves and native zoom IPC.
+Browser zoom sets a reciprocal viewport-width/height factor; an independent
+headless Chromium layout check covered 70/80/100/125/150/200%, and the
+browser React hook regression checks preference changes and cleanup.

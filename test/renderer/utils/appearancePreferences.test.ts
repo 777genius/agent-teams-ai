@@ -17,9 +17,9 @@ import {
   reflectNativeAppearanceZoom,
   subscribeAppearance,
   validateCustomThemes,
-} from '@renderer/utils/appearancePreferences';
+} from '@features/appearance/renderer';
 
-import type { CustomTheme } from '@renderer/utils/appearancePreferences';
+import type { CustomTheme } from '@features/appearance/renderer';
 
 const example = (): CustomTheme => ({
   ...EXAMPLE_THEME,

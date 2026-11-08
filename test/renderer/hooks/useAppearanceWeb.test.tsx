@@ -1,8 +1,8 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { useAppearanceZoomController } from '@renderer/hooks/useAppearance';
-import { DEFAULT_APPEARANCE, saveAppearance, setAppearanceZoom } from '@renderer/utils/appearancePreferences';
+import { useAppearanceZoomController } from '@features/appearance/renderer';
+import { DEFAULT_APPEARANCE, saveAppearance, setAppearanceZoom } from '@features/appearance/renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/api', () => ({

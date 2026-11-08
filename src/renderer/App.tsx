@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { AnnouncementHost } from '@features/announcements/renderer';
+import { useAppearanceZoomController } from '@features/appearance/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
@@ -10,7 +11,6 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
 import { startSplashScene } from './components/splash/splashScene';
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
-import { useAppearanceZoomController } from './hooks/useAppearance';
 import { useThemeController } from './hooks/useTheme';
 import { loadDynamicFlags } from './utils/dynamicFlags';
 import { api } from './api';
