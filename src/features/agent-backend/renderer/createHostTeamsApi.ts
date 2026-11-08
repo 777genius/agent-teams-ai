@@ -27,7 +27,11 @@ import {
 } from './hostTeamRouting';
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
-import { readHostRosterConfiguration } from './readHostRosterConfiguration';
+import {
+  assertMatchingConfiguration,
+  readHostRosterConfiguration,
+  savedProjectPath,
+} from './readHostRosterConfiguration';
 import { createTeamCreationResultApi } from './readTeamCreationResult';
 import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
 import { TeamProductReadOrder } from './TeamProductReadOrder';
@@ -39,7 +43,6 @@ import {
 
 import type { BackendConnectionSnapshot } from '../contracts/connections';
 import type { AgentBackendApi } from '../contracts/operations';
-import type { BackendRosterConfiguration } from '../contracts/roster';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { HostActivityReadOptions } from './readHostActivityLogs';
 import type { TeamsAPI } from '@shared/types/api';
@@ -52,24 +55,6 @@ type CurrentScope = () => boolean;
 
 function current(check: CurrentScope): void {
   if (!check()) throw new Error('Team context changed');
-}
-function assertMatchingConfiguration(
-  snapshot: BackendTeamSnapshot,
-  configuration: BackendRosterConfiguration
-): void {
-  if (
-    snapshot.configurationRevision !== undefined &&
-    snapshot.configurationRevision !== configuration.revision
-  )
-    throw new Error('Team configuration changed');
-  if (
-    configuration.members.length !== snapshot.members.length ||
-    configuration.members.some(
-      (member) =>
-        !snapshot.members.some((row) => row.name === member.name && row.role === member.role)
-    )
-  )
-    throw new Error('Team roster changed');
 }
 function remapSnapshot(
   snapshot: BackendTeamSnapshot,
@@ -265,12 +250,14 @@ export function createHostTeamsApi(
       let description = '',
         displayName = binding.label,
         color: string | undefined;
+      let projectPath: string | undefined;
       try {
         const configuration = await readHostRosterConfiguration(backend, binding.handle);
         assertMatchingConfiguration(data, configuration);
         description = configuration.savedSettings?.description ?? '';
         displayName = configuration.savedSettings?.displayName ?? binding.label;
         color = configuration.savedSettings?.color;
+        projectPath = savedProjectPath(configuration);
       } catch {
         // Unavailable saved settings leave ordinary product records readable.
       }
@@ -281,6 +268,7 @@ export function createHostTeamsApi(
         displayName,
         description,
         ...(color === undefined ? {} : { color }),
+        ...(projectPath === undefined ? {} : { projectPath }),
         memberCount: data.members.filter((member) => member.role === 'member').length,
         members: data.members,
         ...(data.members.find((member) => member.role === 'lead')
@@ -315,10 +303,12 @@ export function createHostTeamsApi(
       );
       observed.push(read.assertCurrent);
       let displayName = binding.label;
+      let projectPath: string | undefined;
       try {
         const configuration = await readHostRosterConfiguration(backend, binding.handle);
         assertMatchingConfiguration(data, configuration);
         displayName = configuration.savedSettings?.displayName ?? binding.label;
+        projectPath = savedProjectPath(configuration);
       } catch {
         // Product tasks remain readable while their saved presentation is unavailable.
       }
@@ -327,6 +317,7 @@ export function createHostTeamsApi(
           ...task,
           teamName: data.teamName,
           teamDisplayName: displayName,
+          ...(projectPath === undefined ? {} : { projectPath }),
         }))
       );
     }

@@ -12,6 +12,7 @@ import { readRendererBackendConnections } from './desktop-backend-observations.t
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
+import { createDesktopUiControls } from './desktop-ui-controls.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -589,4 +590,50 @@ test('original Task assignment prerequisite rejects a foreign context, Team, Tas
     change(f);
     assert.equal(await f.evaluate(), null);
   }
+});
+
+test('original desktop click waits for stable target geometry, without repeating input', { timeout: 5000 }, async () => {
+  const points = [
+    { x: 100, y: 100, tag: 'BUTTON' },
+    { x: 100, y: 100, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+  ];
+  const dispatched: Record<string, unknown>[] = [];
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(expression.includes('document.querySelectorAll'));
+      return points.shift() ?? { x: 100, y: 200, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  await ui.click('#TEST-original-toggle', 'TEST moving original toggle');
+  assert.deepEqual(dispatched.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  for (const event of dispatched) {
+    assert.equal(event.x, 100);
+    if (event.type !== 'mouseMoved') assert.equal(event.y, 200);
+  }
+});
+
+test('original desktop click refuses a constantly moving target before dispatch', { timeout: 5000 }, async () => {
+  let reads = 0;
+  const dispatched: string[] = [];
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(expression.includes('document.querySelectorAll'));
+      return { x: 100, y: 100 + reads++ * 10, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push(String(params.type));
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  await assert.rejects(ui.click('#TEST-original-toggle', 'TEST moving original toggle'), /did not settle before one click/);
+  assert.deepEqual(dispatched, ['mouseMoved'], 'no physical click after unstable ownership');
 });

@@ -30,6 +30,7 @@ function fixture() {
     busyRefusals = 0,
     contextCurrent = true;
   let beforeReply: (() => void) | undefined;
+  let withSavedSettings = true;
   let unavailableHandle: string | undefined;
   const requests: BackendOperationRequest[] = [];
   const backend: AgentBackendApi = {
@@ -61,7 +62,9 @@ function fixture() {
             revision: 'd'.repeat(64),
             members: [],
             removedMembers: [],
-            savedSettings: { cwd: '/TEST', description: `Saved ${index}` },
+            ...(withSavedSettings
+              ? { savedSettings: { cwd: '/TEST', description: `Saved ${index}` } }
+              : {}),
           };
           return { ok: true, value: roster };
         }
@@ -125,6 +128,9 @@ function fixture() {
     bindings,
     requests,
     busyRefusals: () => busyRefusals,
+    withoutSavedSettings: () => {
+      withSavedSettings = false;
+    },
     changeContextBeforeReply: () => {
       beforeReply = () => {
         contextCurrent = false;
@@ -148,6 +154,9 @@ describe('Host aggregate reads respect one finite owner transport', () => {
     expect(teams.slice(1).map((team) => team.description)).toEqual(
       f.bindings.map((_, i) => `Saved ${i}`)
     );
+    expect(teams.slice(1).map((team) => team.projectPath)).toEqual(
+      f.bindings.map(() => '/TEST')
+    );
     expect(f.busyRefusals()).toBe(0);
     expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
   });
@@ -160,8 +169,21 @@ describe('Host aggregate reads respect one finite owner transport', () => {
     expect(tasks.slice(1).map((task) => [task.id, task.teamName])).toEqual(
       f.bindings.map((binding, i) => [`task-${i}`, hostTeamSelectionKey(binding.handle.handleId)])
     );
+    expect(tasks.slice(1).map((task) => task.projectPath)).toEqual(
+      f.bindings.map(() => '/TEST')
+    );
     expect(f.busyRefusals()).toBe(0);
     expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not invent project paths when saved Host settings are absent', async () => {
+    const f = fixture();
+    f.withoutSavedSettings();
+    const teams = await f.api.list();
+    const tasks = await f.api.getAllTasks();
+    expect(teams.slice(1).every((team) => team.projectPath === undefined)).toBe(true);
+    expect(tasks.slice(1).every((task) => task.projectPath === undefined)).toBe(true);
+    expect(f.busyRefusals()).toBe(0);
   });
 
   it('reads all 40 stopped Host Teams while preserving the original alive legacy neighbor', async () => {

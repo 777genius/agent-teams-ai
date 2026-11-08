@@ -6,6 +6,12 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Runtime provider preflight affects the existing Create/Launch controls.
+      - 'src/main/services/infrastructure/CliInstallerService.ts'
+      - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
+      - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'scripts/e2e/teams-create-page-owned-processes.mjs'
       - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
       - 'src/renderer/components/team/**'
@@ -19,6 +25,12 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Runtime provider preflight affects the existing Create/Launch controls.
+      - 'src/main/services/infrastructure/CliInstallerService.ts'
+      - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
+      - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'scripts/e2e/teams-create-page-owned-processes.mjs'
       - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
       - 'src/renderer/components/team/**'

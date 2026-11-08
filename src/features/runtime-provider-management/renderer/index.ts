@@ -43,10 +43,11 @@ export {
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from './openCodeLocalModelSetup';
-export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
+export type { RuntimeProviderConnectedCountEvidence, RuntimeProviderConnectedCountObservation, RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
+  useRuntimeProviderConnectedCount,
   useRuntimeProviderDirectoryCache,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from './runtimeProviderDirectoryCache';

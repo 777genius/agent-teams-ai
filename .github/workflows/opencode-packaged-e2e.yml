@@ -46,6 +46,8 @@ on:
     paths:
       - .github/workflows/opencode-packaged-e2e.yml
       # Focused source changes requiring installed-app provider compatibility proof.
+      # Explicit project-scoped provider preflight must pass installed-app E2E.
+      - src/main/services/infrastructure/CliInstallerService.ts
       - src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts
       - src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
