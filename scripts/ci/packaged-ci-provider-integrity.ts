@@ -11,6 +11,25 @@ const SELECTED = [
 /** Reject stale cached installations if a selected local tarball changed without its lock. */
 export function verifySelectedProviderArchives(root: string): void {
   const lock = readFileSync(resolve(root, 'pnpm-lock.yaml'), 'utf8');
+  // A correctly hashed, unused lock entry must not certify a different
+  // archive selected by the actual Host package importer.
+  const manifest = JSON.parse(
+    readFileSync(resolve(root, 'packages/legacy-agent-host/package.json'), 'utf8')
+  ) as { dependencies?: Record<string, unknown> };
+  const lines = lock.split(/\r?\n/);
+  const importerName = '  packages/legacy-agent-host:';
+  const importerPositions = lines.flatMap((line, index) => line === importerName ? [index] : []);
+  if (importerPositions.length !== 1) throw new Error('Missing or ambiguous Host lock importer');
+  const nextImporter = lines.findIndex((line, index) =>
+    index > importerPositions[0]! && /^  \S.*:$/.test(line));
+  const importerLines = lines.slice(importerPositions[0]! + 1,
+    nextImporter < 0 ? undefined : nextImporter);
+  const dependenciesStart = importerLines.indexOf('    dependencies:');
+  if (dependenciesStart < 0) throw new Error('Missing Host lock dependencies');
+  const dependenciesEnd = importerLines.findIndex((line, index) =>
+    index > dependenciesStart && /^    \S/.test(line));
+  const dependencyBlock = importerLines.slice(dependenciesStart + 1,
+    dependenciesEnd < 0 ? undefined : dependenciesEnd).join('\n');
   // A redirect of vendor/ or provider-migration/ can make an archive outside
   // the checked-in vendor tree appear valid even with a matching locked hash.
   // Only the caller's trusted repository root may be canonicalized elsewhere.
@@ -33,6 +52,22 @@ export function verifySelectedProviderArchives(root: string): void {
       !/^vendor\/provider-migration\/[a-z0-9-]+\/[a-z0-9.-]+\.tgz$/.test(selectedPath!)
     ) {
       throw new Error('Invalid provider archive path: ' + name);
+    }
+
+    const expectedSpecifier = 'file:../../' + selectedPath;
+    const dependency = new RegExp(
+      "^      '" + name + "':\\n        specifier: ([^\\n]+)\\n        version: ([^\\n]+)(?:\\n|$)",
+      'gm'
+    );
+    const importerMatches = [...dependencyBlock.matchAll(dependency)];
+    const installedVersion = importerMatches[0]?.[2];
+    const expectedVersion = 'file:' + selectedPath;
+    if (manifest.dependencies?.[name] !== expectedSpecifier ||
+        importerMatches.length !== 1 ||
+        importerMatches[0]?.[1] !== expectedSpecifier ||
+        (installedVersion !== expectedVersion &&
+          !(installedVersion?.startsWith(expectedVersion + '(') && installedVersion.endsWith(')')))) {
+      throw new Error('Host provider selection differs from pnpm lock: ' + name);
     }
 
     const archive = resolve(root, selectedPath!);

@@ -15,7 +15,16 @@ const archives = [
 function fixture(): { root: string; paths: string[] } {
   const root = mkdtempSync(join(tmpdir(), 'provider-integrity-'));
   const paths: string[] = [];
-  let lock = 'lockfileVersion: 9.0\n\npackages:\n';
+  mkdirSync(join(root, 'packages/legacy-agent-host'), { recursive: true });
+  writeFileSync(join(root, 'packages/legacy-agent-host/package.json'), JSON.stringify({
+    dependencies: Object.fromEntries(archives.map(([name, path]) => [name, 'file:../../' + path])),
+  }));
+  let lock = 'lockfileVersion: 9.0\n\nimporters:\n  packages/legacy-agent-host:\n    dependencies:\n';
+  for (const [name, path] of archives) {
+    lock += "      '" + name + "':\n        specifier: file:../../" + path +
+      '\n        version: file:' + path + '\n';
+  }
+  lock += '\npackages:\n';
   for (const [name, path] of archives) {
     const archive = join(root, path);
     mkdirSync(dirname(archive), { recursive: true });
@@ -124,4 +133,32 @@ test('symlinked provider-migration root cannot relocate locked archives', (t) =>
   renameSync(original, relocated);
   symlinkSync(relocated, original, 'dir');
   assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive root/);
+});
+
+test('selected Host manifest and importer cannot redirect to an unchecked package', (t) => {
+  const { root } = fixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const manifestPath = join(root, 'packages/legacy-agent-host/package.json');
+  const manifest = readFileSync(manifestPath, 'utf8');
+  const lockPath = join(root, 'pnpm-lock.yaml');
+  const lock = readFileSync(lockPath, 'utf8');
+  const [, path] = archives[0];
+
+  const alternative = 'file:../../vendor/provider-migration/unverified/evil.tgz';
+  writeFileSync(manifestPath, manifest.replace('file:../../' + path, alternative));
+  assert.throws(() => verifySelectedProviderArchives(root), /Host provider selection/);
+  writeFileSync(manifestPath, manifest);
+
+  for (const altered of [
+    lock.replace('specifier: file:../../' + path, 'specifier: ' + alternative),
+    lock.replace('version: file:' + path, 'version: file:vendor/provider-migration/unverified/evil.tgz'),
+    lock.replace('  packages/legacy-agent-host:', '  packages/elsewhere:'),
+    lock.replace('    dependencies:\n', '    devDependencies:\n'),
+  ]) {
+    writeFileSync(lockPath, altered);
+    assert.throws(() => verifySelectedProviderArchives(root), /Host (?:lock|provider)/,
+      'unchecked importer must not be certified through an unused resolution');
+  }
+  writeFileSync(lockPath, lock);
+  assert.doesNotThrow(() => verifySelectedProviderArchives(root));
 });
