@@ -43,7 +43,7 @@ const input = {
 
 describe('getDashboardConnectionSummary (no IPC)', () => {
   it('counts verified CLI logins separately from complete OpenCode directory connections', () => {
-    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 2, cliCountComplete: true, cliCountPending: false, openCodeConnected: 2 });
+    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 1, cliCountComplete: true, cliCountPending: false, openCodeConnected: 2 });
   });
 
   it('never counts an OpenCode host or inventory-only fallback as a separate CLI credential', () => {
@@ -54,7 +54,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ),
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toEqual({
-      cliConnected: 1,
+      cliConnected: 0,
       cliCountComplete: true,
       cliCountPending: false,
       openCodeConnected: 2,
@@ -77,13 +77,13 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ),
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toMatchObject({
-      cliConnected: 2,
+      cliConnected: 1,
       cliCountComplete: false,
     });
     expect(getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliCountComplete).toBe(false);
   });
 
-  it('shows the settled zero as a lower bound when Gemini is frozen, not checking forever', () => {
+  it('ignores disabled Gemini even when its status is missing or marked loading', () => {
     const cliStatus = {
       ...baseCliStatus,
       providers: baseCliStatus.providers
@@ -92,7 +92,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     };
     expect(getDashboardConnectionSummary({ ...input, cliStatus })).toMatchObject({
       cliConnected: 0,
-      cliCountComplete: false,
+      cliCountComplete: true,
       cliCountPending: false,
     });
     expect(getDashboardConnectionSummary({
@@ -100,9 +100,9 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       cliStatus,
       providerStatusLoading: { gemini: true },
     })).toMatchObject({
-      cliConnected: null,
-      cliCountComplete: false,
-      cliCountPending: true,
+      cliConnected: 0,
+      cliCountComplete: true,
+      cliCountPending: false,
     });
   });
 
@@ -128,6 +128,63 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ...input,
       runtimeStatus: { ...runtimeStatus, state: 'checking' as const },
     }).openCodeConnected).toBeNull();
+  });
+
+  it('uses only fresh runtime-matched count observations for the active project', () => {
+    const nowMs = Date.parse('2026-11-08T12:00:00Z');
+    const observation = {
+      connected: 7,
+      source: 'summary-connected' as const,
+      runtimeRevision: revision,
+      fetchedAt: new Date(nowMs - 15_000).toISOString(),
+    };
+    const scoped = {
+      ...input,
+      globalDirectory: null,
+      projectDirectory: null,
+      projectPath: '/work/project',
+      observedOpenCodeCount: observation,
+      nowMs,
+    };
+    expect(getDashboardConnectionSummary(scoped).openCodeConnected).toBe(7);
+    expect(getDashboardConnectionSummary({
+      ...scoped, observedOpenCodeCount: { ...observation, runtimeRevision: 'previous-runtime' },
+    }).openCodeConnected).toBeNull();
+    expect(getDashboardConnectionSummary({
+      ...scoped, observedOpenCodeCount: {
+        ...observation, fetchedAt: new Date(nowMs - 121_000).toISOString(),
+      },
+    }).openCodeConnected).toBeNull();
+  });
+
+  it('discards a project count if global credentials are reobserved more recently', () => {
+    const nowMs = Date.parse('2026-11-08T13:10:00Z');
+    expect(getDashboardConnectionSummary({
+      ...input,
+      projectPath: '/work/project',
+      projectDirectory: null, // Scoped directory remains unknown
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
+      observedOpenCodeCount: {
+        connected: 7,
+        runtimeRevision: revision,
+        source: 'summary-connected',
+        fetchedAt: new Date(nowMs - 30_000).toISOString(),
+      },
+      nowMs,
+    }).openCodeConnected).toBeNull();
+  });
+
+  it('prefers a newer complete full directory over an earlier filtered observation', () => {
+    const nowMs = Date.parse('2026-11-08T12:00:00Z');
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
+      observedOpenCodeCount: {
+        connected: 9, runtimeRevision: revision, source: 'summary-connected',
+        fetchedAt: new Date(nowMs - 20_000).toISOString(),
+      },
+      nowMs,
+    }).openCodeConnected).toBe(2);
   });
 
   it('requires both complete global and project snapshots before reporting a project count', () => {
@@ -167,6 +224,13 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ...input,
       globalDirectory: { ...globalDirectory, fetchedAt: 'invalid' },
       nowMs,
+    }).openCodeConnected).toBeNull();
+  });
+
+  it('does not reuse full-directory counts after a credential mutation until a new validated read', () => {
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory, countInvalidated: true,
     }).openCodeConnected).toBeNull();
   });
 
