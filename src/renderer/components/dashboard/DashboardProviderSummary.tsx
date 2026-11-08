@@ -1,6 +1,7 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 import { Gauge, Settings2 } from 'lucide-react';
 
@@ -20,7 +21,9 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
   // A saved credential is not permission to run; keep the readiness title honest.
   const hasReadyProvider =
     cliStatus?.installed === true &&
-    cliStatus.providers.some((provider) => hasEffectiveProviderLaunchAuthority(provider));
+    filterMainScreenCliProviders(cliStatus.providers).some((provider) =>
+      hasEffectiveProviderLaunchAuthority(provider)
+    );
 
   return (
     <div
