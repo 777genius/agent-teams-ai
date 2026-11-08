@@ -618,7 +618,28 @@ async function captureScreenshot(client, fixture, label) {
 }
 
 async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
+  // UI readiness must not be inferred from Main's ready flag. Capture renderer
+  // failures that occur before React's dev store is created, especially on macOS.
+  const rendererErrors = [];
+  const reportRendererError = (message) => {
+    if (!message) return;
+    rendererErrors.push(String(message).slice(0, 1800));
+    if (rendererErrors.length > 12) rendererErrors.shift();
+  };
+  client.on('Runtime.exceptionThrown', (params) => {
+    reportRendererError(params.exceptionDetails?.exception?.description ?? params.exceptionDetails?.text);
+  });
+  client.on('Runtime.consoleAPICalled', (params) => {
+    if (params.type !== 'error') return;
+    reportRendererError((params.args ?? []).map((arg) =>
+      arg.value ?? arg.description ?? arg.unserializableValue ?? ''
+    ).join(' '));
+  });
+  client.on('Log.entryAdded', (params) => {
+    if (params.entry?.level === 'error') reportRendererError(params.entry.text);
+  });
   await client.send('Runtime.enable');
+  await client.send('Log.enable');
   await client.send('Page.enable');
   try {
     // Windows CI needs longer to reopen the *same* profile after taskkill.
@@ -634,9 +655,26 @@ async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
     } catch {
       // The renderer may not have a working preload at all.
     }
+    let rendererState = null;
+    try {
+      rendererState = await client.evaluate(`(() => ({
+        url: location.href,
+        readyState: document.readyState,
+        rootChildren: document.querySelector('#root')?.childElementCount ?? null,
+        uiDidInit: Boolean(window.__claudeTeamsUiDidInit),
+        electronApiPresent: Boolean(window.electronAPI),
+        teamsApiPresent: Boolean(window.electronAPI?.teams),
+        devStorePresent: Boolean(window.__agentTeamsDevStore),
+        viteOverlay: document.querySelector('vite-error-overlay')?.shadowRoot?.textContent?.slice(0, 1200) ?? null,
+      }))()`);
+    } catch {
+      // Renderer may have crashed; retain the captured CDP exceptions instead.
+    }
     throw new Error(
       `Electron renderer did not initialize after ${afterRestart ? 'process restart' : 'cold start'}; ` +
-        `startup status: ${JSON.stringify(startupStatus)}. ${String(error)}`
+        `startup status: ${JSON.stringify(startupStatus)}; ` +
+        `renderer state: ${JSON.stringify(rendererState)}; ` +
+        `renderer errors: ${JSON.stringify(rendererErrors)}. ${String(error)}`
     );
   }
   const names = await client.evaluate(
