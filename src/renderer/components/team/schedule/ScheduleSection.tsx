@@ -70,6 +70,12 @@ const ScheduleRow = ({
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
   const runsLoading = useStore((s) => s.scheduleRunsLoading[schedule.id] ?? false);
   const fetchRunHistory = useStore((s) => s.fetchRunHistory);
+  const savedStatusLabel =
+    schedule.status === 'active'
+      ? t('schedule.status.active')
+      : schedule.status === 'paused'
+        ? t('schedule.status.paused')
+        : t('schedule.status.disabled');
 
   const handleExpand = useCallback(() => {
     const next = !expanded;
@@ -100,7 +106,10 @@ const ScheduleRow = ({
             </span>
             {hostScheduleUnsupported ? (
               <span className="text-[10px] text-[var(--color-text-muted)]" role="status">
-                Host unsupported
+                {t('schedule.status.hostUnsupported', {
+                  defaultValue: 'Host scheduling unavailable',
+                })}{' '}
+                · {t('schedule.status.saved', { defaultValue: 'Saved' })}: {savedStatusLabel}
               </span>
             ) : (
               <ScheduleStatusBadge status={schedule.status} />

@@ -2984,6 +2984,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   placeholder={t('launch.schedule.noLimit')}
                 />
               </div>
+              <p className="col-span-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+                {t('launch.schedule.executionLimitsNote', {
+                  defaultValue:
+                    'These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.',
+                })}
+              </p>
             </div>
           ) : null}
         </fieldset>

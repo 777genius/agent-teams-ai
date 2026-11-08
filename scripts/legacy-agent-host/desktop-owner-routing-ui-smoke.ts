@@ -526,34 +526,34 @@ export async function runDesktopOwnerRoutingContinuation(
           assert.deepEqual(bAfter.files, bBefore.files, 'new original A mutation cannot affect B');
           const aBeforeBCreate = await snapshot('default-b-before-b-create-a', fixture.root);
           await openOriginalCreateForm(cdp, ui, join(fixture.root, 'workspace'), teamB);
-          await ui.scrollTo('[role="dialog"] #launch-team', 'original save-only selection');
+          await ui.scrollTo('[data-testid="create-team-page"] #launch-team', 'original save-only selection');
           assert.equal(
             await cdp.evaluate(
-              `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')`
+              `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')`
             ),
             'checked'
           );
-          await ui.click('[role="dialog"] #launch-team', 'disable original Run after Create');
+          await ui.click('[data-testid="create-team-page"] #launch-team', 'disable original Run after Create');
           await ui.waitRead(
-            `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
+            `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
             'original save-only retained'
           );
-          const provider = '[role="dialog"] button[aria-label*=" provider,"]';
+          const provider = '[data-testid="create-team-page"] button[aria-label*=" provider,"]';
           await ui.scrollTo(provider, 'original Anthropic model selector');
           if (
             !(await cdp.evaluate(
-              `Boolean(document.querySelector('[role="dialog"] [data-testid="team-model-selector-model-option"]'))`
+              `Boolean(document.querySelector('[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"]'))`
             ))
           )
             await ui.click(provider, 'expand original model selector');
           const defaultOption =
-            '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Default"]';
+            '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="Default"]';
           await ui.scrollTo(defaultOption, 'original inherited Default model');
           await ui.click(defaultOption, 'save original Default without native readiness');
-          await ui.scrollTo('[role="dialog"] button', 'original save-only Create', 'Create');
-          await ui.click('[role="dialog"] button', 'original unbound Team Create once', 'Create');
+          await ui.scrollTo('[data-testid="create-team-page"] button', 'original save-only Create', 'Create');
+          await ui.click('[data-testid="create-team-page"] button', 'original unbound Team Create once', 'Create');
           await ui.waitRead(
-            `!document.querySelector('[role="dialog"] #team-name')`,
+            `!document.querySelector('[data-testid="create-team-page"] #team-name')`,
             'original save-only Create completed'
           );
           const directory = join(bRoot, 'hoststore/.host-team-registry/records');

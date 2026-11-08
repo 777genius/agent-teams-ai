@@ -35,7 +35,7 @@ async function isValidGitMarker(root: string): Promise<boolean> {
         readTrimmedFileOrNull(path.join(marker, 'HEAD')),
         readTrimmedFileOrNull(path.join(marker, 'config')),
       ]);
-      return validHead(head) && Boolean(config?.includes('[core]'));
+      return validHead(head) && /(?:^|\n)\s*\[core\]\s*(?=\n|$)/i.test(config ?? '');
     }
     if (!stat.isFile()) return false;
     const contents = await readTrimmedFileOrNull(marker);
@@ -89,7 +89,8 @@ async function isStandaloneGitFile(root: string): Promise<boolean> {
   if (!match || /[\r\n]/.test(match[1])) return false;
   const gitDir = path.resolve(root, match[1]);
   const config = await readTrimmedFileOrNull(path.join(gitDir, 'config'));
-  if (!config || /(?:^|\n)\s*worktree\s*=/im.test(config)) return false;
+  const coreConfig = /(?:^|\n)\s*\[core\]\s*([^]*?)(?=\n\s*\[|$)/i.exec(config ?? '')?.[1];
+  if (!coreConfig || /(?:^|\n)\s*worktree\s*=/im.test(coreConfig)) return false;
   for (const name of ['commondir', 'gitdir']) {
     try {
       await fs.lstat(path.join(gitDir, name));
@@ -181,7 +182,5 @@ export async function resolveWorkspaceTrustCanonicalGitRoot(gitRoot: string): Pr
     return normalizedGitRoot;
   }
 
-  return (path.basename(commonDir) === '.git' ? path.dirname(commonDir) : commonDir).normalize(
-    'NFC'
-  );
+  return path.basename(commonDir) === '.git' ? path.dirname(commonDir) : commonDir;
 }

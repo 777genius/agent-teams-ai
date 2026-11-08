@@ -80,6 +80,32 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
   });
 
+  it('recognizes a case-insensitive core config section', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'upper-core');
+    const nested = path.join(repo, 'nested');
+    await fs.mkdir(path.join(repo, '.git'), { recursive: true });
+    await fs.mkdir(nested);
+    await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[CORE]\n\tbare = false\n');
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+  });
+
+  it('keeps separate-git-dir acceptance when another section mentions worktree', async () => {
+    const dir = await makeTmpDir();
+    const checkout = path.join(dir, 'checkout');
+    const nested = path.join(checkout, 'nested');
+    const gitDir = path.join(dir, 'metadata');
+    await fs.mkdir(nested, { recursive: true });
+    await fs.mkdir(gitDir);
+    await fs.writeFile(path.join(checkout, '.git'), `gitdir: ${gitDir}\n`);
+    await fs.writeFile(path.join(gitDir, 'config'),
+      '[core]\n\tbare = false\n[remote "origin"]\n\tworktree = unrelated\n');
+    const managedGit = vi.fn(async () => true);
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested, managedGit)).resolves.toBe(checkout);
+    expect(managedGit).toHaveBeenCalledWith(checkout);
+  });
+
   it('needs explicit proof before trusting a standalone Git metadata pointer', async () => {
     const dir = await makeTmpDir();
     const checkout = path.join(dir, 'checkout');
@@ -182,6 +208,15 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await fs.writeFile(path.join(repoDir, '.git', 'config'), '[core]\n');
     await createSyntheticWorktree({ repoDir, worktreeDir, name: 'alice' });
 
+    await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
+  });
+
+  it('preserves filesystem spelling for the canonical root of a linked worktree', async () => {
+    const dir = await makeTmpDir();
+    const repoDir = path.join(dir, 'Cafe\u0301');
+    const worktreeDir = path.join(dir, 'worktree');
+    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
+    await createSyntheticWorktree({ repoDir, worktreeDir, name: 'unicode' });
     await expect(resolveWorkspaceTrustCanonicalGitRoot(worktreeDir)).resolves.toBe(repoDir);
   });
 
