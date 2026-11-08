@@ -12,6 +12,20 @@ export interface RuntimeProviderDirectoryCacheSnapshot {
   lastSummaryFetchedAt?: string;
 }
 
+/** A validated display-only count, never provider or model launch authority. */
+export interface RuntimeProviderConnectedCountObservation {
+  connected: number;
+  fetchedAt: string;
+  runtimeRevision: string;
+  source: 'summary-all' | 'summary-connected';
+}
+
+interface PublishRuntimeProviderConnectedCountInput
+  extends RuntimeProviderConnectedCountObservation {
+  projectPath?: string | null;
+  readToken: string;
+}
+
 interface PublishRuntimeProviderDirectoryCacheInput {
   projectPath?: string | null;
   entries: readonly RuntimeProviderDirectoryEntryDto[];
@@ -27,6 +41,7 @@ const GLOBAL_SCOPE_KEY = '\u0000global';
 const MAX_CACHED_PROJECT_SCOPES = 8;
 const EMPTY_SNAPSHOT: RuntimeProviderDirectoryCacheSnapshot | null = null;
 const snapshotsByScope = new Map<string, RuntimeProviderDirectoryCacheSnapshot>();
+const connectedCountByScope = new Map<string, RuntimeProviderConnectedCountObservation>();
 const listenersByScope = new Map<string, Set<() => void>>();
 const mergedFallbackByScope = new Map<
   string,
@@ -70,6 +85,7 @@ function pruneInactiveProjectScopes(): void {
       break;
     }
     snapshotsByScope.delete(oldestInactiveScopeKey);
+    connectedCountByScope.delete(oldestInactiveScopeKey);
     mergedFallbackByScope.delete(oldestInactiveScopeKey);
     projectScopeCount -= 1;
   }
@@ -277,10 +293,14 @@ export function publishRuntimeProviderDirectoryCache({
 export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: string | null): void {
   const scopeKey = getScopeKey(projectPath);
   generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
+  connectedCountByScope.delete(scopeKey);
+  notifyScope(scopeKey);
   if (scopeKey !== GLOBAL_SCOPE_KEY) return;
   // Fence even project requests that have not published a first snapshot.
   invalidationEpoch += 1;
   mergedFallbackByScope.clear();
+  connectedCountByScope.clear();
+  for (const listenerScope of listenersByScope.keys()) notifyScope(listenerScope);
   for (const [projectScope, snapshot] of snapshotsByScope) {
     if (projectScope === GLOBAL_SCOPE_KEY || !snapshot.authoritative) continue;
     // Keep verified provider rows for display, but never present inherited
@@ -298,6 +318,42 @@ export function markRuntimeProviderDirectoryScopeUnverified(projectPath?: string
   touchScope(scopeKey, { ...current, authoritative: false });
   mergedFallbackByScope.clear();
   notifyScope(scopeKey);
+}
+
+/** Publish only on the same scope/runtime generation as the initiating directory request. */
+export function publishRuntimeProviderConnectedCount({
+  projectPath,
+  readToken,
+  connected,
+  fetchedAt,
+  runtimeRevision,
+  source,
+}: PublishRuntimeProviderConnectedCountInput): void {
+  if (
+    readToken !== getRuntimeProviderDirectoryReadToken(projectPath) ||
+    (observedRuntimeRevision !== null && runtimeRevision !== observedRuntimeRevision) ||
+    !Number.isSafeInteger(connected) ||
+    connected < 0
+  ) return;
+  const fetchedAtMs = Date.parse(fetchedAt);
+  if (!Number.isFinite(fetchedAtMs) || fetchedAtMs > Date.now()) return;
+  const scopeKey = getScopeKey(projectPath);
+  const previous = connectedCountByScope.get(scopeKey);
+  if (previous && Date.parse(previous.fetchedAt) > fetchedAtMs) return;
+  connectedCountByScope.set(scopeKey, { connected, fetchedAt, runtimeRevision, source });
+  notifyScope(scopeKey);
+}
+
+export function useRuntimeProviderConnectedCount(
+  projectPath?: string | null
+): RuntimeProviderConnectedCountObservation | null {
+  const scopeKey = getScopeKey(projectPath);
+  const subscribe = useCallback(
+    (listener: () => void) => subscribeScope(scopeKey, listener),
+    [scopeKey]
+  );
+  const getSnapshot = useCallback(() => connectedCountByScope.get(scopeKey) ?? null, [scopeKey]);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 export function useRuntimeProviderDirectoryCache(
@@ -349,6 +405,7 @@ export function invalidateRuntimeProviderDirectoryCache(): void {
   invalidationEpoch += 1;
   generationByScope.clear();
   snapshotsByScope.clear();
+  connectedCountByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;
   globalFallbackSnapshot = null;
