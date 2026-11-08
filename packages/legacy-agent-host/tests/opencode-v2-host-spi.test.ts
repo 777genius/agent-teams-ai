@@ -141,6 +141,13 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
     { ...valid, nativeSessionId: undefined },
     { ...valid, mcpPolicyPlugin: { path: '/TEST-only-plugin', sha256: 'b'.repeat(64) } },
     { ...valid, capturedMcpServers: {} },
+    // Historical Claude MCP catalog and V1 source snapshots must not be
+    // smuggled into a generation-selected V2 profile via the common fields.
+    { ...valid, mcpCatalogSource: { claudeConfigPath: '/TEST-only/v1-claude.json' } },
+    { ...valid, capturedMcpSource: {
+      userConfigPath: '/TEST-only/v1-user.json', projectPath: '/TEST-only/v1-project',
+      policy: { mode: 'inheritScopes' },
+    } },
     { ...valid, nativeOptions: { ...valid.nativeOptions, toolApprovalMode: 'auto' } },
     { ...valid, extraArgs: ['--install-v1-plugin'] },
     { ...valid, environment: { ...valid.environment,
@@ -246,6 +253,11 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
     { ...fixture, nativeGeneration: undefined },
     { ...fixture, protocolRevision: '2.1.4' },
     { ...fixture, mcpPolicyPlugin: { path: '/TEST-only-plugin', sha256: 'a'.repeat(64) } },
+    { ...fixture, mcpCatalogSource: { claudeConfigPath: '/TEST-only/v1-claude.json' } },
+    { ...fixture, capturedMcpSource: {
+      userConfigPath: '/TEST-only/v1-user.json', projectPath: '/TEST-only/v1-project',
+      policy: { mode: 'inheritScopes' },
+    } },
     { ...fixture, environment: { ...fixture.environment,
       OPENCODE_BIN_PATH: '/TEST-untrusted/native' } },
     { ...fixture, environment: { ...fixture.environment,

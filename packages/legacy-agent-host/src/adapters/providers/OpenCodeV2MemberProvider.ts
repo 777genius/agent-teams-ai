@@ -74,7 +74,8 @@ export function createOpenCodeV2MemberProvider(
       !selected.nativeSessionId || hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
-      selected.capturedMcpServers || selected.nativeOptions.toolApprovalMode !== undefined ||
+      selected.capturedMcpServers || selected.capturedMcpSource ||
+      selected.mcpCatalogSource || selected.nativeOptions.toolApprovalMode !== undefined ||
       (selected.extraArgs?.length ?? 0) !== 0)
     throw new Error('OpenCode V2 requires a separate native profile and owner');
 

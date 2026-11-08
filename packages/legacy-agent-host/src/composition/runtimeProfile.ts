@@ -234,6 +234,8 @@ export const runtimeProfileSchema = z
           !!member.nativeSessionId && !hasUntrustedOpenCodeBinaryOverride(member.environment) &&
           member.mcpPolicyPlugin === undefined &&
           member.capturedMcpServers === undefined &&
+          member.capturedMcpSource === undefined &&
+          member.mcpCatalogSource === undefined &&
           member.nativeOptions.toolApprovalMode === undefined &&
           (member.extraArgs?.length ?? 0) === 0
         : member.protocolRevision === '1.18.35' || member.protocolRevision === '1.19.4')
