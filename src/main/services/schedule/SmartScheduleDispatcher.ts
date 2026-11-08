@@ -98,6 +98,18 @@ export class SmartScheduleDispatcher {
     if (schedule.executionMode !== 'agent' && schedule.executionMode !== 'team') {
       throw new Error('Unsupported schedule execution mode');
     }
+    // Check outstanding task-first work before any early skip. That carries
+    // its task ID through arbitrarily many skipped runs, despite 50-run
+    // history retention, without a second database or queue.
+    if (schedule.taskFirst) {
+      const outstanding = await this.findOutstandingTask(schedule, runId);
+      if (outstanding) {
+        return skipped(
+          `Previous task #${outstanding.displayId || outstanding.id} is still active`,
+          outstanding.id
+        );
+      }
+    }
     if (!schedule.launchConfig.prompt.trim()) {
       return skipped('Scheduled instructions are empty; no action was submitted');
     }
@@ -159,28 +171,30 @@ export class SmartScheduleDispatcher {
     }
   }
 
-  private async dispatchTaskFirst(
-    schedule: Schedule,
-    runId: string,
-    isCancelled: () => boolean
-  ): Promise<SmartScheduleOutcome> {
-    const { getPreviousRuns, getTask, hasRunnableConfig, startTaskByUser } = this.runtime;
-    if (!getPreviousRuns || !getTask || !hasRunnableConfig || !startTaskByUser) {
-      return skipped('Task-first scheduling is unavailable in this runtime');
-    }
-
-    // A crash may leave a task without a linked receipt, and skipped occurrences
-    // have no task at all. Examine bounded run history, never just the latest tick.
+  private async findOutstandingTask(schedule: Schedule, runId: string): Promise<TeamTask | null> {
+    const { getPreviousRuns, getTask } = this.runtime;
+    if (!getPreviousRuns || !getTask) return null;
     const priorRuns = await getPreviousRuns(schedule.id, runId);
     const seenTasks = new Set<string>();
     for (const previous of priorRuns) {
       const taskId = previous.linkedTaskId ?? previous.id;
       if (seenTasks.has(taskId)) continue;
       seenTasks.add(taskId);
-      const prior = await getTask(schedule.teamName, taskId);
-      if (prior && prior.status !== 'completed' && prior.status !== 'deleted') {
-        return skipped(`Previous task #${prior.displayId || prior.id} is still active`, prior.id);
-      }
+      // Run IDs double as task command UUIDs after an interrupted write.
+      const task = await getTask(schedule.teamName, taskId);
+      if (task && task.status !== 'completed' && task.status !== 'deleted') return task;
+    }
+    return null;
+  }
+
+  private async dispatchTaskFirst(
+    schedule: Schedule,
+    runId: string,
+    isCancelled: () => boolean
+  ): Promise<SmartScheduleOutcome> {
+    const { hasRunnableConfig, startTaskByUser } = this.runtime;
+    if (!this.runtime.getPreviousRuns || !this.runtime.getTask || !hasRunnableConfig || !startTaskByUser) {
+      return skipped('Task-first scheduling is unavailable in this runtime');
     }
     if (isCancelled() || this.runtime.isTeamBusy(schedule.teamName)) {
       return skipped('Team lifecycle changed before task assignment');
