@@ -2362,7 +2362,7 @@ export class TeamDataService {
     admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
   ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
-    const task = tasks.find((t) => t.id === taskId);
+    let task = tasks.find((t) => t.id === taskId);
     if (!task) {
       throw new Error(`Task #${taskId} not found`);
     }
@@ -2375,10 +2375,11 @@ export class TeamDataService {
         throw new Error('Scheduled task start superseded');
       }
       // The admission check awaits runtime I/O: task state may change in the meantime.
-      const latestTask = this.getTaskBoard(teamName).getTask(taskId) as TeamTask;
-      if (latestTask.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
+      const latestTask = this.getTaskBoard(teamName).getTask(taskId) as TeamTask | null;
+      if (!latestTask || latestTask.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
         throw new Error('Scheduled task start superseded');
       }
+      task = latestTask; // Notify using the actual post-admission task contents.
     }
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
