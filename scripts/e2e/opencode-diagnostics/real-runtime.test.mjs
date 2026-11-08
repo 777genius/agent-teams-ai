@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { verifyRealProviderCountResponse } from './real-runtime.mjs';
+import {
+  hasOneVisibleOpenCodeConnection,
+  verifyRealProviderCountResponse,
+} from './real-runtime.mjs';
 
 function connected(overrides = {}) {
   return {
@@ -37,5 +40,23 @@ test('misreported metadata, missing provider and partial responses fail closed',
       { providerId: 'Deepinfra', state: 'connected' }], totalCount: 2, returnedCount: 2 }),
   ]) {
     assert.throws(() => verifyRealProviderCountResponse(response));
+  }
+});
+
+test('real Settings header proof is independent of localized labels', () => {
+  for (const label of [
+    'OpenCode · Providers: 1 connected',
+    'OpenCode · Провайдеры: 1 подключён',
+    'OpenCode · Fournisseurs : 1 connecté',
+  ]) {
+    assert.equal(hasOneVisibleOpenCodeConnection(label), true);
+  }
+  for (const label of [
+    'OpenCode · unknown',
+    'OpenCode · Providers: 0 connected',
+    'OpenCode · Providers: 11 connected',
+    'Other runtime · Providers: 1 connected',
+  ]) {
+    assert.equal(hasOneVisibleOpenCodeConnection(label), false);
   }
 });

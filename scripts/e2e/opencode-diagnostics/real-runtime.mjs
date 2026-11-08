@@ -102,6 +102,13 @@ export function verifyRealProviderCountResponse(directory) {
   return identities.length;
 }
 
+/** The exact OpenCode count element has one numeric count in every locale. */
+export function hasOneVisibleOpenCodeConnection(text) {
+  if (typeof text !== 'string' || !text.trim().startsWith('OpenCode')) return false;
+  const numericTokens = text.match(/\\d+/g);
+  return numericTokens?.length === 1 && numericTokens[0] === '1';
+}
+
 export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
   let header = '';
@@ -109,10 +116,10 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     header = await evaluate(
       "document.querySelector('[data-testid=\"dashboard-opencode-provider-count\"]')?.textContent || ''"
     );
-    if (/OpenCode.*Providers:\s*1 connected/i.test(header)) break;
+    if (hasOneVisibleOpenCodeConnection(header)) break;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  assert.match(header, /OpenCode.*Providers:\s*1 connected/i,
+  assert(hasOneVisibleOpenCodeConnection(header),
     'Real runtime connected count was not shown in the Settings header');
 
   // This invokes Electron preload → IPC → main CLI client → genuine published
