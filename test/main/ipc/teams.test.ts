@@ -1,5 +1,6 @@
 import { TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
+import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
   beginOpenCodeStartupRuntimeSweep,
@@ -1097,6 +1098,37 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).not.toHaveBeenCalled();
     }
   );
+
+  it('passes only a proven preflight collision through the exact legacy Create config channel', async () => {
+    service.createTeamConfig.mockRejectedValueOnce(new TeamDraftPreflightCollisionError('test-created'));
+    const result = await handlers.get(TEAM_CREATE_CONFIG)!({ sender: {} } as never, {
+      teamName: 'test-created',
+      members: [],
+      cwd: os.tmpdir(),
+    });
+    expect(result).toMatchObject({
+      success: false,
+      error: 'Team already exists: test-created',
+      failure: {
+        kind: 'captured-team-create-refusal',
+        code: 'conflict',
+        outcome: 'not-dispatched',
+      },
+    });
+    expect(service.createTeamConfig).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a post-allocation duplicate-name failure unqualified', async () => {
+    service.createTeamConfig.mockRejectedValueOnce(new Error('Team already exists: test-created'));
+    const result = await handlers.get(TEAM_CREATE_CONFIG)!({ sender: {} } as never, {
+      teamName: 'test-created',
+      members: [],
+      cwd: os.tmpdir(),
+    });
+    expect(result).toMatchObject({ success: false, error: 'Team already exists: test-created' });
+    expect(result).not.toHaveProperty('failure');
+    expect(service.createTeamConfig).toHaveBeenCalledOnce();
+  });
 
   it.each([TEAM_CREATE, TEAM_CREATE_CONFIG])(
     'does not brand postdispatch legacy failure for %s',
