@@ -21,14 +21,17 @@ const { applyLaunchConfiguration } = await import(sourceMode
   : '../dist/composition/launchConfiguration.js');
 
 function v2Profile() {
+  const windows = process.platform === 'win32';
+  const separator = windows ? String.fromCharCode(92) : '/';
+  const root = windows ? 'C:' + separator + 'TEST-only-opencode-v2' : '/TEST-only-opencode-v2';
   return {
     provider: 'opencode' as const,
     nativeGeneration: 'v2' as const,
     protocolRevision: '2.0.21' as const,
-    cwd: '/TEST-only-opencode-v2',
+    cwd: root,
     environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
-      .map(key => [key, '/TEST-only-opencode-v2/' + key])),
-    executable: { path: '/TEST-only-opencode-v2/native-engine', sha256: 'a'.repeat(64) },
+      .map(key => [key, root + separator + key])),
+    executable: { path: root + separator + 'native-engine', sha256: 'a'.repeat(64) },
     teamId: 'test-team',
     memberId: 'test-member',
     principalId: 'test-principal',
@@ -44,6 +47,17 @@ function v2Profile() {
       outputEvents: 100, pendingInteractions: 2, timeoutMs: 1000,
     },
     nativeOptions: { providerId: 'TEST-provider', agent: 'build' },
+  };
+}
+
+// The existing V1 capture stays POSIX-only even on Windows.
+function v1Profile() {
+  return {
+    ...v2Profile(), nativeGeneration: undefined, protocolRevision: '1.19.4' as const,
+    nativeSessionId: undefined, cwd: '/TEST-only-opencode-v2',
+    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+      .map(key => [key, '/TEST-only-opencode-v2/' + key])),
+    executable: { path: '/TEST-only-opencode-v2/native-engine', sha256: 'a'.repeat(64) },
   };
 }
 
@@ -121,8 +135,8 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
   ]) assert.equal(runtimeProfileSchema.safeParse({ members: [invalid] }).success, false,
     JSON.stringify(invalid));
   assert.equal(runtimeProfileSchema.safeParse({ members: [
-    { ...valid, nativeGeneration: undefined, protocolRevision: '1.19.4', nativeSessionId: undefined,
-      environment: { ...valid.environment, OPENCODE_BIN_PATH: '/TEST-only-V1-legacy-path' } },
+    { ...v1Profile(),
+      environment: { ...v1Profile().environment, OPENCODE_BIN_PATH: '/TEST-only-V1-legacy-path' } },
   ] }).success, true, 'unchanged V1 default remains valid');
 });
 
@@ -156,8 +170,7 @@ test('native V2 captures canonical OS paths without widening legacy V1 paths', (
   if (windows) {
     assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, false,
       'do not expand legacy V1 path policy for Windows');
-    const v1Posix = { ...legacy, cwd: base.cwd, executable: base.executable,
-      environment: base.environment };
+    const v1Posix = v1Profile();
     assert.equal(runtimeProfileSchema.safeParse({ members: [v1Posix] }).success, true);
   } else {
     assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true);
@@ -178,10 +191,7 @@ test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
   assert.equal(selected.nativeOptions.toolApprovalMode, undefined,
     'V2 model choice must not inject V1 approval semantics');
 
-  const v1 = runtimeProfileSchema.parse({ members: [{
-    ...v2Profile(), nativeGeneration: undefined, protocolRevision: '1.19.4',
-    nativeSessionId: undefined,
-  }] }).members[0]!;
+  const v1 = runtimeProfileSchema.parse({ members: [v1Profile()] }).members[0]!;
   const legacyChoice = applyLaunchConfiguration(v1, { permissions: 'manual' });
   assert.equal(legacyChoice.provider, 'opencode');
   if (legacyChoice.provider !== 'opencode') throw new Error('Expected OpenCode profile');
