@@ -2485,12 +2485,10 @@ export const CreateTeamDialog = ({
                 promptDraft.setValue(draft.prompt ?? '');
                 // Template prompts have no file-mention chips; retire old references.
                 promptChipDraft.clearChipDraft();
-                setMembers(
-                  buildInitialRosterMemberDrafts({
-                    copiedMembers: draft.members,
-                    multimodelEnabled: true,
-                  })
-                );
+                setMembers(buildInitialRosterMemberDrafts({
+                  copiedMembers: draft.members,
+                  multimodelEnabled: true,
+                }));
               }}
             />
             <TeamRosterEditorSection
