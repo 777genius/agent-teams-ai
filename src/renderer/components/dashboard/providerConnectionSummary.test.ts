@@ -157,6 +157,23 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     }).openCodeConnected).toBeNull();
   });
 
+  it('discards a project count if global credentials are reobserved more recently', () => {
+    const nowMs = Date.parse('2026-11-08T13:10:00Z');
+    expect(getDashboardConnectionSummary({
+      ...input,
+      projectPath: '/work/project',
+      projectDirectory: null, // Scoped directory remains unknown
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
+      observedOpenCodeCount: {
+        connected: 7,
+        runtimeRevision: revision,
+        source: 'summary-connected',
+        fetchedAt: new Date(nowMs - 30_000).toISOString(),
+      },
+      nowMs,
+    }).openCodeConnected).toBeNull();
+  });
+
   it('prefers a newer complete full directory over an earlier filtered observation', () => {
     const nowMs = Date.parse('2026-11-08T12:00:00Z');
     expect(getDashboardConnectionSummary({

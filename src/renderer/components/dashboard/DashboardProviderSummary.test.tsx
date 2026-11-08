@@ -41,7 +41,9 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 vi.mock('@renderer/utils/providerReadiness', () => ({
-  hasEffectiveProviderLaunchAuthority: (provider: { providerId: string }) => provider.providerId === 'gemini',
+  hasEffectiveProviderLaunchAuthority: (provider: { providerId: string; modelCatalog?: { staleAt: string } }) =>
+    provider.providerId === 'gemini' ||
+    (provider.modelCatalog !== undefined && Date.parse(provider.modelCatalog.staleAt) > Date.now()),
 }));
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (s: typeof state) => unknown) => selector(state),
@@ -113,6 +115,33 @@ describe('DashboardProviderSummary (passive)', () => {
       expect(state.loadModels).not.toHaveBeenCalled();
     } finally {
       await act(async () => root.unmount());
+    }
+  });
+
+  it('expires the ready heading when model evidence expires without background IPC', async () => {
+    vi.useFakeTimers();
+    const now = Date.parse('2026-11-08T13:00:00Z');
+    vi.setSystemTime(now);
+    state.cliStatus = {
+      installed: true, flavor: 'agent_teams_orchestrator',
+      providers: [{
+        providerId: 'anthropic', authenticated: true,
+        modelCatalog: { staleAt: new Date(now + 1000).toISOString() },
+      }],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.textContent).toContain('cliStatus.provider.readyToRunAgents');
+      await act(async () => { await vi.advanceTimersByTimeAsync(1015); });
+      expect(host.textContent).not.toContain('cliStatus.provider.readyToRunAgents');
+      expect(state.loadProviderDirectory).not.toHaveBeenCalled();
+      expect(state.loadModels).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
     }
   });
 
