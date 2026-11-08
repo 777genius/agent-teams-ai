@@ -1,7 +1,7 @@
 import { TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
-import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
+import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
 import {
   beginOpenCodeStartupRuntimeSweep,
   OpenCodeStartupCleanupBusyError,
