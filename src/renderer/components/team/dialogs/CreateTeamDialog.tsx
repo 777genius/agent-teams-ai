@@ -527,17 +527,14 @@ export const CreateTeamDialog = ({
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
   }, []);
-
   const setSkipPermissions = useCallback((value: boolean): void => {
     setSkipPermissionsRaw(value);
     setStoredCreateTeamSkipPermissions(value);
   }, []);
-
   const setSelectedEffort = useCallback((value: string): void => {
     setSelectedEffortRaw(value);
     setStoredCreateTeamEffort(value);
   }, []);
-
   const setSelectedFastMode = useCallback((value: TeamFastMode): void => {
     setSelectedFastModeRaw(value);
     setStoredCreateTeamFastMode(value);
@@ -545,7 +542,6 @@ export const CreateTeamDialog = ({
   const enableWorkflowMentionSuggestions = useCallback((): void => {
     setWorkflowMentionSuggestionsEnabled(true);
   }, []);
-
   const setWorktreeEnabled = (value: boolean): void => {
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
