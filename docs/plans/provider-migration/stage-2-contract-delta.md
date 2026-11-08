@@ -129,6 +129,17 @@ Exact reviewed sources:
   the recorded scoped author review is not an independent approval and CodeQL
   has no confirmed exact-HEAD receipt. #259 remains Draft; no production Host,
   owner replacement, M01–M19 parity, or Desktop cutover is authorized.
+  **Additional bounded M08 SQL feasibility (8 Nov 2026):** Runtime
+  [stacked Draft #260](https://github.com/agent-teams-ai/agent-runtime/pull/260)
+  [`6e48a1f81ee7`](https://github.com/agent-teams-ai/agent-runtime/commit/6e48a1f81ee7163342c6f1f7dc8dd034f132dcee)
+  tests a disposable pre-effect PostgreSQL unique-claim spike: two distinct
+  SQL backends admit exactly one winner, and a second claim after COMMIT with
+  intentionally lost application ACK remains blocked. [Native PG18 Node
+  24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42523220834)
+  reached the final unchanged M08 RED oracle on each job (33 PASS, 1 deliberate
+  FAIL, 0 skipped). This is **only SQL feasibility**, not a production
+  admission/route/generation owner; the independent Host B still redispatches.
+  [Exact-head limitations](https://github.com/agent-teams-ai/agent-runtime/pull/260#issuecomment-6727117034).
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
