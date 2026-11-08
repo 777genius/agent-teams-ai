@@ -143,14 +143,17 @@ export function validateCustomThemes(value: unknown): CustomTheme[] {
       }
     }
     const palette = colors as ThemePalette;
-    if (contrastRatio(palette.text, palette.surface) < 4.5) {
-      throw new Error(`${label}: text must contrast at least 4.5:1 with surface`);
-    }
-    if (contrastRatio(palette.textSecondary, palette.surface) < 4.5) {
-      throw new Error(`${label}: secondary text must contrast at least 4.5:1 with surface`);
-    }
-    if (contrastRatio(palette.accent, palette.surface) < 3) {
-      throw new Error(`${label}: accent must contrast at least 3:1 with surface`);
+    for (const surface of ['surface', 'surfaceRaised', 'surfaceOverlay', 'surfaceSidebar'] as const) {
+      for (const foreground of ['text', 'textSecondary'] as const) {
+        if (contrastRatio(palette[foreground], palette[surface]) < 4.5) {
+          throw new Error(`${label}: ${foreground} needs 4.5:1 contrast against ${surface}`);
+        }
+      }
+      for (const foreground of ['textMuted', 'accent'] as const) {
+        if (contrastRatio(palette[foreground], palette[surface]) < 3) {
+          throw new Error(`${label}: ${foreground} needs 3:1 contrast against ${surface}`);
+        }
+      }
     }
     return { id, name: name.trim(), base, colors: { ...palette } };
   });
