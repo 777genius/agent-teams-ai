@@ -231,7 +231,7 @@ export async function settledGroupMembers(
 }
 
 /**
- * macOS ps shows a just-exited Node child as "(node)" instead of its original
+ * macOS ps shows a just-exited Node child as "(node)" or "<defunct>" instead of its original
  * command. Authorize TEST process-group cleanup only while the captured leader
  * is still an unreaped zombie owned by this exact harness. A changed live
  * process, PID reuse, or an orphaned group must never pass this guard.
@@ -264,7 +264,7 @@ export function isCapturedOriginalNodeZombie(input: {
     expected &&
     observed &&
     expected[1] === observed[1] &&
-    observed[2] === '(node)' &&
+    (observed[2] === '(node)' || observed[2] === '<defunct>') &&
     /(?:^|\/)node\s+/.test(expected[2]!) &&
     /(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!)
   );

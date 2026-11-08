@@ -170,12 +170,20 @@ test('macOS original Node zombie is the same unreaped harness child, never a cha
     platform: 'darwin' as const,
   };
   assert.equal(isCapturedOriginalNodeZombie(good), true);
+  assert.equal(
+    isCapturedOriginalNodeZombie({
+      ...good,
+      observedIdentity: 'Sun Nov  8 01:17:47 2026     <defunct>',
+    }),
+    true,
+    'the original macOS defunct wrapper requires the same Z/parent/birth/custody proof'
+  );
   const invalid = [
     { state: 'S' }, // A live renamed process is never enough.
     { state: 'R+' },
     { observedIdentity: 'Sun Nov  8 01:17:48 2026     (node)' },
     { observedIdentity: 'Sun Nov  8 01:17:47 2026     /different/node' },
-    { observedIdentity: 'Sun Nov  8 01:17:47 2026     <defunct>' },
+    { observedIdentity: 'Sun Nov  8 01:17:47 2026     (foreign)' },
     { childPid: 5000 },
     { group: 5000 },
     { leader: { pid: 4096, ppid: 1, pgid: 4096 } },
