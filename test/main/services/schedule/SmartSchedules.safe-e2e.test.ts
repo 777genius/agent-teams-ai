@@ -206,6 +206,36 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(savedSchedule?.taskFirst).toBe(true);
   });
 
+  it('carries the unfinished task through more skips than the retained run history', async () => {
+    const unfinished = { id: 'e2e-task', subject: 'Long-running work', status: 'in_progress' } as TeamTask;
+    port.getPreviousRuns = async (id, runId) =>
+      (await repository.listRuns(id, { limit: 50 })).filter((run) => run.id !== runId);
+    port.getTask = vi.fn(async (_team, id) => id === unfinished.id ? unfinished : null);
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
+
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'team', taskFirst: true,
+    });
+    await scheduler.triggerNow(schedule.id);
+    await waitForRun(schedule.id, 'dispatched');
+    port.isTeamLaunching = vi.fn(() => true);
+    for (let i = 0; i < 53; i++) {
+      await scheduler.triggerNow(schedule.id);
+      const run = await waitForRun(schedule.id, 'skipped');
+      expect(run.linkedTaskId).toBe(unfinished.id);
+    }
+    const history = await repository.listRuns(schedule.id);
+    expect(history).toHaveLength(50);
+    expect(history.every((run) => run.linkedTaskId === unfinished.id)).toBe(true);
+    expect(port.createTask).toHaveBeenCalledOnce();
+
+    port.isTeamLaunching = vi.fn(() => false);
+    await scheduler.triggerNow(schedule.id);
+    expect((await waitForRun(schedule.id, 'skipped')).linkedTaskId).toBe(unfinished.id);
+    expect(port.createTask).toHaveBeenCalledOnce();
+  }, 20_000);
+
   it('creates a pending task before starting an inactive saved team without its old prompt', async () => {
     let live = false;
     port.isTeamAlive = vi.fn(() => live);
