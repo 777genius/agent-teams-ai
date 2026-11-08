@@ -30,6 +30,10 @@ on:
       - 'scripts/prepare-cpu-features-rebuild.cjs'
       - 'scripts/postinstall-electron.cjs'
       - 'src/main/ipc/window.ts'
+      # Host/V2 source or pinned provider archive changes invalidate packaged app proof.
+      # These tests verify packaging only; they do not qualify a V2 model turn.
+      - 'packages/legacy-agent-host/**'
+      - 'vendor/provider-migration/**'
 
 permissions:
   contents: read
