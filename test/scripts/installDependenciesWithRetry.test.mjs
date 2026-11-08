@@ -45,6 +45,26 @@ describe('install-dependencies-with-retry', () => {
     assert.equal(isRetryableInstallFailure(output), true);
   });
 
+  it('retries colored workspace warnings followed by transient download failures', () => {
+    for (const output of [
+      '\x1b[33m[WARN]\x1b[39m Unsupported engine: wanted node 24\\nHTTPError: Response code 504',
+      '[WARN] \x1b[33mUnsupported engine\x1b[39m\\nHTTPError: Response code 504',
+      'HTTPError: Response code \x1b[31m504\x1b[39m',
+    ]) {
+      assert.equal(isRetryableInstallFailure(output), true);
+    }
+  });
+
+  it('keeps colored deterministic failures terminal even after an HTTP 5xx', () => {
+    for (const output of [
+      'HTTPError: Response code 503\\n\x1b[31mERR_PNPM_UNSUPPORTED_ENGINE\x1b[0m',
+      'HTTPError: Response code 503\\n\x1b[31mHTTPError: Response code 404\x1b[0m',
+      '\x1b[33mUnsupported engine\x1b[0m\\nHTTPError: Response code 504',
+    ]) {
+      assert.equal(isRetryableInstallFailure(output), false);
+    }
+  });
+
   it('preserves hard unsupported-engine failures even after a network error', () => {
     for (const output of [
       'HTTPError: Response code 503\nERR_PNPM_UNSUPPORTED_ENGINE: Unsupported engine',
