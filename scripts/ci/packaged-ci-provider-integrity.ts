@@ -11,7 +11,14 @@ const SELECTED = [
 /** Reject stale cached installations if a selected local tarball changed without its lock. */
 export function verifySelectedProviderArchives(root: string): void {
   const lock = readFileSync(resolve(root, 'pnpm-lock.yaml'), 'utf8');
-  const providerRoot = realpathSync(resolve(root, 'vendor/provider-migration'));
+  // A redirect of vendor/ or provider-migration/ can make an archive outside
+  // the checked-in vendor tree appear valid even with a matching locked hash.
+  // Only the caller's trusted repository root may be canonicalized elsewhere.
+  const vendorPath = resolve(root, 'vendor');
+  const providerPath = resolve(vendorPath, 'provider-migration');
+  if (!lstatSync(vendorPath).isDirectory() || !lstatSync(providerPath).isDirectory())
+    throw new Error('Unsafe provider archive root');
+  const providerRoot = realpathSync(providerPath);
 
   for (const name of SELECTED) {
     const entry = new RegExp(
