@@ -1511,7 +1511,17 @@
       "searchTeams": "teams ஐத் தேடு...",
       "selectTeam": "ஒரு team ஐத் தேர்ந்தெடு...",
       "team": "Team",
-      "title": "அட்டவணை"
+      "title": "அட்டவணை",
+      "execution": "செயல்படுத்தல்",
+      "legacyNotice": "ஏற்கனவே உள்ள ஒருமுறை அட்டவணை: சேமிப்பதால் அதன் பழைய செயல்பாடு மாறாது.",
+      "upgradeSmart": "ஸ்மார்ட் அட்டவணைக்கு மாறு",
+      "oneAgent": "ஒரு முகவர்",
+      "wholeTeam": "முழுக் குழு",
+      "target": "குழு இயங்கும்போது பணிபுரிபவர்",
+      "leadDefault": "குழுத் தலைவர் (இயல்புநிலை)",
+      "agentDescription": "குழு நிறுத்தப்பட்டிருந்தால் தனி முகவரை இயக்கும்; இயங்கினால் பணியை ஒதுக்கும்.",
+      "teamDescription": "குழு நிறுத்தப்பட்டிருந்தால் சேமித்த குழுவைத் தொடங்கும்; இயங்கினால் தலைவருக்குப் பணியை ஒதுக்கும். சேமித்த அமைப்புகளைப் பயன்படுத்தும்.",
+      "teamPathMissing": "தொடக்கத்தைத் திட்டமிடும் முன் குழுவின் திட்டக் கோப்புறையைச் சேமிக்கவும்."
     },
     "title": {
       "createSchedule": "அட்டவணையை உருவாக்கு",
@@ -2134,7 +2144,9 @@
       "completed": "முடிந்தது",
       "failed": "தோல்வி",
       "interrupted": "இடைநிறுத்தப்பட்டது",
-      "cancelled": "ரத்துசெய்யப்பட்டது"
+      "cancelled": "ரத்துசெய்யப்பட்டது",
+      "dispatched": "ஒப்படைக்கப்பட்டது",
+      "skipped": "தவிர்க்கப்பட்டது"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} மறைக்கப்பட்டது",
       "trash": "Trash",
       "gridView": "Grid view",
-      "columnsView": "Columns view"
+      "columnsView": "Columns view",
+      "tableView": "அட்டவணைக் காட்சி",
+      "configureColumns": "நெடுவரிசைகளைத் தேர்ந்தெடுக்கவும்",
+      "resizeColumn": "{{column}} அகலத்தை மாற்று"
     },
     "trash": {
       "title": "Trash",

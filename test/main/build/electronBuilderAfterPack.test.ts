@@ -61,6 +61,18 @@ function createPortableExecutableBuffer(arch: 'arm64' | 'ia32' | 'x64'): Buffer 
   return buffer;
 }
 
+function createClrManagedGitLibrary(arch: 'ia32' | 'arm64' = 'ia32'): Buffer {
+  const buffer = Buffer.alloc(512);
+  createPortableExecutableBuffer(arch).copy(buffer);
+  const optionalHeader = 0x80 + 24;
+  buffer.writeUInt16LE(0xe0, 0x80 + 20); // PE32 optional header
+  buffer.writeUInt16LE(0x10b, optionalHeader);
+  const clrDirectory = optionalHeader + 96 + 14 * 8;
+  buffer.writeUInt32LE(0x2000, clrDirectory); // CLR header RVA
+  buffer.writeUInt32LE(0x48, clrDirectory + 4); // CLR header size
+  return buffer;
+}
+
 function writePortableTreeSitterFixtures(
   graph: string,
   platform: 'linux' | 'darwin' | 'win32',
@@ -195,6 +207,99 @@ describe('electron-builder afterPack', () => {
       format: 'pe',
       archs: new Set(['x64']),
     });
+  });
+
+  it.each([
+    ['darwin', 'arm64'],
+    ['linux', 'x64'],
+    ['win32', 'arm64'],
+  ] as const)('recognizes Git Credential Manager CLR libraries but still rejects native x86 DLLs on %s-%s', async (platform, arch) => {
+    const root = createTempDir();
+    tempDirs.push(root);
+    const gitRoot = platform === 'darwin'
+      ? path.join(root, 'Agent Teams AI.app', 'Contents', 'Resources', 'git')
+      : path.join(root, 'resources', 'git');
+    const helperDir = platform === 'win32'
+      ? path.join(gitRoot, 'clangarm64', 'libexec', 'git-core')
+      : path.join(gitRoot, 'libexec', 'git-core');
+    writeFile(path.join(helperDir, 'Avalonia.Base.dll'), createClrManagedGitLibrary());
+    writeFile(path.join(helperDir, 'git-credential-manager.dll'), createClrManagedGitLibrary('arm64'));
+    writeFile(path.join(helperDir, 'ja', 'System.CommandLine.resources.dll'), createClrManagedGitLibrary());
+    expect(await validateNativeBinaries(root, platform, arch)).toEqual([]);
+
+    // Native x86 DLLs (no COM descriptor) must never be treated as portable.
+    writeFile(path.join(helperDir, 'native.dll'), createPortableExecutableBuffer('ia32'));
+    const mismatches = await validateNativeBinaries(root, platform, arch);
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0].path).toContain('native.dll');
+    expect(mismatches[0].format).toBe('pe');
+
+    // CLR code elsewhere in an app isn't a blanket architecture exception.
+    writeFile(path.join(root, 'untrusted.dll'), createClrManagedGitLibrary());
+    const next = await validateNativeBinaries(root, platform, arch);
+    expect(next).toHaveLength(2);
+  });
+
+  it('accepts portable CLR DLLs when verifying an installed macOS app directly', async () => {
+    const release = createTempDir();
+    tempDirs.push(release);
+    const app = path.join(release, 'Agent Teams AI.app');
+    writeFile(
+      path.join(app, 'Contents', 'Resources', 'git', 'libexec', 'git-core', 'Avalonia.Base.dll'),
+      createClrManagedGitLibrary()
+    );
+    expect(await validateNativeBinaries(app, 'darwin', 'arm64')).toEqual([]);
+  });
+
+  it('accepts only pinned Git-for-Windows CLR DLLs and the known 32-bit MSYS helper', async () => {
+    const release = createTempDir();
+    tempDirs.push(release);
+    const git = path.join(release, 'resources', 'git');
+    writeFile(
+      path.join(git, 'ucrt64', 'bin', 'Avalonia.Base.dll'),
+      createClrManagedGitLibrary()
+    );
+    writeFile(
+      path.join(git, 'usr', 'libexec', 'getprocaddr32.exe'),
+      createPortableExecutableBuffer('ia32')
+    );
+    expect(await validateNativeBinaries(release, 'win32', 'x64')).toEqual([]);
+    writeFile(
+      path.join(git, 'usr', 'libexec', 'unapproved32.exe'),
+      createPortableExecutableBuffer('ia32')
+    );
+    const mismatches = await validateNativeBinaries(release, 'win32', 'x64');
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0].path).toContain('unapproved32.exe');
+  });
+
+  it('allows only bundled MSYS2 x64 helper binaries on Windows ARM64', async () => {
+    const root = createTempDir();
+    tempDirs.push(root);
+    writeFile(
+      path.join(root, 'resources', 'git', 'usr', 'bin', 'diff3.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(root, 'resources', 'git', 'usr', 'lib', 'ssh', 'ssh-keysign.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(root, 'resources', 'git', 'clangarm64', 'bin', 'wrong.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    writeFile(
+      path.join(root, 'resources', 'foreign-helper.exe'),
+      createPortableExecutableBuffer('x64')
+    );
+    const mismatches = await validateNativeBinaries(root, 'win32', 'arm64');
+    expect(mismatches).toHaveLength(2);
+    expect(mismatches.map((item: { path: string }) => item.path)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('wrong.exe'),
+        expect.stringContaining('foreign-helper.exe'),
+      ])
+    );
   });
 
   it('prunes node-pty prebuilds that do not match the target platform and arch', async () => {

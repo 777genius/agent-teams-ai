@@ -95,6 +95,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'hasActiveTeamRuntimes',
   'hasLiveOpenCodeMcpConsumers',
   'hasProvisioningRun',
+  'hasTeamOperationInProgress',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
   'isTeamAlive',

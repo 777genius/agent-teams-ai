@@ -1511,7 +1511,17 @@
       "searchTeams": "搜寻队伍…",
       "selectTeam": "选择一个团队…",
       "team": "团队",
-      "title": "日程"
+      "title": "日程",
+      "execution": "执行方式",
+      "legacyNotice": "现有一次性计划任务：保存不会改变其原有行为。",
+      "upgradeSmart": "切换到智能计划",
+      "oneAgent": "单个智能体",
+      "wholeTeam": "整个团队",
+      "target": "团队运行时的执行者",
+      "leadDefault": "团队负责人（默认）",
+      "agentDescription": "团队未运行时单独启动智能体；团队运行时创建并分配任务。",
+      "teamDescription": "团队未运行时启动已保存的团队；运行时向负责人分配任务。使用已保存的提供商和项目设置。",
+      "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。"
     },
     "title": {
       "createSchedule": "创建计划任务",
@@ -2134,7 +2144,9 @@
       "completed": "完全的",
       "failed": "失败",
       "interrupted": "被打断",
-      "cancelled": "取消"
+      "cancelled": "取消",
+      "dispatched": "已派发",
+      "skipped": "已跳过"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} 隐藏",
       "trash": "垃圾",
       "gridView": "网格视图",
-      "columnsView": "列视图"
+      "columnsView": "列视图",
+      "tableView": "表格视图",
+      "configureColumns": "选择列",
+      "resizeColumn": "调整{{column}}列宽"
     },
     "trash": {
       "title": "垃圾",

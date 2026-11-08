@@ -1,0 +1,68 @@
+name: Electron dev profile cross-platform
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'src/main/utils/electronDevPathOverrides.ts'
+      - 'src/main/utils/electronDevPathOverrides.test.ts'
+      - 'src/main/utils/electronUserDataMigration.ts'
+      - 'test/main/utils/electronUserDataMigration.test.ts'
+      - 'test/main/bootstrapConfigIsolation.test.ts'
+      - 'src/main/bootstrapUserDataMigration.ts'
+      - 'src/main/index.ts'
+      - '.github/workflows/electron-dev-profile-cross-platform.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/main/utils/electronDevPathOverrides.ts'
+      - 'src/main/utils/electronDevPathOverrides.test.ts'
+      - 'src/main/utils/electronUserDataMigration.ts'
+      - 'test/main/utils/electronUserDataMigration.test.ts'
+      - 'test/main/bootstrapConfigIsolation.test.ts'
+      - 'src/main/bootstrapUserDataMigration.ts'
+      - 'src/main/index.ts'
+      - '.github/workflows/electron-dev-profile-cross-platform.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  profile-path-regressions:
+    name: Profile isolation (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Validate isolated profile and legacy migration
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          src/main/utils/electronDevPathOverrides.test.ts
+          test/main/utils/electronUserDataMigration.test.ts
+          test/main/services/infrastructure/ConfigManager.claudeRoot.test.ts
+          test/main/bootstrapConfigIsolation.test.ts

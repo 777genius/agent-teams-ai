@@ -1511,7 +1511,17 @@
       "searchTeams": "टीम्स शोधा...",
       "selectTeam": "एक टीम निवडा...",
       "team": "टीम",
-      "title": "वेळापत्रक"
+      "title": "वेळापत्रक",
+      "execution": "अंमलबजावणी",
+      "legacyNotice": "विद्यमान एकदाच चालणारे वेळापत्रक: जतन केल्याने जुने वर्तन बदलणार नाही.",
+      "upgradeSmart": "स्मार्ट वेळापत्रकावर जा",
+      "oneAgent": "एक एजंट",
+      "wholeTeam": "संपूर्ण टीम",
+      "target": "टीम सुरू असताना जबाबदार सदस्य",
+      "leadDefault": "टीम लीड (डीफॉल्ट)",
+      "agentDescription": "टीम बंद असेल तर स्वतंत्र एजंट सुरू करतो; सुरू असेल तर काम सोपवतो.",
+      "teamDescription": "टीम बंद असेल तर जतन केलेली टीम सुरू करतो; सुरू असेल तर लीडला काम सोपवतो. जतन केलेली सेटिंग्ज वापरतो.",
+      "teamPathMissing": "सुरू करण्याचे वेळापत्रक ठरवण्यापूर्वी टीमचा प्रकल्प फोल्डर जतन करा."
     },
     "title": {
       "createSchedule": "वेळापत्रक तयार करा",
@@ -2134,7 +2144,9 @@
       "completed": "पूर्ण",
       "failed": "अयशस्वी",
       "interrupted": "व्यत्यय आला",
-      "cancelled": "रद्द केले"
+      "cancelled": "रद्द केले",
+      "dispatched": "सोपवले",
+      "skipped": "वगळले"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} लपवले",
       "trash": "कचरा",
       "gridView": "ग्रिड दृश्य",
-      "columnsView": "स्तंभ दृश्य"
+      "columnsView": "स्तंभ दृश्य",
+      "tableView": "तक्ता दृश्य",
+      "configureColumns": "स्तंभ निवडा",
+      "resizeColumn": "{{column}} ची रुंदी बदला"
     },
     "trash": {
       "title": "कचरा",

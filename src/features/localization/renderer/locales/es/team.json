@@ -1511,7 +1511,17 @@
       "searchTeams": "Equipos de búsqueda...",
       "selectTeam": "Seleccione un equipo...",
       "team": "Equipo",
-      "title": "Cuadro"
+      "title": "Cuadro",
+      "execution": "Ejecución",
+      "legacyNotice": "Programación individual existente: guardar no cambia su funcionamiento.",
+      "upgradeSmart": "Cambiar a programación inteligente",
+      "oneAgent": "Un agente",
+      "wholeTeam": "Todo el equipo",
+      "target": "Destinatario cuando el equipo esté activo",
+      "leadDefault": "Líder del equipo (predeterminado)",
+      "agentDescription": "Si el equipo está detenido, ejecuta un agente independiente; si está activo, asigna una tarea.",
+      "teamDescription": "Si el equipo está detenido, lo inicia; si está activo, asigna una tarea al líder. Usa la configuración guardada.",
+      "teamPathMissing": "Guarda primero la carpeta del proyecto del equipo para programar su inicio."
     },
     "title": {
       "createSchedule": "Crear programa",
@@ -2134,7 +2144,9 @@
       "completed": "Completado",
       "failed": "Failed",
       "interrupted": "Interrupción",
-      "cancelled": "Cancelada"
+      "cancelled": "Cancelada",
+      "dispatched": "Enviado",
+      "skipped": "Omitido"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} oculto",
       "trash": "Trash",
       "gridView": "Vista a la parrilla",
-      "columnsView": "Vista de las columnas"
+      "columnsView": "Vista de las columnas",
+      "tableView": "Vista de tabla",
+      "configureColumns": "Elegir columnas",
+      "resizeColumn": "Cambiar ancho: {{column}}"
     },
     "trash": {
       "title": "Trash",

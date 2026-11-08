@@ -19,6 +19,7 @@ import {
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
+import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 
 import type { SchedulerService } from '../services/schedule/SchedulerService';
 import type {
@@ -59,6 +60,26 @@ async function wrapScheduleHandler<T>(
 // Handlers
 // =============================================================================
 
+/** Reject unsupported opt-in modes before they can change persisted scheduling behavior. */
+function validateSmartFields(input: {
+  executionMode?: unknown;
+  targetMember?: unknown;
+}): string | null {
+  if (
+    input.executionMode !== undefined &&
+    input.executionMode !== 'agent' &&
+    input.executionMode !== 'team'
+  ) {
+    return 'Invalid executionMode';
+  }
+  if (input.targetMember !== undefined) {
+    if (typeof input.targetMember !== 'string') return 'Invalid targetMember';
+    const name = input.targetMember.trim();
+    if (name && validateTeamMemberNameFormat(name)) return 'Invalid targetMember';
+  }
+  return null;
+}
+
 async function handleList(_event: IpcMainInvokeEvent): Promise<IpcResult<Schedule[]>> {
   return wrapScheduleHandler('list', () => getService().listSchedules());
 }
@@ -90,6 +111,8 @@ async function handleCreate(
   if (!inp.launchConfig.cwd || !inp.launchConfig.prompt) {
     return { success: false, error: 'launchConfig requires cwd and prompt' };
   }
+  const validationError = validateSmartFields(inp);
+  if (validationError) return { success: false, error: validationError };
   return wrapScheduleHandler('create', () => getService().createSchedule(inp));
 }
 
@@ -104,6 +127,8 @@ async function handleUpdate(
   if (!patch || typeof patch !== 'object') {
     return { success: false, error: 'patch must be an object' };
   }
+  const validationError = validateSmartFields(patch as UpdateSchedulePatch);
+  if (validationError) return { success: false, error: validationError };
   return wrapScheduleHandler('update', () =>
     getService().updateSchedule(id, patch as UpdateSchedulePatch)
   );

@@ -5,9 +5,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGitAvailable = vi.hoisted(() => vi.fn(async () => true));
-
 vi.mock('@main/utils/gitAvailability', () => ({
   canUseGitWithoutMacInstallerPrompt: mockGitAvailable,
+}));
+
+vi.mock('@main/utils/managedGit', () => ({
+  MANAGED_GIT_ENV_KEYS: ['PATH', 'GIT_EXEC_PATH', 'GIT_CONFIG_SYSTEM', 'GIT_SSL_CAINFO', 'PREFIX'],
+  createManagedGitEnv: (env: NodeJS.ProcessEnv) => ({ ...env }),
+  getManagedGitExecutable: () => 'git',
 }));
 
 // Mock simple-git
@@ -89,7 +94,16 @@ describe('GitStatusService', () => {
 
       expect(vi.mocked(simpleGit)).toHaveBeenCalledWith({
         baseDir: '/Users/test/project',
-        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
+        binary: 'git',
+        unsafe: { allowUnsafeCustomBinary: true },
+        allowEnvironment: [
+          'GIT_OPTIONAL_LOCKS',
+          'PATH',
+          'GIT_EXEC_PATH',
+          'GIT_CONFIG_SYSTEM',
+          'GIT_SSL_CAINFO',
+          'PREFIX',
+        ],
         timeout: { block: 10_000 },
       });
       expect(mockEnv).toHaveBeenCalledWith('GIT_OPTIONAL_LOCKS', '0');
@@ -97,13 +111,12 @@ describe('GitStatusService', () => {
   });
 
   describe('getStatus', () => {
-    it('skips background Git status when macOS Git is an unavailable installer shim', async () => {
+    it('never launches the Apple Git installer shim in developer mode', async () => {
       mockGitAvailable.mockResolvedValue(false);
       service.init('/Users/test/project');
-
-      const result = await service.getStatus();
-
-      expect(result).toEqual({ files: [], isGitRepo: false, branch: null });
+      await expect(service.getStatus()).resolves.toEqual({
+        files: [], isGitRepo: false, branch: null,
+      });
       expect(mockStatus).not.toHaveBeenCalled();
     });
 
