@@ -468,10 +468,19 @@ async function waitForProcessGroupExit(processGroupId, timeoutMs) {
     try {
       process.kill(-processGroupId, 0);
     } catch (error) {
-      if (error?.code === 'ESRCH' || error?.code === 'EPERM') return;
-      throw error;
+      if (error?.code === 'ESRCH') return true;
+      // EPERM proves a group may still exist; it never authorizes cleanup success.
+      if (error?.code !== 'EPERM') throw error;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  try {
+    process.kill(-processGroupId, 0);
+    return false;
+  } catch (error) {
+    if (error?.code === 'ESRCH') return true;
+    if (error?.code === 'EPERM') return false;
+    throw error;
   }
 }
 
@@ -490,18 +499,23 @@ async function cleanup(fixture) {
     } catch {
       appProcess?.kill('SIGKILL');
     }
-    await waitForProcessGroupExit(appProcessGroupId, 4_000);
+    if (!(await waitForProcessGroupExit(appProcessGroupId, 4_000))) {
+      throw new Error('Disposable Electron process group is still present after teardown');
+    }
   } else if (appProcess?.pid && process.platform === 'win32') {
     // Killing only cmd.exe leaves the child pnpm/Electron processes alive and
     // contaminates the second launch or the next CI job.
     const launcherPid = appProcess.pid;
-    await new Promise((resolve) => {
+    const killSucceeded = await new Promise((resolve, reject) => {
       const killer = spawn('taskkill', ['/PID', String(launcherPid), '/T', '/F'], {
         windowsHide: true, stdio: 'ignore',
       });
-      killer.once('error', resolve);
-      killer.once('close', resolve);
+      killer.once('error', reject);
+      killer.once('close', (exitCode) => resolve(exitCode === 0));
     });
+    if (!killSucceeded) {
+      throw new Error('Disposable Windows Electron process-tree termination unconfirmed');
+    }
   } else if (appProcess?.pid) {
     appProcess.kill('SIGKILL');
   }
@@ -515,7 +529,7 @@ async function cleanup(fixture) {
       } catch (error) {
         if (attempt === 7) {
           process.stderr.write(`Fixture cleanup failed: ${String(error)}\n`);
-          return;
+          throw error;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
@@ -594,6 +608,8 @@ async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
   let failure = null;
+  let cleanupFailure = null;
+  let qualifiedResult = null;
   const log = (step) => process.stdout.write(`STEP: ${step}\n`);
   const renderSnapshot = async (client) => {
     return client.evaluate(`(() => {
@@ -1007,7 +1023,7 @@ async function main() {
     );
     await captureScreenshot(cdp, fixture, 'organization-created');
 
-    const results = {
+    qualifiedResult = {
       success: true,
       unique,
       retainedAcrossBack: true,
@@ -1028,11 +1044,7 @@ async function main() {
       macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
       sandboxRoot: fixture.root,
     };
-    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
-    await mkdir(outDir, { recursive: true });
-    await writeFile(path.join(outDir, 'teams-create-page-result.json'),
-      JSON.stringify(results, null, 2));
-    process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+
   } catch (error) {
     failure = error;
     await dumpRenderer(cdp, 'teams-create-page-failure');
@@ -1040,9 +1052,28 @@ async function main() {
       try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }
     }
   } finally {
-    await cleanup(fixture);
+    try {
+      await cleanup(fixture);
+    } catch (error) {
+      cleanupFailure = error;
+    }
+  }
+  if (failure && cleanupFailure) {
+    throw new AggregateError([failure, cleanupFailure], 'Create Page E2E and cleanup both failed');
   }
   if (failure) throw failure;
+  if (cleanupFailure) throw cleanupFailure;
+  assert(qualifiedResult, 'Missing Create Page E2E proof');
+  qualifiedResult.cleanup = {
+    processGroupAbsent: process.platform !== 'win32' ? true : null,
+    windowsTaskkillExitedZero: process.platform === 'win32' ? true : null,
+    temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',
+  };
+  const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+  await mkdir(outDir, { recursive: true });
+  await writeFile(path.join(outDir, 'teams-create-page-result.json'),
+    JSON.stringify(qualifiedResult, null, 2));
+  process.stdout.write(JSON.stringify(qualifiedResult, null, 2) + '\n');
 }
 
 main().catch(async (error) => {
