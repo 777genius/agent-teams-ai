@@ -117,6 +117,7 @@ describe('runtimeProviderDirectoryCache', () => {
     const previousToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
     invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.connectedCountInvalidated).toBe(true);
     publishRuntimeProviderDirectoryCache({
       projectPath: '/tmp/project-a',
       entries: [{ ...providerEntry, state: 'not-connected' }],

@@ -197,6 +197,13 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     }).openCodeConnected).toBeNull();
   });
 
+  it('does not reuse full-directory counts after a credential mutation until a new validated read', () => {
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: { ...globalDirectory, connectedCountInvalidated: true },
+    }).openCodeConnected).toBeNull();
+  });
+
   it('does not claim an exact count when one cached directory entry has unresolved status', () => {
     expect(getDashboardConnectionSummary({
       ...input,

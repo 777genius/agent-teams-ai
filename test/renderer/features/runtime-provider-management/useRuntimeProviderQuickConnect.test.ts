@@ -256,7 +256,7 @@ describe('useRuntimeProviderQuickConnect', () => {
     all.directory!.nextCursor = '100';
     const connected = directoryResponse('openrouter');
     connected.directory!.filter = 'connected';
-    connected.directory!.entries[0] = { ...connected.directory!.entries[0], state: 'connected' };
+    connected.directory!.entries = [{ ...connected.directory!.entries[0], state: 'connected' }];
     connected.directory!.fetchedAt = new Date().toISOString();
     loadProviderDirectory.mockResolvedValueOnce(all).mockResolvedValueOnce(connected);
 

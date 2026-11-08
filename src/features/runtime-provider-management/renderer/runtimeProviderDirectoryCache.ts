@@ -6,6 +6,8 @@ export interface RuntimeProviderDirectoryCacheSnapshot {
   entries: readonly RuntimeProviderDirectoryEntryDto[];
   fetchedAt: string;
   authoritative: boolean;
+  /** Exact count evidence was invalidated by a credential mutation, even if rows stay mounted. */
+  connectedCountInvalidated?: boolean;
   totalCount?: number | null;
   nextCursor?: string | null;
   runtimeRevision?: string | null;
@@ -269,6 +271,7 @@ export function publishRuntimeProviderDirectoryCache({
     entries: nextEntries,
     fetchedAt: retainFullDirectory ? (current?.fetchedAt ?? fetchedAt) : fetchedAt,
     authoritative: retainFullDirectory ? true : authoritative,
+    connectedCountInvalidated: retainFullDirectory ? current?.connectedCountInvalidated : undefined,
     runtimeRevision: runtimeRevision ?? observedRuntimeRevision,
     ...(retainFullDirectory ? { lastSummaryFetchedAt: fetchedAt } : {}),
     ...(retainFullDirectory
@@ -294,6 +297,10 @@ export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: strin
   const scopeKey = getScopeKey(projectPath);
   generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
   connectedCountByScope.delete(scopeKey);
+  const currentScope = snapshotsByScope.get(scopeKey);
+  if (currentScope) {
+    touchScope(scopeKey, { ...currentScope, connectedCountInvalidated: true });
+  }
   notifyScope(scopeKey);
   if (scopeKey !== GLOBAL_SCOPE_KEY) return;
   // Fence even project requests that have not published a first snapshot.
@@ -305,7 +312,7 @@ export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: strin
     if (projectScope === GLOBAL_SCOPE_KEY || !snapshot.authoritative) continue;
     // Keep verified provider rows for display, but never present inherited
     // credentials as a fresh, authoritative project count after global logout.
-    snapshotsByScope.set(projectScope, { ...snapshot, authoritative: false });
+    snapshotsByScope.set(projectScope, { ...snapshot, authoritative: false, connectedCountInvalidated: true });
     notifyScope(projectScope);
   }
 }

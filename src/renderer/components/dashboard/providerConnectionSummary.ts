@@ -18,7 +18,7 @@ type MainProvider = Pick<
 
 type Directory = Pick<
   RuntimeProviderDirectoryCacheSnapshot,
-  'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor' | 'fetchedAt'
+  'authoritative' | 'connectedCountInvalidated' | 'runtimeRevision' | 'totalCount' | 'nextCursor' | 'fetchedAt'
 > & {
   entries: readonly Pick<RuntimeProviderDirectoryCacheSnapshot['entries'][number], 'providerId' | 'state'>[];
 };
@@ -65,6 +65,7 @@ function isCompleteDirectory(
       fetchedAt <= nowMs &&
       nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS &&
       directory?.authoritative &&
+      directory.connectedCountInvalidated !== true &&
       directory.runtimeRevision === runtimeRevision &&
       directory.totalCount !== undefined &&
       directory.totalCount !== null &&
