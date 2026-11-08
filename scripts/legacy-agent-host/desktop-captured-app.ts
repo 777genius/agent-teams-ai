@@ -360,13 +360,27 @@ export async function cleanupCapturedDesktopApp(options: {
           observedIdentity === appIdentity || originalZombie,
           'captured invocation identity remains current'
         );
+        let groupSignalPermissionError: unknown;
         try {
           process.kill(-group, 'SIGTERM');
         } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code === 'EPERM') {
+            // On macOS a group of exiting/zombie descendants may reject killpg.
+            // Never infer success from EPERM or send a second, broader signal.
+            // Only a fresh complete group-absence census can clear this debt.
+            groupSignalPermissionError = error;
+            evidence.originalGroupSignal = 'EPERM: observing actual group absence';
+          } else if (code !== 'ESRCH') {
+            throw error;
+          }
         }
         const deadline = Date.now() + 30_000;
         while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();
+        if (groupSignalPermissionError) {
+          if (remaining.length > 0) throw groupSignalPermissionError;
+          evidence.originalGroupSignal = 'EPERM followed by verified full group absence';
+        }
       }
     }
     capturedHostAbsent =
