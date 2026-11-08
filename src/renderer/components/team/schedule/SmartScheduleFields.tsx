@@ -30,6 +30,8 @@ interface SmartScheduleFieldsProps {
   onTimezoneChange: (value: string) => void;
   warmUpMinutes: number;
   onWarmUpMinutesChange: (value: number) => void;
+  /** Existing schedules retain their legacy selector and descriptions. */
+  taskFirst?: boolean;
 }
 
 /** Schedule-only controls: the shared team launch dialog remains untouched. */
@@ -50,13 +52,19 @@ export const SmartScheduleFields = ({
   onTimezoneChange,
   warmUpMinutes,
   onWarmUpMinutesChange,
+  taskFirst = false,
 }: SmartScheduleFieldsProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const leadName = team?.leadName?.trim() || 'team-lead';
   const savedTarget = targetMember.trim();
-  // Only normalize the picker display; saving without a selection preserves the original target.
-  const pickerTarget =
-    savedTarget && savedTarget.toLowerCase() === leadName.toLowerCase()
+  const hasTeammates = Boolean(
+    team?.members?.some((member) => member.name.trim().toLowerCase() !== leadName.toLowerCase())
+  );
+  // A new direct assignment must name a worker. The old "default lead"
+  // fallback remains untouched for persisted schedules and solo teams.
+  const pickerTarget = taskFirst && hasTeammates && !savedTarget
+    ? null
+    : savedTarget && savedTarget.toLowerCase() === leadName.toLowerCase()
       ? leadName
       : savedTarget || leadName;
   const recipientMembers = React.useMemo<ResolvedTeamMember[]>(() => {
@@ -71,6 +79,7 @@ export const SmartScheduleFields = ({
     const seen = new Set<string>();
     return members.flatMap((member) => {
       const name = member.name.trim();
+      if (taskFirst && hasTeammates && name === leadName) return [];
       const key = name.toLowerCase();
       if (!name || seen.has(key)) return [];
       if (name !== leadName && validateTeamMemberNameFormat(name)) return [];
@@ -87,7 +96,7 @@ export const SmartScheduleFields = ({
         messageCount: 0,
       }];
     });
-  }, [leadName, team]);
+  }, [hasTeammates, leadName, taskFirst, team]);
   const missingSavedMember = Boolean(
     savedTarget && team && !recipientMembers.some((member) => member.name === pickerTarget)
   );
@@ -106,7 +115,7 @@ export const SmartScheduleFields = ({
           : 'var(--color-surface-overlay)',
       }}
     >
-      <button
+      {!taskFirst ? <button
         type="button"
         className="flex w-full items-center gap-1.5 px-3 py-2 text-left"
         onClick={onToggle}
@@ -124,7 +133,7 @@ export const SmartScheduleFields = ({
             {label || cronExpression}
           </span>
         ) : null}
-      </button>
+      </button> : null}
       {expanded ? (
       <div className="space-y-3 border-t border-[var(--color-border)] px-3 pb-3 pt-2">
         <div className="space-y-1.5">
@@ -158,16 +167,18 @@ export const SmartScheduleFields = ({
         {mode === 'agent' ? (
           <>
             <Label className="text-xs">
-              {t('launch.schedule.target')}
+              {t(taskFirst ? 'tasks.createTask.assignee' : 'launch.schedule.target')}
             </Label>
             <MemberSelect
               members={recipientMembers}
               value={pickerTarget}
               onChange={(name) => onTargetMemberChange(name === leadName ? '' : (name ?? ''))}
               placeholder={
-                savedTarget && !recipientMembers.some((member) => member.name === pickerTarget)
-                  ? savedTarget
-                  : t('launch.schedule.leadDefault')
+                taskFirst && hasTeammates && !savedTarget
+                  ? t('tasks.createTask.selectMember')
+                  : savedTarget && !recipientMembers.some((member) => member.name === pickerTarget)
+                    ? savedTarget
+                    : t('launch.schedule.leadDefault')
               }
               getMemberLabel={(member) =>
                 member.name === leadName ? t('launch.schedule.leadDefault') : member.name
@@ -186,16 +197,16 @@ export const SmartScheduleFields = ({
               </p>
             ))}
             <p className="text-[11px] text-[var(--color-text-muted)]">
-              {t('launch.schedule.agentDescription')}
+              {t(taskFirst ? 'schedule.taskFirstAgentDescription' : 'launch.schedule.agentDescription')}
             </p>
           </>
         ) : mode === 'team' ? (
           <p className="text-[11px] text-[var(--color-text-muted)]">
-            {t('launch.schedule.teamDescription')}
+            {t(taskFirst ? 'schedule.taskFirstTeamDescription' : 'launch.schedule.teamDescription')}
           </p>
         ) : null}
       </div>
-      <div className="space-y-1.5">
+      {!taskFirst ? <div className="space-y-1.5">
         <Label htmlFor="schedule-label" className="label-optional">
           {t('launch.schedule.labelOptional')}
         </Label>
@@ -206,9 +217,10 @@ export const SmartScheduleFields = ({
           onChange={(event) => onLabelChange(event.target.value)}
           placeholder={t('launch.schedule.labelPlaceholder')}
         />
-      </div>
+      </div> : null}
       <CronScheduleInput
         showWarmUp={mode === 'legacy'}
+        compact={taskFirst}
         cronExpression={cronExpression}
         onCronExpressionChange={onCronExpressionChange}
         timezone={timezone}
