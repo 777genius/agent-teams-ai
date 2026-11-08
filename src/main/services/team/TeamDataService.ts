@@ -2355,11 +2355,12 @@ export class TeamDataService {
     return { notifiedOwner: !!task.owner };
   }
 
-  /**
-   * Start a task triggered by the user via UI.
-   * Unlike startTask(), this always notifies the owner (including the lead in solo teams).
-   */
-  async startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
+  /** Start a user task and notify its owner, including the solo lead. */
+  async startTaskByUser(
+    teamName: string,
+    taskId: string,
+    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+  ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
     const task = tasks.find((t) => t.id === taskId);
     if (!task) {
@@ -2368,10 +2369,12 @@ export class TeamDataService {
     if (task.status !== 'pending') {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
-
+    // Revalidate after async reads, before the irreversible board write.
+    if (admission && (task.owner !== admission.expectedOwner || !(await admission.canStart()))) {
+      throw new Error('Scheduled task start superseded');
+    }
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
-
     if (task.owner) {
       await this.sendUserTaskStartNotification(teamName, task);
     }
@@ -2379,11 +2382,7 @@ export class TeamDataService {
     return { notifiedOwner: !!task.owner };
   }
 
-  /**
-   * Send a task start notification from the user to the task owner.
-   * Includes description, prompt, and task_get/task_complete instructions.
-   * Used by startTaskByUser and createTask (startImmediately).
-   */
+  /** Notify a user-started task owner with its prompt and board instructions. */
   private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<void> {
     if (!task.owner) return;
     try {
