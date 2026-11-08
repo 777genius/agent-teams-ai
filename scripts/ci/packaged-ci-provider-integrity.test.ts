@@ -19,7 +19,13 @@ function fixture(): { root: string; paths: string[] } {
   writeFileSync(join(root, 'packages/legacy-agent-host/package.json'), JSON.stringify({
     dependencies: Object.fromEntries(archives.map(([name, path]) => [name, 'file:../../' + path])),
   }));
-  let lock = 'lockfileVersion: 9.0\n\nimporters:\n  packages/legacy-agent-host:\n    dependencies:\n';
+  const contractsPath = archives[1][1];
+  writeFileSync(join(root, 'pnpm-workspace.yaml'),
+    "packages:\n  - packages/legacy-agent-host\noverrides:\n" +
+    "  '@agent-teams/provider-session-contracts': 'file:" + contractsPath + "'\n");
+  let lock = 'lockfileVersion: 9.0\n\noverrides:\n' +
+    "  '@agent-teams/provider-session-contracts': file:" + contractsPath +
+    '\n\nimporters:\n  packages/legacy-agent-host:\n    dependencies:\n';
   for (const [name, path] of archives) {
     lock += "      '" + name + "':\n        specifier: file:../../" + path +
       '\n        version: file:' + path + '\n';
@@ -37,6 +43,30 @@ function fixture(): { root: string; paths: string[] } {
   writeFileSync(join(root, 'pnpm-lock.yaml'), lock);
   return { root, paths };
 }
+
+test('workspace contracts override must match frozen lock and selected archive', (t) => {
+  const { root } = fixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const workspaceFile = join(root, 'pnpm-workspace.yaml');
+  const lockFile = join(root, 'pnpm-lock.yaml');
+  const workspaceOriginal = readFileSync(workspaceFile, 'utf8');
+  const lockOriginal = readFileSync(lockFile, 'utf8');
+  const contracts = archives[1][1];
+
+  writeFileSync(workspaceFile, workspaceOriginal.replace(contracts, 'vendor/provider-migration/unverified/other.tgz'));
+  assert.throws(() => verifySelectedProviderArchives(root), /override differs/);
+  writeFileSync(workspaceFile, workspaceOriginal.replace(
+    "  '@agent-teams/provider-session-contracts':", "  'different/provider':"));
+  assert.throws(() => verifySelectedProviderArchives(root), /override differs/);
+  writeFileSync(workspaceFile, workspaceOriginal);
+
+  writeFileSync(lockFile, lockOriginal.replace(
+    "  '@agent-teams/provider-session-contracts': file:" + contracts,
+    "  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/unverified/other.tgz"));
+  assert.throws(() => verifySelectedProviderArchives(root), /override differs/);
+  writeFileSync(lockFile, lockOriginal);
+  assert.doesNotThrow(() => verifySelectedProviderArchives(root));
+});
 
 test('selected archive bytes match locked SHA-512', (t) => {
   const { root } = fixture();

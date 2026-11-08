@@ -11,6 +11,7 @@ const SELECTED = [
 /** Reject stale cached installations if a selected local tarball changed without its lock. */
 export function verifySelectedProviderArchives(root: string): void {
   const lock = readFileSync(resolve(root, 'pnpm-lock.yaml'), 'utf8');
+  const workspace = readFileSync(resolve(root, 'pnpm-workspace.yaml'), 'utf8');
   // A correctly hashed, unused lock entry must not certify a different
   // archive selected by the actual Host package importer.
   const manifest = JSON.parse(
@@ -52,6 +53,16 @@ export function verifySelectedProviderArchives(root: string): void {
       !/^vendor\/provider-migration\/[a-z0-9-]+\/[a-z0-9.-]+\.tgz$/.test(selectedPath!)
     ) {
       throw new Error('Invalid provider archive path: ' + name);
+    }
+
+    if (name === '@agent-teams/provider-session-contracts') {
+      const overrideKey = "  '@agent-teams/provider-session-contracts':";
+      const workspaceLines = workspace.split(/\\r?\\n/).filter(line => line.startsWith(overrideKey));
+      const lockLines = lines.filter(line => line.startsWith(overrideKey));
+      if (workspaceLines.length !== 1 || lockLines.length !== 1 ||
+          workspaceLines[0] !== overrideKey + " 'file:" + selectedPath + "'" ||
+          lockLines[0] !== overrideKey + ' file:' + selectedPath)
+        throw new Error('Workspace provider override differs from pnpm lock');
     }
 
     const expectedSpecifier = 'file:../../' + selectedPath;
