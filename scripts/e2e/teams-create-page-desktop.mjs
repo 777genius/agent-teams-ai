@@ -639,8 +639,6 @@ async function main() {
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
       'Advanced CLI input retained after team-name change'
     );
-    // Do not let the optional fixture flag change subsequent config-only assertions.
-    await cdp.fill(customArgsSelector, ' ');
     await cdp.fill('#team-name', unique);
 
     log('Back to Teams and resume saved draft');
@@ -710,6 +708,22 @@ async function main() {
       "window.__agentTeamsDevStore.getState().getAllPaneTabs().filter(t => t.teamsCreationPage).length"
     );
     assert.equal(editorCount, 1, 'A second writable creation editor was opened');
+    // A pane split can remount CreateTeamDialog: verify session-only CLI edits survive.
+    const inputStillMounted = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
+    if (!inputStillMounted) {
+      const optionalButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+        .find(button => button.textContent?.includes('Optional launch settings')
+          && button.getBoundingClientRect().width > 0)`;
+      const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
+      if (!expanded) await cdp.click(optionalButton);
+      await cdp.click(createButtonExpression('Advanced'));
+    }
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI edits survived pane split / editor remount'
+    );
+    // Clear the test-only override before the actual process restart and native save.
+    await cdp.fill(customArgsSelector, ' ');
     await captureScreenshot(cdp, fixture, 'split-pane');
     await cdp.evaluate("(() => { " +
       "const s = window.__agentTeamsDevStore.getState(); " +
@@ -1030,6 +1044,7 @@ async function main() {
       retainedAcrossTabSwitch: true,
       retainedAcrossProcessRestart: true,
       advancedCliRetainedAcrossRename: true,
+      advancedCliRetainedAcrossPaneRemount: true,
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,
