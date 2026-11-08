@@ -127,6 +127,28 @@ describe('resolveWorkspaceTrustCanonicalGitRoot', () => {
     await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
   });
 
+  it('accepts Git section-header comments without treating malformed headers as valid', async () => {
+    const dir = await makeTmpDir();
+    const repo = path.join(dir, 'commented-core');
+    const nested = path.join(repo, 'nested');
+    await createGitDirectoryLayout(repo);
+    await fs.mkdir(nested);
+    await fs.writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+
+    for (const header of [
+      '[core] # comment',
+      '[core] ; comment',
+      '[CORE]# comment',
+      '[core]; comment',
+    ]) {
+      await fs.writeFile(path.join(repo, '.git', 'config'), `${header}\n\tbare = false\n`);
+      await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBe(repo);
+    }
+
+    await fs.writeFile(path.join(repo, '.git', 'config'), '[core]invalid\n');
+    await expect(resolveWorkspaceTrustFilesystemGitRoot(nested)).resolves.toBeNull();
+  });
+
   it('keeps separate-git-dir acceptance when another section mentions worktree', async () => {
     const dir = await makeTmpDir();
     const checkout = path.join(dir, 'checkout');

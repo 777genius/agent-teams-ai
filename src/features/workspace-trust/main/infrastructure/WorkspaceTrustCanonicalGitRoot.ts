@@ -41,7 +41,7 @@ async function isValidGitMarker(root: string): Promise<boolean> {
       ]);
       return (
         validHead(head) &&
-        /(?:^|\n)\s*\[core\]\s*(?=\n|$)/i.test(config ?? '') &&
+        /(?:^|\n)[ \t]*\[core\][ \t]*(?:[#;][^\r\n]*)?\r?(?=\n|$)/i.test(config ?? '') &&
         refs?.isDirectory() === true &&
         objects?.isDirectory() === true
       );
