@@ -16,6 +16,12 @@
 
 <p align="center">
   <sub>Free cross-platform desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, and many more. For coding and broader project work.</sub>
+
+  <sub>Check also:
+  - [universal-agent-plugins](https://universal-agent-plugins.com) - Multi-agent CLI to install, update, repair, and remove Agent Plugins 1.0 and Agent Skills across Codex/ChatGPT, Claude, Cursor, Gemini, Copilot, Qoder, Pi, OpenCode, and more. 1,500+ plugins. SDK for universal plugins (hooks, detect, install/manage) 
+  - [review-router-ai](https://github.com/777genius/review-router-ai) - Free, open source CodeRabbit. Powerfull AI code review that runs inside your CI/CD (privacy) using your Claude/Codex/other subscription accounts (pool)/API. Free/self-hosted deployment. Ready github integration. Built using OpenCodeReview. Claude/Codex/OpenRouter/Grok/Kimi/Glm/MiniMax/MiMo...
+  - [agent-notifications](https://agent-notifications.com) - 🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.
+  </sub>
 </p>
 
 <!--
@@ -273,18 +279,6 @@ An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Gr
 
 </details>
 
-## Why not just use Claude Code with pre-configured agents?
-
-We're seeing an interesting trend. First, AI agents started communicating with each other (something Claude and Codex didn't support before). Then we started seeing messenger-style AI assistants like Grok Bot, Meta Muse and OpenAI Dots, where you can create a team (or even multiple teams, as in Grok) and communicate with agents just like in a regular messenger. This is a much more natural and familiar way for people to interact with AI (like with humans).
-
-For the general audience, that might be enough. But people often need to build many/large/complex  projects, and that's where bigger teams of agents become necessary, each with their own roles and responsibilities.
-
-And when you have a lot of teammates, you need a good way to organize and manage them. That's exactly where Agent Teams comes in. You can see everything clearly in a visual interface, understand what's happening across your teams, and easily interact with individual agents.
-
-Sure, you can set up something similar with regular Claude, but keeping track of everything without a proper frontend is difficult, and we are targeting precisely this multi-agent use case.
-
-For us, it's not just about running multi-agent systems. It's about having full visibility into who's doing what, keeping everything organized, and making it easy to interact with your agents.
-
 ## Comparison
 
 | Feature                             | Agent Teams                                                                                             | Gas Town                                                             | Paperclip                                                              | Cursor                                                         | Claude Code CLI                                              | OpenRig |
@@ -339,11 +333,25 @@ Research refreshed November 6, 2026 using published releases and official docs: 
 3. **Create a team** — Pick a project, define roles, write a provisioning prompt
 4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
 
-The desktop app is the main product. The web version is currently in active development.
+The desktop app is the main product. The web version is currently in development.
 
 ---
 
 ## FAQ
+
+<details>
+<summary><strong>Why not just use Claude Code with pre-configured agents?</strong></summary>
+<br />
+We're seeing an interesting trend. First, AI agents started communicating with each other (something Claude and Codex didn't support before). Then we started seeing messenger-style AI assistants like Grok Bot, Meta Muse and OpenAI Dots, where you can create a team (or even multiple teams, as in Grok) and communicate with agents just like in a regular messenger. This is a much more natural and familiar way for people to interact with AI (like with humans).
+
+For the general audience, that might be enough. But people often need to build many/large/complex  projects, and that's where bigger teams of agents become necessary, each with their own roles and responsibilities.
+
+And when you have a lot of teammates, you need a good way to organize and manage them. That's exactly where Agent Teams comes in. You can see everything clearly in a visual interface, understand what's happening across your teams, and easily interact with individual agents.
+
+Sure, you can set up something similar with regular Claude, but keeping track of everything without a proper frontend is difficult, and we are targeting precisely this multi-agent use case.
+
+For us, it's not just about running multi-agent systems. It's about having full visibility into who's doing what, keeping everything organized, and making it easy to interact with your agents.
+</details>
 
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
@@ -391,12 +399,12 @@ Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can 
 
 ## Roadmap (new)
 
-- [ ] Launching 24/7 autonomous teams in the cloud with current UI (in progress)
+- [ ] Launching 24/7 autonomous teams in the cloud (in progress)
 - [ ] Automatic account switching (in progress)
 - [ ] Navigating very complex long tasks without losing context (in progress)
-- [x] Multiple AI runtimes and provider-backed coding agents
-- [ ] A secure universal plugin system regardless of the type of agents
-- [ ] Efficiency and controllability under load with 20-100+ agents in parallel
+- [x] Multiple AI runtimes and provider-backed coding agents (more in progress)
+- [ ] A secure universal plugin system regardless of the type of agents ([in progress](https://github.com/777genius/universal-agent-plugins))
+- [ ] Efficiency and controllability under load with 50-100+ agents in parallel (in progress)
 
 ## Vision
 
