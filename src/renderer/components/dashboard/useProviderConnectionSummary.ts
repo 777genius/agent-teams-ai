@@ -22,6 +22,7 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
   const cliStatusError = useStore((state) => state.cliStatusError);
   const cliProviderStatusLoading = useStore((state) => state.cliProviderStatusLoading);
   const openCodeRuntimeStatus = useStore((state) => state.openCodeRuntimeStatus);
+  const openCodeRuntimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
   const selectedProjectId = useStore((state) => state.selectedProjectId);
   const projects = useStore((state) => state.projects);
   const repositoryGroups = useStore((state) => state.repositoryGroups);
@@ -35,6 +36,16 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
   const countEvidence = useRuntimeProviderConnectedCount(projectPath);
   const observedOpenCodeCount = countEvidence?.observation ?? null;
+  const openCodeIsChecking = Boolean(
+    countEvidence?.checking ||
+    openCodeRuntimeStatusLoading ||
+    cliProviderStatusLoading?.opencode ||
+    openCodeRuntimeStatus?.state === 'checking' ||
+    (cliStatus?.flavor === 'agent_teams_orchestrator' &&
+      cliStatus.providers.some((provider) =>
+        provider.providerId === 'opencode' && provider.statusCheckOutcome === 'pending'
+      ))
+  );
   const [expiryRevision, expire] = useState(0);
   useEffect(() => {
     const snapshots = [
@@ -69,5 +80,5 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     runtimeStatus: openCodeRuntimeStatus,
   });
 
-  return { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled };
+  return { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking };
 }

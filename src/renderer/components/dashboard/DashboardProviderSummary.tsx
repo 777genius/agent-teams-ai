@@ -11,7 +11,7 @@ import { useProviderConnectionSummary } from './useProviderConnectionSummary';
 export const DashboardProviderSummary = (): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
-  const { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled } =
+  const { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking } =
     useProviderConnectionSummary();
   const openSettingsTab = useStore((state) => state.openSettingsTab);
   const openTab = useStore((state) => state.openTab);
@@ -43,6 +43,7 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
             cliStatus={cliStatus}
             cliStatusLoading={cliStatusLoading}
             multimodelEnabled={multimodelEnabled}
+            openCodeIsChecking={openCodeIsChecking}
           />
         </div>
         {cliStatusError && (

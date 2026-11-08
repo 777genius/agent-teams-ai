@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { LoaderCircle } from 'lucide-react';
 
 import type { DashboardConnectionSummary } from './providerConnectionSummary';
 import type { CliInstallationStatus } from '@shared/types';
@@ -8,6 +9,7 @@ interface ProviderConnectionCountsProps {
   readonly cliStatus: Pick<CliInstallationStatus, 'installed' | 'authLoggedIn' | 'authStatusChecking'> | null;
   readonly cliStatusLoading: boolean;
   readonly multimodelEnabled: boolean;
+  readonly openCodeIsChecking: boolean;
 }
 
 /** Shared compact evidence labels: never initiate checks or infer launch readiness. */
@@ -16,6 +18,7 @@ export const ProviderConnectionCounts = ({
   cliStatus,
   cliStatusLoading,
   multimodelEnabled,
+  openCodeIsChecking,
 }: ProviderConnectionCountsProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
@@ -44,7 +47,18 @@ export const ProviderConnectionCounts = ({
       {multimodelEnabled && (
         <span data-testid="dashboard-opencode-provider-count" className={summary.openCodeConnected != null && summary.openCodeConnected > 0 ? 'text-green-400' : undefined}>
           OpenCode · {summary.openCodeConnected === null
-            ? unknown
+            ? openCodeIsChecking
+              ? (
+                <span
+                  data-testid="dashboard-opencode-count-loading"
+                  role="status"
+                  aria-label={t('cliStatus.provider.checkingProviders')}
+                  className="inline-flex items-center align-middle"
+                >
+                  <LoaderCircle className="size-3.5 motion-safe:animate-spin" aria-hidden="true" />
+                </span>
+              )
+              : unknown
             : t('cliStatus.provider.connectedCount', { connected: summary.openCodeConnected })}
         </span>
       )}
