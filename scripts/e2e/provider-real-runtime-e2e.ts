@@ -77,7 +77,7 @@ const report: {
 };
 const evidencePath = process.env.PROVIDER_REAL_E2E_EVIDENCE;
 assert(evidencePath && path.isAbsolute(evidencePath), 'An absolute evidence path is required');
-const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-real-provider-'));
+const testRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-real-provider-')));
 let phase = 'start';
 let inferenceRequests = 0;
 let modelServer: ReturnType<typeof createServer> | null = null;
@@ -294,6 +294,7 @@ async function checkScenario(name: 'clean' | 'ambient' | 'configured',
 
 try {
   if (process.platform === 'win32') {
+    phase = 'windows-private-acl';
     // Reuse the existing reviewed TEST-only ACL boundary for native auth.json.
     const { protectWindowsTestDirectory } = await import('./opencode-native-test-auth.ts');
     await protectWindowsTestDirectory(testRoot);
@@ -333,7 +334,11 @@ try {
 } catch (error) {
   report.failedPhase = phase;
   const reason = error instanceof Error ? error.message : '';
-  report.failedReason = [
+  // Existing ACL helper emits only fixed fields (phase, reason, errno, exit).
+  // Allow its bounded diagnostic, never arbitrary stderr/profile paths.
+  const safeAclReason = /^Private Windows TEST ACL qualification failed: reason=(?:process_failure|process_exit|spawn_failure|output_limit|timeout); phase=(?:startup|owner|set_acl|read_acl|verify_acl); errno=(?:none|E[A-Z0-9_]{1,48}); exit=(?:none|-?[0-9]{1,10})$/.test(reason)
+    ? reason : null;
+  report.failedReason = safeAclReason ?? [
     'runtime_timeout', 'runtime_command_failed',
     'Runtime stdout is not a single valid JSON value',
     'Genuine runtime refused directory read',
