@@ -115,6 +115,8 @@ describe('chip draft persistence via draftStorage', () => {
       await act(async () => { releaseSave(); await Promise.resolve(); });
       expect(draft.chips[0]?.id).toBe('newer-chip');
       expect(draft.isSaved).toBe(false);
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(draft.isSaved).toBe(true);
     } finally {
       await act(async () => { root.unmount(); });
       vi.useRealTimers();
