@@ -2482,9 +2482,9 @@ export const CreateTeamDialog = ({
                 setSoloTeam(false);
                 setSyncModelsWithLead(true, { persistStoredPreference: false });
                 descriptionDraft.setValue(draft.description ?? '');
-                promptDraft.setValue(draft.prompt ?? '');
-                // Template prompts have no file-mention chips; retire old references.
+                // Per-key mutation ordering retires old chips before new prompt saves.
                 promptChipDraft.clearChipDraft();
+                promptDraft.setValue(draft.prompt ?? '');
                 setMembers(buildInitialRosterMemberDrafts({
                   copiedMembers: draft.members,
                   multimodelEnabled: true,
