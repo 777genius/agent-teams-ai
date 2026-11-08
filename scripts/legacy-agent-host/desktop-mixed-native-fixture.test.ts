@@ -217,6 +217,46 @@ for (const selected of providers) {
   });
 }
 
+test('Claude cold Launch phase permits one fresh preflight, never a same-phase replay', async (t) => {
+  let phase: 'native' | 'cold-readback' = 'native';
+  const model = await startNativeTeamModel({
+    allowModelProbes: true,
+    modelProbePhase: () => phase,
+    principalId: () => { throw new Error('no grant before launch'); },
+  });
+  t.after(() => model.close());
+  const send = () => fetch(model.url + '/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-6', output_config: { effort: 'medium' },
+      messages: [{ role: 'user', content: 'Reply only OK. Do not use tools, access files or run commands.' }],
+      tools: [],
+    }),
+  });
+  for (let i = 0; i < 8; i++) {
+    const response = await send();
+    assert.equal(response.status, 200);
+    await response.text();
+  }
+  assert.equal(model.probes.length, 8);
+  assert.equal(model.observations.length, 0);
+  phase = 'cold-readback';
+  const cold = await send();
+  assert.equal(cold.status, 200);
+  await cold.text();
+  assert.deepEqual(model.probes[8], {
+    phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium',
+  });
+  const replay = await send();
+  assert.equal(replay.status, 400);
+  await replay.text();
+  assert.equal(model.probes.length, 9);
+  assert.equal(model.failures.length, 1);
+  assert.match(model.failures[0]!, /finite native cold-readback model probe budget/);
+  assert.equal(model.observations.length, 0, 'preflight never becomes a business turn');
+});
+
 test('mixed principal callback requires exact canonical capture delivery and live registered grant', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-'));
   t.after(() => rm(root, { recursive: true, force: true }));

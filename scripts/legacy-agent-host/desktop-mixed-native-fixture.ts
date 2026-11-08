@@ -75,9 +75,11 @@ export function readMixedCapturedPrincipal(
 /** Called only inside the explicitly authorized desktop proof; no agent starts here. */
 export async function startDesktopMixedModels(root: () => string) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
+  let claudeProbePhase: 'native' | 'cold-readback' = 'native';
   const claude = await startNativeTeamModel({
       mixedTaskNotifications: createMixedTaskNoticeReader(root, 'team-lead'),
     allowModelProbes: true,
+    modelProbePhase: () => claudeProbePhase,
     mixedGroups: true,
     uiGeneratedMessageIds: true,
     memberName: 'team-lead',
@@ -103,6 +105,12 @@ export async function startDesktopMixedModels(root: () => string) {
     let evidenceRoot: string | undefined;
     return {
       ...selected,
+      beginColdReadbackProbes: () => {
+        assert.equal(claudeProbePhase, 'native', 'one original cold readback phase');
+        assert.equal(claude.probes.length, 8, 'original live preflight budget was consumed');
+        assert.deepEqual(claude.failures, []);
+        claudeProbePhase = 'cold-readback';
+      },
       retainEvidenceAt: async (root: string) => {
         assert.equal(evidenceRoot, undefined, 'one original TEST mixed model evidence root');
         assert.match(basename(root), /^TEST-desktop-backend-/);

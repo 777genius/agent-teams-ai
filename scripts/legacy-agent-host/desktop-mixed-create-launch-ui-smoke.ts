@@ -519,8 +519,20 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.equal(record(after.savedSettings).allowExperimentalLocalModels, false);
   const configuredAfterStop = assertMixedSavedSettings(after, workspace, mixedEditedDescription);
   assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
+  // Permit a single new TEST probe only after observing the original cold UI boundary.
+  // This grants neither a new native business input nor a repeated Launch submission.
+  models.beginColdReadbackProbes();
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
   proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
+  await poll(
+    async () => models.claude.probes.length,
+    (count) => count === 9,
+    'one fresh original cold Launch model preflight'
+  );
+  assert.deepEqual(models.claude.probes.slice(8), [
+    { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
+  ]);
+  assert.deepEqual(models.claude.failures, []);
   assert.deepEqual(
     assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
     configuredAfterStop

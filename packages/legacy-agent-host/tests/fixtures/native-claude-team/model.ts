@@ -159,6 +159,8 @@ export async function startNativeTeamModel(
     /** TEST-only original native tool-use IDs observed in actual model request history. */
     captureHistoryMarkers?: boolean;
     allowModelProbes?: boolean;
+    /** TEST-only boundary advanced after verified Stop/reload by the owning UI test. */
+    modelProbePhase?: () => 'native' | 'cold-readback';
     principalId?: () => string;
     memberName?: 'alice' | 'team-lead';
   } = {}
@@ -179,7 +181,7 @@ export async function startNativeTeamModel(
     : undefined;
   const observations: Observation[] = [];
   const notificationObservations: (Observation & { notice: ObservedMixedTaskNotice })[] = [];
-  const probes: { requestedModel?: string; requestedEffort?: string }[] = [];
+  const probes: { requestedModel?: string; requestedEffort?: string; phase?: 'native' | 'cold-readback' }[] = [];
   const unexpectedNoToolsRequests: {
     model?: string;
     roles: unknown[];
@@ -298,11 +300,23 @@ export async function startNativeTeamModel(
         probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
         tools.length === 0
       ) {
-        assert.ok(
-          probes.length < (nativeMember ? 9 : 8),
-          'finite native model probe request budget'
-        );
+        const phase = options.modelProbePhase?.();
+        if (phase === 'cold-readback') {
+          // One actual new preparation after original Stop/reload, never another
+          // allowance for a retry in that same cold UI phase.
+          assert.ok(
+            !nativeMember && probes.length === 8 &&
+              !probes.some((probe) => probe.phase === 'cold-readback'),
+            'finite native cold-readback model probe budget'
+          );
+        } else {
+          assert.ok(
+            probes.length < (nativeMember ? 9 : 8),
+            'finite native model probe request budget'
+          );
+        }
         probes.push({
+          ...(phase === undefined ? {} : { phase }),
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
           ...(typeof record(body.output_config).effort === 'string'
             ? { requestedEffort: String(record(body.output_config).effort) }
