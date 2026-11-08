@@ -6,10 +6,19 @@ const RETRY_DELAYS_MS = [10_000, 20_000];
 const RETRYABLE_NETWORK_ERROR =
   /(?:response code|status(?: code)?)[=: ]+5\d\d|\bERR_PNPM_FETCH_5\d\d\b|\b(?:EAI_AGAIN|ECONNRESET|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|ERR_SOCKET_TIMEOUT|UND_ERR_[A-Z_]*TIMEOUT)\b|socket (?:hang up|timeout)|network timeout|TypeError: terminated|other side closed/i;
 const TERMINAL_INSTALL_ERROR =
-  /\bERR_PNPM_OUTDATED_LOCKFILE\b|unsupported engine|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
+  /\bERR_PNPM_(?:OUTDATED_LOCKFILE|UNSUPPORTED_ENGINE)\b|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
+const ENGINE_FAILURE = /\bUnsupported engine\b/i;
+const ENGINE_WARNING = /(?:\[\s*WARN(?:ING)?\s*\]|\bWARN(?:ING)?)\s*Unsupported engine\b/i;
+
+function hasTerminalInstallFailure(output) {
+  // pnpm may warn about an unrelated workspace's Node engine before a
+  // transient Electron download 5xx. A warning must not suppress retries.
+  return TERMINAL_INSTALL_ERROR.test(output) || output.split(/\r?\n/).some((line) =>
+    ENGINE_FAILURE.test(line) && !ENGINE_WARNING.test(line));
+}
 
 export function isRetryableInstallFailure(output) {
-  return RETRYABLE_NETWORK_ERROR.test(output) && !TERMINAL_INSTALL_ERROR.test(output);
+  return RETRYABLE_NETWORK_ERROR.test(output) && !hasTerminalInstallFailure(output);
 }
 
 function runInstall() {
@@ -32,7 +41,7 @@ function runInstall() {
         const text = chunk.toString('utf8');
         const combinedOutput = outputTail + text;
         retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(combinedOutput);
-        terminalFailureSeen ||= TERMINAL_INSTALL_ERROR.test(combinedOutput);
+        terminalFailureSeen ||= hasTerminalInstallFailure(combinedOutput);
         outputTail = (outputTail + text).slice(-256);
         const destination = stream === child.stdout ? process.stdout : process.stderr;
         destination.write(chunk);
