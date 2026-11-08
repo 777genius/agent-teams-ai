@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import test from 'node:test';
 
 import { verifySelectedProviderArchives } from './packaged-ci-provider-integrity.ts';
@@ -60,4 +60,37 @@ test('missing, duplicated, malformed and redirected lock entries fail closed', (
     writeFileSync(file, changed);
     assert.throws(() => verifySelectedProviderArchives(root));
   }
+});
+
+
+test('symlinked provider archive and symlinked parent fail closed with matching bytes', (t) => {
+  // Windows symlink creation requires host privileges that are not guaranteed
+  // on CI runners. The production guard still runs on every platform.
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink fixture; Windows archive integrity is checked separately');
+    return;
+  }
+  const { root, paths } = fixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const archive = paths[0]!;
+  const original = readFileSync(archive);
+
+  // A matching digest must not make a symlinked archive acceptable.
+  const otherFile = join(root, 'same-bytes.tgz');
+  writeFileSync(otherFile, original);
+  rmSync(archive);
+  symlinkSync(otherFile, archive);
+  assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive/);
+  rmSync(archive);
+  writeFileSync(archive, original);
+  assert.doesNotThrow(() => verifySelectedProviderArchives(root));
+
+  // A regular archive reached through a symlinked parent must not escape
+  // the selected, canonical vendor directory even when its hash matches.
+  const otherDir = join(root, 'outside-vendor');
+  mkdirSync(otherDir);
+  writeFileSync(join(otherDir, basename(archive)), original);
+  rmSync(dirname(archive), { recursive: true, force: true });
+  symlinkSync(otherDir, dirname(archive), 'dir');
+  assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive/);
 });
