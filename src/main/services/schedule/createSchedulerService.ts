@@ -1,9 +1,8 @@
+import { TeamConfigReader } from '../team/TeamConfigReader';
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import { SchedulerService } from './SchedulerService';
 import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
-
-import { TeamConfigReader } from '../team/TeamConfigReader';
 
 import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';

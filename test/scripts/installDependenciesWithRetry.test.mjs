@@ -17,6 +17,7 @@ describe('install-dependencies-with-retry', () => {
     'HTTPError: Response code 504\nELIFECYCLE Command failed with exit code 1',
     'gyp ERR! stack TypeError: terminated',
     'SocketError: other side closed',
+    '[23] The operation was aborted due to timeout\nTimeoutError: The operation was aborted due to timeout',
   ]) {
     it(`retries transient network failure: ${output}`, () => {
       assert.equal(isRetryableInstallFailure(output), true);
