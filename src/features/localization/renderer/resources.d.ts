@@ -4613,6 +4613,9 @@ export default interface Resources {
         "searchTeams": "Search teams...",
         "selectTeam": "Select a team...",
         "target": "Target when team is running",
+        "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
+        "taskFirstTarget": "Assign to",
+        "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
         "team": "Team",
         "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
         "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
@@ -6421,6 +6424,7 @@ export default interface Resources {
         "errors": "Errors",
         "exitCode": "exit {{code}}",
         "loadingLogs": "Loading logs...",
+        "openTask": "Open task",
         "retryCount": "retry {{count}}/{{max}}",
         "stillRunning": "Task is still running...",
         "title": "Run Log"
