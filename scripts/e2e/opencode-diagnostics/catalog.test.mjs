@@ -137,6 +137,7 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     for (const invalid of [
       [...directoryArgs, '--filter', 'connected'],
       [...directoryArgs, '--cursor', '../not-a-cursor'],
+      [...directoryArgs, '--cursor', '01'],
       ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
         '--filter', 'unknown'],
       ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',

@@ -310,7 +310,7 @@ export async function verifyCatalog({
         const renderedCount = await evaluate(
           `document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || ''`
         );
-        if (allFirst && allSecond && connected && /3 connected/.test(renderedCount)) {
+        if (allFirst && allSecond && connected && /\b3 connected\b/.test(renderedCount)) {
           proof = { allFirst, allSecond, connected, renderedCount };
           break;
         }
