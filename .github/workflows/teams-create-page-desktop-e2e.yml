@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Runtime provider preflight affects the existing Create/Launch controls.
+      - 'src/main/services/infrastructure/CliInstallerService.ts'
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
@@ -17,6 +19,8 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Runtime provider preflight affects the existing Create/Launch controls.
+      - 'src/main/services/infrastructure/CliInstallerService.ts'
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
