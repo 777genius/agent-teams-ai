@@ -235,6 +235,7 @@ jobs:
                r.nativePermissionResolverProven!==true ||
                r.nativePermissionReplyRejectNoReplayProven!==true ||
                r.nativeStalePermissionAfterRestartRejected!==true ||
+               r.nativeStaleGrantAfterRestartRejected!==true ||
                r.failure !== undefined) process.exit(1);
             // A fabricated six-element receipt is not a completed native proof.
             // Require each physical TEST stage in its original order.
