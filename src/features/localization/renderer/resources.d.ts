@@ -6396,6 +6396,7 @@ export default interface Resources {
           "weekdaysAtNine": "Weekdays at 9am"
         },
         "selectTimezone": "Select timezone",
+        "time": "Time",
         "timezone": "Timezone",
         "warmUpDescription": "Prepares selected providers before scheduled execution",
         "warmUpOptions": {
@@ -6442,6 +6443,10 @@ export default interface Resources {
         "disabled": "Disabled",
         "paused": "Paused"
       },
+      "taskFirstAgentDescription": "The selected teammate gets this task. The team starts first if needed.",
+      "taskFirstDesktopRequired": "Schedules run only while Agent Teams is open.",
+      "taskFirstHistoricPrompt": "This team has a saved launch prompt. Review it in Team Settings before scheduling automatic work.",
+      "taskFirstTeamDescription": "The lead coordinates this task. The team starts first if needed.",
       "title": "Schedules"
     },
     "sendMessage": {
