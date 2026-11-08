@@ -213,7 +213,10 @@
           "description": "Hanggang 8 tema. Kulay ay #RRGGBB. Valid na JSON lamang ang ilalapat; ang bakanteng themes array ay magtatanggal sa lahat.",
           "cancel": "Kanselahin",
           "save": "I-save ang mga tema",
-          "conflict": "Nagbago ang mga tema sa ibang tab. Isara at buksang muli ang editor upang hindi mapatungan ang mga pagbabago."
+          "conflict": "Binago ang mga tema sa ibang tab. Napanatili ang JSON draft mo; suriin ito o tahasang patungan ang mas bagong tema.",
+          "overwrite": "Patungan ang mas bagong tema",
+          "invalidJson": "Hindi wastong JSON syntax",
+          "invalidTheme": "Hindi wastong theme palette. Suriin ang mga field, kulay, at contrast."
         }
       },
       "uiScale": {

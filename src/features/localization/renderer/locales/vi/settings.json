@@ -213,7 +213,10 @@
           "description": "Tối đa 8 chủ đề. Màu dạng #RRGGBB. Chỉ áp dụng JSON hợp lệ; mảng themes trống sẽ xóa tất cả.",
           "cancel": "Hủy",
           "save": "Lưu chủ đề",
-          "conflict": "Chủ đề đã thay đổi ở tab khác. Đóng rồi mở lại trình chỉnh sửa để không ghi đè thay đổi mới."
+          "conflict": "Chủ đề đã thay đổi ở tab khác. Bản nháp JSON vẫn được giữ; hãy kiểm tra hoặc xác nhận ghi đè các chủ đề mới.",
+          "overwrite": "Ghi đè chủ đề mới",
+          "invalidJson": "Cú pháp JSON không hợp lệ",
+          "invalidTheme": "Bảng màu chủ đề không hợp lệ. Kiểm tra trường, màu sắc và độ tương phản."
         }
       },
       "uiScale": {

@@ -213,7 +213,10 @@
           "description": "Sehingga 8 tema. Warna mesti #RRGGBB. Hanya JSON sah digunakan; tatasusunan themes kosong memadam semuanya.",
           "cancel": "Batal",
           "save": "Simpan tema",
-          "conflict": "Tema telah berubah di tab lain. Tutup dan buka semula editor supaya perubahan baharu tidak ditimpa."
+          "conflict": "Tema berubah dalam tab lain. Draf JSON anda dikekalkan; semak atau timpa tema baharu dengan jelas.",
+          "overwrite": "Timpa tema baharu",
+          "invalidJson": "Sintaks JSON tidak sah",
+          "invalidTheme": "Palet tema tidak sah. Semak medan, warna dan kontras."
         }
       },
       "uiScale": {
