@@ -61,10 +61,13 @@ const report: {
   scenarios: ScenarioEvidence[];
   inferenceRequests: number;
   failedPhase: string | null;
+  failedReason: string | null;
+  lastCommand: { phase: string; elapsedMs: number; stdoutBytes: number } | null;
+  completedProbes: Probe[];
 } = {
   schemaVersion: 1, pin: lock.version, platform, observedRealRuntime: false,
   usesLiveAccounts: false, pass: false, scenarios: [], inferenceRequests: 0,
-  failedPhase: null,
+  failedPhase: null, failedReason: null, lastCommand: null, completedProbes: [],
 };
 const evidencePath = process.env.PROVIDER_REAL_E2E_EVIDENCE;
 assert(evidencePath && path.isAbsolute(evidencePath), 'An absolute evidence path is required');
@@ -139,10 +142,13 @@ async function directory(
     '--project-path', cwd, '--filter', filter, '--limit', '100',
     ...(cursor === null ? [] : ['--cursor', cursor])];
   const result = await runCommand(flags, cwd, env);
+  report.lastCommand = { phase: label, elapsedMs: result.elapsedMs, stdoutBytes: result.bytes };
   const page = parseProviderDirectory(result.stdout, filter, cursor);
-  probes.push({ phase: label, elapsedMs: result.elapsedMs, stdoutBytes: result.bytes,
+  const observation = { phase: label, elapsedMs: result.elapsedMs, stdoutBytes: result.bytes,
     totalCount: page.totalCount, returnedCount: page.returnedCount,
-    nextCursor: page.nextCursor !== null });
+    nextCursor: page.nextCursor !== null };
+  probes.push(observation);
+  report.completedProbes.push(observation);
   return page;
 }
 
@@ -237,8 +243,19 @@ try {
   report.inferenceRequests = inferenceRequests;
   assert.equal(inferenceRequests, 0, 'A nonmetadata local model request was attempted');
   report.pass = true;
-} catch {
+} catch (error) {
   report.failedPhase = phase;
+  const reason = error instanceof Error ? error.message : '';
+  report.failedReason = [
+    'runtime_timeout', 'runtime_command_failed',
+    'Runtime stdout is not a single valid JSON value',
+    'Genuine runtime refused directory read',
+    'Directory contains incomplete inventory diagnostics',
+    'Summary count differs from complete real CLI directory',
+    'Configured loopback provider missing from real CLI connected summary',
+    'Provider directory exceeds bounded 1200-entry budget',
+    'Connected summary is incomplete',
+  ].find((value) => reason.includes(value)) ?? 'contract_error';
   process.exitCode = 1;
 } finally {
   // Only fixed safe numeric measurements leave the E2E process, never raw CLI
