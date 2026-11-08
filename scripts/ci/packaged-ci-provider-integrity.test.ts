@@ -110,3 +110,18 @@ test('symlinked vendor root cannot relocate correctly hashed locked archives', (
   symlinkSync(elsewhere, vendor, 'dir');
   assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive root/);
 });
+
+test('symlinked provider-migration root cannot relocate locked archives', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink fixture; Windows archive integrity is checked separately');
+    return;
+  }
+  const { root } = fixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const original = join(root, 'vendor', 'provider-migration');
+  const relocated = join(root, 'relocated-provider-migration');
+  // Keep vendor itself intact: this independently exercises its child root guard.
+  renameSync(original, relocated);
+  symlinkSync(relocated, original, 'dir');
+  assert.throws(() => verifySelectedProviderArchives(root), /Unsafe provider archive root/);
+});
