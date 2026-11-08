@@ -495,6 +495,48 @@ describe('TeamDataService task projection cache invalidation', () => {
     expect(taskBoard.startTask).not.toHaveBeenCalled();
   });
 
+  it.each([true, false])(
+    'reports scheduled task start notification only after handoff confirmation (%s)',
+    async (deliveredToInbox) => {
+      const original: TeamTask = {
+        id: 'task-1', subject: 'Old instruction', owner: 'alice', status: 'pending',
+      };
+      let currentTask = original;
+      const taskBoard = {
+        getTask: vi.fn(() => currentTask),
+        startTask: vi.fn(),
+      };
+      const service = new TeamDataService(
+        { getConfig: vi.fn(async () => buildDefaultTeamConfig()) } as never,
+        { getTasks: vi.fn(async () => [original]) } as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({ taskBoard })) as never
+      );
+      const send = vi.spyOn(service, 'sendMessage').mockResolvedValue({
+        deliveredToInbox, messageId: 'scheduled-handoff',
+      });
+      const result = await service.startTaskByUser('my-team', original.id, {
+        expectedOwner: 'alice',
+        canStart: async () => {
+          currentTask = { ...original, subject: 'Current instruction' };
+          return true;
+        },
+      });
+      expect(result.notifiedOwner).toBe(deliveredToInbox);
+      expect(taskBoard.startTask).toHaveBeenCalledExactlyOnceWith('task-1', 'user');
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        'my-team', expect.objectContaining({ text: expect.stringContaining('Current instruction') })
+      );
+    }
+  );
+
   it('removes detached trees, never recursively removes public paths, and stays idempotent', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-delete-cache-'));
     tempPaths.push(claudeRoot);
