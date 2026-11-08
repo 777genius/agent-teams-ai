@@ -6,6 +6,7 @@ import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 import {
   isSupportedOpenCodeRuntimeBinaryPath,
+  preparePassiveOpenCodeRuntimeBinaryProjection,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
@@ -66,7 +67,7 @@ function resolveExplicitOpenCodeBinary(
 /**
  * Builds the environment for passive runtime status/catalog commands only.
  * Keep this projection synchronous: passive reads may project existing managed-runtime
- * manifest metadata, but must not probe/install runtimes or enter MCP, credential,
+ * verified captured metadata, but must not probe/install runtimes or enter MCP, credential,
  * auth, or launch-argument resolution.
  */
 export function buildPassiveProviderStatusCliEnv(
@@ -84,7 +85,7 @@ export function buildPassiveProviderStatusCliEnv(
       ? null
       : resolveCachedVerifiedOpenCodeRuntimeBinaryPath();
     const knownOpenCodeBinary = appManagedOpenCodeBinary ?? cachedVerifiedOpenCodeBinary;
-    if (knownOpenCodeBinary && !explicitOpenCodeBinary) {
+    if (!explicitOpenCodeBinary) {
       // A cached login shell can retain a stale override after the app installs or updates
       // or verifies its runtime. Keep only deliberate call/process overrides authoritative.
       delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
@@ -101,6 +102,18 @@ export function buildPassiveProviderStatusCliEnv(
   }
   removeGlobalElectronRunAsNodeEnv(env);
   return { env, connectionIssues: {}, providerArgs: [] };
+}
+
+/** Async admission for the real status/catalog consumer, followed by passive environment projection. */
+export async function preparePassiveProviderStatusCliEnv(
+  options: Pick<ProviderAwareCliEnvOptions, 'binaryPath' | 'providerId' | 'env' | 'shellEnv'>
+): Promise<ProviderAwareCliEnvResult> {
+  if (
+    (!options.providerId || options.providerId === 'opencode') &&
+    !resolveExplicitOpenCodeBinary(options)
+  )
+    await preparePassiveOpenCodeRuntimeBinaryProjection();
+  return buildPassiveProviderStatusCliEnv(options);
 }
 
 export function getProviderStatusStoredCredentialAllowlist(

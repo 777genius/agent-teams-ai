@@ -1,3 +1,4 @@
+import { applyApiAuthReference } from '@features/local-http-auth/main';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
 import {
   resolveAgentTeamsMcpLaunchSpec,
@@ -28,6 +29,7 @@ export function applyAgentTeamsMcpAppContext(
   // Only the current Host can select a remote endpoint; never retain shell hints.
   delete env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
   delete env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+  delete env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON;
   delete env.CLAUDE_TEAM_APP_INSTANCE_ID;
   delete env.CLAUDE_TEAM_APP_PROFILE_SCOPE;
   if (current) {
@@ -72,6 +74,8 @@ export function applyAgentTeamsMcpAppContext(
     delete env.CLAUDE_TEAM_CONTROL_URL;
     delete childEnv.CLAUDE_TEAM_CONTROL_URL;
   }
+  applyApiAuthReference(env, claudeBasePath, controlUrl);
+  applyApiAuthReference(childEnv, claudeBasePath, controlUrl);
   env[MCP_ENV_JSON_ENV] = JSON.stringify(childEnv);
 }
 

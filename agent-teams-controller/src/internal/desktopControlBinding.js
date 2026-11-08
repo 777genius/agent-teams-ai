@@ -1,4 +1,5 @@
 const path = require('path');
+const controlApiAuth = require('./controlApiAuth.cts');
 
 function mismatch(detail) {
   const error = new Error(`APP_CONTEXT_MISMATCH: ${detail}`);
@@ -32,7 +33,9 @@ function assertConnectionContext(value) {
 function readBinding() {
   const controlUrl = process.env.AGENT_TEAMS_BOUND_CONTROL_URL;
   const rawContext = process.env.AGENT_TEAMS_BOUND_CONTEXT_JSON;
-  if (controlUrl === undefined && rawContext === undefined) return null;
+  const authToken = process.env.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN;
+  const authReference = process.env.CLAUDE_TEAM_CONTROL_AUTH_REF;
+  if (controlUrl === undefined && rawContext === undefined && authToken === undefined) return null;
   try {
     const url = new URL(controlUrl);
     const claudeDir = process.env.AGENT_TEAMS_MCP_CLAUDE_DIR;
@@ -46,17 +49,41 @@ function readBinding() {
       url.search ||
       url.hash ||
       controlUrl !== url.origin ||
+      (authReference === undefined &&
+        (typeof authToken !== 'string' || !/^\S{32,512}$/.test(authToken))) ||
       !claudeDir ||
       !path.isAbsolute(claudeDir)
     ) {
       throw mismatch('invalid desktop control binding');
     }
     const context = assertConnectionContext(JSON.parse(rawContext));
+    const resolvedRoot = path.resolve(claudeDir);
+    let authoritySource;
+    if (authReference !== undefined) {
+      if (
+        typeof authReference !== 'string' ||
+        path.dirname(authReference) !== path.join(resolvedRoot, 'local-http-auth') ||
+        !/^api-[a-f0-9-]{36}\.ref\.json$/.test(path.basename(authReference))
+      )
+        throw mismatch('invalid desktop credential reference');
+      // The fixed stable instance ref owns every future generation. Do not read
+      // mutable environment hints or retain a bearer fallback for this child.
+      [authoritySource] = controlApiAuth.resolveControlAuthorities(
+        { claudeDir: resolvedRoot },
+        { controlUrl },
+        authReference
+      );
+    }
     return Object.freeze({
       controlUrl,
-      claudeDir: path.resolve(claudeDir),
+      authToken: authoritySource ? undefined : authToken,
+      authoritySource,
+      claudeDir: resolvedRoot,
       context,
-      headers: Object.freeze({ 'x-agent-teams-app-context': JSON.stringify(context) }),
+      headers: Object.freeze({
+        ...(!authoritySource ? { authorization: `Bearer ${authToken}` } : {}),
+        'x-agent-teams-app-context': JSON.stringify(context),
+      }),
     });
   } catch (error) {
     if (error.code === 'APP_CONTEXT_MISMATCH') throw error;
@@ -86,13 +113,16 @@ function boundControlBaseUrls(context, flags = {}) {
       throw mismatch('controlUrl differs from desktop binding');
     }
   }
-  return [binding.controlUrl];
+  return [{ baseUrl: binding.controlUrl, authToken: binding.authToken }];
 }
 
 function boundRequestOptions(baseUrl) {
-  if (!binding) return {};
+  if (!binding) return { redirect: 'error', credentials: 'omit' };
   if (baseUrl !== binding.controlUrl) throw mismatch('request URL differs from desktop binding');
-  return { headers: binding.headers, redirect: 'error' };
+  const headers = binding.authoritySource
+    ? { ...binding.headers, authorization: `Bearer ${binding.authoritySource.read().token}` }
+    : binding.headers;
+  return { headers, redirect: 'error', credentials: 'omit' };
 }
 
 function assertManagementExpectation(flags) {

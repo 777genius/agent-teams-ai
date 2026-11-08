@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import { HttpAPIClient } from '@renderer/api/httpClient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,7 +44,10 @@ describe('HttpAPIClient organizations', () => {
   });
 
   it('passes all-organizations scope and performance caps to the map route', async () => {
-    const client = new HttpAPIClient('http://127.0.0.1:53123');
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      fixtureBrowserAccess('http://127.0.0.1:53123')
+    );
 
     await expect(
       client.organizations.getOrganizationMap({

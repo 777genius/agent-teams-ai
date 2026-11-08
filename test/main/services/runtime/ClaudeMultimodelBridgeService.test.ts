@@ -133,9 +133,9 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: (
+  preparePassiveProviderStatusCliEnv: (
     ...args: Parameters<typeof buildPassiveProviderStatusCliEnvMock>
-  ) => buildPassiveProviderStatusCliEnvMock(...args),
+  ) => Promise.resolve(buildPassiveProviderStatusCliEnvMock(...args)),
   buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
     buildProviderAwareCliEnvMock(...args),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [

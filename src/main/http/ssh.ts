@@ -21,7 +21,7 @@ import type {
   SshConnectionManager,
 } from '../services/infrastructure/SshConnectionManager';
 import type { SshLastConnection } from '@shared/types';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const logger = createLogger('HTTP:ssh');
 
@@ -29,31 +29,40 @@ export function registerSshRoutes(
   app: FastifyInstance,
   connectionManager: SshConnectionManager,
   modeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>,
-  changeContext: (operation: () => Promise<void>) => Promise<void> = async (operation) =>
-    operation()
+  changeContext: (
+    operation: () => Promise<void>,
+    request?: FastifyRequest
+  ) => Promise<void> = async (operation) => operation()
 ): void {
   const configManager = ConfigManager.getInstance();
-  let lifecycleTail = Promise.resolve();
+  let lifecyclePending = false;
 
-  const runLifecycleOperation = <T>(operation: () => Promise<T>): Promise<T> => {
-    const fencedOperation = async (): Promise<T> => {
+  const runLifecycleOperation = <T>(
+    request: FastifyRequest,
+    operation: () => Promise<T>
+  ): Promise<T> => {
+    if (lifecyclePending) {
+      return Promise.reject(
+        Object.assign(new Error('An SSH context change is already in progress'), {
+          statusCode: 409,
+        })
+      );
+    }
+    lifecyclePending = true;
+    return (async () => {
       let value!: T;
       await changeContext(async () => {
         value = await operation();
-      });
+      }, request);
       return value;
-    };
-    const result = lifecycleTail.then(fencedOperation, fencedOperation);
-    lifecycleTail = result.then(
-      () => undefined,
-      () => undefined
-    );
-    return result;
+    })().finally(() => {
+      lifecyclePending = false;
+    });
   };
 
   // Connect
   app.post<{ Body: SshConnectionConfig }>('/api/ssh/connect', (request) =>
-    runLifecycleOperation(async () => {
+    runLifecycleOperation(request, async () => {
       let connected = false;
       try {
         await connectionManager.connect(request.body);
@@ -81,8 +90,8 @@ export function registerSshRoutes(
   );
 
   // Disconnect
-  app.post('/api/ssh/disconnect', () =>
-    runLifecycleOperation(async () => {
+  app.post('/api/ssh/disconnect', (request) =>
+    runLifecycleOperation(request, async () => {
       try {
         connectionManager.disconnect();
         await modeSwitchCallback('local');

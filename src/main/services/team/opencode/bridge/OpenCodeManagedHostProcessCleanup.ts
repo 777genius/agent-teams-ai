@@ -1,18 +1,7 @@
-import {
-  listRuntimeProcessTableForCurrentPlatform,
-  type RuntimeProcessTableRow,
-} from '@features/tmux-installer/main';
-import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
-import { readProcessStartTimeMs } from '@main/utils/processStartTime';
-import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { execFile, type ExecFileException } from 'child_process';
 
-import {
-  OPENCODE_APP_PROFILE_FRAGMENT_KEY,
-  OPENCODE_APP_PROFILE_SCOPE_ENV,
-} from './OpenCodeMcpBridgeEnv';
-
 import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
+import type { RuntimeProcessTableRow } from '@features/tmux-installer/main';
 
 export type OpenCodeManagedHostCleanupMode = 'orphaned' | 'force';
 
@@ -53,16 +42,14 @@ export interface OpenCodeManagedHostProcessCleanupOptions {
 
 const OPENCODE_SERVE_COMMAND_RE =
   /(^|[/\\\s"])opencode(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
-// The orchestrator binary is this app's own, bundled or explicitly configured.
-// Standalone user tooling is the plain `opencode` CLI, so an orchestrator serve
-// host is app-managed by the fact that it exists at all.
+// Command and configuration recognizers below are diagnostic observations only.
+// Even an app installation path or copied ownership marker cannot grant native custody.
 const ORCHESTRATOR_SERVE_COMMAND_RE =
   /(^|[/\\\s"])claude-multimodel(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
 const WINDOWS_APP_MANAGED_OPENCODE_SERVE_RE =
   /[\\/]runtimes[\\/]opencode[\\/]versions[\\/][^"'\s]+[\\/]opencode-windows-[^"'\s]+[\\/]opencode\.exe(?:"|\s|$)/i;
-// Strings only this app writes into a managed host's effective OpenCode config:
-// the app-scoped MCP instance fragment, the local MCP launch environment key,
-// the managed teammate agent description. A standalone serve config has none.
+// Recognizable app configuration hints. These may be copied by another process
+// and remain diagnostic data, regardless of how many markers match.
 const MANAGED_SERVE_HOST_CONFIG_PATTERNS = [
   /agent-teams-app-instance=/i,
   /"AGENT_TEAMS_MCP_CLAUDE_DIR"/,
@@ -81,11 +68,9 @@ const MANAGED_INLINE_OPENCODE_CONFIG_PATTERNS = [
 ] as const;
 
 /**
- * The managed-host sweep is the only cleanup step that reaches processes this
- * app never recorded a pid for, so every path that uses it goes through a port
- * rather than calling the sweep directly: a deployment that would rather never
- * touch an unattributed host hands in a port that reports itself disabled, and
- * each caller then confines itself to what it can name.
+ * Compatibility port for lifecycle callers. The generic implementation cannot
+ * establish retained native custody and stays disabled. Known managed hosts
+ * remain eligible for cleanup through their authenticated runtime bridge.
  */
 export interface OpenCodeManagedHostSweepPort {
   isEnabled(): boolean;
@@ -100,7 +85,7 @@ export interface OpenCodeManagedHostSweepPort {
 }
 
 export const DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT: OpenCodeManagedHostSweepPort = {
-  isEnabled: () => true,
+  isEnabled: () => false,
   sweepManagedHosts: (input) =>
     cleanupManagedOpenCodeServeProcesses({
       mode: input.mode ?? 'force',
@@ -109,429 +94,19 @@ export const DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT: OpenCodeManagedHostSweep
 };
 
 export async function cleanupManagedOpenCodeServeProcesses(
-  options: OpenCodeManagedHostProcessCleanupOptions
+  _options: OpenCodeManagedHostProcessCleanupOptions
 ): Promise<OpenCodeManagedHostCleanupResult> {
-  const platform = options.platform ?? process.platform;
-  const budget = platform === 'win32' ? options.startupBudget : undefined;
-  const canAdmit = (): boolean => !budget || options.canAdmitStartupWork?.() !== false;
-  const assertCanTerminate = (): void => {
-    if (!canAdmit()) throw new Error('Startup cleanup stopped for shutdown');
-    budget?.assertCanTerminate();
-  };
-  const result: OpenCodeManagedHostCleanupResult = {
+  // Known managed hosts are handled by the runtime bridge using retained native
+  // custody. Names, installation paths, environment markers and HTTP config do
+  // not authorize requests or signals to an otherwise unattributed process.
+  return {
     scanned: 0,
     killed: 0,
     candidates: [],
-    diagnostics: [],
+    diagnostics: [
+      'Managed host process sweep preserved candidates: retained native custody is required.',
+    ],
   };
-
-  const listProcessRows =
-    options.listProcessRows ??
-    (platform === 'win32'
-      ? () => listWindowsProcessTable(budget ? budget.capMs(20_000) : 4_000, { bypassCache: true })
-      : () => listRuntimeProcessTableForCurrentPlatform({ bypassCache: true }));
-  if (!canAdmit()) return result;
-  budget?.capMs(20_000);
-  const rows = await listProcessRows();
-  if (!canAdmit()) return result;
-  const excludePids = options.excludePids ?? new Set<number>();
-  const requiredDetailsMarkers = options.requiredDetailsMarkers ?? [];
-  const requiredServeConfigMarkersAny = options.requiredServeConfigMarkersAny ?? [];
-  const readDetails =
-    options.readProcessDetails ??
-    (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
-  const readStartTimeImpl =
-    options.readProcessStartTimeMs ??
-    ((pid: number) =>
-      readProcessStartTimeMs(pid, platform, budget?.capMs(6_000), (diagnostic) => {
-        result.diagnostics.push(`pid=${pid}; ${diagnostic}`);
-      }));
-  const readStartTimeMs = (pid: number): Promise<number | null> =>
-    budget && budget.remainingMs() === 0 ? Promise.resolve(null) : readStartTimeImpl(pid);
-  const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
-  const readServeHostConfig = (baseUrl: string): Promise<string | null> =>
-    budget && budget.remainingMs() === 0 ? Promise.resolve(null) :
-      (options.readServeHostConfig ?? ((url) => readOpenCodeServeHostConfig(url, budget?.capMs(1_000))))(baseUrl);
-  const killProcess = options.killProcess;
-  const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
-  const sleepMs = options.sleepMs ?? sleep;
-
-  for (const row of rows) {
-    if (!canAdmit()) break;
-    if (!isOpenCodeServeCommand(row.command) && !isOrchestratorServeCommand(row.command)) {
-      continue;
-    }
-    result.scanned += 1;
-
-    if (excludePids.has(row.pid)) {
-      result.candidates.push({
-        pid: row.pid,
-        ppid: row.ppid,
-        action: 'kept_excluded',
-        reason: 'pid is known to the bridge host registry cleanup result',
-      });
-      continue;
-    }
-
-    if (budget && budget.remainingMs() < 5_000) {
-      result.candidates.push({
-        pid: row.pid, ppid: row.ppid, action: 'failed',
-        reason: 'startup cleanup budget exhausted; manual retry required',
-      });
-      result.diagnostics.push(`Unprocessed managed host candidate pid=${row.pid}: budget exhausted`);
-      continue;
-    }
-    const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
-    const details = await readDetails(row.pid);
-    if (!canAdmit()) break;
-    // The install path is evidence; the binary name is not.
-    //
-    // `isAppManagedWindowsOpenCodeServeCommand` matches a runtime under this
-    // app's own versioned install directory, which a host of another program
-    // cannot be running from. `isOrchestratorServeCommand` only says the process
-    // is AN orchestrator - it says nothing about WHOSE. Reading it as proof made
-    // every `claude-multimodel serve` on the machine app-managed by definition,
-    // including one belonging to a second installation or a copy of this app the
-    // user is running side by side. It stays in scope, so the loopback probe
-    // below still gets to ask the host who it belongs to, but it no longer
-    // answers that question by itself.
-    const isManagedByWindowsCommand =
-      platform === 'win32' && isAppManagedWindowsOpenCodeServeCommand(row.command);
-    let isManaged =
-      isManagedByWindowsCommand ||
-      Boolean(details && isManagedOpenCodeServeProcessDetails(details));
-    let serveConfig: string | null = null;
-    if (!isManaged && platform === 'win32' && baseUrl) {
-      // Windows cannot read another process's environment, and a runtime
-      // resolved through PATH does not carry the app-managed install path, so
-      // the last way to tell whose host this is asks the host itself over
-      // loopback. Silence still reads as "not ours".
-      serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
-      if (!canAdmit()) break;
-      isManaged = Boolean(serveConfig && isManagedOpenCodeServeHostConfig(serveConfig));
-    }
-    const hasRequiredDetailsMarkers =
-      requiredDetailsMarkers.length === 0 ||
-      Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
-    if (
-      (requiredServeConfigMarkersAny.length > 0 ||
-        (platform === 'win32' && options.requiredProfileScope !== undefined)) &&
-      baseUrl &&
-      serveConfig === null
-    ) {
-      serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
-      if (!canAdmit()) break;
-    }
-    const hasRequiredServeConfigMarker =
-      requiredServeConfigMarkersAny.length === 0 ||
-      Boolean(serveConfig && stringIncludesAnyMarker(serveConfig, requiredServeConfigMarkersAny));
-    const hasRequiredProfileScope =
-      options.requiredProfileScope === undefined ||
-      hasProfileOwnership(platform, details, serveConfig, options.requiredProfileScope);
-    if (
-      !isManaged ||
-      !hasRequiredDetailsMarkers ||
-      !hasRequiredServeConfigMarker ||
-      !hasRequiredProfileScope
-    ) {
-      result.candidates.push({
-        pid: row.pid,
-        ppid: row.ppid,
-        action: 'kept_unmanaged',
-        reason: !isManaged
-          ? platform === 'win32'
-            ? 'process is not an app-managed Windows OpenCode serve command'
-            : 'process does not carry Agent Teams managed OpenCode environment markers'
-          : 'process ownership markers do not match the required app instance or profile',
-      });
-      continue;
-    }
-
-    const shouldTrackStartTime =
-      platform === 'win32' ||
-      options.requiredProfileScope !== undefined ||
-      typeof options.startedBeforeMs === 'number' ||
-      requiredDetailsMarkers.length > 0 ||
-      requiredServeConfigMarkersAny.length > 0;
-    const startedAtMs = shouldTrackStartTime ? await readStartTimeMs(row.pid) : null;
-    if (!canAdmit()) break;
-    if (shouldTrackStartTime && !Number.isFinite(startedAtMs)) {
-      if (!isProcessAlive(row.pid)) {
-        result.killed += 1;
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'killed',
-          reason: 'managed OpenCode serve exited before cleanup signal',
-        });
-        continue;
-      }
-      if (platform === 'win32') {
-        const reason = 'Windows process start time could not be verified';
-        result.diagnostics.push(
-          `Skipped managed OpenCode serve pid=${row.pid}: ${reason.toLowerCase()}`
-        );
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'failed',
-          reason,
-        });
-        continue;
-      }
-    }
-    // The start-time fence is mode-independent on purpose: `force` used to
-    // bypass every age check, so a force sweep reaped managed hosts that a
-    // launch racing it had just started. A caller that really does want to
-    // reap everything it can attribute (shutdown) leaves `startedBeforeMs`
-    // unset.
-    if (
-      typeof options.startedBeforeMs === 'number' &&
-      (!Number.isFinite(startedAtMs) ||
-        startedAtMs === null ||
-        startedAtMs >= options.startedBeforeMs)
-    ) {
-      result.candidates.push({
-        pid: row.pid,
-        ppid: row.ppid,
-        action: 'kept_recent',
-        reason: 'process started after this app instance began',
-      });
-      continue;
-    }
-    if (options.mode === 'orphaned') {
-      const parentMayStillOwnProcess =
-        platform === 'win32' ? row.ppid > 0 && isProcessAlive(row.ppid) : row.ppid !== 1;
-      if (parentMayStillOwnProcess) {
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'kept_recent',
-          reason: 'process is still parented and may belong to an active bridge command',
-        });
-        continue;
-      }
-    }
-
-    try {
-      const confirmCandidateIdentity = async (
-        allowUnavailableProfileProof = false
-      ): Promise<'confirmed' | 'gone' | 'changed'> => {
-        let startTimeMatches = false;
-        let ownershipMarkerMatches = false;
-        if (requiredDetailsMarkers.length > 0) {
-          const currentDetails = await readDetails(row.pid);
-          if (!canAdmit()) return 'changed';
-          if (currentDetails) {
-            if (!processDetailsIncludeMarkers(currentDetails, requiredDetailsMarkers)) {
-              return isProcessAlive(row.pid) ? 'changed' : 'gone';
-            }
-            ownershipMarkerMatches = true;
-          }
-        }
-        if (requiredServeConfigMarkersAny.length > 0) {
-          const currentServeConfig = baseUrl
-            ? await readServeHostConfig(baseUrl).catch(() => null)
-            : null;
-          if (!canAdmit()) return 'changed';
-          if (currentServeConfig) {
-            if (!stringIncludesAnyMarker(currentServeConfig, requiredServeConfigMarkersAny)) {
-              return isProcessAlive(row.pid) ? 'changed' : 'gone';
-            }
-            ownershipMarkerMatches = true;
-          }
-        }
-        if (options.requiredProfileScope !== undefined) {
-          const currentDetails = platform === 'win32' ? null : await readDetails(row.pid);
-          if (!canAdmit()) return 'changed';
-          const currentConfig =
-            platform === 'win32' && baseUrl
-              ? await readServeHostConfig(baseUrl).catch(() => null)
-              : null;
-          if (!canAdmit()) return 'changed';
-          if (currentDetails || currentConfig) {
-            if (
-              !hasProfileOwnership(
-                platform,
-                currentDetails,
-                currentConfig,
-                options.requiredProfileScope
-              )
-            ) {
-              return isProcessAlive(row.pid) ? 'changed' : 'gone';
-            }
-            ownershipMarkerMatches = true;
-          } else if (!allowUnavailableProfileProof) {
-            return isProcessAlive(row.pid) ? 'changed' : 'gone';
-          }
-        }
-        // Ownership probes may await I/O; check PID birth after all of them.
-        if (Number.isFinite(startedAtMs) && startedAtMs !== null) {
-          const currentStartedAtMs = await readStartTimeMs(row.pid);
-          if (!canAdmit()) return 'changed';
-          if (currentStartedAtMs !== startedAtMs) {
-            return isProcessAlive(row.pid) ? 'changed' : 'gone';
-          }
-          startTimeMatches = true;
-        }
-        if (startTimeMatches) {
-          return 'confirmed';
-        }
-        if (ownershipMarkerMatches) {
-          return isProcessAlive(row.pid) ? 'confirmed' : 'gone';
-        }
-        if (
-          !shouldTrackStartTime &&
-          requiredDetailsMarkers.length === 0 &&
-          requiredServeConfigMarkersAny.length === 0
-        ) {
-          return 'confirmed';
-        }
-        return isProcessAlive(row.pid) ? 'changed' : 'gone';
-      };
-
-      const confirmTargetIdentity = async (): Promise<boolean> => {
-        const confirmed = budget ? await confirmCandidateIdentity() === 'confirmed' :
-          Number.isFinite(startedAtMs) && startedAtMs !== null &&
-          (await readStartTimeMs(row.pid)) === startedAtMs;
-        return canAdmit() && confirmed && (!budget || (budget.remainingMs() >= 5_000 &&
-          !(options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid))));
-      };
-
-      const identityBeforeDispose = await confirmCandidateIdentity();
-      if (!canAdmit()) break;
-      if (identityBeforeDispose === 'gone') {
-        result.killed += 1;
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'killed',
-          reason: 'managed OpenCode serve exited before graceful dispose',
-        });
-        continue;
-      }
-      if (identityBeforeDispose === 'changed') {
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'kept_unmanaged',
-          reason: 'pid identity changed before graceful dispose',
-        });
-        continue;
-      }
-
-      if (baseUrl && !budget) {
-        await disposeServeHost(baseUrl).catch(() => undefined);
-      }
-
-      // Graceful dispose can stop /config; an unchanged PID/start time still identifies the host.
-      const identityBeforeKill = await confirmCandidateIdentity(!budget);
-      if (!canAdmit()) break;
-      if (identityBeforeKill === 'gone') {
-        result.killed += 1;
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'killed',
-          reason: 'managed OpenCode serve exited during graceful dispose',
-        });
-        continue;
-      }
-      if (identityBeforeKill === 'changed') {
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'kept_unmanaged',
-          reason: 'pid identity changed before cleanup signal',
-        });
-        continue;
-      }
-
-      assertCanTerminate();
-      if (budget && options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid)) {
-        throw new Error('Parent ownership changed during startup cleanup');
-      }
-      try {
-        if (killProcess) {
-          await killProcess(row.pid);
-        } else if (platform === 'win32') {
-          await killProcessByPidAndWait(row.pid, {
-            platform,
-            confirmTargetIdentity,
-            requireTreeSuccess: Boolean(budget),
-            assertCanTerminate: budget ? assertCanTerminate : undefined,
-          });
-        } else {
-          killProcessByPid(row.pid);
-        }
-      } catch (error) {
-        if (budget || isProcessAlive(row.pid)) {
-          throw error;
-        }
-      }
-      if (!canAdmit()) break;
-      if (options.mode === 'force' && isProcessAlive(row.pid)) {
-        await sleepMs(250);
-        if (!canAdmit()) break;
-        if (isProcessAlive(row.pid)) {
-          const identityBeforeForceKill = await confirmCandidateIdentity(!budget);
-          if (identityBeforeForceKill === 'confirmed') {
-            assertCanTerminate();
-            try {
-              if (options.forceKillProcess) {
-                await options.forceKillProcess(row.pid);
-              } else {
-                // Windows taskkill awaits before its direct termination fallback.
-                await killProcessByPidAndWait(row.pid, {
-                  platform,
-                  signal: 'SIGKILL',
-                  requireTreeSuccess: Boolean(budget),
-                  assertCanTerminate: budget ? assertCanTerminate : undefined,
-                  ...(platform === 'win32' ? { confirmTargetIdentity } : {}),
-                });
-              }
-            } catch (error) {
-              if (budget || isProcessAlive(row.pid)) {
-                throw error;
-              }
-            }
-          } else if (identityBeforeForceKill === 'changed') {
-            result.diagnostics.push(
-              `Skipped force kill for managed OpenCode serve pid=${row.pid}: pid identity changed`
-            );
-            result.candidates.push({
-              pid: row.pid,
-              ppid: row.ppid,
-              action: 'kept_unmanaged',
-              reason: 'pid identity changed before force kill',
-            });
-            continue;
-          }
-        }
-      }
-      if (isProcessAlive(row.pid)) {
-        throw new Error(`managed OpenCode serve pid=${row.pid} remained alive after cleanup`);
-      }
-      result.killed += 1;
-      result.candidates.push({
-        pid: row.pid,
-        ppid: row.ppid,
-        action: 'killed',
-        reason: `managed OpenCode serve ${options.mode === 'force' ? 'cleanup' : 'orphan cleanup'}`,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      result.diagnostics.push(`Failed to kill managed OpenCode serve pid=${row.pid}: ${message}`);
-      result.candidates.push({
-        pid: row.pid,
-        ppid: row.ppid,
-        action: 'failed',
-        reason: message,
-      });
-    }
-  }
-
-  return result;
 }
 
 export function isOpenCodeServeCommand(command: string): boolean {
@@ -590,43 +165,6 @@ function processDetailsIncludeMarker(details: string, marker: string): boolean {
   return new RegExp(`(^|\\s)${escapeRegExp(marker)}${valueBoundary}`).test(details);
 }
 
-function hasProfileOwnership(
-  platform: NodeJS.Platform,
-  details: string | null,
-  serveConfig: string | null,
-  profileScope: string
-): boolean {
-  if (!profileScope.trim()) return false;
-  if (platform !== 'win32') {
-    return Boolean(
-      details &&
-      processDetailsIncludeMarker(details, `${OPENCODE_APP_PROFILE_SCOPE_ENV}=${profileScope}`)
-    );
-  }
-  if (!serveConfig) return false;
-  try {
-    const config = JSON.parse(serveConfig) as { mcp?: Record<string, unknown> };
-    return Object.entries(config.mcp ?? {}).some(([name, value]) => {
-      if (!/^agent-teams(?:-runtime-\d+)?$/.test(name) || !value || typeof value !== 'object')
-        return false;
-      const entry = value as { environment?: Record<string, unknown>; url?: unknown };
-      if (entry.environment?.[OPENCODE_APP_PROFILE_SCOPE_ENV] === profileScope) return true;
-      if (typeof entry.url !== 'string') return false;
-      const url = new URL(entry.url);
-      return (
-        new URLSearchParams(url.hash.slice(1)).get(OPENCODE_APP_PROFILE_FRAGMENT_KEY) ===
-        profileScope
-      );
-    });
-  } catch {
-    return false;
-  }
-}
-
-function stringIncludesAnyMarker(value: string, markers: readonly string[]): boolean {
-  return markers.some((marker) => marker.length > 0 && value.includes(marker));
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -640,60 +178,16 @@ function isLoopbackHostname(hostname: string): boolean {
   );
 }
 
-async function disposeOpenCodeServeHost(baseUrl: string): Promise<void> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1_000);
-  try {
-    await fetch(`${baseUrl}/global/dispose`, {
-      method: 'POST',
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function readOpenCodeServeHostConfig(baseUrl: string, timeoutMs = 1_000): Promise<string | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${baseUrl}/config`, { signal: controller.signal });
-    if (!response.ok) {
-      return null;
-    }
-    return await response.text();
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 /**
- * A process's command line WITH its environment, which is the only ownership
- * signal available for a process this app did not spawn and never recorded a
- * pid for. Exported because the cursor-agent lead sweep needs exactly the same
- * answer about exactly the same kind of process, and a second `ps eww` spelling
+ * A process's command line WITH its environment. This is observational
+ * diagnostic data; it cannot authorize HTTP or a destructive action. Exported
+ * for other observational callers; a second `ps eww` spelling
  * would be a second thing to keep correct.
  *
- * POSIX only: Windows does not let one process read another's environment, so
- * callers there have to prove ownership some other way.
+ * POSIX-only helper. Its output never grants cleanup authority.
  */
 export async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
   return execFileText('ps', ['eww', '-p', String(pid), '-o', 'command='], 2_000, 2 * 1024 * 1024);
-}
-
-function isNativeProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
-  }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function execFileText(

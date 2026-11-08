@@ -1,5 +1,13 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -23,9 +31,17 @@ afterEach(() => {
 function mcpBundle(platform: string, manifest: unknown) {
   const root = mkdtempSync(path.join(tmpdir(), 'TEST-packaged-mcp-'));
   fixtureRoots.push(root);
-  const directory = path.join(root, platform === 'darwin' ? 'Contents/Resources' : 'resources', 'mcp-server');
+  const directory = path.join(
+    root,
+    platform === 'darwin' ? 'Contents/Resources' : 'resources',
+    'mcp-server'
+  );
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, 'index.js'), 'export const ready = true;\n');
+  writeFileSync(
+    path.join(directory, 'copyHandoff.js'),
+    'throw new Error("TEST bootstrap fixture must never execute");\n'
+  );
   writeFileSync(path.join(directory, 'package.json'), JSON.stringify(manifest));
   return { root, directory };
 }
@@ -37,11 +53,22 @@ const elevateMismatch = {
 };
 
 describe('electron-builder bundle verification', () => {
-  it.each(['darwin', 'win32', 'linux'])('resolves the self-contained MCP bundle on %s without a workspace install', (platform) => {
-    const { root, directory } = mcpBundle(platform, createMcpDeploymentManifest(mcpSource));
-    expect(() => verifyBundledMcpServer(root, platform)).not.toThrow();
-    expect(createRequire(path.join(directory, 'consumer.cjs')).resolve(directory)).toBe(
-      realpathSync(path.join(directory, 'index.js'))
+  it.each(['darwin', 'win32', 'linux'])(
+    'resolves the self-contained MCP bundle on %s without a workspace install',
+    (platform) => {
+      const { root, directory } = mcpBundle(platform, createMcpDeploymentManifest(mcpSource));
+      expect(() => verifyBundledMcpServer(root, platform)).not.toThrow();
+      expect(createRequire(path.join(directory, 'consumer.cjs')).resolve(directory)).toBe(
+        realpathSync(path.join(directory, 'index.js'))
+      );
+    }
+  );
+
+  it('rejects a self-contained manifest when its copy bootstrap output is missing', () => {
+    const { root, directory } = mcpBundle('darwin', createMcpDeploymentManifest(mcpSource));
+    unlinkSync(path.join(directory, 'copyHandoff.js'));
+    expect(() => verifyBundledMcpServer(root, 'darwin')).toThrow(
+      'self-contained deployment manifest'
     );
   });
 
@@ -50,7 +77,9 @@ describe('electron-builder bundle verification', () => {
     { name: 'uninstalled workspace dependency', manifest: { ...mcpSource, main: 'index.js' } },
   ])('rejects $name before an installed V2 controller graph can fail', ({ manifest }) => {
     const { root } = mcpBundle('darwin', manifest);
-    expect(() => verifyBundledMcpServer(root, 'darwin')).toThrow('self-contained deployment manifest');
+    expect(() => verifyBundledMcpServer(root, 'darwin')).toThrow(
+      'self-contained deployment manifest'
+    );
   });
 
   it('allows the known NSIS elevation helper for supported Windows architectures', () => {

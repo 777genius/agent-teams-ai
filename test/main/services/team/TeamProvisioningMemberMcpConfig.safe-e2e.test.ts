@@ -54,6 +54,10 @@ vi.mock('@main/utils/childProcess', () => ({
       fs.mkdirSync(output, { recursive: true });
       fs.writeFileSync(path.join(output, 'index.js'), '// TEST compiled MCP bundle\n');
       fs.writeFileSync(
+        path.join(output, 'copyHandoff.js'),
+        'throw new Error("TEST bootstrap fixture must never execute");\n'
+      );
+      fs.writeFileSync(
         path.join(output, 'package.json'),
         `${JSON.stringify(createMcpDeploymentManifest(mcpPackage), null, 2)}\n`
       );

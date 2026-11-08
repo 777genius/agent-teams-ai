@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { prepareAgentChildProcessWritableEnv } from '@main/services/runtime/agentChildProcessPreflight';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+import { requireRuntimeMcpHeaderSupport } from '@main/services/runtime/mcpHeaderCapability';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import {
   resolveTeamProviderId,
@@ -405,6 +406,7 @@ export async function buildProvisioningEnv({
   }
   if (resolvedProviderId === 'opencode') {
     applyAgentTeamsMcpAppContext(providerEnv, resolvedClaudeBasePath, controlApiBaseUrl);
+    await requireRuntimeMcpHeaderSupport(providerEnv);
   }
   Object.assign(providerEnv, getDesktopMcpChildEnvironment());
 

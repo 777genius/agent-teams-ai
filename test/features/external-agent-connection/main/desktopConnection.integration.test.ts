@@ -2,7 +2,10 @@
 import { request as httpRequest } from 'node:http';
 
 import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
-import { getDesktopMcpChildEnvironment, isDesktopMcpControlAvailable } from '@features/external-agent-connection/main/desktopMcpEnvironment';
+import {
+  getDesktopMcpChildEnvironment,
+  isDesktopMcpControlAvailable,
+} from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -64,6 +67,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
       getAppVersion: () => 'test',
       isLocalContext: () => local,
       getControlUrl: () => (controlReady ? controlUrl : null),
+      getControlAuthToken: () => (controlReady ? 'sandbox-control-token-0123456789abcdef' : null),
       startControl: async () => {
         controlReady = true;
       },
@@ -197,7 +201,9 @@ describe('desktop connection bound HTTP lifecycle', () => {
       const firstChild = getDesktopMcpChildEnvironment();
       const secondChild = getDesktopMcpChildEnvironment();
       expect(JSON.parse(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON)).toEqual(resumed.context);
-      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON);
+      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(
+        firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON
+      );
       expect((await connection.getConnectionInfo()).context).toEqual(resumed.context);
       expect(isDesktopMcpControlAvailable()).toBe(true);
       const rootOrderOffset = order.length;
@@ -241,14 +247,21 @@ describe('desktop connection bound HTTP lifecycle', () => {
       for (const url of ['/api/app/connection/retry', '/api/ssh/connect', '/api/ssh/disconnect']) {
         expect((await request(url, newHeaders)).status).toBe(409);
       }
-      // A failed local switch must resume native launches against the actual root.
+      // An incomplete mutation keeps launch/child admission closed until explicit recovery.
       await expect(
         connection.changeContext(() => {
           throw new Error('SSH connect failed');
         })
       ).rejects.toThrow('SSH connect failed');
+      expect(() => connection.assertLaunchAdmission()).toThrow('changing context');
+      expect(handle).toBeNull();
+      expect(() => getDesktopMcpChildEnvironment()).toThrow('unavailable');
+      const recovered = await connection.retryConnection();
+      expect(recovered.mcp.status).toBe('ready');
+      expect(recovered.context.connectionGeneration).toBeGreaterThan(
+        after.context.connectionGeneration
+      );
       expect(() => connection.assertLaunchAdmission()).not.toThrow();
-      expect((await connection.getConnectionInfo()).mcp.status).toBe('ready');
       expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(root);
       await expect(
         connection.updateRoot(() => {
@@ -256,6 +269,17 @@ describe('desktop connection bound HTTP lifecycle', () => {
           throw new Error('Config write failed');
         })
       ).rejects.toThrow('Config write failed');
+      expect(() => connection.assertLaunchAdmission()).toThrow('changing context');
+      expect(handle).toBeNull();
+      expect(() => getDesktopMcpChildEnvironment()).toThrow('unavailable');
+      const recoveredUpdate = await connection.retryConnection();
+      expect(recoveredUpdate.mcp.status).toBe('ready');
+      expect(recoveredUpdate.context.connectionGeneration).toBeGreaterThan(
+        recovered.context.connectionGeneration
+      );
+      expect(recoveredUpdate.context.dataRootFingerprint).not.toBe(
+        recovered.context.dataRootFingerprint
+      );
       expect(() => connection.assertLaunchAdmission()).not.toThrow();
       expect(spawnedEnvironments.at(-1)?.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe(
         '/sandbox/connection-failed-update'

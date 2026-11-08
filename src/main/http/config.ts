@@ -38,7 +38,7 @@ import type {
   TriggerTokenType,
 } from '../services/infrastructure/ConfigManager';
 import type { TriggerColor } from '@shared/constants/triggerColors';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const logger = createLogger('HTTP:config');
 
@@ -50,7 +50,7 @@ interface ConfigResult<T = void> {
 
 export function registerConfigRoutes(
   app: FastifyInstance,
-  updateRoot?: (applyConfig: () => void) => Promise<void>
+  updateRoot?: (applyConfig: () => void, request?: FastifyRequest) => Promise<void>
 ): void {
   const configManager = ConfigManager.getInstance();
 
@@ -77,8 +77,10 @@ export function registerConfigRoutes(
       const applyConfig = () => {
         configManager.updateConfig(validation.section, validation.data);
       };
-      if (validation.section === 'general' && 'claudeRootPath' in validation.data && updateRoot) {
-        await updateRoot(applyConfig);
+      if (validation.section === 'general' && 'claudeRootPath' in validation.data) {
+        if (!updateRoot)
+          throw new Error('Changing the profile root requires restarting the server');
+        await updateRoot(applyConfig, request);
       } else {
         applyConfig();
       }

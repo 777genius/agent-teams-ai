@@ -20,8 +20,13 @@ does not validate Host/Origin and enables wildcard CORS. The tracked dependency
 patches expose a request gate before CORS, OPTIONS, and session processing. The
 desktop-bound server accepts the exact listener Host and either absent Origin
 (native clients) or the exact listener origin; other values receive HTTP 403.
-With this gate enabled, CORS headers are disabled. This is browser/rebinding
-protection, not authentication of local processes.
+With this gate enabled, CORS headers are disabled. This gate also requires the
+app-owned bearer before transport/session handling; the authority is never in a
+public URL. Copy Prompt registers the separately bundled `copyHandoff.js` stdio
+bootstrap, using a reference-only private configuration. It removes inherited
+provider/auth environment settings before dynamically loading the fixed sibling
+`index.js` and starts exactly once with the management profile. Only the MCP child
+reads private authority, never the external agent.
 
 Both dependency patches must be installed before building the self-contained
 MCP bundle. After updating either dependency, revalidate the patch and run the

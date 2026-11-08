@@ -26,6 +26,7 @@ const applyConfiguredConnectionEnvMock = vi.fn();
 const applyAllConfiguredConnectionEnvMock = vi.fn();
 const getConfiguredConnectionIssuesMock = vi.fn();
 const getConfiguredConnectionLaunchArgsMock = vi.fn();
+const preparePassiveOpenCodeRuntimeBinaryProjectionMock = vi.fn();
 const resolveAppManagedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
@@ -88,6 +89,8 @@ vi.mock('../../../../src/main/services/runtime/ProviderConnectionService', () =>
 }));
 
 vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService', () => ({
+  preparePassiveOpenCodeRuntimeBinaryProjection: () =>
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock(),
   isSupportedOpenCodeRuntimeBinaryPath: (...args: unknown[]) =>
     isSupportedOpenCodeRuntimeBinaryPathMock(...args),
   resolveAppManagedOpenCodeRuntimeBinaryPath: () =>
@@ -236,6 +239,8 @@ describe('buildProviderAwareCliEnv', () => {
     );
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([]);
     getConfiguredConnectionIssuesMock.mockResolvedValue({});
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock.mockReset();
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock.mockResolvedValue(undefined);
     resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
     resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
     resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
@@ -250,7 +255,9 @@ describe('buildProviderAwareCliEnv', () => {
   });
 
   it('passes cold Host publication and changed-port reopen to direct provider catalog without provisioning', async () => {
-    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'app-catalog-context-'));
+    const root = await fs.promises.realpath(
+      await fs.promises.mkdtemp(path.join(os.tmpdir(), 'app-catalog-context-'))
+    );
     const { setClaudeBasePathOverride } = await import('@main/utils/pathDecoder');
     const { writeTeamControlApiState, clearTeamControlApiState } =
       await import('@main/services/team/TeamControlApiState');
@@ -285,7 +292,10 @@ describe('buildProviderAwareCliEnv', () => {
     try {
       await clearTeamControlApiState();
       for (const port of [4580, 4581]) {
-        await writeTeamControlApiState(`http://127.0.0.1:${port}`);
+        await writeTeamControlApiState(
+          `http://127.0.0.1:${port}`,
+          'sandbox-control-token-0123456789abcdef'
+        );
         const client = new AgentTeamsRuntimeProviderManagementCliClient();
         const startedAt = Date.now();
         const catalog = await client.loadModels({ runtimeId: 'opencode', providerId: 'xai' });
@@ -296,6 +306,24 @@ describe('buildProviderAwareCliEnv', () => {
         });
         expect(Date.parse(freshUntil!)).toBeGreaterThanOrEqual(startedAt + 120_000);
         expect(Date.parse(freshUntil!)).toBeLessThanOrEqual(Date.now() + 120_000);
+        const authReference = process.env.CLAUDE_TEAM_CONTROL_AUTH_REF;
+        expect(authReference).toBeTypeOf('string');
+        expect(path.dirname(authReference!)).toBe(path.join(root, 'local-http-auth'));
+        expect(path.basename(authReference!)).toMatch(/^api-[a-f0-9-]{36}\.ref\.json$/);
+        const reference = JSON.parse(await fs.promises.readFile(authReference!, 'utf8'));
+        expect(reference).not.toHaveProperty('token');
+        expect(path.dirname(reference.descriptorPath)).toBe(path.join(root, 'local-http-auth'));
+        expect(path.basename(reference.descriptorPath)).toBe(
+          `api-${reference.instanceId}-${reference.generation}.json`
+        );
+        const descriptor = JSON.parse(await fs.promises.readFile(reference.descriptorPath, 'utf8'));
+        expect(descriptor).toMatchObject({
+          instanceId: reference.instanceId,
+          generation: reference.generation,
+          profileScope: reference.profileScope,
+          baseUrl: `http://127.0.0.1:${port}`,
+          token: 'sandbox-control-token-0123456789abcdef',
+        });
         const [command, args, options] = execCliMock.mock.calls.at(-1)!;
         expect(command).toBe('/sandbox/agent-teams-cli');
         expect(args).toEqual([
@@ -311,6 +339,7 @@ describe('buildProviderAwareCliEnv', () => {
         expect(options.env).toMatchObject({
           AGENT_TEAMS_MCP_CLAUDE_DIR: root,
           CLAUDE_TEAM_CONTROL_URL: `http://127.0.0.1:${port}`,
+          CLAUDE_TEAM_CONTROL_AUTH_REF: authReference,
           HOME: root,
           CLAUDE_CONFIG_DIR: path.join(root, 'auth-namespace'),
         });
@@ -318,9 +347,16 @@ describe('buildProviderAwareCliEnv', () => {
           ELECTRON_RUN_AS_NODE: '1',
           AGENT_TEAMS_MCP_CLAUDE_DIR: root,
           CLAUDE_TEAM_CONTROL_URL: `http://127.0.0.1:${port}`,
+          CLAUDE_TEAM_CONTROL_AUTH_REF: authReference,
         });
+        expect(options.env.CLAUDE_TEAM_CONTROL_AUTH_TOKEN).toBeUndefined();
+        expect(
+          JSON.parse(options.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)
+            .CLAUDE_TEAM_CONTROL_AUTH_TOKEN
+        ).toBeUndefined();
         await clearTeamControlApiState();
         expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+        expect(process.env.CLAUDE_TEAM_CONTROL_AUTH_REF).toBeUndefined();
       }
       expect(execCliMock).toHaveBeenCalledTimes(2);
     } finally {
@@ -375,6 +411,7 @@ describe('buildProviderAwareCliEnv', () => {
       });
       try {
         for (const port of [41001, 41002]) {
+          const authToken = 'sandbox-mcp-auth-token-0123456789abcdef';
           handle.mockReturnValue({
             url: `http://127.0.0.1:${port}/mcp`,
             port,
@@ -382,6 +419,7 @@ describe('buildProviderAwareCliEnv', () => {
             pid: 123,
             generation: 1,
             diagnostics: [],
+            authToken,
             transportEvidence: {
               schemaVersion: 1,
               transport: 'httpStream',
@@ -403,6 +441,10 @@ describe('buildProviderAwareCliEnv', () => {
           expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe(
             `http://127.0.0.1:${port}/mcp#agent-teams-app-instance=sandbox-host&agent-teams-app-profile=${profile}`
           );
+          expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).not.toContain(authToken);
+          expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON)).toEqual({
+            Authorization: `Bearer ${authToken}`,
+          });
           expect(env.CLAUDE_CONFIG_DIR).toBe('/sandbox/selected-auth');
           expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe('/sandbox/host-node');
           expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)).toMatchObject({
@@ -435,6 +477,7 @@ describe('buildProviderAwareCliEnv', () => {
           },
         }).env;
         expect(revoked.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+        expect(revoked.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_HEADERS_JSON).toBeUndefined();
         expect(revoked.CLAUDE_TEAM_APP_INSTANCE_ID).toBeUndefined();
         expect(revoked.CLAUDE_TEAM_APP_PROFILE_SCOPE).toBeUndefined();
         expect(start).not.toHaveBeenCalled();
@@ -590,7 +633,7 @@ describe('buildProviderAwareCliEnv', () => {
     }
   });
 
-  it('projects existing app-managed OpenCode metadata into passive status env', async () => {
+  it('projects only captured verified app-managed OpenCode metadata into passive status env', async () => {
     const managedBinaryPath = path.join('/managed', 'opencode', 'bin', 'opencode');
     resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(managedBinaryPath);
     const { buildPassiveProviderStatusCliEnv } =
@@ -610,6 +653,19 @@ describe('buildProviderAwareCliEnv', () => {
     expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
     expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
     expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('prepares a cold OpenCode status selection before its passive projection', async () => {
+    const path = '/TEST/captured/opencode';
+    preparePassiveOpenCodeRuntimeBinaryProjectionMock.mockImplementation(async () => {
+      resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(path);
+    });
+    const { preparePassiveProviderStatusCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const result = await preparePassiveProviderStatusCliEnv({ providerId: 'opencode' });
+    expect(preparePassiveOpenCodeRuntimeBinaryProjectionMock).toHaveBeenCalledOnce();
+    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(path);
+    expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
 
   it.each([undefined, 'codex'] as const)(

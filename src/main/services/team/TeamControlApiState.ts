@@ -1,65 +1,115 @@
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { randomUUID } from 'node:crypto';
+
+import { type ApiAuthority } from '@features/local-http-auth/contracts';
+import {
+  apiProfileScope,
+  checkApiReadiness,
+  closePublicationAdmission,
+  publishApiAuthority,
+  removeApiAuthority,
+  RetainedApiPublicationError,
+  revokeApiAuthorityHints,
+  selectApiAuthorityHints,
+} from '@features/local-http-auth/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
-import { createLogger } from '@shared/utils/logger';
-import { rm } from 'fs/promises';
-import path from 'path';
 
-const logger = createLogger('Service:TeamControlApiState');
+const instanceId = randomUUID();
+let revision = 0;
+let publicationClosed = false;
+let tail: Promise<void> = Promise.resolve();
+let published: { root: string; authority: ApiAuthority } | null = null;
 
-const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
-let publicationGeneration = 0;
-let publicationTail: Promise<void> = Promise.resolve();
-
-// Host start/stop/root-change callers must order disk publication as well as env updates.
-function enqueuePublication(operation: () => Promise<void>): Promise<void> {
-  const result = publicationTail.then(operation);
-  publicationTail = result.catch(() => undefined);
+function enqueue(operation: () => Promise<void>): Promise<void> {
+  const result = tail.then(operation);
+  tail = result.catch(() => undefined);
   return result;
 }
 
-function normalizeBaseUrlHost(host: string): string {
-  if (host === '0.0.0.0' || host === '::') {
-    return '127.0.0.1';
+export function buildTeamControlApiBaseUrl(port: number, host = '127.0.0.1'): string {
+  const normalized = host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
+  return `http://${normalized.includes(':') ? `[${normalized}]` : normalized}:${port}`;
+}
+
+/** Publish only after authenticated ingress is ready; otherwise revoke discovery. */
+export async function syncTeamControlApiAuthority(
+  baseUrl: string | null,
+  authToken: string | null
+): Promise<void> {
+  if (!baseUrl || !authToken) {
+    await clearTeamControlApiState();
+    return;
   }
-
-  return host;
+  await checkApiReadiness(baseUrl, authToken);
+  await writeTeamControlApiState(baseUrl, authToken);
 }
 
-export function buildTeamControlApiBaseUrl(port: number, host: string = '127.0.0.1'): string {
-  return `http://${normalizeBaseUrlHost(host)}:${port}`;
-}
-
-function getTeamControlApiStatePath(): string {
-  return path.join(getClaudeBasePath(), TEAM_CONTROL_API_STATE_FILE);
-}
-
-export async function writeTeamControlApiState(baseUrl: string): Promise<void> {
-  const generation = ++publicationGeneration;
-  delete process.env.CLAUDE_TEAM_CONTROL_URL;
-  const statePath = getTeamControlApiStatePath();
-  await enqueuePublication(async () => {
-    await atomicWriteAsync(
-      statePath,
-      JSON.stringify(
-        {
-          baseUrl,
-          pid: process.pid,
-          updatedAt: new Date().toISOString(),
-        },
-        null,
-        2
-      )
+/** Publish immutable credentials and switch discovery under the cross-process publication lock. */
+export function writeTeamControlApiState(baseUrl: string, authToken: string): Promise<void> {
+  if (publicationClosed) return Promise.reject(new Error('API publication admission is closed'));
+  if (!/^\S{32,512}$/.test(authToken)) {
+    return Promise.reject(
+      new Error('Team control API auth token must be 32 to 512 non-whitespace characters')
     );
-    // Publish only committed Host state, never a configured port or a late stopped endpoint.
-    if (generation !== publicationGeneration) return;
-    process.env.CLAUDE_TEAM_CONTROL_URL = baseUrl;
-    logger.info(`Published team control API endpoint: ${baseUrl}`);
+  }
+  const root = getClaudeBasePath();
+  const generation = ++revision;
+  revokeApiAuthorityHints();
+  return enqueue(async () => {
+    const previous = published;
+    const authority: ApiAuthority =
+      previous?.root === root &&
+      previous.authority.baseUrl === baseUrl &&
+      previous.authority.token === authToken
+        ? previous.authority
+        : {
+            schemaVersion: 1,
+            service: 'api',
+            profileScope: apiProfileScope(root),
+            instanceId,
+            generation: randomUUID(),
+            baseUrl,
+            token: authToken,
+          };
+    let reference: string;
+    try {
+      reference = await publishApiAuthority(root, authority);
+    } catch (error) {
+      if (
+        error instanceof RetainedApiPublicationError &&
+        previous?.authority === authority &&
+        previous.root === root &&
+        generation === revision &&
+        getClaudeBasePath() === root
+      ) {
+        selectApiAuthorityHints(root, authority, error.referencePath);
+      }
+      throw error;
+    }
+    published = { root, authority };
+    if (previous && previous.authority !== authority) {
+      await removeApiAuthority(previous.root, previous.authority);
+    }
+    if (generation !== revision || getClaudeBasePath() !== root) return;
+    selectApiAuthorityHints(root, authority, reference);
   });
 }
 
-export async function clearTeamControlApiState(): Promise<void> {
-  publicationGeneration++;
-  delete process.env.CLAUDE_TEAM_CONTROL_URL;
-  const statePath = getTeamControlApiStatePath();
-  await enqueuePublication(() => rm(statePath, { force: true }).catch(() => undefined));
+/** A stale instance may remove only the exact generation it published. */
+export function clearTeamControlApiState(): Promise<void> {
+  ++revision;
+  revokeApiAuthorityHints();
+  return enqueue(async () => {
+    const owned = published;
+    if (!owned) return;
+    await removeApiAuthority(owned.root, owned.authority);
+    if (published === owned) published = null;
+  });
+}
+
+/** Before any awaited shutdown step: revoke hints and prevent late owner re-selection. */
+export function closeTeamControlApiPublicationAdmission(): void {
+  publicationClosed = true;
+  ++revision;
+  revokeApiAuthorityHints();
+  closePublicationAdmission();
 }

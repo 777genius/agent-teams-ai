@@ -76,7 +76,7 @@ vi.mock('@main/services/team/cliFlavor', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: vi.fn(() => ({
+  preparePassiveProviderStatusCliEnv: vi.fn(async () => ({
     env: { HOME: '/Users/tester' },
     connectionIssues: {},
     providerArgs: [],

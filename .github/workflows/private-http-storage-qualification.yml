@@ -1,0 +1,57 @@
+name: Private HTTP storage qualification
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/local-http-auth/**'
+      - 'agent-teams-controller/src/internal/controlApiAuth.cts'
+      - 'agent-teams-controller/src/internal/windowsPrivateAcl.cts'
+      - 'agent-teams-controller/scripts/**'
+      - 'test/features/local-http-auth/private*'
+      - 'scripts/ci/vitest.private-http-storage.config.mts'
+      - '.github/workflows/private-http-storage-qualification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/features/local-http-auth/**'
+      - 'agent-teams-controller/**'
+      - 'test/features/local-http-auth/private*'
+      - 'scripts/ci/vitest.private-http-storage.config.mts'
+      - '.github/workflows/private-http-storage-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storage:
+    name: Private HTTP storage (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-15-intel, windows-latest]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE: '1'
+      PRIVATE_HTTP_QUALIFY_COMPILED: '1'
+      PRIVATE_ACL_QUALIFY_FOREIGN_OWNER: ${{ matrix.os == 'ubuntu-latest' && '1' || '' }}
+    steps:
+      - name: Create job-owned synthetic fixture and cache root
+        env:
+          PRIVATE_HTTP_TEST_CACHE: ${{ runner.temp }}/private-http-storage
+        run: node -e "const fs=require('node:fs'); const root=process.env.PRIVATE_HTTP_TEST_CACHE; fs.mkdirSync(root,{recursive:true,mode:448}); fs.appendFileSync(process.env.GITHUB_ENV,['PRIVATE_HTTP_TEST_CACHE='+root,...['TMPDIR','TEMP','TMP'].map(k=>k+'='+root)].join('\n')+'\n')"
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install pinned workspace test dependencies
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build standalone controller and verify policy mirror
+        run: node agent-teams-controller/scripts/build.mjs
+      - name: Qualify actual API writer and controller reader ACLs
+        run: node node_modules/vitest/vitest.mjs run --config scripts/ci/vitest.private-http-storage.config.mts

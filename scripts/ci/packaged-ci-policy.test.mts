@@ -7,7 +7,12 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { collectPackagedDecision } from './packaged-ci-cli.mts';
-import { assertFullPackagedGate, classifyPackagedPr, readRawDiff } from './packaged-ci-policy.mts';
+import {
+  assertFullPackagedGate,
+  classifyPackagedPr,
+  classifyCanonicalPackagedSnapshot,
+  readRawDiff,
+} from './packaged-ci-policy.mts';
 
 const baseSha = 'a'.repeat(40);
 const headSha = 'b'.repeat(40);
@@ -184,6 +189,78 @@ test('review, force-full label and malformed headers always require full verific
   }
 });
 
+function snapshotFixture(sha = headSha): {
+  env: NodeJS.ProcessEnv;
+  payload: Record<string, unknown>;
+} {
+  const ref = `refs/heads/test/packaged-pr-923-${sha}`;
+  return {
+    env: {
+      GITHUB_EVENT_NAME: 'push',
+      GITHUB_REPOSITORY: '777genius/agent-teams-ai',
+      GITHUB_REPOSITORY_OWNER: '777genius',
+      GITHUB_ACTOR: '777genius',
+      GITHUB_TRIGGERING_ACTOR: '777genius',
+      GITHUB_REF: ref,
+      GITHUB_SHA: sha,
+    },
+    payload: {
+      ref,
+      after: sha,
+      deleted: false,
+      forced: false,
+      head_commit: { id: sha },
+      repository: {
+        full_name: '777genius/agent-teams-ai',
+        fork: false,
+        owner: { login: '777genius' },
+      },
+      sender: { login: '777genius', type: 'User' },
+    },
+  };
+}
+
+test('only an authenticated canonical owner push bound to exact TEST ref and local commit qualifies', () => {
+  const { env, payload } = snapshotFixture();
+  const decision = classifyCanonicalPackagedSnapshot(env, payload, headSha);
+  assert.equal(decision.scope, 'full');
+  assert.equal(decision.run, true);
+  assert.equal(decision.canonicalSnapshot, true);
+  for (const changed of [
+    { GITHUB_EVENT_NAME: 'pull_request' },
+    { GITHUB_EVENT_NAME: 'workflow_dispatch' },
+    { GITHUB_REPOSITORY: 'researchersongwu/agent-teams-ai' },
+    { GITHUB_REPOSITORY_OWNER: 'researchersongwu' },
+    { GITHUB_ACTOR: 'contributor' },
+    { GITHUB_TRIGGERING_ACTOR: 'contributor' },
+    { GITHUB_REF: 'refs/heads/main' },
+    { GITHUB_REF: `refs/heads/test/packaged-pr-923-${baseSha}` },
+    { GITHUB_REF: 'refs/heads/test/packaged-pr-923-short' },
+    { GITHUB_REF: `${env.GITHUB_REF}\n` },
+    { GITHUB_SHA: baseSha },
+  ])
+    assert.throws(() =>
+      classifyCanonicalPackagedSnapshot({ ...env, ...changed }, payload, headSha)
+    );
+  for (const changed of [
+    { ref: 'refs/heads/main' },
+    { after: baseSha },
+    { after: '0'.repeat(40) },
+    { deleted: true },
+    { forced: true },
+    { head_commit: { id: baseSha } },
+    { repository: { full_name: 'researchersongwu/agent-teams-ai', fork: true } },
+    { sender: { login: 'contributor', type: 'User' } },
+    { sender: { login: '777genius', type: 'Bot' } },
+  ])
+    assert.throws(() =>
+      classifyCanonicalPackagedSnapshot(env, { ...payload, ...changed }, headSha)
+    );
+  assert.throws(() => classifyCanonicalPackagedSnapshot(env, payload, baseSha));
+  assert.throws(() => classifyCanonicalPackagedSnapshot(env, undefined, headSha));
+  assert.throws(() => classifyCanonicalPackagedSnapshot({}, payload, headSha));
+});
+
 test('title/body edits skip work; base or ambiguous edits must verify code', () => {
   for (const changes of [
     { title: { from: 'old' } },
@@ -295,6 +372,15 @@ test('CLI uses exact local git evidence and falls back to full after git/event f
     rmSync(join(cwd, 'test/obsolete.ts'));
     renameSync(join(cwd, 'src/main/old.ts'), join(cwd, 'test/renamed.ts'));
     const head = commit();
+    const snapshot = snapshotFixture(head);
+    const snapshotEnv = { ...env, ...snapshot.env };
+    writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(snapshot.payload));
+    assert.equal(collectPackagedDecision(snapshotEnv, cwd).canonicalSnapshot, true);
+    git(['checkout', '--detach', base]);
+    assert.throws(() => collectPackagedDecision(snapshotEnv, cwd), /identity mismatch/);
+    git(['checkout', '--detach', head]);
+    writeFileSync(env.GITHUB_EVENT_PATH, '{invalid');
+    assert.throws(() => collectPackagedDecision(snapshotEnv, cwd));
     const payload = event({
       pull_request: {
         ...event().pull_request,
@@ -349,5 +435,12 @@ test('focused changes skip platform matrix only after successful classification'
     assert.throws(() => assertFullPackagedGate({ ...valid, run: undefined }));
     assert.throws(() => assertFullPackagedGate({ ...valid, packagedResult: 'cancelled' }));
   }
-  assert.throws(() => assertFullPackagedGate({ scope: 'unknown', run: 'false', scopeResult: 'success', packagedResult: 'skipped' }));
+  assert.throws(() =>
+    assertFullPackagedGate({
+      scope: 'unknown',
+      run: 'false',
+      scopeResult: 'success',
+      packagedResult: 'skipped',
+    })
+  );
 });

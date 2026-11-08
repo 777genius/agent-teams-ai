@@ -3,6 +3,7 @@ export interface PackagedDecision {
   scope: PackagedScope;
   run: boolean;
   reason: string;
+  canonicalSnapshot?: true;
 }
 export interface PullRequestInput {
   action: string;
@@ -191,6 +192,52 @@ export function classifyPackagedPr(
     return full('change outside app-only allowlist');
   }
   return { scope: 'app', run: true, reason: 'draft regular source/test changes' };
+}
+
+/** A deliberate owner-pushed canonical TEST ref binds the reviewed PR commit unchanged.
+ * This is an authenticated push event, never a fork PR or caller-selected scope override.
+ */
+export function classifyCanonicalPackagedSnapshot(
+  env: NodeJS.ProcessEnv,
+  event: unknown,
+  localHead: string
+): PackagedDecision {
+  const payload = record(event);
+  const repository = record(payload?.repository);
+  const owner = record(repository?.owner);
+  const sender = record(payload?.sender);
+  const commit = record(payload?.head_commit);
+  const ref = env.GITHUB_REF ?? '';
+  const match = /^refs\/heads\/test\/packaged-pr-([1-9]\d*)-([a-f0-9]{40})$/.exec(ref);
+  const sha = env.GITHUB_SHA;
+  if (
+    env.GITHUB_EVENT_NAME !== 'push' ||
+    env.GITHUB_REPOSITORY !== '777genius/agent-teams-ai' ||
+    env.GITHUB_REPOSITORY_OWNER !== '777genius' ||
+    env.GITHUB_ACTOR !== '777genius' ||
+    env.GITHUB_TRIGGERING_ACTOR !== '777genius' ||
+    repository?.full_name !== '777genius/agent-teams-ai' ||
+    repository.fork !== false ||
+    owner?.login !== '777genius' ||
+    sender?.login !== '777genius' ||
+    sender.type !== 'User' ||
+    payload?.deleted !== false ||
+    payload.forced !== false ||
+    !match ||
+    match[0] !== ref ||
+    payload.ref !== ref ||
+    sha !== match[2] ||
+    payload.after !== sha ||
+    commit?.id !== sha ||
+    localHead !== sha
+  )
+    throw new Error('Canonical packaged snapshot event/local commit identity mismatch');
+  return {
+    scope: 'full',
+    run: true,
+    canonicalSnapshot: true,
+    reason: `owner-reviewed canonical snapshot for PR ${match[1]} at ${sha}`,
+  };
 }
 
 export function assertFullPackagedGate(input: {

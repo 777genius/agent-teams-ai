@@ -10,8 +10,8 @@ import { parse } from 'yaml';
 import { METADATA_GATE } from '../../scripts/ci/ci-feedback.mts';
 
 import {
-  type ExpressionValue,
   evaluateWorkflowValue,
+  type ExpressionValue,
   RUN_SUPERSESSION_POLICY,
   SUPERSESSION_GROUP,
 } from './runSupersession.mts';
@@ -300,7 +300,17 @@ describe('run supersession policy', () => {
     }
   });
 
-  it('leaves ReviewRouter, manual native runs and reusable workflows without run groups', () => {
+  it.each(policy.qualification)(
+    '%s: retains each security qualification instead of cancelling it',
+    (name) => {
+      const first = concurrency(name, pr(7, 701));
+      expect(concurrency(name, pr(7, 702))).toEqual({ group: first.group, cancel: false });
+      expect(concurrency(name, pr(8, 703)).group).not.toBe(first.group);
+      expect(concurrency(name, dispatch(704)).cancel).toBe(false);
+    }
+  );
+
+  it('leaves independent qualification, ReviewRouter and manual or reusable runs without run groups', () => {
     for (const name of policy.unmanaged)
       expect(workflows.get(name)!.concurrency, name).toBeUndefined();
     // A called workflow sees the caller's github context and name, so the same

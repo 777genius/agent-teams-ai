@@ -56,6 +56,7 @@ async function fingerprintInputs(root: string): Promise<string> {
   }
   await collect('mcp-server/src');
   await collect('agent-teams-controller/src');
+  await collect('src/features/local-http-auth');
   const hash = createHash('sha256');
   for (const relative of files.toSorted((left, right) => left.localeCompare(right))) {
     const bytes = await fs.readFile(path.join(root, relative));
@@ -69,6 +70,8 @@ async function outputHash(entry: string): Promise<string | null> {
   try {
     return createHash('sha256')
       .update(await fs.readFile(entry))
+      .update('\0')
+      .update(await fs.readFile(path.join(path.dirname(entry), 'copyHandoff.js')))
       .update('\0')
       .update(await fs.readFile(path.join(path.dirname(entry), 'package.json')))
       .digest('hex');

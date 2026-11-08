@@ -31,7 +31,7 @@ function createConnectionManager() {
 }
 
 describe('HTTP SSH routes', () => {
-  it('serializes disconnect behind an in-flight connection', async () => {
+  it('refuses overlapping disconnect and admits an explicit retry after connection settles', async () => {
     const app = Fastify();
     const connectionManager = createConnectionManager();
     let finishConnecting: (() => void) | undefined;
@@ -58,19 +58,26 @@ describe('HTTP SSH routes', () => {
       });
       await vi.waitFor(() => expect(connectionManager.connect).toHaveBeenCalledOnce());
 
-      const disconnectResponse = app.inject({ method: 'POST', url: '/api/ssh/disconnect' });
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      const overlapping = await app.inject({ method: 'POST', url: '/api/ssh/disconnect' });
 
+      expect(overlapping.statusCode).toBe(409);
+      expect(overlapping.json().message).toBe('An SSH context change is already in progress');
       expect(connectionManager.disconnect).not.toHaveBeenCalled();
       expect(modeSwitchCallback).not.toHaveBeenCalled();
 
       finishConnecting?.();
-      await Promise.all([connectResponse, disconnectResponse]);
+      expect((await connectResponse).json().success).toBe(true);
+      expect(modeSwitchCallback).toHaveBeenCalledExactlyOnceWith('ssh');
+      expect(connectionManager.disconnect).not.toHaveBeenCalled();
+      const retried = await app.inject({ method: 'POST', url: '/api/ssh/disconnect' });
+      expect(retried.statusCode).toBe(200);
+      expect(retried.json().success).toBe(true);
 
       expect(modeSwitchCallback).toHaveBeenNthCalledWith(1, 'ssh');
       expect(connectionManager.disconnect).toHaveBeenCalledOnce();
       expect(modeSwitchCallback).toHaveBeenNthCalledWith(2, 'local');
     } finally {
+      finishConnecting?.();
       await app.close();
     }
   });

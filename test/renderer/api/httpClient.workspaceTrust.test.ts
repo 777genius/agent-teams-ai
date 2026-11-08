@@ -1,3 +1,4 @@
+import { fixtureBrowserAccess } from '../../features/local-http-auth/browserFixture';
 import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
   WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
@@ -18,7 +19,10 @@ describe('HttpAPIClient workspace trust', () => {
     const result = { providers: [{ providerId: 'codex', status: 'launch_scoped' }] };
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(result)));
     vi.stubGlobal('fetch', fetch);
-    const client = new HttpAPIClient('http://localhost:9999');
+    const client = new HttpAPIClient(
+      'http://localhost:9999',
+      fixtureBrowserAccess('http://localhost:9999')
+    );
     const request = { projectPath: '/sandbox/repo', providerIds: ['codex' as const] };
     await expect(client.workspaceTrust.getLaunchStatus?.(request)).resolves.toEqual(result);
     expect(fetch).toHaveBeenLastCalledWith(
@@ -46,7 +50,10 @@ describe('HttpAPIClient workspace trust', () => {
         .fn()
         .mockResolvedValue(new Response(JSON.stringify({ error: 'Not Found' }), { status: 404 }))
     );
-    const client = new HttpAPIClient('http://localhost:9999');
+    const client = new HttpAPIClient(
+      'http://localhost:9999',
+      fixtureBrowserAccess('http://localhost:9999')
+    );
     await expect(
       client.workspaceTrust.getLaunchStatus?.({ projectPath: '/sandbox', providerIds: ['codex'] })
     ).rejects.toThrow();

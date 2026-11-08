@@ -15,6 +15,8 @@ import type {
   ExternalAgentRunSnapshot,
 } from '@features/external-agent-connection/contracts';
 
+vi.mock('@features/chat-visualizations/renderer', () => ({ VisualizationBlock: () => null }));
+
 vi.mock('@renderer/services/draftStorage', () => ({
   draftStorage: {
     loadDraft: vi.fn(async () => 'Create a review team for the sandbox'),
@@ -110,7 +112,19 @@ describe('external prompt freshness and clipboard fallback', () => {
     await act(async () =>
       root.render(
         createElement(ExternalAgentPromptDialog, {
-          api,
+          api: {
+            ...api,
+            prepareCopyHandoff:
+              api.prepareCopyHandoff ??
+              (async () => ({
+                connection: await api.getConnectionInfo(),
+                registration: {
+                  name: 'sandbox-connection',
+                  command: '/sandbox/node',
+                  args: ['/sandbox/copyHandoff.js', '--handoff', '/sandbox/private.json'],
+                },
+              })),
+          },
           runApi: api.directRun,
           connection,
           isLight: false,
@@ -121,6 +135,48 @@ describe('external prompt freshness and clipboard fallback', () => {
   };
 
   // RED when a restored oversized task enables a native run instead of explaining its limit.
+  it('prepares a protected stdio handoff and never substitutes a public URL registration', async () => {
+    const prepareCopyHandoff = vi.fn(async () => ({
+      connection: snapshot(),
+      registration: {
+        name: 'sandbox-copy',
+        command: '/sandbox/node',
+        args: ['/sandbox/copyHandoff.js', '--handoff', '/sandbox/private.json'],
+      },
+    }));
+    const getConnectionInfo = vi.fn();
+    await render({ getConnectionInfo, retryConnection: vi.fn(), prepareCopyHandoff });
+    await copy();
+    expect(prepareCopyHandoff).toHaveBeenCalledWith({
+      expectedContext: snapshot().context,
+      expectedProfileFingerprint: 'sandbox',
+    });
+    expect(getConnectionInfo).not.toHaveBeenCalled();
+    const prompt = writeText.mock.calls[0]?.[0];
+    expect(prompt).toContain('claude mcp add --transport stdio');
+    expect(prompt).toContain('codex mcp add');
+    expect(prompt).toContain('copyHandoff.js');
+    expect(prompt).not.toContain('--transport http');
+    expect(prompt).not.toContain('--url');
+    expect(prompt).toContain('Do not open, read, print or copy');
+  });
+
+  it('reports preparation failure without copying or claiming success', async () => {
+    await render({
+      getConnectionInfo: vi.fn(),
+      retryConnection: vi.fn(),
+      prepareCopyHandoff: vi
+        .fn()
+        .mockRejectedValue(new Error('Authentication reference unavailable')),
+    });
+    await copy();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Authentication reference unavailable');
+    expect(host.querySelector('[data-testid="external-agent-prompt-copy"]')?.textContent).not.toBe(
+      'Copied'
+    );
+  });
+
   it('keeps an oversized restored request intact with inline validation and blocks native runs until corrected', async () => {
     const oversized = 'x'.repeat(20_001);
     vi.mocked(draftStorage.loadDraft).mockResolvedValueOnce(oversized);

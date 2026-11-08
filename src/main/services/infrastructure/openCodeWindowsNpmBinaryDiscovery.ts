@@ -22,24 +22,23 @@ const V2_NPM_SHIM_TARGET_MARKER = `node_modules/${OPENCODE_V2_NPM_WRAPPER_PACKAG
 
 type WindowsNpmOpenCodeBinding = 'legacy' | 'v2' | 'unknown';
 
-/** Platform packages npm adds under the legacy wrapper package on Windows. */
-function getLegacyWindowsPlatformPackageNames(): string[] {
-  return process.arch === 'x64'
-    ? ['opencode-windows-x64', 'opencode-windows-x64-baseline']
-    : [`opencode-windows-${process.arch}`];
-}
-
-function collectLegacyWindowsNativeCandidates(shimDirectory: string): string[] {
+function collectLegacyWindowsNativeCandidates(
+  shimDirectory: string,
+  packages: readonly string[]
+): string[] {
   const packageRoot = path.join(shimDirectory, 'node_modules', LEGACY_NPM_ROOT_PACKAGE_NAME);
   return [
     path.join(packageRoot, 'bin', WINDOWS_EXECUTABLE_NAME),
-    ...getLegacyWindowsPlatformPackageNames().map((packageName) =>
+    ...packages.map((packageName) =>
       path.join(packageRoot, 'node_modules', packageName, 'bin', WINDOWS_EXECUTABLE_NAME)
     ),
   ];
 }
 
-function collectV2WindowsNativeCandidates(shimDirectory: string): string[] {
+function collectV2WindowsNativeCandidates(
+  shimDirectory: string,
+  packages: readonly string[]
+): string[] {
   const wrapperBinaryPath = path.join(
     shimDirectory,
     'node_modules',
@@ -50,7 +49,21 @@ function collectV2WindowsNativeCandidates(shimDirectory: string): string[] {
   // Reuse the npm wrapper mapping introduced for explicit overrides: the runtime
   // admits only the platform package delivery, never the wrapper copy under bin/.
   const platformBinaryPath = resolveOpenCodeV2NpmWrapperBinary(wrapperBinaryPath);
-  return platformBinaryPath ? [platformBinaryPath] : [];
+  if (!platformBinaryPath) return [];
+  try {
+    const metadata = JSON.parse(
+      readFileSync(
+        path.join(path.dirname(path.dirname(platformBinaryPath)), 'package.json'),
+        'utf8'
+      )
+    ) as { name?: string };
+    return metadata.name &&
+      packages.includes(metadata.name.replace(/^@opencode\/cli-/, 'opencode-'))
+      ? [platformBinaryPath]
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -97,7 +110,10 @@ function readWindowsNpmShimBinding(shimPath: string): WindowsNpmOpenCodeBinding 
  * usable native candidate the caller falls through to the managed runtime instead
  * of reporting a shim as a healthy binary.
  */
-export function collectWindowsNativeOpenCodeBinaryCandidates(binaryPath: string): string[] {
+export function collectWindowsNativeOpenCodeBinaryCandidates(
+  binaryPath: string,
+  packages: readonly string[]
+): string[] {
   if (process.platform !== 'win32') {
     return [binaryPath];
   }
@@ -105,8 +121,8 @@ export function collectWindowsNativeOpenCodeBinaryCandidates(binaryPath: string)
     return [binaryPath];
   }
   const shimDirectory = path.dirname(binaryPath);
-  const legacyCandidates = collectLegacyWindowsNativeCandidates(shimDirectory);
-  const v2Candidates = collectV2WindowsNativeCandidates(shimDirectory);
+  const legacyCandidates = collectLegacyWindowsNativeCandidates(shimDirectory, packages);
+  const v2Candidates = collectV2WindowsNativeCandidates(shimDirectory, packages);
   const orderedCandidates =
     readWindowsNpmShimBinding(binaryPath) === 'v2'
       ? [...v2Candidates, ...legacyCandidates]

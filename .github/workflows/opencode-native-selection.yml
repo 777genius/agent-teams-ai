@@ -1,0 +1,80 @@
+name: OpenCode native selection qualification
+
+# Reviewed PR changes or explicit dispatch: no model/provider traffic, no native custody claim.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/opencode-native-selection.yml'
+      - 'scripts/e2e/opencode-native-selection/**'
+      - 'src/features/opencode-compatibility/**'
+      - 'src/features/opencode-runtime-installer/**'
+      - 'src/main/services/runtime/openCodeNative*.ts'
+      - 'src/main/services/runtime/openCodeRuntimeBinaryEnv.ts'
+      - 'src/main/services/infrastructure/openCodeRuntimeNativeSelection.ts'
+      - 'src/main/services/infrastructure/openCodeWindowsNpmBinaryDiscovery.ts'
+      - 'src/main/services/infrastructure/openCodeRuntimePackageMetadata.ts'
+      - 'src/main/services/infrastructure/openCodeRuntimeManagedProjection.ts'
+      - 'src/main/utils/pathDecoder.ts'
+      - 'src/main/utils/shellEnv.ts'
+      - 'src/main/utils/runtimePathBinaryResolver.ts'
+      - 'src/main/utils/atomicWrite.ts'
+      - 'src/main/utils/durableFileSync.ts'
+      - 'src/main/utils/reviewFileTransactionOwnership.ts'
+      - 'src/main/utils/cliPathMerge.ts'
+      - 'src/main/utils/transientFsRetry.ts'
+      - 'src/main/utils/durablePathOperations.ts'
+      - 'src/main/utils/pathValidation.ts'
+      - 'src/shared/utils/logger.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'runtime.lock.json'
+      - 'tsconfig.json'
+
+permissions:
+  contents: read
+
+jobs:
+  selection:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, target: linux-x64 }
+          - { runner: macos-15, target: darwin-arm64 }
+          - { runner: macos-15-intel, target: darwin-x64 }
+          - { runner: windows-2025, target: win32-x64 }
+          - { runner: windows-11-arm, target: win32-arm64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26.11.0'
+      - uses: pnpm/action-setup@v4
+      - name: Install reviewed source dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Typecheck qualification and production helper graph
+        run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-native-selection/tsconfig.json
+      - name: Verify finite UNKNOWN propagation before native entry
+        run: node --test scripts/e2e/opencode-native-selection/observe.test.mts
+      - name: Build qualification graph for both interpreters
+        run: node scripts/e2e/opencode-native-selection/build.mts
+      - name: Qualify actual native selection under Node and official Bun toolchain
+        env:
+          SELECTION_TARGET: ${{ matrix.target }}
+        run: node selection-dist/run.cjs
+      - name: Retain success, failure and UNKNOWN evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: opencode-selection-${{ matrix.target }}-${{ github.sha }}
+          path: |
+            selection-evidence/**
+            selection-dist/production-graph.json
+          if-no-files-found: error
+          retention-days: 14

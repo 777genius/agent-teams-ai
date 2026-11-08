@@ -22,7 +22,13 @@ const SECRET_ENV_KEY_PARTS = [
   'SECRET',
   'PASSWORD',
   'AUTHORIZATION',
+  'MCP_HEADERS_JSON',
 ];
+
+/** Protect bearer values in plain headers, nested JSON and environment-dump strings. */
+export function redactHttpBearerCredentials(value: string): string {
+  return value.replace(/(\bBearer\s+)[^\s"'\\,;}]+/gi, '$1[redacted]');
+}
 
 export function boundedDiagnosticString(
   value: string | undefined,
@@ -33,7 +39,7 @@ export function boundedDiagnosticString(
   const redacted = redactDiagnosticEnvAssignments(
     SECRET_VALUE_PATTERNS.reduce(
       (current, [pattern, replacement]) => current.replace(pattern, replacement),
-      trimmed.replace(SECRET_FLAG_PATTERN, '$1[redacted]')
+      redactHttpBearerCredentials(trimmed).replace(SECRET_FLAG_PATTERN, '$1[redacted]')
     )
   );
   return redacted.length > maxLength

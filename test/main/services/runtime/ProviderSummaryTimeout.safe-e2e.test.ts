@@ -15,7 +15,7 @@ const isolated = vi.hoisted(() => ({
 
 // Only credential/environment ports are replaced; execution and parsing stay real.
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: (
+  preparePassiveProviderStatusCliEnv: async (
     options: Pick<ProviderAwareCliEnvOptions, 'binaryPath' | 'providerId' | 'env' | 'shellEnv'>
   ) => {
     const fixture = options.providerId ? isolated.byProvider.get(options.providerId) : undefined;

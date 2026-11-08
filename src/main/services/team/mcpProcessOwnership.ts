@@ -33,16 +33,28 @@ export async function hasLiveMcpConsumers(
   rows: readonly RuntimeProcessTableRow[],
   candidatePids: ReadonlySet<number>,
   port: number,
-  readDetails: (pid: number) => Promise<string | null>
+  readDetails: (pid: number) => Promise<string | null>,
+  expectedUrl?: string
 ): Promise<boolean> {
-  const url = `http://127.0.0.1:${port}/mcp`;
-  const urlHash = createHash('sha256').update(url).digest('hex');
+  const baseUrl = `http://127.0.0.1:${port}/mcp`;
+  const candidateUrls = new Set([baseUrl, ...(expectedUrl ? [expectedUrl] : [])]);
+  const candidateHashes = new Set(
+    [...candidateUrls].map((url) => createHash('sha256').update(url).digest('hex'))
+  );
+  const urlMarkerPrefix = `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${baseUrl}`;
   for (const row of rows) {
     if (candidatePids.has(row.pid)) continue;
     const details = (await readDetails(row.pid)) ?? row.command;
     if (
-      processDetailsIncludeMarker(details, `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`) ||
-      processDetailsIncludeMarker(details, `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH=${urlHash}`)
+      details
+        .split(/\s+/)
+        .some((part) => part === urlMarkerPrefix || part.startsWith(`${urlMarkerPrefix}?`)) ||
+      [...candidateHashes].some((urlHash) =>
+        processDetailsIncludeMarker(
+          details,
+          `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH=${urlHash}`
+        )
+      )
     )
       return true;
   }
@@ -50,7 +62,7 @@ export async function hasLiveMcpConsumers(
 }
 
 export async function assertNoLiveMcpConsumers(
-  handle: { pid: number | null; port: number } | null,
+  handle: { pid: number | null; port: number; url: string } | null,
   listRows: () => Promise<readonly RuntimeProcessTableRow[]>,
   readDetails: (pid: number) => Promise<string | null>
 ): Promise<void> {
@@ -60,7 +72,8 @@ export async function assertNoLiveMcpConsumers(
       await listRows(),
       new Set(handle.pid ? [handle.pid] : []),
       handle.port,
-      readDetails
+      readDetails,
+      handle.url
     ))
   )
     throw new Error('Stop teams using the MCP connection before changing the app root or context.');

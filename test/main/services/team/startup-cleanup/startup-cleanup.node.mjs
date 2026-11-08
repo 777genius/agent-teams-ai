@@ -10,7 +10,6 @@ const { killProcessByPidAndWait: kill } = await import('../../../../../src/main/
 const { executeOpenCodeStartupCleanup: bridgeCleanup, isStartupCleanupData } = await import('../../../../../src/main/services/team/opencode/bridge/OpenCodeStartupCleanupBridge.ts');
 const { OpenCodeWindowsStartupCleanup: Owner } = await import('../../../../../src/main/services/team/opencode/bridge/OpenCodeWindowsStartupCleanup.ts');
 const gate = await import('../../../../../src/main/services/team/opencode/bridge/OpenCodeStartupSweepGate.ts');
-const command = 'C:\\runtimes\\opencode\\versions\\test\\opencode-windows-x64\\opencode.exe serve --port 1234';
 const empty = { scanned: 0, killed: 0, candidates: [], diagnostics: [] };
 const host = (pid, action) => ({ hostKey: `host-${pid}`, projectPath: '/sandbox/startup-cleanup', pid, port: 1234, action, reason: 'runtime fixture', leaseCount: 0 });
 const drained = { ok: true, data: { cleaned: 0, remaining: 0, hosts: [], diagnostics: [], startupCleanup: { completion: 'drained', coverage: 'complete', survivingPids: [] } } };
@@ -26,38 +25,46 @@ test('deadline validation, monotonic clock and nonzero clamped timeouts', () => 
   assert.throws(() => budget.capMs(6_000), /exhausted/);
 });
 
-test('12s enumeration and repeated 4s native identities use startup caps; no dispose', async () => {
-  let now = 0;
-  let kills = 0;
-  globalThis.startupTestEnumeration = async (timeout, options) => {
-    assert.equal(timeout, 20_000); assert.equal(options.bypassCache, true);
-    now += 12_000; return [{ pid: 1, ppid: 0, command }];
-  };
-  globalThis.startupTestIdentity = async (_pid, _platform, timeout) => {
-    assert.equal(timeout, 6_000); now += 4_000; return 10;
-  };
-  const result = await sweep({ mode: 'orphaned', platform: 'win32', startupBudget: new Budget(120_000, 0, () => now),
-    startedBeforeMs: 100, isProcessAlive: () => kills === 0,
-    killProcess: () => { kills++; }, disposeServeHost: () => assert.fail('startup disposal'),
-  });
-  assert.equal(result.killed, 1); assert.equal(kills, 1); assert.equal(now, 24_000);
+test('authenticated startup bridge uses only the remaining shared deadline budget', async () => {
+  let now = 0, dispatches = 0;
+  const budget = new Budget(120_000, 0, () => now);
+  now = 12_000;
+  const result = await bridgeCleanup({ execute: async (command, body, options) => {
+    dispatches++;
+    assert.equal(command, 'opencode.cleanupStartupHosts');
+    assert.equal(body.deadlineUnixMs, 120_000);
+    assert.equal(options.timeoutMs, 108_000);
+    now += 4_000;
+    return drained;
+  } }, budget);
+  assert.equal(result, drained);
+  assert.equal(dispatches, 1);
+  assert.equal(budget.capMs(120_000), 104_000);
 });
 
-test('exhaustion after awaited identity prevents mutation and retains multiple candidates', async () => {
+test('exhausted shared deadline refuses bridge dispatch before any cleanup effect', async () => {
   let now = 0;
-  const result = await sweep({ mode: 'orphaned', platform: 'win32', startupBudget: new Budget(22_000, 0, () => now),
-    startedBeforeMs: 100,
-    listProcessRows: async () => { now += 12_000; return [1, 2].map(pid => ({ pid, ppid: 0, command })); },
-    readProcessStartTimeMs: async () => { now += 4_000; return 10; },
-    isProcessAlive: () => true, killProcess: () => assert.fail('late mutation'), disposeServeHost: () => assert.fail('dispose'),
-  });
-  assert.deepEqual(result.candidates.map(c => c.action), ['failed', 'failed']);
+  const budget = new Budget(22_000, 0, () => now);
+  now = 22_000;
+  await assert.rejects(bridgeCleanup({ execute: () => assert.fail('dispatch after deadline') }, budget), /exhausted/);
 });
 
-test('legacy enumeration and identity defaults stay unchanged', async () => {
-  globalThis.startupTestEnumeration = async timeout => { assert.equal(timeout, 4_000); return [{ pid: 1, ppid: 0, command }]; };
-  globalThis.startupTestIdentity = async (_pid, _platform, timeout) => { assert.equal(timeout, undefined); return null; };
-  await sweep({ mode: 'orphaned', platform: 'win32', isProcessAlive: () => true });
+test('generic discovery never calls enumeration, identity, HTTP, disposal or signal callbacks without retained custody', async () => {
+  const forbidden = () => assert.fail('unattributed process callback');
+  globalThis.startupTestEnumeration = forbidden;
+  globalThis.startupTestIdentity = forbidden;
+  for (const platform of ['linux', 'win32']) for (const mode of ['force', 'orphaned']) {
+    const result = await sweep({ mode, platform, startupBudget: new Budget(),
+      startedBeforeMs: 100, requiredProfileScope: 'test',
+      listProcessRows: forbidden, readProcessDetails: forbidden, readProcessStartTimeMs: forbidden,
+      readServeHostConfig: forbidden, disposeServeHost: forbidden, isProcessAlive: forbidden,
+      killProcess: forbidden, forceKillProcess: forbidden, sleepMs: forbidden,
+    });
+    assert.equal(result.scanned, 0);
+    assert.equal(result.killed, 0);
+    assert.deepEqual(result.candidates, []);
+    assert.match(result.diagnostics.join(' '), /retained native custody is required/);
+  }
 });
 
 test('taskkill callback drainage is awaited; root gone does not erase tree error in startup', async () => {
@@ -162,27 +169,28 @@ test('deadline leaves a live helper gated while unrelated initialization can res
   } finally { Object.defineProperty(process, 'platform', platform); gate.beginOpenCodeStartupRuntimeSweep()(); }
 });
 
-test('startup-only option leaves Unix and shutdown disposal behavior unchanged', async () => {
-  for (const platform of ['linux', 'win32']) {
-    let alive = true, disposed = 0;
-    const result = await sweep({ mode: 'force', platform,
-      ...(platform === 'linux' ? { startupBudget: new Budget(120_000, 0, () => 0) } : {}),
-      listProcessRows: async () => [{ pid: 1, ppid: 0, command }],
-      readProcessDetails: async () => 'CLAUDE_MULTIMODEL_DATA_HOME=test OPENCODE_CONFIG_CONTENT={} AGENT_TEAMS_MCP_CLAUDE_DIR=test',
-      readProcessStartTimeMs: async () => 10,
-      isProcessAlive: () => alive, killProcess: () => { alive = false; }, disposeServeHost: async () => { disposed++; },
-    });
-    assert.equal(disposed, 1); assert.equal(result.killed, 1);
-  }
+test('known managed hosts still clean through authenticated bridge while generic discovery stays inert', async () => {
+  let dispatches = 0;
+  const owner = new Owner({ appStartedAtMs: 100, profileScope: 'test', logWarning: () => {}, waitMs: async () => {} });
+  await owner.preflight();
+  await owner.finish({ cleanupOpenCodeStartupHosts: async () => {
+    dispatches++;
+    return { ok: true, data: { ...drained.data, cleaned: 1, hosts: [host(77, 'disposed')] } };
+  } });
+  assert.equal(dispatches, 1);
+  assert.equal(owner.getStatus().state, 'complete');
+  await gate.whenOpenCodeStartupRuntimeSweepSettled();
 });
 
-test('startup sweep retains terminal tree failure even when root died', async () => {
-  let alive = true;
-  const result = await sweep({ mode: 'orphaned', platform: 'win32', startupBudget: new Budget(120_000, 0, () => 0),
-    listProcessRows: async () => [{ pid: 1, ppid: 0, command }], readProcessStartTimeMs: async () => 10,
-    isProcessAlive: () => alive, killProcess: () => { alive = false; throw new Error('tree denied'); },
-  });
-  assert.equal(result.killed, 0); assert.equal(result.candidates[0].action, 'failed');
+test('terminal authenticated bridge tree failure stays partial rather than claiming cleanup success', async () => {
+  const owner = new Owner({ appStartedAtMs: 100, profileScope: 'test', logWarning: () => {}, sweep: async () => empty, waitMs: async () => {} });
+  await owner.preflight();
+  await owner.finish({ cleanupOpenCodeStartupHosts: async () => ({ ok: true, data: {
+    ...drained.data, remaining: 1, hosts: [host(77, 'failed')],
+    startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [77] },
+  } }) });
+  assert.equal(owner.getStatus().state, 'partial');
+  await gate.whenOpenCodeStartupRuntimeSweepSettled();
 });
 
 test('read-only initialization expiry releases gate without dispatching late cleanup', async (t) => {
@@ -227,16 +235,21 @@ for (const phase of ['registry', 'settle']) {
   });
 }
 
-test('shutdown after awaited identity prevents startup mutation', async () => {
-  let allowed = true, identities = 0;
-  const result = await sweep({ mode: 'force', platform: 'win32', startupBudget: new Budget(),
-    canAdmitStartupWork: () => allowed, startedBeforeMs: 100,
-    listProcessRows: async () => [{ pid: 1, ppid: 0, command }],
-    readProcessStartTimeMs: async () => { if (++identities === 3) allowed = false; return 10; },
-    isProcessAlive: () => true, killProcess: () => assert.fail('shutdown mutation'),
-    forceKillProcess: () => assert.fail('shutdown force mutation'), disposeServeHost: () => assert.fail('dispose'),
-  });
-  assert.equal(identities, 3); assert.equal(result.killed, 0);
+test('shutdown during awaited preflight closes admission before bridge dispatch or maintenance', async () => {
+  let scans = 0;
+  const owner = new Owner({ appStartedAtMs: 100, profileScope: 'test', logWarning: () => {},
+    sweep: async options => {
+      scans++;
+      assert.equal(options.canAdmitStartupWork(), true);
+      await Promise.resolve();
+      owner.stopAdmitting();
+      assert.equal(options.canAdmitStartupWork(), false);
+      return empty;
+    }, maintenance: () => assert.fail('maintenance after shutdown') });
+  await owner.preflight();
+  await owner.finish({ cleanupOpenCodeStartupHosts: () => assert.fail('bridge dispatch after shutdown') });
+  assert.equal(scans, 1);
+  assert.equal(owner.getStatus().state, 'stopped');
 });
 
 test('unsupported/pre-mutation failure performs independent maintenance exactly once, no host fallback', async () => {
@@ -270,20 +283,25 @@ test('registry response after deadline releases only on original terminal draina
   assert.equal(dispatches, 1); assert.equal(scans, 1);
 });
 
-test('shutdown continues observing a started local helper and skips later force work', async () => {
-  let allowed = true, release, entered, settled = false;
+test('shutdown continues observing an injected started helper without later cleanup work', async () => {
+  let release, entered, settled = false, scans = 0;
   const waiting = new Promise(resolve => { entered = resolve; });
-  const operation = sweep({ mode: 'force', platform: 'win32', startupBudget: new Budget(),
-    canAdmitStartupWork: () => allowed, startedBeforeMs: 100,
-    listProcessRows: async () => [{ pid: 1, ppid: 0, command }], readProcessStartTimeMs: async () => 10,
-    isProcessAlive: () => true,
-    killProcess: () => { entered(); return new Promise(resolve => { release = resolve; }); },
-    sleepMs: () => assert.fail('new settle after shutdown'), forceKillProcess: () => assert.fail('force work after shutdown'),
-  }).then(result => { settled = true; return result; });
-  await waiting; allowed = false;
-  await Promise.resolve(); assert.equal(settled, false);
-  release(); await operation;
+  const owner = new Owner({ appStartedAtMs: 100, profileScope: 'test', logWarning: () => {},
+    sweep: () => { scans++; entered(); return new Promise(resolve => { release = resolve; }); },
+    maintenance: () => assert.fail('new maintenance after shutdown'),
+  });
+  const preflight = owner.preflight();
+  await waiting;
+  owner.stopAdmitting();
+  const operation = owner.finish({ cleanupOpenCodeStartupHosts: () => assert.fail('new bridge dispatch after shutdown') })
+    .then(() => { settled = true; });
+  await Promise.resolve();
+  assert.equal(settled, false);
+  release(empty);
+  await preflight;
+  await operation;
   assert.equal(settled, true);
+  assert.equal(scans, 1);
 });
 
 const retained = (action, coverage = 'complete') => ({
@@ -377,15 +395,16 @@ for (const late of [false, true]) {
   });
 }
 
-test('shutdown hook closes current owner during identity and also fences later construction', async () => {
+test('shutdown hook closes current preflight owner and also fences later construction', async () => {
   const { stopAdmittingOpenCodeStartupCleanup } = await import('../../../../../src/main/services/team/opencode/bridge/OpenCodeWindowsStartupCleanup.ts');
   let identities = 0, registry = 0;
   const owner = new Owner({ appStartedAtMs: 100, profileScope: 'test', logWarning: () => {},
-    sweep: options => sweep({ ...options, requiredProfileScope: undefined,
-      listProcessRows: async () => [{ pid: 1, ppid: 0, command }],
-      readProcessStartTimeMs: async () => { identities++; stopAdmittingOpenCodeStartupCleanup(); return 10; },
-      isProcessAlive: () => true, killProcess: () => assert.fail('mutation after shutdown hook'),
-    }), maintenance: () => assert.fail('maintenance after shutdown') });
+    sweep: async options => {
+      identities++;
+      stopAdmittingOpenCodeStartupCleanup();
+      assert.equal(options.canAdmitStartupWork(), false);
+      return empty;
+    }, maintenance: () => assert.fail('maintenance after shutdown') });
   await owner.preflight();
   await owner.finish({ cleanupOpenCodeStartupHosts: async () => { registry++; return drained; } });
   assert.equal(identities, 1); assert.equal(registry, 0);

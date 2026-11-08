@@ -3,18 +3,13 @@ import agentTeamsController from 'agent-teams-controller';
 import type { ConnectionInfoV1, ExternalAgentRunProvider } from '../contracts';
 
 const SERVER_NAME = 'agent-teams';
-
-export interface NativeManagementMcp {
-  command: string;
-  args: string[];
-  env: Record<string, string>;
-}
+export const NATIVE_MCP_BEARER_TOKEN_ENV = 'AGENT_TEAMS_NATIVE_MCP_AUTH_TOKEN';
 
 /** Per-run config only. The registered team group contains no launch/stop/delete/restore tools. */
 export function nativeAgentRunArgs(
   provider: ExternalAgentRunProvider,
   connection: ConnectionInfoV1,
-  managementMcp?: NativeManagementMcp
+  managementMcpConfigPath?: string
 ): string[] {
   const { AGENT_TEAMS_MANAGEMENT_TOOL_NAMES, AGENT_TEAMS_REGISTERED_TOOL_NAMES } =
     agentTeamsController;
@@ -28,7 +23,7 @@ export function nativeAgentRunArgs(
   if (!tools.includes('app_get_connection_info') || !tools.includes('team_create'))
     throw new Error('Management MCP tools are unavailable');
   if (provider === 'anthropic') {
-    if (!managementMcp) throw new Error('Bound management MCP launch is unavailable');
+    if (!managementMcpConfigPath) throw new Error('Bound management MCP launch is unavailable');
     const namespaced = (tool: string) => `mcp__${SERVER_NAME}__${tool}`;
     return [
       '-p',
@@ -45,15 +40,7 @@ export function nativeAgentRunArgs(
       JSON.stringify({ disableAllHooks: true }),
       '--disable-slash-commands',
       '--mcp-config',
-      JSON.stringify({
-        mcpServers: {
-          [SERVER_NAME]: {
-            type: 'stdio',
-            ...managementMcp,
-            args: [...managementMcp.args, '--transport', 'stdio', '--tool-profile', 'management'],
-          },
-        },
-      }),
+      managementMcpConfigPath,
       '--allowedTools',
       tools.map(namespaced).join(','),
       '--disallowedTools',
@@ -75,6 +62,7 @@ export function nativeAgentRunArgs(
     'features.skill_mcp_dependency_install': false,
     'features.hooks': false,
     [`mcp_servers.${SERVER_NAME}.url`]: connection.mcp.url,
+    [`mcp_servers.${SERVER_NAME}.bearer_token_env_var`]: NATIVE_MCP_BEARER_TOKEN_ENV,
     [`mcp_servers.${SERVER_NAME}.enabled_tools`]: tools,
     [`mcp_servers.${SERVER_NAME}.required`]: true,
     ...Object.fromEntries(
