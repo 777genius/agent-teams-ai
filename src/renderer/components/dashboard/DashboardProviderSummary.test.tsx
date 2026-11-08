@@ -40,6 +40,9 @@ vi.mock('@renderer/api', () => ({
     },
   },
 }));
+vi.mock('@renderer/utils/providerReadiness', () => ({
+  hasEffectiveProviderLaunchAuthority: (provider: { providerId: string }) => provider.providerId === 'gemini',
+}));
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (s: typeof state) => unknown) => selector(state),
 }));
@@ -50,6 +53,7 @@ describe('DashboardProviderSummary (passive)', () => {
     vi.clearAllMocks();
     state.cliStatus = null;
     state.cliStatusLoading = false;
+    state.appConfig.general.multimodelEnabled = true;
   });
   afterEach(() => {
     document.body.innerHTML = '';
@@ -92,4 +96,43 @@ describe('DashboardProviderSummary (passive)', () => {
     }
   });
 
+  it('does not report readiness from a frozen Gemini-only provider', async () => {
+    state.cliStatus = {
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [{ providerId: 'gemini', authenticated: true, verificationState: 'verified', statusCheckOutcome: 'authoritative' }],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.textContent).not.toContain('cliStatus.provider.readyToRunAgents');
+      expect(host.textContent).toContain('runtimeProvider.tabs.providers');
+      expect(state.loadProviderDirectory).not.toHaveBeenCalled();
+      expect(state.loadModels).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('keeps direct-Claude auth checking ahead of an old authenticated snapshot', async () => {
+    state.appConfig.general.multimodelEnabled = false;
+    state.cliStatus = {
+      installed: true, flavor: 'claude', providers: [], authLoggedIn: true, authStatusChecking: true,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.textContent).toContain('cliStatus.provider.checkingAuthentication');
+      expect(host.textContent).not.toContain('cliStatus.provider.authenticated');
+      state.cliStatus = { ...state.cliStatus, authStatusChecking: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.textContent).toContain('cliStatus.provider.authenticated');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
 });
