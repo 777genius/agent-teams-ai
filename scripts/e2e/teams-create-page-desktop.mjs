@@ -14,12 +14,18 @@ import { fileURLToPath } from 'node:url';
 
 import WebSocket from 'ws';
 
+import { processes } from './opencode-diagnostics/platform.mjs';
+import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
 const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
+let appCdpPort = null;
+let windowsOwnedHistory = [];
+const windowsTeardowns = [];
 let cdp = null;
 let inputSelectAllDomFallbacks = 0;
 
@@ -236,6 +242,11 @@ async function startApp(fixture) {
   appProcessGroupId = appProcess.pid;
   appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
   appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
+  if (windows) {
+    const initial = processes().find((value) => value.pid === appProcess.pid);
+    assert(initial?.birth, 'Cannot pin the disposable Windows launcher PID/birth');
+    windowsOwnedHistory = [initial];
+  }
   const exitedBeforeRenderer = new Promise((_, reject) => {
     appProcess.once('exit', (code, signal) => {
       reject(
@@ -261,6 +272,8 @@ async function startApp(fixture) {
   })();
   const port = await Promise.race([ownedPort, exitedBeforeRenderer]);
   const renderer = await Promise.race([waitForRenderer(port), exitedBeforeRenderer]);
+  if (windows) windowsOwnedHistory = extendOwnedHistory(windowsOwnedHistory, processes());
+  appCdpPort = port;
   return { port, renderer };
 }
 
@@ -503,24 +516,66 @@ async function cleanup(fixture) {
       throw new Error('Disposable Electron process group is still present after teardown');
     }
   } else if (appProcess?.pid && process.platform === 'win32') {
-    // Killing only cmd.exe leaves the child pnpm/Electron processes alive and
-    // contaminates the second launch or the next CI job.
-    const launcherPid = appProcess.pid;
-    const killSucceeded = await new Promise((resolve, reject) => {
-      const killer = spawn('taskkill', ['/PID', String(launcherPid), '/T', '/F'], {
-        windowsHide: true, stdio: 'ignore',
+    // taskkill can return nonzero after a normal launcher exit. Do not accept
+    // either its exit status OR launcher absence as proof the Electron tree died.
+    const launcher = windowsOwnedHistory[0];
+    assert(launcher?.pid === appProcess.pid && launcher.birth,
+      'Disposable Windows launcher identity was not pinned');
+    let current = processes();
+    const currentLauncher = current.find((value) => value.pid === launcher.pid);
+    assert(!currentLauncher || currentLauncher.birth === launcher.birth,
+      'Disposable Windows launcher PID was reused; refusing taskkill');
+    let history = extendOwnedHistory(windowsOwnedHistory, current);
+    let taskkillExitCode = null;
+    if (currentLauncher) {
+      taskkillExitCode = await new Promise((resolve, reject) => {
+        const killer = spawn('taskkill', ['/PID', String(launcher.pid), '/T', '/F'], {
+          windowsHide: true, stdio: 'ignore',
+        });
+        killer.once('error', reject);
+        killer.once('close', resolve);
       });
-      killer.once('error', reject);
-      killer.once('close', (exitCode) => resolve(exitCode === 0));
-    });
-    if (!killSucceeded) {
-      throw new Error('Disposable Windows Electron process-tree termination unconfirmed');
     }
+    const deadline = Date.now() + 12_000;
+    let remaining = [];
+    let debugStillListening = false;
+    do {
+      current = processes();
+      history = extendOwnedHistory(history, current);
+      remaining = remainingOwned(history, current);
+      debugStillListening = false;
+      if (appCdpPort !== null) {
+        try {
+          await getTargets(appCdpPort);
+          debugStillListening = true;
+        } catch {
+          // Only the OS census below authorizes cleanup. CDP absence alone is insufficient.
+        }
+      }
+      if (!remaining.length && !debugStillListening) break;
+      if (Date.now() >= deadline) {
+        throw new Error(
+          'Disposable Windows Electron process-tree termination unconfirmed: ' +
+          `taskkill=${String(taskkillExitCode)} ownedRemaining=${remaining.map(p => p.pid).join(',')} cdp=${debugStillListening}`
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    } while (true);
+    windowsTeardowns.push({
+      launcherPid: launcher.pid,
+      taskkillAttempted: taskkillExitCode !== null,
+      taskkillExitCode,
+      observedIdentityCount: history.length,
+      exactOwnedProcessesAbsent: true,
+      cdpPortAbsent: true,
+    });
+    windowsOwnedHistory = [];
   } else if (appProcess?.pid) {
     appProcess.kill('SIGKILL');
   }
   appProcess = null;
   appProcessGroupId = null;
+  appCdpPort = null;
   if (fixture?.root && process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1') {
     for (let attempt = 0; attempt < 8; attempt += 1) {
       try {
@@ -1066,7 +1121,11 @@ async function main() {
   assert(qualifiedResult, 'Missing Create Page E2E proof');
   qualifiedResult.cleanup = {
     processGroupAbsent: process.platform !== 'win32' ? true : null,
-    windowsTaskkillExitedZero: process.platform === 'win32' ? true : null,
+    windowsTaskkillExitedZero: process.platform === 'win32'
+      ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,
+    windowsExactOwnedProcessesAbsent: process.platform === 'win32'
+      ? windowsTeardowns.length === 2 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
+    windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,
     temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',
   };
   const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
