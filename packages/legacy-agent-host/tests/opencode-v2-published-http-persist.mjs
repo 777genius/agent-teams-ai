@@ -48,29 +48,45 @@ if (process.argv[2] === '--worker') {
     processCustodyQualified:false, steps:[], cleanup:false};
   const hash = value => createHash('sha256').update(value).digest('hex');
   const db = join(root,'data','v2.sqlite');
-  for (const name of ['home','workspace','config','data','cache','state','temp'])
-    mkdirSync(join(root,name));
   const workspace = join(root,'workspace');
-  const canonicalPrefix = realpathSync(prefix);
-  const packageRoot = realpathSync(join(prefix,'node_modules','@opencode','sdk'));
-  const serverRoot = realpathSync(join(prefix,'node_modules','@opencode','server'));
-  if (!packageRoot.startsWith(canonicalPrefix+'/node_modules/') ||
-      !serverRoot.startsWith(canonicalPrefix+'/node_modules/'))
-    throw Error('TEST_published_package_escape');
-  const sdk = JSON.parse(readFileSync(join(packageRoot,'package.json'),'utf8'));
-  const server = JSON.parse(readFileSync(join(serverRoot,'package.json'),'utf8'));
-  if (sdk.name !== '@opencode/sdk' || sdk.version !== '2.0.21' ||
-      server.name !== '@opencode/server' || server.version !== '2.0.21')
-    throw Error('TEST_published_version_unqualified');
-  const worker = join(prefix, 'TEST-v2-http-owned-worker.mjs');
-  copyFileSync(fileURLToPath(import.meta.url),worker);
-  const password = randomBytes(24).toString('hex');
-  const env = { PATH:process.env.PATH || '/usr/bin:/bin', HOME:join(root,'home'),
-    XDG_CONFIG_HOME:join(root,'config'), XDG_CACHE_HOME:join(root,'cache'),
-    XDG_DATA_HOME:join(root,'data'), XDG_STATE_HOME:join(root,'state'),
-    TMPDIR:join(root,'temp'), OPENCODE_DISABLE_MODELS_FETCH:'true',
-    CI:'true', NO_COLOR:'1', TEST_V2_HTTP_DB:db,
-    TEST_V2_HTTP_PASSWORD:password };
+  let worker, password, env;
+  // No native worker exists during setup; still finalize a failed TEST
+  // receipt and remove the owned temporary root on any package/IO failure.
+  try {
+    for (const name of ['home','workspace','config','data','cache','state','temp'])
+      mkdirSync(join(root,name));
+    const canonicalPrefix = realpathSync(prefix);
+    const packageRoot = realpathSync(join(prefix,'node_modules','@opencode','sdk'));
+    const serverRoot = realpathSync(join(prefix,'node_modules','@opencode','server'));
+    if (!packageRoot.startsWith(canonicalPrefix+'/node_modules/') ||
+        !serverRoot.startsWith(canonicalPrefix+'/node_modules/'))
+      throw Error('TEST_published_package_escape');
+    const sdk = JSON.parse(readFileSync(join(packageRoot,'package.json'),'utf8'));
+    const server = JSON.parse(readFileSync(join(serverRoot,'package.json'),'utf8'));
+    if (sdk.name !== '@opencode/sdk' || sdk.version !== '2.0.21' ||
+        server.name !== '@opencode/server' || server.version !== '2.0.21')
+      throw Error('TEST_published_version_unqualified');
+    worker = join(prefix, 'TEST-v2-http-owned-worker.mjs');
+    copyFileSync(fileURLToPath(import.meta.url),worker);
+    password = randomBytes(24).toString('hex');
+    env = { PATH:process.env.PATH || '/usr/bin:/bin', HOME:join(root,'home'),
+      XDG_CONFIG_HOME:join(root,'config'), XDG_CACHE_HOME:join(root,'cache'),
+      XDG_DATA_HOME:join(root,'data'), XDG_STATE_HOME:join(root,'state'),
+      TMPDIR:join(root,'temp'), OPENCODE_DISABLE_MODELS_FETCH:'true',
+      CI:'true', NO_COLOR:'1', TEST_V2_HTTP_DB:db,
+      TEST_V2_HTTP_PASSWORD:password };
+  } catch (error) {
+    receipt.failure = /^TEST_[A-Za-z0-9_]+$/.test(error?.message || '')
+      ? error.message : 'TEST_published_HTTP_persist_unqualified';
+    try {
+      rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+      receipt.cleanup = true;
+    } catch {
+      receipt.cleanup = false;
+    }
+    writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');
+    throw Error(receipt.failure);
+  }
   let child, port, startTicks, stopSignalSent = false;
   function startIdentity(pid) {
     try {
