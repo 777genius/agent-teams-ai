@@ -1,0 +1,70 @@
+name: Real Runtime Provider Count E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/e2e/provider-real-runtime-*.ts'
+      - '.github/workflows/provider-real-runtime-e2e.yml'
+      - 'runtime.lock.json'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - 'scripts/e2e/provider-real-runtime-*.ts'
+      - '.github/workflows/provider-real-runtime-e2e.yml'
+      - 'runtime.lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  real-runtime:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    name: pinned CLI metadata (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+          - platform: win32-x64
+            runner: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Verify pure provider-count contract
+        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts
+      - name: Install genuine OpenCode V1 in runner-owned scratch
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/real-opencode-v1" --no-audit --no-fund opencode-ai@1.18.31
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const name = process.platform === 'win32' ? 'opencode.cmd' : 'bin/opencode'; const binary = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1', name); if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('OpenCode V1 install missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'REAL_OPENCODE_TEST_BINARY=' + binary + '\\n');"
+      - name: Stage verified published runtime archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs
+      - name: Verify actual pinned executable version
+        run: node scripts/ci/verify-staged-runtime-version.mjs
+      - name: Execute genuine CLI, connected-filter and full-directory comparison
+        env:
+          PROVIDER_REAL_E2E_EVIDENCE: ${{ runner.temp }}/provider-real-runtime-e2e/evidence.json
+        run: node scripts/e2e/provider-real-runtime-e2e.ts
+      - name: Preserve sanitized count and timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-provider-count-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/provider-real-runtime-e2e/evidence.json
