@@ -76,6 +76,7 @@ import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProvider
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
+import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   AlertTriangle,
@@ -2037,6 +2038,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (!effectiveTeamName) errors.push('Team is required');
       if (!promptDraft.value.trim()) errors.push('Prompt is required');
       if (!cronExpression.trim()) errors.push('Cron expression is required');
+      const savedTarget = scheduleTargetMember.trim();
+      const team = teamByName[effectiveTeamName];
+      if (scheduleExecutionMode === 'agent' && savedTarget && team) {
+        const leadName = team.leadName?.trim() || 'team-lead';
+        if (
+          savedTarget.toLowerCase() !== leadName.toLowerCase() &&
+          !team.members?.some(
+            (member) => member.name.trim() === savedTarget && !validateTeamMemberNameFormat(member.name)
+          )
+        ) {
+          errors.push(t('messages.manualQueue.recipientUnavailable'));
+        }
+      }
     }
     return errors;
   }, [
@@ -2053,6 +2067,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     effectiveTeamName,
     promptDraft.value,
     cronExpression,
+    scheduleExecutionMode,
+    scheduleTargetMember,
   ]);
   const modelValidationError = useMemo(
     () =>

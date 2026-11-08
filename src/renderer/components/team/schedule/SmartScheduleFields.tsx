@@ -167,7 +167,11 @@ export const SmartScheduleFields = ({
                   : t('launch.schedule.leadDefault')
               }
               getMemberLabel={(member) =>
-                member.name === leadName ? t('launch.schedule.leadDefault') : member.name
+                member.name !== leadName
+                  ? member.name
+                  : leadName === 'team-lead'
+                    ? t('launch.schedule.leadDefault')
+                    : `${leadName} — ${t('launch.schedule.leadDefault')}`
               }
               ariaLabel={t(taskFirst ? 'launch.schedule.taskFirstTarget' : 'launch.schedule.target')}
               size="md"

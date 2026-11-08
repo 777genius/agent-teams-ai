@@ -192,6 +192,26 @@ describe('SmartScheduleFields teammate picker', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('shows an explicitly named lead alongside the default lead label', async () => {
+    const onChange = vi.fn();
+    await act(async () =>
+      root.render(scheduleFields(onChange, {
+        team: {
+          leadName: 'Robin',
+          members: [{ name: 'Robin', role: 'Coordinator' }, { name: 'alice' }],
+        },
+      }))
+    );
+
+    const trigger = host.querySelector('button[role="combobox"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('Robin — Team lead (default)');
+    await act(async () => trigger.click());
+    const list = document.body.querySelector('[cmdk-list]') as HTMLElement;
+    expect(list.textContent).toContain('Robin — Team lead (default)');
+    expect(list.textContent).toContain('Coordinator');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('reuses lead metadata when the roster spells its name with different casing', async () => {
     const onChange = vi.fn();
     await act(async () =>

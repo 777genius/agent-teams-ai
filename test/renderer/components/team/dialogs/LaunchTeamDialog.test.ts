@@ -4851,6 +4851,64 @@ describe('LaunchTeamDialog', () => {
     }
   });
 
+  it('prevents editing a schedule with a removed recipient until one is reselected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule',
+          open: true,
+          teamName: 'team-alpha',
+          onClose: vi.fn(),
+          schedule: {
+            id: 'schedule-stale-target',
+            teamName: 'team-alpha',
+            executionMode: 'agent',
+            targetMember: 'removed-member',
+            cronExpression: '0 9 * * 1-5',
+            timezone: 'UTC',
+            status: 'active',
+            warmUpMinutes: 0,
+            maxConsecutiveFailures: 3,
+            consecutiveFailures: 0,
+            maxTurns: 50,
+            createdAt: '2026-11-07T00:00:00.000Z',
+            updatedAt: '2026-11-07T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project',
+              prompt: 'Review PRs',
+              providerId: 'anthropic',
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      expect(host.textContent).toContain('removed-member');
+      expect(host.textContent).toContain('This recipient is no longer available.');
+      const save = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      expect(save?.disabled).toBe(true);
+      expect(updateSchedule).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
   it('saves an explicitly selected whole-team mode without a migration', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.teamByName = {
