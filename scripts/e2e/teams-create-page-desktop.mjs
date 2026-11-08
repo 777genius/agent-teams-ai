@@ -675,6 +675,59 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'css-zoom-200');
     await cdp.evaluate("document.documentElement.style.zoom = ''");
 
+    log('verify native Electron zoom at approximately 200% with real keyboard shortcuts');
+    const zoomBaseline = await cdp.evaluate(
+      "window.electronAPI.getZoomFactor().then(factor => ({ factor, innerWidth: window.innerWidth }))"
+    );
+    assert(zoomBaseline.factor >= 0.95 && zoomBaseline.factor <= 1.05,
+      'Electron test must start at 100% native zoom');
+    const mac = process.platform === 'darwin';
+    const mod = mac ? 4 : 2;
+    const modKey = mac ? 'Meta' : 'Control';
+    const modCode = mac ? 'MetaLeft' : 'ControlLeft';
+    const modVk = mac ? 91 : 17;
+    const sendNativeZoomShortcut = async (key, code, virtualKey) => {
+      await cdp.send('Input.dispatchKeyEvent', {
+        type: 'rawKeyDown', key: modKey, code: modCode,
+        windowsVirtualKeyCode: modVk, modifiers: mod,
+      });
+      await cdp.send('Input.dispatchKeyEvent', {
+        type: 'keyDown', key, code, windowsVirtualKeyCode: virtualKey, modifiers: mod,
+      });
+      await cdp.send('Input.dispatchKeyEvent', {
+        type: 'keyUp', key, code, windowsVirtualKeyCode: virtualKey, modifiers: mod,
+      });
+      await cdp.send('Input.dispatchKeyEvent', {
+        type: 'keyUp', key: modKey, code: modCode, windowsVirtualKeyCode: modVk,
+      });
+      // Electron main publishes the real BrowserWindow zoom factor asynchronously.
+      await new Promise((resolve) => setTimeout(resolve, 220));
+    };
+    let nativeZoomFactor = zoomBaseline.factor;
+    for (let attempt = 0; attempt < 10 && nativeZoomFactor < 1.95; attempt++) {
+      await sendNativeZoomShortcut('=', 'Equal', 187);
+      nativeZoomFactor = await cdp.evaluate('window.electronAPI.getZoomFactor()');
+    }
+    assert(nativeZoomFactor >= 1.95 && nativeZoomFactor <= 2.12,
+      `Native Electron zoom shortcut never reached ~200%; actual factor: ${nativeZoomFactor}`);
+    const atNativeZoom = await cdp.evaluate(
+      "({ innerWidth: window.innerWidth, backVisible: " +
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')?.getBoundingClientRect().width > 0 })"
+    );
+    assert(atNativeZoom.backVisible, 'Back button disappeared at native 200% zoom');
+    assert(atNativeZoom.innerWidth < zoomBaseline.innerWidth * 0.70,
+      'BrowserWindow zoom did not reduce the effective layout viewport');
+    await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
+    await sendNativeZoomShortcut('0', 'Digit0', 48);
+    await cdp.waitFor(
+      "window.electronAPI.getZoomFactor().then(factor => Math.abs(factor - 1) < 0.05)",
+      'native Electron zoom restored to 100%'
+    );
+    assert.equal(
+      await cdp.evaluate("document.querySelector('#team-name')?.value"),
+      unique, 'Native zoom and reset changed unsaved draft'
+    );
+
     log('split into two panes and prevent duplicate creation editors');
     const paneCount = await cdp.evaluate("(() => { " +
       "const s = window.__agentTeamsDevStore.getState(); " +
@@ -1024,6 +1077,7 @@ async function main() {
       duplicateNameValidationRecovered: true,
       themeDarkLightRendered: true,
       cssZoom200Rendered: true,
+      nativeElectronZoom200Rendered: true,
       splitPaneSingleEditor: true,
       macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
       sandboxRoot: fixture.root,
