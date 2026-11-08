@@ -681,14 +681,17 @@ test('native V2 submit preflight failure revokes Host readiness without replay o
   assert.equal(calls.stop, 1, 'no duplicate stop after uncertain native ACK');
 });
 
-test('pinned PR1 rejects the real V2 session envelope before native prompt (HOLD)',
+test('pinned PR2 V2 driver refuses sync-only native log before prompt (HOLD)',
   { timeout: 10000 }, async () => {
-    // Official pinned V2.0.21 session GET returns {data: session}; the Host's
-    // existing PR1 vendor tarball still decodes flat session JSON. Demonstrate
-    // the incompatible boundary without inventing a native model-turn PASS.
+    // PR2 decodes the real pinned V2.0.21 {data: session} envelope, but
+    // log.synced without session.created and durable events is insufficient
+    // for a qualified input. Prove rejection BEFORE any native POST. This is
+    // a synthetic TEST peer, not evidence of a native model/tool turn.
     const profile = v2Profile();
     const sessionPath = '/api/session/' + profile.nativeSessionId;
+    const logPath = '/api/experimental/session/' + profile.nativeSessionId + '/log?follow=false';
     let getCount = 0;
+    let logCount = 0;
     let promptCount = 0;
     const server = createServer((req, res) => {
       if (req.method === 'GET' && req.url === sessionPath) {
@@ -701,6 +704,14 @@ test('pinned PR1 rejects the real V2 session envelope before native prompt (HOLD
           model: { providerID: 'TEST-provider', id: 'TEST-model' },
           time: { created: 1 },
         } }));
+        return;
+      }
+      if (req.method === 'GET' && req.url === logPath) {
+        logCount++;
+        res.setHeader('content-type', 'text/event-stream');
+        res.end('data: ' + JSON.stringify({
+          type: 'log.synced', aggregateID: profile.nativeSessionId, seq: 0,
+        }) + '\n\n');
         return;
       }
       if (req.method === 'POST') promptCount++;
@@ -724,7 +735,8 @@ test('pinned PR1 rejects the real V2 session envelope before native prompt (HOLD
         content: 'TEST only; no model execution',
       }), { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' });
       assert.equal(getCount, 1, 'exactly one real-shaped session GET');
-      assert.equal(promptCount, 0, 'incompatible PR1 driver cannot submit a prompt');
+      assert.equal(logCount, 1, 'PR2 must decode the official session and inspect the empty durable log');
+      assert.equal(promptCount, 0, 'sync-only log cannot qualify any native prompt');
       assert.equal(provider.isReady(), false);
       assert.equal(calls.stop, 1, 'only the captured TEST owner is retired');
       assert.deepEqual(await opened.driver.submit({
@@ -733,6 +745,7 @@ test('pinned PR1 rejects the real V2 session envelope before native prompt (HOLD
         content: 'never send',
       }), { ok: false, code: 'unavailable', delivery: 'known-not-sent' });
       assert.equal(getCount, 1);
+      assert.equal(logCount, 1, 'sealed capture must not reread native log');
       assert.equal(promptCount, 0);
       assert.equal(await provider.cleanup(), true);
       assert.equal(calls.stop, 1);
