@@ -74,6 +74,16 @@ describe('install-dependencies-with-retry', () => {
     }
   });
 
+  it('never retries a fatal pnpm 404 even after an earlier transient download', () => {
+    for (const output of [
+      'ERR_PNPM_FETCH_404 GET https://registry.npmjs.org/missing-test-package',
+      'HTTPError: Response code 503\\nERR_PNPM_FETCH_404 GET https://registry.npmjs.org/missing-test-package',
+      'HTTPError: Response code 504\\n\\x1b[31mERR_PNPM_FETCH_404\\x1b[0m',
+    ]) {
+      assert.equal(isRetryableInstallFailure(output), false);
+    }
+  });
+
   it('lets a later deterministic error override an earlier transient marker', () => {
     const output =
       'HTTPError: Response code 503\nERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile';
