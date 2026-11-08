@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
@@ -16,6 +16,7 @@ import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components
 import { ThemeJsonEditorDialog } from './ThemeJsonEditorDialog';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';
+import type { CustomTheme } from '@renderer/utils/appearancePreferences';
 import type { AppConfig } from '@shared/types/notifications';
 
 const THEME_OPTIONS = ['dark', 'light', 'system'] as const;
@@ -39,6 +40,8 @@ export const AppearanceSection = ({
   const isElectron = isElectronMode();
   const { activeCustomThemeId, themes, zoomPercent } = useAppearancePreferences();
   const [editorOpen, setEditorOpen] = useState(false);
+  const [editingThemes, setEditingThemes] = useState<readonly CustomTheme[]>([]);
+  const editorTriggerRef = useRef<HTMLButtonElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const themeOptions = THEME_OPTIONS.map((value) => ({
     value,
@@ -110,7 +113,11 @@ export const AppearanceSection = ({
           <button
             type="button"
             data-testid="appearance-edit-custom-themes"
-            onClick={() => setEditorOpen(true)}
+            ref={editorTriggerRef}
+            onClick={() => {
+              setEditingThemes(themes);
+              setEditorOpen(true);
+            }}
             className="rounded border border-border-emphasis bg-surface-raised px-2.5 py-1.5 text-xs font-medium text-text"
           >
             {t('general.appearance.customThemes.edit')}
@@ -190,8 +197,14 @@ export const AppearanceSection = ({
       <ThemeJsonEditorDialog
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
-        themes={themes}
-        onSave={(next) => setCustomThemes(next)}
+        themes={editingThemes}
+        focusReturnRef={editorTriggerRef}
+        onSave={(next) => {
+          if (JSON.stringify(themes) !== JSON.stringify(editingThemes)) {
+            throw new Error(t('general.appearance.customThemes.editor.conflict'));
+          }
+          setCustomThemes(next);
+        }}
       />
     </div>
   );
