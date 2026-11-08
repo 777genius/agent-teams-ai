@@ -352,8 +352,25 @@ export class SmartScheduleDispatcher {
       subject: (schedule.label?.trim() || prompt.replace(/\s+/g, ' ').slice(0, 100)).slice(0, 120),
       prompt,
       owner: memberName,
-      startImmediately: true,
+      startImmediately: !schedule.taskFirst,
     });
+    if (schedule.taskFirst) {
+      const afterWrite = await this.runtime.getRuntime(team);
+      if (
+        isCancelled() ||
+        this.runtime.isTeamBusy(team) ||
+        !this.runtime.isTeamAlive(team) ||
+        afterWrite.runId !== runtime.runId ||
+        !readyMember(afterWrite.members[memberName])
+      ) {
+        return skipped('Task saved; runtime changed before start', task.id);
+      }
+      try {
+        await this.runtime.startTaskByUser?.(team, task.id);
+      } catch {
+        return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', task.id);
+      }
+    }
     return {
       kind: 'dispatched',
       taskId: task.id,
