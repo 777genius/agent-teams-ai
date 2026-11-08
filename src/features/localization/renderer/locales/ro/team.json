@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Ora"
     },
     "empty": {
       "title": "Nicio programare încă",
@@ -2147,7 +2148,11 @@
       "cancelled": "Anulată",
       "dispatched": "Trimis",
       "skipped": "Omis"
-    }
+    },
+    "taskFirstAgentDescription": "Sarcina este atribuită membrului selectat. Dacă este necesar, echipa va fi pornită mai întâi.",
+    "taskFirstTeamDescription": "Liderul coordonează această sarcină. Dacă este necesar, echipa va fi pornită mai întâi.",
+    "taskFirstDesktopRequired": "Programările rulează numai cât timp Agent Teams este deschis.",
+    "taskFirstHistoricPrompt": "Această echipă are un prompt de pornire salvat. Verifică-l în setările echipei înainte de a programa lucrări automate."
   },
   "openCodeContextConfigHint": {
     "summary": "Modelele locale OpenCode pot folosi un buget de context OpenCode în loc de limite doar pentru prompt.",
