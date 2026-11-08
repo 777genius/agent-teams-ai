@@ -1521,7 +1521,10 @@
       "leadDefault": "Team lead (default)",
       "agentDescription": "Kapag hindi tumatakbo ang team, maglulunsad ng hiwalay na agent; kung aktibo, magtatalaga ng gawain.",
       "teamDescription": "Kapag hindi tumatakbo ang team, sisimulan ito; kung aktibo, magtatalaga ng gawain sa lead. Gagamitin ang naka-save na setting.",
-      "teamPathMissing": "I-save muna ang project folder ng team bago mag-iskedyul ng paglulunsad."
+      "teamPathMissing": "I-save muna ang project folder ng team bago mag-iskedyul ng paglulunsad.",
+      "taskFirstAgentDescription": "Makakatanggap ang napiling teammate ng gawain sa board matapos ligtas na simulan ang team kung kailangan. Hindi maaantala ang mga abalang agent.",
+      "taskFirstTeamDescription": "Makakatanggap ang team lead ng gawain sa koordinasyon matapos ligtas na simulan ang team kung kailangan. Hindi maaantala ang kasalukuyang trabaho.",
+      "taskFirstTarget": "Italaga kay"
     },
     "title": {
       "createSchedule": "Lumikha ng Schedule",
@@ -2096,7 +2099,8 @@
       "stillRunning": "Tumatakbo pa ang task...",
       "loadingLogs": "Niloload ang mga log...",
       "errors": "Mga Error",
-      "close": "Isara"
+      "close": "Isara",
+      "openTask": "Buksan ang gawain"
     },
     "cron": {
       "expression": "Cron expression",

@@ -1689,7 +1689,10 @@
       "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
       "title": "Schedule",
       "upgradeSmart": "Switch to smart scheduling",
-      "wholeTeam": "Whole team"
+      "wholeTeam": "Whole team",
+      "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
+      "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
+      "taskFirstTarget": "Assign to"
     },
     "title": {
       "createSchedule": "Create Schedule",
@@ -2290,7 +2293,8 @@
       "stillRunning": "Task is still running...",
       "loadingLogs": "Loading logs...",
       "errors": "Errors",
-      "close": "Close"
+      "close": "Close",
+      "openTask": "Open task"
     },
     "cron": {
       "expression": "Cron expression",

@@ -9,7 +9,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { CronScheduleInput } from './CronScheduleInput';
 
-import type { ResolvedTeamMember, TeamSummary } from '@shared/types';
+import type { TeamSummary } from '@shared/types';
 
 export type EditableScheduleMode = 'legacy' | 'agent' | 'team';
 
@@ -18,6 +18,7 @@ interface SmartScheduleFieldsProps {
   expanded: boolean;
   onToggle: () => void;
   mode: EditableScheduleMode;
+  taskFirst?: boolean;
   onModeChange: (mode: EditableScheduleMode) => void;
   targetMember: string;
   onTargetMemberChange: (name: string) => void;
@@ -38,6 +39,7 @@ export const SmartScheduleFields = ({
   expanded,
   onToggle,
   mode,
+  taskFirst = false,
   onModeChange,
   targetMember,
   onTargetMemberChange,
@@ -59,7 +61,7 @@ export const SmartScheduleFields = ({
     savedTarget && savedTarget.toLowerCase() === leadName.toLowerCase()
       ? leadName
       : savedTarget || leadName;
-  const recipientMembers = React.useMemo<ResolvedTeamMember[]>(() => {
+  const recipientMembers = React.useMemo(() => {
     const source = team?.members ?? [];
     const lead = source.find(
       (member) => member.name.trim().toLowerCase() === leadName.toLowerCase()
@@ -80,11 +82,6 @@ export const SmartScheduleFields = ({
         agentId: member.agentId,
         role: member.role,
         color: member.color,
-        status: 'unknown' as const,
-        currentTaskId: null,
-        taskCount: 0,
-        lastActiveAt: null,
-        messageCount: 0,
       }];
     });
   }, [leadName, team]);
@@ -158,7 +155,7 @@ export const SmartScheduleFields = ({
         {mode === 'agent' ? (
           <>
             <Label className="text-xs">
-              {t('launch.schedule.target')}
+              {t(taskFirst ? 'launch.schedule.taskFirstTarget' : 'launch.schedule.target')}
             </Label>
             <MemberSelect
               members={recipientMembers}
@@ -172,7 +169,7 @@ export const SmartScheduleFields = ({
               getMemberLabel={(member) =>
                 member.name === leadName ? t('launch.schedule.leadDefault') : member.name
               }
-              ariaLabel={t('launch.schedule.target')}
+              ariaLabel={t(taskFirst ? 'launch.schedule.taskFirstTarget' : 'launch.schedule.target')}
               size="md"
             />
             {missingSavedMember ? (
@@ -186,12 +183,12 @@ export const SmartScheduleFields = ({
               </p>
             ))}
             <p className="text-[11px] text-[var(--color-text-muted)]">
-              {t('launch.schedule.agentDescription')}
+              {t(taskFirst ? 'launch.schedule.taskFirstAgentDescription' : 'launch.schedule.agentDescription')}
             </p>
           </>
         ) : mode === 'team' ? (
           <p className="text-[11px] text-[var(--color-text-muted)]">
-            {t('launch.schedule.teamDescription')}
+            {t(taskFirst ? 'launch.schedule.taskFirstTeamDescription' : 'launch.schedule.teamDescription')}
           </p>
         ) : null}
       </div>

@@ -1523,7 +1523,10 @@
       "leadDefault": "Kiongozi wa timu (chaguo-msingi)",
       "agentDescription": "Timu ikiwa imesimama, huanzisha wakala tofauti; ikiwa inaendelea, hugawa kazi.",
       "teamDescription": "Timu ikiwa imesimama, huiwasha; ikiwa inaendelea, humpa kiongozi kazi. Hutumia mipangilio iliyohifadhiwa.",
-      "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji."
+      "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji.",
+      "taskFirstAgentDescription": "Mshiriki aliyechaguliwa atapokea kazi kwenye ubao baada ya timu kuanzishwa kwa usalama inapohitajika. Mawakala walio na shughuli hawatakatizwa.",
+      "taskFirstTeamDescription": "Kiongozi wa timu atapokea kazi ya uratibu baada ya timu kuanzishwa kwa usalama inapohitajika. Kazi inayoendelea haitakatizwa.",
+      "taskFirstTarget": "Mkabidhi"
     },
     "title": {
       "createSchedule": "Unda Ratiba",
@@ -2098,7 +2101,8 @@
       "stillRunning": "Kazi bado inaendeshwa...",
       "loadingLogs": "Inapakia kumbukumbu...",
       "errors": "Hitilafu",
-      "close": "Funga"
+      "close": "Funga",
+      "openTask": "Fungua kazi"
     },
     "cron": {
       "expression": "Usemi wa cron",

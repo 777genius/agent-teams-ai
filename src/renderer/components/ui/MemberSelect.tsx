@@ -18,8 +18,11 @@ import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
-interface MemberSelectProps {
-  members: ResolvedTeamMember[];
+type SelectableMember = Pick<ResolvedTeamMember, 'name'> &
+  Partial<Pick<ResolvedTeamMember, 'role' | 'agentType' | 'color' | 'removedAt'>>;
+
+interface MemberSelectProps<T extends SelectableMember> {
+  members: T[];
   value: string | null;
   onChange: (value: string | null) => void;
   placeholder?: string;
@@ -34,14 +37,14 @@ interface MemberSelectProps {
   className?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
-  getMemberLabel?: (member: ResolvedTeamMember) => string;
-  getMemberDescription?: (member: ResolvedTeamMember) => string | null | undefined;
+  getMemberLabel?: (member: T) => string;
+  getMemberDescription?: (member: T) => string | null | undefined;
   ariaLabel?: string;
 }
 
 const UNASSIGNED_VALUE = '__unassigned__';
 
-export const MemberSelect = ({
+export const MemberSelect = <T extends SelectableMember>({
   members,
   value,
   onChange,
@@ -57,7 +60,7 @@ export const MemberSelect = ({
   getMemberLabel,
   getMemberDescription,
   ariaLabel,
-}: MemberSelectProps): React.JSX.Element => {
+}: MemberSelectProps<T>): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -79,12 +82,12 @@ export const MemberSelect = ({
   const effectivePopoverAlign = popoverAlign ?? (isAvatarTrigger ? 'end' : 'start');
   const avatarTriggerSize = size === 'md' ? 'size-9' : 'size-8';
   const resolveMemberLabel = React.useCallback(
-    (member: ResolvedTeamMember): string =>
+    (member: T): string =>
       getMemberLabel?.(member) ?? (member.name === 'team-lead' ? 'lead' : member.name),
     [getMemberLabel]
   );
   const resolveMemberDescription = React.useCallback(
-    (member: ResolvedTeamMember): string | null | undefined =>
+    (member: T): string | null | undefined =>
       getMemberDescription?.(member) ??
       formatAgentRole(member.role) ??
       formatAgentRole(member.agentType),
@@ -109,11 +112,11 @@ export const MemberSelect = ({
       loading="lazy"
     />
   );
-  const renderMemberAvatar = (member: ResolvedTeamMember): React.ReactNode =>
+  const renderMemberAvatar = (member: T): React.ReactNode =>
     renderAvatarByName(member.name);
 
   // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
-  const renderMemberInline = (member: ResolvedTeamMember): React.ReactNode => {
+  const renderMemberInline = (member: T): React.ReactNode => {
     const resolvedColor = colorMap.get(member.name);
     const colors = getTeamColorSet(resolvedColor ?? '');
     const label = resolveMemberLabel(member);
@@ -176,7 +179,7 @@ export const MemberSelect = ({
                     {t('members.unassigned')}
                   </span>
                 ) : (
-                  <span className="text-[var(--color-text-muted)]">{placeholder}</span>
+                  <span className="text-[var(--color-text-muted)]">{value ? selectedLabel : placeholder}</span>
                 )}
               </span>
               <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />

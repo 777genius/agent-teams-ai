@@ -1521,7 +1521,10 @@
       "leadDefault": "Pemimpin tim (default)",
       "agentDescription": "Saat tim mati, jalankan agen terpisah; saat aktif, berikan tugas kepada anggota.",
       "teamDescription": "Saat tim mati, jalankan tim tersimpan; saat aktif, berikan tugas kepada pemimpin. Gunakan pengaturan tersimpan.",
-      "teamPathMissing": "Simpan folder proyek tim sebelum menjadwalkan peluncuran."
+      "teamPathMissing": "Simpan folder proyek tim sebelum menjadwalkan peluncuran.",
+      "taskFirstAgentDescription": "Anggota tim terpilih menerima tugas di papan setelah tim dimulai dengan aman jika diperlukan. Agen yang sibuk tidak akan diganggu.",
+      "taskFirstTeamDescription": "Pemimpin tim menerima tugas koordinasi setelah tim dimulai dengan aman jika diperlukan. Pekerjaan yang berjalan tidak akan diganggu.",
+      "taskFirstTarget": "Tugaskan kepada"
     },
     "title": {
       "createSchedule": "Buat Jadwal",
@@ -2096,7 +2099,8 @@
       "stillRunning": "Tugas masih berjalan...",
       "loadingLogs": "Memuat log...",
       "errors": "Galat",
-      "close": "Tutup"
+      "close": "Tutup",
+      "openTask": "Buka tugas"
     },
     "cron": {
       "expression": "Ekspresi cron",

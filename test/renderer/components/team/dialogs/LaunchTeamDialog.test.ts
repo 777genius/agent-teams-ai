@@ -4715,6 +4715,83 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('creates task-first team assignment without one-shot model and budget settings', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      members: [{ name: 'alice', role: 'Developer' }],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'schedule',
+            open: true,
+            teamName: 'team-alpha',
+            onClose: vi.fn(),
+          })
+        );
+        await flush();
+      });
+      expect(host.textContent).toContain('The selected teammate receives a board task');
+      expect(host.querySelector('[data-testid="team-model-selector"]')).toBeNull();
+      expect(host.querySelector('#schedule-max-turns')).toBeNull();
+      expect(host.querySelector('#schedule-max-budget')).toBeNull();
+
+      const prompt = host.querySelector('#dialog-prompt') as HTMLTextAreaElement;
+      expect(prompt).toBeTruthy();
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          prompt, 'Review the current changes'
+        );
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+      const submit = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Create Schedule'
+      );
+      expect(submit).toBeTruthy();
+      expect(submit?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        submit?.click();
+        await flush();
+      });
+      expect(createSchedule).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          executionMode: 'agent',
+          taskFirst: true,
+          targetMember: '',
+          launchConfig: expect.objectContaining({
+            cwd: '/tmp/project',
+            prompt: 'Review the current changes',
+            providerId: 'anthropic',
+            model: undefined,
+            effort: undefined,
+            skipPermissions: undefined,
+          }),
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+      vi.mocked(api.teams.getSavedRequest).mockReset();
+      storeState.teamByName = {};
+    }
+  });
+
   it('saves an explicitly selected whole-team mode without a migration', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.teamByName = {

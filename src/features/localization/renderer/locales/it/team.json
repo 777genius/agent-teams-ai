@@ -1521,7 +1521,10 @@
       "leadDefault": "Responsabile del team (predefinito)",
       "agentDescription": "Se il team è fermo, avvia un agente separato; se è attivo, assegna un'attività.",
       "teamDescription": "Se il team è fermo, lo avvia; se è attivo, assegna un'attività al responsabile. Usa le impostazioni salvate.",
-      "teamPathMissing": "Salva la cartella del progetto del team prima di pianificarne l'avvio."
+      "teamPathMissing": "Salva la cartella del progetto del team prima di pianificarne l'avvio.",
+      "taskFirstAgentDescription": "Il membro selezionato riceve un'attività nella bacheca dopo l'avvio sicuro del team, se necessario. Gli agenti occupati non vengono interrotti.",
+      "taskFirstTeamDescription": "Il responsabile riceve un'attività di coordinamento dopo l'avvio sicuro del team, se necessario. Il lavoro in corso non viene interrotto.",
+      "taskFirstTarget": "Assegna a"
     },
     "title": {
       "createSchedule": "Crea pianificazione",
@@ -2096,7 +2099,8 @@
       "stillRunning": "Il task è ancora in esecuzione...",
       "loadingLogs": "Caricamento dei log...",
       "errors": "Errori",
-      "close": "Chiudi"
+      "close": "Chiudi",
+      "openTask": "Apri attività"
     },
     "cron": {
       "expression": "Espressione cron",

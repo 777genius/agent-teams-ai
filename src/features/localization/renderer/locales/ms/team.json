@@ -1521,7 +1521,10 @@
       "leadDefault": "Ketua pasukan (lalai)",
       "agentDescription": "Jika pasukan berhenti, jalankan ejen berasingan; jika aktif, berikan tugasan.",
       "teamDescription": "Jika pasukan berhenti, mulakan pasukan yang disimpan; jika aktif, berikan tugasan kepada ketua. Gunakan tetapan tersimpan.",
-      "teamPathMissing": "Simpan folder projek pasukan sebelum menjadualkan pelancarannya."
+      "teamPathMissing": "Simpan folder projek pasukan sebelum menjadualkan pelancarannya.",
+      "taskFirstAgentDescription": "Ahli pasukan yang dipilih menerima tugasan pada papan selepas pasukan dimulakan dengan selamat jika perlu. Ejen yang sibuk tidak akan diganggu.",
+      "taskFirstTeamDescription": "Ketua pasukan menerima tugasan penyelarasan selepas pasukan dimulakan dengan selamat jika perlu. Kerja yang sedang berjalan tidak akan diganggu.",
+      "taskFirstTarget": "Tugaskan kepada"
     },
     "title": {
       "createSchedule": "Cipta Jadual",
@@ -2096,7 +2099,8 @@
       "stillRunning": "Tugasan masih berjalan...",
       "loadingLogs": "Memuatkan log...",
       "errors": "Ralat",
-      "close": "Tutup"
+      "close": "Tutup",
+      "openTask": "Buka tugasan"
     },
     "cron": {
       "expression": "Ungkapan cron",

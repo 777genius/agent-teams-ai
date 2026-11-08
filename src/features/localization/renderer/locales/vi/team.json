@@ -1521,7 +1521,10 @@
       "leadDefault": "Trưởng nhóm (mặc định)",
       "agentDescription": "Nếu nhóm đã dừng, chạy một tác nhân riêng; nếu đang chạy, giao một nhiệm vụ.",
       "teamDescription": "Nếu nhóm đã dừng, khởi động nhóm đã lưu; nếu đang chạy, giao nhiệm vụ cho trưởng nhóm. Dùng cài đặt đã lưu.",
-      "teamPathMissing": "Hãy lưu thư mục dự án của nhóm trước khi lên lịch khởi động."
+      "teamPathMissing": "Hãy lưu thư mục dự án của nhóm trước khi lên lịch khởi động.",
+      "taskFirstAgentDescription": "Thành viên được chọn nhận nhiệm vụ trên bảng sau khi nhóm được khởi động an toàn nếu cần. Không làm gián đoạn tác nhân đang bận.",
+      "taskFirstTeamDescription": "Trưởng nhóm nhận nhiệm vụ điều phối sau khi nhóm được khởi động an toàn nếu cần. Không làm gián đoạn công việc đang thực hiện.",
+      "taskFirstTarget": "Giao cho"
     },
     "title": {
       "createSchedule": "Tạo lịch",
@@ -2096,7 +2099,8 @@
       "stillRunning": "Tác vụ vẫn đang chạy...",
       "loadingLogs": "Đang tải nhật ký...",
       "errors": "Lỗi",
-      "close": "Đóng"
+      "close": "Đóng",
+      "openTask": "Mở nhiệm vụ"
     },
     "cron": {
       "expression": "Biểu thức cron",
