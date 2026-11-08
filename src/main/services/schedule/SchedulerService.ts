@@ -198,10 +198,7 @@ export class SchedulerService {
       updatedAt: now,
       launchConfig: input.launchConfig,
     };
-
-    // Compute nextRunAt before saving
     schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
-
     await this.repository.saveSchedule(schedule);
     this.createCronJob(schedule);
 
