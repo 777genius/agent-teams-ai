@@ -95,7 +95,7 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     assert.equal(first.filter, 'all');
     assert.equal(first.cursor, null);
     assert.equal(first.nextCursor, '100');
-    assert.equal(first.entries.filter((entry) => entry.state === 'connected').length, 4);
+    assert.equal(first.entries.filter((entry) => entry.state === 'connected').length, 0);
 
     const secondPage = run([...directoryArgs, '--cursor', first.nextCursor]);
     assert.equal(secondPage.status, 0, secondPage.stderr);
@@ -104,7 +104,8 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     assert.equal(second.returnedCount, 5);
     assert.equal(second.cursor, '100');
     assert.equal(second.nextCursor, null);
-    assert(second.entries.every((entry) => entry.state === 'available'));
+    assert.equal(second.entries.filter((entry) => entry.state === 'available').length, 1);
+    assert.equal(second.entries.filter((entry) => entry.state === 'connected').length, 4);
 
     // The real Windows startup-cleanup path requests a 250-row summary.
     // This is read-only and must not appear as a forbidden mutation.

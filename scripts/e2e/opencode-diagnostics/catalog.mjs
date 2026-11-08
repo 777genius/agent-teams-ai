@@ -239,6 +239,8 @@ export async function verifyCatalog({
     let copied = '';
     let loadingCaptured = false;
     let completedCatalog;
+    let beforeFilteredCount = null;
+    let filteredBeforeSecondPage = null;
     const maxAttempts = scenario === 'catalog-timeout' ? 660 : 240;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await pause(500);
@@ -251,6 +253,30 @@ export async function verifyCatalog({
       completedCatalog = catalogRefreshEvidence(calls, {
         requireSummary,
       });
+      if (scenario === 'connected-summary' && !filteredBeforeSecondPage) {
+        const reads = catalogFixtureRequests(calls).filter((r) => r.operation === 'directory');
+        const first = reads.find((r) => r.response?.response.directory?.filter === 'all' &&
+          r.response.response.directory.nextCursor === '100');
+        const connected = reads.find((r) => r.response?.response.directory?.filter === 'connected' &&
+          r.start.args.includes('--summary'));
+        const second = reads.find((r) => r.start.args.includes('--cursor') &&
+          r.start.args[r.start.args.indexOf('--cursor') + 1] === '100');
+        const label = await evaluate(
+          `document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || ''`
+        );
+        // Read-only DOM observation on opposite sides of a held filtered response.
+        if (first?.response && !connected?.response && !second?.response &&
+            !/^\\D*3\\D*$/.test(label.trim())) {
+          beforeFilteredCount = { label, at: Date.now(), firstPageAt: first.response.at };
+        }
+        if (beforeFilteredCount && connected?.response && !second?.response &&
+            /^\\D*3\\D*$/.test(label.trim())) {
+          filteredBeforeSecondPage = {
+            before: beforeFilteredCount, after: { label, at: Date.now() },
+            connectedResponseAt: connected.response.at,
+          };
+        }
+      }
       text = await evaluate('document.body.innerText');
       const visible = await evaluate(`${alert}?.innerText || ''`);
       if (scenario === 'delayed8s' && Date.now() - started < 7000) {
@@ -322,9 +348,17 @@ export async function verifyCatalog({
         await pause(250);
       }
       assert(proof, 'Filtered connected-summary subprocess and live header were not observed');
+      assert(filteredBeforeSecondPage, 'Connected summary did not update the UI before page two completed');
+      assert(filteredBeforeSecondPage.after.at >= proof.connected.response.at);
+      assert(filteredBeforeSecondPage.after.at < proof.allSecond.response.at);
+      proof.filteredBeforeSecondPage = filteredBeforeSecondPage;
       assert.equal(proof.allFirst.response.response.directory.totalCount, 105);
       assert.equal(proof.allFirst.response.response.directory.returnedCount, 100);
+      assert.equal(proof.allFirst.response.response.directory.entries.filter(
+        (entry) => entry.state === 'connected').length, 0);
       assert.equal(proof.allSecond.response.response.directory.returnedCount, 5);
+      assert.equal(proof.allSecond.response.response.directory.entries.filter(
+        (entry) => entry.state === 'connected').length, 4);
       assert.equal(proof.connected.response.response.directory.totalCount, 4);
       assert.equal(proof.connected.response.response.directory.returnedCount, 4);
       assert.equal(proof.connected.response.response.directory.nextCursor, null);

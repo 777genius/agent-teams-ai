@@ -215,7 +215,10 @@ function catalogCommand(operation) {
             },
           }))
         : [];
-      const allEntries = [...connectedEntries, ...availableEntries];
+      // Put connected sources on page two so its count cannot be guessed from page one.
+      const allEntries = scenario === 'connected-summary'
+        ? [...availableEntries, ...connectedEntries]
+        : [...connectedEntries, ...availableEntries];
       const filteredEntries = filter === 'connected'
         ? allEntries.filter((entry) => entry.state === 'connected')
         : allEntries;
@@ -279,6 +282,13 @@ function catalogCommand(operation) {
     process.stderr.write('fixture catalog waiting api_key=DO_NOT_COPY_THIS_SECRET\n');
     // Outlive the 300s catalog budget so the app must terminate this fixture.
     setTimeout(emit, 360000);
+  } else if (operation === 'directory' && scenario === 'connected-summary' && filter === 'connected') {
+    // The UI must first show an incomplete count, then consume this read.
+    setTimeout(emit, 3000);
+  } else if (operation === 'directory' && scenario === 'connected-summary' &&
+             cursor === '100' && flags.get('--refresh') === true) {
+    // Do not let the completed full directory explain the early header update.
+    setTimeout(emit, 9000);
   } else emit();
 }
 function refuse() {
