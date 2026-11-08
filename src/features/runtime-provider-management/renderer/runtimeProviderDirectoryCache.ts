@@ -23,6 +23,8 @@ export interface RuntimeProviderConnectedCountObservation {
 export interface RuntimeProviderConnectedCountEvidence {
   readonly observation: RuntimeProviderConnectedCountObservation | null;
   readonly invalidated: boolean;
+  /** True while an active consumer is reading provider connections. */
+  readonly checking?: boolean;
 }
 
 interface PublishRuntimeProviderConnectedCountInput
@@ -48,6 +50,7 @@ const EMPTY_SNAPSHOT: RuntimeProviderDirectoryCacheSnapshot | null = null;
 const snapshotsByScope = new Map<string, RuntimeProviderDirectoryCacheSnapshot>();
 const EMPTY_COUNT_EVIDENCE: RuntimeProviderConnectedCountEvidence = { observation: null, invalidated: false };
 const connectedCountEvidenceByScope = new Map<string, RuntimeProviderConnectedCountEvidence>();
+const activeConnectionChecksByScope = new Map<string, Set<symbol>>();
 const listenersByScope = new Map<string, Set<() => void>>();
 const mergedFallbackByScope = new Map<
   string,
@@ -92,6 +95,7 @@ function pruneInactiveProjectScopes(): void {
     }
     snapshotsByScope.delete(oldestInactiveScopeKey);
     connectedCountEvidenceByScope.delete(oldestInactiveScopeKey);
+    activeConnectionChecksByScope.delete(oldestInactiveScopeKey);
     mergedFallbackByScope.delete(oldestInactiveScopeKey);
     projectScopeCount -= 1;
   }
@@ -313,10 +317,12 @@ export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: strin
   const scopeKey = getScopeKey(projectPath);
   generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
   connectedCountEvidenceByScope.set(scopeKey, { observation: null, invalidated: true });
+  activeConnectionChecksByScope.delete(scopeKey);
   notifyScope(scopeKey);
   if (scopeKey !== GLOBAL_SCOPE_KEY) return;
   // Fence even project requests that have not published a first snapshot.
   invalidationEpoch += 1;
+  activeConnectionChecksByScope.clear();
   mergedFallbackByScope.clear();
   for (const projectScope of new Set([
     ...snapshotsByScope.keys(),
@@ -368,8 +374,36 @@ export function publishRuntimeProviderConnectedCount({
   connectedCountEvidenceByScope.set(scopeKey, {
     observation: { connected, fetchedAt, runtimeRevision, source },
     invalidated: false,
+    checking: (activeConnectionChecksByScope.get(scopeKey)?.size ?? 0) > 0,
   });
   notifyScope(scopeKey);
+}
+
+/** Scoped reference-counted display signal, without starting any provider IPC. */
+export function beginRuntimeProviderConnectedCountCheck(
+  projectPath?: string | null,
+  readToken = getRuntimeProviderDirectoryReadToken(projectPath)
+): () => void {
+  if (readToken !== getRuntimeProviderDirectoryReadToken(projectPath)) return () => undefined;
+  const scopeKey = getScopeKey(projectPath);
+  const id = Symbol('provider-check');
+  const pending = activeConnectionChecksByScope.get(scopeKey) ?? new Set<symbol>();
+  pending.add(id);
+  activeConnectionChecksByScope.set(scopeKey, pending);
+  const evidence = getRuntimeProviderConnectedCountEvidence(projectPath);
+  if (evidence.checking !== true) {
+    connectedCountEvidenceByScope.set(scopeKey, { ...evidence, checking: true });
+    notifyScope(scopeKey);
+  }
+  return () => {
+    if (!pending.delete(id)) return;
+    if (pending.size === 0 && activeConnectionChecksByScope.get(scopeKey) === pending) {
+      activeConnectionChecksByScope.delete(scopeKey);
+      const current = getRuntimeProviderConnectedCountEvidence(projectPath);
+      connectedCountEvidenceByScope.set(scopeKey, { ...current, checking: false });
+      notifyScope(scopeKey);
+    }
+  };
 }
 
 export function getRuntimeProviderConnectedCountObservation(
@@ -445,6 +479,7 @@ export function invalidateRuntimeProviderDirectoryCache(): void {
   invalidationEpoch += 1;
   generationByScope.clear();
   snapshotsByScope.clear();
+  activeConnectionChecksByScope.clear();
   connectedCountEvidenceByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;
