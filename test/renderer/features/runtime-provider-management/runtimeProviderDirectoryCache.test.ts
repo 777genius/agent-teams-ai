@@ -4,7 +4,10 @@ import { runtimeProviderDirectoryInteraction } from '../../../../src/features/ru
 
 import {
   getRuntimeProviderDirectoryCacheSnapshot,
+  getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryCache,
+  invalidateRuntimeProviderDirectoryScopeReads,
+  markRuntimeProviderDirectoryScopeUnverified,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
@@ -38,6 +41,122 @@ const providerEntry = {
 describe('runtimeProviderDirectoryCache', () => {
   afterEach(() => {
     resetRuntimeProviderDirectoryCacheForTests();
+  });
+
+  it('rejects stale in-flight reads after a credential change without touching other scopes', () => {
+    const oldReadToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const otherScopeToken = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    markRuntimeProviderDirectoryScopeUnverified('/tmp/project-a');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      readToken: oldReadToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-b',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      readToken: otherScopeToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-b')).not.toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state).toBe(
+      'not-connected'
+    );
+  });
+
+  it('fences old reads without downgrading the complete cache on successful refresh', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+    });
+    const previousToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state)
+      .toBe('not-connected');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      readToken: previousToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state)
+      .toBe('not-connected');
+  });
+
+  it('withdraws exact project authority after a global credential mutation without dropping rows', () => {
+    const globalRead = getRuntimeProviderDirectoryReadToken(null);
+    const projectARead = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const projectBRead = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    for (const projectPath of [null, '/tmp/project-a', '/tmp/project-b']) {
+      publishRuntimeProviderDirectoryCache({
+        projectPath,
+        entries: [providerEntry],
+        fetchedAt: '2026-07-20T10:00:00.000Z',
+        authoritative: true,
+        totalCount: 1,
+        nextCursor: null,
+      });
+    }
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderDirectoryReadToken(null)).not.toBe(globalRead);
+    expect(getRuntimeProviderDirectoryReadToken('/tmp/project-a')).not.toBe(projectARead);
+    expect(getRuntimeProviderDirectoryReadToken('/tmp/project-b')).not.toBe(projectBRead);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.authoritative).toBe(true);
+    for (const scope of ['/tmp/project-a', '/tmp/project-b']) {
+      expect(getRuntimeProviderDirectoryCacheSnapshot(scope)?.authoritative).toBe(false);
+      expect(getRuntimeProviderDirectoryCacheSnapshot(scope)?.entries[0]?.state).toBe('connected');
+    }
+    // In-flight project reads from before the global change cannot resurrect
+    // an inherited connection as an authoritative result.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+      readToken: projectARead,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(false);
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state).toBe(
+      'not-connected'
+    );
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-b')?.authoritative).toBe(false);
   });
 
   it('keeps provider snapshots isolated by project scope', () => {

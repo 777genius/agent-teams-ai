@@ -26,6 +26,7 @@ import {
 import {
   parseCreateTeamRequest,
   TeamRequestValidationError,
+  validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -2141,6 +2142,8 @@ async function handleLaunchTeamUnlocked(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { success: false, error: 'prompt must be a string' };
   }
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) return { success: false, error: bootstrapError };
 
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
@@ -2181,6 +2184,7 @@ async function handleLaunchTeamUnlocked(
     if (meta) isDraft = true;
   }
 
+  if (isDraft && payload.bootstrapOnly) return { success: false, error: 'Finish team setup first' };
   if (isDraft) {
     const savedRequest = await getTeamDataService().getSavedRequest(tn);
     if (!savedRequest) {
@@ -2366,6 +2370,7 @@ async function handleLaunchTeamUnlocked(
           cwd,
           prompt:
             typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+          bootstrapOnly: payload.bootstrapOnly === true ? true : undefined,
           providerId: launchProviderId,
           providerBackendId: launchProviderBackendValidation.value,
           model: rawLaunchModel,
@@ -2834,7 +2839,10 @@ async function handleSendMessage(
         : leadName !== null && memberName === leadName;
     const actionMode = payload.actionMode ?? 'do';
 
-    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
+    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderIdForUserSend(
+      tn,
+      memberName
+    );
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
     if (validatedAttachments?.length) {
       const nativeAttachments = selectNativeMessageAttachments(

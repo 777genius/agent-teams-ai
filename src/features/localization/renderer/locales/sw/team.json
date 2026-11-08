@@ -1513,7 +1513,17 @@
       "searchTeams": "Tafuta timu...",
       "selectTeam": "Chagua timu...",
       "team": "Timu",
-      "title": "Ratiba"
+      "title": "Ratiba",
+      "execution": "Utekelezaji",
+      "legacyNotice": "Ratiba ya mara moja iliyopo: kuhifadhi hakutabadilisha jinsi inavyofanya kazi.",
+      "upgradeSmart": "Badili hadi ratiba mahiri",
+      "oneAgent": "Wakala mmoja",
+      "wholeTeam": "Timu nzima",
+      "target": "Mpokeaji wakati timu inaendelea",
+      "leadDefault": "Kiongozi wa timu (chaguo-msingi)",
+      "agentDescription": "Timu ikiwa imesimama, huanzisha wakala tofauti; ikiwa inaendelea, hugawa kazi.",
+      "teamDescription": "Timu ikiwa imesimama, huiwasha; ikiwa inaendelea, humpa kiongozi kazi. Hutumia mipangilio iliyohifadhiwa.",
+      "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji."
     },
     "title": {
       "createSchedule": "Unda Ratiba",
@@ -2136,7 +2146,9 @@
       "completed": "Imekamilika",
       "failed": "Imeshindwa",
       "interrupted": "Imekatizwa",
-      "cancelled": "Imeghairiwa"
+      "cancelled": "Imeghairiwa",
+      "dispatched": "Imetumwa",
+      "skipped": "Imerukwa"
     }
   },
   "openCodeContextConfigHint": {
@@ -2425,7 +2437,10 @@
       "hiddenCount": "{{count}} zimefichwa",
       "trash": "Tupio",
       "gridView": "Mwonekano wa gridi",
-      "columnsView": "Mwonekano wa safu"
+      "columnsView": "Mwonekano wa safu",
+      "tableView": "Mwonekano wa jedwali",
+      "configureColumns": "Chagua safu wima",
+      "resizeColumn": "Badilisha upana wa {{column}}"
     },
     "trash": {
       "title": "Tupio",

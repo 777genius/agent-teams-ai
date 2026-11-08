@@ -7,17 +7,17 @@ usePageSeo("meta.homeTitle", "meta.homeDescription");
     <PageBackground />
     <HeroSection />
     <SectionDivider />
-    <LazyScreenshotsSection />
+    <LazyScreenshotsSection :hydrate-on-visible="{ rootMargin: '350px' }" />
     <SectionDivider :flip="true" />
-    <LazyFeaturesSection />
+    <LazyFeaturesSection :hydrate-on-visible="{ rootMargin: '350px' }" />
     <SectionDivider />
     <LazyDownloadSection />
     <SectionDivider />
-    <LazyComparisonSection />
+    <LazyComparisonSection :hydrate-on-visible="{ rootMargin: '350px' }" />
     <SectionDivider :flip="true" />
-    <LazyPricingSection />
+    <LazyPricingSection :hydrate-on-visible="{ rootMargin: '350px' }" />
     <SectionDivider />
-    <LazyFAQSection />
+    <LazyFAQSection :hydrate-on-visible="{ rootMargin: '350px' }" />
     <!-- <LazyTestimonialsSection /> -->
   </div>
 </template>

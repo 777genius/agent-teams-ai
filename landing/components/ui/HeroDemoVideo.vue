@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { mdiPlay } from '@mdi/js';
 
 const { t } = useI18n();
@@ -34,23 +34,29 @@ const muxPosterUrl = computed(() => {
     `https://image.mux.com/${encodeURIComponent(muxPlaybackId.value)}/thumbnail.webp`,
   );
   url.searchParams.set('time', muxThumbnailTime);
-  url.searchParams.set('width', '900');
+  url.searchParams.set('width', isMobileViewport.value ? '480' : '900');
   url.searchParams.set('fit_mode', 'preserve');
   return url.toString();
 });
 const isLoaded = ref(false);
 const hasError = ref(false);
 const isMobileViewport = ref(false);
+// Avoid creating a Mux iframe before checking whether this is a phone.
+const viewportReady = ref(false);
 const playerActivated = ref(false);
+// Preserve an already-running desktop player when the viewport narrows.
+const playerPreviouslyMounted = ref(false);
 const shouldShowMobilePoster = computed(
   () =>
     Boolean(muxPlayerUrl.value) &&
     !hasError.value &&
+    viewportReady.value &&
     isMobileViewport.value &&
-    !playerActivated.value,
+    !playerActivated.value &&
+    !playerPreviouslyMounted.value,
 );
 const shouldShowPlayer = computed(
-  () => Boolean(muxPlayerUrl.value) && !hasError.value && !shouldShowMobilePoster.value,
+  () => Boolean(muxPlayerUrl.value) && !hasError.value && viewportReady.value && !shouldShowMobilePoster.value,
 );
 
 let loadFallbackTimer: ReturnType<typeof setTimeout> | null = null;
@@ -81,11 +87,25 @@ function activatePlayer() {
   playerActivated.value = true;
 }
 
+// One lifecycle for every iframe mount, including transitions between breakpoints.
+// Clearing the timer prevents a detached player from marking a new one loaded.
+watch(
+  shouldShowPlayer,
+  (visible) => {
+    clearLoadFallback();
+    isLoaded.value = false;
+    if (!visible) return;
+    playerPreviouslyMounted.value = true;
+    loadFallbackTimer = setTimeout(markLoaded, 2500);
+  },
+  { flush: 'sync' },
+);
+
 onMounted(() => {
-  mobileQuery = window.matchMedia('(max-width: 700px)');
+  mobileQuery = window.matchMedia('(max-width: 767px)');
   syncMobileViewport();
+  viewportReady.value = true;
   mobileQuery.addEventListener('change', syncMobileViewport);
-  loadFallbackTimer = setTimeout(markLoaded, 2500);
 });
 
 onUnmounted(() => {

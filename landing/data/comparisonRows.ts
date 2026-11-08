@@ -21,10 +21,21 @@ export function createComparisonRows(
 ): ComparisonRow[] {
   return [
     {
+      // Desktop operating systems only. CLI tools are labelled as such so
+      // they are not mistaken for installable graphical desktop apps.
+      feature: t('comparison.features.desktopPlatforms'),
+      us: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.desktopApp')}` },
+      gastown: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.cliBinaries')}` },
+      paperclip: { status: 'text', note: t('comparison.platforms.noNativeDesktop') },
+      cursor: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.desktopIde')}` },
+      claudeCli: { status: 'text', note: `macOS · Windows · Linux ${t('comparison.platforms.cli')}` },
+      openrig: { status: 'text', note: `macOS · Linux; Windows ${t('comparison.platforms.wsl2')}` },
+    },
+    {
       feature: t('comparison.features.teamAutonomy'),
       us: { status: 'yes', power: 9, note: note('Live agents plan, delegate, work, and review together') },
       gastown: { status: 'yes', power: 8, note: note('Persistent teams with coordination and recovery') },
-      paperclip: { status: 'partial', power: 7, note: note('Durable scheduled and event-triggered agents, less live peer teamwork') },
+      paperclip: { status: 'partial', power: 7, note: note('Scheduled/event agents + MCP task collaboration; less live peer teamwork') },
       cursor: { status: 'partial', power: 6, note: note('Parallel agents + subagents, no peer team') },
       claudeCli: { status: 'partial', power: 7, note: note('Experimental teams + cross-session messaging; recovery limits') },
       openrig: { status: 'yes', power: 8, note: note('Persistent roles, delegation, owned-work queues, and review handoffs') },
@@ -36,7 +47,7 @@ export function createComparisonRows(
       paperclip: { status: 'yes', note: note('Board approvals, roles, pause, and stop') },
       cursor: { status: 'partial', note: note('Command controls and admin policies') },
       claudeCli: { status: 'yes', note: note('Permissions + hooks') },
-      openrig: { status: 'yes', note: note('Native permissions, audited seat policies, typing guard, and stop controls') },
+      openrig: { status: 'yes', note: note('Runner permission requests, audited policies, typing guard, and stop controls') },
     },
     {
       feature: t('comparison.features.liveWorkGraph'),
@@ -54,7 +65,7 @@ export function createComparisonRows(
       paperclip: { status: 'partial', note: note('Board + task chats, less live teammate view') },
       cursor: { status: 'partial', note: note('Agents Window, no peer team workspace') },
       claudeCli: { status: 'partial', note: note('Terminal agent view, no graphical workspace') },
-      openrig: { status: 'partial', note: note('TUI coordination + tmux terminals; optional maintenance web UI') },
+      openrig: { status: 'partial', note: note('TUI, tmux, task-following terminal views; optional maintenance web UI') },
     },
     {
       feature: t('comparison.features.zeroSetup'),
@@ -87,7 +98,7 @@ export function createComparisonRows(
       feature: t('comparison.features.reviewWorkflow'),
       us: { status: 'yes', note: note('Built-in Changes viewer with file/hunk accept, reject, edit, undo, and feedback') },
       gastown: { status: 'partial', note: note('Merge queue, no diff UI') },
-      paperclip: { status: 'partial', note: note('Review gates, not inline code review') },
+      paperclip: { status: 'partial', note: note('Review gates + experimental GitHub review bot; no in-app hunk review') },
       cursor: { status: 'yes', note: note('Local Agent Review + PR Bugbot') },
       claudeCli: { status: 'partial', note: note('Agent review, no review UI') },
       openrig: { status: 'partial', note: note('Reviewer rigs and proof approvals; no task-level hunk review UI') },
@@ -114,7 +125,7 @@ export function createComparisonRows(
       feature: t('comparison.features.sessionAnalysis'),
       us: { status: 'yes', note: note('Agent messages, tool calls, timeline, token use, and cost') },
       gastown: { status: 'partial', note: note('Session recall, feed, metrics') },
-      paperclip: { status: 'partial', note: note('Run transcripts + cost audit') },
+      paperclip: { status: 'partial', note: note('Run transcripts + audited cost ledger (estimates possible)') },
       cursor: { status: 'partial', note: note('Agent chat, diffs, artifacts, and cloud diagnostics') },
       claudeCli: { status: 'partial', note: note('Transcripts, background logs, /usage, and /insights') },
       openrig: { status: 'yes', note: note('Activity feed, transcripts, queue audit, and runtime-dependent telemetry') },
@@ -126,16 +137,16 @@ export function createComparisonRows(
       paperclip: { status: 'yes', note: note('Org chart + board governance') },
       cursor: { status: 'partial', note: note('Team admin only') },
       claudeCli: { status: 'no' },
-      openrig: { status: 'partial', note: note('Rigs, pods, seats, and topology graph; no editable company org map') },
+      openrig: { status: 'partial', note: note('Org/group policies and topology; no editable company org map') },
     },
     {
       feature: t('comparison.features.multiAgent'),
       us: { status: 'yes', note: note('Provider-aware teams with per-member models and mixed OpenCode side lanes') },
       gastown: { status: 'yes', note: note('Many providers, terminal-first') },
-      paperclip: { status: 'yes', note: note('Bring your own agents/runtimes') },
+      paperclip: { status: 'yes', note: note('Own runtimes + MCP clients; experimental Runner adapters') },
       cursor: { status: 'partial', note: note('Multi-model parent + subagents, no peer team') },
       claudeCli: { status: 'partial', note: note('Claude-only experimental teams') },
-      openrig: { status: 'yes', note: note('Claude Code, Codex, Pi, and Oh My Pi in mixed rigs') },
+      openrig: { status: 'yes', note: note('Claude, Codex, Pi, Oh My Pi + experimental hosted MCP members') },
     },
     {
       feature: t('comparison.features.budgetControls'),

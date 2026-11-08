@@ -5,6 +5,11 @@
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const mockGitAvailable = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@main/utils/gitAvailability', () => ({
+  canUseGitWithoutMacInstallerPrompt: mockGitAvailable,
+}));
+
 vi.mock('fs/promises', () => ({
   access: vi.fn(),
   readdir: vi.fn(),
@@ -37,6 +42,7 @@ describe('FileSearchService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    mockGitAvailable.mockResolvedValue(true);
     vi.mocked(fs.access).mockRejectedValue(new Error('not a git repository') as never);
     service = new FileSearchService();
   });
@@ -70,6 +76,18 @@ describe('FileSearchService', () => {
       return content as never;
     });
   }
+
+  it('uses filesystem fallback instead of Git on macOS without developer tools', async () => {
+    vi.mocked(fs.access).mockResolvedValue(undefined as never);
+    mockGitAvailable.mockResolvedValue(false);
+    mockFileSystem({ [path.join(PROJECT_ROOT, 'hello.ts')]: 'hello world' });
+
+    const files = await service.listFiles(PROJECT_ROOT);
+
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe('hello.ts');
+    expect(mockGitAvailable).toHaveBeenCalled();
+  });
 
   it('finds matches in files', async () => {
     const files = {

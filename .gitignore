@@ -16,6 +16,9 @@ electron.vite.config.*.mjs
 .runtime-download/
 resources/runtime/*
 !resources/runtime/.gitkeep
+resources/git/
+resources/.managed-git-staging-*/
+resources/git.previous/
 .terminal-platform-download/
 resources/terminal-platform/*
 !resources/terminal-platform/.gitkeep

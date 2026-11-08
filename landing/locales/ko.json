@@ -136,7 +136,16 @@
       "launchProof": "팀원 실행 상태",
       "orgGovernance": "조직 및 전체 개요",
       "budgetControls": "예산 관리",
-      "price": "가격"
+      "price": "가격",
+      "desktopPlatforms": "지원 데스크톱 운영체제"
+    },
+    "platforms": {
+      "desktopApp": "(데스크톱 앱)",
+      "cliBinaries": "(CLI 바이너리)",
+      "noNativeDesktop": "네이티브 데스크톱 앱 없음 (자체 호스팅 제어판)",
+      "desktopIde": "(데스크톱 IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 경유 (네이티브 아님)"
     }
   },
   "screenshots": {

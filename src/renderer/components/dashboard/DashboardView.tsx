@@ -14,7 +14,7 @@ import { formatShortcut } from '@renderer/utils/stringUtils';
 import { Search, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { CliStatusBanner } from './CliStatusBanner';
+import { DashboardProviderSummary } from './DashboardProviderSummary';
 import { DashboardUpdateBanner } from './DashboardUpdateBanner';
 import { TmuxStatusBanner } from './TmuxStatusBanner';
 import { WebPreviewBanner } from './WebPreviewBanner';
@@ -108,7 +108,7 @@ interface DashboardViewProps {
   isActive?: boolean;
 }
 
-export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JSX.Element => {
+export const DashboardView = ({ isActive: _isActive = true }: DashboardViewProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);
@@ -124,7 +124,7 @@ export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JS
         <WebPreviewBanner />
         <WindowsAdministratorBanner />
         <DashboardUpdateBanner />
-        <CliStatusBanner isDashboardActive={isActive} />
+        <DashboardProviderSummary />
         <TmuxStatusBanner />
 
         <div className="mb-12 flex flex-col items-stretch justify-center gap-2 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-0">

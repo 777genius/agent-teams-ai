@@ -4,6 +4,17 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const mockGitAvailable = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@main/utils/gitAvailability', () => ({
+  canUseGitWithoutMacInstallerPrompt: mockGitAvailable,
+}));
+
+vi.mock('@main/utils/managedGit', () => ({
+  MANAGED_GIT_ENV_KEYS: ['PATH', 'GIT_EXEC_PATH', 'GIT_CONFIG_SYSTEM', 'GIT_SSL_CAINFO', 'PREFIX'],
+  createManagedGitEnv: (env: NodeJS.ProcessEnv) => ({ ...env }),
+  getManagedGitExecutable: () => 'git',
+}));
+
 // Mock simple-git
 const mockStatus = vi.fn();
 const mockRevparse = vi.fn();
@@ -73,6 +84,7 @@ describe('GitStatusService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    mockGitAvailable.mockResolvedValue(true);
     service = new GitStatusService();
   });
 
@@ -82,7 +94,16 @@ describe('GitStatusService', () => {
 
       expect(vi.mocked(simpleGit)).toHaveBeenCalledWith({
         baseDir: '/Users/test/project',
-        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
+        binary: 'git',
+        unsafe: { allowUnsafeCustomBinary: true },
+        allowEnvironment: [
+          'GIT_OPTIONAL_LOCKS',
+          'PATH',
+          'GIT_EXEC_PATH',
+          'GIT_CONFIG_SYSTEM',
+          'GIT_SSL_CAINFO',
+          'PREFIX',
+        ],
         timeout: { block: 10_000 },
       });
       expect(mockEnv).toHaveBeenCalledWith('GIT_OPTIONAL_LOCKS', '0');
@@ -90,6 +111,15 @@ describe('GitStatusService', () => {
   });
 
   describe('getStatus', () => {
+    it('never launches the Apple Git installer shim in developer mode', async () => {
+      mockGitAvailable.mockResolvedValue(false);
+      service.init('/Users/test/project');
+      await expect(service.getStatus()).resolves.toEqual({
+        files: [], isGitRepo: false, branch: null,
+      });
+      expect(mockStatus).not.toHaveBeenCalled();
+    });
+
     it('returns empty non-repo result when not initialized', async () => {
       const result = await service.getStatus();
 

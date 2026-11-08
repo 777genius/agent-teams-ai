@@ -136,7 +136,16 @@
       "launchProof": "Готовность и восстановление агентов",
       "orgGovernance": "Организации и общий обзор",
       "budgetControls": "Бюджетные лимиты",
-      "price": "Цена"
+      "price": "Цена",
+      "desktopPlatforms": "Поддерживаемые десктопные ОС"
+    },
+    "platforms": {
+      "desktopApp": "(десктопное приложение)",
+      "cliBinaries": "(CLI-бинарники)",
+      "noNativeDesktop": "Нет нативного десктопного приложения (self-hosted панель)",
+      "desktopIde": "(десктопная IDE)",
+      "cli": "(CLI)",
+      "wsl2": "через WSL2 (не нативно)"
     }
   },
   "screenshots": {

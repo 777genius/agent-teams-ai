@@ -1,3 +1,7 @@
+import { constants } from 'node:fs';
+import { access } from 'node:fs/promises';
+import * as path from 'node:path';
+
 import { isWorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
 import { sanitizeRuntimeDiagnosticText as safeDetail } from '@shared/utils/runtimeDiagnosticText';
@@ -8,6 +12,40 @@ const DETAIL_LIMIT = 6_000;
 const OUTPUT_LIMIT = 1_600;
 const FIELD_LIMIT = 800;
 
+type ProjectAccessDeniedCode = 'EACCES' | 'EPERM';
+
+function getAccessDeniedCode(error: unknown): ProjectAccessDeniedCode | null {
+  const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : null;
+  return code === 'EACCES' || code === 'EPERM' ? code : null;
+}
+
+function mayBeProjectAccessFailure(error: unknown): boolean {
+  if (getAccessDeniedCode(error)) return true;
+  if (!error || typeof error !== 'object') return false;
+  const message = error instanceof Error ? error.message : '';
+  const stderr = (error as { stderr?: unknown }).stderr;
+  return /an unknown error occurred \(unexpected\)/i.test(
+    `${message}\n${typeof stderr === 'string' ? stderr : ''}`
+  );
+}
+
+async function inspectDeniedProjectAccess(
+  error: unknown,
+  cwd: string | URL | undefined,
+  checkProjectAccess: (directory: string) => Promise<void>
+): Promise<ProjectAccessDeniedCode | null> {
+  if (typeof cwd !== 'string' || !path.isAbsolute(cwd) || !mayBeProjectAccessFailure(error)) {
+    return null;
+  }
+  try {
+    await checkProjectAccess(cwd);
+  } catch (accessError) {
+    return getAccessDeniedCode(accessError);
+  }
+  return null;
+}
+
+
 interface RuntimeStatusCommandContext {
   binaryPath: string;
   args: readonly string[];
@@ -17,16 +55,22 @@ interface RuntimeStatusCommandContext {
 /** Carries only bounded, redacted presentation evidence; classification uses the original cause. */
 export class RuntimeStatusCommandError extends Error {
   readonly diagnosticDetails: string;
+  readonly projectAccessDenied: ProjectAccessDeniedCode | null;
 
   constructor(
     error: unknown,
     context: RuntimeStatusCommandContext,
-    output: { stdout?: unknown; stderr?: unknown } = {}
+    output: { stdout?: unknown; stderr?: unknown } = {},
+    projectAccessDenied: ProjectAccessDeniedCode | null = null
   ) {
     const message = error instanceof Error ? error.message : String(error);
     super(safeDetail(message, FIELD_LIMIT) ?? 'Runtime status command failed', { cause: error });
     this.name = 'RuntimeStatusCommandError';
-    this.diagnosticDetails = buildDetails(error, context, output);
+    this.projectAccessDenied = projectAccessDenied;
+    const details = buildDetails(error, context, output);
+    this.diagnosticDetails = projectAccessDenied
+      ? `Project folder access denied (${projectAccessDenied}). Grant Agent Teams access to this folder in system privacy settings or choose another project.\n\n${details}`
+      : details;
   }
 }
 
@@ -67,7 +111,9 @@ export async function readRuntimeStatusCommand<T>(
   binaryPath: string,
   args: string[],
   options: ExecCliOptions,
-  parse: (stdout: string) => T
+  parse: (stdout: string) => T,
+  checkProjectAccess: (directory: string) => Promise<void> = (directory) =>
+    access(directory, constants.R_OK | constants.X_OK)
 ): Promise<T> {
   const context = { binaryPath, args, cwd: options.cwd ?? process.cwd() };
   let output: { stdout: string; stderr: string } | undefined;
@@ -77,7 +123,12 @@ export async function readRuntimeStatusCommand<T>(
   } catch (error) {
     // Preserve the typed project-folder error and its dedicated recovery UI.
     if (isWorkingDirectoryMissingError(error)) throw error;
-    throw new RuntimeStatusCommandError(error, context, output);
+    const projectAccessDenied = await inspectDeniedProjectAccess(
+      error,
+      options.cwd,
+      checkProjectAccess
+    );
+    throw new RuntimeStatusCommandError(error, context, output, projectAccessDenied);
   }
 }
 

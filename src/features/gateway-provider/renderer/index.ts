@@ -1,4 +1,5 @@
 export {
+  discardRetainedGatewayBindingDraft,
   type GatewayMemberBindingsState,
   useGatewayMemberBindings,
 } from './hooks/useGatewayMemberBindings';

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "repository": "desktop/dugite-native",
+  "tag": "v2.56.0-2",
+  "gitVersion": "2.56.0",
+  "assets": {
+    "darwin-arm64": {
+      "filename": "dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz",
+      "sha256": "1110de343de11cc6f469b782b60f36217b9199b5e06875dd65baa26dd60563c7"
+    },
+    "darwin-x64": {
+      "filename": "dugite-native-v2.56.0-a44aeca-macOS-x64.tar.gz",
+      "sha256": "52cc663281e1ec2f1d76ba781193ca4847e62dbbf767f6c99ec9ec5b978a7659"
+    },
+    "win32-arm64": {
+      "filename": "dugite-native-v2.56.0-a44aeca-windows-arm64.tar.gz",
+      "sha256": "1834e7817589f25f97ae0f309ef4733578a6b8dbd438ed29f898d075e6ead4c2"
+    },
+    "win32-x64": {
+      "filename": "dugite-native-v2.56.0-a44aeca-windows-x64.tar.gz",
+      "sha256": "f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14"
+    },
+    "linux-x64": {
+      "filename": "dugite-native-v2.56.0-a44aeca-ubuntu-x64.tar.gz",
+      "sha256": "1efd8ce0516b670b6b6d0f49ecaf395ceb8cf7fff3f5857259763d97a1238df9"
+    }
+  }
+}

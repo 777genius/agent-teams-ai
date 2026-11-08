@@ -1511,7 +1511,17 @@
       "searchTeams": "Équipes de recherche...",
       "selectTeam": "Sélectionnez une équipe...",
       "team": "Équipe",
-      "title": "Tableau"
+      "title": "Tableau",
+      "execution": "Exécution",
+      "legacyNotice": "Planification ponctuelle existante : l'enregistrement ne change pas son comportement.",
+      "upgradeSmart": "Passer à la planification intelligente",
+      "oneAgent": "Un agent",
+      "wholeTeam": "Toute l’équipe",
+      "target": "Destinataire lorsque l’équipe est active",
+      "leadDefault": "Responsable de l’équipe (par défaut)",
+      "agentDescription": "Si l’équipe est arrêtée, lance un agent autonome ; sinon, attribue une tâche.",
+      "teamDescription": "Si l’équipe est arrêtée, la démarre ; sinon, attribue une tâche au responsable. Utilise les paramètres enregistrés.",
+      "teamPathMissing": "Enregistrez le dossier du projet de l’équipe avant de planifier son démarrage."
     },
     "title": {
       "createSchedule": "Créer un calendrier",
@@ -2134,7 +2144,9 @@
       "completed": "Achevé",
       "failed": "Échec",
       "interrupted": "Interruption",
-      "cancelled": "Annulé"
+      "cancelled": "Annulé",
+      "dispatched": "Transmis",
+      "skipped": "Ignoré"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2435,10 @@
       "hiddenCount": "{{count}} caché",
       "trash": "Corbeille",
       "gridView": "Affichage de la grille",
-      "columnsView": "Vue des colonnes"
+      "columnsView": "Vue des colonnes",
+      "tableView": "Vue en tableau",
+      "configureColumns": "Choisir les colonnes",
+      "resizeColumn": "Redimensionner {{column}}"
     },
     "trash": {
       "title": "Corbeille",
