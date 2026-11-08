@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Oras"
     },
     "empty": {
       "title": "Wala pang schedule",
@@ -2147,7 +2148,11 @@
       "cancelled": "Kinansela",
       "dispatched": "Naipadala",
       "skipped": "Nilaktawan"
-    }
+    },
+    "taskFirstAgentDescription": "Itatalaga ang gawain sa napiling miyembro. Sisimulan muna ang team kung kailangan.",
+    "taskFirstTeamDescription": "Ang team lead ang mag-uugnay ng gawaing ito. Sisimulan muna ang team kung kailangan.",
+    "taskFirstDesktopRequired": "Gagana lang ang mga iskedyul habang bukas ang Agent Teams.",
+    "taskFirstHistoricPrompt": "May naka-save na lumang launch prompt ang team na ito. Suriin ito sa Team Settings bago mag-iskedyul ng awtomatikong gawain."
   },
   "openCodeContextConfigHint": {
     "summary": "Maaaring gumamit ang mga lokal na OpenCode model ng OpenCode context budget sa halip na prompt-only na mga limitasyon.",
