@@ -248,6 +248,16 @@ export class SmartScheduleDispatcher {
     if (!ready || isCancelled() || this.runtime.isTeamBusy(schedule.teamName)) {
       return skipped('Task saved; selected agent did not become ready', task.id);
     }
+    const fresh = await this.runtime.getRuntime(schedule.teamName);
+    if (
+      isCancelled() ||
+      !this.runtime.isTeamAlive(schedule.teamName) ||
+      this.runtime.isTeamBusy(schedule.teamName) ||
+      fresh.runId !== launched.runId ||
+      !readyMember(fresh.members[owner])
+    ) {
+      return skipped('Task saved; runtime changed before start', task.id);
+    }
     try {
       await startTaskByUser(schedule.teamName, task.id);
     } catch {
