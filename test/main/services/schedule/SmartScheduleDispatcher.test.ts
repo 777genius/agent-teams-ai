@@ -240,7 +240,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
       id: 'prior-run', scheduleId: 'schedule-1', teamName: 'test-team', status: 'dispatched',
       scheduledFor: new Date().toISOString(), startedAt: new Date().toISOString(),
       retryCount: 0, linkedTaskId: 'prior-task',
-    }]));
+    }]);
     port.getTask = vi.fn(async () => ({
       id: 'prior-task', displayId: '17', subject: 'Still working', status: 'in_progress',
     } as TeamTask));
