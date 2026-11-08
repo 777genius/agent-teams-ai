@@ -201,7 +201,25 @@
           "system": "System"
         }
       },
-      "title": "Hitsura"
+      "title": "Hitsura",
+      "customThemes": {
+        "label": "Mga custom na tema",
+        "description": "Mga pinangalanang JSON palette batay sa Dark o Light.",
+        "none": "Built-in na tema",
+        "edit": "I-edit ang JSON",
+        "localOnly": "Ang mga tema at laki ay naka-save lamang sa browser o device na ito.",
+        "editor": {
+          "title": "I-edit ang mga tema (JSON)",
+          "description": "Hanggang 8 tema. Kulay ay #RRGGBB. Valid na JSON lamang ang ilalapat; ang bakanteng themes array ay magtatanggal sa lahat.",
+          "cancel": "Kanselahin",
+          "save": "I-save ang mga tema"
+        }
+      },
+      "uiScale": {
+        "label": "Laki ng interface",
+        "description": "Baguhin ang laki ng buong app nang hindi binabago ang zoom ng system o browser.",
+        "reset": "I-reset"
+      }
     },
     "browserAccess": {
       "serverMode": {

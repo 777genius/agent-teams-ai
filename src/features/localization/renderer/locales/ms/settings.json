@@ -201,7 +201,25 @@
           "system": "Sistem"
         }
       },
-      "title": "Penampilan"
+      "title": "Penampilan",
+      "customThemes": {
+        "label": "Tema tersuai",
+        "description": "Palet warna JSON bernama berasaskan tema gelap atau cerah.",
+        "none": "Tema terbina dalam",
+        "edit": "Edit JSON",
+        "localOnly": "Tema dan skala disimpan pada pelayar atau peranti ini sahaja.",
+        "editor": {
+          "title": "Edit tema (JSON)",
+          "description": "Sehingga 8 tema. Warna mesti #RRGGBB. Hanya JSON sah digunakan; tatasusunan themes kosong memadam semuanya.",
+          "cancel": "Batal",
+          "save": "Simpan tema"
+        }
+      },
+      "uiScale": {
+        "label": "Skala antara muka",
+        "description": "Skalakan seluruh aplikasi tanpa mengubah zum sistem atau pelayar.",
+        "reset": "Tetapkan semula"
+      }
     },
     "browserAccess": {
       "serverMode": {
