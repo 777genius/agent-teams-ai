@@ -6,8 +6,6 @@ export interface RuntimeProviderDirectoryCacheSnapshot {
   entries: readonly RuntimeProviderDirectoryEntryDto[];
   fetchedAt: string;
   authoritative: boolean;
-  /** Exact count evidence was invalidated by a credential mutation, even if rows stay mounted. */
-  connectedCountInvalidated?: boolean;
   totalCount?: number | null;
   nextCursor?: string | null;
   runtimeRevision?: string | null;
@@ -20,6 +18,11 @@ export interface RuntimeProviderConnectedCountObservation {
   fetchedAt: string;
   runtimeRevision: string;
   source: 'summary-all' | 'summary-connected';
+}
+
+export interface RuntimeProviderConnectedCountEvidence {
+  readonly observation: RuntimeProviderConnectedCountObservation | null;
+  readonly invalidated: boolean;
 }
 
 interface PublishRuntimeProviderConnectedCountInput
@@ -43,7 +46,8 @@ const GLOBAL_SCOPE_KEY = '\u0000global';
 const MAX_CACHED_PROJECT_SCOPES = 8;
 const EMPTY_SNAPSHOT: RuntimeProviderDirectoryCacheSnapshot | null = null;
 const snapshotsByScope = new Map<string, RuntimeProviderDirectoryCacheSnapshot>();
-const connectedCountByScope = new Map<string, RuntimeProviderConnectedCountObservation>();
+const EMPTY_COUNT_EVIDENCE: RuntimeProviderConnectedCountEvidence = { observation: null, invalidated: false };
+const connectedCountEvidenceByScope = new Map<string, RuntimeProviderConnectedCountEvidence>();
 const listenersByScope = new Map<string, Set<() => void>>();
 const mergedFallbackByScope = new Map<
   string,
@@ -87,7 +91,7 @@ function pruneInactiveProjectScopes(): void {
       break;
     }
     snapshotsByScope.delete(oldestInactiveScopeKey);
-    connectedCountByScope.delete(oldestInactiveScopeKey);
+    connectedCountEvidenceByScope.delete(oldestInactiveScopeKey);
     mergedFallbackByScope.delete(oldestInactiveScopeKey);
     projectScopeCount -= 1;
   }
@@ -271,7 +275,6 @@ export function publishRuntimeProviderDirectoryCache({
     entries: nextEntries,
     fetchedAt: retainFullDirectory ? (current?.fetchedAt ?? fetchedAt) : fetchedAt,
     authoritative: retainFullDirectory ? true : authoritative,
-    connectedCountInvalidated: retainFullDirectory ? current?.connectedCountInvalidated : undefined,
     runtimeRevision: runtimeRevision ?? observedRuntimeRevision,
     ...(retainFullDirectory ? { lastSummaryFetchedAt: fetchedAt } : {}),
     ...(retainFullDirectory
@@ -287,6 +290,19 @@ export function publishRuntimeProviderDirectoryCache({
     mergedFallbackByScope.delete(scopeKey);
   }
   touchScope(scopeKey, nextSnapshot);
+  // A newer complete directory supersedes a previously observed count.
+  // Count validity stays separate so the existing catalog keeps its identity.
+  const evidence = connectedCountEvidenceByScope.get(scopeKey);
+  if (
+    authoritative && !retainFullDirectory &&
+    nextCursor == null && totalCount === entries.length &&
+    entries.every((entry) => entry.state !== 'error') &&
+    (evidence?.invalidated ||
+      (evidence?.observation &&
+        nextFetchedAt >= getFetchedAtTimestamp(evidence.observation.fetchedAt)))
+  ) {
+    connectedCountEvidenceByScope.set(scopeKey, EMPTY_COUNT_EVIDENCE);
+  }
   notifyScope(scopeKey);
 }
 
@@ -296,23 +312,25 @@ export function publishRuntimeProviderDirectoryCache({
 export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: string | null): void {
   const scopeKey = getScopeKey(projectPath);
   generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
-  connectedCountByScope.delete(scopeKey);
-  const currentScope = snapshotsByScope.get(scopeKey);
-  if (currentScope) {
-    touchScope(scopeKey, { ...currentScope, connectedCountInvalidated: true });
-  }
+  connectedCountEvidenceByScope.set(scopeKey, { observation: null, invalidated: true });
   notifyScope(scopeKey);
   if (scopeKey !== GLOBAL_SCOPE_KEY) return;
   // Fence even project requests that have not published a first snapshot.
   invalidationEpoch += 1;
   mergedFallbackByScope.clear();
-  connectedCountByScope.clear();
-  for (const listenerScope of listenersByScope.keys()) notifyScope(listenerScope);
+  for (const projectScope of new Set([
+    ...snapshotsByScope.keys(),
+    ...connectedCountEvidenceByScope.keys(),
+    ...listenersByScope.keys(),
+  ])) {
+    connectedCountEvidenceByScope.set(projectScope, { observation: null, invalidated: true });
+    notifyScope(projectScope);
+  }
   for (const [projectScope, snapshot] of snapshotsByScope) {
     if (projectScope === GLOBAL_SCOPE_KEY || !snapshot.authoritative) continue;
     // Keep verified provider rows for display, but never present inherited
     // credentials as a fresh, authoritative project count after global logout.
-    snapshotsByScope.set(projectScope, { ...snapshot, authoritative: false, connectedCountInvalidated: true });
+    snapshotsByScope.set(projectScope, { ...snapshot, authoritative: false });
     notifyScope(projectScope);
   }
 }
@@ -345,27 +363,36 @@ export function publishRuntimeProviderConnectedCount({
   const fetchedAtMs = Date.parse(fetchedAt);
   if (!Number.isFinite(fetchedAtMs) || fetchedAtMs > Date.now()) return;
   const scopeKey = getScopeKey(projectPath);
-  const previous = connectedCountByScope.get(scopeKey);
+  const previous = connectedCountEvidenceByScope.get(scopeKey)?.observation;
   if (previous && Date.parse(previous.fetchedAt) > fetchedAtMs) return;
-  connectedCountByScope.set(scopeKey, { connected, fetchedAt, runtimeRevision, source });
+  connectedCountEvidenceByScope.set(scopeKey, {
+    observation: { connected, fetchedAt, runtimeRevision, source },
+    invalidated: false,
+  });
   notifyScope(scopeKey);
 }
 
 export function getRuntimeProviderConnectedCountObservation(
   projectPath?: string | null
 ): RuntimeProviderConnectedCountObservation | null {
-  return connectedCountByScope.get(getScopeKey(projectPath)) ?? null;
+  return connectedCountEvidenceByScope.get(getScopeKey(projectPath))?.observation ?? null;
+}
+
+export function getRuntimeProviderConnectedCountEvidence(
+  projectPath?: string | null
+): RuntimeProviderConnectedCountEvidence {
+  return connectedCountEvidenceByScope.get(getScopeKey(projectPath)) ?? EMPTY_COUNT_EVIDENCE;
 }
 
 export function useRuntimeProviderConnectedCount(
   projectPath?: string | null
-): RuntimeProviderConnectedCountObservation | null {
+): RuntimeProviderConnectedCountEvidence {
   const scopeKey = getScopeKey(projectPath);
   const subscribe = useCallback(
     (listener: () => void) => subscribeScope(scopeKey, listener),
     [scopeKey]
   );
-  const getSnapshot = useCallback(() => getRuntimeProviderConnectedCountObservation(projectPath), [scopeKey]);
+  const getSnapshot = useCallback(() => getRuntimeProviderConnectedCountEvidence(projectPath), [scopeKey]);
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
@@ -418,7 +445,7 @@ export function invalidateRuntimeProviderDirectoryCache(): void {
   invalidationEpoch += 1;
   generationByScope.clear();
   snapshotsByScope.clear();
-  connectedCountByScope.clear();
+  connectedCountEvidenceByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;
   globalFallbackSnapshot = null;
