@@ -23,7 +23,8 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
     const marker = join(fixture, 'ready.json');
     const receiptPath = join(fixture, 'interrupted.json');
     mkdirSync(temp);
-    let parent;
+    let parent, finished;
+    let interruptionSent = false;
     try {
       parent = spawn(process.execPath, [
         resolve('packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs'),
@@ -38,7 +39,7 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
         },
         stdio: 'ignore',
       });
-      const finished = once(parent, 'exit');
+      finished = once(parent, 'exit');
       const deadline = Date.now() + 35_000;
       while (!existsSync(marker) && parent.exitCode === null && Date.now() < deadline)
         await delay(100);
@@ -48,7 +49,8 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
       assert.ok(Number.isSafeInteger(owner.pid) && owner.pid > 1);
       assert.match(owner.startIdentity, /^\d+$/);
       // Do not signal the native process/group here; its parent alone owns it.
-      process.kill(parent.pid, signalName);
+      assert.equal(parent.kill(signalName), true, 'signal only the owned TEST parent');
+      interruptionSent = true;
       const [code, signal] = await Promise.race([
         finished, delay(15_000).then(() => { throw Error('TEST_interrupt_cleanup_timeout'); }),
       ]);
@@ -66,10 +68,37 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
       catch (error) { if (error?.code !== 'ESRCH') throw error; }
       assert.equal(groupAlive, false, 'the TEST worker group must have exited');
     } finally {
-      // Never kill an unknown or foreign process group on test failure.
-      if (parent && parent.exitCode === null && parent.signalCode === null)
-        try { process.kill(parent.pid, 'SIGTERM'); }
-        catch (error) { if (error?.code !== 'ESRCH') throw error; }
+      // Never signal the detached native worker or another process group here:
+      // only the spawned parent can attest cleanup of its owned worker.
+      if (parent) {
+        if (!interruptionSent && parent.exitCode === null && parent.signalCode === null)
+          interruptionSent = parent.kill('SIGTERM');
+        const timeout = new AbortController();
+        try {
+          await Promise.race([
+            finished,
+            delay(15_000, undefined, {signal:timeout.signal}).then(() => {
+              throw Error('TEST_parent_cleanup_timeout_fixture_preserved');
+            }),
+          ]);
+        } finally {
+          timeout.abort();
+        }
+        // Missing/negative receipt or a surviving worker means ownership is
+        // uncertain. Leave the fixture for diagnosis instead of deleting live
+        // process resources.
+        assert.ok(existsSync(receiptPath),
+          'TEST parent cleanup receipt missing; fixture preserved');
+        assert.equal(JSON.parse(readFileSync(receiptPath, 'utf8')).cleanup, true,
+          'TEST parent cleanup not confirmed; fixture preserved');
+        assert.deepEqual(readdirSync(temp), [],
+          'TEST parent left temporary resources; fixture preserved');
+        if (existsSync(marker)) {
+          const ready = JSON.parse(readFileSync(marker, 'utf8'));
+          assert.throws(() => process.kill(-ready.pid, 0), {code:'ESRCH'},
+            'TEST worker group still exists; fixture preserved');
+        }
+      }
       rmSync(fixture, {recursive:true,force:true,maxRetries:5,retryDelay:100});
     }
   });
