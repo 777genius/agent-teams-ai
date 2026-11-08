@@ -24,6 +24,8 @@
     0 0 0 1px rgba(129, 140, 248, 0.28), 0 10px 30px rgba(37, 99, 235, 0.24),
     0 0 22px rgba(129, 140, 248, 0.16);
   --color-text: #f1f5f9;
+  /* Translucent control tint follows the active light/dark/custom theme. */
+  --color-form-control-bg: color-mix(in srgb, var(--color-text) 6%, transparent);
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
   --color-accent: #818cf8;
@@ -921,6 +923,17 @@ a[href],
 [role='textbox'],
 [contenteditable='true'] {
   -webkit-app-region: no-drag;
+}
+
+/* Low-specificity defaults for native inputs outside the shared UI primitives.
+   Explicit component backgrounds (errors, search overlays, etc.) still win. */
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+  textarea,
+  select,
+  [role='combobox']
+) {
+  background-color: var(--color-form-control-bg);
 }
 
 /* Prevent drag region bleed-through on Windows: all fixed overlays must be no-drag */
