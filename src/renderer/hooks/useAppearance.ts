@@ -32,12 +32,14 @@ export function useAppearanceZoomController(): void {
     // Existing Cmd/Ctrl +/- shortcuts still work. Reflect their result in Settings.
     return api.onZoomFactorChanged((zoomFactor) => {
       const percent = Math.round(zoomFactor * 100);
-      if (percent >= 70 && percent <= 200) {
-        try {
-          setAppearanceZoom(percent);
-        } catch {
-          // Keyboard zoom must still work if localStorage is unavailable.
-        }
+      const bounded = Math.max(70, Math.min(200, percent));
+      if (bounded !== percent) {
+        void api.setZoomFactor(bounded / 100).catch(() => undefined);
+      }
+      try {
+        setAppearanceZoom(bounded);
+      } catch {
+        // Keyboard zoom must still work if localStorage is unavailable.
       }
     });
   }, []);
