@@ -176,8 +176,8 @@ describe('Smart schedules filesystem safe E2E', () => {
     const boardTask: TeamTask = {
       id: 'e2e-task', displayId: '7', subject: 'In progress', status: 'in_progress',
     } as TeamTask;
-    port.getPreviousRun = async (id, runId) =>
-      (await repository.listRuns(id, { limit: 2 })).find((run) => run.id !== runId) ?? null;
+    port.getPreviousRuns = async (id, runId) =>
+      (await repository.listRuns(id, { limit: 50 })).filter((run) => run.id !== runId);
     port.getTask = vi.fn(async (_team, id) => id === boardTask.id ? boardTask : null);
     port.hasRunnableConfig = vi.fn(async () => true);
     port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
@@ -209,8 +209,8 @@ describe('Smart schedules filesystem safe E2E', () => {
   it('creates a pending task before starting an inactive saved team without its old prompt', async () => {
     let live = false;
     port.isTeamAlive = vi.fn(() => live);
-    port.getPreviousRun = async (id, runId) =>
-      (await repository.listRuns(id, { limit: 2 })).find((run) => run.id !== runId) ?? null;
+    port.getPreviousRuns = async (id, runId) =>
+      (await repository.listRuns(id, { limit: 50 })).filter((run) => run.id !== runId);
     port.getTask = vi.fn(async () => null);
     port.hasRunnableConfig = vi.fn(async () => true);
     port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
