@@ -61,3 +61,4 @@ try {
   console.log('PASS: packaged pinned macOS runtime, selected TEST project (spaces), status summary/full, model list, missing path fail-closed');
 } finally {
   await rm(root, { recursive: true, force: true });
+}

@@ -140,6 +140,9 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify managed Git pins and archive path safety
         run: node --test scripts/stage-managed-git.test.mjs
+      - name: Validate packaged OpenCode project-path smoke syntax early
+        if: matrix.os == 'darwin'
+        run: node --check scripts/e2e/opencode-project-path-packaged.mjs
       - name: Typecheck packaged CI policy with pinned compiler
         run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
       - name: Assert Electron binary was provisioned during install
