@@ -20,10 +20,12 @@ const { applyLaunchConfiguration } = await import(sourceMode
   ? '../src/composition/launchConfiguration.ts'
   : '../dist/composition/launchConfiguration.js');
 
+// Source-only SPI fixture uses the *old pinned provider's* POSIX test path.
+// That vendor rejects canonical C:\\ paths on Windows. Native Windows remains
+// HOLD until the corrected provider PR #2 package is pinned with its lockfile.
 function v2Profile() {
-  const windows = process.platform === 'win32';
-  const separator = windows ? String.fromCharCode(92) : '/';
-  const root = windows ? 'C:' + separator + 'TEST-only-opencode-v2' : '/TEST-only-opencode-v2';
+  const separator = '/';
+  const root = '/TEST-only-opencode-v2';
   return {
     provider: 'opencode' as const,
     nativeGeneration: 'v2' as const,
@@ -175,6 +177,25 @@ test('native V2 captures canonical OS paths without widening legacy V1 paths', (
   } else {
     assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true);
   }
+});
+
+test('old pinned V2 driver does not qualify canonical Windows directory (expected HOLD)', async () => {
+  if (process.platform !== 'win32') return;
+  const separator = String.fromCharCode(92);
+  const native = v2Profile();
+  const root = 'C:' + separator + 'TEST-owned-v2';
+  const profile = {
+    ...native, cwd: root,
+    executable: { ...native.executable, path: root + separator + 'native.exe' },
+    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+      .map((key) => [key, root + separator + key])),
+  };
+  assert.equal(runtimeProfileSchema.safeParse({ members: [profile] }).success, true);
+  const { captured, calls } = owner(true);
+  const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+  await assert.rejects(provider.factory.open(request()), /opencode\\.driver\\.invalid-config/);
+  assert.equal(calls.probe, 0, 'old vendor must refuse before native probe');
+  assert.equal(calls.password, 0, 'old vendor must refuse before credential read');
 });
 
 test('V2 launch rejects V1 manual/bypass choices before launch.prepare', () => {
