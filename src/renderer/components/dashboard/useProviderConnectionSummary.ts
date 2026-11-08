@@ -30,7 +30,8 @@ export function useProviderConnectionSummary() {
 
   const globalDirectory = useRuntimeProviderDirectoryCache(null);
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
-  const observedOpenCodeCount = useRuntimeProviderConnectedCount(projectPath);
+  const countEvidence = useRuntimeProviderConnectedCount(projectPath);
+  const observedOpenCodeCount = countEvidence?.observation ?? null;
   const [, expire] = useState(0);
   useEffect(() => {
     const snapshots = [
@@ -55,6 +56,7 @@ export function useProviderConnectionSummary() {
     globalDirectory,
     projectDirectory,
     observedOpenCodeCount,
+    countInvalidated: countEvidence?.invalidated ?? false,
     runtimeStatus: openCodeRuntimeStatus,
   });
 

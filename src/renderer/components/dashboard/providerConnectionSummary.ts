@@ -18,7 +18,7 @@ type MainProvider = Pick<
 
 type Directory = Pick<
   RuntimeProviderDirectoryCacheSnapshot,
-  'authoritative' | 'connectedCountInvalidated' | 'runtimeRevision' | 'totalCount' | 'nextCursor' | 'fetchedAt'
+  'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor' | 'fetchedAt'
 > & {
   entries: readonly Pick<RuntimeProviderDirectoryCacheSnapshot['entries'][number], 'providerId' | 'state'>[];
 };
@@ -35,6 +35,7 @@ interface ConnectionSummaryInput {
   globalDirectory: Directory | null;
   projectDirectory: Directory | null;
   observedOpenCodeCount?: RuntimeProviderConnectedCountObservation | null;
+  countInvalidated?: boolean;
   runtimeStatus: Pick<
     OpenCodeRuntimeStatus,
     'installed' | 'state' | 'version' | 'binaryPath'
@@ -65,7 +66,6 @@ function isCompleteDirectory(
       fetchedAt <= nowMs &&
       nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS &&
       directory?.authoritative &&
-      directory.connectedCountInvalidated !== true &&
       directory.runtimeRevision === runtimeRevision &&
       directory.totalCount !== undefined &&
       directory.totalCount !== null &&
@@ -87,6 +87,7 @@ export function getDashboardConnectionSummary({
   globalDirectory,
   projectDirectory,
   observedOpenCodeCount,
+  countInvalidated = false,
   runtimeStatus,
   nowMs = Date.now(),
 }: ConnectionSummaryInput): DashboardConnectionSummary {
@@ -129,7 +130,17 @@ export function getDashboardConnectionSummary({
   // A complete connected-only observation is scoped and independent of the
   // full provider/model directory. It never grants permission to launch.
   const countFetchedAt = Date.parse(observedOpenCodeCount?.fetchedAt ?? '');
+  const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision, nowMs);
+  const projectComplete =
+    projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
+  const newerCompleteDirectory =
+    globalComplete && projectComplete &&
+    (Date.parse(globalDirectory.fetchedAt) > countFetchedAt ||
+      (projectPath !== null && projectDirectory !== null &&
+        Date.parse(projectDirectory.fetchedAt) > countFetchedAt));
   if (
+    !countInvalidated &&
+    !newerCompleteDirectory &&
     runtimeRevision &&
     observedOpenCodeCount?.runtimeRevision === runtimeRevision &&
     Number.isFinite(countFetchedAt) &&
@@ -144,11 +155,7 @@ export function getDashboardConnectionSummary({
     };
   }
 
-  const globalComplete = isCompleteDirectory(globalDirectory, runtimeRevision, nowMs);
-  const projectComplete =
-    projectPath === null || isCompleteDirectory(projectDirectory, runtimeRevision, nowMs);
-
-  if (!globalComplete || !projectComplete) {
+  if (countInvalidated || !globalComplete || !projectComplete) {
     return { cliConnected, cliCountComplete, cliCountPending, openCodeConnected: null };
   }
 
