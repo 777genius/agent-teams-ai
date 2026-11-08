@@ -1524,7 +1524,8 @@
       "teamPathMissing": "شیڈول سے ٹیم شروع کرنے سے پہلے پروجیکٹ فولڈر محفوظ کریں۔",
       "taskFirstAgentDescription": "ضرورت پڑنے پر ٹیم کو محفوظ طریقے سے شروع کرنے کے بعد منتخب ساتھی کو بورڈ پر کام دیا جائے گا۔ مصروف ایجنٹس کے کام میں خلل نہیں ڈالا جائے گا۔",
       "taskFirstTeamDescription": "ضرورت پڑنے پر ٹیم کو محفوظ طریقے سے شروع کرنے کے بعد ٹیم لیڈ کو رابطہ کاری کا کام دیا جائے گا۔ جاری کام میں خلل نہیں ڈالا جائے گا۔",
-      "taskFirstTarget": "تفویض کریں"
+      "taskFirstTarget": "تفویض کریں",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "ایجاد کریں",

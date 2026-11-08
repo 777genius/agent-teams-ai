@@ -2298,6 +2298,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           if (usesSavedTeamRuntime && (!savedTeam?.cwd?.trim() || !savedTeam.providerId)) {
             throw new Error(t('launch.schedule.teamPathMissing'));
           }
+          if (isTaskFirstSchedule && savedTeam?.prompt?.trim()) {
+            throw new Error(t('launch.schedule.historicalPromptReviewRequired'));
+          }
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
           const scheduleModel = resolvePersistedTeamModel({
             model: computeEffectiveTeamModel(

@@ -1526,7 +1526,8 @@
       "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji.",
       "taskFirstAgentDescription": "Mshiriki aliyechaguliwa atapokea kazi kwenye ubao baada ya timu kuanzishwa kwa usalama inapohitajika. Mawakala walio na shughuli hawatakatizwa.",
       "taskFirstTeamDescription": "Kiongozi wa timu atapokea kazi ya uratibu baada ya timu kuanzishwa kwa usalama inapohitajika. Kazi inayoendelea haitakatizwa.",
-      "taskFirstTarget": "Mkabidhi"
+      "taskFirstTarget": "Mkabidhi",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Unda Ratiba",

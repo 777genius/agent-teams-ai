@@ -1692,7 +1692,8 @@
       "wholeTeam": "Whole team",
       "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
       "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
-      "taskFirstTarget": "Assign to"
+      "taskFirstTarget": "Assign to",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Create Schedule",

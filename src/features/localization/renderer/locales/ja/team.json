@@ -1524,7 +1524,8 @@
       "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。",
       "taskFirstAgentDescription": "選択したチームメイトには、必要に応じてチームを安全に起動してからボードのタスクを割り当てます。作業中のエージェントは中断しません。",
       "taskFirstTeamDescription": "チームリーダーには、必要に応じてチームを安全に起動してから調整タスクを割り当てます。進行中の作業は中断しません。",
-      "taskFirstTarget": "担当者"
+      "taskFirstTarget": "担当者",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "スケジュールの作成",

@@ -1524,7 +1524,8 @@
       "teamPathMissing": "सुरू करण्याचे वेळापत्रक ठरवण्यापूर्वी टीमचा प्रकल्प फोल्डर जतन करा.",
       "taskFirstAgentDescription": "गरज असल्यास टीम सुरक्षितपणे सुरू केल्यानंतर निवडलेल्या सदस्याला बोर्डवरील काम दिले जाईल. व्यस्त एजंट्सच्या कामात व्यत्यय आणला जाणार नाही.",
       "taskFirstTeamDescription": "गरज असल्यास टीम सुरक्षितपणे सुरू केल्यानंतर टीम लीडला समन्वयाचे काम दिले जाईल. सुरू असलेल्या कामात व्यत्यय आणला जाणार नाही.",
-      "taskFirstTarget": "यांना सोपवा"
+      "taskFirstTarget": "यांना सोपवा",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "वेळापत्रक तयार करा",

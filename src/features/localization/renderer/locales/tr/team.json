@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Başlatma zamanlamadan önce ekibin proje klasörünü kaydedin.",
       "taskFirstAgentDescription": "Seçilen ekip üyesine, gerekirse ekip güvenli şekilde başlatıldıktan sonra panoda bir görev atanır. Meşgul ajanların işi kesilmez.",
       "taskFirstTeamDescription": "Ekip liderine, gerekirse ekip güvenli şekilde başlatıldıktan sonra bir koordinasyon görevi atanır. Devam eden işler kesilmez.",
-      "taskFirstTarget": "Şuna ata"
+      "taskFirstTarget": "Şuna ata",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Zamanlama Oluştur",

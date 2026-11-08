@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Zapisz folder projektu zespołu przed zaplanowaniem uruchomienia.",
       "taskFirstAgentDescription": "Wybrany członek zespołu otrzyma zadanie na tablicy po bezpiecznym uruchomieniu zespołu, jeśli będzie to potrzebne. Zajęci agenci nie są przerywani.",
       "taskFirstTeamDescription": "Lider otrzyma zadanie koordynacyjne po bezpiecznym uruchomieniu zespołu, jeśli będzie to potrzebne. Trwająca praca nie zostanie przerwana.",
-      "taskFirstTarget": "Przypisz do"
+      "taskFirstTarget": "Przypisz do",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Utwórz harmonogram",

@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Sla eerst de projectmap van het team op voordat je een start plant.",
       "taskFirstAgentDescription": "Het gekozen teamlid krijgt een taak op het bord nadat het team zo nodig veilig is gestart. Bezette agents worden niet onderbroken.",
       "taskFirstTeamDescription": "De teamleider krijgt een coördinatietaak nadat het team zo nodig veilig is gestart. Lopend werk wordt niet onderbroken.",
-      "taskFirstTarget": "Toewijzen aan"
+      "taskFirstTarget": "Toewijzen aan",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Planning aanmaken",

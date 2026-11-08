@@ -4792,6 +4792,65 @@ describe('LaunchTeamDialog', () => {
     }
   });
 
+  it('rejects new task-first schedules with unreviewed historical launch work', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      prompt: 'Old task that must not be executed',
+      members: [{ name: 'alice', role: 'Developer' }],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'schedule',
+            open: true,
+            teamName: 'team-alpha',
+            onClose: vi.fn(),
+          })
+        );
+        await flush();
+      });
+      const prompt = host.querySelector('#dialog-prompt') as HTMLTextAreaElement;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          prompt, 'New task'
+        );
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+      const submit = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Create Schedule'
+      );
+      expect(submit).toBeTruthy();
+      await act(async () => {
+        submit?.click();
+        await flush();
+      });
+      expect(createSchedule).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('Review the team');
+      expect(host.textContent).toContain('saved one-time instructions');
+    } finally {
+      await act(async () => root.unmount());
+      vi.mocked(api.teams.getSavedRequest).mockReset();
+      storeState.teamByName = {};
+    }
+  });
+
   it('saves an explicitly selected whole-team mode without a migration', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.teamByName = {

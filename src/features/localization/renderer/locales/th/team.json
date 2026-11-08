@@ -1524,7 +1524,8 @@
       "teamPathMissing": "บันทึกโฟลเดอร์โครงการของทีมก่อนกำหนดเวลาเริ่มทำงาน",
       "taskFirstAgentDescription": "สมาชิกทีมที่เลือกจะได้รับงานบนบอร์ดหลังจากเริ่มทีมอย่างปลอดภัยเมื่อจำเป็น จะไม่ขัดจังหวะเอเจนต์ที่กำลังทำงาน",
       "taskFirstTeamDescription": "หัวหน้าทีมจะได้รับงานประสานงานหลังจากเริ่มทีมอย่างปลอดภัยเมื่อจำเป็น จะไม่ขัดจังหวะงานที่กำลังดำเนินอยู่",
-      "taskFirstTarget": "มอบหมายให้"
+      "taskFirstTarget": "มอบหมายให้",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "สร้างกำหนดการ",

@@ -1524,7 +1524,8 @@
       "teamPathMissing": "I-save muna ang project folder ng team bago mag-iskedyul ng paglulunsad.",
       "taskFirstAgentDescription": "Makakatanggap ang napiling teammate ng gawain sa board matapos ligtas na simulan ang team kung kailangan. Hindi maaantala ang mga abalang agent.",
       "taskFirstTeamDescription": "Makakatanggap ang team lead ng gawain sa koordinasyon matapos ligtas na simulan ang team kung kailangan. Hindi maaantala ang kasalukuyang trabaho.",
-      "taskFirstTarget": "Italaga kay"
+      "taskFirstTarget": "Italaga kay",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Lumikha ng Schedule",

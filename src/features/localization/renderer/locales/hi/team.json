@@ -1524,7 +1524,8 @@
       "teamPathMissing": "शेड्यूल पर टीम शुरू करने से पहले उसका प्रोजेक्ट फ़ोल्डर सहेजें।",
       "taskFirstAgentDescription": "चुने गए टीम सदस्य को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद बोर्ड पर कार्य दिया जाएगा। व्यस्त एजेंटों का काम बाधित नहीं होगा।",
       "taskFirstTeamDescription": "टीम लीड को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद समन्वय कार्य दिया जाएगा। चल रहा काम बाधित नहीं होगा।",
-      "taskFirstTarget": "इसे सौंपें"
+      "taskFirstTarget": "इसे सौंपें",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "अनुसूची बनाएँ",

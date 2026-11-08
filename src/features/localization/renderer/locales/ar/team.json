@@ -1524,7 +1524,8 @@
       "teamPathMissing": "احفظ مجلد مشروع الفريق قبل جدولة تشغيله.",
       "taskFirstAgentDescription": "يتلقى عضو الفريق المحدد مهمة في اللوحة بعد تشغيل الفريق بأمان عند الحاجة. لن تتم مقاطعة الوكلاء المشغولين.",
       "taskFirstTeamDescription": "يتلقى قائد الفريق مهمة تنسيق بعد تشغيل الفريق بأمان عند الحاجة. لن تتم مقاطعة العمل الجاري.",
-      "taskFirstTarget": "إسناد إلى"
+      "taskFirstTarget": "إسناد إلى",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "الجدول الزمني المحدد",

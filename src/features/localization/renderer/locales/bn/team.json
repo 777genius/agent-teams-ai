@@ -1524,7 +1524,8 @@
       "teamPathMissing": "চালু করার সময়সূচি দেওয়ার আগে দলের প্রকল্প ফোল্ডার সংরক্ষণ করুন।",
       "taskFirstAgentDescription": "প্রয়োজনে দল নিরাপদে চালু করার পর নির্বাচিত সদস্য বোর্ডে একটি কাজ পাবেন। ব্যস্ত এজেন্টদের কাজ বাধাগ্রস্ত হবে না।",
       "taskFirstTeamDescription": "প্রয়োজনে দল নিরাপদে চালু করার পর দলনেতা সমন্বয়ের একটি কাজ পাবেন। চলমান কাজ বাধাগ্রস্ত হবে না।",
-      "taskFirstTarget": "দায়িত্ব দিন"
+      "taskFirstTarget": "দায়িত্ব দিন",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "ট্যাগ তৈরি করুন",

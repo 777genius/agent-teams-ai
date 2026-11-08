@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Salvează folderul proiectului echipei înainte de a programa pornirea.",
       "taskFirstAgentDescription": "Membrul ales primește o sarcină pe tablă după pornirea în siguranță a echipei, dacă este necesar. Agenții ocupați nu sunt întrerupți.",
       "taskFirstTeamDescription": "Liderul primește o sarcină de coordonare după pornirea în siguranță a echipei, dacă este necesar. Lucrul în curs nu este întrerupt.",
-      "taskFirstTarget": "Atribuie către"
+      "taskFirstTarget": "Atribuie către",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Creează programare",

@@ -1524,7 +1524,8 @@
       "teamPathMissing": "ప్రారంభాన్ని షెడ్యూల్ చేసే ముందు బృంద ప్రాజెక్ట్ ఫోల్డర్‌ను సేవ్ చేయండి.",
       "taskFirstAgentDescription": "అవసరమైతే బృందాన్ని సురక్షితంగా ప్రారంభించిన తర్వాత ఎంచుకున్న సభ్యునికి బోర్డులో పని అప్పగించబడుతుంది. పనిలో ఉన్న ఏజెంట్లకు అంతరాయం కలగదు.",
       "taskFirstTeamDescription": "అవసరమైతే బృందాన్ని సురక్షితంగా ప్రారంభించిన తర్వాత బృంద నాయకుడికి సమన్వయ పని అప్పగించబడుతుంది. కొనసాగుతున్న పనికి అంతరాయం కలగదు.",
-      "taskFirstTarget": "వీరికి అప్పగించు"
+      "taskFirstTarget": "వీరికి అప్పగించు",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "షెడ్యూల్ సృష్టించు",

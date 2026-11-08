@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Salva la cartella del progetto del team prima di pianificarne l'avvio.",
       "taskFirstAgentDescription": "Il membro selezionato riceve un'attività nella bacheca dopo l'avvio sicuro del team, se necessario. Gli agenti occupati non vengono interrotti.",
       "taskFirstTeamDescription": "Il responsabile riceve un'attività di coordinamento dopo l'avvio sicuro del team, se necessario. Il lavoro in corso non viene interrotto.",
-      "taskFirstTarget": "Assegna a"
+      "taskFirstTarget": "Assegna a",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Crea pianificazione",

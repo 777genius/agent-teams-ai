@@ -1524,7 +1524,8 @@
       "teamPathMissing": "தொடக்கத்தைத் திட்டமிடும் முன் குழுவின் திட்டக் கோப்புறையைச் சேமிக்கவும்.",
       "taskFirstAgentDescription": "தேவைப்பட்டால் குழுவைப் பாதுகாப்பாகத் தொடங்கிய பிறகு தேர்ந்தெடுத்த உறுப்பினருக்கு பலகையில் பணி ஒதுக்கப்படும். பணியில் இருக்கும் முகவர்கள் இடைநிறுத்தப்படமாட்டார்கள்.",
       "taskFirstTeamDescription": "தேவைப்பட்டால் குழுவைப் பாதுகாப்பாகத் தொடங்கிய பிறகு குழுத் தலைவருக்கு ஒருங்கிணைப்புப் பணி ஒதுக்கப்படும். நடைபெறும் வேலை இடைநிறுத்தப்படாது.",
-      "taskFirstTarget": "ஒதுக்க வேண்டியவர்"
+      "taskFirstTarget": "ஒதுக்க வேண்டியவர்",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "அட்டவணையை உருவாக்கு",

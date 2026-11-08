@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Simpan folder projek pasukan sebelum menjadualkan pelancarannya.",
       "taskFirstAgentDescription": "Ahli pasukan yang dipilih menerima tugasan pada papan selepas pasukan dimulakan dengan selamat jika perlu. Ejen yang sibuk tidak akan diganggu.",
       "taskFirstTeamDescription": "Ketua pasukan menerima tugasan penyelarasan selepas pasukan dimulakan dengan selamat jika perlu. Kerja yang sedang berjalan tidak akan diganggu.",
-      "taskFirstTarget": "Tugaskan kepada"
+      "taskFirstTarget": "Tugaskan kepada",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "Cipta Jadual",

@@ -1524,7 +1524,8 @@
       "teamPathMissing": "Guarde a pasta do projeto da equipa antes de agendar o arranque.",
       "taskFirstAgentDescription": "O colega selecionado recebe uma tarefa no quadro após o início seguro da equipa, se necessário. Os agentes ocupados não são interrompidos.",
       "taskFirstTeamDescription": "O líder recebe uma tarefa de coordenação após o início seguro da equipa, se necessário. O trabalho em curso não é interrompido.",
-      "taskFirstTarget": "Atribuir a"
+      "taskFirstTarget": "Atribuir a",
+      "historicalPromptReviewRequired": "Revise as instruções pontuais salvas da equipe antes de agendar. Remova ou separe o prompt antigo de inicialização primeiro."
     },
     "title": {
       "createSchedule": "Criar agendamento",

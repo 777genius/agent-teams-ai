@@ -1524,7 +1524,8 @@
       "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。",
       "taskFirstAgentDescription": "如有需要，先安全启动团队，再将看板任务交给所选队友。不会中断正在忙碌的智能体。",
       "taskFirstTeamDescription": "如有需要，先安全启动团队，再将协调任务交给负责人。不会中断正在进行的工作。",
-      "taskFirstTarget": "分配给"
+      "taskFirstTarget": "分配给",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
     },
     "title": {
       "createSchedule": "创建计划任务",
