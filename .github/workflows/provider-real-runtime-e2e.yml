@@ -54,7 +54,10 @@ jobs:
           # reviewed, pinned public V1 package inside the disposable test prefix.
           node -e "const fs = require('node:fs'); const path = require('node:path'); const dir = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1'); fs.mkdirSync(dir, {recursive:true}); fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({name:'agent-teams-test-opencode',private:true,version:'1.0.0',allowScripts:{'opencode-ai@1.18.31':true}}));"
           npm install --prefix "$RUNNER_TEMP/real-opencode-v1" --no-audit --no-fund opencode-ai@1.18.31
-          node -e "const fs = require('node:fs'); const path = require('node:path'); const name = process.platform === 'win32' ? 'opencode.cmd' : 'opencode'; const binary = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1', 'node_modules', '.bin', name); if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('OpenCode V1 install missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'REAL_OPENCODE_TEST_BINARY=' + binary + String.fromCharCode(10));"
+          # On Windows, use the real native V1 executable. The npm .cmd shim
+          # is a launcher, not a native OpenCode identity, and can obscure the
+          # source of a provider-status probe failure. Never fall back silently.
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const root = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1', 'node_modules'); const win = process.platform === 'win32'; const binary = win ? path.join(root, 'opencode-windows-x64', 'bin', 'opencode.exe') : path.join(root, '.bin', 'opencode'); if (win) { const pkg = JSON.parse(fs.readFileSync(path.join(root, 'opencode-windows-x64', 'package.json'), 'utf8')); if (pkg.version !== '1.18.31') throw Error('Wrong native OpenCode V1 version'); } if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('Native OpenCode V1 install missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'REAL_OPENCODE_TEST_BINARY=' + binary + String.fromCharCode(10));"
       - name: Stage verified published runtime archive
         env:
           GH_TOKEN: ${{ github.token }}
