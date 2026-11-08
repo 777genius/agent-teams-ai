@@ -866,15 +866,8 @@ export class CliInstallerService {
 
   async getProviderStatus(
     providerId: CliProviderId,
-    options: CliProviderStatusRequestOptions = {}
-  ): Promise<CliProviderStatus | null> {
-    return this.getProviderStatusWithBoundedRetry(providerId, options, false);
-  }
-
-  private async getProviderStatusWithBoundedRetry(
-    providerId: CliProviderId,
-    options: CliProviderStatusRequestOptions,
-    retried: boolean
+    options: CliProviderStatusRequestOptions = {},
+    retried = false
   ): Promise<CliProviderStatus | null> {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
@@ -884,11 +877,9 @@ export class CliInstallerService {
         providerId,
         new Error('Provider runtime changed during status check. Refresh to retry.')
       );
-    // A changed generation invalidates the discovered path. Explicit project
-    // preflight may retry once against the new generation; passive reads never do.
     const retryOrObsolete = () =>
       options.projectPath && !retried
-        ? this.getProviderStatusWithBoundedRetry(providerId, options, true)
+        ? this.getProviderStatus(providerId, options, true)
         : obsoleteStatus();
     if (generation !== this.statusGatherGeneration) return retryOrObsolete();
     // Explicit project-scoped preflight can race initial runtime discovery.
