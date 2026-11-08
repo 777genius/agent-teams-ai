@@ -452,6 +452,7 @@ export const CreateTeamDialog = ({
   const [copySeedReady, setCopySeedReady] = useState(!initialData);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
+  const advancedPreferencesLoadedRef = useRef(false);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
   const [worktreeName, setWorktreeNameRaw] = useState('');
   const [customArgs, setCustomArgsRaw] = useState('');
@@ -512,13 +513,16 @@ export const CreateTeamDialog = ({
     };
   }, [draftLoaded, initialOrganizationPlacement, open, restoredFromStorage, setOrganizationPlacementEnabled, setOrganizationPlacementOrganizationId, setOrganizationPlacementParentId]);
   useEffect(() => {
+    // Load once after draft/copy hydration. A rename must not erase live CLI edits.
+    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesLoadedRef.current) return;
+    advancedPreferencesLoadedRef.current = true;
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
     const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
     setWorktreeEnabledRaw(storedEnabled && Boolean(storedName));
     setWorktreeNameRaw(storedName);
     setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
-  }, [advancedKey]);
+  }, [advancedKey, copySeedReady, draftLoaded, teamName]);
   const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
