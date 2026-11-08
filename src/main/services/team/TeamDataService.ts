@@ -2204,6 +2204,7 @@ export class TeamDataService {
       ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
       ...(request.promptTaskRefs?.length ? { promptTaskRefs: request.promptTaskRefs } : {}),
       ...(shouldStart ? { startImmediately: true } : {}),
+      ...(request.notifyOwner === false ? { notifyOwner: false } : {}),
     };
 
     let task: TeamTask;
