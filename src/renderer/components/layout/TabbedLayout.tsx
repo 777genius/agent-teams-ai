@@ -58,13 +58,15 @@ export const TabbedLayout = (): React.JSX.Element => {
       ? 8
       : getTrafficLightPaddingForZoom(zoomFactor);
 
+  const hideSidebarForActiveTab = activeTabType === 'token-usage';
+
   // --- DnD state (lifted from PaneContainer) ---
   const panes = useStore(useShallow((s) => s.paneLayout.panes));
-  const hideSidebarForActiveTab = useStore(
+  const activeTabType = useStore(
     useShallow((s) => {
       const focusedPane = s.paneLayout.panes.find((pane) => pane.id === s.paneLayout.focusedPaneId);
       const activeTab = focusedPane?.tabs.find((tab) => tab.id === focusedPane.activeTabId);
-      return activeTab?.type === 'token-usage';
+      return activeTab?.type;
     })
   );
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
@@ -186,7 +188,7 @@ export const TabbedLayout = (): React.JSX.Element => {
           </div>
 
           {/* Sidebar - Task list / Sessions (right side) */}
-          {!hideSidebarForActiveTab && <Sidebar />}
+          {!hideSidebarForActiveTab && <Sidebar hideOnNarrowSettings={activeTabType === 'settings'} />}
         </div>
 
         {/* Drag overlay - semi-transparent ghost of the dragged tab */}

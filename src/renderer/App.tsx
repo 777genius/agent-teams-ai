@@ -4,7 +4,6 @@ import { AnnouncementHost } from '@features/announcements/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
-import { api } from './api';
 import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { ContextSwitchOverlay } from './components/common/ContextSwitchOverlay';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -13,8 +12,9 @@ import { startSplashScene } from './components/splash/splashScene';
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
 import { useAppearanceZoomController } from './hooks/useAppearance';
 import { useThemeController } from './hooks/useTheme';
-import { useStore } from './store';
 import { loadDynamicFlags } from './utils/dynamicFlags';
+import { api } from './api';
+import { useStore } from './store';
 
 import type { SplashSceneHandle } from './components/splash/splashScene';
 

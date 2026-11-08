@@ -144,6 +144,15 @@ describe('portable Appearance persistence', () => {
     expect(getAppearanceSnapshot().themes).toEqual([example()]);
   });
 
+  it('preserves reflected native zoom when a later theme save succeeds', () => {
+    reflectNativeAppearanceZoom(175);
+    expect(readAppearance(localStorage).zoomPercent).toBe(100);
+    expect(getLatestAppearance().zoomPercent).toBe(175);
+    setCustomThemes([example()]);
+    expect(readAppearance(localStorage).zoomPercent).toBe(175);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+  });
+
   it('shows a native zoom when storage is unavailable', () => {
     reflectNativeAppearanceZoom(175);
     expect(getAppearanceSnapshot().zoomPercent).toBe(175);

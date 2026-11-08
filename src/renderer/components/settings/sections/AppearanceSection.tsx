@@ -15,6 +15,7 @@ import {
 } from '@renderer/utils/appearancePreferences';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
+
 import { ThemeJsonEditorDialog } from './ThemeJsonEditorDialog';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';

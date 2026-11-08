@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { useStore } from '../store';
 import { applyCustomThemeToRoot, type CustomTheme } from '../utils/appearancePreferences';
+
 import { useAppearancePreferences } from './useAppearance';
 
 type Theme = 'dark' | 'light' | 'system';

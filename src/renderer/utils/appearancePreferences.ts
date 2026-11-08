@@ -213,6 +213,8 @@ export function readAppearance(storage: Pick<Storage, 'getItem'>): AppearancePre
 }
 
 let snapshot: AppearancePreferences | null = null;
+// Preserve real native zoom if the settings store is temporarily not writable.
+let unpersistedNativeZoomPercent: number | null = null;
 const listeners = new Set<() => void>();
 
 function getStorage(): Storage {
@@ -226,7 +228,9 @@ function getStorage(): Storage {
  */
 export function getLatestAppearance(): AppearancePreferences {
   const raw = getStorage().getItem(APPEARANCE_STORAGE_KEY);
-  if (raw === null) return DEFAULT_APPEARANCE;
+  if (raw === null) return unpersistedNativeZoomPercent === null
+    ? DEFAULT_APPEARANCE
+    : { ...DEFAULT_APPEARANCE, zoomPercent: unpersistedNativeZoomPercent };
   if (raw.length > MAX_JSON_LENGTH) throw new Error('Invalid saved appearance preferences');
   let parsed: unknown;
   try {
@@ -236,7 +240,9 @@ export function getLatestAppearance(): AppearancePreferences {
   }
   const current = parseAppearance(parsed);
   if (current === DEFAULT_APPEARANCE) throw new Error('Invalid saved appearance preferences');
-  return current;
+  return unpersistedNativeZoomPercent === null
+    ? current
+    : { ...current, zoomPercent: unpersistedNativeZoomPercent };
 }
 
 export function getAppearanceSnapshot(): AppearancePreferences {
@@ -267,6 +273,7 @@ export function saveAppearance(next: AppearancePreferences, storage: Pick<Storag
   }
   // Write first: failed storage must not change the visible theme/zoom.
   storage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(safe));
+  unpersistedNativeZoomPercent = null;
   announceChange(safe);
 }
 
@@ -301,6 +308,7 @@ export function setCustomThemes(themes: CustomTheme[]): void {
 /** Reflect a native shortcut when persistence is unavailable; UI must not lie. */
 export function reflectNativeAppearanceZoom(zoomPercent: number): void {
   const bounded = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(zoomPercent)));
+  unpersistedNativeZoomPercent = bounded;
   if (getAppearanceSnapshot().zoomPercent !== bounded) {
     announceChange({ ...getAppearanceSnapshot(), zoomPercent: bounded });
   }

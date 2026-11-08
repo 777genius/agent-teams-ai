@@ -35,7 +35,7 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
 const DEFAULT_WIDTH = 280;
 
-export const Sidebar = (): React.JSX.Element => {
+export const Sidebar = ({ hideOnNarrowSettings = false }: { hideOnNarrowSettings?: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const { activeContextId, sidebarCollapsed, toggleSidebar } = useStore(
     useShallow((s) => ({
@@ -103,7 +103,7 @@ export const Sidebar = (): React.JSX.Element => {
   return (
     <div
       ref={sidebarRef}
-      className="relative flex shrink-0 flex-col overflow-hidden border-l"
+      className={`relative flex shrink-0 flex-col overflow-hidden border-l ${hideOnNarrowSettings ? 'max-[850px]:hidden' : ''}`}
       style={{
         backgroundColor: 'var(--color-surface-sidebar)',
         borderColor: 'var(--color-border)',
