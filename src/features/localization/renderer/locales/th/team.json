@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 นาที",
         "fifteenMinutes": "15 นาที",
         "thirtyMinutes": "30 นาที"
-      }
+      },
+      "time": "เวลา"
     },
     "empty": {
       "title": "ยังไม่มีกำหนดการ",
@@ -2147,7 +2148,11 @@
       "cancelled": "ยกเลิกแล้ว",
       "dispatched": "ส่งงานแล้ว",
       "skipped": "ข้ามแล้ว"
-    }
+    },
+    "taskFirstAgentDescription": "มอบหมายงานให้สมาชิกทีมที่เลือก หากจำเป็น ระบบจะเริ่มทีมก่อน",
+    "taskFirstTeamDescription": "หัวหน้าทีมจะประสานงานนี้ หากจำเป็น ระบบจะเริ่มทีมก่อน",
+    "taskFirstDesktopRequired": "กำหนดการทำงานเฉพาะเมื่อเปิด Agent Teams อยู่",
+    "taskFirstHistoricPrompt": "ทีมนี้มีพรอมป์เริ่มต้นที่บันทึกไว้ โปรดตรวจสอบในการตั้งค่าทีมก่อนกำหนดงานอัตโนมัติ"
   },
   "openCodeContextConfigHint": {
     "summary": "โมเดลในเครื่องของ OpenCode สามารถใช้งบประมาณคอนเท็กซ์ของ OpenCode แทนขีดจำกัดเฉพาะพรอมต์ได้",
