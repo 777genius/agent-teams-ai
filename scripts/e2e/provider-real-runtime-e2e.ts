@@ -50,6 +50,8 @@ interface ScenarioEvidence {
   fullCatalogOver100: boolean | null;
   connectedIdsMatchFull: boolean | null;
   fullComparisonStatus: 'qualified' | 'incomplete_inventory' | 'runtime_unavailable' | 'not_run';
+  /** Safe, fixed-category provenance; no paths/keys/provider diagnostic text. */
+  configuredProviderState: 'connected' | 'available' | 'not-connected' | 'error' | 'missing' | 'other';
   probes: Probe[];
 }
 const report: {
@@ -95,14 +97,24 @@ function isolatedEnv(home: string, configured: boolean): NodeJS.ProcessEnv {
     TMP: path.join(home, 'tmp'), TEMP: path.join(home, 'tmp'),
     TMPDIR: path.join(home, 'tmp'),
     CLAUDE_MULTIMODEL_DATA_HOME: path.join(home, 'runtime-data'),
+    CLAUDE_MULTIMODEL_CACHE_HOME: path.join(home, 'runtime-cache'),
+    CLAUDE_CONFIG_DIR: path.join(home, '.claude'),
     OPENCODE_BIN_PATH: opencodeBin!,
     CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: opencodeBin!,
   };
   Object.values(dirs).forEach(dir => {
     if (dir !== opencodeBin) fs.mkdirSync(dir, { recursive: true });
   });
+  // Native Windows OpenCode/Bun reads HOMEDRIVE+HOMEPATH, not just USERPROFILE.
+  // Derive them exclusively from this disposable root, never the runner home.
+  const windowsHome = process.platform === 'win32'
+    ? {
+        HOMEDRIVE: path.parse(home).root.replace(/[\\/]+$/, ''),
+        HOMEPATH: home.slice(path.parse(home).root.replace(/[\\/]+$/, '').length),
+      }
+    : {};
   return {
-    ...inherited, ...dirs, NODE_BINARY: process.execPath,
+    ...inherited, ...dirs, ...windowsHome, NODE_BINARY: process.execPath,
     OPENCODE_DISABLE_AUTOUPDATE: '1',
     OPENCODE_DISABLE_LSP_DOWNLOAD: '1',
     OPENCODE_DISABLE_MODELS_FETCH: '1',
@@ -237,9 +249,13 @@ async function checkScenario(name: 'clean' | 'configured',
         ? 'incomplete_inventory' : 'runtime_unavailable';
     }
   }
+  const observedState = all.entries.find((row) =>
+    row.providerId.trim().toLowerCase() === 'deepinfra')?.state ?? 'missing';
+  const configuredProviderState = ['connected', 'available', 'not-connected', 'error', 'missing']
+    .includes(observedState) ? observedState as ScenarioEvidence['configuredProviderState'] : 'other';
   return { name, summaryCount, summaryDirectoryTotal: all.totalCount,
     fullDirectoryTotal, fullPages, fullCatalogOver100, connectedIdsMatchFull,
-    fullComparisonStatus, probes };
+    fullComparisonStatus, configuredProviderState, probes };
 }
 
 try {
@@ -289,13 +305,20 @@ try {
 } finally {
   // Only fixed safe numeric measurements leave the E2E process, never raw CLI
   // output, user paths, environment, host address or credentials.
-  fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
-  fs.writeFileSync(evidencePath, JSON.stringify(report, null, 2) + '\n');
-  if (modelServer) {
-    modelServer.closeAllConnections();
-    await new Promise<void>(resolve => modelServer!.close(() => resolve()));
+  try {
+    fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
+    fs.writeFileSync(evidencePath, JSON.stringify(report, null, 2) + '\n');
+  } finally {
+    try {
+      if (modelServer) {
+        modelServer.closeAllConnections();
+        await new Promise<void>(resolve => modelServer!.close(() => resolve()));
+      }
+    } finally {
+      // Always delete the isolated test home, even if evidence writing fails.
+      fs.rmSync(testRoot, { recursive: true, force: true });
+    }
   }
-  fs.rmSync(testRoot, { recursive: true, force: true });
   console.log('real-runtime-provider-e2e: ' +
     (report.pass ? 'PASS' : 'FAIL phase=' + report.failedPhase));
 }
