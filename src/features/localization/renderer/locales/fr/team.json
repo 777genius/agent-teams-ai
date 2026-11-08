@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Heure"
     },
     "empty": {
       "title": "Pas encore d'horaires",
@@ -2147,7 +2148,11 @@
       "cancelled": "Annulé",
       "dispatched": "Transmis",
       "skipped": "Ignoré"
-    }
+    },
+    "taskFirstAgentDescription": "La tâche est confiée au coéquipier sélectionné. L'équipe démarre d'abord si nécessaire.",
+    "taskFirstTeamDescription": "Le responsable coordonne cette tâche. L'équipe démarre d'abord si nécessaire.",
+    "taskFirstDesktopRequired": "Les tâches planifiées ne s'exécutent que lorsque Agent Teams est ouvert.",
+    "taskFirstHistoricPrompt": "Cette équipe possède une ancienne instruction de démarrage. Vérifiez-la dans les paramètres de l'équipe avant de programmer des tâches automatiques."
   },
   "openCodeContextConfigHint": {
     "summary": "Les modèles locaux OpenCode peuvent utiliser un budget de contexte OpenCode au lieu de limites uniquement rapides.",
