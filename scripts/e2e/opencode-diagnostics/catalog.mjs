@@ -266,11 +266,11 @@ export async function verifyCatalog({
         );
         // Read-only DOM observation on opposite sides of a held filtered response.
         if (first?.response && !connected?.response && !second?.response &&
-            !/^\\D*3\\D*$/.test(label.trim())) {
+            !/^\D*3\D*$/.test(label.trim())) {
           beforeFilteredCount = { label, at: Date.now(), firstPageAt: first.response.at };
         }
         if (beforeFilteredCount && connected?.response && !second?.response &&
-            /^\\D*3\\D*$/.test(label.trim())) {
+            /^\D*3\D*$/.test(label.trim())) {
           filteredBeforeSecondPage = {
             before: beforeFilteredCount, after: { label, at: Date.now() },
             connectedResponseAt: connected.response.at,
