@@ -214,6 +214,88 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.runOneShot).not.toHaveBeenCalled();
   });
 
+  it('ignores taskless skipped runs but retains older unfinished board work', async () => {
+    enableTaskFirstPorts();
+    const now = new Date().toISOString();
+    const prior = (id: string, status: ScheduleRun['status'], linkedTaskId?: string): ScheduleRun => ({
+      id,
+      scheduleId: 'schedule-1',
+      teamName: 'test-team',
+      status,
+      scheduledFor: now,
+      startedAt: now,
+      retryCount: 0,
+      ...(linkedTaskId ? { linkedTaskId } : {}),
+    });
+    port.getPreviousRuns = vi.fn(async () => [
+      prior('skipped-without-task', 'skipped'),
+      prior('failed-without-task', 'failed_interrupted'),
+      prior('older-task-run', 'dispatched', 'older-active-task'),
+    ]);
+    port.getTask = vi.fn(async (_team, id) =>
+      id === 'older-active-task'
+        ? ({ id, subject: 'Review in progress', status: 'in_progress' } as TeamTask)
+        : null
+    );
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true },
+      'new-tick',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', taskId: 'older-active-task' });
+    expect(port.getTask).toHaveBeenCalledTimes(3);
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('recovers an unlinked task created before its prior schedule run was interrupted', async () => {
+    enableTaskFirstPorts();
+    const now = new Date().toISOString();
+    port.getPreviousRuns = vi.fn(async (): Promise<ScheduleRun[]> => [{
+      id: 'interrupted-creation-id',
+      scheduleId: 'schedule-1',
+      teamName: 'test-team',
+      status: 'failed_interrupted',
+      scheduledFor: now,
+      startedAt: now,
+      retryCount: 0,
+    }]);
+    port.getTask = vi.fn(async (_team, taskId) => ({
+      id: taskId,
+      subject: 'Durably saved before crash',
+      status: 'pending',
+    } as TeamTask));
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true },
+      'after-crash',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', taskId: 'interrupted-creation-id' });
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+  });
+
+  it('runs after a taskless skipped occurrence instead of deadlocking the schedule', async () => {
+    enableTaskFirstPorts();
+    const now = new Date().toISOString();
+    port.getPreviousRuns = vi.fn(async (): Promise<ScheduleRun[]> => [{
+      id: 'taskless-previous',
+      scheduleId: 'schedule-1',
+      teamName: 'test-team',
+      status: 'skipped',
+      scheduledFor: now,
+      startedAt: now,
+      retryCount: 0,
+    }]);
+    port.getTask = vi.fn(async () => null);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true },
+      'next-tick',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'dispatched', taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledOnce();
+  });
+
   it('keeps a saved board task pending when bootstrap fails and never retries the prompt', async () => {
     enableTaskFirstPorts();
     port.isTeamAlive = vi.fn(() => false);
