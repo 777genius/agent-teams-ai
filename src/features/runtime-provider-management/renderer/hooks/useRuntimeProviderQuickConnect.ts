@@ -7,8 +7,8 @@ import {
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
   observeRuntimeProviderDirectoryRevision,
-  publishRuntimeProviderDirectoryCache,
   publishRuntimeProviderConnectedCount,
+  publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';

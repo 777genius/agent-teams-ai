@@ -5,8 +5,8 @@ import {
   getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryScopeReads,
   markRuntimeProviderDirectoryScopeUnverified,
-  publishRuntimeProviderDirectoryCache,
   publishRuntimeProviderConnectedCount,
+  publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
 
 import { DEFAULT_DIRECTORY_FILTER } from './runtimeProviderDirectoryCatalogPolicy';

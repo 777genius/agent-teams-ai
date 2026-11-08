@@ -385,16 +385,24 @@ export function useCodexAccountSnapshot(options: {
   // Resuming an old Settings pane must not wait another interval to discover
   // an externally changed account. Do not run this on the initial cold read.
   useEffect(() => {
-    const active = enabled && mayPollAccount;
+    // Only a visible Providers pane resumes passive reads. Pending login
+    // already has its own polling and must never start a second resume read.
+    const active = enabled && options.passivePollingEnabled !== false;
     const wasActive = passivePollingWasEnabled.current;
     passivePollingWasEnabled.current = active;
     if (
-      !active || wasActive || !initialRefreshAttempted || !snapshot ||
+      !active || wasActive || loginPending || !initialRefreshAttempted || !snapshot ||
+      (options.includeRateLimits === true && !initialRateLimitsAttemptedRef.current) ||
+      rateLimitsLoadingTokensRef.current.size > 0 ||
+      loadingTokensRef.current.size > 0 ||
       lastUpdatedAtRef.current === null ||
       Date.now() - lastUpdatedAtRef.current < CODEX_VISIBLE_STANDARD_REFRESH_MS
     ) return;
     void refresh({ includeRateLimits: options.includeRateLimits, silent: true });
-  }, [enabled, initialRefreshAttempted, mayPollAccount, options.includeRateLimits, refresh, snapshot]);
+  }, [
+    enabled, initialRefreshAttempted, loginPending,
+    options.passivePollingEnabled, options.includeRateLimits, refresh, snapshot,
+  ]);
 
   useEffect(() => {
     if (!electronMode || !options.enabled || !mayPollAccount || typeof document === 'undefined') {
