@@ -76,20 +76,69 @@ describe('CliInstallerService background provider status', () => {
     expect(result?.detailMessage).toContain('Provider runtime missing');
   });
 
-  test('does not use a runtime discovered before status was invalidated', async () => {
+  test('does not use a stale runtime when a new generation has no runtime', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
     let finish!: (path: string | null) => void;
-    vi.spyOn(ClaudeBinaryResolver, 'resolve').mockReturnValue(
-      new Promise((resolve) => {
-        finish = resolve;
-      })
-    );
+    vi.spyOn(ClaudeBinaryResolver, 'resolve')
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { finish = resolve; })
+      )
+      .mockResolvedValue(null);
     const check = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus');
     const pending = service.getProviderStatus('opencode', { projectPath });
     await Promise.resolve();
     service.invalidateStatusCache();
     finish('/fake/stale-runtime');
+    const result = await pending;
+    expect(check).not.toHaveBeenCalled();
+    expect(result?.detailMessage).toContain('Provider runtime missing');
+  });
+
+  test('retries explicit project preflight with the new generation after invalidation', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    let finish!: (path: string | null) => void;
+    vi.spyOn(ClaudeBinaryResolver, 'resolve')
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { finish = resolve; })
+      )
+      .mockResolvedValue('/fake/fresh-runtime');
+    const check = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+      .mockResolvedValue(createDefaultProviderStatus('opencode'));
+    const pending = service.getProviderStatus('opencode', { projectPath });
+    await Promise.resolve();
+    service.invalidateStatusCache();
+    finish('/fake/stale-runtime');
+    const result = await pending;
+    expect(check).toHaveBeenCalledOnce();
+    expect(check).toHaveBeenCalledWith('/fake/fresh-runtime', 'opencode', undefined, {
+      projectPath,
+    });
+    expect(result?.providerId).toBe('opencode');
+  });
+
+  test('stops after one scoped retry if the runtime generation changes again', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    let finishFirst!: (path: string | null) => void;
+    let finishSecond!: (path: string | null) => void;
+    vi.spyOn(ClaudeBinaryResolver, 'resolve')
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { finishFirst = resolve; })
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { finishSecond = resolve; })
+      );
+    const check = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus');
+    const pending = service.getProviderStatus('opencode', { projectPath });
+    await Promise.resolve();
+    service.invalidateStatusCache();
+    finishFirst('/fake/stale-runtime-a');
+    await Promise.resolve();
+    await Promise.resolve();
+    service.invalidateStatusCache();
+    finishSecond('/fake/stale-runtime-b');
     const result = await pending;
     expect(check).not.toHaveBeenCalled();
     expect(result?.detailMessage).toContain('runtime changed during status check');
