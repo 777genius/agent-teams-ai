@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { refreshRuntimeProviderConnection } from '../../../../src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection';
 import {
+  getRuntimeProviderConnectedCountObservation,
   getRuntimeProviderDirectoryReadToken,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
@@ -58,6 +59,45 @@ describe('refreshRuntimeProviderConnection', () => {
 
     expect(await refresh).toBe('refreshed');
     expect(completed).toBe(true);
+  });
+
+  it('publishes a complete post-write summary without needing models or a successful full read', async () => {
+    const projectPath = '/tmp/TEST-post-write-connected';
+    const revision = 'runtime-v1';
+    const entries = [
+      { providerId: 'openrouter', displayName: 'OpenRouter', state: 'connected' },
+      { providerId: 'xai', displayName: 'xAI', state: 'connected' },
+      { providerId: 'local', displayName: 'Local', state: 'available' },
+    ];
+    loadProviderDirectory.mockResolvedValueOnce({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        entries,
+        fetchedAt: new Date().toISOString(),
+        filter: 'all',
+        query: null,
+        cursor: null,
+        nextCursor: null,
+        totalCount: entries.length,
+        returnedCount: entries.length,
+        diagnostics: [],
+      },
+    });
+    const result = await refreshRuntimeProviderConnection({
+      runtimeId: 'opencode', projectPath, runtimeRevision: revision,
+      directorySupported: true,
+      isContextCurrent: () => true, isRuntimeRevisionCurrent: () => true,
+      refreshExternal: async () => true,
+      refreshView: async () => true,
+      refreshDirectory: async () => false,
+    });
+    expect(result).toBe('warning');
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    expect(getRuntimeProviderConnectedCountObservation(projectPath)).toMatchObject({
+      connected: 2, runtimeRevision: revision, source: 'summary-all',
+    });
   });
 
   it('starts post-mutation directory recovery after a failing shared summary', async () => {
