@@ -207,7 +207,13 @@ function getStorage(): Storage {
 }
 
 export function getAppearanceSnapshot(): AppearancePreferences {
-  snapshot ??= readAppearance(getStorage());
+  if (snapshot === null) {
+    try {
+      snapshot = readAppearance(getStorage());
+    } catch {
+      snapshot = DEFAULT_APPEARANCE;
+    }
+  }
   return snapshot;
 }
 
@@ -271,7 +277,11 @@ export function applyCustomThemeToRoot(root: HTMLElement, theme: CustomTheme | n
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event: StorageEvent) => {
     if (event.key === APPEARANCE_STORAGE_KEY || event.key === null) {
-      announceChange(readAppearance(getStorage()));
+      try {
+        announceChange(readAppearance(getStorage()));
+      } catch {
+        announceChange(DEFAULT_APPEARANCE);
+      }
     }
   });
 }
