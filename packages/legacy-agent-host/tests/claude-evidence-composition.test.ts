@@ -677,6 +677,10 @@ test('registered captured workspace survives an actual selected checkpoint resto
   }
   assert.equal(restoredInputTerminal, true, 'restored native result must settle durably before stopping');
   await f.runtime.execute(f.binding.teamId, 'stop', { memberId: 'worker-id', expectedGeneration: restored.generation });
+  // Stop confirms the selected member, but the coordinator may still be draining
+  // its previously queued owner work. Cold review must begin after its writers
+  // have quiesced, so the original captured-source identity remains stable.
+  await f.runtime.close();
   const later = join(f.root, 'later-main'); mkdirSync(later);
   const review = createHostTeamReview({ team: f.team, ownerStorageRoot: f.profile.owner.storageRoot, principalId: 'human',
     currentProjectPath: () => later, initialRuntimeMembers: [], assertCurrent() {}, processStartProbe: async () => 1 });
