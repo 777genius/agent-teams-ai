@@ -7,7 +7,7 @@ Correct the disposable OpenCode CLI fixture: `--filter connected` currently repo
 ## Narrow implementation
 
 1. Make the fixture honor `all` and `connected`, validate safe bounded `--limit`/`--cursor` and return exact `filter`, `totalCount`, `returnedCount`, `cursor`, `nextCursor`; reject unsupported flags.
-2. Add one disposable `connected-summary` scenario with more than 100 provider records, four real connected fixture sources (including the OpenCode host), and available-only synthetic records. The all-directory is paginated; the connected-only summary completes in one page.
+2. Add one disposable `connected-summary` scenario with more than 100 provider records, five simulated connected fixture sources (including the OpenCode host) and 100 available-only records. The fifth source intentionally differs from the previous scenario's retained count, so E2E can observe a real UI update before page two finishes. The all-directory is paginated; the connected-only summary completes in one page.
 3. Run source subprocess assertions plus the existing Windows/Linux real Electron desktop E2E. Assert that the active Providers page actually issues the filtered subprocess, the result is complete, the displayed OpenCode count is correct, and only connected sources load model catalogs.
 4. Preserve isolation/ownership/CDP protections and unchanged behavior for existing diagnostics scenarios.
 
