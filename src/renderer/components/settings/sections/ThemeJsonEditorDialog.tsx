@@ -8,17 +8,17 @@ import { EditorState } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { useAppTranslation } from '@features/localization/renderer';
-import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 import { formatCustomThemesJson, parseCustomThemesJson } from '@renderer/utils/appearancePreferences';
-import { X } from 'lucide-react';
-
+import type { RefObject } from 'react';
 import type { CustomTheme } from '@renderer/utils/appearancePreferences';
 
 interface ThemeJsonEditorDialogProps {
   open: boolean;
   onClose: () => void;
   themes: readonly CustomTheme[];
+  focusReturnRef: RefObject<HTMLButtonElement | null>;
   onSave: (themes: CustomTheme[]) => void;
 }
 
@@ -30,13 +30,13 @@ export const ThemeJsonEditorDialog = ({
   open,
   onClose,
   themes,
+  focusReturnRef,
   onSave,
 }: ThemeJsonEditorDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useOverlayOccupancy(open);
 
   useEffect(() => {
     if (!open || !containerRef.current) return;
@@ -88,46 +88,34 @@ export const ThemeJsonEditorDialog = ({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3"
-      role="presentation"
-      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="appearance-theme-json-title"
-        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border-emphasis bg-surface shadow-2xl"
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.stopPropagation();
-            onClose();
-          }
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent
+        data-testid="appearance-theme-editor-dialog"
+        className="flex max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          focusReturnRef.current?.focus();
         }}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <h2 id="appearance-theme-json-title" className="text-sm font-medium text-text">
+        <DialogHeader className="border-b border-border px-4 py-3">
+          <DialogTitle className="text-sm">
             {t('general.appearance.customThemes.editor.title')}
-          </h2>
-          <button
-            type="button"
-            className="rounded p-1 text-text-secondary hover:bg-surface-raised"
-            onClick={onClose}
-            aria-label={t('general.appearance.customThemes.editor.cancel')}
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <p className="px-4 pt-3 text-xs text-text-muted">
-          {t('general.appearance.customThemes.editor.description')}
-        </p>
-        <div ref={containerRef} data-testid="appearance-custom-theme-json" className="config-editor-container min-h-[240px] flex-1 overflow-hidden px-2 py-3" />
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {t('general.appearance.customThemes.editor.description')}
+          </DialogDescription>
+        </DialogHeader>
+        <div
+          ref={containerRef}
+          data-testid="appearance-custom-theme-json"
+          className="config-editor-container min-h-[240px] flex-1 overflow-hidden px-2 py-3"
+        />
         {error && (
           <p role="alert" data-testid="appearance-theme-json-error" className="px-4 pb-2 text-xs text-red-400">
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-2 border-t border-border p-3">
+        <DialogFooter className="flex-row justify-end gap-2 border-t border-border p-3">
           <button
             type="button"
             className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-raised"
@@ -143,8 +131,8 @@ export const ThemeJsonEditorDialog = ({
           >
             {t('general.appearance.customThemes.editor.save')}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
