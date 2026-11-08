@@ -2,7 +2,7 @@
 // Node worker is a TEST owner only; no production executable/Host custody or V01–V08 certificate.
 import { createHash, randomBytes } from 'node:crypto';
 import { spawn, execFileSync } from 'node:child_process';
-import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -66,7 +66,13 @@ if (process.argv[2] === '--worker') {
     if (sdk.name !== '@opencode/sdk' || sdk.version !== '2.0.21' ||
         server.name !== '@opencode/server' || server.version !== '2.0.21')
       throw Error('TEST_published_version_unqualified');
-    worker = join(prefix, 'TEST-v2-http-owned-worker.mjs');
+    // The worker must live inside this run's disposable namespace, never
+    // overwrite a shared SDK prefix used by another TEST owner. Only this
+    // root is removed on confirmed process-tree teardown.
+    worker = join(root, 'TEST-v2-http-owned-worker.mjs');
+    // Node's ESM resolver finds the *pinned TEST installation* through this
+    // read-only dependency link; removing root does not remove its target.
+    symlinkSync(join(canonicalPrefix, 'node_modules'), join(root, 'node_modules'), 'dir');
     copyFileSync(fileURLToPath(import.meta.url),worker);
     password = randomBytes(24).toString('hex');
     env = { PATH:process.env.PATH || '/usr/bin:/bin', HOME:join(root,'home'),
