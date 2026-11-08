@@ -92,6 +92,31 @@ Exact reviewed sources:
   disposable broker fixtures, **not** a production owner-bound Host,
   credentialed native turn, independent review, CodeQL, or Desktop S2.1 parity.
   [Exact-head PR evidence](https://github.com/agent-teams-ai/agent-runtime/pull/258#issuecomment-6711079632).
+
+  **Native PostgreSQL Host A/B evidence (8 Nov 2026):**
+  [Runtime Draft #259](https://github.com/agent-teams-ai/agent-runtime/pull/259)
+  exact HEAD [`0f2c9a298154`](https://github.com/agent-teams-ai/agent-runtime/commit/0f2c9a298154d7400183761014417a62b3693926)
+  composed the actual private authenticated Host session, Node boundary IDs,
+  trusted resolver and PostgreSQL HTTP evidence owner on a disposable PostgreSQL
+  18 database. [Native E2E #42458658192](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658192)
+  passed **34/34 on each of Node 24/26, zero failures/skips**, with an
+  exact-HEAD checkout. [Full CI #42458658246](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658246),
+  [Node matrix #42458658174](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658174)
+  and [trusted Docs #42458658383](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658383)
+  completed SUCCESS. It tests SQL receipt retention across a new pool,
+  lost-COMMIT-ACK / operation UNKNOWN, automatic bearer revocation, foreign
+  Host bearer rejection and an independently minted bearer with a **different**
+  captured operation ID. DNS and provider transport are deterministic TEST
+  fixtures; the fixture's journal always returns `consumed`, and it installs
+  no production `routeFirstWrite` owner. Thus a second Host using the
+  **same** captured durable identity and a fresh valid bearer is **NOT
+  qualified as replay-safe**. A storage receipt written after provider effects
+  is not pre-dispatch idempotency authority. [Owning gap #257](https://github.com/agent-teams-ai/agent-runtime/issues/257)
+  requires a real interprocess intent/route admission and reconciliation
+  before claiming M08 or S2.1. ReviewRouter reported **INCOMPLETE 0/2**;
+  the recorded scoped author review is not an independent approval and CodeQL
+  has no confirmed exact-HEAD receipt. #259 remains Draft; no production Host,
+  owner replacement, M01–M19 parity, or Desktop cutover is authorized.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
