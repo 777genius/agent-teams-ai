@@ -69,7 +69,6 @@ function validateSmartFields(input: {
 }): string | null {
   if (input.taskFirst !== undefined && input.taskFirst !== true) return 'Invalid taskFirst';
   if (input.reviewedSavedPrompt !== undefined && input.reviewedSavedPrompt !== true) return 'Invalid reviewedSavedPrompt';
-  if (input.reviewedSavedPrompt && !input.taskFirst) return 'Saved prompt review requires task-first schedule';
   if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
     return 'Task-first schedule requires agent or team executionMode';
   }
@@ -121,6 +120,7 @@ async function handleCreate(
   }
   const validationError = validateSmartFields(inp);
   if (validationError) return { success: false, error: validationError };
+  if (inp.reviewedSavedPrompt && !inp.taskFirst) return { success: false, error: 'Saved prompt review requires task-first schedule' };
   return wrapScheduleHandler('create', () => getService().createSchedule(inp));
 }
 
@@ -137,7 +137,7 @@ async function handleUpdate(
   }
   const validationError = validateSmartFields(patch as UpdateSchedulePatch);
   if (validationError) return { success: false, error: validationError };
-  if (Object.hasOwn(patch, 'taskFirst') || Object.hasOwn(patch, 'reviewedSavedPrompt')) {
+  if (Object.hasOwn(patch, 'taskFirst')) {
     return { success: false, error: 'taskFirst is create-only; existing schedules are unchanged' };
   }
   return wrapScheduleHandler('update', () =>

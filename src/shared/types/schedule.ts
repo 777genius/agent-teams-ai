@@ -131,6 +131,8 @@ export interface CreateScheduleInput {
 }
 
 export interface UpdateSchedulePatch {
+  /** Explicit user approval; may only be added to an existing task-first schedule. */
+  reviewedSavedPrompt?: true;
   executionMode?: ScheduleExecutionMode;
   targetMember?: string;
   label?: string;

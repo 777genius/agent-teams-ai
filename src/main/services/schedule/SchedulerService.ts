@@ -161,7 +161,6 @@ export class SchedulerService {
   // ===========================================================================
   // CRUD
   // ===========================================================================
-
   async listSchedules(): Promise<Schedule[]> {
     return this.repository.listSchedules();
   }
@@ -218,11 +217,13 @@ export class SchedulerService {
     if (!existing) {
       throw new Error(`Schedule not found: ${id}`);
     }
+    if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
 
     const updated: Schedule = {
       ...existing,
       ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
       ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
+      ...(patch.reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
       ...(patch.label !== undefined && { label: patch.label }),
       ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
       ...(patch.timezone !== undefined && { timezone: patch.timezone }),
@@ -362,7 +363,6 @@ export class SchedulerService {
   // ===========================================================================
   // Trigger Now
   // ===========================================================================
-
   async triggerNow(id: string): Promise<ScheduleRun> {
     const schedule = await this.repository.getSchedule(id);
     if (!schedule) {
