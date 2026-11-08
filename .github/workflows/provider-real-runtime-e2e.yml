@@ -47,7 +47,7 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Verify pure provider-count contract
-        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts
+        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts scripts/e2e/opencode-diagnostics/real-runtime.test.mjs
       - name: Install genuine OpenCode V1 in runner-owned scratch
         shell: bash
         run: |
