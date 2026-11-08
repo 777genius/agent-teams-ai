@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isRetryableInstallFailure } from '../../scripts/ci/install-dependencies-with-retry.mjs';
+import { createInstallFailureTracker, isRetryableInstallFailure } from '../../scripts/ci/install-dependencies-with-retry.mjs';
 
 describe('install-dependencies-with-retry', () => {
   for (const output of [
@@ -82,6 +82,32 @@ describe('install-dependencies-with-retry', () => {
     ]) {
       assert.equal(isRetryableInstallFailure(output), false);
     }
+  });
+
+  it('never loses a split fatal 404 when stderr interleaves a long chunk', () => {
+    const tracker = createInstallFailureTracker();
+    tracker.observe('stdout', 'HTTPError: Response code 503\\nERR_PNPM_F');
+    tracker.observe('stderr', 'diagnostic '.repeat(100));
+    tracker.observe('stdout', 'ETCH_404 GET https://registry.npmjs.org/absent');
+    assert.deepEqual(tracker.snapshot(), {
+      retryableFailureSeen: true,
+      terminalFailureSeen: true,
+    });
+  });
+
+  it('tracks split transient and terminal markers independently in both streams', () => {
+    const tracker = createInstallFailureTracker();
+    tracker.observe('stderr', 'ERR_PNPM_FETCH_');
+    tracker.observe('stdout', 'warning '.repeat(100));
+    tracker.observe('stderr', '504 fetching Electron\\n');
+    assert.deepEqual(tracker.snapshot(), {
+      retryableFailureSeen: true,
+      terminalFailureSeen: false,
+    });
+    tracker.observe('stdout', '\\x1b[31mERR_PNPM_FETCH_');
+    tracker.observe('stderr', 'log '.repeat(100));
+    tracker.observe('stdout', '404\\x1b[0m');
+    assert.equal(tracker.snapshot().terminalFailureSeen, true);
   });
 
   it('lets a later deterministic error override an earlier transient marker', () => {
