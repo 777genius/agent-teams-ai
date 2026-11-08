@@ -157,6 +157,19 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     }).openCodeConnected).toBeNull();
   });
 
+  it('prefers a newer complete full directory over an earlier filtered observation', () => {
+    const nowMs = Date.parse('2026-11-08T12:00:00Z');
+    expect(getDashboardConnectionSummary({
+      ...input,
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
+      observedOpenCodeCount: {
+        connected: 9, runtimeRevision: revision, source: 'summary-connected',
+        fetchedAt: new Date(nowMs - 20_000).toISOString(),
+      },
+      nowMs,
+    }).openCodeConnected).toBe(2);
+  });
+
   it('requires both complete global and project snapshots before reporting a project count', () => {
     const projectDirectory = {
       ...globalDirectory,
@@ -200,7 +213,7 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
   it('does not reuse full-directory counts after a credential mutation until a new validated read', () => {
     expect(getDashboardConnectionSummary({
       ...input,
-      globalDirectory: { ...globalDirectory, connectedCountInvalidated: true },
+      globalDirectory, countInvalidated: true,
     }).openCodeConnected).toBeNull();
   });
 

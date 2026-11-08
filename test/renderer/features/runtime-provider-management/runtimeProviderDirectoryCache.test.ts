@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runtimeProviderDirectoryInteraction } from '../../../../src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction';
 
 import {
+  getRuntimeProviderConnectedCountEvidence,
   getRuntimeProviderConnectedCountObservation,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
@@ -117,7 +118,7 @@ describe('runtimeProviderDirectoryCache', () => {
     const previousToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
     invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
-    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.connectedCountInvalidated).toBe(true);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/project-a').invalidated).toBe(true);
     publishRuntimeProviderDirectoryCache({
       projectPath: '/tmp/project-a',
       entries: [{ ...providerEntry, state: 'not-connected' }],
