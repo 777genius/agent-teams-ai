@@ -2126,7 +2126,8 @@
         "tenMinutes": "dakika 10",
         "fifteenMinutes": "dakika 15",
         "thirtyMinutes": "dakika 30"
-      }
+      },
+      "time": "Saa"
     },
     "empty": {
       "title": "Bado hakuna ratiba",
@@ -2149,7 +2150,11 @@
       "cancelled": "Imeghairiwa",
       "dispatched": "Imetumwa",
       "skipped": "Imerukwa"
-    }
+    },
+    "taskFirstAgentDescription": "Kazi inapewa mshiriki aliyechaguliwa. Timu itaanzishwa kwanza ikihitajika.",
+    "taskFirstTeamDescription": "Kiongozi wa timu anaratibu kazi hii. Timu itaanzishwa kwanza ikihitajika.",
+    "taskFirstDesktopRequired": "Ratiba hutekelezwa tu wakati Agent Teams imefunguliwa.",
+    "taskFirstHistoricPrompt": "Timu hii ina agizo la zamani la kuanzisha lililohifadhiwa. Likague katika mipangilio ya timu kabla ya kupanga kazi za kiotomatiki."
   },
   "openCodeContextConfigHint": {
     "summary": "Modeli za ndani za OpenCode zinaweza kutumia bajeti ya muktadha ya OpenCode badala ya vikomo vya kidokezo pekee.",
