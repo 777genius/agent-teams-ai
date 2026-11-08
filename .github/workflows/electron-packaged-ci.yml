@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/electron-packaged-ci.yml'
       - 'scripts/ci/packaged-ci-*.mts'
+      - 'scripts/ci/packaged-ci-provider-integrity.ts'
+      - 'scripts/ci/packaged-ci-provider-integrity.test.ts'
       - 'scripts/ci/verify-bundled-undici.cjs'
       - 'test/scripts/verify-bundled-undici.test.cjs'
       - '.node-version'
@@ -62,6 +64,8 @@ jobs:
           node-version-file: .node-version
       - name: Verify packaged CI policy contracts
         run: node --test scripts/ci/packaged-ci-policy.test.mts
+      - name: Test provider archive integrity gate
+        run: node --test scripts/ci/packaged-ci-provider-integrity.test.ts
       - name: Classify exact local PR diff
         id: scope
         run: node scripts/ci/packaged-ci-cli.mts classify
@@ -131,6 +135,8 @@ jobs:
               find "$root" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
             fi
           done
+      - name: Verify selected provider archives against frozen lock before install
+        run: node scripts/ci/packaged-ci-provider-integrity.ts
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Typecheck packaged CI policy with pinned compiler
