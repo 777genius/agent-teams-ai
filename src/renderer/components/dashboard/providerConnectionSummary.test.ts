@@ -130,6 +130,33 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     }).openCodeConnected).toBeNull();
   });
 
+  it('uses only fresh runtime-matched count observations for the active project', () => {
+    const nowMs = Date.parse('2026-11-08T12:00:00Z');
+    const observation = {
+      connected: 7,
+      source: 'summary-connected' as const,
+      runtimeRevision: revision,
+      fetchedAt: new Date(nowMs - 15_000).toISOString(),
+    };
+    const scoped = {
+      ...input,
+      globalDirectory: null,
+      projectDirectory: null,
+      projectPath: '/work/project',
+      observedOpenCodeCount: observation,
+      nowMs,
+    };
+    expect(getDashboardConnectionSummary(scoped).openCodeConnected).toBe(7);
+    expect(getDashboardConnectionSummary({
+      ...scoped, observedOpenCodeCount: { ...observation, runtimeRevision: 'previous-runtime' },
+    }).openCodeConnected).toBeNull();
+    expect(getDashboardConnectionSummary({
+      ...scoped, observedOpenCodeCount: {
+        ...observation, fetchedAt: new Date(nowMs - 121_000).toISOString(),
+      },
+    }).openCodeConnected).toBeNull();
+  });
+
   it('requires both complete global and project snapshots before reporting a project count', () => {
     const projectDirectory = {
       ...globalDirectory,

@@ -1306,4 +1306,62 @@ describe('useCodexAccountSnapshot', () => {
       root.unmount();
     });
   });
+  it('pauses hidden passive checks but continues observing an in-progress login', async () => {
+    vi.useFakeTimers();
+    const initial = createSnapshot();
+    apiMocks.getCodexAccountSnapshot.mockResolvedValue(initial);
+    apiMocks.refreshCodexAccountSnapshot.mockResolvedValue(initial);
+    let publish: ((event: unknown, snapshot: CodexAccountSnapshotDto) => void) | undefined;
+    apiMocks.onCodexAccountSnapshotChanged.mockImplementation((callback) => {
+      publish = callback;
+      return () => undefined;
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    function Harness({ active }: { active: boolean }): React.ReactElement {
+      useCodexAccountSnapshot({ enabled: true, passivePollingEnabled: active });
+      return React.createElement('div', null, 'mounted');
+    }
+
+    await act(async () => {
+      root.render(React.createElement(Harness, { active: false }));
+      await Promise.resolve();
+    });
+    expect(apiMocks.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+
+    await act(async () => {
+      publish?.(null, {
+        ...initial, updatedAt: new Date(Date.now() + 1000).toISOString(),
+        login: { status: 'pending', error: null, startedAt: new Date().toISOString() },
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      publish?.(null, { ...initial, updatedAt: new Date(Date.now() + 2000).toISOString() });
+    });
+    apiMocks.refreshCodexAccountSnapshot.mockClear();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+    expect(apiMocks.refreshCodexAccountSnapshot).not.toHaveBeenCalled();
+
+    await act(async () => root.render(React.createElement(Harness, { active: true })));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(apiMocks.refreshCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+    vi.useRealTimers();
+  });
+
 });

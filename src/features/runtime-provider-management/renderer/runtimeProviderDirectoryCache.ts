@@ -344,6 +344,12 @@ export function publishRuntimeProviderConnectedCount({
   notifyScope(scopeKey);
 }
 
+export function getRuntimeProviderConnectedCountObservation(
+  projectPath?: string | null
+): RuntimeProviderConnectedCountObservation | null {
+  return connectedCountByScope.get(getScopeKey(projectPath)) ?? null;
+}
+
 export function useRuntimeProviderConnectedCount(
   projectPath?: string | null
 ): RuntimeProviderConnectedCountObservation | null {
@@ -352,7 +358,7 @@ export function useRuntimeProviderConnectedCount(
     (listener: () => void) => subscribeScope(scopeKey, listener),
     [scopeKey]
   );
-  const getSnapshot = useCallback(() => connectedCountByScope.get(scopeKey) ?? null, [scopeKey]);
+  const getSnapshot = useCallback(() => getRuntimeProviderConnectedCountObservation(projectPath), [scopeKey]);
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
