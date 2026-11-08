@@ -201,7 +201,25 @@
           "system": "Sistema"
         }
       },
-      "title": "Aspetto"
+      "title": "Aspetto",
+      "customThemes": {
+        "label": "Temi personalizzati",
+        "description": "Palette JSON con nome basate sul tema scuro o chiaro.",
+        "none": "Tema integrato",
+        "edit": "Modifica JSON",
+        "localOnly": "Temi e scala vengono salvati solo in questo browser o dispositivo.",
+        "editor": {
+          "title": "Modifica temi (JSON)",
+          "description": "Fino a 8 temi. I colori devono essere #RRGGBB. Si applica solo JSON valido; un array themes vuoto elimina tutti i temi.",
+          "cancel": "Annulla",
+          "save": "Salva temi"
+        }
+      },
+      "uiScale": {
+        "label": "Scala dell’interfaccia",
+        "description": "Ridimensiona tutta l’app senza modificare lo zoom del sistema o del browser.",
+        "reset": "Ripristina"
+      }
     },
     "browserAccess": {
       "serverMode": {

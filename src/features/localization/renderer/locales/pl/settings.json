@@ -201,7 +201,25 @@
           "system": "Systemowy"
         }
       },
-      "title": "Wygląd"
+      "title": "Wygląd",
+      "customThemes": {
+        "label": "Motywy niestandardowe",
+        "description": "Nazwane palety JSON oparte na jasnym lub ciemnym motywie.",
+        "none": "Motyw wbudowany",
+        "edit": "Edytuj JSON",
+        "localOnly": "Motywy i skala są zapisywane tylko w tej przeglądarce lub na urządzeniu.",
+        "editor": {
+          "title": "Edytuj motywy (JSON)",
+          "description": "Do 8 motywów. Kolory w formacie #RRGGBB. Zapisywany jest tylko poprawny JSON; pusta tablica themes usuwa motywy.",
+          "cancel": "Anuluj",
+          "save": "Zapisz motywy"
+        }
+      },
+      "uiScale": {
+        "label": "Skala interfejsu",
+        "description": "Skaluj całą aplikację niezależnie od powiększenia systemu lub przeglądarki.",
+        "reset": "Resetuj"
+      }
     },
     "browserAccess": {
       "serverMode": {

@@ -201,7 +201,25 @@
           "system": "System"
         }
       },
-      "title": "Erscheinung"
+      "title": "Erscheinung",
+      "customThemes": {
+        "label": "Eigene Designs",
+        "description": "Benannte JSON-Farbpaletten auf Basis des dunklen oder hellen Designs.",
+        "none": "Integriertes Design",
+        "edit": "JSON bearbeiten",
+        "localOnly": "Designs und Skalierung werden nur in diesem Browser bzw. auf diesem Gerät gespeichert.",
+        "editor": {
+          "title": "Designs bearbeiten (JSON)",
+          "description": "Bis zu 8 Designs bearbeiten. Farben müssen #RRGGBB sein. Nur gültiges JSON wird gespeichert; ein leeres themes-Array entfernt alle Designs.",
+          "cancel": "Abbrechen",
+          "save": "Designs speichern"
+        }
+      },
+      "uiScale": {
+        "label": "Oberflächenskalierung",
+        "description": "Die gesamte App unabhängig vom Browser- oder Systemzoom skalieren.",
+        "reset": "Zurücksetzen"
+      }
     },
     "browserAccess": {
       "serverMode": {
