@@ -9,6 +9,7 @@ import type {
   CreateTaskRequest,
   MemberSpawnStatusesSnapshot,
   Schedule,
+  ScheduleRun,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
@@ -19,8 +20,8 @@ import type {
 
 export type SmartScheduleOutcome =
   | { kind: 'one_shot'; result: ScheduledTaskResult }
-  | { kind: 'dispatched'; summary: string }
-  | { kind: 'skipped'; summary: string };
+  | { kind: 'dispatched'; summary: string; taskId?: string }
+  | { kind: 'skipped'; summary: string; taskId?: string };
 
 export interface SmartScheduleRuntimePort {
   isTeamAlive(teamName: string): boolean;
@@ -30,6 +31,11 @@ export interface SmartScheduleRuntimePort {
   getMemberStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   getLeadName(teamName: string): Promise<string | null>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  /** Required only for opt-in task-first schedules; old adapters remain compatible. */
+  hasRunnableConfig?(teamName: string): Promise<boolean>;
+  getPreviousRun?(scheduleId: string, runId: string): Promise<ScheduleRun | null>;
+  getTask?(teamName: string, taskId: string): Promise<TeamTask | null>;
+  startTaskByUser?(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }>;
   attachMember(teamName: string, memberName: string): Promise<void>;
   createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask>;
   launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse>;
@@ -52,8 +58,8 @@ function readyMember(entry: TeamAgentRuntimeEntry | undefined): boolean {
   return Boolean(entry.livenessKind && READY_KINDS.has(entry.livenessKind));
 }
 
-function skipped(reason: string): SmartScheduleOutcome {
-  return { kind: 'skipped', summary: reason };
+function skipped(reason: string, taskId?: string): SmartScheduleOutcome {
+  return { kind: 'skipped', summary: reason, ...(taskId ? { taskId } : {}) };
 }
 
 function teamLaunchRequest(saved: TeamCreateRequest, prompt: string): TeamLaunchRequest {
@@ -108,6 +114,9 @@ export class SmartScheduleDispatcher {
       if (this.runtime.isTeamBusy(team)) {
         return skipped('Team lifecycle operation in progress; no work was submitted');
       }
+      if (schedule.taskFirst) {
+        return await this.dispatchTaskFirst(schedule, runId, isCancelled);
+      }
       if (!this.runtime.isTeamAlive(team)) {
         if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamBusy(team) || this.runtime.isTeamAlive(team)) {
           return skipped('Team state changed while scheduling; no action was submitted');
@@ -148,6 +157,103 @@ export class SmartScheduleDispatcher {
     } finally {
       this.dispatchingTeams.delete(team);
     }
+  }
+
+  private async dispatchTaskFirst(
+    schedule: Schedule,
+    runId: string,
+    isCancelled: () => boolean
+  ): Promise<SmartScheduleOutcome> {
+    const { getPreviousRun, getTask, hasRunnableConfig, startTaskByUser } = this.runtime;
+    if (!getPreviousRun || !getTask || !hasRunnableConfig || !startTaskByUser) {
+      return skipped('Task-first scheduling is unavailable in this runtime');
+    }
+
+    // The task ID equals the stable run command UUID. A skipped run carries
+    // its predecessor's linked ID so repeated ticks cannot hide active work.
+    const previous = await getPreviousRun(schedule.id, runId);
+    if (previous) {
+      const prior = await getTask(schedule.teamName, previous.linkedTaskId ?? previous.id);
+      if (prior && prior.status !== 'completed' && prior.status !== 'deleted') {
+        return skipped(`Previous task #${prior.displayId || prior.id} is still active`, prior.id);
+      }
+    }
+    if (isCancelled() || this.runtime.isTeamBusy(schedule.teamName)) {
+      return skipped('Team lifecycle changed before task assignment');
+    }
+
+    // The live case keeps the already-proven readiness/attach gates and task
+    // command identity; only the stopped case needs task-first bootstrap.
+    if (this.runtime.isTeamAlive(schedule.teamName)) {
+      return this.dispatchToLiveTeam(schedule, runId, isCancelled);
+    }
+    const saved = await this.runtime.getSavedRequest(schedule.teamName);
+    if (!saved?.cwd || !saved.providerId || !(await hasRunnableConfig(schedule.teamName))) {
+      return skipped('Finish team setup before assigning scheduled work');
+    }
+    if (saved.prompt?.trim()) {
+      return skipped('Review historical team instructions before enabling task-first launch');
+    }
+    const leadName = await this.runtime.getLeadName(schedule.teamName);
+    if (!leadName) return skipped('Team lead cannot be resolved');
+    const selected = schedule.executionMode === 'team' ? leadName : schedule.targetMember?.trim();
+    const owner = selected?.toLowerCase() === leadName.toLowerCase() ? leadName : selected || leadName;
+    if (owner !== leadName && !saved.members.some((member) => member.name === owner)) {
+      return skipped(`Member "${owner}" is not configured in this team`);
+    }
+
+    // A pending board task is the durable source of truth. No bootstrap prompt
+    // contains this work and no task is automatically retried after a lost ACK.
+    const prompt = schedule.launchConfig.prompt.trim();
+    const task = await this.runtime.createTask(schedule.teamName, {
+      command: { commandId: runId, idempotencyKey: `schedule:${runId}` },
+      subject: (schedule.label?.trim() || prompt.replace(/\s+/g, ' ').slice(0, 100)).slice(0, 120),
+      prompt,
+      owner,
+      startImmediately: false,
+    });
+    if (
+      isCancelled() ||
+      this.runtime.isTeamLaunching(schedule.teamName) ||
+      this.runtime.isTeamBusy(schedule.teamName) ||
+      this.runtime.isTeamAlive(schedule.teamName)
+    ) {
+      return skipped('Task saved; team state changed before launch', task.id);
+    }
+
+    let launched: TeamLaunchResponse;
+    try {
+      launched = await this.runtime.launchTeam({
+        ...teamLaunchRequest(saved, ''),
+        prompt: undefined,
+        bootstrapOnly: true,
+      });
+    } catch {
+      return skipped('Task saved; team launch failed. Inspect the team before retrying', task.id);
+    }
+    if (launched.launchStatus === 'already_launching' || launched.alreadyLaunching) {
+      return skipped('Task saved; another launch is already underway', task.id);
+    }
+    const ready = await this.waitForMember(
+      schedule.teamName,
+      owner,
+      launched.runId,
+      isCancelled,
+      true
+    );
+    if (!ready || isCancelled() || this.runtime.isTeamBusy(schedule.teamName)) {
+      return skipped('Task saved; selected agent did not become ready', task.id);
+    }
+    try {
+      await startTaskByUser(schedule.teamName, task.id);
+    } catch {
+      return skipped('Task saved; start acknowledgement is uncertain. Inspect the task', task.id);
+    }
+    return {
+      kind: 'dispatched',
+      taskId: task.id,
+      summary: `Task #${task.displayId || task.id} start requested for ${owner}; agent work not yet verified`,
+    };
   }
 
   private async dispatchToLiveTeam(
@@ -236,6 +342,7 @@ export class SmartScheduleDispatcher {
     });
     return {
       kind: 'dispatched',
+      taskId: task.id,
       summary: `Task #${task.displayId || task.id} assigned to ${memberName}; work completion not yet verified`,
     };
   }
@@ -244,13 +351,18 @@ export class SmartScheduleDispatcher {
     teamName: string,
     memberName: string,
     expectedRunId: string,
-    isCancelled: () => boolean
+    isCancelled: () => boolean,
+    allowStarting = false
   ): Promise<boolean> {
     for (let i = 0; i < READY_CHECK_ATTEMPTS; i++) {
-      if (isCancelled() || !this.runtime.isTeamAlive(teamName)) return false;
+      if (isCancelled()) return false;
+      const alive = this.runtime.isTeamAlive(teamName);
+      if (!alive && !(allowStarting && this.runtime.isTeamLaunching(teamName))) return false;
       const current = await this.runtime.getRuntime(teamName);
-      if (current.runId !== expectedRunId) return false;
-      if (readyMember(current.members[memberName])) return true;
+      if (current.runId !== expectedRunId && (!allowStarting || current.runId)) return false;
+      if (alive && current.runId === expectedRunId && readyMember(current.members[memberName])) {
+        return true;
+      }
       if (i + 1 < READY_CHECK_ATTEMPTS) {
         await new Promise<void>((resolve) => setTimeout(resolve, READY_CHECK_DELAY_MS));
       }

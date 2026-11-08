@@ -133,6 +133,121 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.launchTeam).not.toHaveBeenCalled();
   });
 
+  function enableTaskFirstPorts(): void {
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.getPreviousRun = vi.fn(async () => null);
+    port.getTask = vi.fn(async () => null);
+    port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
+  }
+
+  it('creates one pending task before bootstrap-only launch and starts the exact teammate after readiness', async () => {
+    enableTaskFirstPorts();
+    let running = false;
+    port.isTeamAlive = vi.fn(() => running);
+    port.getRuntime = vi.fn(async () => ({
+      ...runtimeMembers(true),
+      runId: 'launched-1',
+    }));
+    port.launchTeam = vi.fn(async () => {
+      expect(port.createTask).toHaveBeenCalledOnce();
+      expect(port.createTask).toHaveBeenCalledWith(
+        'test-team',
+        expect.objectContaining({ owner: 'alice', startImmediately: false })
+      );
+      running = true;
+      return { runId: 'launched-1', launchStatus: 'started' as const };
+    });
+
+    const schedule = { ...makeSchedule('agent'), taskFirst: true as const, targetMember: 'alice' };
+    const result = await dispatch.dispatch(schedule, 'task-first-1', active);
+
+    expect(result).toMatchObject({ kind: 'dispatched', taskId: 'task-1' });
+    expect(port.launchTeam).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/tmp/saved-team',
+        bootstrapOnly: true,
+        prompt: undefined,
+      })
+    );
+    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith('test-team', 'task-1');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('routes task-first team work to the live lead without a redundant launch', async () => {
+    enableTaskFirstPorts();
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('team'), taskFirst: true },
+      'task-first-live',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'dispatched', taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledExactlyOnceWith(
+      'test-team',
+      expect.objectContaining({ owner: 'lead', startImmediately: true })
+    );
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('never creates more work while the previous scheduled board task is unfinished', async () => {
+    enableTaskFirstPorts();
+    port.getPreviousRun = vi.fn(async () => ({
+      id: 'prior-run', scheduleId: 'schedule-1', teamName: 'test-team', status: 'dispatched',
+      scheduledFor: new Date().toISOString(), startedAt: new Date().toISOString(),
+      retryCount: 0, linkedTaskId: 'prior-task',
+    }));
+    port.getTask = vi.fn(async () => ({
+      id: 'prior-task', displayId: '17', subject: 'Still working', status: 'in_progress',
+    } as TeamTask));
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'next-occurrence',
+      active
+    );
+    expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'prior-task' });
+    expect(outcome.summary).toMatch(/still active/);
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('keeps a saved board task pending when bootstrap fails and never retries the prompt', async () => {
+    enableTaskFirstPorts();
+    port.isTeamAlive = vi.fn(() => false);
+    port.launchTeam = vi.fn(async () => {
+      throw new Error('Provider offline');
+    });
+    const outcome = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
+      'task-first-failed-launch',
+      active
+    );
+    expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
+    expect(port.createTask).toHaveBeenCalledExactlyOnceWith(
+      'test-team',
+      expect.objectContaining({ owner: 'alice', startImmediately: false })
+    );
+    expect(port.startTaskByUser).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('skips non-runnable drafts or unmigrated historical work before creating a task', async () => {
+    enableTaskFirstPorts();
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasRunnableConfig = vi.fn(async () => false);
+    const schedule = { ...makeSchedule('team'), taskFirst: true };
+    expect((await dispatch.dispatch(schedule, 'draft', active)).kind).toBe('skipped');
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.getSavedRequest = vi.fn(async () => ({
+      teamName: 'test-team', cwd: '/tmp/saved-team', providerId: 'anthropic' as const,
+      prompt: 'Legacy work that may contain instructions', members: [{ name: 'alice' }],
+    }));
+    expect((await dispatch.dispatch(schedule, 'legacy-prompt', active)).kind).toBe('skipped');
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+  });
+
   it('runs the old one-shot executor for a new agent schedule if the team is off', async () => {
     port.isTeamAlive = vi.fn(() => false);
     const result = await dispatch.dispatch(makeSchedule('agent'), 'run-1', active);

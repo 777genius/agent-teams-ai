@@ -180,6 +180,7 @@ export class SchedulerService {
       id: randomUUID(),
       teamName: input.teamName,
       ...(input.executionMode && { executionMode: input.executionMode }),
+      ...(input.taskFirst && { taskFirst: true as const }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
       cronExpression: input.cronExpression,
@@ -596,7 +597,7 @@ export class SchedulerService {
           };
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
-        await this.completeRun(run, outcome.kind, null, outcome.summary);
+        await this.completeRun(run, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
         if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
         const result = outcome.result;
@@ -646,7 +647,6 @@ export class SchedulerService {
       }
     }
   }
-
 
   /**
    * Handle a failed run. Returns `true` if a retry was dispatched
@@ -719,7 +719,8 @@ export class SchedulerService {
     status: ScheduleRunStatus,
     exitCode: number | null,
     summary?: string,
-    error?: string
+    error?: string,
+    linkedTaskId?: string
   ): Promise<void> {
     const completedAt = new Date().toISOString();
     const startedAt = new Date(run.startedAt).getTime();
@@ -733,6 +734,7 @@ export class SchedulerService {
       exitCode,
       summary: summary ?? run.summary,
       error: error ?? run.error,
+      ...(linkedTaskId ? { linkedTaskId } : {}),
     };
 
     await this.repository.saveRun(updatedRun);
@@ -825,11 +827,9 @@ export class SchedulerService {
   // Recovery
   // ===========================================================================
 
-
   // ===========================================================================
   // Helpers
   // ===========================================================================
-
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);

@@ -172,6 +172,87 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect((await repository.listRuns(schedule.id))[0].status).toBe('dispatched');
   });
 
+  it('persists task-first run linked to real task and skips the next overlapping occurrence', async () => {
+    const boardTask: TeamTask = {
+      id: 'e2e-task', displayId: '7', subject: 'In progress', status: 'in_progress',
+    } as TeamTask;
+    port.getPreviousRun = async (id, runId) =>
+      (await repository.listRuns(id, { limit: 2 })).find((run) => run.id !== runId) ?? null;
+    port.getTask = vi.fn(async (_team, id) => id === boardTask.id ? boardTask : null);
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
+
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', taskFirst: true, targetMember: '',
+    });
+    await scheduler.triggerNow(schedule.id);
+    const first = await waitForRun(schedule.id, 'dispatched');
+    expect(first.linkedTaskId).toBe(boardTask.id);
+    expect(port.createTask).toHaveBeenCalledOnce();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+
+    await scheduler.triggerNow(schedule.id);
+    const skipped = await waitForRun(schedule.id, 'skipped');
+    expect(skipped.id).not.toBe(first.id);
+    expect(skipped.linkedTaskId).toBe(boardTask.id);
+    expect(skipped.summary).toMatch(/previous task/i);
+    expect(port.createTask).toHaveBeenCalledOnce();
+
+    await scheduler.stop();
+    await scheduler.start();
+    const runs = await repository.listRuns(schedule.id);
+    expect(runs[0]).toMatchObject({ status: 'skipped', linkedTaskId: boardTask.id });
+    const savedSchedule = await repository.getSchedule(schedule.id);
+    expect(savedSchedule?.taskFirst).toBe(true);
+  });
+
+  it('creates a pending task before starting an inactive saved team without its old prompt', async () => {
+    let live = false;
+    port.isTeamAlive = vi.fn(() => live);
+    port.getPreviousRun = async (id, runId) =>
+      (await repository.listRuns(id, { limit: 2 })).find((run) => run.id !== runId) ?? null;
+    port.getTask = vi.fn(async () => null);
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
+    port.getRuntime = vi.fn(async () => ({
+      teamName: 'e2e-team',
+      runId: live ? 'new-team-run' : null,
+      updatedAt: new Date().toISOString(),
+      members: {
+        alice: {
+          memberName: 'alice', alive: live, restartable: false,
+          livenessKind: live ? 'confirmed_bootstrap' as const : 'not_found' as const,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    port.launchTeam = vi.fn(async (request) => {
+      expect(port.createTask).toHaveBeenCalledOnce();
+      expect(request).toMatchObject({
+        teamName: 'e2e-team', providerId: 'anthropic',
+        bootstrapOnly: true, prompt: undefined,
+      });
+      live = true;
+      return { runId: 'new-team-run', launchStatus: 'started' as const };
+    });
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', taskFirst: true, targetMember: 'alice',
+    });
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'dispatched');
+    expect(run.linkedTaskId).toBe('e2e-task');
+    expect(port.createTask).toHaveBeenCalledWith(
+      'e2e-team',
+      expect.objectContaining({
+        owner: 'alice', startImmediately: false,
+        command: { commandId: run.id, idempotencyKey: `schedule:${run.id}` },
+      })
+    );
+    expect(port.startTaskByUser).toHaveBeenCalledExactlyOnceWith('e2e-team', 'e2e-task');
+    expect(port.launchTeam).toHaveBeenCalledOnce();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
   it('starts a stopped team once from its saved provider profile without a second task', async () => {
     port.isTeamAlive = vi.fn(() => false);
     const schedule = await scheduler.createSchedule({
