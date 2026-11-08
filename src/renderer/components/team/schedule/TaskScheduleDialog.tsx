@@ -28,11 +28,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { SmartScheduleFields } from './SmartScheduleFields';
 
-import type { TeamCreateRequest, TeamSummary } from '@shared/types';
+import type { Schedule, TeamCreateRequest, TeamSummary } from '@shared/types';
 
 interface TaskScheduleDialogProps {
   readonly open: boolean;
   readonly fixedTeamName?: string;
+  readonly schedule?: Schedule | null;
   readonly onClose: () => void;
 }
 
@@ -43,33 +44,38 @@ interface TaskScheduleDialogProps {
 export const TaskScheduleDialog = ({
   open,
   fixedTeamName,
+  schedule,
   onClose,
 }: TaskScheduleDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { isLight } = useTheme();
-  const { teams, teamByName, fetchTeams, createSchedule, openTeamTab } = useStore(
+  const { teams, teamByName, fetchTeams, createSchedule, updateSchedule, openTeamTab } = useStore(
     useShallow((state) => ({
       teams: state.teams,
       teamByName: state.teamByName,
       fetchTeams: state.fetchTeams,
       createSchedule: state.createSchedule,
+      updateSchedule: state.updateSchedule,
       openTeamTab: state.openTeamTab,
     }))
   );
-  const [selectedTeamName, setSelectedTeamName] = useState(fixedTeamName ?? '');
+  const [selectedTeamName, setSelectedTeamName] = useState(schedule?.teamName ?? fixedTeamName ?? '');
   const [saved, setSaved] = useState<TeamCreateRequest | null>(null);
   const [savedLoading, setSavedLoading] = useState(false);
-  const [mode, setMode] = useState<'agent' | 'team'>('team');
-  const [targetMember, setTargetMember] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [cronExpression, setCronExpression] = useState('0 9 * * 1-5');
-  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  const [mode, setMode] = useState<'agent' | 'team'>(schedule?.executionMode ?? 'team');
+  const [targetMember, setTargetMember] = useState(schedule?.targetMember ?? '');
+  const [prompt, setPrompt] = useState(schedule?.launchConfig.prompt ?? '');
+  const [cronExpression, setCronExpression] = useState(schedule?.cronExpression ?? '0 9 * * 1-5');
+  const [timezone, setTimezone] = useState(
+    () => schedule?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC'
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submitInFlight = useRef(false);
 
-  const teamName = fixedTeamName ?? selectedTeamName;
+  const teamName = schedule?.teamName ?? fixedTeamName ?? selectedTeamName;
+  const editing = Boolean(schedule?.taskFirst);
   const teamChoices = useMemo(() => {
     const byName = new Map<string, TeamSummary>();
     for (const team of [...teams, ...Object.values(teamByName)]) {
@@ -98,16 +104,16 @@ export const TaskScheduleDialog = ({
   );
 
   useEffect(() => {
-    if (open && !fixedTeamName) void fetchTeams();
-  }, [open, fixedTeamName, fetchTeams]);
+    if (open && !fixedTeamName && !schedule) void fetchTeams();
+  }, [open, fixedTeamName, schedule, fetchTeams]);
 
   useEffect(() => {
-    setSelectedTeamName(fixedTeamName ?? '');
-  }, [fixedTeamName]);
+    setSelectedTeamName(schedule?.teamName ?? fixedTeamName ?? '');
+  }, [fixedTeamName, schedule?.teamName]);
 
   useEffect(() => {
     setSaved(null);
-    setTargetMember('');
+    setTargetMember(schedule?.targetMember ?? '');
     setError(null);
     if (!open || !teamName) return;
     let cancelled = false;
@@ -125,7 +131,7 @@ export const TaskScheduleDialog = ({
     return () => {
       cancelled = true;
     };
-  }, [open, teamName, t]);
+  }, [open, teamName, schedule?.targetMember, t]);
 
   const handleSave = (): void => {
     if (submitInFlight.current || !canSubmit || !saved) return;
@@ -155,17 +161,20 @@ export const TaskScheduleDialog = ({
         !latest.members.some((member) => member.name === targetMember)) {
         throw new Error(t('messages.manualQueue.recipientUnavailable'));
       }
-      await createSchedule({
-        teamName,
+      const details = {
         executionMode: mode,
-        taskFirst: true,
         targetMember: mode === 'agent' ? targetMember : '',
         label: prompt.trim().replace(/\s+/g, ' ').slice(0, 100),
         cronExpression: cronExpression.trim(),
         timezone,
         warmUpMinutes: 0,
         launchConfig: { cwd: latest.cwd, prompt: prompt.trim() },
-      });
+      };
+      if (editing && schedule) {
+        await updateSchedule(schedule.id, details);
+      } else {
+        await createSchedule({ ...details, teamName, taskFirst: true });
+      }
       onClose();
     })().catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : t('launch.errors.saveScheduleFailed'));
@@ -179,18 +188,18 @@ export const TaskScheduleDialog = ({
     <Dialog open={open} onOpenChange={(next) => { if (!next && !submitting) onClose(); }}>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('launch.title.createSchedule')}</DialogTitle>
+          <DialogTitle>{t(editing ? 'launch.title.editSchedule' : 'launch.title.createSchedule')}</DialogTitle>
           <DialogDescription>{t('schedule.taskFirstDesktopRequired')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>{t('launch.schedule.team')}</Label>
-            {fixedTeamName ? (
+            {fixedTeamName || editing ? (
               <div className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm">
                 {team?.displayName || teamName}
               </div>
             ) : (
-              <Select value={selectedTeamName} onValueChange={setSelectedTeamName}>
+              <Select value={selectedTeamName} onValueChange={setSelectedTeamName} disabled={submitting}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t('launch.schedule.selectTeam')} />
                 </SelectTrigger>
@@ -259,7 +268,7 @@ export const TaskScheduleDialog = ({
             </Button>
           ) : null}
           <Button onClick={handleSave} disabled={!canSubmit || Boolean(saved?.prompt?.trim())}>
-            {submitting ? t('tasks.createTask.creating') : t('launch.title.createSchedule')}
+            {submitting ? t('tasks.createTask.creating') : t(editing ? 'launch.title.editSchedule' : 'launch.title.createSchedule')}
           </Button>
         </DialogFooter>
       </DialogContent>
