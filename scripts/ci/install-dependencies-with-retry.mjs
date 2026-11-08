@@ -29,6 +29,31 @@ export function isRetryableInstallFailure(output) {
   return RETRYABLE_NETWORK_ERROR.test(normalized) && !hasTerminalInstallFailure(normalized);
 }
 
+// Keep stream boundaries distinct: stdout and stderr may interleave between
+// arbitrary chunks, including the two halves of a fatal pnpm error code.
+// A shared tail would lose that code and could wrongly retry an HTTP 404.
+export function createInstallFailureTracker() {
+  const tails = { stdout: '', stderr: '' };
+  let retryableFailureSeen = false;
+  let terminalFailureSeen = false;
+
+  return {
+    observe(source, chunk) {
+      if (source !== 'stdout' && source !== 'stderr') {
+        throw new TypeError('Unknown pnpm output stream');
+      }
+      const combined = tails[source] + chunk.toString('utf8');
+      const normalized = stripColorCodes(combined);
+      retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(normalized);
+      terminalFailureSeen ||= hasTerminalInstallFailure(normalized);
+      tails[source] = combined.slice(-256);
+    },
+    snapshot() {
+      return { retryableFailureSeen, terminalFailureSeen };
+    },
+  };
+}
+
 function runInstall() {
   return new Promise((resolve, reject) => {
     const child = spawn(
@@ -40,19 +65,11 @@ function runInstall() {
         stdio: ['inherit', 'pipe', 'pipe'],
       }
     );
-    let retryableFailureSeen = false;
-    let terminalFailureSeen = false;
-    let outputTail = '';
-
-    for (const stream of [child.stdout, child.stderr]) {
+    const tracker = createInstallFailureTracker();
+    for (const [source, stream] of [['stdout', child.stdout], ['stderr', child.stderr]]) {
       stream.on('data', (chunk) => {
-        const text = chunk.toString('utf8');
-        const combinedOutput = outputTail + text;
-        const normalized = stripColorCodes(combinedOutput);
-        retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(normalized);
-        terminalFailureSeen ||= hasTerminalInstallFailure(normalized);
-        outputTail = (outputTail + text).slice(-256);
-        const destination = stream === child.stdout ? process.stdout : process.stderr;
+        tracker.observe(source, chunk);
+        const destination = source === 'stdout' ? process.stdout : process.stderr;
         destination.write(chunk);
       });
     }
@@ -61,8 +78,7 @@ function runInstall() {
     child.once('close', (code, signal) => {
       resolve({
         code: code ?? 1,
-        retryableFailureSeen,
-        terminalFailureSeen,
+        ...tracker.snapshot(),
         signal,
       });
     });
