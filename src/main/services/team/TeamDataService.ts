@@ -2383,20 +2383,21 @@ export class TeamDataService {
     }
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
-    if (task.owner) {
-      await this.sendUserTaskStartNotification(teamName, task);
-    }
-
-    return { notifiedOwner: !!task.owner };
+    const notifiedOwner = task.owner
+      ? await this.sendUserTaskStartNotification(teamName, task)
+      : false;
+    return { notifiedOwner };
   }
 
-  /** Notify a user-started task owner with its prompt and board instructions. */
-  private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<void> {
-    if (!task.owner) return;
+  /** Returns only confirmed inbox/runtime handoff; never claims successful delivery on failure. */
+  private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<boolean> {
+    if (!task.owner) return false;
     try {
-      await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
+      const result = await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
+      return result.deliveredToInbox || result.deliveredViaStdin === true;
     } catch {
-      // Best-effort notification
+      // Preserve the started task for inspection; scheduled work must not retry blindly.
+      return false;
     }
   }
 
