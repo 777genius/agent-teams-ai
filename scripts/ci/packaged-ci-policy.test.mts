@@ -107,7 +107,10 @@ test('Git collection sees a packaging-sensitive change after more than 3000 ordi
     assert.equal(sensitive.scope, 'full');
     assert.equal(sensitive.reason, 'change outside app-only allowlist');
   } finally {
-    rmSync(cwd, { recursive: true, force: true });
+    // The >3,000-file Git fixture runs on remote CI filesystems where recursive
+    // unlink can briefly report ENOTEMPTY. Bounded retries only affect TEST
+    // teardown; the classifier and its strict gate remain unchanged.
+    rmSync(cwd, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
