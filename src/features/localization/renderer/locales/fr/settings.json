@@ -213,7 +213,10 @@
           "description": "Jusqu’à 8 thèmes. Couleurs au format #RRGGBB. Seul un JSON valide est appliqué ; un tableau themes vide supprime les thèmes.",
           "cancel": "Annuler",
           "save": "Enregistrer les thèmes",
-          "conflict": "Les thèmes ont changé dans un autre onglet. Fermez puis rouvrez l’éditeur pour éviter d’écraser ces changements."
+          "conflict": "Les thèmes ont changé dans un autre onglet. Votre brouillon JSON est conservé : vérifiez-le ou écrasez explicitement les thèmes récents.",
+          "overwrite": "Écraser les thèmes récents",
+          "invalidJson": "Syntaxe JSON incorrecte",
+          "invalidTheme": "Palette du thème invalide. Vérifiez les champs, les couleurs et le contraste."
         }
       },
       "uiScale": {

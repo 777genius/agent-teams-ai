@@ -213,7 +213,10 @@
           "description": "Até 8 temas. Cores no formato #RRGGBB. Só o JSON válido é aplicado; uma lista themes vazia remove os temas.",
           "cancel": "Cancelar",
           "save": "Guardar temas",
-          "conflict": "Os temas foram alterados noutro separador. Feche e reabra o editor para não substituir as alterações."
+          "conflict": "Os temas foram alterados noutra aba. O rascunho JSON foi preservado; reveja-o ou substitua explicitamente os temas mais recentes.",
+          "overwrite": "Substituir temas recentes",
+          "invalidJson": "Sintaxe JSON inválida",
+          "invalidTheme": "Paleta de tema inválida. Verifique os campos, cores e contraste."
         }
       },
       "uiScale": {

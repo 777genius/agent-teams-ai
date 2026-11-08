@@ -213,7 +213,10 @@
           "description": "Fino a 8 temi. I colori devono essere #RRGGBB. Si applica solo JSON valido; un array themes vuoto elimina tutti i temi.",
           "cancel": "Annulla",
           "save": "Salva temi",
-          "conflict": "I temi sono cambiati in un'altra scheda. Chiudi e riapri l'editor per non sovrascrivere le modifiche."
+          "conflict": "I temi sono stati modificati in un'altra scheda. La bozza JSON è conservata: controllala o sovrascrivi esplicitamente i temi più recenti.",
+          "overwrite": "Sovrascrivi i temi recenti",
+          "invalidJson": "Sintassi JSON non valida",
+          "invalidTheme": "Palette del tema non valida. Controlla campi, colori e contrasto."
         }
       },
       "uiScale": {

@@ -213,7 +213,10 @@
           "description": "Do 8 motywów. Kolory w formacie #RRGGBB. Zapisywany jest tylko poprawny JSON; pusta tablica themes usuwa motywy.",
           "cancel": "Anuluj",
           "save": "Zapisz motywy",
-          "conflict": "Motywy zmieniono w innej karcie. Zamknij i otwórz edytor ponownie, aby nie nadpisać zmian."
+          "conflict": "Motywy zmieniono w innej karcie. Szkic JSON został zachowany; sprawdź go lub świadomie nadpisz nowsze motywy.",
+          "overwrite": "Nadpisz nowsze motywy",
+          "invalidJson": "Nieprawidłowa składnia JSON",
+          "invalidTheme": "Nieprawidłowa paleta motywu. Sprawdź pola, kolory i kontrast."
         }
       },
       "uiScale": {

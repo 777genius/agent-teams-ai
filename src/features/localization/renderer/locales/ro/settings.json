@@ -228,7 +228,10 @@
           "description": "Poți edita până la 8 teme. Culorile folosesc formatul #RRGGBB. Se aplică doar JSON valid; lista themes goală elimină toate temele.",
           "cancel": "Anulează",
           "save": "Salvează temele",
-          "conflict": "Temele s-au schimbat în altă filă. Închide și redeschide editorul pentru a evita suprascrierea modificărilor."
+          "conflict": "Temele s-au schimbat într-o altă filă. Ciorna JSON a fost păstrată; verific-o sau suprascrie explicit temele mai noi.",
+          "overwrite": "Suprascrie temele noi",
+          "invalidJson": "Sintaxă JSON incorectă",
+          "invalidTheme": "Paletă de temă nevalidă. Verifică câmpurile, culorile și contrastul."
         }
       },
       "uiScale": {
