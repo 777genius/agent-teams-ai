@@ -18,7 +18,6 @@ import { cn } from '@renderer/lib/utils';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
 
-
 import type { SafeConfig } from '../hooks/useSettingsConfig';
 import type { AppConfig } from '@shared/types/notifications';
 

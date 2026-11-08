@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
+
 import {
   getAppearanceSnapshot,
   reflectNativeAppearanceZoom,

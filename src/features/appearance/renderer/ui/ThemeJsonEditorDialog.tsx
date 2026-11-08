@@ -9,8 +9,9 @@ import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog';
-import { formatCustomThemesJson, parseCustomThemesJson } from '../../core/domain/appearancePreferences';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
+
+import { formatCustomThemesJson, parseCustomThemesJson } from '../../core/domain/appearancePreferences';
 
 import type { CustomTheme } from '../../core/domain/appearancePreferences';
 import type { RefObject } from 'react';
@@ -107,7 +108,13 @@ export const ThemeJsonEditorDialog = ({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent
         data-testid="appearance-theme-editor-dialog"
-        className="flex h-[70vh] max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0"
+        className="flex max-w-3xl flex-col gap-0 overflow-hidden p-0"
+        style={{
+          // Browser CSS zoom does not rebase viewport units for portaled dialogs.
+          width: 'calc((100vw - 2rem) * var(--appearance-inverse-zoom, 1))',
+          height: 'calc(70vh * var(--appearance-inverse-zoom, 1))',
+          maxHeight: 'calc(85vh * var(--appearance-inverse-zoom, 1))',
+        }}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           focusReturnRef.current?.focus();

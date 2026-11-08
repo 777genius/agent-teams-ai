@@ -34,8 +34,8 @@ export interface AppearancePreferences {
 export const ZOOM_PRESETS = [80, 90, 100, 110, 125, 150, 175, 200] as const;
 const MAX_THEME_COUNT = 8;
 export const MAX_JSON_LENGTH = 16_384;
-const MIN_ZOOM = 70;
-const MAX_ZOOM = 200;
+export const MIN_ZOOM = 70;
+export const MAX_ZOOM = 200;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 const THEME_ID = /^[a-z0-9][a-z0-9-]{0,30}$/;
 

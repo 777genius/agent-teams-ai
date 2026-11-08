@@ -3,6 +3,8 @@ import {
   CUSTOM_THEME_COLOR_KEYS,
   DEFAULT_APPEARANCE,
   MAX_JSON_LENGTH,
+  MAX_ZOOM,
+  MIN_ZOOM,
   parseAppearance,
   validateCustomThemes,
 } from '../../core/domain/appearancePreferences';
