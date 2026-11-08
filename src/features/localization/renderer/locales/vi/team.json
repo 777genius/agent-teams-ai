@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "Thành viên được chọn nhận nhiệm vụ trên bảng sau khi nhóm được khởi động an toàn nếu cần. Không làm gián đoạn tác nhân đang bận.",
       "taskFirstTeamDescription": "Trưởng nhóm nhận nhiệm vụ điều phối sau khi nhóm được khởi động an toàn nếu cần. Không làm gián đoạn công việc đang thực hiện.",
       "taskFirstTarget": "Giao cho",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Tôi đã xem lại lời nhắc cũ và tách các chỉ dẫn lâu dài. Giữ văn bản cũ nhưng không chạy lại theo lịch."
     },
     "title": {
       "createSchedule": "Tạo lịch",

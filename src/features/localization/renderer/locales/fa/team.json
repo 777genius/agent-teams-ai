@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "هم‌تیمی انتخاب‌شده پس از راه‌اندازی ایمن تیم در صورت نیاز، یک وظیفه در تابلو دریافت می‌کند. کار عامل‌های مشغول قطع نمی‌شود.",
       "taskFirstTeamDescription": "رهبر تیم پس از راه‌اندازی ایمن تیم در صورت نیاز، یک وظیفه هماهنگی دریافت می‌کند. کارهای جاری قطع نمی‌شوند.",
       "taskFirstTarget": "واگذاری به",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "پرامپت قدیمی را بررسی کرده و دستورهای دائمی را جدا کرده‌ام. متن قبلی حفظ شود اما در زمان‌بندی اجرا نشود."
     },
     "title": {
       "createSchedule": "ایجاد زمان‌بندی",

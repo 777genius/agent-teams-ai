@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "అవసరమైతే బృందాన్ని సురక్షితంగా ప్రారంభించిన తర్వాత ఎంచుకున్న సభ్యునికి బోర్డులో పని అప్పగించబడుతుంది. పనిలో ఉన్న ఏజెంట్లకు అంతరాయం కలగదు.",
       "taskFirstTeamDescription": "అవసరమైతే బృందాన్ని సురక్షితంగా ప్రారంభించిన తర్వాత బృంద నాయకుడికి సమన్వయ పని అప్పగించబడుతుంది. కొనసాగుతున్న పనికి అంతరాయం కలగదు.",
       "taskFirstTarget": "వీరికి అప్పగించు",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "షెడ్యూల్‌ను సృష్టించే ముందు సేవ్ చేసిన పాత ఒక్కసారి సూచనలను సమీక్షించి, శాశ్వత సూచనలను వేరుగా ఉంచండి.",
+      "historicalPromptAcknowledged": "పాత సేవ్ చేసిన ప్రాంప్ట్‌ను సమీక్షించి శాశ్వత సూచనలను వేరు చేశాను. పాత పాఠ్యాన్ని భద్రపరచండి, కానీ షెడ్యూల్‌తో అమలు చేయవద్దు."
     },
     "title": {
       "createSchedule": "షెడ్యూల్ సృష్టించు",

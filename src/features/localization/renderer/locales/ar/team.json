@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "يتلقى عضو الفريق المحدد مهمة في اللوحة بعد تشغيل الفريق بأمان عند الحاجة. لن تتم مقاطعة الوكلاء المشغولين.",
       "taskFirstTeamDescription": "يتلقى قائد الفريق مهمة تنسيق بعد تشغيل الفريق بأمان عند الحاجة. لن تتم مقاطعة العمل الجاري.",
       "taskFirstTarget": "إسناد إلى",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "راجعت المطالبة القديمة وفصلت التعليمات الدائمة. احتفظ بالنص القديم، لكن لا تنفذه مع الجدول."
     },
     "title": {
       "createSchedule": "الجدول الزمني المحدد",

@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "चुने गए टीम सदस्य को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद बोर्ड पर कार्य दिया जाएगा। व्यस्त एजेंटों का काम बाधित नहीं होगा।",
       "taskFirstTeamDescription": "टीम लीड को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद समन्वय कार्य दिया जाएगा। चल रहा काम बाधित नहीं होगा।",
       "taskFirstTarget": "इसे सौंपें",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "पुराने सहेजे गए प्रॉम्प्ट की समीक्षा करके स्थायी निर्देश अलग कर दिए हैं। पुराना पाठ रखें, पर शेड्यूल पर न चलाएँ।"
     },
     "title": {
       "createSchedule": "अनुसूची बनाएँ",

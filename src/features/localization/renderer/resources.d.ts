@@ -4600,6 +4600,7 @@ export default interface Resources {
       "schedule": {
         "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
         "execution": "Execution",
+        "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work.",
         "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
         "labelOptional": "Label (optional)",
         "labelPlaceholder": "e.g., Daily code review, Nightly tests...",

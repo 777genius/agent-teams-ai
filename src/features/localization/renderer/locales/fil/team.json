@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "Makakatanggap ang napiling teammate ng gawain sa board matapos ligtas na simulan ang team kung kailangan. Hindi maaantala ang mga abalang agent.",
       "taskFirstTeamDescription": "Makakatanggap ang team lead ng gawain sa koordinasyon matapos ligtas na simulan ang team kung kailangan. Hindi maaantala ang kasalukuyang trabaho.",
       "taskFirstTarget": "Italaga kay",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Nasuri ko ang lumang prompt at naihiwalay ang pangmatagalang tagubilin. Panatilihin ang lumang teksto pero huwag patakbuhin sa iskedyul."
     },
     "title": {
       "createSchedule": "Lumikha ng Schedule",

@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "El compañero elegido recibe una tarea en el tablero tras iniciar el equipo de forma segura, si es necesario. No se interrumpe a los agentes ocupados.",
       "taskFirstTeamDescription": "El líder recibe una tarea de coordinación tras iniciar el equipo de forma segura, si es necesario. No se interrumpe el trabajo en curso.",
       "taskFirstTarget": "Asignar a",
-      "historicalPromptReviewRequired": "Revisa las instrucciones puntuales guardadas del equipo antes de programar. Borra o separa primero el prompt de inicio anterior."
+      "historicalPromptReviewRequired": "Revisa las instrucciones puntuales guardadas del equipo antes de programar. Borra o separa primero el prompt de inicio anterior.",
+      "historicalPromptAcknowledged": "He revisado el prompt guardado y separado las instrucciones permanentes. Conservar el texto antiguo sin ejecutarlo según el horario."
     },
     "title": {
       "createSchedule": "Crear programa",

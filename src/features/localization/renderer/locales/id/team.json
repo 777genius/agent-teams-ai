@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "Anggota tim terpilih menerima tugas di papan setelah tim dimulai dengan aman jika diperlukan. Agen yang sibuk tidak akan diganggu.",
       "taskFirstTeamDescription": "Pemimpin tim menerima tugas koordinasi setelah tim dimulai dengan aman jika diperlukan. Pekerjaan yang berjalan tidak akan diganggu.",
       "taskFirstTarget": "Tugaskan kepada",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Saya telah meninjau prompt lama dan memisahkan instruksi permanen. Simpan teks lama, tetapi jangan jalankan dalam jadwal."
     },
     "title": {
       "createSchedule": "Buat Jadwal",

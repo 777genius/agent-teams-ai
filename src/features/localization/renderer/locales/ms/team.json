@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "Ahli pasukan yang dipilih menerima tugasan pada papan selepas pasukan dimulakan dengan selamat jika perlu. Ejen yang sibuk tidak akan diganggu.",
       "taskFirstTeamDescription": "Ketua pasukan menerima tugasan penyelarasan selepas pasukan dimulakan dengan selamat jika perlu. Kerja yang sedang berjalan tidak akan diganggu.",
       "taskFirstTarget": "Tugaskan kepada",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Saya sudah menyemak prompt lama dan mengasingkan arahan kekal. Simpan teks lama, tetapi jangan jalankannya mengikut jadual."
     },
     "title": {
       "createSchedule": "Cipta Jadual",

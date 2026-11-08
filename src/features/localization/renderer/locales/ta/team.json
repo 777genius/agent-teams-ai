@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "தேவைப்பட்டால் குழுவைப் பாதுகாப்பாகத் தொடங்கிய பிறகு தேர்ந்தெடுத்த உறுப்பினருக்கு பலகையில் பணி ஒதுக்கப்படும். பணியில் இருக்கும் முகவர்கள் இடைநிறுத்தப்படமாட்டார்கள்.",
       "taskFirstTeamDescription": "தேவைப்பட்டால் குழுவைப் பாதுகாப்பாகத் தொடங்கிய பிறகு குழுத் தலைவருக்கு ஒருங்கிணைப்புப் பணி ஒதுக்கப்படும். நடைபெறும் வேலை இடைநிறுத்தப்படாது.",
       "taskFirstTarget": "ஒதுக்க வேண்டியவர்",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "பழைய சேமித்த பிராம்ப்டைப் பரிசீலித்து நிரந்தர வழிமுறைகளைப் பிரித்துள்ளேன். பழைய உரையை வைத்திருந்து திட்டமிட்ட நேரத்தில் இயக்க வேண்டாம்."
     },
     "title": {
       "createSchedule": "அட்டவணையை உருவாக்கு",

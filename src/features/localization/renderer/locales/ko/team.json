@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "선택한 팀원에게 필요한 경우 팀을 안전하게 시작한 후 보드 작업을 할당합니다. 작업 중인 에이전트는 중단하지 않습니다.",
       "taskFirstTeamDescription": "팀 리더에게 필요한 경우 팀을 안전하게 시작한 후 조정 작업을 할당합니다. 진행 중인 작업은 중단하지 않습니다.",
       "taskFirstTarget": "담당자",
-      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first."
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "저장된 이전 프롬프트를 검토하고 지속 지침을 분리했습니다. 원문은 보관하되 예약 작업에 실행하지 않습니다."
     },
     "title": {
       "createSchedule": "자주 묻는 질문",

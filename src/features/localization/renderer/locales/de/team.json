@@ -1525,7 +1525,8 @@
       "taskFirstAgentDescription": "Der ausgewählte Teamkollege erhält eine Aufgabe im Board, nachdem das Team bei Bedarf sicher gestartet wurde. Beschäftigte Agenten werden nicht unterbrochen.",
       "taskFirstTeamDescription": "Die Teamleitung erhält eine Koordinationsaufgabe, nachdem das Team bei Bedarf sicher gestartet wurde. Laufende Arbeit wird nicht unterbrochen.",
       "taskFirstTarget": "Zuweisen an",
-      "historicalPromptReviewRequired": "Prüfe vor der Planung die gespeicherten einmaligen Teamanweisungen. Entferne oder trenne zuerst den alten Start-Prompt."
+      "historicalPromptReviewRequired": "Prüfe vor der Planung die gespeicherten einmaligen Teamanweisungen. Entferne oder trenne zuerst den alten Start-Prompt.",
+      "historicalPromptAcknowledged": "Ich habe den gespeicherten Prompt geprüft und dauerhafte Anweisungen getrennt. Den alten Text behalten, aber nicht für Zeitpläne ausführen."
     },
     "title": {
       "createSchedule": "Plan erstellen",
