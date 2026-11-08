@@ -57,7 +57,7 @@ export function verifySelectedProviderArchives(root: string): void {
 
     if (name === '@agent-teams/provider-session-contracts') {
       const overrideKey = "  '@agent-teams/provider-session-contracts':";
-      const workspaceLines = workspace.split(/\\r?\\n/).filter(line => line.startsWith(overrideKey));
+      const workspaceLines = workspace.split(/\r?\n/).filter(line => line.startsWith(overrideKey));
       const lockLines = lines.filter(line => line.startsWith(overrideKey));
       if (workspaceLines.length !== 1 || lockLines.length !== 1 ||
           workspaceLines[0] !== overrideKey + " 'file:" + selectedPath + "'" ||
