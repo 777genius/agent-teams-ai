@@ -116,6 +116,7 @@ import {
 } from './openCodeDashboardCatalogPolicy';
 import { OpenCodeFreeTierUpdateAction } from './OpenCodeFreeTierUpdateAction';
 import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
+import { ProviderConnectionCounts } from './ProviderConnectionCounts';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
@@ -128,6 +129,7 @@ import {
   shouldShowOpenCodeRuntimeError,
 } from './runtimeInstallActionUi';
 import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
+import { useProviderConnectionSummary } from './useProviderConnectionSummary';
 import {
   useDashboardProviderRefresh,
   useOpenCodeDashboardStatus,
@@ -846,6 +848,7 @@ const InstalledBanner = ({
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
+  const { summary: sharedConnectionSummary, multimodelEnabled } = useProviderConnectionSummary();
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
@@ -1018,19 +1021,18 @@ const InstalledBanner = ({
                   {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
                 </span>
               ) : null}
-              {runtimeAuthSummary && (
-                <span
-                  className="text-xs"
-                  style={{
-                    color:
-                      isMultimodelRuntimeStatus(cliStatus) && !hasConnectedMultimodelProvider
-                        ? 'var(--color-text-muted)'
-                        : 'var(--color-positive-text)',
-                  }}
-                >
+              {isMultimodelRuntimeStatus(cliStatus) ? (
+                <ProviderConnectionCounts
+                  summary={sharedConnectionSummary}
+                  cliStatus={cliStatus}
+                  cliStatusLoading={cliStatusLoading}
+                  multimodelEnabled={multimodelEnabled}
+                />
+              ) : runtimeAuthSummary ? (
+                <span className="text-xs" style={{ color: 'var(--color-positive-text)' }}>
                   {runtimeAuthSummary}
                 </span>
-              )}
+              ) : null}
             </div>
             {cliStatus.showBinaryPath && cliStatus.binaryPath && (
               <button
