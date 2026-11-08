@@ -67,10 +67,13 @@ const report: {
   failedReason: string | null;
   lastCommand: { phase: string; elapsedMs: number; stdoutBytes: number } | null;
   completedProbes: Probe[];
+  nativeProbe: 'not_run' | 'failed' | 'connected_marker' | 'provider_mentioned' | 'absent';
+  configuredAllEntryState: 'missing' | 'connected' | 'available' | 'not-connected' | 'error' | 'other';
 } = {
   schemaVersion: 1, pin: lock.version, platform, observedRealRuntime: false,
   usesLiveAccounts: false, pass: false, scenarios: [], inferenceRequests: 0,
   failedPhase: null, failedReason: null, lastCommand: null, completedProbes: [],
+  nativeProbe: 'not_run', configuredAllEntryState: 'missing',
 };
 const evidencePath = process.env.PROVIDER_REAL_E2E_EVIDENCE;
 assert(evidencePath && path.isAbsolute(evidencePath), 'An absolute evidence path is required');
@@ -187,7 +190,29 @@ async function checkScenario(name: 'clean' | 'configured',
     }));
   }
   const probes: Probe[] = [];
+  if (configured) {
+    // Same disposable config and environment, but invoke OpenCode directly.
+    // Never retain stdout/stderr, which could contain profile paths or secrets.
+    phase = name + '-native-providers-list';
+    try {
+      const read = await execute(opencodeBin!, ['providers', 'list'], {
+        cwd, env, timeout: 30_000, maxBuffer: 1024 * 1024, windowsHide: true,
+      });
+      const output = read.stdout;
+      report.nativeProbe = /●\s+deepinfra(?:\s|$)/iu.test(output)
+        ? 'connected_marker'
+        : /\bdeepinfra\b/iu.test(output) ? 'provider_mentioned' : 'absent';
+    } catch {
+      report.nativeProbe = 'failed';
+    }
+  }
   const all = await directory('all', true, null, cwd, env, probes, name + '-summary-all');
+  if (configured) {
+    const state = all.entries.find((row) =>
+      row.providerId.trim().toLowerCase() === 'deepinfra')?.state ?? 'missing';
+    report.configuredAllEntryState = ['connected', 'available', 'not-connected', 'error', 'missing']
+      .includes(state) ? state as typeof report.configuredAllEntryState : 'other';
+  }
   const connected = await directory('connected', true, null, cwd, env, probes,
     name + '-summary-connected');
   const summaryCount = validateConnectedSummary(all, connected);
