@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 menit",
         "fifteenMinutes": "15 menit",
         "thirtyMinutes": "30 menit"
-      }
+      },
+      "time": "Waktu"
     },
     "empty": {
       "title": "Belum ada jadwal",
@@ -2147,7 +2148,11 @@
       "cancelled": "Dibatalkan",
       "dispatched": "Dikirim",
       "skipped": "Dilewati"
-    }
+    },
+    "taskFirstAgentDescription": "Tugas diberikan kepada anggota tim yang dipilih. Tim akan dijalankan terlebih dahulu jika diperlukan.",
+    "taskFirstTeamDescription": "Pemimpin tim mengoordinasikan tugas ini. Tim akan dijalankan terlebih dahulu jika diperlukan.",
+    "taskFirstDesktopRequired": "Jadwal hanya berjalan saat Agent Teams terbuka.",
+    "taskFirstHistoricPrompt": "Tim ini memiliki prompt peluncuran yang tersimpan. Tinjau di pengaturan tim sebelum menjadwalkan pekerjaan otomatis."
   },
   "openCodeContextConfigHint": {
     "summary": "Model lokal OpenCode dapat menggunakan anggaran konteks OpenCode bukannya batas proto-saja.",
