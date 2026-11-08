@@ -211,6 +211,8 @@ describe('draft hydration ordering', () => {
       await act(async () => { releaseSave(); await Promise.resolve(); });
       expect(draft.value).toBe('newer prompt');
       expect(draft.isSaved).toBe(false);
+      await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+      expect(draft.isSaved).toBe(true);
     } finally {
       await act(async () => { root.unmount(); });
       vi.useRealTimers();
