@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import path from 'node:path';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
 
 import lock from '../managed-git.lock.json' with { type: 'json' };
 import { downloadArchive, gitExecutable, validateArchiveEntries } from './stage-managed-git.mjs';
