@@ -7,7 +7,9 @@ import {
   getRuntimeProviderDirectoryReadToken,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
+  publishRuntimeProviderConnectedCount,
 } from '../runtimeProviderDirectoryCache';
+import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 
@@ -162,6 +164,58 @@ export function useRuntimeProviderQuickConnect({
           runtimeRevision: requestRuntimeRevision,
           readToken,
         });
+        // A complete, healthy summary is enough for a display-only connected
+        // count. No models or full directory need to be loaded.
+        const observedCount = countCompleteDirectoryConnections(response.directory, 'all');
+        if (requestRuntimeRevision && observedCount !== null) {
+          publishRuntimeProviderConnectedCount({
+            projectPath,
+            readToken,
+            runtimeRevision: requestRuntimeRevision,
+            connected: observedCount,
+            fetchedAt: response.directory.fetchedAt,
+            source: 'summary-all',
+          });
+        } else if (
+          requestRuntimeRevision &&
+          (response.directory.nextCursor != null ||
+            response.directory.totalCount > response.directory.entries.length)
+        ) {
+          // Spike: read only connected sources when the legacy all-provider
+          // summary is truncated. The existing all-summary rows remain the
+          // fallback for cards; never escalate to model or full inventory reads.
+          void api.runtimeProviderManagement
+            .loadProviderDirectory({
+              runtimeId: 'opencode',
+              summary: true,
+              projectPath,
+              query: null,
+              filter: 'connected',
+              limit: 100,
+              cursor: null,
+              refresh: false,
+            })
+            .then((connectedResponse) => {
+              if (cancelled || requestSequence.current !== requestId || connectedResponse.error) {
+                return;
+              }
+              const count = countCompleteDirectoryConnections(
+                connectedResponse.directory,
+                'connected'
+              );
+              if (count !== null && connectedResponse.directory) {
+                publishRuntimeProviderConnectedCount({
+                  projectPath,
+                  readToken,
+                  runtimeRevision: requestRuntimeRevision,
+                  connected: count,
+                  fetchedAt: connectedResponse.directory.fetchedAt,
+                  source: 'summary-connected',
+                });
+              }
+            })
+            .catch(() => undefined);
+        }
         setError(null);
         setLoaded(true);
         setAuthoritativeLoaded(false);
