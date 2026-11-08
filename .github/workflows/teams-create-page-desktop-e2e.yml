@@ -63,6 +63,8 @@ jobs:
           sudo apt-get install -y xvfb
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron is installed before measuring app startup
+        run: node ./scripts/ensure-electron-install.cjs --strict
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
         shell: bash
         env:
