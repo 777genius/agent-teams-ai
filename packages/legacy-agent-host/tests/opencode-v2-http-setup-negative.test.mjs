@@ -1,10 +1,52 @@
 // TEST-only negative: failed published SDK setup must leave no worker or temp root.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
+
+// Snapshot published package bytes, not only immediate directory names.
+// Follow the two explicitly selected package roots, but never recurse through
+// dependency symlinks or outside the selected published package trees.
+function snapshotPackageTree(root) {
+  const entries = [];
+  function visit(directory, relative) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const name = relative ? relative + '/' + entry.name : entry.name;
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        entries.push(['directory', name]);
+        visit(path, name);
+      } else if (entry.isFile()) {
+        entries.push(['file', name, createHash('sha256').update(readFileSync(path)).digest('hex')]);
+      } else if (entry.isSymbolicLink()) {
+        entries.push(['symlink', name, readlinkSync(path)]);
+      } else {
+        entries.push(['special', name]);
+      }
+    }
+  }
+  visit(root, '');
+  return entries;
+}
+
+test('published package snapshot detects nested mutation even with unchanged directory entries', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'TEST-v2-package-snapshot-'));
+  try {
+    const nested = join(fixture, 'nested');
+    mkdirSync(nested);
+    const file = join(nested, 'entry.mjs');
+    writeFileSync(file, 'export const version = 1;\n');
+    const before = snapshotPackageTree(fixture);
+    writeFileSync(file, 'export const version = 2;\n');
+    assert.notDeepEqual(snapshotPackageTree(fixture), before);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
 
 test('failed published V2 SDK setup emits HOLD receipt and cleans only its TEST root', () => {
   const head = process.env.OPENCODE_V2_TEST_SOURCE_HEAD;
@@ -60,8 +102,13 @@ test('valid published SDK post-copy failure cannot modify its shared prefix', {
   const prefix = process.env.OPENCODE_V2_TEST_SDK_PREFIX;
   const sdkRoot = join(prefix, 'node_modules', '@opencode', 'sdk');
   const serverRoot = join(prefix, 'node_modules', '@opencode', 'server');
-  const shared = [prefix, sdkRoot, serverRoot];
-  const before = shared.map((dir) => readdirSync(dir).sort());
+  // Shallow installation layout plus recursive content/digest snapshots of
+  // the exact published SDK and server packages used by the worker.
+  const shared = [prefix, join(prefix, 'node_modules')];
+  const before = {
+    layout: shared.map((dir) => readdirSync(dir).sort()),
+    packages: [snapshotPackageTree(sdkRoot), snapshotPackageTree(serverRoot)],
+  };
   const fixture = mkdtempSync(join(tmpdir(), 'TEST-v2-http-postcopy-fixture-'));
   try {
     const isolatedTemp = join(fixture, 'tmp');
@@ -95,8 +142,10 @@ test('valid published SDK post-copy failure cannot modify its shared prefix', {
     assert.ok(receipt.testOwnedWorkerPath.startsWith(isolatedTemp + '/TEST-opencode-v2-persist-'));
     assert.equal(existsSync(receipt.testOwnedWorkerPath), false);
     assert.deepEqual(readdirSync(isolatedTemp), [], 'owned worker root must be removed');
-    assert.deepEqual(shared.map((dir) => readdirSync(dir).sort()), before,
-      'valid published SDK installation must remain untouched after post-copy failure');
+    assert.deepEqual({
+      layout: shared.map((dir) => readdirSync(dir).sort()),
+      packages: [snapshotPackageTree(sdkRoot), snapshotPackageTree(serverRoot)],
+    }, before, 'valid published SDK bytes and layout must survive post-copy failure');
   } finally {
     rmSync(fixture, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
