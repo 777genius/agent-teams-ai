@@ -106,17 +106,13 @@ describe('portable Appearance persistence', () => {
 
   it('does not change the visible setting when storage rejects writes', () => {
     const old = getAppearanceSnapshot();
-    const original = Storage.prototype.setItem;
-    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('QuotaExceededError');
-    });
-    try {
-      expect(() => setAppearanceZoom(150)).toThrow(/QuotaExceeded/);
-      expect(getAppearanceSnapshot()).toBe(old);
-    } finally {
-      spy.mockRestore();
-      expect(Storage.prototype.setItem).toBe(original);
-    }
+    expect(() =>
+      saveAppearance(
+        { ...old, zoomPercent: 150 },
+        { setItem: () => { throw new Error('QuotaExceededError'); } }
+      )
+    ).toThrow(/QuotaExceeded/);
+    expect(getAppearanceSnapshot()).toBe(old);
   });
 
   it('recovers from invalid values and denied storage reads', () => {

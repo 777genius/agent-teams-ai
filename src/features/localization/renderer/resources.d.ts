@@ -2663,7 +2663,26 @@ export default interface Resources {
             "system": "System"
           }
         },
-        "title": "Appearance"
+        "title": "Appearance",
+        "customThemes": {
+          "label": "Custom themes",
+          "description": "Use named JSON color palettes based on Dark or Light.",
+          "none": "Built-in theme",
+          "edit": "Edit JSON",
+          "localOnly": "Custom themes and UI scale are stored on this browser/device only.",
+          "editor": {
+            "title": "Edit custom themes (JSON)",
+            "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
+            "cancel": "Cancel",
+            "save": "Save themes",
+            "conflict": "Themes changed in another tab. Close and reopen the editor to avoid overwriting newer changes."
+          }
+        },
+        "uiScale": {
+          "label": "Interface scale",
+          "description": "Scale the entire app without changing the operating system or browser zoom.",
+          "reset": "Reset"
+        }
       },
       "browserAccess": {
         "serverMode": {

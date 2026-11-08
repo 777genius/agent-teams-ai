@@ -54,7 +54,7 @@ const BASE_COLORS: ThemePalette = {
   text: '#f1f5f9',
   textSecondary: '#b5bfce',
   textMuted: '#94a3b8',
-  accent: '#818cf8',
+  accent: '#6366f1',
 };
 
 export const EXAMPLE_THEME: CustomTheme = {
@@ -105,7 +105,7 @@ function hexLuminance(hex: string): number {
       ? normalized / 12.92
       : ((normalized + 0.055) / 1.055) ** 2.4;
   });
-  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
 }
 
 export function contrastRatio(foreground: string, background: string): number {
@@ -154,6 +154,16 @@ export function validateCustomThemes(value: unknown): CustomTheme[] {
           throw new Error(`${label}: ${foreground} needs 3:1 contrast against ${surface}`);
         }
       }
+    }
+    for (const surface of ['surface', 'surfaceRaised', 'surfaceOverlay', 'surfaceSidebar'] as const) {
+      for (const border of ['border', 'borderSubtle', 'borderEmphasis'] as const) {
+        if (contrastRatio(palette[border], palette[surface]) < 1.15) {
+          throw new Error(`${label}: ${border} must be visible against ${surface}`);
+        }
+      }
+    }
+    if (contrastRatio('#ffffff', palette.accent) < 3) {
+      throw new Error(`${label}: accent must provide contrast with light control icons`);
     }
     return { id, name: name.trim(), base, colors: { ...palette } };
   });
@@ -230,13 +240,13 @@ function announceChange(next: AppearancePreferences): void {
   for (const listener of listeners) listener();
 }
 
-export function saveAppearance(next: AppearancePreferences): void {
+export function saveAppearance(next: AppearancePreferences, storage: Pick<Storage, 'setItem'> = getStorage()): void {
   const safe = parseAppearance(next);
   if (safe === DEFAULT_APPEARANCE && next !== DEFAULT_APPEARANCE) {
     throw new Error('Invalid appearance preferences');
   }
   // Write first: failed storage must not change the visible theme/zoom.
-  getStorage().setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(safe));
+  storage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(safe));
   announceChange(safe);
 }
 

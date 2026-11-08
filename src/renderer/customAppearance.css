@@ -1,0 +1,73 @@
+/*
+ * Named user themes only: derive neutral component surfaces from the eleven
+ * palette tokens. Built-in Dark/Light/System rules above remain unchanged.
+ * Status, diff, syntax and provider colors intentionally retain their meanings.
+ */
+:root.custom-theme {
+  --scrollbar-thumb: color-mix(in srgb, var(--color-text) 17%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--color-text) 29%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--color-text) 40%, transparent);
+  --chat-user-bg: var(--color-surface-raised);
+  --chat-user-text: var(--color-text-secondary);
+  --tool-item-name: var(--color-text);
+  --tool-item-summary: var(--color-text-secondary);
+  --tool-item-muted: var(--color-text-muted);
+  --tool-item-hover-bg: var(--color-surface-overlay);
+  --chat-system-bg: var(--color-surface-raised);
+  --chat-system-text: var(--color-text-secondary);
+  --chat-ai-border: var(--color-border-subtle);
+  --chat-ai-icon: var(--color-text-muted);
+  --code-bg: var(--color-surface-overlay);
+  --code-header-bg: var(--color-surface-raised);
+  --code-border: var(--color-border);
+  --code-line-number: var(--color-text-muted);
+  --code-filename: var(--color-accent);
+  --inline-code-bg: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --inline-code-text: var(--color-text);
+  --prose-heading: var(--color-text);
+  --prose-body: var(--color-text);
+  --prose-muted: var(--color-text-muted);
+  --prose-link: var(--color-accent);
+  --prose-code-bg: var(--inline-code-bg);
+  --prose-code-text: var(--inline-code-text);
+  --prose-pre-bg: var(--code-bg);
+  --prose-pre-border: var(--color-border);
+  --prose-blockquote-border: var(--color-border);
+  --prose-table-border: var(--color-border-subtle);
+  --prose-table-header-bg: var(--color-surface-raised);
+  --output-bg: var(--color-surface-overlay);
+  --output-border: var(--color-border);
+  --output-text: var(--color-text);
+  --output-content-border: var(--color-border-subtle);
+  --tag-bg: var(--color-surface-raised);
+  --tag-text: var(--color-text-secondary);
+  --tag-border: var(--color-border);
+  --badge-neutral-bg: var(--color-surface-raised);
+  --badge-neutral-text: var(--color-text);
+  --skill-highlight-bg: var(--inline-code-bg);
+  --skill-highlight-text: var(--color-text);
+  --path-highlight-bg: var(--inline-code-bg);
+  --path-highlight-text: var(--color-text);
+  --kbd-bg: var(--color-surface-raised);
+  --kbd-border: var(--color-border);
+  --kbd-text: var(--color-text-secondary);
+  --card-bg: var(--color-surface);
+  --card-bg-zebra: var(--color-surface-overlay);
+  --card-border: var(--color-border);
+  --card-header-bg: var(--color-surface-raised);
+  --card-header-hover: var(--color-surface-overlay);
+  --card-icon-muted: var(--color-text-muted);
+  --card-text-light: var(--color-text-secondary);
+  --card-text-lighter: var(--color-text);
+  --card-separator: var(--color-border);
+  --skeleton-base: var(--color-surface-raised);
+  --skeleton-base-light: var(--color-surface-overlay);
+  --skeleton-base-dim: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
+  --color-section-bg: color-mix(in srgb, var(--color-text) 4%, transparent);
+  --color-section-bg-open: color-mix(in srgb, var(--color-text) 7%, transparent);
+  --color-section-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --color-section-hover-open: color-mix(in srgb, var(--color-text) 10%, transparent);
+  --compact-phase-bg: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  --compact-phase-text: var(--color-accent);
+}
+

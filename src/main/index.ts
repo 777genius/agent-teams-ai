@@ -220,7 +220,6 @@ import {
   DEV_SERVER_PORT,
   getTrafficLightPositionForZoom,
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
-  WINDOW_SET_ZOOM_FACTOR_CHANNEL,
 } from '@shared/constants';
 import { shouldSuppressDesktopNotificationForInboxText } from '@shared/utils/idleNotificationSemantics';
 import { createLogger } from '@shared/utils/logger';
@@ -228,6 +227,7 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import { registerWindowZoomHandler } from './ipc/windowZoom';
 import {
   bindMemberWorkSyncProvisioningRuntime,
   createDeferredWorkSyncStallObservation,
@@ -1247,18 +1247,7 @@ function registerAppStartupHandlers(): void {
   registerOpenCodeStartupCleanupHandlers(ipcMain);
   ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
   ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
-  ipcMain.handle(WINDOW_SET_ZOOM_FACTOR_CHANNEL, (event, factor: unknown): number => {
-    const win = mainWindow;
-    if (!win || win.isDestroyed() || event.sender !== win.webContents) {
-      throw new Error('Zoom request from an unauthorized window');
-    }
-    if (typeof factor !== 'number' || !Number.isFinite(factor) || factor < 0.7 || factor > 2) {
-      throw new Error('Zoom factor must be between 0.7 and 2');
-    }
-    win.webContents.setZoomFactor(factor);
-    syncTrafficLightPosition(win);
-    return win.webContents.getZoomFactor();
-  });
+  registerWindowZoomHandler(ipcMain, () => mainWindow, syncTrafficLightPosition);
 }
 
 function cloneStartupSteps(): AppStartupStep[] {

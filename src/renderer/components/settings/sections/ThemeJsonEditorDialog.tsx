@@ -9,8 +9,9 @@ import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog';
-import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 import { formatCustomThemesJson, parseCustomThemesJson } from '@renderer/utils/appearancePreferences';
+import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
+
 import type { RefObject } from 'react';
 import type { CustomTheme } from '@renderer/utils/appearancePreferences';
 
