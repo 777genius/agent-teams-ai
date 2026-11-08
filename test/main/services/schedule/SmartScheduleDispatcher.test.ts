@@ -135,7 +135,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
 
   function enableTaskFirstPorts(): void {
     port.hasRunnableConfig = vi.fn(async () => true);
-    port.getPreviousRun = vi.fn(async () => null);
+    port.getPreviousRuns = vi.fn(async () => []);
     port.getTask = vi.fn(async () => null);
     port.startTaskByUser = vi.fn(async () => ({ notifiedOwner: true }));
   }
@@ -192,11 +192,11 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
 
   it('never creates more work while the previous scheduled board task is unfinished', async () => {
     enableTaskFirstPorts();
-    port.getPreviousRun = vi.fn(async () => ({
+    port.getPreviousRuns = vi.fn(async () => [{
       id: 'prior-run', scheduleId: 'schedule-1', teamName: 'test-team', status: 'dispatched',
       scheduledFor: new Date().toISOString(), startedAt: new Date().toISOString(),
       retryCount: 0, linkedTaskId: 'prior-task',
-    }));
+    }]));
     port.getTask = vi.fn(async () => ({
       id: 'prior-task', displayId: '17', subject: 'Still working', status: 'in_progress',
     } as TeamTask));
