@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 मि",
         "fifteenMinutes": "15 मि",
         "thirtyMinutes": "30 मि"
-      }
+      },
+      "time": "वेळ"
     },
     "empty": {
       "title": "अद्याप कोणतीही वेळापत्रके नाहीत",
@@ -2147,7 +2148,11 @@
       "cancelled": "रद्द केले",
       "dispatched": "सोपवले",
       "skipped": "वगळले"
-    }
+    },
+    "taskFirstAgentDescription": "निवडलेल्या टीम सदस्याला काम दिले जाईल. आवश्यक असल्यास टीम आधी सुरू होईल.",
+    "taskFirstTeamDescription": "टीम लीड या कामाचे समन्वय करेल. आवश्यक असल्यास टीम आधी सुरू होईल.",
+    "taskFirstDesktopRequired": "Agent Teams उघडे असतानाच नियोजित कामे चालतात.",
+    "taskFirstHistoricPrompt": "या टीमचा जुना सुरूवातीचा प्रॉम्प्ट जतन केलेला आहे. स्वयंचलित कामे नियोजित करण्यापूर्वी टीम सेटिंग्जमध्ये तो तपासा."
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode स्थानिक मॉडेल्स फक्त-प्रॉम्प्ट मर्यादांऐवजी OpenCode संदर्भ बजेट वापरू शकतात.",
