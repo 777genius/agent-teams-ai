@@ -23,6 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.documentElement.style.zoom = '';
+  document.documentElement.style.removeProperty('--appearance-inverse-zoom');
   saveAppearance(DEFAULT_APPEARANCE);
   vi.unstubAllGlobals();
 });
@@ -34,12 +35,15 @@ it('applies and resets whole-app browser zoom through the mounted React controll
   try {
     await act(async () => root.render(<BrowserAppearance />));
     expect(document.documentElement.style.zoom).toBe('1');
-    for (const zoom of [125, 200, 100]) {
+    expect(document.documentElement.style.getPropertyValue('--appearance-inverse-zoom')).toBe('1');
+    for (const zoom of [80, 125, 200, 100]) {
       await act(async () => setAppearanceZoom(zoom));
       expect(document.documentElement.style.zoom).toBe(String(zoom / 100));
+      expect(Number(document.documentElement.style.getPropertyValue('--appearance-inverse-zoom'))).toBeCloseTo(100 / zoom, 8);
     }
   } finally {
     await act(async () => root.unmount());
+    expect(document.documentElement.style.getPropertyValue('--appearance-inverse-zoom')).toBe('');
     host.remove();
   }
 });

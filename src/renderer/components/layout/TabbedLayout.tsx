@@ -58,8 +58,6 @@ export const TabbedLayout = (): React.JSX.Element => {
       ? 8
       : getTrafficLightPaddingForZoom(zoomFactor);
 
-  const hideSidebarForActiveTab = activeTabType === 'token-usage';
-
   // --- DnD state (lifted from PaneContainer) ---
   const panes = useStore(useShallow((s) => s.paneLayout.panes));
   const activeTabType = useStore(
@@ -69,6 +67,7 @@ export const TabbedLayout = (): React.JSX.Element => {
       return activeTab?.type;
     })
   );
+  const hideSidebarForActiveTab = activeTabType === 'token-usage';
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
 
   const sensors = useSensors(
@@ -161,7 +160,7 @@ export const TabbedLayout = (): React.JSX.Element => {
 
   return (
     <div
-      className="flex h-screen flex-col bg-claude-dark-bg text-claude-dark-text"
+      className="flex h-full flex-col bg-claude-dark-bg text-claude-dark-text"
       style={
         { '--macos-traffic-light-padding-left': `${trafficLightPadding}px` } as React.CSSProperties
       }

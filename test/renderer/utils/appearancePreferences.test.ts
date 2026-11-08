@@ -123,6 +123,12 @@ describe('portable Appearance persistence', () => {
     expect(readAppearance({ getItem: () => { throw new Error('denied'); } })).toEqual(DEFAULT_APPEARANCE);
   });
 
+  it('keeps built-in theme switching usable with corrupt local preferences', () => {
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, '{"version":1,"themes":[');
+    expect(() => setActiveCustomTheme(null)).not.toThrow();
+    expect(getAppearanceSnapshot().activeCustomThemeId).toBeNull();
+  });
+
   it('merges a stale tab theme save with the latest zoom', () => {
     setCustomThemes([example()]);
     setAppearanceZoom(125);

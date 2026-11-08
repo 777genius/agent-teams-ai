@@ -479,6 +479,16 @@ try {
     "(()=>{const ids=['appearance-ui-scale','appearance-custom-theme-select','appearance-edit-custom-themes'];const visible=ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;const box=el.getBoundingClientRect();return box.width>0&&box.left>=0&&box.right<=window.innerWidth-4;});const sidebar=document.getElementById('sidebar-tasks-panel');return visible&&(!sidebar||sidebar.getClientRects().length===0);})()"
   ), '200% Appearance controls remain onscreen without task sidebar overflow');
   await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
+  // A 200% native scale halves the CSS viewport; editing must still work.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const dialog=document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');const editor=dialog?.querySelector('.cm-content');const save=dialog?.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(editor instanceof HTMLElement)||!(save instanceof HTMLElement))return false;const box=save.getBoundingClientRect();return box.bottom<=innerHeight-2&&box.top>=0&&box.width>0&&editor.getBoundingClientRect().height>20;})()"
+  ), '200% JSON editor keeps its Save control and editor visible');
+  await cdp.screenshot(join(root, 'settings-appearance-editor-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), '200% JSON editor cancels cleanly');
   await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-100');
   await until(() => cdp!.evaluate(
     "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===100&&Math.abs(zoom-1)<0.02;})()"

@@ -107,7 +107,7 @@ export const ThemeJsonEditorDialog = ({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent
         data-testid="appearance-theme-editor-dialog"
-        className="flex max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0"
+        className="flex h-[70vh] max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           focusReturnRef.current?.focus();
@@ -124,7 +124,7 @@ export const ThemeJsonEditorDialog = ({
         <div
           ref={setContainer}
           data-testid="appearance-custom-theme-json"
-          className="config-editor-container min-h-[240px] flex-1 overflow-hidden px-2 py-3"
+          className="config-editor-container min-h-0 flex-1 overflow-hidden px-2 py-3"
         />
         {error && (
           <p role="alert" data-testid="appearance-theme-json-error" className="px-4 pb-2 text-xs text-red-400">
@@ -134,6 +134,7 @@ export const ThemeJsonEditorDialog = ({
         <DialogFooter className="flex-row justify-end gap-2 border-t border-border p-3">
           <button
             type="button"
+            data-testid="appearance-theme-json-cancel"
             className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-raised"
             onClick={onClose}
           >

@@ -23,7 +23,13 @@ export function useAppearanceZoomController(): void {
         console.warn('[Appearance] Unable to apply native UI scale', error);
       });
     } else {
-      document.documentElement.style.zoom = String(zoomPercent / 100);
+      const root = document.documentElement;
+      root.style.setProperty('--appearance-inverse-zoom', String(100 / zoomPercent));
+      root.style.zoom = String(zoomPercent / 100);
+      return () => {
+        root.style.removeProperty('--appearance-inverse-zoom');
+        root.style.zoom = '';
+      };
     }
   }, [zoomPercent]);
 

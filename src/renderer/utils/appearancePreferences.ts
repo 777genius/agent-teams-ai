@@ -288,6 +288,14 @@ export function setAppearanceZoom(zoomPercent: number): void {
 }
 
 export function setActiveCustomTheme(id: string | null): void {
+  // Built-in themes must stay usable if local appearance storage is unreadable.
+  if (id === null && getAppearanceSnapshot().activeCustomThemeId === null) {
+    try {
+      if (getLatestAppearance().activeCustomThemeId === null) return;
+    } catch {
+      return;
+    }
+  }
   const current = getLatestAppearance();
   if (id !== null && !current.themes.some((theme) => theme.id === id)) {
     throw new Error('Unknown custom theme');
