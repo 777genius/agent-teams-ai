@@ -229,6 +229,7 @@ export class SmartScheduleDispatcher {
       prompt,
       owner,
       startImmediately: false,
+      notifyOwner: false,
     });
     if (
       isCancelled() ||
