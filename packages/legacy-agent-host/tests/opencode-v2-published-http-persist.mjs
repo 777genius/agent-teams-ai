@@ -323,26 +323,37 @@ if (process.argv[2] === '--worker') {
     // A cold native restart must never let an old permission prompt grant a
     // new process authority. Keep one isolated pending TEST request across
     // restart and attempt only a DENIAL against its stale identifier.
-    const staleCreated=await call('/api/session','POST',{
-      location:{directory:workspace},agent:'build',
-      permissions:[{action:'external_directory',resource:'*',effect:'ask'}],
-    });
-    const staleSessionId=staleCreated.data?.data?.id;
-    if(staleCreated.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(staleSessionId||''))
-      throw Error('TEST_stale_permission_session_create_failed');
-    const stalePath='/api/session/'+encodeURIComponent(staleSessionId);
-    const pendingAsk=await call(stalePath+'/permission','POST',{
-      action:'external_directory',resources:[join(root,'temp','TEST-stale-resource')],
-    });
-    const stalePermissionId=pendingAsk.data?.data?.id;
-    if(pendingAsk.status!==200||pendingAsk.data?.data?.effect!=='ask'||
-       !/^per[A-Za-z0-9_-]+$/.test(stalePermissionId||''))
-      throw Error('TEST_stale_permission_ask_not_created');
-    const pendingBefore=await call(stalePath+'/permission');
-    if(pendingBefore.status!==200||!Array.isArray(pendingBefore.data?.data)||
-       pendingBefore.data.data.length!==1||
-       pendingBefore.data.data[0]?.id!==stalePermissionId)
-      throw Error('TEST_stale_permission_not_pending_before_restart');
+    // Every native stale reply is sent only once, against its own captured
+    // permission ID. Never turn a lost-ACK retry into a passing test.
+    // In particular, a stale `once`/`always` must not grant on a cold owner.
+    const stalePermissionClaims = [];
+    for (const decision of ['reject', 'once', 'always']) {
+      const staleCreated=await call('/api/session','POST',{
+        location:{directory:workspace},agent:'build',
+        permissions:[{action:'external_directory',resource:'*',effect:'ask'}],
+      });
+      const staleSessionId=staleCreated.data?.data?.id;
+      if(staleCreated.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(staleSessionId||''))
+        throw Error('TEST_stale_permission_session_create_failed');
+      const stalePath='/api/session/'+encodeURIComponent(staleSessionId);
+      const pendingAsk=await call(stalePath+'/permission','POST',{
+        action:'external_directory',resources:[join(root,'temp','TEST-stale-'+decision)],
+      });
+      const stalePermissionId=pendingAsk.data?.data?.id;
+      if(pendingAsk.status!==200||pendingAsk.data?.data?.effect!=='ask'||
+         !/^per[A-Za-z0-9_-]+$/.test(stalePermissionId||'')||
+         stalePermissionClaims.some(claim=>claim.permissionId===stalePermissionId))
+        throw Error('TEST_stale_permission_ask_not_created');
+      const pendingBefore=await call(stalePath+'/permission');
+      if(pendingBefore.status!==200||!Array.isArray(pendingBefore.data?.data)||
+         pendingBefore.data.data.length!==1||
+         pendingBefore.data.data[0]?.id!==stalePermissionId||
+         pendingBefore.data.data[0]?.sessionID!==staleSessionId)
+        throw Error('TEST_stale_permission_not_pending_before_restart');
+      stalePermissionClaims.push({path:stalePath,permissionId:stalePermissionId,decision});
+    }
+    if(stalePermissionClaims.length!==3)
+      throw Error('TEST_stale_permission_negative_matrix_incomplete');
     receipt.steps.push('TEST_real_pending_permission_exists_before_cold_restart');
     const before=await readLog(sessionId);
     receipt.steps.push('TEST_official_HTTP_session_created_event_persisted');
@@ -355,17 +366,25 @@ if (process.argv[2] === '--worker') {
     const after=await readLog(sessionId);
     if(after.id!==before.id||after.seq!==before.seq||after.sync!==before.sync)
       throw Error('TEST_cold_durable_event_identity_changed');
-    const staleAfter=await call(stalePath+'/permission');
-    if(staleAfter.status!==200||!Array.isArray(staleAfter.data?.data)||
-       staleAfter.data.data.length!==0)
-      throw Error('TEST_cold_restart_resurrected_permission');
-    const staleReject=await call(stalePath+'/permission/'+
-      encodeURIComponent(stalePermissionId)+'/reply','POST',{decision:'reject'});
-    if(staleReject.status!==404)
-      throw Error('TEST_cold_restart_accepted_stale_permission_reply');
-    if((await call(stalePath,'DELETE')).status!==204)
-      throw Error('TEST_stale_permission_session_cleanup_failed');
+    for (const claim of stalePermissionClaims) {
+      const staleAfter=await call(claim.path+'/permission');
+      if(staleAfter.status!==200||!Array.isArray(staleAfter.data?.data)||
+         staleAfter.data.data.length!==0)
+        throw Error('TEST_cold_restart_resurrected_permission');
+      const staleReply=await call(claim.path+'/permission/'+
+        encodeURIComponent(claim.permissionId)+'/reply','POST',
+        {decision:claim.decision});
+      if(staleReply.status!==404)
+        throw Error('TEST_cold_restart_accepted_stale_permission_reply');
+      const stillEmpty=await call(claim.path+'/permission');
+      if(stillEmpty.status!==200||!Array.isArray(stillEmpty.data?.data)||
+         stillEmpty.data.data.length!==0)
+        throw Error('TEST_cold_restart_stale_reply_created_permission');
+      if((await call(claim.path,'DELETE')).status!==204)
+        throw Error('TEST_stale_permission_session_cleanup_failed');
+    }
     receipt.nativeStalePermissionAfterRestartRejected=true;
+    receipt.nativeStaleGrantAfterRestartRejected=true;
     receipt.steps.push('TEST_cold_native_permission_not_replayed_or_accepted');
     receipt.durableHTTPEvents=1;
     receipt.steps.push('TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt');
