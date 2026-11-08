@@ -19,6 +19,7 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
 import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
@@ -1043,6 +1044,11 @@ async function wrapTeamHandler<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[teams:${operation}] ${message}`);
+    if (operation === 'createConfig' && error instanceof TeamDraftPreflightCollisionError) {
+      // Existing on-disk team/tasks detected before this Create allocated anything.
+      // Post-allocation errors, transport failures, and uncertain side effects remain held.
+      return teamCreationFailureResult(new TeamCreationRefusal('conflict', 'not-dispatched'), message);
+    }
     return teamReadFailureResult(error);
   }
 }
