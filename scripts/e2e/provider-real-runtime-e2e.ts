@@ -1,0 +1,255 @@
+#!/usr/bin/env node
+/** Runs shipped, checksum-staged CLI against real OpenCode V1 metadata with no real credentials. */
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { promisify } from 'node:util';
+
+import {
+  connectedProviderIds, parseProviderDirectory, validateConnectedSummary,
+} from './provider-real-runtime-policy.ts';
+
+import type { ProviderDirectoryPage } from './provider-real-runtime-policy.ts';
+
+const execute = promisify(execFile);
+const root = path.resolve(import.meta.dirname, '../..');
+const lock = JSON.parse(fs.readFileSync(path.join(root, 'runtime.lock.json'), 'utf8')) as {
+  version: string; cliVersion: string;
+  assets: Record<string, { binaryName: string }>;
+};
+const platform = process.platform + '-' + process.arch;
+const asset = lock.assets[platform];
+assert(asset, 'Pinned runtime not supported on this platform');
+const binary = path.join(root, 'resources/runtime', asset.binaryName);
+assert(fs.statSync(binary, { throwIfNoEntry: false })?.isFile(), 'Pinned runtime was not staged');
+assert.equal(fs.readFileSync(path.join(root, 'resources/runtime/VERSION'), 'utf8').trim(),
+  lock.version, 'Unexpected staged runtime version');
+const opencodeBin = process.env.REAL_OPENCODE_TEST_BINARY;
+assert(opencodeBin && path.isAbsolute(opencodeBin) &&
+  fs.statSync(opencodeBin, { throwIfNoEntry: false })?.isFile(),
+  'A real isolated OpenCode test binary must be provided');
+
+interface Probe {
+  phase: string;
+  elapsedMs: number;
+  stdoutBytes: number;
+  totalCount: number;
+  returnedCount: number;
+  nextCursor: boolean;
+}
+interface ScenarioEvidence {
+  name: string;
+  summaryCount: number;
+  summaryDirectoryTotal: number;
+  fullDirectoryTotal: number;
+  fullPages: number;
+  fullCatalogOver100: boolean;
+  connectedIdsMatchFull: boolean;
+  probes: Probe[];
+}
+const report: {
+  schemaVersion: number;
+  pin: string;
+  platform: string;
+  observedRealRuntime: boolean;
+  usesLiveAccounts: boolean;
+  pass: boolean;
+  scenarios: ScenarioEvidence[];
+  inferenceRequests: number;
+  failedPhase: string | null;
+} = {
+  schemaVersion: 1, pin: lock.version, platform, observedRealRuntime: false,
+  usesLiveAccounts: false, pass: false, scenarios: [], inferenceRequests: 0,
+  failedPhase: null,
+};
+const evidencePath = process.env.PROVIDER_REAL_E2E_EVIDENCE;
+assert(evidencePath && path.isAbsolute(evidencePath), 'An absolute evidence path is required');
+const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-real-provider-TEST-'));
+let phase = 'start';
+let inferenceRequests = 0;
+let modelServer: ReturnType<typeof createServer> | null = null;
+
+function isolatedEnv(home: string, configured: boolean): NodeJS.ProcessEnv {
+  const permitted = ['PATH', 'PATHEXT', 'SYSTEMROOT', 'WINDIR', 'COMSPEC',
+    'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432', 'PSMODULEPATH'];
+  const inherited: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (permitted.includes(key.toUpperCase()) && value !== undefined) inherited[key] = value;
+  }
+  const dirs: Record<string, string> = {
+    HOME: home, USERPROFILE: home,
+    APPDATA: path.join(home, 'AppData/Roaming'),
+    LOCALAPPDATA: path.join(home, 'AppData/Local'),
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+    XDG_DATA_HOME: path.join(home, '.local/share'),
+    XDG_CACHE_HOME: path.join(home, '.cache'),
+    XDG_STATE_HOME: path.join(home, '.local/state'),
+    TMP: path.join(home, 'tmp'), TEMP: path.join(home, 'tmp'),
+    TMPDIR: path.join(home, 'tmp'),
+    CLAUDE_MULTIMODEL_DATA_HOME: path.join(home, 'runtime-data'),
+    OPENCODE_BIN_PATH: opencodeBin!,
+    CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: opencodeBin!,
+  };
+  Object.values(dirs).forEach(dir => {
+    if (dir !== opencodeBin) fs.mkdirSync(dir, { recursive: true });
+  });
+  return {
+    ...inherited, ...dirs, NODE_BINARY: process.execPath,
+    OPENCODE_DISABLE_AUTOUPDATE: '1',
+    OPENCODE_DISABLE_LSP_DOWNLOAD: '1',
+    OPENCODE_DISABLE_MODELS_FETCH: '1',
+    OPENCODE_DISABLE_CLAUDE_CODE: '1',
+    ...(configured ? { DEEPINFRA_API_KEY: 'TEST-nonsecret-local-catalog-only' } : {}),
+  };
+}
+
+async function runCommand(args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<{
+  stdout: string;
+  elapsedMs: number;
+  bytes: number;
+}> {
+  const startedAt = performance.now();
+  let stdout: string;
+  try {
+    const result = await execute(binary, args, {
+      cwd, env, timeout: 120_000, maxBuffer: 6 * 1024 * 1024,
+      windowsHide: true,
+    });
+    stdout = result.stdout;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    // Deliberately no raw stdout/stderr/arguments: they may contain credentials.
+    throw new Error(code === 'ETIMEDOUT' ? 'runtime_timeout' : 'runtime_command_failed');
+  }
+  return { stdout, elapsedMs: Math.round(performance.now() - startedAt),
+    bytes: Buffer.byteLength(stdout) };
+}
+
+async function directory(
+  filter: 'all' | 'connected', summary: boolean, cursor: string | null,
+  cwd: string, env: NodeJS.ProcessEnv, probes: Probe[], label: string,
+): Promise<ProviderDirectoryPage> {
+  phase = label;
+  const flags = ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+    ...(summary ? ['--summary'] : []),
+    '--project-path', cwd, '--filter', filter, '--limit', '100',
+    ...(cursor === null ? [] : ['--cursor', cursor])];
+  const result = await runCommand(flags, cwd, env);
+  const page = parseProviderDirectory(result.stdout, filter, cursor);
+  probes.push({ phase: label, elapsedMs: result.elapsedMs, stdoutBytes: result.bytes,
+    totalCount: page.totalCount, returnedCount: page.returnedCount,
+    nextCursor: page.nextCursor !== null });
+  return page;
+}
+
+async function checkScenario(name: 'clean' | 'configured',
+  port: number): Promise<ScenarioEvidence> {
+  const home = path.join(testRoot, name);
+  const cwd = path.join(home, 'project');
+  fs.mkdirSync(cwd, { recursive: true });
+  const configured = name === 'configured';
+  const env = isolatedEnv(home, configured);
+  if (configured) {
+    const configRoot = path.join(home, '.config/opencode');
+    fs.mkdirSync(configRoot, { recursive: true });
+    // A documented V1 metadata-only provider, pointed exclusively at local HTTP.
+    fs.writeFileSync(path.join(configRoot, 'opencode.jsonc'), JSON.stringify({
+      plugin: [], provider: { deepinfra: {
+        options: { baseURL: 'http://127.0.0.1:' + port + '/v1',
+          apiKey: '{env:DEEPINFRA_API_KEY}' },
+        models: { 'TEST-local-catalog-model': {
+          name: 'TEST catalog model', limit: { context: 8192, output: 1024 },
+        } },
+      } },
+    }));
+  }
+  const probes: Probe[] = [];
+  const all = await directory('all', true, null, cwd, env, probes, name + '-summary-all');
+  const connected = await directory('connected', true, null, cwd, env, probes,
+    name + '-summary-connected');
+  const summaryCount = validateConnectedSummary(all, connected);
+  // Repeat the same real command in the same isolated project to time warm reads.
+  const warmAll = await directory('all', true, null, cwd, env, probes,
+    name + '-summary-all-warm');
+  assert.equal(warmAll.totalCount, all.totalCount);
+  const full: ProviderDirectoryPage[] = [];
+  let cursor: string | null = null;
+  const ids = new Set<string>();
+  do {
+    const page = await directory('all', false, cursor, cwd, env, probes,
+      name + '-full-page-' + (full.length + 1));
+    if (full.length > 0) assert.equal(page.totalCount, full[0].totalCount);
+    for (const entry of page.entries) {
+      const id = entry.providerId.trim().toLowerCase();
+      assert(!ids.has(id), 'Full pages duplicate provider identity');
+      ids.add(id);
+    }
+    full.push(page);
+    cursor = page.nextCursor;
+    assert(full.length <= 12, 'Provider directory exceeds bounded 1200-entry budget');
+  } while (cursor !== null);
+  assert.equal(ids.size, full[0].totalCount);
+  const fullConnected = connectedProviderIds(full.flatMap(x => x.entries));
+  const summaryConnected = connectedProviderIds(connected.entries);
+  // Summary deliberately carries a selected subset of the full catalog.
+  // Every declared connected identity must still survive the summary filter.
+  assert.deepEqual(summaryConnected, fullConnected,
+    'Summary count differs from complete real CLI directory');
+  if (configured) assert(summaryConnected.includes('deepinfra'),
+    'Configured loopback provider missing from real CLI connected summary');
+
+  return { name, summaryCount, summaryDirectoryTotal: all.totalCount,
+    fullDirectoryTotal: ids.size, fullPages: full.length,
+    fullCatalogOver100: ids.size > 100, connectedIdsMatchFull: true, probes };
+}
+
+try {
+  phase = 'version';
+  const version = await runCommand(['--version'], testRoot, isolatedEnv(testRoot, false));
+  assert(version.stdout.includes(lock.cliVersion), 'Wrong released runtime CLI version');
+  report.observedRealRuntime = true;
+  modelServer = createServer((req, res) => {
+    if (req.method !== 'GET') {
+      inferenceRequests++;
+      res.writeHead(405); res.end();
+      return;
+    }
+    if (req.url === '/v1/models' || req.url === '/models' || req.url === '/auth') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ object: 'list',
+        data: [{ id: 'TEST-local-catalog-model', object: 'model' }] }));
+      return;
+    }
+    res.writeHead(404); res.end();
+  });
+  await new Promise<void>((resolve, reject) => {
+    modelServer!.once('error', reject);
+    modelServer!.listen(0, '127.0.0.1', resolve);
+  });
+  const address = modelServer.address();
+  assert(address && typeof address === 'object');
+  report.scenarios.push(await checkScenario('clean', address.port));
+  report.scenarios.push(await checkScenario('configured', address.port));
+  report.inferenceRequests = inferenceRequests;
+  assert.equal(inferenceRequests, 0, 'A nonmetadata local model request was attempted');
+  report.pass = true;
+} catch {
+  report.failedPhase = phase;
+  process.exitCode = 1;
+} finally {
+  // Only fixed safe numeric measurements leave the E2E process, never raw CLI
+  // output, user paths, environment, host address or credentials.
+  fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
+  fs.writeFileSync(evidencePath, JSON.stringify(report, null, 2) + '\n');
+  if (modelServer) {
+    modelServer.closeAllConnections();
+    await new Promise<void>(resolve => modelServer!.close(() => resolve()));
+  }
+  fs.rmSync(testRoot, { recursive: true, force: true });
+  console.log('real-runtime-provider-e2e: ' +
+    (report.pass ? 'PASS' : 'FAIL phase=' + report.failedPhase));
+}
