@@ -20,6 +20,7 @@ const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
+let mainInspectorWebSocketUrl = null;
 let cdp = null;
 let inputSelectAllDomFallbacks = 0;
 
@@ -27,6 +28,10 @@ function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
   const lines = `${appLogRemainder[stream]}${text}`.split(/\r?\n/);
   appLogRemainder[stream] = lines.pop() ?? '';
+  for (const line of lines) {
+    const target = line.match(/Debugger listening on (ws:\/\/127\.0\.0\.1:5858\/[a-z0-9-]+)/i);
+    if (target) mainInspectorWebSocketUrl = target[1];
+  }
   appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 200) appLogTail.splice(0, appLogTail.length - 200);
 }
@@ -197,6 +202,7 @@ async function waitForRenderer(port) {
 async function startApp(fixture) {
   // Never use a previous process's DevTools URL while launching the new one.
   appLogTail.length = 0;
+  mainInspectorWebSocketUrl = null;
   appLogRemainder.stdout = '';
   appLogRemainder.stderr = '';
   const nodeBinary = await realpath(process.execPath);
@@ -265,15 +271,12 @@ async function startApp(fixture) {
   // CDP cannot access BrowserWindow.webContents.zoomFactor or menu accelerators.
   const inspectorWebSocketDebuggerUrl = await Promise.race([
     (async () => {
-      const deadline = Date.now() + 90_000;
-      while (Date.now() < deadline) {
-        const matched = appLogTail.find((line) =>
-          /Debugger listening on ws:\/\/127\.0\.0\.1:5858\//.test(line)
-        )?.match(/(ws:\/\/127\.0\.0\.1:5858\/[a-z0-9-]+)/i);
-        if (matched) return matched[1];
+      const deadline = Date.now() + 10_000;
+      while (!mainInspectorWebSocketUrl && Date.now() < deadline)
         await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      throw new Error('Main-process loopback V8 inspector was not started');
+      if (!mainInspectorWebSocketUrl)
+        throw new Error('Main-process loopback V8 inspector was not started');
+      return mainInspectorWebSocketUrl;
     })(),
     exitedBeforeRenderer,
   ]);
