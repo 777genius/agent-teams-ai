@@ -197,6 +197,11 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/opencode-v2-http-test" \
             --save-exact --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/sdk@2.0.21
           npm ls --prefix "$RUNNER_TEMP/opencode-v2-http-test" --depth=0 @opencode/sdk
+      - name: Negative owned-worker cleanup on parent SIGINT and SIGTERM
+        env:
+          OPENCODE_V2_TEST_SDK_PREFIX: ${{ runner.temp }}/opencode-v2-http-test
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs
       - name: Probe actual published server HTTP durable-log and cold restart
         env:
           OPENCODE_V2_TEST_SDK_PREFIX: ${{ runner.temp }}/opencode-v2-http-test

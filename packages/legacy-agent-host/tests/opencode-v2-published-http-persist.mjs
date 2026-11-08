@@ -117,6 +117,26 @@ if (process.argv[2] === '--worker') {
     }
     return false;
   }
+  // A CI cancellation must not orphan this TEST-owned detached worker group.
+  // Validate its PID/start identity before any signal, as normal stop() does.
+  let interruptionStarted = false;
+  async function interruptOwned(signal) {
+    if (interruptionStarted) return;
+    interruptionStarted = true;
+    receipt.failure = 'TEST_interrupted_' + signal;
+    let cleaned = false;
+    try {
+      cleaned = await stop();
+      if (cleaned) rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+    } catch { cleaned = false; }
+    receipt.cleanup = cleaned;
+    try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
+    catch { /* Failed receipt persistence cannot qualify this TEST. */ }
+    process.exit(signal === 'SIGINT' ? 130 : 143);
+  }
+  process.once('SIGINT', () => { void interruptOwned('SIGINT'); });
+  process.once('SIGTERM', () => { void interruptOwned('SIGTERM'); });
+
   async function reservePort() {
     const s = createServer();
     await new Promise((yes,no)=>s.once('error',no).listen(0,'127.0.0.1',yes));
@@ -155,8 +175,13 @@ if (process.argv[2] === '--worker') {
     for (let n=0;n<80;n++) {
       if (!present(child.pid))break;
       try {const info=await call('/api/info');
-        if(info.status===200&&info.data?.pid===child.pid&&info.data?.version==='2.0.21')
+        if(info.status===200&&info.data?.pid===child.pid&&info.data?.version==='2.0.21') {
+          // Optional isolated negative-test handshake, never emitted normally.
+          if (process.env.OPENCODE_V2_TEST_READY_FILE)
+            writeFileSync(process.env.OPENCODE_V2_TEST_READY_FILE,
+              JSON.stringify({pid:child.pid,startIdentity:startTicks})+'\n');
           return child.pid;
+        }
       } catch { /* Only read-only server-start polling. */ }
       await delay(125);
     }
