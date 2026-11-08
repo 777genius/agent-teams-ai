@@ -296,6 +296,7 @@ if (process.argv[2] === '--worker') {
       const base='/api/session/'+encodeURIComponent(id);
       const decision=await call(base+'/permission','POST',{
         action:'external_directory',resources:[externalResource],
+        ...(scenario.expected==='ask'?{save:[externalResource]}:{}),
       });
       if(decision.status!==200||decision.data?.data?.effect!==scenario.expected)
         throw Error('TEST_native_last_matching_permission_not_effective');
@@ -307,7 +308,8 @@ if (process.argv[2] === '--worker') {
       if(scenario.expected==='ask') {
         const permissionId=decision.data?.data?.id;
         if(!/^per[A-Za-z0-9_-]+$/.test(permissionId||'')||
-           requests[0]?.id!==permissionId||requests[0]?.sessionID!==id)
+           requests[0]?.id!==permissionId||requests[0]?.sessionID!==id||
+           requests[0]?.save?.length!==1||requests[0]?.save?.[0]!==externalResource)
           throw Error('TEST_native_ask_identity_invalid');
         // A different TEST session must never grant this request. Its
         // possession of the same loopback secret is not session authority.
@@ -336,7 +338,6 @@ if (process.argv[2] === '--worker') {
            afterAnonymousGrant.data.data[0]?.id!==permissionId||
            afterAnonymousGrant.data.data[0]?.sessionID!==id)
           throw Error('TEST_native_unauthenticated_permission_grant_changed_pending');
-        receipt.nativeUnauthenticatedPermissionGrantRejected=true;
         if((await call(reply,'POST',{decision:'reject'})).status!==204)
           throw Error('TEST_native_permission_reject_failed');
         if((await call(reply,'POST',{decision:'once'})).status!==404)
@@ -344,6 +345,27 @@ if (process.argv[2] === '--worker') {
         const cleared=await call(base+'/permission');
         if(cleared.status!==200||cleared.data?.data?.length!==0)
           throw Error('TEST_native_permission_after_reject_not_empty');
+        // A 401 must not install a saved approval for the ORIGINAL resource.
+        const fresh=await call(base+'/permission','POST',{
+          action:'external_directory',resources:[externalResource],
+        });
+        const freshId=fresh.data?.data?.id;
+        if(fresh.status!==200||fresh.data?.data?.effect!=='ask'||
+           !/^per[A-Za-z0-9_-]+$/.test(freshId||'')||freshId===permissionId)
+          throw Error('TEST_native_unauthenticated_grant_changed_effective_policy');
+        const freshPending=await call(base+'/permission');
+        if(freshPending.status!==200||!Array.isArray(freshPending.data?.data)||
+           freshPending.data.data.length!==1||
+           freshPending.data.data[0]?.id!==freshId||
+           freshPending.data.data[0]?.sessionID!==id)
+          throw Error('TEST_native_unauthenticated_grant_fresh_pending_unqualified');
+        if((await call(base+'/permission/'+encodeURIComponent(freshId)+
+           '/reply','POST',{decision:'reject'})).status!==204)
+          throw Error('TEST_native_fresh_permission_reject_failed');
+        const afterFreshReject=await call(base+'/permission');
+        if(afterFreshReject.status!==200||afterFreshReject.data?.data?.length!==0)
+          throw Error('TEST_native_fresh_permission_not_cleared');
+        receipt.nativeUnauthenticatedPermissionGrantRejected=true;
         rejectNoReplay=true;
       }
       if((await call(base,'DELETE')).status!==204)
@@ -373,8 +395,9 @@ if (process.argv[2] === '--worker') {
       if(staleCreated.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(staleSessionId||''))
         throw Error('TEST_stale_permission_session_create_failed');
       const stalePath='/api/session/'+encodeURIComponent(staleSessionId);
+      const staleResource=join(root,'temp','TEST-stale-'+decision);
       const pendingAsk=await call(stalePath+'/permission','POST',{
-        action:'external_directory',resources:[join(root,'temp','TEST-stale-'+decision)],
+        action:'external_directory',resources:[staleResource],save:[staleResource],
       });
       const stalePermissionId=pendingAsk.data?.data?.id;
       if(pendingAsk.status!==200||pendingAsk.data?.data?.effect!=='ask'||
@@ -385,9 +408,12 @@ if (process.argv[2] === '--worker') {
       if(pendingBefore.status!==200||!Array.isArray(pendingBefore.data?.data)||
          pendingBefore.data.data.length!==1||
          pendingBefore.data.data[0]?.id!==stalePermissionId||
-         pendingBefore.data.data[0]?.sessionID!==staleSessionId)
+         pendingBefore.data.data[0]?.sessionID!==staleSessionId||
+         pendingBefore.data.data[0]?.save?.length!==1||
+         pendingBefore.data.data[0]?.save?.[0]!==staleResource)
         throw Error('TEST_stale_permission_not_pending_before_restart');
-      stalePermissionClaims.push({path:stalePath,permissionId:stalePermissionId,decision});
+      stalePermissionClaims.push({path:stalePath,sessionId:staleSessionId,
+        permissionId:stalePermissionId,decision,resource:staleResource});
     }
     if(stalePermissionClaims.length!==3)
       throw Error('TEST_stale_permission_negative_matrix_incomplete');
@@ -417,9 +443,29 @@ if (process.argv[2] === '--worker') {
       if(stillEmpty.status!==200||!Array.isArray(stillEmpty.data?.data)||
          stillEmpty.data.data.length!==0)
         throw Error('TEST_cold_restart_stale_reply_created_permission');
-      // A stale `always` must not create a persistent grant even if the
-      // endpoint returned 404. Query the real native permission resolver with
-      // a NEW external TEST resource; it must still ask on this same session.
+      // A stale reply must not grant its ORIGINAL saved resource, even if
+      // the response was 404 and a different external path still asks.
+      const originalAsk=await call(claim.path+'/permission','POST',{
+        action:'external_directory',resources:[claim.resource],
+      });
+      const originalId=originalAsk.data?.data?.id;
+      if(originalAsk.status!==200||originalAsk.data?.data?.effect!=='ask'||
+         !/^per[A-Za-z0-9_-]+$/.test(originalId||'')||
+         originalId===claim.permissionId)
+        throw Error('TEST_cold_restart_original_resource_granted');
+      const originalPending=await call(claim.path+'/permission');
+      if(originalPending.status!==200||!Array.isArray(originalPending.data?.data)||
+         originalPending.data.data.length!==1||
+         originalPending.data.data[0]?.id!==originalId||
+         originalPending.data.data[0]?.sessionID!==claim.sessionId)
+        throw Error('TEST_cold_restart_original_resource_pending_unqualified');
+      if((await call(claim.path+'/permission/'+encodeURIComponent(originalId)+
+         '/reply','POST',{decision:'reject'})).status!==204)
+        throw Error('TEST_cold_restart_original_ask_reject_failed');
+      const afterOriginalReject=await call(claim.path+'/permission');
+      if(afterOriginalReject.status!==200||afterOriginalReject.data?.data?.length!==0)
+        throw Error('TEST_cold_restart_original_ask_not_cleared');
+      // Check a NEW external path too, so a wildcard grant is also caught.
       const freshAsk=await call(claim.path+'/permission','POST',{
         action:'external_directory',
         resources:[join(root,'temp','TEST-fresh-'+claim.decision)],
