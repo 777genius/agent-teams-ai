@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 分钟",
         "fifteenMinutes": "15 分钟",
         "thirtyMinutes": "30 分钟"
-      }
+      },
+      "time": "时间"
     },
     "empty": {
       "title": "还没有计划任务",
@@ -2147,7 +2148,11 @@
       "cancelled": "取消",
       "dispatched": "已派发",
       "skipped": "已跳过"
-    }
+    },
+    "taskFirstAgentDescription": "任务交给所选队友；如果团队尚未运行，将先启动团队。",
+    "taskFirstTeamDescription": "任务交给负责人协调；如有需要，将先启动团队。",
+    "taskFirstDesktopRequired": "仅当 Agent Teams 保持运行时，定时任务才会执行。",
+    "taskFirstHistoricPrompt": "该团队保存了旧的启动提示词。安排自动任务前，请先在团队设置中检查。"
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode 本地模型可以使用 OpenCode 上下文预算，而不是仅限提示词的限制。",
