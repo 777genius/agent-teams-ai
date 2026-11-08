@@ -174,7 +174,7 @@ export const TabbedLayout = (): React.JSX.Element => {
       >
         <TabBarRow />
         <CliInstallWarningBanner />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-w-0 flex-1 overflow-hidden" style={{ containerType: 'inline-size' }}>
           {/* Command Palette (Cmd+K) */}
           <CommandPalette />
 

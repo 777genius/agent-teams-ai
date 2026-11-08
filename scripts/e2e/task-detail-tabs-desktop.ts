@@ -516,6 +516,32 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId===null&&!document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='';})()"
   ), 'Returning to built-in themes fully clears custom CSS overrides');
+  // Regression: a rejected save must not leave an armed Overwrite action when
+  // the editor is closed and reopened for a new session.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Editor reopens for conflict recovery');
+  await cdp.evaluate(
+    "(()=>{const key='agent-teams-appearance-v1';const raw=localStorage.getItem(key);if(!raw)throw Error('Missing saved palette');window.__appearanceConflictFixture=raw;localStorage.setItem(key,JSON.stringify({...JSON.parse(raw),themes:[]}));document.querySelector('[data-testid=\"appearance-theme-json-save\"]').click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'Editor detects conflicting saved themes');
+  await cdp.evaluate(
+    "(()=>{document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click();const original=window.__appearanceConflictFixture;localStorage.setItem('agent-teams-appearance-v1',original);delete window.__appearanceConflictFixture;})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Cancelling a conflict closes the editor');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')&&!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'New editing session clears stale conflict and overwrite action');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Clean editor cancellation');
   reads.push({ kind: 'appearance-custom-theme-and-zoom-real-electron', customJsonSaved: true, cssApplied: true, builtinsRestored: true, scales: [100,125,200] });
   reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
   }

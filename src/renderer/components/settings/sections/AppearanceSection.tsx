@@ -65,10 +65,11 @@ export const AppearanceSection = ({
     <div>
       <SettingsSectionHeader title={t('general.appearance.title')} />
       <SettingRow
+        wrapControls
         label={t('general.appearance.theme.label')}
         description={t('general.appearance.theme.description')}
       >
-        <div className="inline-flex flex-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
+        <div className="inline-flex max-w-full flex-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
           {themeOptions.map((opt) => (
             <button
               key={opt.value}
@@ -95,10 +96,11 @@ export const AppearanceSection = ({
         </div>
       </SettingRow>
       <SettingRow
+        wrapControls
         label={t('general.appearance.customThemes.label')}
         description={t('general.appearance.customThemes.description')}
       >
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
           <Select
             value={activeCustomThemeId ?? BUILTIN_THEME_OPTION}
             onValueChange={(value) =>
@@ -108,7 +110,7 @@ export const AppearanceSection = ({
             <SelectTrigger
               data-testid="appearance-custom-theme-select"
               aria-label={t('general.appearance.customThemes.label')}
-              className="h-8 w-44 bg-surface-raised text-xs text-text"
+              className="h-8 w-44 max-w-full bg-surface-raised text-xs text-text"
             >
               <SelectValue />
             </SelectTrigger>
@@ -135,17 +137,18 @@ export const AppearanceSection = ({
               setEditingThemes(themes);
               setEditorOpen(true);
             }}
-            className="rounded border border-border-emphasis bg-surface-raised px-2.5 py-1.5 text-xs font-medium text-text"
+            className="max-w-full rounded border border-border-emphasis bg-surface-raised px-2.5 py-1.5 text-xs font-medium text-text"
           >
             {t('general.appearance.customThemes.edit')}
           </button>
         </div>
       </SettingRow>
       <SettingRow
+        wrapControls
         label={t('general.appearance.uiScale.label')}
         description={t('general.appearance.uiScale.description')}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <Select
             value={String(zoomPercent)}
             onValueChange={(value) =>

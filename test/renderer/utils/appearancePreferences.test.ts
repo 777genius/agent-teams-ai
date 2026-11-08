@@ -51,6 +51,13 @@ describe('user color theme JSON', () => {
     expect(getAppearanceSnapshot().themes).toEqual([]);
   });
 
+  it('rejects empty-string unknown keys in all palette objects', () => {
+    const valid = example();
+    expect(() => parseCustomThemesJson(JSON.stringify({ '': true, themes: [valid] }))).toThrow(/unknown field/);
+    expect(() => validateCustomThemes([{ ...valid, '': true }])).toThrow(/unknown field/);
+    expect(() => validateCustomThemes([{ ...valid, colors: { ...valid.colors, '': '#000000' } }])).toThrow(/unknown field/);
+  });
+
   it('rejects duplicate ids and excessive theme counts', () => {
     expect(() => validateCustomThemes([example(), example()])).toThrow(/duplicate/);
     expect(() => validateCustomThemes(Array.from({ length: 9 }, (_, i) => ({
@@ -129,6 +136,16 @@ describe('portable Appearance persistence', () => {
     expect(getAppearanceSnapshot().activeCustomThemeId).toBeNull();
   });
 
+  it('clears an active custom theme without overwriting corrupt storage', () => {
+    setCustomThemes([example()]);
+    setActiveCustomTheme('my-theme');
+    const corrupt = '{"version":1,"themes":[';
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, corrupt);
+    expect(() => setActiveCustomTheme(null)).not.toThrow();
+    expect(getAppearanceSnapshot().activeCustomThemeId).toBeNull();
+    expect(localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe(corrupt);
+  });
+
   it('merges a stale tab theme save with the latest zoom', () => {
     setCustomThemes([example()]);
     setAppearanceZoom(125);
@@ -157,6 +174,31 @@ describe('portable Appearance persistence', () => {
     setCustomThemes([example()]);
     expect(readAppearance(localStorage).zoomPercent).toBe(175);
     expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+  });
+
+  it('keeps a reflected zoom on external theme-only edits, but accepts external zoom changes', () => {
+    reflectNativeAppearanceZoom(175);
+    const previous = localStorage.getItem(APPEARANCE_STORAGE_KEY)!;
+    const withTheme = JSON.stringify({ ...readAppearance(localStorage), themes: [example()] });
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, withTheme);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: APPEARANCE_STORAGE_KEY, oldValue: previous, newValue: withTheme,
+    }));
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+    expect(getAppearanceSnapshot().themes).toEqual([example()]);
+    setCustomThemes([]);
+    expect(readAppearance(localStorage).zoomPercent).toBe(175);
+
+    reflectNativeAppearanceZoom(200);
+    const priorZoom = localStorage.getItem(APPEARANCE_STORAGE_KEY)!;
+    const externalZoom = JSON.stringify({ ...readAppearance(localStorage), zoomPercent: 150 });
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, externalZoom);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: APPEARANCE_STORAGE_KEY, oldValue: priorZoom, newValue: externalZoom,
+    }));
+    expect(getAppearanceSnapshot().zoomPercent).toBe(150);
+    setCustomThemes([example()]);
+    expect(readAppearance(localStorage).zoomPercent).toBe(150);
   });
 
   it('shows a native zoom when storage is unavailable', () => {

@@ -59,3 +59,7 @@ The desktop E2E exercises real Radix selectors, theme saves and native zoom IPC.
 Browser zoom sets a reciprocal viewport-width/height factor; an independent
 headless Chromium layout check covered 70/80/100/125/150/200%, and the
 browser React hook regression checks preference changes and cleanup.
+
+## Cross-tab write guarantee (review clarification)
+
+Preferences are browser-local and use synchronous localStorage. Each write reads the latest committed record and the JSON editor detects theme conflicts; storage events also reconcile native zoom. This prevents stale *already completed* writes from being silently applied. Truly simultaneous read/modify/write operations across independent tabs cannot be made atomic using localStorage alone. A distributed Web Locks coordination scheme would change the synchronous settings contract to async and is intentionally not introduced for a local-only appearance feature. If transactional cross-tab writes become a product requirement, implement and test a small async lock-backed persistence port rather than an unsafe localStorage spinlock.

@@ -71,3 +71,10 @@
   --compact-phase-text: var(--color-accent);
 }
 
+
+/* The available settings pane shrinks when CSS zoom is applied in browser mode. */
+@container (max-width: 850px) {
+  .appearance-settings-task-sidebar {
+    display: none;
+  }
+}

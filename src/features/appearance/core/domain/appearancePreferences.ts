@@ -77,7 +77,7 @@ function checkKeys(
   context: string
 ): void {
   const unexpected = Object.keys(value).find((key) => !allowed.includes(key));
-  if (unexpected) throw new Error(`${context}: unknown field "${unexpected}"`);
+  if (unexpected !== undefined) throw new Error(`${context}: unknown field "${unexpected}"`);
 }
 
 function hexLuminance(hex: string): number {

@@ -113,15 +113,19 @@ export function setAppearanceZoom(zoomPercent: number): void {
 }
 
 export function setActiveCustomTheme(id: string | null): void {
-  // Built-in themes must stay usable if local appearance storage is unreadable.
-  if (id === null && getAppearanceSnapshot().activeCustomThemeId === null) {
-    try {
-      if (getLatestAppearance().activeCustomThemeId === null) return;
-    } catch {
-      return;
+  let current: AppearancePreferences;
+  try {
+    current = getLatestAppearance();
+  } catch (error) {
+    // A damaged/denied local record must not prevent switching back to Dark/Light/System.
+    // Only clear the visible selection; leave the unreadable persisted data untouched.
+    if (id !== null) throw error;
+    const cached = getAppearanceSnapshot();
+    if (cached.activeCustomThemeId !== null) {
+      announceChange({ ...cached, activeCustomThemeId: null });
     }
+    return;
   }
-  const current = getLatestAppearance();
   if (id !== null && !current.themes.some((theme) => theme.id === id)) {
     throw new Error('Unknown custom theme');
   }
@@ -160,11 +164,21 @@ export function applyCustomThemeToRoot(root: HTMLElement, theme: CustomTheme | n
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event: StorageEvent) => {
     if (event.key === APPEARANCE_STORAGE_KEY || event.key === null) {
-      try {
-        announceChange(readAppearance(getStorage()));
-      } catch {
-        announceChange(DEFAULT_APPEARANCE);
+      // A theme-only change in another tab must not erase a native zoom that
+      // could not be saved. An explicit zoom change from that tab takes priority.
+      if (event.key === null) {
+        unpersistedNativeZoomPercent = null;
+      } else if (unpersistedNativeZoomPercent !== null) {
+        const previous = readAppearance({ getItem: () => event.oldValue });
+        const incoming = readAppearance({ getItem: () => event.newValue });
+        if (previous.zoomPercent !== incoming.zoomPercent) {
+          unpersistedNativeZoomPercent = null;
+        }
       }
+      const current = readAppearance(getStorage());
+      announceChange(unpersistedNativeZoomPercent === null
+        ? current
+        : { ...current, zoomPercent: unpersistedNativeZoomPercent });
     }
   });
 }

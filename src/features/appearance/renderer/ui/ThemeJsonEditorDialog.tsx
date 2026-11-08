@@ -41,6 +41,12 @@ export const ThemeJsonEditorDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
 
+  const closeEditor = (): void => {
+    setError(null);
+    setConflict(false);
+    onClose();
+  };
+
   useEffect(() => {
     if (!open || !container) return;
     const view = new EditorView({
@@ -84,9 +90,7 @@ export const ThemeJsonEditorDialog = ({
     try {
       const parsed = parseCustomThemesJson(viewRef.current.state.doc.toString());
       onSave(parsed, forceOverwrite);
-      setError(null);
-      setConflict(false);
-      onClose();
+      closeEditor();
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : String(cause);
       if (message === t('general.appearance.customThemes.editor.conflict')) {
@@ -105,7 +109,7 @@ export const ThemeJsonEditorDialog = ({
   if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) closeEditor(); }}>
       <DialogContent
         data-testid="appearance-theme-editor-dialog"
         className="flex max-w-3xl flex-col gap-0 overflow-hidden p-0"
@@ -143,7 +147,7 @@ export const ThemeJsonEditorDialog = ({
             type="button"
             data-testid="appearance-theme-json-cancel"
             className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-raised"
-            onClick={onClose}
+            onClick={closeEditor}
           >
             {t('general.appearance.customThemes.editor.cancel')}
           </button>
