@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 منٹ",
         "fifteenMinutes": "15 من",
         "thirtyMinutes": "۳۰ منٹ"
-      }
+      },
+      "time": "وقت"
     },
     "empty": {
       "title": "ابھی تک کوئی شیڈول نہیں",
@@ -2147,7 +2148,11 @@
       "cancelled": "منسوخ کیا گیا",
       "dispatched": "بھیج دیا گیا",
       "skipped": "چھوڑ دیا گیا"
-    }
+    },
+    "taskFirstAgentDescription": "کام منتخب ٹیم ممبر کو دیا جائے گا۔ ضرورت پڑنے پر ٹیم پہلے شروع ہوگی۔",
+    "taskFirstTeamDescription": "ٹیم لیڈ اس کام کو مربوط کرے گا۔ ضرورت پڑنے پر ٹیم پہلے شروع ہوگی۔",
+    "taskFirstDesktopRequired": "طے شدہ کام صرف Agent Teams کھلا ہونے پر چلتے ہیں۔",
+    "taskFirstHistoricPrompt": "اس ٹیم میں پرانا آغاز کا پرامپٹ محفوظ ہے۔ خودکار کام شیڈول کرنے سے پہلے ٹیم کی ترتیبات میں اس کا جائزہ لیں۔"
   },
   "openCodeContextConfigHint": {
     "summary": "OpenCode مقامی ماڈل فوری حدود کی بجائے OpenCode section بجٹ استعمال کر سکتے ہیں۔",
