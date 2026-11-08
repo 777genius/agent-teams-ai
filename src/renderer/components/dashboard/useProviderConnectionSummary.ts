@@ -5,6 +5,8 @@ import {
   useRuntimeProviderDirectoryCache,
 } from '@features/runtime-provider-management/renderer';
 import { useStore } from '@renderer/store';
+
+import type { CliInstallationStatus } from '@shared/types';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 
 import {
@@ -13,8 +15,9 @@ import {
 } from './providerConnectionSummary';
 
 /** Display-only selector: subscribing to snapshots never starts provider IPC. */
-export function useProviderConnectionSummary() {
-  const cliStatus = useStore((state) => state.cliStatus);
+export function useProviderConnectionSummary(cliStatusOverride?: CliInstallationStatus | null) {
+  const storedCliStatus = useStore((state) => state.cliStatus);
+  const cliStatus = cliStatusOverride === undefined ? storedCliStatus : cliStatusOverride;
   const cliStatusLoading = useStore((state) => state.cliStatusLoading);
   const cliStatusError = useStore((state) => state.cliStatusError);
   const cliProviderStatusLoading = useStore((state) => state.cliProviderStatusLoading);
@@ -32,7 +35,7 @@ export function useProviderConnectionSummary() {
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
   const countEvidence = useRuntimeProviderConnectedCount(projectPath);
   const observedOpenCodeCount = countEvidence?.observation ?? null;
-  const [, expire] = useState(0);
+  const [expiryRevision, expire] = useState(0);
   useEffect(() => {
     const snapshots = [
       globalDirectory?.fetchedAt,
@@ -46,7 +49,7 @@ export function useProviderConnectionSummary() {
     const delay = Math.max(1, Math.min(...expiries) - Date.now() + 10);
     const timer = window.setTimeout(() => expire((n) => n + 1), delay);
     return () => window.clearTimeout(timer);
-  }, [globalDirectory, projectDirectory, projectPath, observedOpenCodeCount]);
+  }, [globalDirectory, projectDirectory, projectPath, observedOpenCodeCount, expiryRevision]);
 
   const summary = getDashboardConnectionSummary({
     cliStatus,

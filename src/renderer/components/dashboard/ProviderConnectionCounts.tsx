@@ -5,7 +5,7 @@ import type { CliInstallationStatus } from '@shared/types';
 
 interface ProviderConnectionCountsProps {
   readonly summary: DashboardConnectionSummary;
-  readonly cliStatus: Pick<CliInstallationStatus, 'installed' | 'authLoggedIn'> | null;
+  readonly cliStatus: Pick<CliInstallationStatus, 'installed' | 'authLoggedIn' | 'authStatusChecking'> | null;
   readonly cliStatusLoading: boolean;
   readonly multimodelEnabled: boolean;
 }
@@ -25,10 +25,10 @@ export const ProviderConnectionCounts = ({
     cliStatus?.installed === false && !cliStatusLoading
       ? t('cliStatus.quickConnect.cliNotInstalled')
       : !multimodelEnabled
-        ? cliStatus?.authLoggedIn
-          ? t('cliStatus.provider.authenticated')
-          : cliStatusLoading || !cliStatus
-            ? t('cliStatus.provider.checkingAuthentication')
+        ? cliStatusLoading || !cliStatus || cliStatus.authStatusChecking
+          ? t('cliStatus.provider.checkingAuthentication')
+          : cliStatus.authLoggedIn
+            ? t('cliStatus.provider.authenticated')
             : t('cliStatus.provider.connectToGetStarted')
         : summary.cliConnected === null
           ? cliSuffix

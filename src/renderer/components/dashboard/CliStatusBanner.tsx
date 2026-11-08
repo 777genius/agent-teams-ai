@@ -848,7 +848,7 @@ const InstalledBanner = ({
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
-  const { summary: sharedConnectionSummary, multimodelEnabled } = useProviderConnectionSummary();
+  const { summary: sharedConnectionSummary, multimodelEnabled } = useProviderConnectionSummary(cliStatus);
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]

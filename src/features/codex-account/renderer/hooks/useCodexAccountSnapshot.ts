@@ -114,6 +114,7 @@ export function useCodexAccountSnapshot(options: {
   const loadingTokensRef = useRef(new Set<symbol>());
   const rateLimitsLoadingTokensRef = useRef(new Set<symbol>());
   const mountedRef = useRef(true);
+  const passivePollingWasEnabled = useRef(false);
   const enabledRef = useRef(false);
   const lifecycleIdRef = useRef(0);
   const snapshotRevisionRef = useRef(0);
@@ -380,6 +381,20 @@ export function useCodexAccountSnapshot(options: {
     options.enabled,
     options.includeRateLimits,
   ]);
+
+  // Resuming an old Settings pane must not wait another interval to discover
+  // an externally changed account. Do not run this on the initial cold read.
+  useEffect(() => {
+    const active = enabled && mayPollAccount;
+    const wasActive = passivePollingWasEnabled.current;
+    passivePollingWasEnabled.current = active;
+    if (
+      !active || wasActive || !initialRefreshAttempted || !snapshot ||
+      lastUpdatedAtRef.current === null ||
+      Date.now() - lastUpdatedAtRef.current < CODEX_VISIBLE_STANDARD_REFRESH_MS
+    ) return;
+    void refresh({ includeRateLimits: options.includeRateLimits, silent: true });
+  }, [enabled, initialRefreshAttempted, mayPollAccount, options.includeRateLimits, refresh, snapshot]);
 
   useEffect(() => {
     if (!electronMode || !options.enabled || !mayPollAccount || typeof document === 'undefined') {
