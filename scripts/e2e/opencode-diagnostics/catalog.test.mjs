@@ -106,6 +106,14 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     assert.equal(second.nextCursor, null);
     assert.equal(second.entries.filter((entry) => entry.state === 'available').length, 0);
     assert.equal(second.entries.filter((entry) => entry.state === 'connected').length, 5);
+    assert.deepEqual(
+      [...first.entries, ...second.entries].map((entry) => entry.providerId),
+      [
+        ...Array.from({ length: 100 }, (_, index) =>
+          `fixture-available-${String(index).padStart(3, '0')}`),
+        'opencode', 'anthropic', 'google', 'openrouter', 'fixture-connected',
+      ]
+    );
 
     // The real Windows startup-cleanup path requests a 250-row summary.
     // This is read-only and must not appear as a forbidden mutation.
