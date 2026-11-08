@@ -3,10 +3,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useStore } from '../store';
-import { applyCustomThemeToRoot } from '../utils/appearancePreferences';
+import { applyCustomThemeToRoot, type CustomTheme } from '../utils/appearancePreferences';
 import { useAppearancePreferences } from './useAppearance';
-
-import type { CustomTheme } from '../utils/appearancePreferences';
 
 type Theme = 'dark' | 'light' | 'system';
 type ResolvedTheme = 'dark' | 'light';

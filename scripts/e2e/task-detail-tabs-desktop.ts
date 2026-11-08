@@ -161,6 +161,29 @@ const reads: unknown[] = [];
 const diagnostics: unknown[] = [];
 let passed = false;
 let launchError: Error | undefined;
+/** Exercise Radix selectors with actual mouse input through Chromium CDP. */
+async function clickAppearanceControl(testId: string): Promise<void> {
+  assert(cdp, 'CDP must be connected before Appearance interactions');
+  const point = (await cdp.evaluate(`(() => {
+    const node = document.querySelector('[data-testid="${testId}"]');
+    if (!(node instanceof HTMLElement)) throw new Error('Appearance control missing: ${testId}');
+    node.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const bounds = node.getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0) throw new Error('Appearance control hidden: ${testId}');
+    return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+  })()`)) as { x: number; y: number };
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+}
+async function chooseAppearanceOption(triggerId: string, optionId: string): Promise<void> {
+  await clickAppearanceControl(triggerId);
+  await until(
+    () => cdp!.evaluate(`!!document.querySelector('[data-testid="${optionId}"]')`),
+    `Appearance option ${optionId} opens`
+  );
+  await clickAppearanceControl(optionId);
+}
 const receiptPath = join(root, 'electron-watcher-v7-' + sha.slice(0, 7) + '.json');
 async function receipt() {
   await writeFile(
@@ -443,23 +466,17 @@ try {
   ), 'Appearance restores fixture theme');
   // Custom Appearance E2E: exercise the actual Electron renderer, IPC and persisted
   // local preference store (never synthetic React props or fabricated E2E receipts).
-  await cdp.evaluate(
-    "(()=>{const select=document.querySelector('[data-testid=\"appearance-ui-scale\"]');if(!(select instanceof HTMLSelectElement))throw Error('Missing interface scale');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;if(!setter)throw Error('No native select setter');setter.call(select,'125');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
-  );
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-125');
   await until(() => cdp!.evaluate(
     "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===125&&Math.abs(zoom-1.25)<0.02;})()"
   ), 'Appearance applies and saves 125% through native Electron zoom');
   await cdp.screenshot(join(root, 'settings-appearance-125-desktop.png'));
-  await cdp.evaluate(
-    "(()=>{const select=document.querySelector('[data-testid=\"appearance-ui-scale\"]');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'200');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
-  );
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-200');
   await until(() => cdp!.evaluate(
     "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===200&&Math.abs(zoom-2)<0.02;})()"
   ), 'Appearance applies and saves 200% through native Electron zoom');
   await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
-  await cdp.evaluate(
-    "(()=>{const select=document.querySelector('[data-testid=\"appearance-ui-scale\"]');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'100');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
-  );
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-100');
   await until(() => cdp!.evaluate(
     "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===100&&Math.abs(zoom-1)<0.02;})()"
   ), 'Appearance resets native scale to 100%');
@@ -473,11 +490,9 @@ try {
     "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme save missing');button.click();})()"
   );
   await until(() => cdp!.evaluate(
-    "!!document.querySelector('[data-testid=\"appearance-custom-theme-select\"] option[value=\"my-theme\"]') && !document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+    "(()=>{const record=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return record?.themes?.some(t=>t.id==='my-theme')&&!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');})()"
   ), 'Valid JSON theme is persisted and editor closes');
-  await cdp.evaluate(
-    "(()=>{const select=document.querySelector('[data-testid=\"appearance-custom-theme-select\"]');if(!(select instanceof HTMLSelectElement))throw Error('Custom theme selector missing');const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')?.set;setter.call(select,'my-theme');select.dispatchEvent(new Event('change',{bubbles:true}));})()"
-  );
+  await chooseAppearanceOption('appearance-custom-theme-select', 'appearance-custom-theme-option-my-theme');
   await until(() => cdp!.evaluate(
     "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#6366f1';})()"
   ), 'Custom theme applies CSS semantic tokens on the real root');

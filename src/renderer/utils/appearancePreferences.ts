@@ -221,15 +221,22 @@ function getStorage(): Storage {
 
 /**
  * Read the latest persisted record for read-modify-write operations.
- * This prevents a not-yet-delivered cross-tab storage event from overwriting
- * another tab's zoom or theme selection.
+ * Invalid persisted data must never silently become an empty palette when
+ * another tab changes scale or themes. Startup reads can still fall back.
  */
 export function getLatestAppearance(): AppearancePreferences {
+  const raw = getStorage().getItem(APPEARANCE_STORAGE_KEY);
+  if (raw === null) return DEFAULT_APPEARANCE;
+  if (raw.length > MAX_JSON_LENGTH) throw new Error('Invalid saved appearance preferences');
+  let parsed: unknown;
   try {
-    return readAppearance(getStorage());
+    parsed = JSON.parse(raw) as unknown;
   } catch {
-    return getAppearanceSnapshot();
+    throw new Error('Invalid saved appearance preferences');
   }
+  const current = parseAppearance(parsed);
+  if (current === DEFAULT_APPEARANCE) throw new Error('Invalid saved appearance preferences');
+  return current;
 }
 
 export function getAppearanceSnapshot(): AppearancePreferences {

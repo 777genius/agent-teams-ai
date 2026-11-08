@@ -9,12 +9,14 @@ import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { ContextSwitchOverlay } from './components/common/ContextSwitchOverlay';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
-import { type SplashSceneHandle, startSplashScene } from './components/splash/splashScene';
+import { startSplashScene } from './components/splash/splashScene';
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
 import { useAppearanceZoomController } from './hooks/useAppearance';
 import { useThemeController } from './hooks/useTheme';
 import { useStore } from './store';
 import { loadDynamicFlags } from './utils/dynamicFlags';
+
+import type { SplashSceneHandle } from './components/splash/splashScene';
 
 declare global {
   interface Window {

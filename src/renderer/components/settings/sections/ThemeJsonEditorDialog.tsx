@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput, syntaxHighlighting } from '@codemirror/language';
-import { search, searchKeymap } from '@codemirror/search';
+import { searchKeymap } from '@codemirror/search';
 import { EditorState } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
@@ -12,8 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { formatCustomThemesJson, parseCustomThemesJson } from '@renderer/utils/appearancePreferences';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 
-import type { RefObject } from 'react';
 import type { CustomTheme } from '@renderer/utils/appearancePreferences';
+import type { RefObject } from 'react';
 
 interface ThemeJsonEditorDialogProps {
   open: boolean;

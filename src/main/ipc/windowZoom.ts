@@ -1,4 +1,5 @@
 import { WINDOW_SET_ZOOM_FACTOR_CHANNEL } from '@shared/constants';
+
 import type { BrowserWindow, IpcMain } from 'electron';
 
 /**

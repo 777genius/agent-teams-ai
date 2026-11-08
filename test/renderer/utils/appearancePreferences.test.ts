@@ -135,6 +135,15 @@ describe('portable Appearance persistence', () => {
     expect(getAppearanceSnapshot().themes).toEqual([]);
   });
 
+  it('does not overwrite a corrupt appearance record when another setting changes', () => {
+    setCustomThemes([example()]);
+    const corrupt = '{"version":1,"themes":[';
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, corrupt);
+    expect(() => setAppearanceZoom(125)).toThrow(/Invalid saved appearance preferences/);
+    expect(localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe(corrupt);
+    expect(getAppearanceSnapshot().themes).toEqual([example()]);
+  });
+
   it('shows a native zoom when storage is unavailable', () => {
     reflectNativeAppearanceZoom(175);
     expect(getAppearanceSnapshot().zoomPercent).toBe(175);

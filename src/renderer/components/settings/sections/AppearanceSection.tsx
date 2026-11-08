@@ -17,9 +17,9 @@ import {
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
 import { ThemeJsonEditorDialog } from './ThemeJsonEditorDialog';
 
+import type { SafeConfig } from '../hooks/useSettingsConfig';
 import type { CustomTheme } from '@renderer/utils/appearancePreferences';
 import type { AppConfig } from '@shared/types/notifications';
-import type { SafeConfig } from '../hooks/useSettingsConfig';
 
 const THEME_OPTIONS = ['dark', 'light', 'system'] as const;
 const BUILTIN_THEME_OPTION = '__builtin__';
