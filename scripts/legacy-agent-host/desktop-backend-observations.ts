@@ -260,14 +260,17 @@ export function isCapturedOriginalNodeZombie(input: {
     /^([A-Za-z]{3} [A-Za-z]{3} [ \d]\d \d{2}:\d{2}:\d{2} \d{4})\s+(.+)$/;
   const expected = expression.exec(input.expectedIdentity);
   const observed = expression.exec(input.observedIdentity);
-  return Boolean(
-    expected &&
-    observed &&
-    expected[1] === observed[1] &&
+  if (!expected || !observed || expected[1] !== observed[1]) return false;
+  // The original packed app has a different macOS zombie display name than
+  // the dev Node wrapper. Bind that exception to its exact captured invocation.
+  const originalNode =
     (observed[2] === '(node)' || observed[2] === '<defunct>') &&
     /(?:^|\/)node\s+/.test(expected[2]!) &&
-    /(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!)
-  );
+    /(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!);
+  const originalPackedApp =
+    observed[2] === '(Agent Teams AI)' &&
+    /(?:^|\/)Agent Teams AI\.app\/Contents\/MacOS\/Agent Teams AI --remote-debugging-port=9222$/.test(expected[2]!);
+  return originalNode || originalPackedApp;
 }
 
 interface OriginalAppReapInput {
