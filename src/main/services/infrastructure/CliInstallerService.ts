@@ -388,19 +388,7 @@ function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
 }
 
 function resetGatherDiag(diag: CliInstallerStatusRunDiag): void {
-  diag.versionError = null;
-  diag.authAttempts = 0;
-  diag.authLastError = null;
-  diag.authStdoutLen = 0;
-  diag.authStdoutTail = '';
-  diag.authTimedOut = false;
-  diag.gatherError = null;
-  diag.shellEnvMs = null;
-  diag.binaryResolveMs = null;
-  diag.versionProbeMs = null;
-  diag.providerInitialWaitMs = null;
-  diag.totalMs = null;
-  diag.diagWriteScheduled = false;
+  Object.assign(diag, createCliInstallerRunDiag());
 }
 
 function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstallerStatusRunDiag {
