@@ -687,16 +687,30 @@ async function main() {
     const modCode = mac ? 'MetaLeft' : 'ControlLeft';
     const modVk = mac ? 91 : 17;
     const sendNativeZoomShortcut = async (key, code, virtualKey) => {
+      const plus = key === '+';
+      const modifiers = mod | (plus ? 8 : 0);
       await cdp.send('Input.dispatchKeyEvent', {
         type: 'rawKeyDown', key: modKey, code: modCode,
         windowsVirtualKeyCode: modVk, modifiers: mod,
       });
+      if (plus) {
+        await cdp.send('Input.dispatchKeyEvent', {
+          type: 'rawKeyDown', key: 'Shift', code: 'ShiftLeft',
+          windowsVirtualKeyCode: 16, modifiers,
+        });
+      }
       await cdp.send('Input.dispatchKeyEvent', {
-        type: 'keyDown', key, code, windowsVirtualKeyCode: virtualKey, modifiers: mod,
+        type: 'keyDown', key, code, windowsVirtualKeyCode: virtualKey, modifiers,
       });
       await cdp.send('Input.dispatchKeyEvent', {
-        type: 'keyUp', key, code, windowsVirtualKeyCode: virtualKey, modifiers: mod,
+        type: 'keyUp', key, code, windowsVirtualKeyCode: virtualKey, modifiers,
       });
+      if (plus) {
+        await cdp.send('Input.dispatchKeyEvent', {
+          type: 'keyUp', key: 'Shift', code: 'ShiftLeft',
+          windowsVirtualKeyCode: 16, modifiers: mod,
+        });
+      }
       await cdp.send('Input.dispatchKeyEvent', {
         type: 'keyUp', key: modKey, code: modCode, windowsVirtualKeyCode: modVk,
       });
@@ -705,7 +719,7 @@ async function main() {
     };
     let nativeZoomFactor = zoomBaseline.factor;
     for (let attempt = 0; attempt < 10 && nativeZoomFactor < 1.95; attempt++) {
-      await sendNativeZoomShortcut('=', 'Equal', 187);
+      await sendNativeZoomShortcut('+', 'Equal', 187);
       nativeZoomFactor = await cdp.evaluate('window.electronAPI.getZoomFactor()');
     }
     assert(nativeZoomFactor >= 1.95 && nativeZoomFactor <= 2.12,
