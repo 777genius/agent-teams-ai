@@ -32,6 +32,7 @@ export interface SmartScheduleRuntimePort {
   getMemberStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   getLeadName(teamName: string): Promise<string | null>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  hasLaunchConfig(teamName: string): Promise<boolean>;
   attachMember(teamName: string, memberName: string): Promise<void>;
   createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask>;
   launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse>;
@@ -83,6 +84,15 @@ export class SmartScheduleDispatcher {
 
   constructor(private readonly runtime: SmartScheduleRuntimePort) {}
 
+  /** Reject new team schedules for metadata-only drafts; desktop Launch must finish their setup. */
+  async assertCanSchedule(schedule: Pick<Schedule, 'teamName' | 'executionMode'>): Promise<void> {
+    if (schedule.executionMode !== 'team') return;
+    const saved = await this.runtime.getSavedRequest(schedule.teamName);
+    if (saved && !(await this.runtime.hasLaunchConfig(schedule.teamName))) {
+      throw new Error('Finish team setup before creating a Whole team schedule');
+    }
+  }
+
   async dispatch(
     schedule: Schedule,
     runId: string,
@@ -129,6 +139,9 @@ export class SmartScheduleDispatcher {
         const saved = await this.runtime.getSavedRequest(team);
         if (!saved?.cwd || !saved.providerId) {
           return skipped('Team launch settings are missing or the provider is not selected');
+        }
+        if (!(await this.runtime.hasLaunchConfig(team))) {
+          return skipped('Finish team setup before scheduling a Whole team launch (config.json missing)');
         }
         if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamBusy(team) || this.runtime.isTeamAlive(team)) {
           return skipped('Team launch state changed; no duplicate launch was submitted');

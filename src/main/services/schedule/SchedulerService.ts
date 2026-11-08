@@ -186,6 +186,7 @@ export class SchedulerService {
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
     assertSupportedScheduledTeam(input.teamName);
+    await this.smartDispatcher?.assertCanSchedule(input);
     const now = new Date().toISOString();
     const schedule: Schedule = {
       id: randomUUID(),
@@ -245,6 +246,8 @@ export class SchedulerService {
       }),
       updatedAt: new Date().toISOString(),
     };
+
+    await this.smartDispatcher?.assertCanSchedule(updated);
 
     // Reschedule cron job if expression or timezone changed
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
@@ -333,6 +336,7 @@ export class SchedulerService {
 
     // A retained Host schedule cannot be armed against the legacy executor.
     assertSupportedScheduledTeam(existing.teamName);
+    await this.smartDispatcher?.assertCanSchedule(existing);
     // Remove old job and recreate to get fresh next-run timing
     this.removeCronJob(id);
 

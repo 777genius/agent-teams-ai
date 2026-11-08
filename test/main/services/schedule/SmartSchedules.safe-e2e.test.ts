@@ -70,6 +70,7 @@ describe('Smart schedules filesystem safe E2E', () => {
       getMemberStatuses: vi.fn(async () => ({ runId: 'active-team-run', statuses: {} })),
       getLeadName: vi.fn(async () => 'lead'),
       getSavedRequest: vi.fn(async () => saved),
+      hasLaunchConfig: vi.fn(async () => true),
       attachMember: vi.fn(async () => undefined),
       createTask: vi.fn(async () => ({
         id: 'e2e-task',
@@ -212,6 +213,28 @@ describe('Smart schedules filesystem safe E2E', () => {
     await scheduler.stop();
     await scheduler.start();
     expect((await repository.listRuns(schedule.id))[0].status).toBe('dispatched');
+  });
+
+  it('rejects a metadata-only team draft before saving and safely skips retained schedules', async () => {
+    port.hasLaunchConfig = vi.fn(async () => false);
+    const draftInput = { ...input(), executionMode: 'team' as const };
+    await expect(scheduler.createSchedule(draftInput)).rejects.toThrow('Finish team setup');
+    expect(await repository.listSchedules()).toHaveLength(0);
+
+    const now = new Date().toISOString();
+    const retained: Schedule = {
+      ...draftInput, id: 'retained-draft', status: 'active', maxConsecutiveFailures: 3,
+      consecutiveFailures: 0, maxTurns: 5, createdAt: now, updatedAt: now,
+    };
+    await repository.saveSchedule(retained);
+    await expect(scheduler.updateSchedule(retained.id, { label: 'Retry' })).rejects.toThrow('Finish team setup');
+    await expect(scheduler.resumeSchedule(retained.id)).rejects.toThrow('Finish team setup');
+    port.isTeamAlive = vi.fn(() => false);
+    await scheduler.triggerNow(retained.id);
+    const run = await waitForRun(retained.id, 'skipped');
+    expect(run.summary).toContain('Finish team setup');
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(oneShot).not.toHaveBeenCalled();
   });
 
   it('starts a stopped team once from its saved provider profile without a second task', async () => {

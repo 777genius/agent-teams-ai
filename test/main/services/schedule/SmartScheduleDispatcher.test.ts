@@ -80,6 +80,7 @@ function makePort(): SmartScheduleRuntimePort {
     })),
     getLeadName: vi.fn(async () => 'lead'),
     getSavedRequest: vi.fn(async () => saved),
+    hasLaunchConfig: vi.fn(async () => true),
     attachMember: vi.fn(async () => undefined),
     createTask: vi.fn(async () => ({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask)),
     launchTeam: vi.fn(async () => ({ runId: 'launched-1', launchStatus: 'started' as const })),
@@ -256,6 +257,16 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     );
     expect(result.kind).toBe('skipped');
     expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('refuses metadata-only draft schedules without invoking the unsafe launch path', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasLaunchConfig = vi.fn(async () => false);
+    await expect(dispatch.assertCanSchedule(makeSchedule('team'))).rejects.toThrow('Finish team setup');
+    const result = await dispatch.dispatch(makeSchedule('team'), 'draft-run', active);
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('Finish team setup') });
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
   });
 
   it('launches the whole team once using saved provider/CWD and one prompt', async () => {

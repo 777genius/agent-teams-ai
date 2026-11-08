@@ -3,6 +3,8 @@ import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import { SchedulerService } from './SchedulerService';
 import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 
+import { TeamConfigReader } from '../team/TeamConfigReader';
+
 import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';
 import type { TeamProvisioningService } from '../team/TeamProvisioningService';
@@ -14,6 +16,7 @@ export function createSchedulerService(
   provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
+  const configReader = new TeamConfigReader();
   const dispatcher = new SmartScheduleDispatcher({
     isTeamAlive: (teamName) => apis.runtime.isTeamAlive(teamName),
     isTeamLaunching: (teamName) => apis.provisioningRun.hasProvisioningRun(teamName),
@@ -22,6 +25,7 @@ export function createSchedulerService(
     getMemberStatuses: (teamName) => apis.memberLifecycle.getMemberSpawnStatuses(teamName),
     getLeadName: (teamName) => data.getLeadMemberName(teamName),
     getSavedRequest: (teamName) => data.getSavedRequest(teamName),
+    hasLaunchConfig: async (teamName) => (await configReader.getConfigVerified(teamName)) !== null,
     attachMember: (teamName, memberName) =>
       apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
         reason: 'member_added',
