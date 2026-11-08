@@ -845,6 +845,19 @@ async function main() {
       );
     };
     await selectTemplate();
+    // A destructive confirmation must not expose background form fields to Tab.
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
+    });
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
+    });
+    assert(
+      await cdp.evaluate(
+        "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"]')?.contains(document.activeElement)"
+      ),
+      'Template confirmation focus escaped into the background form'
+    );
     await cdp.click(
       "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
     );
@@ -885,17 +898,17 @@ async function main() {
       ".find(option => option.textContent?.trim() === " + JSON.stringify(organizationName) + ")";
     let organizationEntryReady = false;
     for (let attempt = 0; attempt < 3; attempt++) {
-      await cdp.waitFor(
-        "window.__agentTeamsDevStore?.getState",
-        'renderer after potential Vite reload', 45_000
-      );
-      await cdp.evaluate("(() => {" +
-        "const s = window.__agentTeamsDevStore.getState();" +
-        "const tab = s.getAllPaneTabs().find(t => t.type === 'organizations');" +
-        "if (tab) s.setActiveTab(tab.id);" +
-        "else s.openTab({ type: 'organizations', label: 'Organizations' });" +
-      "})()");
       try {
+        await cdp.waitFor(
+          "window.__agentTeamsDevStore?.getState",
+          'renderer after potential Vite reload', 45_000
+        );
+        await cdp.evaluate("(() => {" +
+          "const s = window.__agentTeamsDevStore.getState();" +
+          "const tab = s.getAllPaneTabs().find(t => t.type === 'organizations');" +
+          "if (tab) s.setActiveTab(tab.id);" +
+          "else s.openTab({ type: 'organizations', label: 'Organizations' });" +
+        "})()");
         await cdp.waitFor(
           `(${createButtonExpression('Edit')}) || (${createButtonExpression('Editing')})`,
           'Organization Map editor action', 20_000
