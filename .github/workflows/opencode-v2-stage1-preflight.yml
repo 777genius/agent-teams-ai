@@ -214,8 +214,19 @@ jobs:
                r.packagedElectronQualified!==false || r.modelTurnProven!==false ||
                r.processCustodyQualified!==false || r.cleanup!==true ||
                r.durableHTTPEvents!==1 || r.hostSpiReadinessProven!==true ||
-               r.failure !== undefined ||
-               !Array.isArray(r.steps) || r.steps.length!==6) process.exit(1);
+               r.failure !== undefined) process.exit(1);
+            // A fabricated six-element receipt is not a completed native proof.
+            // Require each physical TEST stage in its original order.
+            const requiredSteps=[
+              'TEST_published_server_real_authenticated_HTTP_ready',
+              'TEST_no_unauthenticated_HTTP_access',
+              'TEST_official_HTTP_session_created_event_persisted',
+              'TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt',
+              'TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn',
+              'TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay',
+            ];
+            if(!Array.isArray(r.steps) || r.steps.length!==requiredSteps.length ||
+               r.steps.some((step,index)=>step!==requiredSteps[index])) process.exit(1);
           "
       - name: Preserve TEST-only receipt on success or safe failure
         if: always()
