@@ -71,6 +71,19 @@ jobs:
       # Electron main bundle; installing alone does not produce dist/lifecycle.
       - name: Build isolated Host before Electron startup
         run: pnpm --filter @agent-teams/legacy-agent-host build
+      # dev:mcp bootstraps terminal-platform before opening CDP. Stage the exact
+      # lockfile-pinned and checksum-verified runtime with Actions credentials,
+      # instead of leaving a network download inside the 90s UI startup deadline.
+      - name: Stage pinned terminal-platform runtime before Electron startup
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --ensure
+      # node-ci intentionally skips Electron's postinstall. Validate it explicitly
+      # so failures retain the installer's diagnostics rather than a CDP timeout.
+      - name: Ensure Electron binary before UI E2E
+        timeout-minutes: 10
+        run: node ./scripts/ensure-electron-install.cjs --strict
       - name: Verify owned Windows process census and fail-closed teardown invariants
         run: node --test scripts/e2e/teams-create-page-owned-processes.test.mjs
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
