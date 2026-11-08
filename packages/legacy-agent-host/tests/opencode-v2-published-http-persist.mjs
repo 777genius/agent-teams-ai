@@ -199,6 +199,69 @@ if (process.argv[2] === '--worker') {
         throw Error('TEST_native_late_permission_override_not_fenced');
     }
     receipt.nativeSessionPermissionOrderReadbackProven=true;
+    // This checks the real published V2 Permission.Service resolver, NOT a
+    // session readback, model turn, tool execution, or effective agent policy.
+    // All resources are disposable and outside this TEST workspace only.
+    const externalResource=join(root,'temp','TEST-external-resource');
+    let rejectNoReplay=false;
+    for(const scenario of [
+      {first:'allow',last:'deny',expected:'deny'},
+      {first:'deny',last:'allow',expected:'allow'},
+      {first:'allow',last:'ask',expected:'ask'},
+    ]) {
+      const rules=[
+        {action:'external_directory',resource:'*',effect:scenario.first},
+        {action:'external_directory',resource:'*',effect:scenario.last},
+      ];
+      const made=await call('/api/session','POST',{
+        location:{directory:workspace},agent:'build',permissions:rules,
+      });
+      const id=made.data?.data?.id;
+      if(made.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(id||''))
+        throw Error('TEST_native_resolver_session_missing');
+      const base='/api/session/'+encodeURIComponent(id);
+      const decision=await call(base+'/permission','POST',{
+        action:'external_directory',resources:[externalResource],
+      });
+      if(decision.status!==200||decision.data?.data?.effect!==scenario.expected)
+        throw Error('TEST_native_last_matching_permission_not_effective');
+      const pending=await call(base+'/permission');
+      const requests=pending.data?.data;
+      if(pending.status!==200||!Array.isArray(requests)||
+         requests.length!==(scenario.expected==='ask'?1:0))
+        throw Error('TEST_native_permission_pending_count_invalid');
+      if(scenario.expected==='ask') {
+        const permissionId=decision.data?.data?.id;
+        if(!/^per[A-Za-z0-9_-]+$/.test(permissionId||'')||
+           requests[0]?.id!==permissionId||requests[0]?.sessionID!==id)
+          throw Error('TEST_native_ask_identity_invalid');
+        // A different TEST session must never grant this request. Its
+        // possession of the same loopback secret is not session authority.
+        const foreign='/api/session/'+encodeURIComponent(sessionId)+
+          '/permission/'+encodeURIComponent(permissionId)+'/reply';
+        if((await call(foreign,'POST',{decision:'always'})).status!==404)
+          throw Error('TEST_foreign_permission_reply_accepted');
+        const still=await call(base+'/permission');
+        if(still.status!==200||still.data?.data?.length!==1||
+           still.data.data[0]?.id!==permissionId)
+          throw Error('TEST_foreign_permission_changed_owner');
+        const reply=base+'/permission/'+encodeURIComponent(permissionId)+'/reply';
+        if((await call(reply,'POST',{decision:'reject'})).status!==204)
+          throw Error('TEST_native_permission_reject_failed');
+        if((await call(reply,'POST',{decision:'once'})).status!==404)
+          throw Error('TEST_native_permission_reply_replayed');
+        const cleared=await call(base+'/permission');
+        if(cleared.status!==200||cleared.data?.data?.length!==0)
+          throw Error('TEST_native_permission_after_reject_not_empty');
+        rejectNoReplay=true;
+      }
+      if((await call(base,'DELETE')).status!==204)
+        throw Error('TEST_native_resolver_session_cleanup_failed');
+    }
+    if(!rejectNoReplay)throw Error('TEST_native_permission_negative_not_executed');
+    receipt.nativePermissionResolverProven=true;
+    receipt.nativePermissionReplyRejectNoReplayProven=true;
+    receipt.steps.push('TEST_published_native_permission_resolver_and_nonreplay');
     const before=await readLog(sessionId);
     receipt.steps.push('TEST_official_HTTP_session_created_event_persisted');
     if(!await stop())throw Error('TEST_first_process_cleanup_unknown');
