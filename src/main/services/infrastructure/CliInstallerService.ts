@@ -866,8 +866,7 @@ export class CliInstallerService {
 
   async getProviderStatus(
     providerId: CliProviderId,
-    options: CliProviderStatusRequestOptions = {},
-    retried = false
+    options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
@@ -877,17 +876,15 @@ export class CliInstallerService {
         providerId,
         new Error('Provider runtime changed during status check. Refresh to retry.')
       );
-    const retryOrObsolete = () =>
-      options.projectPath && !retried
-        ? this.getProviderStatus(providerId, options, true)
-        : obsoleteStatus();
-    if (generation !== this.statusGatherGeneration) return retryOrObsolete();
-    // Background polling remains passive; only explicit project preflight discovers a runtime.
+    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    // Explicit project-scoped preflight can race initial runtime discovery.
+    // Keep background/global status polling passive: it must not spawn shell
+    // discovery or invalidate an authoritative cached status.
     const snapshot = this.latestStatusSnapshot;
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
     if (options.projectPath && !snapshot?.binaryPath) {
       const binaryPath = await ClaudeBinaryResolver.resolve();
-      if (generation !== this.statusGatherGeneration) return retryOrObsolete();
+      if (generation !== this.statusGatherGeneration) return obsoleteStatus();
       const latest = this.latestStatusSnapshot;
       passiveRuntime = resolvePassiveProviderRuntime(
         latest?.binaryPath
@@ -926,7 +923,7 @@ export class CliInstallerService {
           providerId,
           handleCatalogUpdate
         );
-    if (generation !== this.statusGatherGeneration) return retryOrObsolete();
+    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;
