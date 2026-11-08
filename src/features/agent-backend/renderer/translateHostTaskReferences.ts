@@ -49,7 +49,7 @@ export function translateHostTaskReferences(
   }
   return result.replace(/task:\/\/[^\s<>)[\]]+/g, (href) => {
     const ref = parseTaskLinkHref(href);
-    if (!ref) throw new Error('Invalid Host task reference');
+    if (!ref) return href;
     return buildTaskLinkHref({
       taskId: ref.taskId,
       displayId: ref.displayId ?? ref.taskId,

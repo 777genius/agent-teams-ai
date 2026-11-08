@@ -38,6 +38,25 @@ describe('detached source reference navigation', () => {
       expect(translated).not.toContain('TEST-destination');
     }
   });
+  it('keeps malformed task URLs as text while mapping valid links in the same message', () => {
+    const referencedTeams: Array<string | undefined> = [];
+    const source = [
+      'literal `task://bad%ZZ`',
+      'stored task://%E0%A4%A',
+      'valid task://TEST-current?team=TEST-destination&display=12',
+    ].join('\n');
+    const rewritten = translateHostTaskReferences(source, (team) => {
+      referencedTeams.push(team);
+      return qualifyHostTaskReferenceTeam(team, 'TEST-destination', selection);
+    });
+
+    expect(rewritten).toContain('`task://bad%ZZ`');
+    expect(rewritten).toContain('task://%E0%A4%A');
+    expect(rewritten).toContain(
+      `task://TEST-current?team=${encodeURIComponent(selection)}&display=12`
+    );
+    expect(referencedTeams).toEqual(['TEST-destination']);
+  });
   it('a same-named Host Team remains unbound without an exact captured resource map', () => {
     const destination = qualifyHostTaskReferenceTeam(
       'TEST-colliding-human-name',
