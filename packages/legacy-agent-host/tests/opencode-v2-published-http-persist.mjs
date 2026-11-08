@@ -1,5 +1,5 @@
 // TEST-only discovery: published OpenCode 2.0.21 HTTP server with durable events.
-// Not an executable/Host-custody or production V01-V08 certificate.
+// Node worker is a TEST owner only; no production executable/Host custody or V01–V08 certificate.
 import { createHash, randomBytes } from 'node:crypto';
 import { spawn, execFileSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
@@ -182,6 +182,113 @@ if (process.argv[2] === '--worker') {
       throw Error('TEST_cold_durable_event_identity_changed');
     receipt.durableHTTPEvents=1;
     receipt.steps.push('TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt');
+
+    // Next vertical slice: the real published durable HTTP server, through
+    // the existing private Stage1 Session SPI. No model call, tool or V1 owner.
+    // This Node worker is an isolated TEST harness, not a qualified production
+    // OpenCode executable/process custodian.
+    const { createOpenCodeV2MemberProvider } =
+      await import('../dist/adapters/providers/OpenCodeV2MemberProvider.js');
+    const { initialContextDigest } =
+      await import('../dist/team-launch/context.js');
+    const instructions = 'TEST Host-owned team, member and workspace instructions';
+    const requiredRules = [
+      { action:'external_directory', resource:'*', effect:'deny' },
+    ];
+    const sessionPath='/api/session/'+encodeURIComponent(sessionId);
+    const entriesPath='/api/experimental/session/'+encodeURIComponent(sessionId)+
+      '/instructions/entries';
+    const executablePath=realpathSync(process.execPath);
+    const executableSha256=hash(readFileSync(executablePath));
+    const context={
+      request:{tenantId:'TEST-tenant',projectId:'TEST-project',
+        sessionId:'TEST-session',generation:1,configRevision:'TEST-config',
+        requiredCapabilities:['text']},
+      profile:{provider:'opencode',nativeGeneration:'v2',protocolRevision:'2.0.21',
+        cwd:workspace,environment:env,
+        executable:{path:executablePath,sha256:executableSha256},
+        teamId:'TEST-team',memberId:'TEST-member',principalId:'TEST-principal',
+        sessionId:'TEST-session',generation:1,configRevision:'TEST-config',
+        model:'TEST-model',accountBinding:'TEST-account',
+        endpoint:'http://127.0.0.1:'+port,nativeSessionId:sessionId,
+        limits:{queuedInputs:2,inputBytes:8192,outputBytes:8192,
+          outputEvents:100,pendingInteractions:2,timeoutMs:12000},
+        nativeOptions:{providerId:'TEST-provider',agent:'build'}},
+      endpoint:{binding:{backendId:'TEST-backend',teamId:'TEST-team',
+        runId:'TEST-run',memberId:'TEST-member',generation:'TEST-generation'}},
+      instructions,isCurrent:()=>true,canAllocate:()=>true,
+      onProgress:()=>{},readCheckpoint:async()=>undefined,
+    };
+    let instructionWrites=0;
+    const owner={
+      requiredExternalDirectory:'deny',
+      readPassword:()=>password,
+      async probe(signal) {
+        if(signal.aborted)return false;
+        const response=await call('/api/info');
+        return !signal.aborted&&response.status===200&&
+          response.data?.pid===secondPid&&startIdentity(secondPid)===startTicks;
+      },
+      async readNativeCustody(signal) {
+        if(signal.aborted||startIdentity(secondPid)!==startTicks)return undefined;
+        const info=await call('/api/info');
+        if(signal.aborted||info.status!==200||info.data?.pid!==secondPid||
+           info.data?.version!=='2.0.21')return undefined;
+        const observedPath=realpathSync('/proc/'+secondPid+'/exe');
+        return {executablePath:observedPath,
+          executableSha256:hash(readFileSync('/proc/'+secondPid+'/exe')),
+          pid:secondPid,startIdentity:startTicks,version:info.data.version};
+      },
+      async readNativeEffectivePermissions(signal) {
+        if(signal.aborted)throw Error('TEST_readback_aborted');
+        const response=await call(sessionPath);
+        if(signal.aborted||response.status!==200||
+           response.data?.data?.id!==sessionId||
+           response.data?.data?.location?.directory!==workspace)
+          throw Error('TEST_native_session_identity_unconfirmed');
+        return response.data.data.permissions;
+      },
+      async installAndAttestInitialContext(capture,signal) {
+        if(signal.aborted||++instructionWrites!==1||
+           capture.nativeSessionId!==sessionId||
+           capture.contextDigest!==initialContextDigest(instructions)||
+           capture.generation!=='TEST-generation'||
+           capture.configRevision!=='TEST-config')return undefined;
+        const put=await call(entriesPath+'/host-context','PUT',
+          {value:{instructions:capture.instructions,digest:capture.contextDigest}});
+        if(signal.aborted||put.status!==204)return undefined;
+        const get=await call(entriesPath);
+        if(get.status!==200||!Array.isArray(get.data?.data)||
+           get.data.data.filter(e=>e?.key==='host-context').length!==1||
+           JSON.stringify(get.data.data.find(e=>e?.key==='host-context')?.value)!==
+             JSON.stringify({instructions,digest:capture.contextDigest}))
+          return undefined;
+        return {nativeSessionId:sessionId,contextDigest:capture.contextDigest,
+          generation:capture.generation,configRevision:capture.configRevision};
+      },
+      stopOwned:stop,
+      async confirmStopped() {
+        // Read-only physical check. Never repeat the stop signal after an
+        // uncertain ACK, and never touch an unowned process group.
+        return !present(secondPid)&&!present(-secondPid);
+      },
+    };
+    const provider=createOpenCodeV2MemberProvider(context,owner);
+    const opened=await provider.factory.open(context.request);
+    if(!provider.isReady()||
+       provider.initialContextEvidence?.()?.contextDigest!==
+         initialContextDigest(instructions)||instructionWrites!==1)
+      throw Error('TEST_persisted_HTTP_Host_SPI_not_ready');
+    const rechecked=await opened.driver.checkReadiness();
+    if(rechecked.ok!==true||!provider.isReady()||instructionWrites!==1)
+      throw Error('TEST_Host_SPI_rechecked_or_context_replayed');
+    receipt.hostSpiReadinessProven=true;
+    receipt.steps.push('TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn');
+    const closed=await opened.driver.close();
+    if(closed.cleanup!=='confirmed'||!await provider.cleanup()||
+       present(secondPid)||present(-secondPid))
+      throw Error('TEST_Host_SPI_own_process_cleanup_unconfirmed');
+    receipt.steps.push('TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay');
   } catch (e) {
     receipt.failure = /^TEST_[A-Za-z0-9_]+$/.test(e?.message || '')
       ? e.message : 'TEST_published_HTTP_persist_unqualified';

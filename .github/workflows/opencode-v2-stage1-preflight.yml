@@ -172,10 +172,17 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24.21.0
           package-manager-cache: false
+      - name: Install exact private Stage1 Session SPI dependencies
+        env:
+          AGENT_TEAMS_INSTALL_PROFILE: node-ci
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build isolated Stage1 V2 Session SPI for TEST-only HTTP proof
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check isolated durable-HTTP TEST harness syntax
         run: node --check packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs
       - name: Install official pinned SDK without scripts in TEST-owned npm prefix
@@ -206,8 +213,9 @@ jobs:
                r.kind!=='TEST_V2_HTTP_DURABLE_DISCOVERY' || r.qualified!==false ||
                r.packagedElectronQualified!==false || r.modelTurnProven!==false ||
                r.processCustodyQualified!==false || r.cleanup!==true ||
-               r.durableHTTPEvents!==1 || r.failure !== undefined ||
-               !Array.isArray(r.steps) || r.steps.length!==4) process.exit(1);
+               r.durableHTTPEvents!==1 || r.hostSpiReadinessProven!==true ||
+               r.failure !== undefined ||
+               !Array.isArray(r.steps) || r.steps.length!==6) process.exit(1);
           "
       - name: Preserve TEST-only receipt on success or safe failure
         if: always()
