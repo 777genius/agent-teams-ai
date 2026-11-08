@@ -679,6 +679,10 @@ async function main() {
     const zoomBaseline = await cdp.evaluate(
       "window.electronAPI.getZoomFactor().then(factor => ({ factor, innerWidth: window.innerWidth }))"
     );
+    await cdp.evaluate(
+      "window.__nativeZoomEvents = []; window.__stopNativeZoomEvents = " +
+      "window.electronAPI.onZoomFactorChanged(factor => window.__nativeZoomEvents.push(factor));"
+    );
     assert(zoomBaseline.factor >= 0.95 && zoomBaseline.factor <= 1.05,
       'Electron test must start at 100% native zoom');
     const mac = process.platform === 'darwin';
@@ -722,8 +726,9 @@ async function main() {
       await sendNativeZoomShortcut('+', 'Equal', 187);
       nativeZoomFactor = await cdp.evaluate('window.electronAPI.getZoomFactor()');
     }
+    const nativeZoomEvents = await cdp.evaluate('window.__nativeZoomEvents');
     assert(nativeZoomFactor >= 1.95 && nativeZoomFactor <= 2.12,
-      `Native Electron zoom shortcut never reached ~200%; actual factor: ${nativeZoomFactor}`);
+      `Native Electron zoom shortcut never reached ~200%; actual factor: ${nativeZoomFactor}; main zoom notifications: ${JSON.stringify(nativeZoomEvents)}`);
     const atNativeZoom = await cdp.evaluate(
       "({ innerWidth: window.innerWidth, backVisible: " +
       "document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')?.getBoundingClientRect().width > 0 })"
