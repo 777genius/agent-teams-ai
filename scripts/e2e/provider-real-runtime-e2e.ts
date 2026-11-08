@@ -60,7 +60,11 @@ const report: {
   platform: string;
   observedRealRuntime: boolean;
   usesLiveAccounts: boolean;
+  /** Only the real pinned CLI summary/filter contract, NOT full inventory or OAuth. */
   pass: boolean;
+  qualificationScope: 'summary-filter-only';
+  fullCatalogReconciled: boolean;
+  desktopIpcQualified: false;
   scenarios: ScenarioEvidence[];
   inferenceRequests: number;
   failedPhase: string | null;
@@ -71,7 +75,9 @@ const report: {
   configuredAllEntryState: 'missing' | 'connected' | 'available' | 'not-connected' | 'error' | 'other';
 } = {
   schemaVersion: 1, pin: lock.version, platform, observedRealRuntime: false,
-  usesLiveAccounts: false, pass: false, scenarios: [], inferenceRequests: 0,
+  usesLiveAccounts: false, pass: false, qualificationScope: 'summary-filter-only',
+  fullCatalogReconciled: false, desktopIpcQualified: false,
+  scenarios: [], inferenceRequests: 0,
   failedPhase: null, failedReason: null, lastCommand: null, completedProbes: [],
   nativeProbe: 'not_run', configuredAllEntryState: 'missing',
 };
@@ -330,6 +336,10 @@ try {
   report.scenarios.push(await checkScenario('configured', address.port));
   report.inferenceRequests = inferenceRequests;
   assert.equal(inferenceRequests, 0, 'A nonmetadata local model request was attempted');
+  report.fullCatalogReconciled =
+    report.scenarios.find(s => s.name === 'configured')?.fullComparisonStatus === 'qualified';
+  // Do not overstate this result. The full host-backed directory is optional
+  // diagnostic evidence and can fail in a credential-free runner.
   report.pass = true;
 } catch (error) {
   report.failedPhase = phase;
@@ -355,6 +365,13 @@ try {
   try {
     fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
     fs.writeFileSync(evidencePath, JSON.stringify(report, null, 2) + '\n');
+  } catch {
+    // A missing evidence artifact invalidates the CI qualification. Do not
+    // replace or erase the originating assertion failure, and never log paths.
+    report.pass = false;
+    report.failedPhase ??= 'evidence-write';
+    report.failedReason ??= 'evidence_write_failed';
+    process.exitCode = 1;
   } finally {
     try {
       if (modelServer) {
@@ -367,5 +384,8 @@ try {
     }
   }
   console.log('real-runtime-provider-e2e: ' +
-    (report.pass ? 'PASS' : 'FAIL phase=' + report.failedPhase));
+    (report.pass
+      ? 'PASS summary-filter-only; full-catalog=' +
+        (report.fullCatalogReconciled ? 'qualified' : 'unqualified')
+      : 'FAIL phase=' + report.failedPhase));
 }
