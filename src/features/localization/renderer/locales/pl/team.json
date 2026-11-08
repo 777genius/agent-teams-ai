@@ -2124,7 +2124,8 @@
         "tenMinutes": "10 min",
         "fifteenMinutes": "15 min",
         "thirtyMinutes": "30 min"
-      }
+      },
+      "time": "Godzina"
     },
     "empty": {
       "title": "Brak harmonogramów",
@@ -2147,7 +2148,11 @@
       "cancelled": "Anulowane",
       "dispatched": "Przekazano",
       "skipped": "Pominięto"
-    }
+    },
+    "taskFirstAgentDescription": "Zadanie trafi do wybranego członka zespołu. W razie potrzeby zespół uruchomi się najpierw.",
+    "taskFirstTeamDescription": "Lider koordynuje to zadanie. W razie potrzeby zespół uruchomi się najpierw.",
+    "taskFirstDesktopRequired": "Harmonogramy działają tylko wtedy, gdy Agent Teams jest otwarty.",
+    "taskFirstHistoricPrompt": "Ten zespół ma zapisany stary prompt startowy. Sprawdź go w ustawieniach zespołu przed zaplanowaniem automatycznych zadań."
   },
   "openCodeContextConfigHint": {
     "summary": "Lokalne modele OpenCode mogą używać budżetu kontekstu OpenCode zamiast limitów dotyczących tylko promptu.",
