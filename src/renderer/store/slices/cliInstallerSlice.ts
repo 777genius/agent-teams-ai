@@ -17,7 +17,6 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
-import { createCodexRuntimeStatusActions } from './codexRuntimeStatusActions';
 import {
   getProviderDisplayName,
   isMultimodelCliStatus,
@@ -32,6 +31,7 @@ import {
   invalidateCliProviderScopeReads,
   setBoundedScopedProviderStatus,
 } from './cliProviderStatusScope';
+import { createCodexRuntimeStatusActions } from './codexRuntimeStatusActions';
 import { captureOpenCodeMetadataRead } from './openCodeMetadataPublication';
 import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
