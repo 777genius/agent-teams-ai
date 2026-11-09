@@ -55,6 +55,11 @@ function hasConfirmedFailedOpenCodeSends(
   );
   if (promptPositions.length !== 1 || answerPositions.length !== 1 ||
     promptPositions[0] >= answerPositions[0]) return false;
+  // A later user prompt starts another turn. Its failed tool cannot prove
+  // that this original lead request was answered without a successful send.
+  if (messages.slice(promptPositions[0] + 1, answerPositions[0])
+    .some(message => message.sessionId === sessionId && message.type === 'user' && !message.isMeta))
+    return false;
 
   const sends = messages.slice(promptPositions[0] + 1, answerPositions[0] + 1)
     .filter(message => message.type === 'assistant' && !message.isMeta &&
