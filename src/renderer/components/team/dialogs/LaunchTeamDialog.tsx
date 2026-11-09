@@ -2064,6 +2064,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     teamName: effectiveTeamName,
     prompt: promptDraft.value,
     cronExpression,
+    timezone,
     cwd: effectiveCwd,
     selectedProjectPathDeleted,
     isCustomCwd: cwdMode === 'custom',
