@@ -2,6 +2,7 @@ import {
   classifyOpenCodeDeliveryReplyContract,
   isOpenCodeReplyOptionalDeliveryContract,
   isOpenCodeConfiguredLeadReply,
+  isOpenCodeLeadDestinationProof,
   isOpenCodeReplyRequiredDeliveryRecipient,
 } from './OpenCodeDeliveryReplyContract';
 import {
@@ -138,17 +139,10 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
     (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
       isOpenCodeConfiguredLeadReply(record, input.configuredLeadName))
   ) {
-    const destination = input.configuredLeadName?.trim().toLowerCase();
     const proof = input.visibleReply;
     return Boolean(
-      destination && proof &&
-      record.visibleReplyInbox?.trim().toLowerCase() === destination &&
-      record.visibleReplyMessageId?.trim() === proof.message.messageId &&
-      proof.inboxName.trim().toLowerCase() === destination &&
-      proof.message.to?.trim().toLowerCase() === destination &&
-      proof.message.from.trim().toLowerCase() === record.memberName.trim().toLowerCase() &&
-      proof.message.relayOfMessageId === record.inboxMessageId &&
-      proof.message.source === 'runtime_delivery' &&
+      isOpenCodeLeadDestinationProof(record, input.configuredLeadName, proof) &&
+      proof?.message.source === 'runtime_delivery' &&
       isOpenCodeVisibleReplySemanticallySufficient({
         actionMode: input.actionMode, taskRefs: input.taskRefs,
         text: proof.message.text, summary: proof.message.summary,
@@ -304,6 +298,13 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     return isOpenCodePlainTextResponseReadCommitAllowed(input);
   }
   if (state === 'responded_visible_message') {
+    // A message in the user's inbox cannot satisfy a lead-directed reply.
+    if (record && input.configuredLeadName !== undefined &&
+      (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
+        isOpenCodeConfiguredLeadReply(record, input.configuredLeadName)) &&
+      !isOpenCodeLeadDestinationProof(record, input.configuredLeadName, input.visibleReply)) {
+      return false;
+    }
     return (
       isOpenCodeVisibleReplyReadCommitAllowed({
         actionMode: input.actionMode,
