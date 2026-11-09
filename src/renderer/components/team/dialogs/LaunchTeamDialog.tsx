@@ -2557,7 +2557,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               <Combobox
                 options={teamOptions}
                 value={selectedTeamName}
-                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); }}
+                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); setLocalError(null); }}
                 placeholder={t('launch.schedule.selectTeam')}
                 searchPlaceholder={t('launch.schedule.searchTeams')}
                 emptyMessage={
@@ -2613,16 +2613,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onToggle={() => setSchedExpanded((value) => !value)}
               mode={scheduleExecutionMode}
               taskFirst={isTaskFirstSchedule}
-              onModeChange={(mode) => { setScheduleExecutionMode(mode); setScheduleFormTouched(true); }}
+              onModeChange={(mode) => { setScheduleExecutionMode(mode); setScheduleFormTouched(true); setLocalError(null); }}
               targetMember={scheduleTargetMember}
-              onTargetMemberChange={(name) => { setScheduleTargetMember(name); setScheduleFormTouched(true); }}
+              onTargetMemberChange={(name) => { setScheduleTargetMember(name); setScheduleFormTouched(true); setLocalError(null); }}
               team={teamByName[effectiveTeamName]}
               label={schedLabel}
               onLabelChange={setSchedLabel}
               cronExpression={cronExpression}
-              onCronExpressionChange={(expression) => { setCronExpression(expression); setScheduleFormTouched(true); }}
+              onCronExpressionChange={(expression) => { setCronExpression(expression); setScheduleFormTouched(true); setLocalError(null); }}
               timezone={timezone}
-              onTimezoneChange={(zone) => { setTimezone(zone); setScheduleFormTouched(true); }}
+              onTimezoneChange={(zone) => { setTimezone(zone); setScheduleFormTouched(true); setLocalError(null); }}
               warmUpMinutes={warmUpMinutes}
               onWarmUpMinutesChange={setWarmUpMinutes}
             />
@@ -2881,7 +2881,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   minRows={4}
                   maxRows={12}
                   value={promptDraft.value}
-                  onValueChange={(value) => { promptDraft.setValue(value); setScheduleFormTouched(true); }}
+                  onValueChange={(value) => { promptDraft.setValue(value); setScheduleFormTouched(true); setLocalError(null); }}
                   suggestions={mentionSuggestions}
                   projectPath={
                     usesSavedTeamRuntime
