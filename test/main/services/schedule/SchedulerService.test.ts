@@ -771,6 +771,33 @@ describe('SchedulerService', () => {
 
   // --- Auto-Pause on Consecutive Failures ---
 
+  it('does not pause a live cron when automatic pause persistence fails', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const failing = { ...schedule, consecutiveFailures: 2, maxConsecutiveFailures: 3 };
+    await repo.saveSchedule(failing);
+    const cron = (service as unknown as {
+      cronJobs: Map<string, { pause(): void }>;
+    }).cronJobs.get(schedule.id);
+    expect(cron).toBeDefined();
+    const pauseSpy = vi.spyOn(cron!, 'pause');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    const subject = service as unknown as {
+      incrementConsecutiveFailures(input: Schedule): Promise<void>;
+    };
+    await expect(subject.incrementConsecutiveFailures(failing))
+      .rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(schedule.id)).toEqual(failing);
+    expect(pauseSpy).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
   it('auto-pauses schedule after maxConsecutiveFailures via retries', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 

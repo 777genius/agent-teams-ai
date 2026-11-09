@@ -778,14 +778,13 @@ export class SchedulerService {
 
     if (shouldAutoPause) {
       logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
-      const job = this.cronJobs.get(schedule.id);
-      if (job) job.pause();
-      this.clearWarmUpTimer(schedule.id);
     }
 
     await this.repository.saveSchedule(updated);
 
     if (shouldAutoPause) {
+      this.cronJobs.get(schedule.id)?.pause();
+      this.clearWarmUpTimer(schedule.id);
       this.emitChange({
         type: 'schedule-paused',
         scheduleId: schedule.id,
