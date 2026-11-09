@@ -145,7 +145,7 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
       record.visibleReplyInbox?.trim().toLowerCase() === destination &&
       record.visibleReplyMessageId?.trim() === proof.message.messageId &&
       proof.inboxName.trim().toLowerCase() === destination &&
-      proof.message.to.trim().toLowerCase() === destination &&
+      proof.message.to?.trim().toLowerCase() === destination &&
       proof.message.from.trim().toLowerCase() === record.memberName.trim().toLowerCase() &&
       proof.message.relayOfMessageId === record.inboxMessageId &&
       proof.message.source === 'runtime_delivery' &&
