@@ -233,7 +233,8 @@
         "apply": "Anwenden",
         "discover": "Installierte Schriften anzeigen",
         "loaded": "Installierte Schriften wurden zur Liste hinzugefügt.",
-        "unavailable": "Schriftarten können hier nicht abgefragt werden. Gib den Namen manuell ein."
+        "unavailable": "Schriftarten können hier nicht abgefragt werden. Gib den Namen manuell ein.",
+        "empty": "Keine installierten Schriftarten gefunden. Gib den Namen manuell ein."
       },
       "textSize": {
         "label": "Textgröße",
