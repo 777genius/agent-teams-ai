@@ -2407,24 +2407,30 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           const launchConfig: ScheduleLaunchConfig = {
             cwd: usesSavedTeamRuntime ? savedTeam?.cwd ?? '' : effectiveCwd,
             prompt: promptDraft.value.trim(),
-            providerId: isTaskFirstSchedule ? savedTeam!.providerId : originalProvider?.providerId ?? selectedProviderId,
+            // Preserve the *absence* of optional legacy fields too. Nullish
+            // fallbacks would mix a hidden runtime with the visible provider's defaults.
+            providerId: isTaskFirstSchedule
+              ? savedTeam!.providerId
+              : originalProvider ? originalProvider.providerId : selectedProviderId,
             providerBackendId: isTaskFirstSchedule
               ? savedTeam?.providerBackendId
-              : originalProvider?.providerBackendId ?? selectedProviderBackendId,
-            model: isTaskFirstSchedule ? undefined : originalModel?.model ?? scheduleModel,
-            effort: isTaskFirstSchedule ? undefined : originalEffort?.effort ?? scheduleEffort,
-            fastMode: isTaskFirstSchedule ? undefined : originalFastMode?.fastMode ?? (
+              : originalProvider ? originalProvider.providerBackendId : selectedProviderBackendId,
+            model: isTaskFirstSchedule ? undefined : originalModel ? originalModel.model : scheduleModel,
+            effort: isTaskFirstSchedule ? undefined : originalEffort ? originalEffort.effort : scheduleEffort,
+            fastMode: isTaskFirstSchedule ? undefined : originalFastMode ? originalFastMode.fastMode : (
               selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
                 ? selectedFastMode : undefined
             ),
-            resolvedFastMode: isTaskFirstSchedule ? undefined : originalFastMode?.resolvedFastMode ?? (
+            resolvedFastMode: isTaskFirstSchedule ? undefined : originalFastMode ? originalFastMode.resolvedFastMode : (
               selectedProviderId === 'anthropic'
                 ? (anthropicFastModeResolution?.resolvedFastMode ?? false)
                 : selectedProviderId === 'codex'
                   ? (codexFastModeResolution?.resolvedFastMode ?? false)
                   : undefined
             ),
-            skipPermissions: isTaskFirstSchedule ? undefined : originalPermissions?.skipPermissions ?? skipPermissions,
+            skipPermissions: isTaskFirstSchedule
+              ? undefined
+              : originalPermissions ? originalPermissions.skipPermissions : skipPermissions,
           };
 
           if (isEditing && schedule) {
