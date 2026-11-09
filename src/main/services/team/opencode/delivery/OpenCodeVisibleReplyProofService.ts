@@ -808,7 +808,12 @@ export class OpenCodeVisibleReplyProofService {
         proof.message.from.trim().toLowerCase() === input.memberName.trim().toLowerCase() &&
         proof.message.relayOfMessageId === record.inboxMessageId &&
         proof.message.source === 'runtime_delivery' &&
-        proof.message.messageId === messageId);
+        proof.message.messageId === messageId &&
+        !/^already handled\s*:/i.test(proof.message.text.trim()) &&
+        isOpenCodeVisibleReplySemanticallySufficient({
+          actionMode: record.actionMode, taskRefs: record.taskRefs,
+          text: proof.message.text, summary: proof.message.summary,
+        }).sufficient);
 
     try {
       const existing = await this.findByRelayOfMessageId({
@@ -860,6 +865,16 @@ export class OpenCodeVisibleReplyProofService {
         member: destination, from: input.memberName, to: destination, text,
         summary: buildPlainTextVisibleReplySummary(text), timestamp, messageId,
         relayOfMessageId: record.inboxMessageId, source: 'runtime_delivery', taskRefs: record.taskRefs,
+      }, {
+        shouldStillWrite: async () => {
+          try {
+            await assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint);
+            return true;
+          } catch (error) {
+            if (error instanceof OpenCodePromptDeliveryCancelledError) return false;
+            throw error;
+          }
+        },
       });
       if (!written.deliveredToInbox || written.messageId !== messageId) {
         throw new Error('OpenCode lead plain-text reply was not persisted');
