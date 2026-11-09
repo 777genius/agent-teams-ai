@@ -6424,6 +6424,8 @@ export default interface Resources {
           "mondayAtNine": "Monday at 9am",
           "weekdaysAtNine": "Weekdays at 9am"
         },
+        "noTimezones": "No matching timezones",
+        "searchTimezone": "Search timezones...",
         "selectTimezone": "Select timezone",
         "timezone": "Timezone",
         "warmUpDescription": "Prepares selected providers before scheduled execution",

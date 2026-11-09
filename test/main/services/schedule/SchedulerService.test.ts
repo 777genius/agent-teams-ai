@@ -253,6 +253,25 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('normalizes padded timing before persisting creation and edits', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: ' 0 9 * * * ',
+      timezone: ' UTC ',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    expect(schedule.cronExpression).toBe('0 9 * * *');
+    expect(schedule.timezone).toBe('UTC');
+    const updated = await service.updateSchedule(schedule.id, {
+      cronExpression: ' 0 10 * * * ',
+      timezone: ' Europe/Chisinau ',
+    });
+    expect(updated.cronExpression).toBe('0 10 * * *');
+    expect(updated.timezone).toBe('Europe/Chisinau');
+    await service.stop();
+  });
+
   it('keeps the timer and record intact when persistence rejects a valid edit', async () => {
     const service = createService();
     const schedule = await service.createSchedule({

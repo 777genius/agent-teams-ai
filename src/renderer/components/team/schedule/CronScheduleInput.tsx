@@ -241,8 +241,8 @@ export const CronScheduleInput = ({
           value={timezone}
           onValueChange={onTimezoneChange}
           placeholder={t('schedule.cron.selectTimezone')}
-          searchPlaceholder={t('schedule.cron.selectTimezone')}
-          emptyMessage={t('schedule.cron.selectTimezone')}
+          searchPlaceholder={t('schedule.cron.searchTimezone')}
+          emptyMessage={t('schedule.cron.noTimezones')}
         />
       </div>
 

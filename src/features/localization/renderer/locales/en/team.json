@@ -2308,6 +2308,8 @@
       "nextRuns": "Next runs:",
       "timezone": "Timezone",
       "selectTimezone": "Select timezone",
+      "searchTimezone": "Search timezones...",
+      "noTimezones": "No matching timezones",
       "warmUpTime": "Warm-up time",
       "warmUpDescription": "Prepares selected providers before scheduled execution",
       "errors": {

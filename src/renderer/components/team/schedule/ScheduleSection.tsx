@@ -64,6 +64,7 @@ const ScheduleRow = ({
   onTriggerNow,
 }: ScheduleRowProps): React.JSX.Element => {
   const { t, resolvedLanguage } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
@@ -140,7 +141,7 @@ const ScheduleRow = ({
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={t('schedule.actions.edit')}>
+              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={tCommon('actions.moreActions')}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>

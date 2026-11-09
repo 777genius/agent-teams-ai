@@ -641,6 +641,12 @@ async function exerciseScheduleUx(client, fixture, log) {
   await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
     'actual schedule editor loaded', 45_000);
   await captureScreenshot(client, fixture, 'schedules-editor-opened');
+  const pristineSave = createButtonExpression('Create Schedule');
+  await client.click(pristineSave);
+  await client.waitFor(
+    "document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')",
+    'pristine form shows a reason after Save', 20_000);
+  await captureScreenshot(client, fixture, 'schedules-pristine-submit-validation');
 
   log('select the fixture team and review its saved one-time startup prompt');
   await client.click("document.querySelector('[role=dialog] button[role=combobox]')");

@@ -11,7 +11,7 @@ export type ScheduleActionFeedback = { kind: 'error' | 'success'; message: strin
 
 /** Same deletion safety and visible failure semantics in both schedule lists. */
 export function useScheduleActions() {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { schedules, deleteSchedule, pauseSchedule, resumeSchedule, triggerNow } =
     useStore(useShallow((s) => ({
@@ -28,7 +28,7 @@ export function useScheduleActions() {
     if (kind === 'delete') {
       const schedule = schedules.find((candidate) => candidate.id === id);
       if (!schedule) return;
-      const label = schedule.label || getCronDescription(schedule.cronExpression);
+      const label = schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage);
       const accepted = await confirm({
         title: t('schedule.actions.delete'),
         message: t('schedule.deleteConfirmation', { label }),
@@ -51,7 +51,7 @@ export function useScheduleActions() {
       const reason = error instanceof Error ? error.message : String(error);
       setFeedback({ kind: 'error', message: `${t('schedule.actionFailed')}: ${reason}` });
     }
-  }, [deleteSchedule, pauseSchedule, resumeSchedule, schedules, t, triggerNow]);
+  }, [deleteSchedule, pauseSchedule, resumeSchedule, resolvedLanguage, schedules, t, triggerNow]);
 
   return { feedback, act };
 }

@@ -2454,7 +2454,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
-    : isSubmitting || validationErrors.length > 0 || (!usesSavedTeamRuntime && !!modelValidationError);
+    : isSubmitting || ((isEditing || scheduleFormTouched) && validationErrors.length > 0) || (!usesSavedTeamRuntime && !!modelValidationError);
   const labelKeys = getLaunchDialogLabelKeys(isLaunchMode, isRelaunch, isEditing);
   const dialogTitle = t(labelKeys.title);
 

@@ -175,7 +175,9 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
-    getValidScheduleNextRuns(input.cronExpression, input.timezone);
+    const cronExpression = input.cronExpression.trim();
+    const timezone = input.timezone.trim();
+    getValidScheduleNextRuns(cronExpression, timezone);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
       throw new Error('Task-first schedule requires agent or team executionMode');
     }
@@ -187,8 +189,8 @@ export class SchedulerService {
       ...(input.taskFirst && { taskFirst: true as const, reviewedSavedPrompt: input.reviewedSavedPrompt }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
-      cronExpression: input.cronExpression,
-      timezone: input.timezone,
+      cronExpression,
+      timezone,
       status: 'active',
       warmUpMinutes: input.warmUpMinutes ?? 15,
       maxConsecutiveFailures: 3,
@@ -218,17 +220,17 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
-    if (patch.cronExpression !== undefined || patch.timezone !== undefined) {
-      getValidScheduleNextRuns(patch.cronExpression ?? existing.cronExpression, patch.timezone ?? existing.timezone);
-    }
+    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
+    const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
+    const timezone = (patch.timezone ?? existing.timezone).trim();
+    if (cronChanged) getValidScheduleNextRuns(cronExpression, timezone);
     const updated: Schedule = {
       ...existing,
       ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
       ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
       ...(patch.reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
       ...(patch.label !== undefined && { label: patch.label }),
-      ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
-      ...(patch.timezone !== undefined && { timezone: patch.timezone }),
+      ...(cronChanged && { cronExpression, timezone }),
       ...(patch.warmUpMinutes !== undefined && { warmUpMinutes: patch.warmUpMinutes }),
       ...(patch.maxTurns !== undefined && { maxTurns: patch.maxTurns }),
       ...(patch.maxBudgetUsd !== undefined && { maxBudgetUsd: patch.maxBudgetUsd }),
@@ -238,7 +240,6 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
     // Reschedule cron job if expression or timezone changed
-    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
     if (reschedule && updated.status === 'active') {
       updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
