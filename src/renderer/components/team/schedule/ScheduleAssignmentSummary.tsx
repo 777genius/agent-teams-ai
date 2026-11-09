@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 
 import type { Schedule } from '@shared/types';
 
@@ -29,11 +30,13 @@ export function ScheduleAssignmentSummary({
   }
 
   return (
-    <span
-      className="block min-w-0 truncate text-[11px] text-[var(--color-text-muted)]"
-      title={label}
-    >
-      {label}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="block min-w-0 truncate text-[11px] text-[var(--color-text-muted)]">
+          {label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-sm text-xs">{label}</TooltipContent>
+    </Tooltip>
   );
 }

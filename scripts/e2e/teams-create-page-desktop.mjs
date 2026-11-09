@@ -710,6 +710,25 @@ async function exerciseScheduleUx(client, fixture, log) {
   await captureScreenshot(client, fixture, 'schedules-list-css-zoom-200');
   await client.evaluate("document.documentElement.style.zoom = ''");
 
+  log('capture the schedule UI at a genuinely narrow viewport');
+  await client.send('Emulation.setDeviceMetricsOverride', {
+    width: 700, height: 760, deviceScaleFactor: 1, mobile: false,
+  });
+  try {
+    await client.waitFor('window.innerWidth <= 700', 'narrow renderer viewport');
+    const narrowActionsVisible = await client.evaluate(`(() => {
+      const row = Array.from(document.querySelectorAll('div.rounded-lg'))
+        .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+          el.querySelector('button[aria-label="More actions"]'));
+      const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
+      return !!rect && rect.width > 0 && rect.left >= 0 && rect.right <= window.innerWidth;
+    })()`);
+    assert(narrowActionsVisible, 'Schedule actions overflowed narrow viewport');
+    await captureScreenshot(client, fixture, 'schedules-list-narrow-700');
+  } finally {
+    await client.send('Emulation.clearDeviceMetricsOverride');
+  }
+
   log('edit the real schedule without migrating its task-first semantics');
   const more = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +

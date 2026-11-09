@@ -16,7 +16,7 @@ export function formatNextRun(isoString?: string, locale?: string): string {
       style: 'short',
     });
     if (diffMs < 0) {
-      return relative.format(Math.min(-1, Math.floor(diffMs / 60_000)), 'minute');
+      return relative.format(Math.min(-1, Math.ceil(diffMs / 60_000)), 'minute');
     }
 
     const hours = Math.floor(diffMs / 3600_000);
