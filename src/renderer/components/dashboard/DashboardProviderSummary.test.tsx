@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
   cliStatusLoading: false,
   cliStatusError: null,
   cliProviderStatusLoading: {},
-  openCodeRuntimeStatus: null,
+  openCodeRuntimeStatus: null as null | { installed: boolean; state: string; version: string; binaryPath: string },
   openCodeRuntimeStatusLoading: false,
   countEvidence: null as null | { checking: boolean; observation: null; invalidated: boolean },
   openSettingsTab: vi.fn(),
@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   getStatus: vi.fn(),
   loadProviderDirectory: vi.fn(),
   loadModels: vi.fn(),
+  connectedCountProbe: vi.fn(),
 }));
 
 vi.mock('@features/localization/renderer', () => ({
@@ -31,6 +32,7 @@ vi.mock('@features/localization/renderer', () => ({
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   useRuntimeProviderDirectoryCache: () => state.directoryReads() ?? null,
   useRuntimeProviderConnectedCount: () => state.countEvidence,
+  useOpenCodeDashboardConnectedCountProbe: state.connectedCountProbe,
 }));
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
@@ -60,6 +62,7 @@ describe('DashboardProviderSummary (passive)', () => {
     state.openCodeRuntimeStatusLoading = false;
     state.cliProviderStatusLoading = {};
     state.countEvidence = null;
+    state.openCodeRuntimeStatus = null;
     state.appConfig.general.multimodelEnabled = true;
   });
   afterEach(() => {
@@ -126,6 +129,39 @@ describe('DashboardProviderSummary (passive)', () => {
       state.cliProviderStatusLoading = { opencode: true };
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('starts only a count probe on an active installed Dashboard and pauses it when hidden', async () => {
+    state.cliStatus = {
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [],
+    };
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.18.31',
+      binaryPath: '/test/opencode',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary, { isActive: false })));
+      expect(state.connectedCountProbe).toHaveBeenLastCalledWith(expect.objectContaining({
+        enabled: false,
+        connectedCount: null,
+      }));
+      await act(async () => root.render(React.createElement(DashboardProviderSummary, { isActive: true })));
+      expect(state.connectedCountProbe).toHaveBeenLastCalledWith(expect.objectContaining({
+        enabled: true,
+        connectedCount: null,
+      }));
+      expect(state.loadProviderDirectory).not.toHaveBeenCalled();
+      expect(state.loadModels).not.toHaveBeenCalled();
     } finally {
       await act(async () => root.unmount());
     }
