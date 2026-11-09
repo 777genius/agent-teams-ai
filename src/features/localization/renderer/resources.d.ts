@@ -2669,7 +2669,7 @@ export default interface Resources {
           "description": "Use named JSON color palettes based on Dark or Light.",
           "none": "Built-in theme",
           "edit": "Edit JSON",
-          "localOnly": "Custom themes and UI scale are stored on this browser/device only.",
+          "localOnly": "Themes, UI zoom and typography are saved only on this browser/device.",
           "editor": {
             "title": "Edit custom themes (JSON)",
             "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
@@ -2684,6 +2684,22 @@ export default interface Resources {
         "uiScale": {
           "label": "Interface scale",
           "description": "Scale the entire app without changing the operating system or browser zoom.",
+          "reset": "Reset"
+        },
+        "fontFamily": {
+          "label": "UI font",
+          "description": "Choose a locally installed font for the interface. Editors and terminals keep their own fonts.",
+          "system": "System default",
+          "other": "Other font…",
+          "placeholder": "Installed font family",
+          "apply": "Apply",
+          "discover": "Find installed fonts",
+          "loaded": "Installed fonts added to the menu.",
+          "unavailable": "Font discovery is unavailable here. Enter a font name manually."
+        },
+        "textSize": {
+          "label": "Text size",
+          "description": "Change interface text without changing the overall UI zoom.",
           "reset": "Reset"
         }
       },
