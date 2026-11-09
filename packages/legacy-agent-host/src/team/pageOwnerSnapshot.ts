@@ -89,8 +89,7 @@ export function pageOwnerSnapshot(options: {
       tasks: {} as Record<string, JsonValue>,
       reviewers: [] as JsonValue[],
       ...(originalOrder === undefined ? {} : {
-        columnOrder: Object.fromEntries(columns.map(([name]) => [name, [] as JsonValue[]]))
-          as Record<string, JsonValue[]>,
+        columnOrder: Object.fromEntries(columns.map(([name]) => [name, [] as JsonValue[]])) as Record<string, JsonValue[]>,
       }),
     },
     nextCursor: null as string | null,
