@@ -27,7 +27,7 @@ export function TeamModelProviderActions({
   providerId,
   projectPath,
   onManageProviders,
-}: Readonly<TeamModelProviderActionsProps>): React.JSX.Element {
+}: Readonly<TeamModelProviderActionsProps>): JSX.Element {
   const { t: commonT } = useAppTranslation('common');
   const { t: dashboardT } = useAppTranslation('dashboard');
   const openSettingsTab = useStore((s) => s.openSettingsTab);
