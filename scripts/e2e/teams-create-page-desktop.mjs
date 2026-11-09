@@ -632,7 +632,21 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
-async function exerciseScheduleUx(client, fixture, log) {
+async function setBrowserWindowZoom(inspector, factor) {
+  return inspector.evaluate(
+    "(() => {" +
+    "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
+    "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
+    "const { BrowserWindow } = moduleRequire('electron');" +
+    "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
+    "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
+    "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
+    "return win.webContents.getZoomFactor();" +
+    "})()"
+  );
+}
+
+async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
   const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
   log('open real Schedules UI in isolated Electron');
   await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');
@@ -687,7 +701,7 @@ async function exerciseScheduleUx(client, fixture, log) {
     'New UI schedule did not persist its selected team and task-first mode');
   assert.equal(scheduled.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone,
     'Schedule changed the selected local IANA timezone');
-  log('exercise list presentation in dark/light and CSS 200% layout');
+  log('exercise list presentation in dark/light and native Electron 200% zoom');
   for (const theme of ['light', 'dark']) {
     await client.evaluate(
       "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig?.general, theme: " +
@@ -698,18 +712,36 @@ async function exerciseScheduleUx(client, fixture, log) {
       'schedules ' + theme + ' theme applied');
     await captureScreenshot(client, fixture, 'schedules-list-' + theme);
   }
-  await client.evaluate("document.documentElement.style.zoom = '2'");
-  const zoomActionsVisible = await client.evaluate(`(() => {
-    const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
-      .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
-        el.querySelector('button[aria-label="More actions"]'));
-    const button = row?.querySelector('button[aria-label="More actions"]');
-    const r = button?.getBoundingClientRect();
-    return !!r && r.width > 0 && r.left >= 0 && r.right <= window.innerWidth;
-  })()`);
-  assert(zoomActionsVisible, 'Schedule actions overflowed viewport at 200% CSS zoom');
-  await captureScreenshot(client, fixture, 'schedules-list-css-zoom-200');
-  await client.evaluate("document.documentElement.style.zoom = ''");
+  const initialViewportWidth = await client.evaluate('window.innerWidth');
+  const zoomInspector = await CdpClient.connect(inspectorWebSocketDebuggerUrl);
+  try {
+    await zoomInspector.send('Runtime.enable');
+    const factor = await setBrowserWindowZoom(zoomInspector, 2);
+    assert(Math.abs(factor - 2) <= 0.05, 'Schedule window did not accept native 200% zoom');
+    await client.waitFor(
+      'window.innerWidth < ' + JSON.stringify(initialViewportWidth * 0.7),
+      'native Electron zoom narrowed the schedules viewport');
+    const zoomActionsVisible = await client.evaluate(`(() => {
+      const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
+        .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+          el.querySelector('button[aria-label="More actions"]'));
+      const viewport = row?.closest('.overflow-y-auto')?.getBoundingClientRect();
+      const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
+      return !!rect && !!viewport && rect.width > 0 &&
+        rect.left >= viewport.left && rect.right <= viewport.right;
+    })()`);
+    assert(zoomActionsVisible, 'Schedule actions overflowed pane at native Electron 200% zoom');
+    await captureScreenshot(client, fixture, 'schedules-list-native-electron-zoom-200');
+  } finally {
+    try {
+      await setBrowserWindowZoom(zoomInspector, 1);
+    } finally {
+      zoomInspector.close();
+    }
+  }
+  await client.waitFor(
+    'window.innerWidth >= ' + JSON.stringify(initialViewportWidth * 0.95),
+    'schedules viewport restored after native zoom');
 
   log('capture the schedule UI at a genuinely narrow viewport');
   await client.send('Emulation.setDeviceMetricsOverride', {
@@ -915,19 +947,7 @@ async function main() {
     // This local inspector is enabled only in the disposable E2E launch. It
     // changes a *real* BrowserWindow property, not CSS zoom or CDP pinch scale.
     const inspector = await CdpClient.connect(started.inspectorWebSocketDebuggerUrl);
-    const setActualZoom = async (factor) => {
-      return inspector.evaluate(
-        "(() => {" +
-        "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
-        "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
-        "const { BrowserWindow } = moduleRequire('electron');" +
-        "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
-        "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
-        "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
-        "return win.webContents.getZoomFactor();" +
-        "})()"
-      );
-    };
+    const setActualZoom = (factor) => setBrowserWindowZoom(inspector, factor);
     try {
       await inspector.send('Runtime.enable');
       const actualFactor = await setActualZoom(2);
@@ -1299,7 +1319,7 @@ async function main() {
     );
     await captureScreenshot(cdp, fixture, 'organization-created');
 
-    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log);
+    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
 
     const results = {
       success: true,

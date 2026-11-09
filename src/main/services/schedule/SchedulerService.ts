@@ -222,9 +222,7 @@ export class SchedulerService {
 
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
@@ -247,9 +245,7 @@ export class SchedulerService {
     };
     // Reschedule cron job if expression or timezone changed
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
-    if (reschedule && updated.status === 'active') {
-      updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    }
+    if (reschedule && updated.status === 'active') updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
     const nextJob = reschedule && updated.status === 'active'
       ? this.prepareCronJob(updated)
       : null;
@@ -275,17 +271,11 @@ export class SchedulerService {
 
   async deleteSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
-
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
     // Do not stop a live schedule unless the durable deletion succeeds.
     await this.repository.deleteSchedule(id);
-
     const activeRun = this.activeRuns.get(id);
-    if (activeRun) {
-      this.executor.cancel(activeRun.id);
-    }
+    if (activeRun) this.executor.cancel(activeRun.id);
     this.removeCronJob(id);
     this.releaseRunLocks(id);
     this.emitChange({
@@ -294,15 +284,12 @@ export class SchedulerService {
       teamName: existing.teamName,
       detail: 'deleted',
     });
-
     logger.info(`Schedule deleted: ${id}`);
   }
 
   async pauseSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
 
     const updated: Schedule = {
       ...existing,
@@ -312,8 +299,7 @@ export class SchedulerService {
 
     // Persistence errors must not leave an active record without a live job.
     await this.repository.saveSchedule(updated);
-    const job = this.cronJobs.get(id);
-    job?.pause();
+    this.cronJobs.get(id)?.pause();
     this.clearWarmUpTimer(id);
     this.emitChange({
       type: 'schedule-paused',
@@ -326,9 +312,7 @@ export class SchedulerService {
 
   async resumeSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
 
     // A historic invalid schedule must be repaired before it can be resumed.
     getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
@@ -430,9 +414,8 @@ export class SchedulerService {
 
   /** Prepare the replacement without touching the currently active cron timer. */
   private prepareCronJob(schedule: Schedule): Cron {
-    return new Cron(schedule.cronExpression, { timezone: schedule.timezone, paused: true }, () => {
-      void this.onCronTick(schedule.id);
-    });
+    return new Cron(schedule.cronExpression, { timezone: schedule.timezone, paused: true },
+      () => void this.onCronTick(schedule.id));
   }
 
   private activateCronJob(schedule: Schedule, job: Cron): void {
@@ -440,10 +423,8 @@ export class SchedulerService {
     this.cronJobs.set(schedule.id, job);
     job.resume();
     this.scheduleWarmUp(schedule);
-    logger.info(
-      `Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
-        `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`
-    );
+    logger.info(`Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
+      `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`);
   }
 
   /** Historic records may be invalid: log and keep the rest of startup running. */
