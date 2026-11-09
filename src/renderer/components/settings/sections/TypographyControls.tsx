@@ -6,6 +6,7 @@ import {
   setAppearanceFontFamily,
   setAppearanceFontSize,
   useAppearancePreferences,
+  uniqueFontFamilies,
 } from '@features/appearance/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
@@ -23,14 +24,12 @@ export const TypographyControls = (): React.JSX.Element => {
   const { t } = useAppTranslation('settings');
   const { fontFamily, fontSizePercent } = useAppearancePreferences();
   const [installedFonts, setInstalledFonts] = useState<string[]>([]);
-  const [discovery, setDiscovery] = useState<'idle' | 'loading' | 'loaded' | 'unavailable'>('idle');
+  const [discovery, setDiscovery] = useState<'idle' | 'loading' | 'loaded' | 'empty' | 'unavailable'>('idle');
   const [customOpen, setCustomOpen] = useState(false);
   const [customFont, setCustomFont] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const fonts = [...new Set([
-    ...FONT_SUGGESTIONS, ...installedFonts, ...(fontFamily ? [fontFamily] : []),
-  ])].sort((a, b) => a.localeCompare(b));
+  const fonts = uniqueFontFamilies([...FONT_SUGGESTIONS, ...installedFonts], fontFamily);
 
   const save = (action: () => void): boolean => {
     try {
@@ -47,12 +46,12 @@ export const TypographyControls = (): React.JSX.Element => {
     setDiscovery('loading');
     // Trigger permission only after explicit user interaction (never on mount).
     void listLocalFontFamilies().then((families) => {
-      if (!families || families.length === 0) {
+      if (families === null) {
         setDiscovery('unavailable');
-      } else {
-        setInstalledFonts(families);
-        setDiscovery('loaded');
+        return;
       }
+      setInstalledFonts(families);
+      setDiscovery(families.length === 0 ? 'empty' : 'loaded');
     }).catch(() => setDiscovery('unavailable'));
   };
 
@@ -154,6 +153,11 @@ export const TypographyControls = (): React.JSX.Element => {
           {discovery === 'loaded' && (
             <p role="status" className="max-w-72 text-right text-xs text-text-muted">
               {t('general.appearance.fontFamily.loaded')}
+            </p>
+          )}
+          {discovery === 'empty' && (
+            <p role="status" className="max-w-72 text-right text-xs text-text-muted">
+              {t('general.appearance.fontFamily.empty')}
             </p>
           )}
         </div>

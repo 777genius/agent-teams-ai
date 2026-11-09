@@ -10,6 +10,7 @@ import {
   getAppearanceSnapshot,
   getLatestAppearance,
   normalizeFontFamily,
+  uniqueFontFamilies,
   parseCustomThemesJson,
   readAppearance,
   saveAppearance,
@@ -266,6 +267,11 @@ describe('portable Appearance persistence', () => {
     applyAppearanceTypographyToRoot(root, { fontFamily: null, fontSizePercent: 100 });
     expect(root.style.getPropertyValue('--appearance-font-family')).toBe('');
     expect(root.style.getPropertyValue('--appearance-text-scale')).toBe('1');
+  });
+
+  it('keeps one entry per case-insensitive family while preserving selected spelling', () => {
+    expect(uniqueFontFamilies(['Georgia', 'ARIAL', 'georgia', 'Arial'])).toEqual(['Arial', 'georgia']);
+    expect(uniqueFontFamilies(['Georgia', 'Noto Sans'], 'georgia')).toEqual(['georgia', 'Noto Sans']);
   });
 
   it('merges a font edit with the latest saved theme and zoom from another tab', () => {

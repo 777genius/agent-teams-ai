@@ -11,6 +11,7 @@ export {
   MAX_FONT_SIZE_PERCENT,
   MIN_FONT_SIZE_PERCENT,
   normalizeFontFamily,
+  uniqueFontFamilies,
   MAX_JSON_LENGTH,
   parseAppearance,
   parseCustomThemesJson,

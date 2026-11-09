@@ -20,6 +20,7 @@ describe('local font discovery', () => {
       { family: ' Georgia ' },
       { family: 'Noto Sans' },
       { family: 'Georgia' },
+      { family: 'GEORGIA' },
       { family: 'inject; font-size:999px' },
       { family: 'a"b' },
       { family: '' },
@@ -27,8 +28,15 @@ describe('local font discovery', () => {
     Object.defineProperty(window, 'queryLocalFonts', {
       configurable: true, value: queryLocalFonts,
     });
-    expect(await listLocalFontFamilies()).toEqual(['Georgia', 'Noto Sans']);
+    expect(await listLocalFontFamilies()).toEqual(['GEORGIA', 'Noto Sans']);
     expect(queryLocalFonts).toHaveBeenCalledOnce();
+  });
+
+  it('returns an empty array when discovery succeeded without installed families', async () => {
+    Object.defineProperty(window, 'queryLocalFonts', {
+      configurable: true, value: vi.fn(async () => []),
+    });
+    expect(await listLocalFontFamilies()).toEqual([]);
   });
 
   it('propagates denied font permissions for the UI to explain and offer manual entry', async () => {

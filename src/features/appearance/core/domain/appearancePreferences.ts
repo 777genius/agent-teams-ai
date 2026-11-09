@@ -49,6 +49,14 @@ export function normalizeFontFamily(value: string | null): string | null {
   }
   return family;
 }
+/** Case-insensitive CSS family uniqueness; keep the stored family spelling selectable. */
+export function uniqueFontFamilies(names: readonly string[], selected: string | null = null): string[] {
+  const families = new Map<string, string>();
+  for (const name of names) families.set(name.toLowerCase(), name);
+  if (selected) families.set(selected.toLowerCase(), selected);
+  return [...families.values()].sort((a, b) => a.localeCompare(b));
+}
+
 const MAX_THEME_COUNT = 8;
 export const MAX_JSON_LENGTH = 16_384;
 export const MIN_ZOOM = 70;
