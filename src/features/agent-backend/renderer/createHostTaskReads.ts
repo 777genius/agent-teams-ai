@@ -49,6 +49,9 @@ export function createHostTaskReads(
       )
         throw new HostTeamOperationError('invalid-result', 'unknown');
       const retained = task;
+      const subject = retained.subject;
+      if (typeof subject !== 'string')
+        throw new HostTeamOperationError('invalid-result', 'unknown');
       const comments = retained.comments?.map((comment) => {
         if (
           typeof comment.id !== 'string' ||
@@ -72,7 +75,7 @@ export function createHostTaskReads(
       // Only the Main-projected product allowlist is exposed; no Host internals.
       const restored: TeamTaskWithKanban = {
         id: retained.id,
-        subject: retained.subject,
+        subject,
         status: 'deleted',
         ...(retained.displayId === undefined ? {} : { displayId: retained.displayId }),
         ...(retained.description === undefined ? {} : { description: retained.description }),
