@@ -40,6 +40,28 @@ type OpenCodeLeadPlainTextReplyPorts = Pick<
   }) => Promise<{ visibleReply: OpenCodeVisibleReplyProof; diagnostics: string[] }>;
 };
 
+/** Do not treat a legacy user fallback as proof that the requested lead received this turn. */
+export async function isMisaddressedLeadPlainTextProof(
+  record: OpenCodePromptDeliveryLedgerRecord,
+  teamName: string,
+  proof: OpenCodeVisibleReplyProof,
+  getConfiguredLeadName: (team: string) => Promise<string | null>
+): Promise<boolean> {
+  if (record.groupChatId || record.responseState !== 'responded_plain_text' ||
+    record.replyRecipient.trim().toLowerCase() === 'user') return false;
+  const lead = await getConfiguredLeadName(teamName);
+  const recipient = record.replyRecipient.trim();
+  const isLead = classifyOpenCodeDeliveryReplyContract(recipient) === 'lead_reply' ||
+    Boolean(lead && recipient.toLowerCase() === lead.trim().toLowerCase());
+  if (!isLead) return false;
+  const expected = lead?.trim().toLowerCase();
+  return !expected || proof.inboxName.trim().toLowerCase() !== expected ||
+    proof.message.to?.trim().toLowerCase() !== expected ||
+    proof.message.from.trim().toLowerCase() !== record.memberName.trim().toLowerCase() ||
+    proof.message.relayOfMessageId !== record.inboxMessageId ||
+    proof.message.source !== 'runtime_delivery';
+}
+
 /** A single exact assistant turn can qualify an idempotent reply in the lead's inbox. */
 export async function materializeOpenCodeLeadPlainTextReply(input: {
     checkpoint?: () => void | Promise<void>;
