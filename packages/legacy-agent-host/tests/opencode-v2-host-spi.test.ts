@@ -265,6 +265,43 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
       error.reason === 'launch-option-unsupported',
     'a different model must still fail closed even with a provider prefix',
   );
+  // A saved V2 effort selection may explicitly repeat the captured native
+  // variant. It is not permission to switch variants or weaken the policy.
+  const capturedVariantBase = runtimeProfileSchema.parse({ members: [{
+    ...nativeV2Profile(),
+    nativeOptions: { ...nativeV2Profile().nativeOptions, variant: 'high' },
+  }] }).members[0]!;
+  for (const choice of [
+    { effort: 'high' },
+    { model: 'TEST-model', effort: 'high' },
+    { model: 'TEST-provider/TEST-model', effort: 'high' },
+  ]) {
+    const selected = applyLaunchConfiguration(capturedVariantBase, choice);
+    assert.equal(selected.provider, 'opencode');
+    if (selected.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+    assert.equal(selected.nativeGeneration, 'v2');
+    assert.equal(selected.model, capturedVariantBase.model);
+    assert.equal(selected.nativeOptions.variant, 'high',
+      'unchanged V2 effort must preserve the previously captured variant');
+    assert.equal(selected.nativeOptions.toolApprovalMode, undefined,
+      'matching V2 effort must not inherit V1 auto/manual approvals');
+    assert.deepEqual(selected.executable, capturedVariantBase.executable,
+      'matching effort cannot substitute the pinned native engine');
+    assert.equal(selected.nativeSessionId, capturedVariantBase.nativeSessionId);
+  }
+  for (const choice of [
+    { effort: 'low' },
+    { model: 'TEST-next-model', effort: 'high' },
+    { model: 'TEST-model', effort: 'high', permissions: 'manual' },
+    { model: 'TEST-provider/TEST-model', effort: 'high', permissions: 'bypass' },
+    { model: 'TEST-model', effort: 'high', fastMode: true },
+    { model: 'TEST-model', effort: 'high', context: 'one-million' },
+  ]) {
+    assert.throws(() => applyLaunchConfiguration(capturedVariantBase, choice),
+      (error: unknown) => error instanceof Error &&
+        'reason' in error && error.reason === 'launch-option-unsupported',
+      `Unattested combined V2 launch option was accepted: ${JSON.stringify(choice)}`);
+  }
   const v1 = runtimeProfileSchema.parse({ members: [v1Profile()] }).members[0]!;
   const legacyChoice = applyLaunchConfiguration(v1, {
     model: 'TEST-next-model', effort: 'high', permissions: 'manual',

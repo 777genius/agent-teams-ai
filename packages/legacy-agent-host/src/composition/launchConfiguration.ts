@@ -43,14 +43,16 @@ export function applyLaunchConfiguration(
   // The owned V2 session was already captured with a native model/variant.
   // Merely changing the Host profile cannot change that native session and
   // would silently dispatch to a different model than the user's selection.
-  // Until native model/variant binding is attested, allow only an identical
-  // model selection; never reinterpret V1 permission or effort choices as V2.
+  // Until native model/variant binding is attested, allow only the exact
+  // captured model and variant (including unchanged explicit selections).
+  // Never reinterpret V1 permission or effort choices as V2.
   if (base.provider === 'opencode' && base.nativeGeneration === 'v2') {
     // A bare model can itself begin with the provider ID (e.g. foo/bar).
     // Accept the exact captured model before considering its qualified form;
     // never strip a prefix from the native capture or trust a rewritten model.
     const qualifiedCapturedModel = `${base.nativeOptions.providerId}/${base.model}`;
-    if (selected.permissions !== undefined || selected.effort !== undefined ||
+    if (selected.permissions !== undefined ||
+        (selected.effort !== undefined && selected.effort !== base.nativeOptions.variant) ||
         (selected.model !== undefined && selected.model !== base.model &&
           selected.model !== qualifiedCapturedModel))
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
