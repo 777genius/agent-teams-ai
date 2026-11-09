@@ -54,7 +54,7 @@ export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
   ): boolean;
   visibleReplyProofService: Pick<
     OpenCodeVisibleReplyProofService,
-    'applyDestinationProof' | 'materializePlainTextReplyIfNeeded'
+    'applyDestinationProof' | 'materializePlainTextReplyIfNeeded' | 'getConfiguredLeadName'
   >;
   maybeSyncRuntimePermissionsAfterDelivery(input: {
     teamName: string;
