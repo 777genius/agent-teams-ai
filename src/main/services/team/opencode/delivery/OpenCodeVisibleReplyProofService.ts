@@ -6,6 +6,7 @@ import {
   materializeOpenCodeGroupReply,
   type OpenCodeGroupReplySender,
 } from './OpenCodeGroupVisibleReply';
+import { materializeOpenCodeLeadPlainTextReply } from './OpenCodeLeadPlainTextReply';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
@@ -21,7 +22,6 @@ import {
   type OpenCodeVisibleReplyProof,
 } from './OpenCodePromptDeliveryWatchdog';
 import {
-  isOpenCodeLeadReplyRecipientAlias,
   getOpenCodeVisibleReplyInboxCandidates,
   isOpenCodeRecoveredVisibleReplyCandidate,
   normalizeOpenCodeTaskRefsForComparison,
@@ -79,14 +79,6 @@ export class OpenCodeVisibleReplyProofService {
 
   async getConfiguredLeadName(teamName: string): Promise<string | null> {
     return this.deps.getConfiguredLeadName(teamName);
-  }
-
-  async isConfiguredLeadReplyRecipient(teamName: string, recipient: string): Promise<boolean> {
-    const configuredLead = await this.getConfiguredLeadName(teamName);
-    return Boolean(
-      configuredLead?.trim() &&
-      configuredLead.trim().toLowerCase() === recipient.trim().toLowerCase()
-    );
   }
 
   async findByRelayOfMessageId(input: {
@@ -630,7 +622,15 @@ export class OpenCodeVisibleReplyProofService {
       input.ledgerRecord.responseState === 'tool_error' &&
       hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord);
     if (!isOpenCodeDirectUserPromptDelivery(input.ledgerRecord)) {
-      return this.materializeLeadPlainTextReplyIfNeeded(input);
+      return materializeOpenCodeLeadPlainTextReply({
+        ...input,
+        ports: {
+          ...this.deps,
+          nowIso: this.nowIso,
+          findByRelayOfMessageId: (request) => this.findByRelayOfMessageId(request),
+          ensureVisibleReplyTaskRefs: (request) => this.ensureVisibleReplyTaskRefs(request),
+        },
+      });
     }
     if (
       !canMaterializeOpenCodePlainTextReply(input.ledgerRecord) ||
@@ -778,137 +778,7 @@ export class OpenCodeVisibleReplyProofService {
     }
   }
 
-  private async materializeLeadPlainTextReplyIfNeeded(input: {
-    checkpoint?: () => void | Promise<void>;
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-    teamName: string;
-    memberName: string;
-  }): Promise<{ ledgerRecord: OpenCodePromptDeliveryLedgerRecord; visibleReply: OpenCodeVisibleReplyProof | null }> {
-    const record = input.ledgerRecord;
-    const configuredLead = await this.deps.getConfiguredLeadName(input.teamName);
-    const recipient = record.replyRecipient.trim();
-    if (
-      !configuredLead?.trim() ||
-      (!isOpenCodeLeadReplyRecipientAlias(recipient) &&
-        recipient.toLowerCase() !== configuredLead.trim().toLowerCase()) ||
-      !canMaterializeOpenCodePlainTextReply(record) ||
-      record.visibleReplyMessageId ||
-      record.visibleReplyInbox ||
-      (record.responseState !== 'tool_error' && hasOpenCodeObservedMessageSendToolCall(record))
-    ) {
-      return { ledgerRecord: record, visibleReply: null };
-    }
-    const destination = configuredLead.trim();
-    const messageId = buildPlainTextVisibleReplyMessageId(record);
-    const validProof = (proof: OpenCodeVisibleReplyProof | null): proof is OpenCodeVisibleReplyProof =>
-      Boolean(proof &&
-        proof.inboxName.toLowerCase() === destination.toLowerCase() &&
-        proof.message.to.trim().toLowerCase() === destination.toLowerCase() &&
-        proof.message.from.trim().toLowerCase() === input.memberName.trim().toLowerCase() &&
-        proof.message.relayOfMessageId === record.inboxMessageId &&
-        proof.message.source === 'runtime_delivery' &&
-        proof.message.messageId === messageId &&
-        !/^already handled\s*:/i.test(proof.message.text.trim()) &&
-        isOpenCodeVisibleReplySemanticallySufficient({
-          actionMode: record.actionMode, taskRefs: record.taskRefs,
-          text: proof.message.text, summary: proof.message.summary,
-        }).sufficient);
 
-    try {
-      const existing = await this.findByRelayOfMessageId({
-        teamName: input.teamName,
-        replyRecipient: destination,
-        from: input.memberName,
-        relayOfMessageId: record.inboxMessageId,
-        expectedMessageId: messageId,
-      });
-      if (validProof(existing)) {
-        const enriched = await this.ensureVisibleReplyTaskRefs({
-          checkpoint: () => assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint),
-          teamName: input.teamName, memberName: input.memberName, ledgerRecord: record, visibleReply: existing,
-        });
-        await assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint);
-        const ledgerRecord = await input.ledger.applyDestinationProof({
-          id: record.id,
-          visibleReplyInbox: destination,
-          visibleReplyMessageId: messageId,
-          visibleReplyCorrelation: 'plain_assistant_text',
-          semanticallySufficient: openCodeTaskRefsIncludeAll(enriched.visibleReply.message.taskRefs, record.taskRefs),
-          diagnostics: enriched.diagnostics,
-          observedAt: this.nowIso(),
-        });
-        await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord, input.checkpoint);
-        this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, enriched.visibleReply.message);
-        return { ledgerRecord, visibleReply: enriched.visibleReply };
-      }
-
-      const sessionId = record.runtimeSessionId?.trim();
-      const assistantMessageId = record.observedAssistantMessageId?.trim();
-      const runId = record.runId?.trim();
-      if (!sessionId || !assistantMessageId || !runId || !record.laneId?.trim()) {
-        return { ledgerRecord: record, visibleReply: null };
-      }
-      const text = await this.deps.readExactAssistantText?.({
-        teamName: input.teamName, memberName: input.memberName, laneId: record.laneId,
-        runId, sessionId, assistantMessageId,
-      });
-      if (!text?.trim() || /^already handled\s*:/i.test(text.trim()) ||
-        !isOpenCodeVisibleReplySemanticallySufficient({
-          actionMode: record.actionMode, taskRefs: record.taskRefs, text,
-        }).sufficient) {
-        return { ledgerRecord: record, visibleReply: null };
-      }
-      const timestamp = record.respondedAt ?? record.lastObservedAt ?? record.updatedAt ?? this.nowIso();
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint);
-      const written = await this.deps.inboxWriter.sendMessage(input.teamName, {
-        member: destination, from: input.memberName, to: destination, text,
-        summary: buildPlainTextVisibleReplySummary(text), timestamp, messageId,
-        relayOfMessageId: record.inboxMessageId, source: 'runtime_delivery', taskRefs: record.taskRefs,
-      }, {
-        shouldStillWrite: async () => {
-          try {
-            await assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint);
-            return true;
-          } catch (error) {
-            if (error instanceof OpenCodePromptDeliveryCancelledError) return false;
-            throw error;
-          }
-        },
-      });
-      if (!written.deliveredToInbox || written.messageId !== messageId) {
-        throw new Error('OpenCode lead plain-text reply was not persisted');
-      }
-      const visibleReply: OpenCodeVisibleReplyProof = {
-        inboxName: destination,
-        message: {
-          from: input.memberName, to: destination, text, timestamp, read: false,
-          summary: buildPlainTextVisibleReplySummary(text), messageId,
-          relayOfMessageId: record.inboxMessageId, source: 'runtime_delivery', taskRefs: record.taskRefs,
-        },
-      };
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint);
-      const ledgerRecord = await input.ledger.applyDestinationProof({
-        id: record.id, visibleReplyInbox: destination, visibleReplyMessageId: messageId,
-        visibleReplyCorrelation: 'plain_assistant_text', semanticallySufficient: true,
-        diagnostics: [
-          written.deduplicated
-            ? 'opencode_lead_plain_text_reply_materialized_deduplicated'
-            : 'opencode_lead_plain_text_reply_materialized',
-        ],
-        observedAt: this.nowIso(),
-      });
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord, input.checkpoint);
-      this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
-      return { ledgerRecord, visibleReply };
-    } catch (error) {
-      if (error instanceof OpenCodePromptDeliveryCancelledError) throw error;
-      this.deps.warn(
-        `[${input.teamName}] Failed to deliver OpenCode plain-text lead reply for ${input.memberName}/${record.inboxMessageId}: ${this.deps.getErrorMessage(error)}`
-      );
-      return { ledgerRecord: record, visibleReply: null };
-    }
-  }
 }
 
 export type {
