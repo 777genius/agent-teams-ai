@@ -42,8 +42,8 @@ function transcriptMessage(id: string, text: string) {
 
 /** Shared transcript fixture for correlated send/error regression cases. */
 function projection(messages: unknown[]): OpenCodeRuntimeTranscriptResponse['transcript'] {
-  return { sessionId: 'ses-current', logProjection: { messages } }
-    as OpenCodeRuntimeTranscriptResponse['transcript'];
+  return ({ sessionId: 'ses-current', logProjection: { messages } }
+    as OpenCodeRuntimeTranscriptResponse['transcript']);
 }
 
 describe('OpenCode lead plain-text reply persisted E2E', () => {
