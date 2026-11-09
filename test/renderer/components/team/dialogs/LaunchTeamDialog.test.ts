@@ -4845,7 +4845,8 @@ describe('LaunchTeamDialog', () => {
       expect(host.textContent).toContain('Review the team');
       expect(host.textContent).toContain('saved one-time instructions');
       expect(host.textContent).toContain('Old task that must not be executed');
-      const acknowledgment = host.querySelector('button[role="checkbox"]') as HTMLButtonElement;
+      // This test's Checkbox mock renders a native input, not Radix's button.
+      const acknowledgment = host.querySelector('#schedule-saved-prompt-reviewed') as HTMLInputElement;
       expect(acknowledgment).toBeTruthy();
       await act(async () => {
         acknowledgment.click();
@@ -5108,6 +5109,56 @@ describe('LaunchTeamDialog', () => {
         warmUpMinutes: 0,
         launchConfig: { cwd: '/tmp/project', prompt: 'Review open PRs' },
       });
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
+  it('keeps an existing Gemini one-shot provider when editing an unrelated schedule field', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha', projectPath: '/tmp/project', leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule', open: true, teamName: 'team-alpha', onClose: vi.fn(),
+          schedule: {
+            id: 'legacy-gemini', teamName: 'team-alpha',
+            cronExpression: '0 9 * * 1-5', timezone: 'UTC', status: 'active',
+            warmUpMinutes: 15, maxConsecutiveFailures: 3, consecutiveFailures: 0,
+            maxTurns: 50, createdAt: '2026-11-08T00:00:00.000Z',
+            updatedAt: '2026-11-08T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project', prompt: 'Run the existing check',
+              providerId: 'gemini', model: 'gemini-2.5-pro', skipPermissions: false,
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      const save = [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      expect(save?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        save?.click();
+        await flush();
+      });
+      expect(updateSchedule).toHaveBeenCalledExactlyOnceWith('legacy-gemini', expect.objectContaining({
+        launchConfig: expect.objectContaining({
+          providerId: 'gemini', model: 'gemini-2.5-pro', skipPermissions: false,
+        }),
+      }));
     } finally {
       await act(async () => root.unmount());
       storeState.teamByName = {};

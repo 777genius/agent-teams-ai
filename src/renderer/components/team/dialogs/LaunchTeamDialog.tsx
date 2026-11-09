@@ -399,6 +399,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
   const legacyTeamSettings = isEditing && scheduleExecutionMode === 'team' && schedule?.executionMode === 'team' && !schedule.taskFirst ? schedule.launchConfig : null;
+  // Hydration and catalog normalization are not user edits. Retain the exact
+  // persisted one-shot runtime fields until their controls are actually changed.
+  const scheduleRuntimeEditedRef = useRef({
+    provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
+  });
   useEffect(() => setSavedPromptReview(null), [effectiveTeamName, schedule?.id, open]);
   // A newly selected team must not inherit the former team's target member.
   useEffect(() => {
@@ -683,6 +688,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
   const setSelectedProviderId = (value: TeamProviderId): void => {
     hydrationRef.current.dirty = true;
+    if (isSchedule) Object.assign(scheduleRuntimeEditedRef.current, {
+      provider: true, model: true, effort: true, fastMode: true,
+    });
     setRuntimeSelectionUnresolved(false);
     const normalizedValue = isLaunchMode
       ? normalizeLeadProviderForMode(value, multimodelEnabled)
@@ -705,6 +713,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
   const setSelectedModel = (value: string): void => {
     hydrationRef.current.dirty = true;
+    if (isSchedule) Object.assign(scheduleRuntimeEditedRef.current, { model: true, effort: true });
     const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
     const nextEffort = getAvailableTeamEffortValue({
       providerId: selectedProviderId,
@@ -726,6 +735,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     localStorage.setItem('team:lastLimitContext', String(value));
   };
   const setSkipPermissions = (value: boolean): void => {
+    if (isSchedule) scheduleRuntimeEditedRef.current.skipPermissions = true;
     hydrationRef.current.dirty = true;
     setSkipPermissionsRaw(value);
     localStorage.setItem('team:lastSkipPermissions', String(value));
@@ -733,6 +743,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const setSelectedEffort = (value: string): void => {
     // Always an explicit user choice, including Default (''); programmatic clears
     // go through autoResetSelectedEffort instead.
+    if (isSchedule) scheduleRuntimeEditedRef.current.effort = true;
     hydrationRef.current.dirty = true;
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
@@ -745,6 +756,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedFastMode = (value: TeamFastMode): void => {
+    if (isSchedule) scheduleRuntimeEditedRef.current.fastMode = true;
     hydrationRef.current.dirty = true;
     setSelectedFastModeRaw(value);
     localStorage.setItem('team:lastSelectedFastMode', value);
@@ -808,6 +820,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Populate form in schedule edit mode
   useEffect(() => {
     if (!open || !isSchedule) return;
+    scheduleRuntimeEditedRef.current = {
+      provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
+    };
     if (schedule) {
       // Edit mode — preserve the missing mode of existing schedules on Save.
       setScheduleExecutionMode(schedule.executionMode ?? 'legacy');
@@ -2028,6 +2043,24 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
+    // Show the recipient blocker before unrelated one-shot folder validation.
+    if (isSchedule && scheduleExecutionMode === 'agent' && scheduleTargetMember.trim()) {
+      const savedTarget = scheduleTargetMember.trim();
+      const team = teamByName[effectiveTeamName];
+      if (!team) {
+        errors.push(t('members.list.unavailable'));
+      } else {
+        const leadName = team.leadName?.trim() || 'team-lead';
+        if (
+          savedTarget.toLowerCase() !== leadName.toLowerCase() &&
+          !team.members?.some(
+            (member) => member.name.trim() === savedTarget && !validateTeamMemberNameFormat(member.name)
+          )
+        ) {
+          errors.push(t('messages.manualQueue.recipientUnavailable'));
+        }
+      }
+    }
     if (!usesSavedTeamRuntime) {
       if (selectedProjectPathDeleted) {
         errors.push('Project folder no longer exists');
@@ -2042,20 +2075,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (!effectiveTeamName) errors.push('Team is required');
       if (!promptDraft.value.trim()) errors.push('Prompt is required');
       if (!cronExpression.trim()) errors.push('Cron expression is required');
-      const savedTarget = scheduleTargetMember.trim();
-      const team = teamByName[effectiveTeamName];
-      if (scheduleExecutionMode === 'agent' && savedTarget) {
-        if (!team) errors.push(t('members.list.unavailable'));
-        const leadName = team?.leadName?.trim() || 'team-lead';
-        if (
-          savedTarget.toLowerCase() !== leadName.toLowerCase() &&
-          !team?.members?.some(
-            (member) => member.name.trim() === savedTarget && !validateTeamMemberNameFormat(member.name)
-          )
-        ) {
-          errors.push(t('messages.manualQueue.recipientUnavailable'));
-        }
-      }
     }
     return errors;
   }, [
@@ -2353,26 +2372,46 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             selectedProviderId === 'anthropic'
               ? (explicitScheduleEffort ?? anthropicRuntimeSelection?.defaultEffort ?? undefined)
               : explicitScheduleEffort;
+          // An existing one-shot schedule may use a provider now hidden by the UI
+          // (for example Gemini). A label/time edit must not silently migrate it.
+          const originalOneShotSettings =
+            isEditing && schedule && !isTaskFirstSchedule &&
+            scheduleExecutionMode === (schedule.executionMode ?? 'legacy') &&
+            scheduleExecutionMode !== 'team'
+              ? schedule.launchConfig
+              : null;
+          const edited = scheduleRuntimeEditedRef.current;
+          const originalProvider = legacyTeamSettings ??
+            (originalOneShotSettings && !edited.provider ? originalOneShotSettings : null);
+          const originalModel = legacyTeamSettings ??
+            (originalOneShotSettings && !edited.model ? originalOneShotSettings : null);
+          const originalEffort = legacyTeamSettings ??
+            (originalOneShotSettings && !edited.effort ? originalOneShotSettings : null);
+          const originalFastMode = legacyTeamSettings ??
+            (originalOneShotSettings && !edited.fastMode ? originalOneShotSettings : null);
+          const originalPermissions = legacyTeamSettings ??
+            (originalOneShotSettings && !edited.skipPermissions ? originalOneShotSettings : null);
           const launchConfig: ScheduleLaunchConfig = {
             cwd: usesSavedTeamRuntime ? savedTeam?.cwd ?? '' : effectiveCwd,
             prompt: promptDraft.value.trim(),
-            providerId: isTaskFirstSchedule ? savedTeam!.providerId : legacyTeamSettings?.providerId ?? selectedProviderId,
+            providerId: isTaskFirstSchedule ? savedTeam!.providerId : originalProvider?.providerId ?? selectedProviderId,
             providerBackendId: isTaskFirstSchedule
               ? savedTeam?.providerBackendId
-              : legacyTeamSettings?.providerBackendId ?? selectedProviderBackendId,
-            model: isTaskFirstSchedule ? undefined : legacyTeamSettings?.model ?? scheduleModel,
-            effort: isTaskFirstSchedule ? undefined : legacyTeamSettings?.effort ?? scheduleEffort,
-            fastMode:
-              !isTaskFirstSchedule && (selectedProviderId === 'anthropic' || selectedProviderId === 'codex')
-                ? legacyTeamSettings?.fastMode ?? selectedFastMode
-                : legacyTeamSettings?.fastMode,
-            resolvedFastMode:
-              isTaskFirstSchedule ? undefined : legacyTeamSettings?.resolvedFastMode ?? (selectedProviderId === 'anthropic'
+              : originalProvider?.providerBackendId ?? selectedProviderBackendId,
+            model: isTaskFirstSchedule ? undefined : originalModel?.model ?? scheduleModel,
+            effort: isTaskFirstSchedule ? undefined : originalEffort?.effort ?? scheduleEffort,
+            fastMode: isTaskFirstSchedule ? undefined : originalFastMode?.fastMode ?? (
+              selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
+                ? selectedFastMode : undefined
+            ),
+            resolvedFastMode: isTaskFirstSchedule ? undefined : originalFastMode?.resolvedFastMode ?? (
+              selectedProviderId === 'anthropic'
                 ? (anthropicFastModeResolution?.resolvedFastMode ?? false)
                 : selectedProviderId === 'codex'
                   ? (codexFastModeResolution?.resolvedFastMode ?? false)
-                  : undefined),
-            skipPermissions: isTaskFirstSchedule ? undefined : legacyTeamSettings?.skipPermissions ?? skipPermissions,
+                  : undefined
+            ),
+            skipPermissions: isTaskFirstSchedule ? undefined : originalPermissions?.skipPermissions ?? skipPermissions,
           };
 
           if (isEditing && schedule) {

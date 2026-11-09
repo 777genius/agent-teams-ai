@@ -149,7 +149,7 @@ export const MemberSelect = <T extends SelectableMember>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <TooltipProvider>
+      <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
