@@ -207,7 +207,7 @@
         "description": "Bảng màu JSON có tên dựa trên giao diện sáng hoặc tối.",
         "none": "Chủ đề mặc định",
         "edit": "Sửa JSON",
-        "localOnly": "Chủ đề và tỷ lệ chỉ được lưu trên thiết bị hoặc trình duyệt này.",
+        "localOnly": "Giao diện, mức thu phóng và phông chữ chỉ được lưu trên thiết bị hoặc trình duyệt này.",
         "editor": {
           "title": "Sửa chủ đề (JSON)",
           "description": "Tối đa 8 chủ đề. Màu dạng #RRGGBB. Chỉ áp dụng JSON hợp lệ; mảng themes trống sẽ xóa tất cả.",
@@ -222,6 +222,22 @@
       "uiScale": {
         "label": "Tỷ lệ giao diện",
         "description": "Thay đổi tỷ lệ toàn bộ ứng dụng mà không đổi độ thu phóng hệ thống hoặc trình duyệt.",
+        "reset": "Đặt lại"
+      },
+      "fontFamily": {
+        "label": "Phông chữ giao diện",
+        "description": "Chọn phông chữ đã cài trên thiết bị. Trình soạn thảo và terminal giữ nguyên phông chữ riêng.",
+        "system": "Mặc định hệ thống",
+        "other": "Phông chữ khác…",
+        "placeholder": "Tên phông chữ đã cài",
+        "apply": "Áp dụng",
+        "discover": "Tìm phông chữ đã cài",
+        "loaded": "Đã thêm các phông chữ đã cài vào danh sách.",
+        "unavailable": "Không thể liệt kê phông chữ ở đây. Hãy nhập tên thủ công."
+      },
+      "textSize": {
+        "label": "Cỡ chữ",
+        "description": "Đổi cỡ chữ mà không thay đổi mức thu phóng toàn giao diện.",
         "reset": "Đặt lại"
       }
     },
