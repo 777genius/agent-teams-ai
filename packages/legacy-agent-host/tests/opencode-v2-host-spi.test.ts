@@ -1094,6 +1094,48 @@ test('a reused mutable custody readback cannot hide a native PID or binary swap'
   }
 });
 
+test('post-instruction custody getter cannot hide transient Host lease revocation', async () => {
+  const ctx = context();
+  const { captured, calls } = owner(true);
+  const nativeCustody = testNativeCustody();
+  let reads = 0;
+  let finalPathReads = 0;
+  let progressCalls = 0;
+  // The previous implementation checked current() BEFORE reading final
+  // custody getters, then invoked onProgress() BEFORE its next authority
+  // check. Progress could mask the revoked Host profile.
+  captured.readNativeCustody = async () => {
+    reads++;
+    if (reads === 1) return nativeCustody;
+    return {
+      ...nativeCustody,
+      get executablePath() {
+        finalPathReads++;
+        Object.assign(ctx.profile, { protocolRevision: '2.1.4' });
+        return nativeCustody.executablePath;
+      },
+    };
+  };
+  ctx.onProgress = () => {
+    progressCalls++;
+    Object.assign(ctx.profile, { protocolRevision: '2.0.21' });
+  };
+  const provider = createOpenCodeV2MemberProvider(ctx, captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/,
+    'final receipt projection must recheck authority before progress');
+  assert.equal(reads, 2, 'initial and final native custody both observed');
+  assert.equal(finalPathReads, 1, 'final native identity field captured once');
+  assert.equal(progressCalls, 0, 'progress cannot restore authority before its recheck');
+  assert.equal(calls.context, 1, 'native context mutation never replayed');
+  assert.equal(calls.permissions, 2, 'both native policy readbacks preceded final custody');
+  assert.equal(calls.password, 0, 'no credentials after revoked capture');
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1, 'only this TEST-owned native process stopped once');
+});
+
 test('V2 checks the first captured native digest, not later accessor values', async () => {
   const { captured, calls } = owner(true);
   let custodyReads = 0;

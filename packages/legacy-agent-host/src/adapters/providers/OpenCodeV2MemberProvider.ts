@@ -392,7 +392,17 @@ export function createOpenCodeV2MemberProvider(
                 preflightOpenCodeV2EffectiveExternalDirectory(
                   finalEffective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
                 combined.aborted || !current()) return false;
-            const finalCustody = await capturedReadNativeCustody(combined);
+            const finalCustodyReceipt = await capturedReadNativeCustody(combined);
+            // Treat the post-mutation native readback as a captured witness.
+            // An untrusted accessor can revoke Host authority while projecting
+            // a field, so check the lease AFTER all fields have been captured.
+            const finalCustody = finalCustodyReceipt && Object.freeze({
+              executablePath: finalCustodyReceipt.executablePath,
+              executableSha256: finalCustodyReceipt.executableSha256,
+              version: finalCustodyReceipt.version,
+              pid: finalCustodyReceipt.pid,
+              startIdentity: finalCustodyReceipt.startIdentity,
+            });
             if (!finalCustody || combined.aborted || !current() ||
                 finalCustody.executablePath !== admittedCustody.executablePath ||
                 finalCustody.executableSha256 !== admittedCustody.executableSha256 ||
