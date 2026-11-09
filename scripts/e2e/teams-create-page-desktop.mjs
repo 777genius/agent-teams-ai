@@ -978,6 +978,11 @@ async function main() {
       );
     };
     await selectTemplate();
+    // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
+    await cdp.waitFor(
+      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      'template confirmation initial keyboard focus'
+    );
     // A destructive confirmation must not expose background form fields to Tab.
     await cdp.send('Input.dispatchKeyEvent', {
       type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
