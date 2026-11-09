@@ -20,7 +20,12 @@ export function useGroupChatHistory(teamName: string, contextId: string, groupCh
   const current = useRef(identity);
   current.current = identity;
   const session = useMemo(
-    () => ({ identity, cursor: null as MessagesPage['nextCursor'], busy: false }),
+    () => ({
+      identity,
+      cursor: null as MessagesPage['nextCursor'],
+      revision: null as MessagesPage['feedRevision'] | null,
+      busy: false,
+    }),
     [identity]
   );
   const load = useCallback(
@@ -56,10 +61,15 @@ export function useGroupChatHistory(teamName: string, contextId: string, groupCh
             },
           };
         });
-        if (older || !session.cursor) {
+        // Owner cursors are bound to the message revision. Replace the old
+        // cursor after a changed head; unchanged polling retains older progress.
+        const revisionChanged =
+          !older && session.revision !== null && session.revision !== result.feedRevision;
+        if (older || !session.cursor || revisionChanged) {
           session.cursor = result.nextCursor;
           setPage(result);
         }
+        session.revision = result.feedRevision;
         setError(null);
       } catch (cause) {
         if (current.current === identity)
@@ -79,6 +89,7 @@ export function useGroupChatHistory(teamName: string, contextId: string, groupCh
     setError(null);
     setPage(null);
     session.cursor = null;
+    session.revision = null;
     session.busy = false;
     void load();
   }, [identity, load, rootIdentity, session]);

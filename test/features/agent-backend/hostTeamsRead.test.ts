@@ -644,11 +644,17 @@ describe('ordinary Host team read selection', () => {
     expect(page.messages[0].messageId).toBe('m2');
     const older = await teams.getMessagesPage(f.key, { limit: 1, cursor: page.nextCursor });
     expect(older.messages[0].messageId).toBe('m1');
-    f.snapshot.revision = 'b'.repeat(64);
-    f.snapshot.feed.sequence++;
-    await expect(teams.getMessagesPage(f.key, { cursor: page.nextCursor })).rejects.toThrow(
-      'expired'
-    );
+    // Owner-page cursors depend on retained messages, not the unrelated Team snapshot revision.
+    f.snapshot.messages.push({
+      from: 'alice',
+      text: 'third accepted message',
+      timestamp: '2026-01-03',
+      read: false,
+      messageId: 'm3',
+    });
+    await expect(teams.getMessagesPage(f.key, { cursor: page.nextCursor })).rejects.toMatchObject({
+      code: 'hold',
+    });
   });
   it('fails closed for unknown/unavailable handles and unsupported operations, zero legacy fallback', async () => {
     const f = fixture();
