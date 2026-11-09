@@ -402,11 +402,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
-  // Hydration and catalog normalization are not user edits. Retain the exact
-  // persisted one-shot runtime fields until their controls are actually changed.
-  const scheduleRuntimeEditedRef = useRef({
-    provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
-  });
+  const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });
   const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({
     open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,
     scheduleId: schedule?.id, reviewed: schedule?.reviewedSavedPrompt === true,
@@ -2633,11 +2629,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ) : null}
 
           {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
-            <HistoricalPromptReview
-              prompt={savedPromptReview.prompt}
-              confirmed={savedPromptReview.confirmed}
-              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))}
-            />
+            <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}
+              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
           ) : null}
 
           {!usesSavedTeamRuntime ? <ProjectPathSelector
