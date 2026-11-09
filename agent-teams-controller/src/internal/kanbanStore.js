@@ -100,7 +100,7 @@ function readKanbanState(paths, teamName, options = {}) {
   try {
     const stat = fs.statSync(paths.kanbanPath);
     observed = true;
-    if (!stat.isFile() || stat.size > 512 * 1024) throw new Error('Kanban safety state is unavailable');
+    if (!stat.isFile()) throw new Error('Kanban safety state is unavailable');
     raw = fs.readFileSync(paths.kanbanPath, 'utf8');
   } catch (error) {
     if (error.code === 'ENOENT' && !observed) return getDefaultState(teamName);

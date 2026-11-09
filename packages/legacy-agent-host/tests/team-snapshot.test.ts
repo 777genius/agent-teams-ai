@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
 import { pageOwnerSnapshot } from '../dist/team/pageOwnerSnapshot.js';
+import { boundProductCommandReceipt } from '../dist/team/boundProductCommandReceipt.js';
 
 test('snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-snapshot-')));
@@ -57,6 +58,187 @@ test('snapshot reads persisted authority/roster/tasks/kanban and only permitted 
   assert.equal(JSON.stringify(human.readSnapshot()).includes('principalId'), false);
 });
 
+
+
+test('one task with large nested history retains all task parts, order and signed continuations', () => {
+  const history = Array.from({ length: 90 }, (_, index) => ({
+    id: 'comment-' + index,
+    author: 'alice',
+    type: 'regular',
+    createdAt: '2026-01-01T00:00:00Z',
+    text: 'history-' + index + '-' + 'x'.repeat(6000),
+  }));
+  const tasks = [
+    { id: 'first', subject: 'First', status: 'pending', comments: [] },
+    { id: 'large', subject: 'Large', status: 'pending', comments: history,
+      historyEvents: [{ id: 'created', timestamp: '2026-01-01T00:00:00Z',
+        type: 'task_created', status: 'pending' }] },
+    { id: 'last', subject: 'Last', status: 'pending', comments: [] },
+  ];
+  const snapshot = {
+    teamName: 'TEST-team', revision: 'a'.repeat(64), members: [],
+    tasks, messages: [],
+    kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+  };
+  const original = JSON.stringify(snapshot);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    const groups = new Map<number, Map<number, Record<string, unknown>>>();
+    let cursor: string | undefined;
+    let pages = 0;
+    do {
+      const page = pageOwnerSnapshot({ principalId: 'human', key: 'TEST-key',
+        snapshot, maxBytes, ...(cursor ? { cursor } : {}) }) as {
+        tasks: Record<string, unknown>[];
+        taskTotal: number;
+        taskParts: { index: number; part: number; total: number }[];
+        nextCursor: string | null;
+      };
+      assert.equal(page.taskTotal, tasks.length);
+      assert.equal(page.taskParts.length, page.tasks.length);
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      for (const [index, marker] of page.taskParts.entries()) {
+        const group = groups.get(marker.index) ?? new Map();
+        assert.equal(group.has(marker.part), false);
+        group.set(marker.part, page.tasks[index]!);
+        groups.set(marker.index, group);
+      }
+      if (pages === 0) {
+        assert.ok(page.nextCursor);
+        assert.throws(() => pageOwnerSnapshot({ principalId: 'different',
+          key: 'TEST-key', snapshot, maxBytes, cursor: page.nextCursor! }));
+      }
+      cursor = page.nextCursor ?? undefined;
+      pages++;
+      assert.ok(pages < 128, 'cursor must converge');
+    } while (cursor);
+    assert.equal(groups.size, tasks.length);
+    const rebuilt = tasks.map((task, index) => {
+      const pieces = groups.get(index)!;
+      const base = { ...pieces.get(0)! };
+      for (let part = 1; part < pieces.size; part++) {
+        const row = pieces.get(part)!;
+        for (const field of ['comments', 'historyEvents']) {
+          if (Array.isArray(row[field]))
+            (base as Record<string, unknown>)[field] = [
+              ...((base as Record<string, unknown>)[field] as unknown[] ?? []),
+              ...(row[field] as unknown[]),
+            ];
+        }
+      }
+      assert.equal(base.id, task.id);
+      return base;
+    });
+    assert.deepEqual(rebuilt, tasks);
+    assert.ok(pages > 1);
+  }
+  assert.equal(JSON.stringify(snapshot), original, 'paging does not mutate original data');
+});
+
+test('a 420 KiB Unicode message remains readable through signed Desktop and MCP pages', () => {
+  const message = {
+    messageId: 'TEST-oversized-message',
+    from: 'alice',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    text: '漢'.repeat(140_000),
+    read: false,
+    attachments: [{ id: 'TEST-attachment', filename: 'proof.txt' }],
+  };
+  const snapshot = {
+    teamName: 'TEST-team', revision: 'a'.repeat(64), members: [],
+    tasks: [], messages: [message],
+    kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(message)) > 384 * 1024);
+  const original = JSON.stringify(snapshot);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    const fragments = new Map<number, string>();
+    let cursor: string | undefined, pages = 0;
+    do {
+      const page = pageOwnerSnapshot({
+        principalId: 'human', key: 'TEST-key', snapshot, maxBytes,
+        ...(cursor ? { cursor } : {}),
+      }) as {
+        messages: { text: string; attachments?: unknown[] }[];
+        messageTotal: number;
+        messageParts: { index: number; part: number; total: number }[];
+        nextCursor: string | null;
+      };
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      assert.equal(page.messageTotal, 1);
+      assert.equal(page.messageParts.length, page.messages.length);
+      for (const [position, marker] of page.messageParts.entries()) {
+        assert.equal(marker.index, 0);
+        assert.ok(!fragments.has(marker.part));
+        fragments.set(marker.part, page.messages[position]!.text);
+        if (marker.part > 0)
+          assert.equal(page.messages[position]!.attachments, undefined);
+      }
+      if (pages === 0) {
+        assert.ok(page.nextCursor);
+        assert.throws(() => pageOwnerSnapshot({
+          principalId: 'foreign', key: 'TEST-key', snapshot,
+          maxBytes, cursor: page.nextCursor!,
+        }));
+      }
+      cursor = page.nextCursor ?? undefined;
+      assert.ok(++pages < 128);
+    } while (cursor);
+    assert.ok(pages > 1);
+    assert.equal([...fragments.entries()].sort(([a], [b]) => a - b)
+      .map(([, text]) => text).join(''), message.text);
+  }
+  assert.equal(JSON.stringify(snapshot), original);
+});
+
+test('real committed task mutation keeps an under-1-MiB Host acknowledgement with full durable history', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-host-bounded-receipt-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({
+    root, binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice', name: 'alice', role: 'member' }],
+    grants: [{ principalId: 'human', memberName: 'user',
+      permissions: ['read', 'admin', 'task.write'] }],
+  });
+  const human = owner.connect('human');
+  const taskId = human.execute({
+    commandId: 'TEST-mutation-create', operation: 'task.create',
+    payload: { subject: 'Retained task' },
+  }).effects.taskId;
+  for (let index = 0; index < 180; index++) {
+    human.execute({
+      commandId: 'TEST-mutation-comment-' + index,
+      operation: 'task.comment',
+      payload: { taskId, text: 'retained-' + index + '-' + 'x'.repeat(6000) },
+    });
+  }
+  const receipt = human.execute({
+    commandId: 'TEST-mutation-update', operation: 'task.update',
+    payload: { taskId, subject: 'Updated retained task' },
+  });
+  assert.equal(receipt.phase, 'completed');
+  assert.ok(Buffer.byteLength(JSON.stringify({ ok: true, value: receipt })) > 1024 * 1024);
+  const projected = boundProductCommandReceipt(receipt) as unknown as {
+    commandId: string; phase: string; command: { operation: string };
+    result?: { id: string; status: string; subject: string; comments?: unknown[] };
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify({ ok: true, value: projected })) < 768 * 1024);
+  assert.equal(projected.commandId, receipt.commandId);
+  assert.equal(projected.phase, 'completed');
+  assert.equal(projected.command.operation, 'task.update');
+  assert.equal(projected.result?.id, taskId);
+  assert.equal(projected.result?.subject, 'Updated retained task');
+  assert.equal(projected.result?.comments, undefined);
+  const saved = human.lookup('TEST-mutation-update');
+  assert.deepEqual(saved, receipt, 'bounded response must never mutate the command ledger');
+  assert.equal(
+    (human.getTask(taskId).comments as unknown[]).length,
+    180,
+    'complete product history stays durable'
+  );
+  const original = JSON.stringify(receipt);
+  assert.deepEqual(boundProductCommandReceipt(receipt), projected);
+  assert.equal(JSON.stringify(receipt), original);
+});
 
 test('large retained task inventory stays readable through all bounded original Owner pages', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-tasks-')));

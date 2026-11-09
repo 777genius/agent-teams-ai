@@ -1522,7 +1522,12 @@
       "leadDefault": "หัวหน้าทีม (ค่าเริ่มต้น)",
       "agentDescription": "หากทีมปิดอยู่ จะเรียกเอเจนต์แยกต่างหาก; หากทีมทำงานอยู่ จะมอบหมายงาน",
       "teamDescription": "หากทีมปิดอยู่ จะเริ่มทีมที่บันทึกไว้; หากทำงานอยู่ จะมอบหมายงานให้หัวหน้าทีม ใช้การตั้งค่าที่บันทึกไว้",
-      "teamPathMissing": "บันทึกโฟลเดอร์โครงการของทีมก่อนกำหนดเวลาเริ่มทำงาน"
+      "teamPathMissing": "บันทึกโฟลเดอร์โครงการของทีมก่อนกำหนดเวลาเริ่มทำงาน",
+      "taskFirstAgentDescription": "สมาชิกทีมที่เลือกจะได้รับงานบนบอร์ดหลังจากเริ่มทีมอย่างปลอดภัยเมื่อจำเป็น จะไม่ขัดจังหวะเอเจนต์ที่กำลังทำงาน",
+      "taskFirstTeamDescription": "หัวหน้าทีมจะได้รับงานประสานงานหลังจากเริ่มทีมอย่างปลอดภัยเมื่อจำเป็น จะไม่ขัดจังหวะงานที่กำลังดำเนินอยู่",
+      "taskFirstTarget": "มอบหมายให้",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "ฉันตรวจสอบพรอมป์เก่าและแยกคำสั่งถาวรแล้ว เก็บข้อความเดิมไว้ แต่ไม่เรียกใช้ตามกำหนดการ"
     },
     "title": {
       "createSchedule": "สร้างกำหนดการ",
@@ -2097,7 +2102,8 @@
       "stillRunning": "งานยังกำลังทำงาน...",
       "loadingLogs": "กำลังโหลดบันทึก...",
       "errors": "ข้อผิดพลาด",
-      "close": "ปิด"
+      "close": "ปิด",
+      "openTask": "เปิดงาน"
     },
     "cron": {
       "expression": "นิพจน์ Cron",

@@ -4,6 +4,7 @@ import { api } from '@renderer/api';
 
 import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
 import {
+  beginRuntimeProviderConnectedCountCheck,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
   observeRuntimeProviderDirectoryRevision,
@@ -111,6 +112,7 @@ export function useRuntimeProviderQuickConnect({
       refreshRequestSequence !== previousRefreshRequestSequence.current ||
       refreshKey !== previousRefreshKey.current;
     let cancelled = false;
+    let stopCountCheck: (() => void) | null = null;
     const projectScope = projectPath?.trim() ?? '';
     const projectScopeChanged = previousProjectScope.current !== projectScope;
     previousProjectScope.current = projectScope;
@@ -130,6 +132,8 @@ export function useRuntimeProviderQuickConnect({
 
     const loadDirectory = async (): Promise<void> => {
       const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
+      stopCountCheck = beginRuntimeProviderConnectedCountCheck(projectPath, readToken);
+      let connectedProbeStarted = false;
       setLoading(true);
       setError(null);
 
@@ -184,6 +188,7 @@ export function useRuntimeProviderQuickConnect({
           // Spike: read only connected sources when the legacy all-provider
           // summary is truncated. The existing all-summary rows remain the
           // fallback for cards; never escalate to model or full inventory reads.
+          connectedProbeStarted = true;
           void api.runtimeProviderManagement
             .loadProviderDirectory({
               runtimeId: 'opencode',
@@ -214,7 +219,8 @@ export function useRuntimeProviderQuickConnect({
                 });
               }
             })
-            .catch(() => undefined);
+            .catch(() => undefined)
+            .finally(() => stopCountCheck?.());
         }
         setError(null);
         setLoaded(true);
@@ -225,6 +231,7 @@ export function useRuntimeProviderQuickConnect({
         }
         setError(loadError instanceof Error ? loadError.message : 'Failed to load provider status');
       } finally {
+        if (!connectedProbeStarted) stopCountCheck?.();
         if (!cancelled && requestSequence.current === requestId) {
           setLoading(false);
         }
@@ -248,6 +255,7 @@ export function useRuntimeProviderQuickConnect({
 
     return () => {
       cancelled = true;
+      stopCountCheck?.();
       window.clearTimeout(timeout);
     };
   }, [enabled, projectPath, refreshKey, refreshRequestSequence]);

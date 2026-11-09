@@ -10,7 +10,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import {
-  connectedProviderIds, parseProviderDirectory, validateConnectedSummary,
+  assertStableConnectedProviders, connectedProviderIds, parseProviderDirectory, validateConnectedSummary,
 } from './provider-real-runtime-policy.ts';
 
 import type { ProviderDirectoryPage } from './provider-real-runtime-policy.ts';
@@ -45,6 +45,9 @@ interface ScenarioEvidence {
   name: string;
   summaryCount: number;
   summaryDirectoryTotal: number;
+  warmSummaryCount: number;
+  warmDirectoryTotal: number;
+  unfilteredInventoryChanged: boolean;
   fullDirectoryTotal: number | null;
   fullPages: number;
   fullCatalogOver100: boolean | null;
@@ -238,10 +241,17 @@ async function checkScenario(name: 'clean' | 'ambient' | 'configured',
   } else if (name === 'clean') {
     assert.equal(summaryCount, 0, 'Credential-free baseline unexpectedly connected');
   }
-  // Repeat the same real command in the same isolated project to time warm reads.
+  // Reobserve the connected identities, not the total unfiltered inventory.
+  // The published V1 host can discover/drop *available* providers between
+  // independent metadata reads even when no credentials change.
   const warmAll = await directory('all', true, null, cwd, env, probes,
     name + '-summary-all-warm');
-  assert.equal(warmAll.totalCount, all.totalCount);
+  const warmConnected = await directory('connected', true, null, cwd, env, probes,
+    name + '-summary-connected-warm');
+  const warmSummaryCount = validateConnectedSummary(warmAll, warmConnected);
+  assert.equal(warmSummaryCount, summaryCount,
+    'Connected summary changed without a credential mutation');
+  assertStableConnectedProviders(connected.entries, warmConnected.entries);
   // The full catalog is *not* required to establish a complete summary count.
   // The real V1 host may fail to start or return incomplete inventory in a
   // credential-free sandbox. Record that limitation rather than claiming its
@@ -294,6 +304,8 @@ async function checkScenario(name: 'clean' | 'ambient' | 'configured',
   const configuredProviderState = ['connected', 'available', 'not-connected', 'error', 'missing']
     .includes(observedState) ? observedState as ScenarioEvidence['configuredProviderState'] : 'other';
   return { name, summaryCount, summaryDirectoryTotal: all.totalCount,
+    warmSummaryCount, warmDirectoryTotal: warmAll.totalCount,
+    unfilteredInventoryChanged: warmAll.totalCount !== all.totalCount,
     fullDirectoryTotal, fullPages, fullCatalogOver100, connectedIdsMatchFull,
     fullComparisonStatus, configuredProviderState, probes };
 }

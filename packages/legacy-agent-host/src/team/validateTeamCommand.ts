@@ -9,7 +9,7 @@ import { safeSegment, stableJson } from './identity.js';
 import type { TeamCommand, TaskRef } from './contracts.js';
 
 export function validateTeamText(value: unknown, empty = false): asserts value is string {
-  if (typeof value !== 'string' || (!empty && !value.trim()) || value.length > 1_000_000)
+  if (typeof value !== 'string' || value.includes('\0') || (!empty && !value.trim()) || value.length > 1_000_000)
     throw new TeamOwnerError('invalid');
 }
 

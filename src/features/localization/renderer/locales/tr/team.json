@@ -1522,7 +1522,12 @@
       "leadDefault": "Ekip lideri (varsayılan)",
       "agentDescription": "Ekip kapalıysa bağımsız ajanı çalıştırır; açıksa görev atar.",
       "teamDescription": "Ekip kapalıysa kayıtlı ekibi başlatır; açıksa lidere görev atar. Kayıtlı ayarları kullanır.",
-      "teamPathMissing": "Başlatma zamanlamadan önce ekibin proje klasörünü kaydedin."
+      "teamPathMissing": "Başlatma zamanlamadan önce ekibin proje klasörünü kaydedin.",
+      "taskFirstAgentDescription": "Seçilen ekip üyesine, gerekirse ekip güvenli şekilde başlatıldıktan sonra panoda bir görev atanır. Meşgul ajanların işi kesilmez.",
+      "taskFirstTeamDescription": "Ekip liderine, gerekirse ekip güvenli şekilde başlatıldıktan sonra bir koordinasyon görevi atanır. Devam eden işler kesilmez.",
+      "taskFirstTarget": "Şuna ata",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Eski kayıtlı istemi inceledim ve kalıcı talimatları ayırdım. Metni saklayın ancak zamanlanmış işte çalıştırmayın."
     },
     "title": {
       "createSchedule": "Zamanlama Oluştur",
@@ -2097,7 +2102,8 @@
       "stillRunning": "Görev hâlâ çalışıyor...",
       "loadingLogs": "Günlükler yükleniyor...",
       "errors": "Hatalar",
-      "close": "Kapat"
+      "close": "Kapat",
+      "openTask": "Görevi aç"
     },
     "cron": {
       "expression": "Cron ifadesi",

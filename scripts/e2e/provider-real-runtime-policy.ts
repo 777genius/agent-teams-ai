@@ -80,6 +80,17 @@ export function connectedProviderIds(rows: readonly ProviderDirectoryRow[]): str
     .filter((id) => id && id !== 'opencode'))].sort();
 }
 
+/** A stable count does not prove the same authenticated providers remain connected. */
+export function assertStableConnectedProviders(
+  original: readonly ProviderDirectoryRow[],
+  warm: readonly ProviderDirectoryRow[],
+): void {
+  assert.deepEqual(
+    connectedProviderIds(warm), connectedProviderIds(original),
+    'Connected identities changed without a credential mutation',
+  );
+}
+
 export function completeConnectedCount(page: ProviderDirectoryPage): number | null {
   if (page.nextCursor !== null || page.entries.length !== page.totalCount) return null;
   return connectedProviderIds(page.entries).length;

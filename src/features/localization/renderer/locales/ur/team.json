@@ -1522,7 +1522,12 @@
       "leadDefault": "ٹیم لیڈ (طے شدہ)",
       "agentDescription": "ٹیم بند ہو تو الگ ایجنٹ چلتا ہے؛ فعال ہو تو کام تفویض ہوتا ہے۔",
       "teamDescription": "ٹیم بند ہو تو محفوظ شدہ ٹیم شروع ہوتی ہے؛ فعال ہو تو لیڈ کو کام ملتا ہے۔ محفوظ ترتیبات استعمال ہوتی ہیں۔",
-      "teamPathMissing": "شیڈول سے ٹیم شروع کرنے سے پہلے پروجیکٹ فولڈر محفوظ کریں۔"
+      "teamPathMissing": "شیڈول سے ٹیم شروع کرنے سے پہلے پروجیکٹ فولڈر محفوظ کریں۔",
+      "taskFirstAgentDescription": "ضرورت پڑنے پر ٹیم کو محفوظ طریقے سے شروع کرنے کے بعد منتخب ساتھی کو بورڈ پر کام دیا جائے گا۔ مصروف ایجنٹس کے کام میں خلل نہیں ڈالا جائے گا۔",
+      "taskFirstTeamDescription": "ضرورت پڑنے پر ٹیم کو محفوظ طریقے سے شروع کرنے کے بعد ٹیم لیڈ کو رابطہ کاری کا کام دیا جائے گا۔ جاری کام میں خلل نہیں ڈالا جائے گا۔",
+      "taskFirstTarget": "تفویض کریں",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "میں نے پرانا محفوظ پرامپٹ دیکھ کر مستقل ہدایات الگ کر دی ہیں۔ متن محفوظ رکھیں، مگر شیڈول کے ساتھ دوبارہ نہ چلائیں۔"
     },
     "title": {
       "createSchedule": "ایجاد کریں",
@@ -2097,7 +2102,8 @@
       "stillRunning": "مجاہدین اب بھی چل رہا ہے...",
       "loadingLogs": "لاگس لوڈ کریں...",
       "errors": "خامی",
-      "close": "بندکرو"
+      "close": "بندکرو",
+      "openTask": "کام کھولیں"
     },
     "cron": {
       "expression": "قرونِ وسطٰی",

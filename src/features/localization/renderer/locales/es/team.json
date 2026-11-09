@@ -1522,7 +1522,12 @@
       "leadDefault": "Líder del equipo (predeterminado)",
       "agentDescription": "Si el equipo está detenido, ejecuta un agente independiente; si está activo, asigna una tarea.",
       "teamDescription": "Si el equipo está detenido, lo inicia; si está activo, asigna una tarea al líder. Usa la configuración guardada.",
-      "teamPathMissing": "Guarda primero la carpeta del proyecto del equipo para programar su inicio."
+      "teamPathMissing": "Guarda primero la carpeta del proyecto del equipo para programar su inicio.",
+      "taskFirstAgentDescription": "El compañero elegido recibe una tarea en el tablero tras iniciar el equipo de forma segura, si es necesario. No se interrumpe a los agentes ocupados.",
+      "taskFirstTeamDescription": "El líder recibe una tarea de coordinación tras iniciar el equipo de forma segura, si es necesario. No se interrumpe el trabajo en curso.",
+      "taskFirstTarget": "Asignar a",
+      "historicalPromptReviewRequired": "Revisa las instrucciones puntuales guardadas del equipo antes de programar. Borra o separa primero el prompt de inicio anterior.",
+      "historicalPromptAcknowledged": "He revisado el prompt guardado y separado las instrucciones permanentes. Conservar el texto antiguo sin ejecutarlo según el horario."
     },
     "title": {
       "createSchedule": "Crear programa",
@@ -2097,7 +2102,8 @@
       "stillRunning": "La tarea sigue funcionando...",
       "loadingLogs": "Cargando registros...",
       "errors": "Errores",
-      "close": "Cerca"
+      "close": "Cerca",
+      "openTask": "Abrir tarea"
     },
     "cron": {
       "expression": "Expresión de hierro",

@@ -1522,7 +1522,12 @@
       "leadDefault": "Líder da equipa (predefinição)",
       "agentDescription": "Com a equipa parada, executa um agente isolado; com ela ativa, atribui uma tarefa.",
       "teamDescription": "Com a equipa parada, inicia-a; com ela ativa, atribui uma tarefa ao líder. Usa as definições guardadas.",
-      "teamPathMissing": "Guarde a pasta do projeto da equipa antes de agendar o arranque."
+      "teamPathMissing": "Guarde a pasta do projeto da equipa antes de agendar o arranque.",
+      "taskFirstAgentDescription": "O colega selecionado recebe uma tarefa no quadro após o início seguro da equipa, se necessário. Os agentes ocupados não são interrompidos.",
+      "taskFirstTeamDescription": "O líder recebe uma tarefa de coordenação após o início seguro da equipa, se necessário. O trabalho em curso não é interrompido.",
+      "taskFirstTarget": "Atribuir a",
+      "historicalPromptReviewRequired": "Revise as instruções pontuais salvas da equipe antes de agendar. Remova ou separe o prompt antigo de inicialização primeiro.",
+      "historicalPromptAcknowledged": "Revisei o prompt antigo e separei as instruções permanentes. Guardar o texto antigo, mas não o executar no agendamento."
     },
     "title": {
       "createSchedule": "Criar agendamento",
@@ -2097,7 +2102,8 @@
       "stillRunning": "A tarefa ainda está em execução...",
       "loadingLogs": "A carregar os registos...",
       "errors": "Erros",
-      "close": "Fechar"
+      "close": "Fechar",
+      "openTask": "Abrir tarefa"
     },
     "cron": {
       "expression": "Expressão de Cron",

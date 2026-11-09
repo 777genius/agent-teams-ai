@@ -185,6 +185,57 @@ test("bound canonical queues/comments/board reads survive reopen and produce no 
   );
 });
 
+
+test("team_get keeps canonical 90-comment task readable with taskParts continuations", (t) => {
+  const f = fixture(t);
+  const taskId = f.user.execute({
+    commandId: "TEST-huge-task", operation: "task.create",
+    payload: { subject: "Large task history", owner: "alice" },
+  }).effects.taskId;
+  for (let index = 0; index < 90; index++)
+    f.user.execute({
+      commandId: "TEST-huge-comment-" + index,
+      operation: "task.comment",
+      payload: { taskId, text: "comment-" + index + "-" + "x".repeat(6000) },
+    });
+  const expected = f.user.getTask(taskId).comments as { text: string }[];
+  assert.equal(expected.length, 90);
+  const tools = createTeamMcpTools(f.owner.connect("alice"));
+  const fragments = new Map<number, { total: number; values: Map<number, unknown> }>();
+  let cursor: string | null = null;
+  let revision: string | undefined;
+  let pages = 0;
+  do {
+    const page = value(tools.call("team_get", cursor ? { cursor } : {})) as {
+      revision: string;
+      tasks: { id: string; comments?: { text: string }[] }[];
+      taskParts: { index: number; part: number; total: number }[];
+      nextCursor: string | null;
+    };
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+    assert.equal(revision === undefined || revision === page.revision, true);
+    revision = page.revision;
+    for (const [position, marker] of page.taskParts.entries()) {
+      const group = fragments.get(marker.index) ?? { total: marker.total, values: new Map() };
+      assert.equal(group.total, marker.total);
+      assert.equal(group.values.has(marker.part), false);
+      group.values.set(marker.part, page.tasks[position]);
+      fragments.set(marker.index, group);
+    }
+    cursor = page.nextCursor;
+    pages++;
+    assert.ok(pages < 128);
+  } while (cursor);
+  const group = [...fragments.values()].find((entry) =>
+    (entry.values.get(0) as { id?: string } | undefined)?.id === taskId);
+  assert.ok(group);
+  assert.equal(group.values.size, group.total);
+  const comments = [...group.values.entries()].sort(([a], [b]) => a - b)
+    .flatMap(([, row]) => (row as { comments?: { text: string }[] }).comments ?? []);
+  assert.deepEqual(comments.map((row) => row.text), expected.map((row) => row.text));
+  assert.ok(pages > 1);
+});
+
 test("team_get pages retained >256 KiB task history within MCP response limits", (t) => {
   const f = fixture(t);
   for (let index = 0; index < 100; index++) {

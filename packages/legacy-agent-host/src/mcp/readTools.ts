@@ -42,7 +42,7 @@ export function createReadMcpTools(
       : []),
     defineTool(
       "team_get",
-      "Read a bounded page of this captured Team snapshot. Pass nextCursor as cursor to continue.",
+      "Read a bounded Team page. Continue with nextCursor; taskParts indexes identify pieces of the same task whose history arrays concatenate in part order.",
       z.strictObject({
         cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
       }),

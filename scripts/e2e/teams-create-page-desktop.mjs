@@ -788,13 +788,24 @@ async function main() {
       'same team name restored after Back');
     await captureScreenshot(cdp, fixture, 'resumed');
 
-    log('switch away to Settings and return to Teams creation in same renderer');
+    log('open Providers Settings through the real model picker and resume the draft');
     const teamsTabId = await cdp.evaluate(`(() => {
       const store = window.__agentTeamsDevStore.getState();
       const pane = store.paneLayout.panes.find(p => p.id === store.paneLayout.focusedPaneId);
       return pane.activeTabId;
     })()`);
-    await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('general')");
+    const leadModelTrigger = `document.querySelector('[data-role=lead-row] button[aria-label*=" provider, "]')`;
+    await cdp.click(leadModelTrigger);
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=team-model-selector-manage-providers]')",
+      'Manage providers action in Create Team model picker'
+    );
+    await cdp.click("document.querySelector('[data-testid=team-model-selector-manage-providers]')");
+    await cdp.waitFor(`(() => {
+      const store = window.__agentTeamsDevStore.getState();
+      const pane = store.paneLayout.panes.find(p => p.id === store.paneLayout.focusedPaneId);
+      return pane.tabs.find(t => t.id === pane.activeTabId)?.type === 'settings';
+    })()`, 'Manage providers navigated to Settings');
     // Inactive Teams creation pages are retained mounted to avoid lost editor state.
     // Assert that the inactive page is hidden, not removed from the DOM.
     await cdp.waitFor(
@@ -804,7 +815,10 @@ async function main() {
     await cdp.evaluate(
       `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(teamsTabId)})`);
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
-      'draft survives tab switch');
+      'draft survives the Manage providers Settings trip');
+    await cdp.click(leadModelTrigger);
+    await cdp.waitFor("!document.querySelector('[data-testid=team-model-selector-manage-providers]')",
+      'model picker collapsed on return');
     log('render creation page in both themes and at 200% CSS zoom');
     for (const theme of ['light', 'dark']) {
       await cdp.evaluate(
@@ -1073,6 +1087,11 @@ async function main() {
       );
     };
     await selectTemplate();
+    // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
+    await cdp.waitFor(
+      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      'template confirmation initial keyboard focus'
+    );
     // A destructive confirmation must not expose background form fields to Tab.
     await cdp.send('Input.dispatchKeyEvent', {
       type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
@@ -1219,6 +1238,7 @@ async function main() {
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
+      manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
       launchStillModal: true,
       launchContentLoaded: true,

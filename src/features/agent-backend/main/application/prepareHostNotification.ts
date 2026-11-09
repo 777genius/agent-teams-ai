@@ -70,10 +70,11 @@ export async function prepareHostNotification(source: HostNotificationSource, ra
   const snapshot = { ...first, tasks };
   const target = data.target!;
   if (target.kind === 'task') {
-    const task = snapshot.tasks.find((row) => row.id === target.taskId);
+    const taskParts = snapshot.tasks.filter((row) => row.id === target.taskId);
     if (
-      !task ||
-      (target.commentId !== undefined && !task.comments?.some((row) => row.id === target.commentId))
+      taskParts.length === 0 ||
+      (target.commentId !== undefined &&
+        !taskParts.some((row) => row.comments?.some((comment) => comment.id === target.commentId)))
     )
       throw new Error('Original Host task destination unavailable');
   } else if (

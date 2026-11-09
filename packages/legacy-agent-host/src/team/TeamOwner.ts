@@ -437,7 +437,7 @@ export class TeamOwner {
       readSnapshot: (query: { cursor?: string } = {}) => this.readSnapshot(principalId, query),
       readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
         this.readMessagesPage(principalId, options),
-      readDeletedTasks: () => this.readDeletedTasks(principalId),
+      readDeletedTasks: (query: { cursor?: string } = {}) => this.readDeletedTasks(principalId, query),
       ...(this.policy.reads
         ? {
             readQueries: createTeamReadQueries({
@@ -582,16 +582,24 @@ export class TeamOwner {
     });
   }
 
-  private readDeletedTasks(principalId: string): JsonValue {
+  /** Trash uses the same revision-bound Owner pager as active tasks, including nested history. */
+  private readDeletedTasks(principalId: string, query: { cursor?: string } = {}): JsonValue {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
-      const value = json({
-        kind: 'deleted-tasks',
-        teamName: this.binding.teamName,
-        tasks: this.policy.taskBoard().listDeletedTasks(),
+      const tasks = this.policy.taskBoard().listDeletedTasks();
+      return pageOwnerSnapshot({
+        principalId,
+        key: this.snapshotPageKey,
+        snapshot: json({
+          kind: 'deleted-tasks',
+          teamName: this.binding.teamName,
+          revision: digest(tasks),
+          tasks,
+          messages: [],
+          kanbanState: { teamName: this.binding.teamName, tasks: {}, reviewers: [] },
+        }),
+        ...query,
       });
-      if (Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) throw new TeamOwnerError('hold');
-      return value;
     });
   }
 
