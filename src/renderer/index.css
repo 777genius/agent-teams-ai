@@ -926,8 +926,7 @@ a[href],
   -webkit-app-region: no-drag;
 }
 
-/* Low-specificity defaults for native inputs outside the shared UI primitives.
-   Explicit component backgrounds (errors, search overlays, etc.) still win. */
+/* Subtle native field tint; explicit component backgrounds still win. */
 :where(
   input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
   textarea,
