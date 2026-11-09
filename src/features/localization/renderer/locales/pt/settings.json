@@ -201,7 +201,29 @@
           "system": "Sistema"
         }
       },
-      "title": "Aparência"
+      "title": "Aparência",
+      "customThemes": {
+        "label": "Temas personalizados",
+        "description": "Paletas JSON com nomes baseadas no tema claro ou escuro.",
+        "none": "Tema incorporado",
+        "edit": "Editar JSON",
+        "localOnly": "Os temas e a escala são guardados apenas neste dispositivo ou navegador.",
+        "editor": {
+          "title": "Editar temas (JSON)",
+          "description": "Até 8 temas. Cores no formato #RRGGBB. Só o JSON válido é aplicado; uma lista themes vazia remove os temas.",
+          "cancel": "Cancelar",
+          "save": "Guardar temas",
+          "conflict": "Os temas foram alterados noutra aba. O rascunho JSON foi preservado; reveja-o ou substitua explicitamente os temas mais recentes.",
+          "overwrite": "Substituir temas recentes",
+          "invalidJson": "Sintaxe JSON inválida",
+          "invalidTheme": "Paleta de tema inválida. Verifique os campos, cores e contraste."
+        }
+      },
+      "uiScale": {
+        "label": "Escala da interface",
+        "description": "Amplie toda a aplicação sem alterar o zoom do sistema ou do navegador.",
+        "reset": "Repor"
+      }
     },
     "browserAccess": {
       "serverMode": {

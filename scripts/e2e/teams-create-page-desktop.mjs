@@ -21,6 +21,7 @@ const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
+let inputSelectAllDomFallbacks = 0;
 
 function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
@@ -54,7 +55,10 @@ async function seedFixture() {
     projectPath: path.join(root, 'sandbox-project'),
     teamName: `teams-create-page-e2e-${randomUUID()}`,
     memberName: 'team-lead',
-    runtimeWrapperPath: path.join(root, 'fixture-runtime-deny.cjs'),
+    runtimeScriptPath: path.join(root, 'fixture-runtime-deny.cjs'),
+    runtimeWrapperPath: path.join(
+      root, process.platform === 'win32' ? 'fixture-runtime-deny.cmd' : 'fixture-runtime-deny.cjs'
+    ),
     runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),
     deliveryRuntimeVersion: runtimeLock.version,
   };
@@ -75,7 +79,7 @@ async function seedFixture() {
   }
   const nodeBinary = await realpath(process.execPath);
   await writeFile(
-    fixture.runtimeWrapperPath,
+    fixture.runtimeScriptPath,
     `#!${nodeBinary}\n'use strict';\n` +
       `const fs = require('node:fs');\n` +
       `const args = process.argv.slice(2);\n` +
@@ -87,7 +91,16 @@ async function seedFixture() {
       `process.stderr.write('fixture runtime denies all lifecycle and provider commands\\n');\n` +
       `process.exit(77);\n`
   );
-  await chmod(fixture.runtimeWrapperPath, 0o755);
+  if (process.platform === 'win32') {
+    // Dev bootstrap uses the project's Windows-shell-aware runner for .cmd.
+    // Keep the test runtime deny-all; never point this fixture at real providers.
+    await writeFile(
+      fixture.runtimeWrapperPath,
+      `@echo off\r\n"${nodeBinary}" "${fixture.runtimeScriptPath}" %*\r\n`
+    );
+  } else {
+    await chmod(fixture.runtimeScriptPath, 0o755);
+  }
   await writeFile(fixture.runtimeLedgerPath, '');
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Teams Creation Page E2E\n');
   const member = {
@@ -182,6 +195,10 @@ async function waitForRenderer(port) {
 }
 
 async function startApp(fixture) {
+  // Never use a previous process's DevTools URL while launching the new one.
+  appLogTail.length = 0;
+  appLogRemainder.stdout = '';
+  appLogRemainder.stderr = '';
   const nodeBinary = await realpath(process.execPath);
   const env = {
     ...process.env,
@@ -195,19 +212,27 @@ async function startApp(fixture) {
     XDG_CACHE_HOME: fixture.xdgCacheHome,
     XDG_STATE_HOME: fixture.xdgStateHome,
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
-    SHELL: '/bin/sh',
+    ...(process.platform === 'win32' ? {} : { SHELL: '/bin/sh' }),
     CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   };
-  appProcess = spawn('pnpm', ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])], {
-    cwd: repoRoot,
-    detached: process.platform !== 'win32',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env,
-  });
+  // Windows pnpm is a .cmd shim, which cannot be spawned as a POSIX executable.
+  // Keep a known launcher PID for taskkill /T on teardown (including restart).
+  const windows = process.platform === 'win32';
+  appProcess = spawn(
+    windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
+    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp'] : ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
+    {
+      cwd: repoRoot,
+      detached: !windows,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env,
+    }
+  );
   appProcessGroupId = appProcess.pid;
   appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
   appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
@@ -359,21 +384,72 @@ class CdpClient {
   async fill(selector, value) {
     const expression = `document.querySelector(${JSON.stringify(selector)})`;
     await this.click(expression);
+    const mac = process.platform === 'darwin';
+    const modifier = mac ? 4 : 2; // CDP: Meta or Control
+    const modifierKey = mac ? 'Meta' : 'Control';
+    const modifierCode = mac ? 'MetaLeft' : 'ControlLeft';
+    const modifierCodeValue = mac ? 91 : 17;
     await this.send('Input.dispatchKeyEvent', {
-      type: 'rawKeyDown', key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17,
-      modifiers: 2,
+      type: 'rawKeyDown', key: modifierKey, code: modifierCode,
+      windowsVirtualKeyCode: modifierCodeValue, modifiers: modifier,
     });
     await this.send('Input.dispatchKeyEvent', {
       type: 'keyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
-      modifiers: 2,
+      modifiers: modifier,
     });
     await this.send('Input.dispatchKeyEvent', {
       type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65,
-      modifiers: 2,
+      modifiers: modifier,
     });
     await this.send('Input.dispatchKeyEvent', {
-      type: 'keyUp', key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17,
+      type: 'keyUp', key: modifierKey, code: modifierCode,
+      windowsVirtualKeyCode: modifierCodeValue,
     });
+    // macOS Electron can ignore an emulated Cmd+A accelerator despite receiving
+    // the key events. Verify selection, then use Blink's native edit command.
+    const entireValueSelected = async () => this.evaluate(`(() => {
+      const input = ${expression};
+      return !!input && input.selectionStart === 0 &&
+        input.selectionEnd === input.value.length;
+    })()`);
+    if (!(await entireValueSelected()) && mac) {
+      await this.send('Input.dispatchKeyEvent', {
+        type: 'keyDown', key: 'a', code: 'KeyA',
+        windowsVirtualKeyCode: 65, modifiers: 4, commands: ['selectAll'],
+      });
+      await this.send('Input.dispatchKeyEvent', {
+        type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 4,
+      });
+    }
+    if (!(await entireValueSelected()) && mac) {
+      // CDP's synthetic Command+A is sometimes ignored by Electron/macOS.
+      // Try an actual triple-click before the last-resort DOM selection.
+      const bounds = await this.evaluate(`(() => {
+        const rect = ${expression}.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })()`);
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', ...bounds, button: 'left', clickCount: 3,
+      });
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', ...bounds, button: 'left', clickCount: 3,
+      });
+    }
+    if (!(await entireValueSelected()) && mac) {
+      inputSelectAllDomFallbacks++;
+      // Fixture-only fallback; recorded in the E2E report, never treated as
+      // evidence that the native macOS keyboard accelerator works.
+      // Pass the selector as data to CDP, never interpolate it into evaluated code.
+      const global = await this.send('Runtime.evaluate', { expression: 'window' });
+      assert(global.result?.objectId, 'No renderer global object for selection fallback');
+      const selected = await this.send('Runtime.callFunctionOn', {
+        objectId: global.result.objectId,
+        functionDeclaration: 'function(selector) { const input = document.querySelector(selector); input?.focus(); input?.select(); }',
+        arguments: [{ value: selector }],
+      });
+      assert(!selected.exceptionDetails, 'DOM selection fallback raised a renderer exception');
+    }
+    assert(await entireValueSelected(), `Input select-all failed for ${selector}`);
     await this.send('Input.insertText', { text: value });
     await this.waitFor(
       `document.querySelector(${JSON.stringify(selector)})?.value === ${JSON.stringify(value)}`,
@@ -415,6 +491,17 @@ async function cleanup(fixture) {
       appProcess?.kill('SIGKILL');
     }
     await waitForProcessGroupExit(appProcessGroupId, 4_000);
+  } else if (appProcess?.pid && process.platform === 'win32') {
+    // Killing only cmd.exe leaves the child pnpm/Electron processes alive and
+    // contaminates the second launch or the next CI job.
+    const launcherPid = appProcess.pid;
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill', ['/PID', String(launcherPid), '/T', '/F'], {
+        windowsHide: true, stdio: 'ignore',
+      });
+      killer.once('error', resolve);
+      killer.once('close', resolve);
+    });
   } else if (appProcess?.pid) {
     appProcess.kill('SIGKILL');
   }
@@ -461,11 +548,29 @@ async function captureScreenshot(client, fixture, label) {
   await writeFile(path.join(dir, `teams-create-${label}.png`), Buffer.from(result.data, 'base64'));
 }
 
-async function initializeTeams(client, fixture) {
+async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
   await client.send('Runtime.enable');
   await client.send('Page.enable');
-  await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
-    'native API and dev store', 60_000);
+  try {
+    // Cold macOS CI may finish Vite's dev renderer bundle after 60s while
+    // Electron main/preload are ready. Wait boundedly for the actual renderer;
+    // keep real IPC/store readiness mandatory, never bypass failed startup.
+    await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
+      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 150_000);
+  } catch (error) {
+    let startupStatus = null;
+    try {
+      startupStatus = await client.evaluate(
+        "window.electronAPI?.startup?.getStatus?.().catch(() => null) ?? null"
+      );
+    } catch {
+      // The renderer may not have a working preload at all.
+    }
+    throw new Error(
+      `Electron renderer did not initialize after ${afterRestart ? 'process restart' : 'cold start'}; ` +
+        `startup status: ${JSON.stringify(startupStatus)}. ${String(error)}`
+    );
+  }
   const names = await client.evaluate(
     `window.electronAPI.teams.list().then(rows => rows.map(team => team.teamName))`);
   assert(names.includes(fixture.teamName), 'Sandbox team is missing from native API');
@@ -550,13 +655,60 @@ async function main() {
       `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(teamsTabId)})`);
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'draft survives tab switch');
+    log('render creation page in both themes and at 200% CSS zoom');
+    for (const theme of ['light', 'dark']) {
+      await cdp.evaluate(
+        "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig?.general, theme: " +
+          JSON.stringify(theme) + " } } }))"
+      );
+      await cdp.waitFor(
+        "document.documentElement.classList.contains(" + JSON.stringify(theme) + ")",
+        theme + ' theme applied'
+      );
+      await captureScreenshot(cdp, fixture, 'theme-' + theme);
+    }
+    // Layout-only proxy for 200% zoom. Native Electron zoom is a separate host capability.
+    await cdp.evaluate("document.documentElement.style.zoom = '2'");
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')?.getBoundingClientRect().width > 0",
+      'page Back action remains visible at CSS zoom 200%'
+    );
+    await captureScreenshot(cdp, fixture, 'css-zoom-200');
+    await cdp.evaluate("document.documentElement.style.zoom = ''");
+
+    log('split into two panes and prevent duplicate creation editors');
+    const paneCount = await cdp.evaluate("(() => { " +
+      "const s = window.__agentTeamsDevStore.getState(); " +
+      "const settings = s.getAllPaneTabs().find(t => t.type === 'settings'); " +
+      "const owner = s.paneLayout.panes.find(p => p.tabs.some(t => t.teamsCreationPage)); " +
+      "if (!settings || !owner) throw new Error('Missing staged Settings/Teams tabs'); " +
+      "s.splitPane(owner.id, settings.id, 'right'); " +
+      "window.__agentTeamsDevStore.getState().openTeamsCreationPage(); " +
+      "return window.__agentTeamsDevStore.getState().paneLayout.panes.length; " +
+    "})()");
+    assert.equal(paneCount, 2, 'Split-pane creation view did not create two panes');
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]')?.getBoundingClientRect().width > 0",
+      'single creation editor visible in split pane'
+    );
+    const editorCount = await cdp.evaluate(
+      "window.__agentTeamsDevStore.getState().getAllPaneTabs().filter(t => t.teamsCreationPage).length"
+    );
+    assert.equal(editorCount, 1, 'A second writable creation editor was opened');
+    await captureScreenshot(cdp, fixture, 'split-pane');
+    await cdp.evaluate("(() => { " +
+      "const s = window.__agentTeamsDevStore.getState(); " +
+      "const settings = s.paneLayout.panes.find(p => p.tabs.some(t => t.type === 'settings')); " +
+      "if (settings) s.closePane(settings.id); " +
+      "window.__agentTeamsDevStore.getState().openTeamsCreationPage(); " +
+    "})()");
 
     log('restart real Electron process retaining the same isolated data root');
     await cleanup({ ...fixture, root: null });
     // Graceful rebuild of the renderer with the same IndexedDB profile.
     started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
-    await initializeTeams(cdp, fixture);
+    await initializeTeams(cdp, fixture, { afterRestart: true });
     const restored = await cdp.evaluate(`(() => {
       const el = document.querySelector('[data-testid=create-team-page] #team-name');
       return el ? { inPage: true, value: el.value } : { inPage: false, value: null };
@@ -617,7 +769,27 @@ async function main() {
     );
     if (launchChecked)
       await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
-    await cdp.waitFor(createButtonExpression('Create'), 'config-only Create is enabled', 45_000);
+    log('native config-only save rejection retains the editor and its working directory');
+    const rejectedName = `blocked-create-e2e-${randomUUID().slice(0, 8)}`;
+    const rejectedTasksDir = path.join(fixture.claudeRoot, 'tasks', rejectedName);
+    // A dangling tasks directory forces a real native createConfig rejection.
+    // This is disposable fixture state, not a mocked renderer promise.
+    await mkdir(rejectedTasksDir, { recursive: true });
+    await cdp.fill('#team-name', rejectedName);
+    await cdp.waitFor(createButtonExpression('Create'), 'rejection scenario Create enabled');
+    await cdp.click(createButtonExpression('Create'));
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]')?.textContent.includes('Team already exists')",
+      'native creation error visible without closing editor', 45_000
+    );
+    assert.equal(
+      await cdp.evaluate("document.querySelector('[data-testid=create-team-page] #team-name')?.value"),
+      rejectedName, 'Failed native creation discarded user-entered team name'
+    );
+    await captureScreenshot(cdp, fixture, 'save-rejected');
+    await rm(rejectedTasksDir, { recursive: true, force: true });
+    await cdp.fill('#team-name', unique);
+    await cdp.waitFor(createButtonExpression('Create'), 'retry after rejection enabled', 45_000);
     await cdp.click(createButtonExpression('Create'));
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
       'config-only team created through real IPC', 45_000);
@@ -671,6 +843,170 @@ async function main() {
       'copy seed did not replay over an edited draft'
     );
     await captureScreenshot(cdp, fixture, 'copy-resumed-edits');
+    log('template replacement must be cancelable without losing copied draft');
+    await cdp.click(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))" +
+      ".find(b => b.textContent?.includes('Optional team details'))"
+    );
+    await cdp.waitFor("document.querySelector('#team-description')", 'expanded team details');
+    const copiedDescription = await cdp.evaluate(
+      "document.querySelector('#team-description')?.value"
+    );
+    assert(copiedDescription, 'Copied team description did not hydrate');
+    const selectTemplate = async () => {
+      await cdp.click(
+        "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
+      );
+      await cdp.click(
+        "Array.from(document.querySelectorAll('[role=option]'))" +
+        ".find(option => option.textContent?.includes('Software Product Team'))"
+      );
+      await cdp.waitFor(
+        "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"]')",
+        'template replacement confirmation'
+      );
+    };
+    await selectTemplate();
+    // A destructive confirmation must not expose background form fields to Tab.
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
+    });
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
+    });
+    assert(
+      await cdp.evaluate(
+        "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"]')?.contains(document.activeElement)"
+      ),
+      'Template confirmation focus escaped into the background form'
+    );
+    await cdp.click(
+      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
+    );
+    assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
+      copiedDescription, 'Canceling template replacement discarded the copied description');
+    await selectTemplate();
+    await cdp.click(
+      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button[data-confirm-btn]')"
+    );
+    await cdp.waitFor(
+      "document.querySelector('#team-description')?.value === " +
+      JSON.stringify('Design, build and validate apps, websites and digital products.'),
+      'template applied after explicit confirmation'
+    );
+    await captureScreenshot(cdp, fixture, 'template-confirmed');
+
+    log('create from actual Organization Map and verify native placement');
+    await cdp.click(
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
+    );
+    await cdp.waitFor(createButtonExpression('Continue creating'), 'template draft retained');
+    const organizationName = 'e2e-org-' + randomUUID().slice(0, 8);
+    const organization = await cdp.evaluate(
+      "window.electronAPI.organizations.createOrganization({ name: " +
+      JSON.stringify(organizationName) + " }).then(s => s.organizations.find(o => o.name === " +
+      JSON.stringify(organizationName) + "))"
+    );
+    assert(organization?.id && organization?.rootNodeId,
+      'Native organization fixture has no root');
+    // Opening a new lazy Organizations route can trigger a dev-only Vite reload.
+    // Retry only the navigation/selection sequence, never the team creation itself.
+    const confirmOrgReplace = "document.querySelector('[role=dialog] button[data-confirm-btn]')";
+    const orgSelector =
+      "Array.from(document.querySelectorAll('button[role=combobox]'))" +
+      ".find(button => button.classList.contains('w-44') && !button.disabled && button.getBoundingClientRect().width > 0)";
+    const organizationOption =
+      "Array.from(document.querySelectorAll('[role=option]'))" +
+      ".find(option => option.textContent?.trim() === " + JSON.stringify(organizationName) + ")";
+    let organizationEntryReady = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await cdp.waitFor(
+          "window.__agentTeamsDevStore?.getState",
+          'renderer after potential Vite reload', 45_000
+        );
+        await cdp.evaluate("(() => {" +
+          "const s = window.__agentTeamsDevStore.getState();" +
+          "const tab = s.getAllPaneTabs().find(t => t.type === 'organizations');" +
+          "if (tab) s.setActiveTab(tab.id);" +
+          "else s.openTab({ type: 'organizations', label: 'Organizations' });" +
+        "})()");
+        await cdp.waitFor(
+          `(${createButtonExpression('Edit')}) || (${createButtonExpression('Editing')})`,
+          'Organization Map editor action', 20_000
+        );
+        if (!(await cdp.evaluate(`Boolean(${createButtonExpression('Editing')})`))) {
+          await cdp.click(createButtonExpression('Edit'));
+        }
+        // Wait for the organization structure to finish loading before clicking.
+        await cdp.waitFor(orgSelector, 'enabled Organization selector', 25_000);
+        await cdp.click(orgSelector);
+        await cdp.click(organizationOption);
+        await cdp.waitFor(
+          "Array.from(document.querySelectorAll('button[role=combobox]'))" +
+          ".some(button => button.classList.contains('w-44') && button.textContent?.includes(" +
+          JSON.stringify(organizationName) + "))",
+          'new organization selected'
+        );
+        await cdp.click(createButtonExpression('Team here'));
+        await cdp.waitFor(
+          confirmOrgReplace,
+          'replace-existing-draft confirmation from Organization Map', 20_000
+        );
+        organizationEntryReady = true;
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        log('Organization Map reloaded or selector changed; retry staged navigation');
+      }
+    }
+    assert(organizationEntryReady, 'Organization Map entry could not open the creation page');
+    await cdp.click("document.querySelector('[role=dialog] button[data-confirm-btn]')");
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page] input#team-name')",
+      'creation page opened from Organization Map'
+    );
+    const creationSeed = await cdp.evaluate(
+      "window.__agentTeamsDevStore.getState().getAllPaneTabs()" +
+      ".find(t => t.type === 'teams' && t.teamsCreationPage)?.teamsCreationSeed"
+    );
+    assert.equal(creationSeed?.placement?.organizationId, organization.id);
+    assert.equal(creationSeed?.placement?.parentUnitId, organization.rootNodeId);
+    await captureScreenshot(cdp, fixture, 'organization-entry');
+
+    log('duplicate team-name validation and recovery in organization editor');
+    await cdp.fill('#team-name', fixture.teamName);
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]')?.innerText.includes('Team name already exists')",
+      'existing team name rejected'
+    );
+    const orgTeamName = 'org-team-e2e-' + randomUUID().slice(0, 8);
+    await cdp.fill('#team-name', orgTeamName);
+    await cdp.click(createButtonExpression('Custom path'));
+    await cdp.fill(
+      '[data-testid=create-team-page] input[aria-label="Custom working directory"]',
+      fixture.projectPath
+    );
+    const orgLaunchChecked = await cdp.evaluate(
+      "document.querySelector('#launch-team')?.getAttribute('data-state') === 'checked'"
+    );
+    if (orgLaunchChecked) {
+      await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
+    }
+    await cdp.click(createButtonExpression('Create'));
+    await cdp.waitFor(
+      "!document.querySelector('[data-testid=create-team-page]')",
+      'organization team saved and editor closed', 45_000
+    );
+    const structure = await cdp.evaluate(
+      "window.electronAPI.organizations.getOrganizationStructure()"
+    );
+    assert(
+      structure.units.some(u => u.kind === 'team' &&
+        u.teamName === orgTeamName && u.organizationId === organization.id),
+      'Created team was not assigned to the requested organization'
+    );
+    await captureScreenshot(cdp, fixture, 'organization-created');
 
     const results = {
       success: true,
@@ -681,8 +1017,16 @@ async function main() {
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,
+      nativeConfigOnlyRejectionKeepsDraft: true,
       copiedTeamUsesSharedEditor: true,
       copiedDraftDoesNotReplaySeed: true,
+      templateReplacementCancelledAndConfirmed: true,
+      organizationPlacementPersistedViaNativeApi: true,
+      duplicateNameValidationRecovered: true,
+      themeDarkLightRendered: true,
+      cssZoom200Rendered: true,
+      splitPaneSingleEditor: true,
+      macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
       sandboxRoot: fixture.root,
     };
     const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
@@ -693,6 +1037,9 @@ async function main() {
   } catch (error) {
     failure = error;
     await dumpRenderer(cdp, 'teams-create-page-failure');
+    if (cdp) {
+      try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }
+    }
   } finally {
     await cleanup(fixture);
   }

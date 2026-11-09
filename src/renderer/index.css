@@ -890,9 +890,10 @@ body.theme-transitioning {
     color 0.2s ease;
 }
 
+/* Browser mode offsets CSS zoom so its viewport-sized layout still fits. */
 #root {
-  width: 100vw;
-  height: 100vh;
+  width: calc(100vw * var(--appearance-inverse-zoom, 1));
+  height: calc(100vh * var(--appearance-inverse-zoom, 1));
   overflow: hidden;
 }
 

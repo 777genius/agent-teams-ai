@@ -18,6 +18,7 @@ export const catalogScenarios = [
   'models-four-errors',
   'partial-success',
   'catalog-retry',
+  'connected-summary',
   'catalog-timeout',
 ];
 const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
@@ -75,6 +76,9 @@ export function catalogRefreshEvidence(calls, { requireSummary = false } = {}) {
     .filter(
       (r) =>
         r.operation === 'directory' &&
+        // Connected-only probes are count evidence, not model catalog pages.
+        (!r.start.args.includes('--filter') ||
+          r.start.args[r.start.args.indexOf('--filter') + 1] === 'all') &&
         (!requireSummary || (r.index > summary.response.index && r.start.at >= summary.response.at))
     )
     .at(-1);
@@ -84,7 +88,10 @@ export function catalogRefreshEvidence(calls, { requireSummary = false } = {}) {
     !directory.start.args.includes('--summary')
   )
     return null;
-  const models = sources.map((source) =>
+  const expectedSources = calls.some((call) => call.scenario === 'connected-summary')
+    ? [...sources, 'fixture-connected']
+    : sources;
+  const models = expectedSources.map((source) =>
     requests
       .filter(
         (r) =>
@@ -235,6 +242,8 @@ export async function verifyCatalog({
     let copied = '';
     let loadingCaptured = false;
     let completedCatalog;
+    let beforeFilteredCount = null;
+    let filteredBeforeSecondPage = null;
     const maxAttempts = scenario === 'catalog-timeout' ? 660 : 240;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await pause(500);
@@ -247,6 +256,30 @@ export async function verifyCatalog({
       completedCatalog = catalogRefreshEvidence(calls, {
         requireSummary,
       });
+      if (scenario === 'connected-summary' && !filteredBeforeSecondPage) {
+        const reads = catalogFixtureRequests(calls).filter((r) => r.operation === 'directory');
+        const first = reads.find((r) => r.response?.response.directory?.filter === 'all' &&
+          r.response.response.directory.nextCursor === '100');
+        const connected = reads.find((r) => r.response?.response.directory?.filter === 'connected' &&
+          r.start.args.includes('--summary'));
+        const second = reads.find((r) => r.start.args.includes('--cursor') &&
+          r.start.args[r.start.args.indexOf('--cursor') + 1] === '100');
+        const label = await evaluate(
+          `document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || ''`
+        );
+        // Read-only DOM observation on opposite sides of a held filtered response.
+        if (first?.response && !connected?.response && !second?.response &&
+            !/^\D*4\D*$/.test(label.trim())) {
+          beforeFilteredCount = { label, at: Date.now(), firstPageAt: first.response.at };
+        }
+        if (beforeFilteredCount && connected?.response && !second?.response &&
+            /^\D*4\D*$/.test(label.trim())) {
+          filteredBeforeSecondPage = {
+            before: beforeFilteredCount, after: { label, at: Date.now() },
+            connectedResponseAt: connected.response.at,
+          };
+        }
+      }
       text = await evaluate('document.body.innerText');
       const visible = await evaluate(`${alert}?.innerText || ''`);
       if (scenario === 'delayed8s' && Date.now() - started < 7000) {
@@ -279,6 +312,63 @@ export async function verifyCatalog({
         /fixture-model|Fixture .* model/.test(text)
       )
         break;
+    }
+    if (scenario === 'connected-summary') {
+      // This is a *real Electron -> preload -> IPC -> CLI subprocess* proof.
+      // >100 available-only rows force the active QuickConnect hook to probe
+      // --summary --filter connected; model catalog still walks all pages.
+      let proof = null;
+      for (let attempt = 0; attempt < 80; attempt++) {
+        const recorded = (await readPendingArtifact(path.join(root, 'calls.ndjson')))
+          .trim().split('\n').filter(Boolean).map(JSON.parse)
+          .filter((event) => event.scenario === scenario && event.at >= started);
+        const records = catalogFixtureRequests(recorded);
+        const directoryReads = records.filter((record) => record.operation === 'directory');
+        // Anchor both pages to the refresh that actually qualified all model reads.
+        // An unrelated later background refresh must not replace that evidence.
+        const allSecond = completedCatalog?.directory;
+        const allFirst = directoryReads.filter((record) =>
+          record.response?.response.directory?.filter === 'all' &&
+          record.response.response.directory.nextCursor === '100' &&
+          record.response.index < (allSecond?.index ?? -1)).at(-1);
+        const connected = directoryReads.filter((record) =>
+          record.start.args.includes('--summary') &&
+          record.start.args.includes('--filter') &&
+          record.start.args[record.start.args.indexOf('--filter') + 1] === 'connected' &&
+          record.response?.response.directory?.filter === 'connected' &&
+          record.response.index > (allFirst?.response?.index ?? -1)).at(-1);
+        const renderedCount = await evaluate(
+          `document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || ''`
+        );
+        // Only one numeric token, independent of the translated count label.
+        if (allFirst && allSecond &&
+          allSecond.response.response.directory.cursor === '100' &&
+          allSecond.response.response.directory.nextCursor === null &&
+          connected && /^\D*4\D*$/.test(renderedCount.trim())) {
+          proof = { allFirst, allSecond, connected, renderedCount };
+          break;
+        }
+        await pause(250);
+      }
+      assert(proof, 'Filtered connected-summary subprocess and live header were not observed');
+      assert(filteredBeforeSecondPage, 'Connected summary did not update the UI before page two completed');
+      assert(filteredBeforeSecondPage.after.at >= proof.connected.response.at);
+      assert(filteredBeforeSecondPage.after.at < proof.allSecond.response.at);
+      proof.filteredBeforeSecondPage = filteredBeforeSecondPage;
+      assert.equal(proof.allFirst.response.response.directory.totalCount, 105);
+      assert.equal(proof.allFirst.response.response.directory.returnedCount, 100);
+      assert.equal(proof.allFirst.response.response.directory.entries.filter(
+        (entry) => entry.state === 'connected').length, 0);
+      assert.equal(proof.allSecond.response.response.directory.returnedCount, 5);
+      assert.equal(proof.allSecond.response.response.directory.entries.filter(
+        (entry) => entry.state === 'connected').length, 5);
+      assert.equal(proof.connected.response.response.directory.totalCount, 5);
+      assert.equal(proof.connected.response.response.directory.returnedCount, 5);
+      assert.equal(proof.connected.response.response.directory.nextCursor, null);
+      assert(proof.connected.response.response.directory.entries.every(
+        (entry) => entry.state === 'connected'
+      ));
+      await save('connected-count-proof.json', JSON.stringify(proof, null, 2));
     }
     await save('ui.txt', text);
     await save('subprocess.json', JSON.stringify(calls, null, 2));
@@ -348,7 +438,7 @@ export async function verifyCatalog({
             .filter((c) => c.event === 'response' && c.operation === 'models' && !c.failed)
             .map((c) => c.source)
         ).size,
-        4
+        scenario === 'connected-summary' ? 5 : 4
       );
     }
     if (scenario === 'partial-success' || !expectedFailures)

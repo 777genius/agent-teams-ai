@@ -154,6 +154,56 @@ describe('applyElectronDevPathOverrides', () => {
     }
   );
 
+  it.skipIf(process.platform !== 'win32')(
+    'handles an unavailable early Windows userData path without weakening regular-profile isolation',
+    () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-early-userdata-'));
+      tempDirs.push(root);
+      const appData = path.join(root, 'normal-appdata');
+      const regular = path.join(appData, 'Agent Teams AI');
+      const isolated = path.join(root, 'isolated');
+      const previousAppData = process.env.APPDATA;
+      process.env.APPDATA = appData;
+      const setPath = vi.fn();
+      const app = {
+        setPath,
+        getName: () => 'Agent Teams AI',
+        getPath: (name: string): string => {
+          throw new Error(`Failed to get '${name}' path`);
+        },
+      };
+      try {
+        expect(
+          applyElectronDevPathOverrides(app, {
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
+          }).userDataDir
+        ).toBe(isolated);
+        expect(setPath).toHaveBeenCalledTimes(4);
+        expect(fs.existsSync(regular)).toBe(false);
+        setPath.mockClear();
+
+        expect(() =>
+          applyElectronDevPathOverrides(app, {
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: regular,
+          })
+        ).toThrow(/overlaps regular userData/);
+        expect(setPath).not.toHaveBeenCalled();
+        expect(fs.existsSync(regular)).toBe(false);
+
+        process.env.APPDATA = 'relative-appdata';
+        expect(() =>
+          applyElectronDevPathOverrides(app, {
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
+          })
+        ).toThrow("Failed to get 'appData' path");
+        expect(setPath).not.toHaveBeenCalled();
+      } finally {
+        if (previousAppData === undefined) delete process.env.APPDATA;
+        else process.env.APPDATA = previousAppData;
+      }
+    }
+  );
+
   it('fails closed for an explicit relative userData path', () => {
     const setPathCalls: Array<{ name: string; value: string }> = [];
     expect(() =>

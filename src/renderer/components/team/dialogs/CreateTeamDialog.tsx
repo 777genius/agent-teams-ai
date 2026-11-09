@@ -2474,19 +2474,21 @@ export const CreateTeamDialog = ({
           </div>
           <div className="space-y-4 md:col-span-2">
             <TeamTemplatePicker
+              confirmBeforeApply
+              disabled={!draftLoaded || !descriptionDraft.isLoaded || !promptDraft.isLoaded}
               onApply={(draft) => {
                 setRuntimeSelection(1);
                 setLaunchTeam(false);
                 setSoloTeam(false);
                 setSyncModelsWithLead(true, { persistStoredPreference: false });
                 descriptionDraft.setValue(draft.description ?? '');
+                // Per-key mutation ordering retires old chips before new prompt saves.
+                promptChipDraft.clearChipDraft();
                 promptDraft.setValue(draft.prompt ?? '');
-                setMembers(
-                  buildInitialRosterMemberDrafts({
-                    copiedMembers: draft.members,
-                    multimodelEnabled: true,
-                  })
-                );
+                setMembers(buildInitialRosterMemberDrafts({
+                  copiedMembers: draft.members,
+                  multimodelEnabled: true,
+                }));
               }}
             />
             <TeamRosterEditorSection

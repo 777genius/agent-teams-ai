@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { AnnouncementHost } from '@features/announcements/renderer';
+import { useAppearanceZoomController } from '@features/appearance/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
@@ -8,12 +9,14 @@ import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { ContextSwitchOverlay } from './components/common/ContextSwitchOverlay';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
-import { type SplashSceneHandle, startSplashScene } from './components/splash/splashScene';
+import { startSplashScene } from './components/splash/splashScene';
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
 import { useThemeController } from './hooks/useTheme';
 import { loadDynamicFlags } from './utils/dynamicFlags';
 import { api } from './api';
 import { useStore } from './store';
+
+import type { SplashSceneHandle } from './components/splash/splashScene';
 
 declare global {
   interface Window {
@@ -37,6 +40,7 @@ export const App = (): React.JSX.Element => {
   const [newsReady, setNewsReady] = useState(() => !document.getElementById('splash'));
   // Initialize theme on app load
   useThemeController();
+  useAppearanceZoomController();
   const appConfig = useStore((s) => s.appConfig);
 
   useEffect(() => {
