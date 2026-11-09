@@ -192,6 +192,7 @@ vi.mock('@renderer/components/ui/tabs', () => {
 const storeState = {
   cliStatus: null as unknown,
   cliStatusLoading: false,
+  cliStatusError: null as string | null,
   cliProviderStatusLoading: {} as Record<string, boolean>,
   cliProviderStatusByScope: {} as Record<string, unknown>,
   cliProviderStatusScopeRevision: 0,
@@ -221,7 +222,10 @@ const codexAccountHookState = {
 };
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: unknown) => unknown) => selector(storeState),
+  useStore: Object.assign(
+    (selector: (state: unknown) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
 }));
 
 vi.mock('@features/codex-account/renderer', async (importOriginal) => {
@@ -377,6 +381,64 @@ describe('TeamModelSelector disabled Codex models', () => {
     ]);
     expect(onProviderChange).not.toHaveBeenCalled();
     expect(onValueChange).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it('reports a provider that resolves to an unsuccessful status check', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.fetchCliProviderStatus.mockResolvedValue(false);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
+      checkReason: 'manual_refresh',
+    });
+    await act(async () => root.unmount());
+  });
+
+  it('reports metadata errors even when status checks succeed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.fetchCliStatus.mockImplementationOnce(async () => {
+      storeState.cliStatusError = 'metadata refresh failed';
+    });
+    storeState.fetchCliProviderStatus.mockResolvedValue(true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
     await act(async () => root.unmount());
   });
 
@@ -634,6 +696,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     Reflect.deleteProperty(window, 'electronAPI');
     storeState.cliStatus = null;
     storeState.cliStatusLoading = false;
+    storeState.cliStatusError = null;
     storeState.cliProviderStatusLoading = {};
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusScopeRevision = 0;
