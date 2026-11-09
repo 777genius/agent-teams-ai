@@ -4,7 +4,7 @@ import cronstrue from 'cronstrue/i18n';
  * Format an ISO date string as a human-readable "next run" label.
  * Shows relative time for runs within 24h, absolute date otherwise.
  */
-export function formatNextRun(isoString?: string): string {
+export function formatNextRun(isoString?: string, locale?: string): string {
   if (!isoString) return 'N/A';
   try {
     const date = new Date(isoString);
@@ -17,7 +17,7 @@ export function formatNextRun(isoString?: string): string {
     const minutes = Math.floor((diffMs % 3600_000) / 60_000);
 
     if (hours > 24) {
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString(locale, {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -36,10 +36,17 @@ export function formatNextRun(isoString?: string): string {
 /**
  * Convert a cron expression to a human-readable description.
  */
-export function getCronDescription(expression: string): string {
+export function getCronDescription(expression: string, locale = 'en'): string {
   try {
-    return cronstrue.toString(expression, { locale: 'en', use24HourTimeFormat: true });
+    return cronstrue.toString(expression, {
+      locale: locale.split('-')[0],
+      use24HourTimeFormat: true,
+    });
   } catch {
-    return expression;
+    try {
+      return cronstrue.toString(expression, { locale: 'en', use24HourTimeFormat: true });
+    } catch {
+      return expression;
+    }
   }
 }
