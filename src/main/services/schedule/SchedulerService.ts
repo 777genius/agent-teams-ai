@@ -175,7 +175,6 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
-    // Fail before persistence: an invalid active schedule would never fire.
     getValidScheduleNextRuns(input.cronExpression, input.timezone);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
       throw new Error('Task-first schedule requires agent or team executionMode');
@@ -203,14 +202,12 @@ export class SchedulerService {
     schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
     await this.repository.saveSchedule(schedule);
     this.createCronJob(schedule);
-
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: schedule.id,
       teamName: schedule.teamName,
       detail: 'created',
     });
-
     logger.info(`Schedule created: ${schedule.id} for team ${schedule.teamName}`);
     return schedule;
   }
@@ -221,14 +218,9 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
-    // Validate before removing the previous live timer or saving a new record.
     if (patch.cronExpression !== undefined || patch.timezone !== undefined) {
-      getValidScheduleNextRuns(
-        patch.cronExpression ?? existing.cronExpression,
-        patch.timezone ?? existing.timezone
-      );
+      getValidScheduleNextRuns(patch.cronExpression ?? existing.cronExpression, patch.timezone ?? existing.timezone);
     }
-
     const updated: Schedule = {
       ...existing,
       ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
@@ -245,10 +237,8 @@ export class SchedulerService {
       }),
       updatedAt: new Date().toISOString(),
     };
-
     // Reschedule cron job if expression or timezone changed
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
-
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
     if (reschedule) {
       this.removeCronJob(id);
