@@ -7,6 +7,7 @@
 
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
@@ -174,6 +175,8 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    // Fail before persistence: an invalid active schedule would never fire.
+    getValidScheduleNextRuns(input.cronExpression, input.timezone);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
       throw new Error('Task-first schedule requires agent or team executionMode');
     }
@@ -218,6 +221,13 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
+    // Validate before removing the previous live timer or saving a new record.
+    if (patch.cronExpression !== undefined || patch.timezone !== undefined) {
+      getValidScheduleNextRuns(
+        patch.cronExpression ?? existing.cronExpression,
+        patch.timezone ?? existing.timezone
+      );
+    }
 
     const updated: Schedule = {
       ...existing,
