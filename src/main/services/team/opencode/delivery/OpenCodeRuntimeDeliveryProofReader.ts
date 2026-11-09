@@ -5,7 +5,6 @@ import { TeamInboxReader } from '../../TeamInboxReader';
 import { TeamTaskReader } from '../../TeamTaskReader';
 
 import { isOpenCodeConfiguredPeerRecipient } from './OpenCodeDeliveryReplyContract';
-
 import {
   getOpenCodeRuntimeDeliveryPromptTimeMs,
   getOpenCodeRuntimeDeliveryRecordTimeMs,
