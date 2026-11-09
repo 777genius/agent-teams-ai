@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
   cliStatusLoading: false,
   cliStatusError: null,
   cliProviderStatusLoading: {},
-  openCodeRuntimeStatus: null,
+  openCodeRuntimeStatus: null as null | { installed: boolean; state: string; version: string; binaryPath: string },
   openCodeRuntimeStatusLoading: false,
   countEvidence: null as null | { checking: boolean; observation: null; invalidated: boolean },
   openSettingsTab: vi.fn(),
