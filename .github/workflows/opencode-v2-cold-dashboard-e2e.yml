@@ -1,0 +1,27 @@
+name: OpenCode V2 cold Dashboard packaged E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/opencode-v2-cold-dashboard-e2e.yml'
+      - '.github/workflows/opencode-packaged-e2e.yml'
+      - 'scripts/e2e/opencode-diagnostics/packaged-verify.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencode-v2-cold-dashboard-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  windows-v2:
+    if: github.event.pull_request.draft != true
+    uses: ./.github/workflows/opencode-packaged-e2e.yml
+    with:
+      native_arch: x64
+      v2_support_repair: true
+    secrets: inherit

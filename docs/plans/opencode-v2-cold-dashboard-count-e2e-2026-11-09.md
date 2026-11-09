@@ -24,3 +24,8 @@ Main base: `99a4a3c0ab7f97850d1b81beeab1aa76e5b63fe4`. Scope is **current shippe
 - Source review 3: Retain per-version, per-project generation boundaries; an unknown or incomplete response cannot be called zero.
 - Source review 4: No new package/service abstraction; reuse official pinned runtime and existing packaged harness.
 - If the real V2 E2E fails to show an honest zero, fix only the proven regression; never relax readiness/permission checks.
+
+
+## Scoped implementation
+
+Reuse the existing app-installed, signed V2 support-repair packaged E2E. Prove visible zero on the active Dashboard before a direct provider-directory IPC read or the Settings panel, then compare independently with a strict complete `filter=connected` summary. The V2 catalog's `capabilities_pending` diagnostic is not authentication proof. Preserve V1-default workflow behavior and invoke the same packaged workflow through a dedicated V2 caller. Never seed V1 `auth.json` as V2 proof or infer launch readiness.

@@ -1,6 +1,14 @@
 name: OpenCode packaged Windows E2E
 
 on:
+  workflow_call:
+    inputs:
+      native_arch:
+        type: string
+        default: x64
+      v2_support_repair:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       native_arch:
