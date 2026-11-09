@@ -314,13 +314,30 @@ read-only history and per-principal denial without resurrecting a removed
 member, granting delivery, or migrating an active session. Native Host+UI
 and target-core E2E remain unqualified; reuse the Stage 1 test oracle.
 
-**Still open:** task/deleted-task and nested comment/history/work/review
-pages remain incomplete, and `list/getData/getAllTasks/getTask` can still
-depend on an over-512-KiB snapshot. Exact-head Stage 1 CI/CodeQL and the
-full original Host+Electron oversized-history E2E must be judged from their
-own receipts, not inferred from the bounded tests. Preserve the 512 KiB
-snapshot cap, captured owner, no-UNKNOWN-replay, fail-closed page revisions
-and read-only archive.
+**Stage 1 retained deleted-task details (9 Nov 2026, source
+[`af4b7365`](https://github.com/777genius/agent-teams-ai/commit/af4b7365a4a6317a0bed9348d9202963c84d1d53)):**
+The existing Desktop `getTask` now attempts a captured-handle Owner
+`task.get` **only when the selected active snapshot has no matching task**.
+It accepts an exact-ID, `status=deleted` retained result, restores the
+allowlisted task details/comments/references, remaps product references and
+rejects invalid identity, status or denied reads rather than falling back to
+legacy ownership. Its original
+[positive/negative source tests](https://github.com/777genius/agent-teams-ai/blob/af4b7365a4a6317a0bed9348d9202963c84d1d53/test/features/agent-backend/hostTeamsRead.test.ts)
+verify the captured handle, details without private Host fields and refusal
+on mismatched/forbidden results. M03/M16 parity must preserve **read-only
+deleted-task detail** without reviving a task or changing its original owner.
+This is Stage 1 source-test evidence, **not** a new-core API or native
+Host+Electron qualification.
+
+**Still open:** bounded task/deleted-task lists, nested
+comment/history/work/review pages and full-snapshot consumers remain
+incomplete. The retained `getTask` fallback still selects the active
+snapshot first; `list/getData/getAllTasks/getTask` may therefore remain
+blocked by an over-512-KiB snapshot. Exact-head Stage 1 CI/CodeQL and the
+original Host+Electron oversized-history E2E must be judged from their own
+receipts, not inferred from source tests. Preserve the 512 KiB snapshot cap,
+captured owner, no-UNKNOWN-replay, fail-closed page revisions and read-only
+archive.
 
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution
