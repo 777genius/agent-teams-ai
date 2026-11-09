@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Cron } from 'croner';
+import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import cronstrue from 'cronstrue/i18n';
 import { AlertCircle, Calendar, Clock, Globe } from 'lucide-react';
 
@@ -94,9 +94,7 @@ export const CronScheduleInput = ({
     }
 
     try {
-      const job = new Cron(cronExpression.trim(), { timezone, paused: true });
-      const runs = job.nextRuns(3);
-      job.stop();
+      const runs = getValidScheduleNextRuns(cronExpression, timezone, 3);
 
       let description: string;
       try {
