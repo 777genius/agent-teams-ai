@@ -388,6 +388,26 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       'ses-current', 'send-id')).toBeNull();
   });
 
+  it('does not confuse a stale ledger message_send with a send in the current turn', () => {
+    const oldPrompt = { ...transcriptMessage('old-prompt', ''), type: 'user' as const, role: 'user' };
+    const oldSend = {
+      ...transcriptMessage('old-send', ''),
+      toolCalls: [{ id: 'old-call', name: 'agent-teams_message_send', input: {}, isTask: false }],
+    };
+    const prompt = { ...oldPrompt, uuid: 'current-prompt' };
+    const answer = transcriptMessage('current-answer', 'Actual text-only result.');
+    const transcript = {
+      sessionId: 'ses-current',
+      logProjection: { messages: [oldPrompt, oldSend, prompt, answer] },
+    } as unknown as OpenCodeRuntimeTranscriptResponse['transcript'];
+    expect(readOpenCodeExactAssistantText(transcript, 'ses-current', 'current-answer', {
+      requireFailedMessageSendProof: true, runtimePromptMessageId: 'current-prompt',
+    })).toBe('Actual text-only result.');
+    expect(readOpenCodeExactAssistantText(transcript, 'ses-current', 'current-answer', {
+      requireFailedMessageSendProof: true, runtimePromptMessageId: 'old-prompt',
+    })).toBeNull();
+  });
+
   it('preserves real newline separators between distinct assistant text blocks', () => {
     const fullAssistant = {
       ...transcriptMessage('msg-multiblock', 'unused'),
