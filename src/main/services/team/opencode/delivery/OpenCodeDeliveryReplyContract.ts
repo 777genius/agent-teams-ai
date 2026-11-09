@@ -1,4 +1,4 @@
-import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadAgentType, isLeadNameAlias } from '@shared/utils/leadDetection';
 
 /**
  * Reserved reply-recipient marker for informational system/task notifications.
@@ -40,10 +40,7 @@ export function classifyOpenCodeDeliveryReplyContract(
   if (lower === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT) {
     return 'informational';
   }
-  if (
-    isLeadMember({ name: recipient }) || isLeadAgentType(lower) ||
-    ['teamlead', 'team-leader'].includes(lower.replace(/[\s_]+/g, '-'))
-  ) {
+  if (isLeadNameAlias(recipient) || isLeadAgentType(lower)) {
     return 'lead_reply';
   }
   return 'teammate_report';
