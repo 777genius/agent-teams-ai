@@ -63,7 +63,7 @@ const ScheduleRow = ({
   onResume,
   onTriggerNow,
 }: ScheduleRowProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
@@ -88,7 +88,7 @@ const ScheduleRow = ({
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
           aria-expanded={expanded}
-          aria-label={schedule.label || getCronDescription(schedule.cronExpression)}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
         >
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
@@ -97,16 +97,16 @@ const ScheduleRow = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-xs font-medium text-[var(--color-text)]">
-              {schedule.label || getCronDescription(schedule.cronExpression)}
+              {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
             <ScheduleStatusBadge status={schedule.status} />
           </div>
           <div className="mt-0.5 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
-            {schedule.label ? <span>{getCronDescription(schedule.cronExpression)}</span> : null}
+            {schedule.label ? <span>{getCronDescription(schedule.cronExpression, resolvedLanguage)}</span> : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default">
-                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt) })}
+                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt, resolvedLanguage) })}
                 </span>
               </TooltipTrigger>
               {schedule.nextRunAt ? (
