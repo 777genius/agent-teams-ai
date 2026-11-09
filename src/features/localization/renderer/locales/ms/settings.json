@@ -201,7 +201,46 @@
           "system": "Sistem"
         }
       },
-      "title": "Penampilan"
+      "title": "Penampilan",
+      "customThemes": {
+        "label": "Tema tersuai",
+        "description": "Palet warna JSON bernama berasaskan tema gelap atau cerah.",
+        "none": "Tema terbina dalam",
+        "edit": "Edit JSON",
+        "localOnly": "Tema, zum dan fon hanya disimpan pada peranti atau pelayar ini.",
+        "editor": {
+          "title": "Edit tema (JSON)",
+          "description": "Sehingga 8 tema. Warna mesti #RRGGBB. Hanya JSON sah digunakan; tatasusunan themes kosong memadam semuanya.",
+          "cancel": "Batal",
+          "save": "Simpan tema",
+          "conflict": "Tema berubah dalam tab lain. Draf JSON anda dikekalkan; semak atau timpa tema baharu dengan jelas.",
+          "overwrite": "Timpa tema baharu",
+          "invalidJson": "Sintaks JSON tidak sah",
+          "invalidTheme": "Palet tema tidak sah. Semak medan, warna dan kontras."
+        }
+      },
+      "uiScale": {
+        "label": "Skala antara muka",
+        "description": "Skalakan seluruh aplikasi tanpa mengubah zum sistem atau pelayar.",
+        "reset": "Tetapkan semula"
+      },
+      "fontFamily": {
+        "label": "Fon antara muka",
+        "description": "Pilih fon yang dipasang pada peranti. Fon editor dan terminal kekal sama.",
+        "system": "Lalai sistem",
+        "other": "Fon lain…",
+        "placeholder": "Nama fon terpasang",
+        "apply": "Gunakan",
+        "discover": "Cari fon terpasang",
+        "loaded": "Fon terpasang ditambah pada senarai.",
+        "unavailable": "Senarai fon tidak tersedia di sini. Masukkan nama secara manual.",
+        "empty": "Tiada fon terpasang ditemui. Masukkan nama secara manual."
+      },
+      "textSize": {
+        "label": "Saiz teks",
+        "description": "Ubah saiz teks tanpa mengubah zum keseluruhan antara muka.",
+        "reset": "Tetapkan semula"
+      }
     },
     "browserAccess": {
       "serverMode": {

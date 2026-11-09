@@ -2663,7 +2663,46 @@ export default interface Resources {
             "system": "System"
           }
         },
-        "title": "Appearance"
+        "title": "Appearance",
+        "customThemes": {
+          "label": "Custom themes",
+          "description": "Use named JSON color palettes based on Dark or Light.",
+          "none": "Built-in theme",
+          "edit": "Edit JSON",
+          "localOnly": "Themes, UI zoom and typography are saved only on this browser/device.",
+          "editor": {
+            "title": "Edit custom themes (JSON)",
+            "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
+            "cancel": "Cancel",
+            "save": "Save themes",
+            "conflict": "Themes changed in another tab. Your JSON draft is preserved; review it or explicitly overwrite the newer themes.",
+            "overwrite": "Overwrite newer themes",
+            "invalidJson": "Invalid JSON syntax",
+            "invalidTheme": "Invalid theme palette. Check the fields, colors, and contrast."
+          }
+        },
+        "uiScale": {
+          "label": "Interface scale",
+          "description": "Scale the entire app without changing the operating system or browser zoom.",
+          "reset": "Reset"
+        },
+        "fontFamily": {
+          "label": "UI font",
+          "description": "Choose a locally installed font for the interface. Editors and terminals keep their own fonts.",
+          "system": "System default",
+          "other": "Other font…",
+          "placeholder": "Installed font family",
+          "apply": "Apply",
+          "discover": "Find installed fonts",
+          "loaded": "Installed fonts added to the menu.",
+          "unavailable": "Font discovery is unavailable here. Enter a font name manually.",
+          "empty": "No installed fonts were found. Enter a font name manually."
+        },
+        "textSize": {
+          "label": "Text size",
+          "description": "Change interface text without changing the overall UI zoom.",
+          "reset": "Reset"
+        }
       },
       "browserAccess": {
         "serverMode": {
@@ -4600,6 +4639,8 @@ export default interface Resources {
       "schedule": {
         "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
         "execution": "Execution",
+        "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work.",
+        "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
         "labelOptional": "Label (optional)",
         "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
         "leadDefault": "Team lead (default)",
@@ -4613,6 +4654,9 @@ export default interface Resources {
         "searchTeams": "Search teams...",
         "selectTeam": "Select a team...",
         "target": "Target when team is running",
+        "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
+        "taskFirstTarget": "Assign to",
+        "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
         "team": "Team",
         "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
         "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
@@ -6421,6 +6465,7 @@ export default interface Resources {
         "errors": "Errors",
         "exitCode": "exit {{code}}",
         "loadingLogs": "Loading logs...",
+        "openTask": "Open task",
         "retryCount": "retry {{count}}/{{max}}",
         "stillRunning": "Task is still running...",
         "title": "Run Log"

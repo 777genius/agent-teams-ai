@@ -2,10 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
 import {
+  beginRuntimeProviderConnectedCountCheck,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryReadToken,
   observeRuntimeProviderDirectoryRevision,
+  publishRuntimeProviderConnectedCount,
   publishRuntimeProviderDirectoryCache,
 } from '../runtimeProviderDirectoryCache';
 
@@ -109,6 +112,7 @@ export function useRuntimeProviderQuickConnect({
       refreshRequestSequence !== previousRefreshRequestSequence.current ||
       refreshKey !== previousRefreshKey.current;
     let cancelled = false;
+    let stopCountCheck: (() => void) | null = null;
     const projectScope = projectPath?.trim() ?? '';
     const projectScopeChanged = previousProjectScope.current !== projectScope;
     previousProjectScope.current = projectScope;
@@ -128,6 +132,8 @@ export function useRuntimeProviderQuickConnect({
 
     const loadDirectory = async (): Promise<void> => {
       const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
+      stopCountCheck = beginRuntimeProviderConnectedCountCheck(projectPath, readToken);
+      let connectedProbeStarted = false;
       setLoading(true);
       setError(null);
 
@@ -162,6 +168,60 @@ export function useRuntimeProviderQuickConnect({
           runtimeRevision: requestRuntimeRevision,
           readToken,
         });
+        // A complete, healthy summary is enough for a display-only connected
+        // count. No models or full directory need to be loaded.
+        const observedCount = countCompleteDirectoryConnections(response.directory, 'all');
+        if (requestRuntimeRevision && observedCount !== null) {
+          publishRuntimeProviderConnectedCount({
+            projectPath,
+            readToken,
+            runtimeRevision: requestRuntimeRevision,
+            connected: observedCount,
+            fetchedAt: response.directory.fetchedAt,
+            source: 'summary-all',
+          });
+        } else if (
+          requestRuntimeRevision &&
+          (response.directory.nextCursor != null ||
+            response.directory.totalCount > response.directory.entries.length)
+        ) {
+          // Spike: read only connected sources when the legacy all-provider
+          // summary is truncated. The existing all-summary rows remain the
+          // fallback for cards; never escalate to model or full inventory reads.
+          connectedProbeStarted = true;
+          void api.runtimeProviderManagement
+            .loadProviderDirectory({
+              runtimeId: 'opencode',
+              summary: true,
+              projectPath,
+              query: null,
+              filter: 'connected',
+              limit: 100,
+              cursor: null,
+              refresh: false,
+            })
+            .then((connectedResponse) => {
+              if (cancelled || requestSequence.current !== requestId || connectedResponse.error) {
+                return;
+              }
+              const count = countCompleteDirectoryConnections(
+                connectedResponse.directory,
+                'connected'
+              );
+              if (count !== null && connectedResponse.directory) {
+                publishRuntimeProviderConnectedCount({
+                  projectPath,
+                  readToken,
+                  runtimeRevision: requestRuntimeRevision,
+                  connected: count,
+                  fetchedAt: connectedResponse.directory.fetchedAt,
+                  source: 'summary-connected',
+                });
+              }
+            })
+            .catch(() => undefined)
+            .finally(() => stopCountCheck?.());
+        }
         setError(null);
         setLoaded(true);
         setAuthoritativeLoaded(false);
@@ -171,6 +231,7 @@ export function useRuntimeProviderQuickConnect({
         }
         setError(loadError instanceof Error ? loadError.message : 'Failed to load provider status');
       } finally {
+        if (!connectedProbeStarted) stopCountCheck?.();
         if (!cancelled && requestSequence.current === requestId) {
           setLoading(false);
         }
@@ -194,6 +255,7 @@ export function useRuntimeProviderQuickConnect({
 
     return () => {
       cancelled = true;
+      stopCountCheck?.();
       window.clearTimeout(timeout);
     };
   }, [enabled, projectPath, refreshKey, refreshRequestSequence]);
