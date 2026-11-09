@@ -2,9 +2,12 @@
 import {
   CUSTOM_THEME_COLOR_KEYS,
   DEFAULT_APPEARANCE,
+  MAX_FONT_SIZE_PERCENT,
   MAX_JSON_LENGTH,
   MAX_ZOOM,
+  MIN_FONT_SIZE_PERCENT,
   MIN_ZOOM,
+  normalizeFontFamily,
   parseAppearance,
   validateCustomThemes,
 } from '../../core/domain/appearancePreferences';
@@ -112,6 +115,24 @@ export function setAppearanceZoom(zoomPercent: number): void {
   saveAppearance({ ...current, zoomPercent: next });
 }
 
+export function setAppearanceFontFamily(fontFamily: string | null): void {
+  const family = normalizeFontFamily(fontFamily);
+  const current = getLatestAppearance();
+  if (current.fontFamily === family && getAppearanceSnapshot().fontFamily === family) return;
+  saveAppearance({ ...current, fontFamily: family });
+}
+
+export function setAppearanceFontSize(fontSizePercent: number): void {
+  if (!Number.isInteger(fontSizePercent) ||
+      fontSizePercent < MIN_FONT_SIZE_PERCENT || fontSizePercent > MAX_FONT_SIZE_PERCENT) {
+    throw new Error('Text size must be between 80% and 150%');
+  }
+  const current = getLatestAppearance();
+  if (current.fontSizePercent === fontSizePercent &&
+      getAppearanceSnapshot().fontSizePercent === fontSizePercent) return;
+  saveAppearance({ ...current, fontSizePercent });
+}
+
 export function setActiveCustomTheme(id: string | null): void {
   let current: AppearancePreferences;
   try {
@@ -149,6 +170,18 @@ export function reflectNativeAppearanceZoom(zoomPercent: number): void {
   if (getAppearanceSnapshot().zoomPercent !== bounded) {
     announceChange({ ...getAppearanceSnapshot(), zoomPercent: bounded });
   }
+}
+
+const SYSTEM_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif';
+
+export function applyAppearanceTypographyToRoot(
+  root: HTMLElement,
+  preferences: Pick<AppearancePreferences, 'fontFamily' | 'fontSizePercent'>
+): void {
+  const family = normalizeFontFamily(preferences.fontFamily);
+  if (family) root.style.setProperty('--appearance-font-family', `"${family}", ${SYSTEM_FONT_STACK}`);
+  else root.style.removeProperty('--appearance-font-family');
+  root.style.setProperty('--appearance-text-scale', String(preferences.fontSizePercent / 100));
 }
 
 export function applyCustomThemeToRoot(root: HTMLElement, theme: CustomTheme | null): void {

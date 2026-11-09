@@ -207,7 +207,7 @@
         "description": "Benannte JSON-Farbpaletten auf Basis des dunklen oder hellen Designs.",
         "none": "Integriertes Design",
         "edit": "JSON bearbeiten",
-        "localOnly": "Designs und Skalierung werden nur in diesem Browser bzw. auf diesem Gerät gespeichert.",
+        "localOnly": "Designs, UI-Zoom und Schriftarten werden nur auf diesem Gerät oder im Browser gespeichert.",
         "editor": {
           "title": "Designs bearbeiten (JSON)",
           "description": "Bis zu 8 Designs bearbeiten. Farben müssen #RRGGBB sein. Nur gültiges JSON wird gespeichert; ein leeres themes-Array entfernt alle Designs.",
@@ -222,6 +222,23 @@
       "uiScale": {
         "label": "Oberflächenskalierung",
         "description": "Die gesamte App unabhängig vom Browser- oder Systemzoom skalieren.",
+        "reset": "Zurücksetzen"
+      },
+      "fontFamily": {
+        "label": "Schriftart der Oberfläche",
+        "description": "Wähle eine lokal installierte Schrift. Editor und Terminal behalten ihre eigenen Schriften.",
+        "system": "Systemstandard",
+        "other": "Andere Schrift…",
+        "placeholder": "Name der installierten Schrift",
+        "apply": "Anwenden",
+        "discover": "Installierte Schriften anzeigen",
+        "loaded": "Installierte Schriften wurden zur Liste hinzugefügt.",
+        "unavailable": "Schriftarten können hier nicht abgefragt werden. Gib den Namen manuell ein.",
+        "empty": "Keine installierten Schriftarten gefunden. Gib den Namen manuell ein."
+      },
+      "textSize": {
+        "label": "Textgröße",
+        "description": "Textgröße unabhängig vom gesamten UI-Zoom ändern.",
         "reset": "Zurücksetzen"
       }
     },

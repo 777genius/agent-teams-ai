@@ -207,7 +207,7 @@
         "description": "Palettes JSON nommées basées sur le thème sombre ou clair.",
         "none": "Thème intégré",
         "edit": "Modifier le JSON",
-        "localOnly": "Les thèmes et l’échelle sont stockés uniquement sur cet appareil ou navigateur.",
+        "localOnly": "Les thèmes, le zoom et les polices sont enregistrés uniquement sur cet appareil ou navigateur.",
         "editor": {
           "title": "Modifier les thèmes (JSON)",
           "description": "Jusqu’à 8 thèmes. Couleurs au format #RRGGBB. Seul un JSON valide est appliqué ; un tableau themes vide supprime les thèmes.",
@@ -222,6 +222,23 @@
       "uiScale": {
         "label": "Échelle de l’interface",
         "description": "Redimensionne toute l’application sans modifier le zoom du système ou du navigateur.",
+        "reset": "Réinitialiser"
+      },
+      "fontFamily": {
+        "label": "Police de l’interface",
+        "description": "Choisissez une police installée sur cet appareil. L’éditeur et le terminal conservent leurs polices.",
+        "system": "Police du système",
+        "other": "Autre police…",
+        "placeholder": "Nom de la police installée",
+        "apply": "Appliquer",
+        "discover": "Afficher les polices installées",
+        "loaded": "Les polices installées ont été ajoutées à la liste.",
+        "unavailable": "Impossible de lister les polices ici. Saisissez le nom manuellement.",
+        "empty": "Aucune police installée trouvée. Saisissez le nom manuellement."
+      },
+      "textSize": {
+        "label": "Taille du texte",
+        "description": "Modifiez la taille du texte sans toucher au zoom de l’interface.",
         "reset": "Réinitialiser"
       }
     },
