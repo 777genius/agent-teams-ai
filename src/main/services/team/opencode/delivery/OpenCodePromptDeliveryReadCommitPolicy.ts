@@ -2,6 +2,7 @@ import {
   classifyOpenCodeDeliveryReplyContract,
   isOpenCodeReplyOptionalDeliveryContract,
   isOpenCodeConfiguredLeadReply,
+  isOpenCodeReplyRequiredDeliveryRecipient,
 } from './OpenCodeDeliveryReplyContract';
 import {
   hasOpenCodeGroupAcknowledgement,
@@ -391,7 +392,7 @@ export function getOpenCodeDeliveryPendingReason(input: {
   if (state === 'responded_plain_text') {
     const preview = record?.observedAssistantPreview?.trim();
     if (
-      isOpenCodeDirectUserPromptDelivery(record) &&
+      isOpenCodeReplyRequiredDeliveryRecipient(record?.replyRecipient) &&
       input.visibleReply &&
       !input.taskRefsIncludeAll(input.visibleReply.message.taskRefs, input.taskRefs)
     ) {
@@ -411,7 +412,7 @@ export function getOpenCodeDeliveryPendingReason(input: {
       return 'plain_text_ack_only_still_requires_answer';
     }
     if (
-      isOpenCodeDirectUserPromptDelivery(record) &&
+      isOpenCodeReplyRequiredDeliveryRecipient(record?.replyRecipient) &&
       !record?.visibleReplyMessageId &&
       !record?.inboxReadCommittedAt
     ) {
