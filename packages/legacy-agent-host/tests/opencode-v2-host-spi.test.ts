@@ -139,6 +139,86 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
   return { calls, captured };
 }
 
+test('V2 admission cannot accept forged permission readback swapped during owner probe', async () => {
+  const { captured, calls } = owner(true);
+  let forgedPermissionCalls = 0;
+  // The original captured owner reports external-directory ALLOW. A probe
+  // swaps the method for a counterfeit DENY reader before Host reads it.
+  captured.readNativeEffectivePermissions = async () => {
+    calls.permissions++;
+    return testNativePermissionReadback([
+      { action: 'external_directory', resource: '*', effect: 'allow' },
+    ]);
+  };
+  captured.probe = async () => {
+    calls.probe++;
+    captured.readNativeEffectivePermissions = async () => {
+      forgedPermissionCalls++;
+      return testNativePermissionReadback([
+        { action: 'external_directory', resource: '*', effect: 'deny' },
+      ]);
+    };
+    return true;
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/,
+    'a changed owner method cannot forge native permission policy');
+  assert.equal(calls.probe, 1);
+  assert.equal(calls.permissions, 1, 'only the original native readback is trusted');
+  assert.equal(forgedPermissionCalls, 0);
+  assert.equal(calls.context, 0, 'no initial native mutation under false DENY');
+  assert.equal(calls.password, 0, 'no credentials to unqualified native engine');
+  assert.equal(calls.stop, 1, 'only the original TEST-owned process is retired');
+  assert.equal(await provider.cleanup(), true);
+});
+
+test('V2 admission never follows a replaced native credential callback',
+  { timeout: 10000 }, async () => {
+    let requests = 0;
+    const server = createServer((_request, response) => {
+      requests++;
+      response.writeHead(503);
+      response.end();
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const profile = v2Profile();
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    const { captured, calls } = owner(true);
+    let forgedPasswordCalls = 0;
+    captured.probe = async () => {
+      calls.probe++;
+      captured.readPassword = () => {
+        forgedPasswordCalls++;
+        return 'TEST-forged-password';
+      };
+      return true;
+    };
+    const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+    let opened: Awaited<ReturnType<typeof provider.factory.open>> | undefined;
+    try {
+      opened = await provider.factory.open(request());
+      assert.equal(provider.isReady(), true);
+      await opened.driver.submit({
+        inputId: 'TEST-credential-method-swap', operationRef: 'TEST-credential-method-swap-op',
+        content: 'TEST only, no model execution',
+      });
+      assert.equal(forgedPasswordCalls, 0, 'transport never reads swapped owner credentials');
+      assert.equal(calls.password, 1, 'original owner is read exactly once');
+      assert.ok(requests >= 1, 'the original credential path reached the TEST HTTP peer');
+    } finally {
+      await opened?.driver.close();
+      await provider.cleanup();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close(error => error ? reject(error) : resolve()));
+    }
+    assert.equal(calls.stop, 1, 'only the captured TEST owner is stopped');
+  });
+
 test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv or version', () => {
   const valid = nativeV2Profile();
   assert.equal(runtimeProfileSchema.safeParse({ members: [valid] }).success, true);
@@ -1632,17 +1712,18 @@ test('late executable alias during a suspended V2 native probe cannot renew auth
       for (const stopConfirmed of [true, false]) {
         const { captured, calls } = owner(true);
         captured.confirmStopped = async () => { calls.stopped++; return stopConfirmed; };
+        const entered = Promise.withResolvers<void>();
+        const resume = Promise.withResolvers<void>();
+        let suspendProbe = false;
+        captured.probe = async () => {
+          calls.probe++;
+          if (suspendProbe) { entered.resolve(); await resume.promise; }
+          return true;
+        };
         const provider = createOpenCodeV2MemberProvider(context(), captured);
         const opened = await provider.factory.open(request());
         assert.equal(provider.isReady(), true);
-        const entered = Promise.withResolvers<void>();
-        const resume = Promise.withResolvers<void>();
-        captured.probe = async () => {
-          calls.probe++;
-          entered.resolve();
-          await resume.promise;
-          return true;
-        };
+        suspendProbe = true;
         const recheck = opened.driver.checkReadiness();
         try {
           await entered.promise;
@@ -1731,17 +1812,18 @@ test('native progress callback cannot expose a V2 lease before its own admission
 test('pending native V2 re-attestation fences concurrent controls without retiring owner',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
+    const entered = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    let suspendProbe = false;
+    captured.probe = async () => {
+      calls.probe++;
+      if (suspendProbe) { entered.resolve(); await resume.promise; }
+      return true;
+    };
     const provider = createOpenCodeV2MemberProvider(context(), captured);
     const opened = await provider.factory.open(request());
     assert.equal(provider.isReady(), true);
-    const entered = Promise.withResolvers<void>();
-    const resume = Promise.withResolvers<void>();
-    captured.probe = async () => {
-      calls.probe++;
-      entered.resolve();
-      await resume.promise;
-      return true;
-    };
+    suspendProbe = true;
     const observer = opened.driver.observe()[Symbol.asyncIterator]();
     const pendingEvent = observer.next();
     let observerSettled = false;
@@ -1868,6 +1950,15 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
       profile.endpoint = 'http://127.0.0.1:' + address.port;
       let opened: Awaited<ReturnType<ReturnType<typeof createOpenCodeV2MemberProvider>['factory']['open']>> | undefined;
       const { captured, calls } = owner(true);
+      let suspendRecheck = false;
+      captured.probe = async () => {
+        calls.probe++;
+        if (suspendRecheck) {
+          recheckEntered.resolve();
+          await completeRecheck.promise;
+        }
+        return true;
+      };
       try {
         const provider = createOpenCodeV2MemberProvider(context(profile), captured);
         opened = await provider.factory.open(request());
@@ -1880,12 +1971,7 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
         // re-attestation AFTER the TEST HTTP peer has received the mutation.
         await within(postSeen.promise, mode + ' POST received');
         if (mode !== 'seal') {
-          captured.probe = async () => {
-            calls.probe++;
-            recheckEntered.resolve();
-            await completeRecheck.promise;
-            return true;
-          };
+          suspendRecheck = true;
           const recheck = opened.driver.checkReadiness();
           await within(recheckEntered.promise, 're-attestation started');
           assert.equal(provider.isReady(), false);

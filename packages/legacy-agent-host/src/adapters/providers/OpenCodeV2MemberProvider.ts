@@ -125,6 +125,14 @@ export function createOpenCodeV2MemberProvider(
   // Process custody callbacks are part of the original captured owner. Never
   // look them up again after a native callback could replace the methods and
   // redirect physical cleanup or fabricate a stopped PID.
+  // These method identities belong to the original TEST-owned engine. An
+  // asynchronous native callback must not replace its custody, permission,
+  // instruction or credential reader before the next Host admission check.
+  const capturedReadPassword = owned.readPassword.bind(owned);
+  const capturedProbe = owned.probe.bind(owned);
+  const capturedReadNativeCustody = owned.readNativeCustody.bind(owned);
+  const capturedReadNativeEffectivePermissions = owned.readNativeEffectivePermissions.bind(owned);
+  const capturedInstallAndAttestInitialContext = owned.installAndAttestInitialContext.bind(owned);
   const capturedStopOwned = owned.stopOwned.bind(owned);
   const capturedConfirmStopped = owned.confirmStopped.bind(owned);
   let stopAttempt: Promise<boolean> | undefined;
@@ -224,7 +232,7 @@ export function createOpenCodeV2MemberProvider(
           // a synchronous override/revocation cannot authorize a network I/O.
           if (!admissionSettled() || !current())
             throw new Error('V2 native custody revoked');
-          const password = owned.readPassword();
+          const password = capturedReadPassword();
           if (!admissionSettled() || !current())
             throw new Error('V2 native custody revoked');
           return password;
@@ -241,13 +249,13 @@ export function createOpenCodeV2MemberProvider(
           try {
             if (!current() || signal.aborted) return false;
             const combined = AbortSignal.any([signal, abort.signal]);
-            const valid = await owned.probe(combined);
+            const valid = await capturedProbe(combined);
             if (!valid || combined.aborted || !current()) return false;
             // This is an independently captured, immutable Host process pin.
             // A loopback HTTP success or a wrapper/package hash is not native
             // custody. Even identical bytes in a restarted PID cannot inherit
             // the old member's authority without a new Host capture.
-            const custody = await owned.readNativeCustody(combined);
+            const custody = await capturedReadNativeCustody(combined);
             if (!custody || combined.aborted || !current() ||
                 custody.executablePath !== profile.executable.path ||
                 custody.executableSha256 !== profile.executable.sha256 ||
@@ -274,7 +282,7 @@ export function createOpenCodeV2MemberProvider(
             // Source-only candidate plus owner-supplied native readback. The
             // production owner still must prove genuine engine custody and
             // cannot claim qualification from a scripted TEST receipt.
-            const effective = await owned.readNativeEffectivePermissions(combined);
+            const effective = await capturedReadNativeEffectivePermissions(combined);
             // Permissions must be read from THIS exact native session and
             // PID/start identity. A correctly ordered ruleset from another
             // session or a restarted process is not an authorization.
@@ -290,7 +298,7 @@ export function createOpenCodeV2MemberProvider(
             // never infer their installation from probe or a local digest.
             initialContextAttempt ??= Promise.resolve().then(() => {
               if (combined.aborted || !current()) return undefined;
-              return owned.installAndAttestInitialContext(Object.freeze({
+              return capturedInstallAndAttestInitialContext(Object.freeze({
                 nativeSessionId: profile.nativeSessionId!,
                 instructions: capturedInstructions,
                 contextDigest,
@@ -306,7 +314,7 @@ export function createOpenCodeV2MemberProvider(
                 attested.configRevision !== capturedConfigRevision) return false;
             // A process or policy may change during the initial native PUT.
             // Re-attest both after the mutation; never retry a lost PUT ACK.
-            const finalEffective = await owned.readNativeEffectivePermissions(combined);
+            const finalEffective = await capturedReadNativeEffectivePermissions(combined);
             if (!finalEffective ||
                 finalEffective.nativeSessionId !== profile.nativeSessionId ||
                 finalEffective.pid !== admittedCustody.pid ||
@@ -314,7 +322,7 @@ export function createOpenCodeV2MemberProvider(
                 preflightOpenCodeV2EffectiveExternalDirectory(
                   finalEffective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
                 combined.aborted || !current()) return false;
-            const finalCustody = await owned.readNativeCustody(combined);
+            const finalCustody = await capturedReadNativeCustody(combined);
             if (!finalCustody || combined.aborted || !current() ||
                 finalCustody.executablePath !== admittedCustody.executablePath ||
                 finalCustody.executableSha256 !== admittedCustody.executableSha256 ||
