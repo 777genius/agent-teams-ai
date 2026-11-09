@@ -2548,6 +2548,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       // Retire old scoped reads and bypass the main-process status cache first.
       await invalidateCliStatus();
       await fetchCliStatus();
+      // Metadata refresh reports errors through the store instead of rejecting.
+      if (useStore.getState().cliStatusError) setProviderStatusRefreshError(true);
       const checks = MULTIMODEL_PROVIDER_IDS.map((candidateProviderId) =>
         fetchCliProviderStatus(candidateProviderId, { checkReason: 'manual_refresh' })
       );
