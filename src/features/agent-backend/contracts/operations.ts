@@ -165,7 +165,7 @@ export interface BackendOperationPayloads
   'team.lead.context.read': Record<string, never>;
   'task.get': { taskId: string };
   'tasks.list': { deleted?: true };
-  'team.snapshot': Record<string, never>;
+  'team.snapshot': { cursor?: string };
   'team.messages.page': { cursor?: string; limit?: number; groupChatId?: string };
   'team.changes.read': { cursor?: string };
   'team.roster.read': Record<string, never>;

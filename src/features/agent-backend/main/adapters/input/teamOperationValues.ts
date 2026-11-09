@@ -68,9 +68,12 @@ export function parseBackendTeamOperation(
     case 'team.lead.context.read':
     case 'team.launch.model.configuration.read':
     case 'team.roster.read':
-    case 'team.snapshot':
       object(value, []);
       return {};
+    case 'team.snapshot': {
+      const p = object(value, ['cursor']);
+      return p.cursor === undefined ? {} : { cursor: text(p.cursor) };
+    }
     case 'team.activity.logs.read': {
       const p = object(value, ['memberName', 'taskId']);
       if (Object.hasOwn(p, 'memberName') === Object.hasOwn(p, 'taskId'))

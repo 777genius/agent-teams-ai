@@ -17,6 +17,8 @@ export interface BackendTeamMessagesPage {
 export interface BackendTeamSnapshot {
   teamName: string;
   revision: string;
+  /** Authenticated Owner continuation; never expose a partial team to consumers. */
+  nextCursor?: string | null;
   lifecycle?: BackendTeamLifecycle;
   /** Selected owner has no current/retained native capture, original binding or pending cleanup. */
   runtimeNeverLaunched?: true;

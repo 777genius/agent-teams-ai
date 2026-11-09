@@ -27,6 +27,7 @@ import {
 } from './hostTeamRouting';
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
+import { readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
   assertMatchingConfiguration,
   readHostRosterConfiguration,
@@ -182,30 +183,7 @@ export function createHostTeamsApi(
     connection: Connection,
     check: CurrentScope
   ): Promise<{ data: BackendTeamSnapshot; assertCurrent(): void }> {
-    readOrder.capture(check);
-    const readFence = readOrder.readFence(connection.handle.handleId);
-    // Reads use a fresh transport correlation ID, never a mutation receipt or replay.
-    const result = await backend.invoke({
-      handle: connection.handle,
-      commandId: crypto.randomUUID(),
-      operation: 'team.snapshot',
-      payload: {},
-    });
-    current(check);
-    if (!result.ok) throw new Error(`Host team read ${result.code}`);
-    if (!result.value || !('revision' in result.value) || !('kanbanState' in result.value))
-      throw new Error('Invalid Host team snapshot');
-    const value = result.value;
-    readFence();
-    readOrder.acceptSnapshot(connection.handle.handleId, value);
-    return {
-      data: value,
-      assertCurrent: () => {
-        current(check);
-        readFence();
-        readOrder.assertCurrent(connection.handle.handleId, value.feed);
-      },
-    };
+    return readHostPagedSnapshot(backend, connection, check, readOrder);
   }
   async function resolveConnection(
     key: string,

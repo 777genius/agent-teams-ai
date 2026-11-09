@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { pageOwnerMessages } from './pageOwnerMessages.js';
+import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
 import { executeTeamCommand } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
@@ -97,6 +98,7 @@ export class TeamOwner {
   private readonly productChanges = new TeamProductChanges();
   /** Volatile key: continuation cursors expire on owner recreation. */
   private readonly messagesPageKey = randomUUID();
+  private readonly snapshotPageKey = randomUUID();
   private readonly store: TeamStore;
   private readonly policy: TeamPolicyPort;
   private readonly binding: TeamBinding;
@@ -432,7 +434,7 @@ export class TeamOwner {
       lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
-      readSnapshot: () => this.readSnapshot(principalId),
+      readSnapshot: (query: { cursor?: string } = {}) => this.readSnapshot(principalId, query),
       readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
         this.readMessagesPage(principalId, options),
       readDeletedTasks: () => this.readDeletedTasks(principalId),
@@ -640,22 +642,21 @@ export class TeamOwner {
     return snapshot;
   }
 
-  /** Full product snapshots retain the 512 KiB transport guard. */
-  private productSnapshot(principalId: string) {
-    const snapshot = this.collectProductState(principalId);
-    if (Buffer.byteLength(JSON.stringify(snapshot)) > 512 * 1024) throw new TeamOwnerError('hold');
-    return { ...snapshot, revision: digest(snapshot) };
-  }
-
-  private readSnapshot(principalId: string): JsonValue {
+  /** Every page is grant-checked and revision-bound; no persisted history is discarded. */
+  private readSnapshot(principalId: string, query: { cursor?: string } = {}): JsonValue {
     return this.store.fenced(() => {
-      const snapshot = this.productSnapshot(principalId);
-      const value = json({
-        ...snapshot,
-        feed: this.productChanges.snapshot(principalId, snapshot.revision),
+      const state = this.collectProductState(principalId);
+      const revision = digest(state);
+      return pageOwnerSnapshot({
+        principalId,
+        key: this.snapshotPageKey,
+        snapshot: json({
+          ...state,
+          revision,
+          feed: this.productChanges.snapshot(principalId, revision),
+        }),
+        ...query,
       });
-      if (Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) throw new TeamOwnerError('hold');
-      return value;
     });
   }
 
