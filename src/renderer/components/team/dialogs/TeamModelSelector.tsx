@@ -1081,6 +1081,8 @@ export interface TeamModelSelectorProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   value: string;
   onValueChange: (value: string) => void;
+  /** Automatic catalog reconciliation must not count as a manual model edit. */
+  onNormalizedValueChange?: (value: string) => void;
   preserveSelectedModel?: boolean;
   limitContext?: boolean;
   projectPath?: string | null;
@@ -1104,6 +1106,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onProviderChange,
   value,
   onValueChange,
+  onNormalizedValueChange,
   preserveSelectedModel = false,
   limitContext = false,
   projectPath = null,
@@ -1725,12 +1728,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       return;
     }
     if (normalizedValue !== value) {
-      onValueChange(normalizedValue);
+      (onNormalizedValueChange ?? onValueChange)(normalizedValue);
     }
   }, [
     isInspectingInactiveProvider,
     normalizedValue,
     onValueChange,
+    onNormalizedValueChange,
     shouldDeferModelNormalization,
     value,
   ]);

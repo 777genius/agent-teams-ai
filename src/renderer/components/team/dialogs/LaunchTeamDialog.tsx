@@ -2940,6 +2940,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   value={selectedModel}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
                   onValueChange={setSelectedModel}
+                  onNormalizedValueChange={setSelectedModelRaw}
                   projectPath={effectiveCwd || null}
                   id="dialog-model"
                   disableGeminiOption={isGeminiUiFrozen()}

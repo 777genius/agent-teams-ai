@@ -17,6 +17,7 @@ const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
 const projectPathSelectorMock = vi.hoisted(() => ({ onSelect: (_path: string) => {} }));
+const modelAutoNormalizeMock = vi.hoisted(() => ({ callback: null as ((value: string) => void) | null }));
 type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
   Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
@@ -610,8 +611,10 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () =
 }));
 
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
-  TeamModelSelector: ({ value }: { value: string }) =>
-    React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`),
+  TeamModelSelector: ({ value, onNormalizedValueChange }: { value: string; onNormalizedValueChange?: (value: string) => void }) => {
+    modelAutoNormalizeMock.callback = onNormalizedValueChange ?? null;
+    return React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`);
+  },
   computeEffectiveTeamModel: vi.fn((model: string) => model || undefined),
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
@@ -5145,6 +5148,13 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
       await flushCustomFolderProbe();
+      // The model catalog can reconcile the visible default without a user
+      // selecting a new model; that must not rewrite a legacy runtime profile.
+      expect(modelAutoNormalizeMock.callback).toBeTruthy();
+      await act(async () => {
+        modelAutoNormalizeMock.callback?.('sonnet');
+        await flush();
+      });
       const save = [...host.querySelectorAll('button')].find(
         (button) => button.textContent?.trim() === 'Save Changes'
       );
