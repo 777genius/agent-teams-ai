@@ -76,7 +76,6 @@ import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProvider
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
-import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   AlertTriangle,
@@ -88,6 +87,11 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { HistoricalPromptReview } from '../schedule/HistoricalPromptReview';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
+import {
+  markScheduleProviderSwitch,
+  resolveScheduleLaunchConfig,
+} from '../schedule/resolveScheduleLaunchConfig';
+import { validateScheduleForm } from '../schedule/validateScheduleForm';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
@@ -199,7 +203,6 @@ import type {
   CliProviderId,
   CreateScheduleInput,
   EffortLevel,
-  ScheduleLaunchConfig,
   TeamCreateRequest,
   TeamFastMode,
   TeamLaunchRequest,
@@ -398,7 +401,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
-  const legacyTeamSettings = isEditing && scheduleExecutionMode === 'team' && schedule?.executionMode === 'team' && !schedule.taskFirst ? schedule.launchConfig : null;
   // Hydration and catalog normalization are not user edits. Retain the exact
   // persisted one-shot runtime fields until their controls are actually changed.
   const scheduleRuntimeEditedRef = useRef({
@@ -690,10 +692,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // one-shot picker. Selecting a model/effort/fast mode is an explicit switch
   // to that displayed provider, not a cross-provider model override.
   const markDisplayedProviderAsEdited = (): void => {
-    if (isSchedule && isEditing && schedule?.launchConfig.providerId !== selectedProviderId) {
-      Object.assign(scheduleRuntimeEditedRef.current, {
-        provider: true, model: true, effort: true, fastMode: true,
-      });
+    if (isSchedule && isEditing) {
+      markScheduleProviderSwitch(
+        scheduleRuntimeEditedRef.current, schedule?.launchConfig.providerId, selectedProviderId
+      );
     }
   };
   const setSelectedProviderId = (value: TeamProviderId): void => {
@@ -2054,59 +2056,22 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Validation
 
-  const validationErrors = useMemo(() => {
-    const errors: string[] = [];
-    // Show the recipient blocker before unrelated one-shot folder validation.
-    if (isSchedule && scheduleExecutionMode === 'agent' && scheduleTargetMember.trim()) {
-      const savedTarget = scheduleTargetMember.trim();
-      const team = teamByName[effectiveTeamName];
-      if (!team) {
-        errors.push(t('members.list.unavailable'));
-      } else {
-        const leadName = team.leadName?.trim() || 'team-lead';
-        if (
-          savedTarget.toLowerCase() !== leadName.toLowerCase() &&
-          !team.members?.some(
-            (member) => member.name.trim() === savedTarget && !validateTeamMemberNameFormat(member.name)
-          )
-        ) {
-          errors.push(t('messages.manualQueue.recipientUnavailable'));
-        }
-      }
-    }
-    if (!usesSavedTeamRuntime) {
-      if (selectedProjectPathDeleted) {
-        errors.push('Project folder no longer exists');
-      } else if (!effectiveCwd) {
-        errors.push('Working directory is required');
-      } else if (cwdMode === 'custom' && customProjectFolder.blocksSubmit) {
-        errors.push('Project folder is not available');
-      }
-      if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
-    }
-    if (isSchedule) {
-      if (!effectiveTeamName) errors.push('Team is required');
-      if (!promptDraft.value.trim()) errors.push('Prompt is required');
-      if (!cronExpression.trim()) errors.push('Cron expression is required');
-    }
-    return errors;
-  }, [
-    effectiveCwd,
-    selectedProjectPathDeleted,
-    cwdMode,
-    customProjectFolder.blocksSubmit,
-    worktreeGitBlockingMessage,
-    isSchedule,
-    usesSavedTeamRuntime,
-    teamByName,
-    schedule?.launchConfig.cwd,
-    t,
-    effectiveTeamName,
-    promptDraft.value,
+  const validationErrors = validateScheduleForm({
+    isSchedule, usesSavedTeamRuntime,
+    mode: scheduleExecutionMode,
+    targetMember: scheduleTargetMember,
+    team: teamByName[effectiveTeamName],
+    teamName: effectiveTeamName,
+    prompt: promptDraft.value,
     cronExpression,
-    scheduleExecutionMode,
-    scheduleTargetMember,
-  ]);
+    cwd: effectiveCwd,
+    selectedProjectPathDeleted,
+    isCustomCwd: cwdMode === 'custom',
+    customFolderBlocksSubmit: customProjectFolder.blocksSubmit,
+    worktreeGitBlockingMessage,
+    rosterUnavailable: t('members.list.unavailable'),
+    recipientUnavailable: t('messages.manualQueue.recipientUnavailable'),
+  });
   const modelValidationError = useMemo(
     () =>
       gatewayBindings.error ??
@@ -2385,53 +2350,30 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             selectedProviderId === 'anthropic'
               ? (explicitScheduleEffort ?? anthropicRuntimeSelection?.defaultEffort ?? undefined)
               : explicitScheduleEffort;
-          // An existing one-shot schedule may use a provider now hidden by the UI
-          // (for example Gemini). A label/time edit must not silently migrate it.
-          const originalOneShotSettings =
-            isEditing && schedule && !isTaskFirstSchedule &&
-            scheduleExecutionMode === (schedule.executionMode ?? 'legacy') &&
-            scheduleExecutionMode !== 'team'
-              ? schedule.launchConfig
-              : null;
-          const edited = scheduleRuntimeEditedRef.current;
-          const originalProvider = legacyTeamSettings ??
-            (originalOneShotSettings && !edited.provider ? originalOneShotSettings : null);
-          const originalModel = legacyTeamSettings ??
-            (originalOneShotSettings && !edited.model ? originalOneShotSettings : null);
-          const originalEffort = legacyTeamSettings ??
-            (originalOneShotSettings && !edited.effort ? originalOneShotSettings : null);
-          const originalFastMode = legacyTeamSettings ??
-            (originalOneShotSettings && !edited.fastMode ? originalOneShotSettings : null);
-          const originalPermissions = legacyTeamSettings ??
-            (originalOneShotSettings && !edited.skipPermissions ? originalOneShotSettings : null);
-          const launchConfig: ScheduleLaunchConfig = {
-            cwd: usesSavedTeamRuntime ? savedTeam?.cwd ?? '' : effectiveCwd,
-            prompt: promptDraft.value.trim(),
-            // Preserve the *absence* of optional legacy fields too. Nullish
-            // fallbacks would mix a hidden runtime with the visible provider's defaults.
-            providerId: isTaskFirstSchedule
-              ? savedTeam!.providerId
-              : originalProvider ? originalProvider.providerId : selectedProviderId,
-            providerBackendId: isTaskFirstSchedule
-              ? savedTeam?.providerBackendId
-              : originalProvider ? originalProvider.providerBackendId : selectedProviderBackendId,
-            model: isTaskFirstSchedule ? undefined : originalModel ? originalModel.model : scheduleModel,
-            effort: isTaskFirstSchedule ? undefined : originalEffort ? originalEffort.effort : scheduleEffort,
-            fastMode: isTaskFirstSchedule ? undefined : originalFastMode ? originalFastMode.fastMode : (
-              selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
-                ? selectedFastMode : undefined
-            ),
-            resolvedFastMode: isTaskFirstSchedule ? undefined : originalFastMode ? originalFastMode.resolvedFastMode : (
-              selectedProviderId === 'anthropic'
+          // Preserve unchanged legacy runtime fields, including omitted options.
+          const launchConfig = resolveScheduleLaunchConfig({
+            schedule,
+            mode: scheduleExecutionMode,
+            taskFirst: isTaskFirstSchedule,
+            savedTeam,
+            edited: scheduleRuntimeEditedRef.current,
+            proposed: {
+              cwd: usesSavedTeamRuntime ? savedTeam?.cwd ?? '' : effectiveCwd,
+              prompt: promptDraft.value.trim(),
+              providerId: selectedProviderId,
+              providerBackendId: selectedProviderBackendId,
+              model: scheduleModel,
+              effort: scheduleEffort,
+              fastMode: selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
+                ? selectedFastMode : undefined,
+              resolvedFastMode: selectedProviderId === 'anthropic'
                 ? (anthropicFastModeResolution?.resolvedFastMode ?? false)
                 : selectedProviderId === 'codex'
                   ? (codexFastModeResolution?.resolvedFastMode ?? false)
-                  : undefined
-            ),
-            skipPermissions: isTaskFirstSchedule
-              ? undefined
-              : originalPermissions ? originalPermissions.skipPermissions : skipPermissions,
-          };
+                  : undefined,
+              skipPermissions,
+            },
+          });
 
           if (isEditing && schedule) {
             const patch: UpdateSchedulePatch = {
@@ -2958,8 +2900,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onProviderChange={setSelectedProviderId}
                   value={selectedModel}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
-                  onValueChange={setSelectedModel}
-                  onNormalizedValueChange={setSelectedModelRaw}
+                  onValueChange={(value, source) =>
+                    source === 'normalized' ? setSelectedModelRaw(value) : setSelectedModel(value)
+                  }
                   projectPath={effectiveCwd || null}
                   id="dialog-model"
                   disableGeminiOption={isGeminiUiFrozen()}

@@ -20,6 +20,7 @@ const projectPathSelectorMock = vi.hoisted(() => ({ onSelect: (_path: string) =>
 const modelAutoNormalizeMock = vi.hoisted(() => ({
   callback: null as ((value: string) => void) | null,
   manualCallback: null as ((value: string) => void) | null,
+  providerCallback: null as ((value: TeamProviderId) => void) | null,
 }));
 type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
   Partial<Pick<CliInstallationStatus, 'flavor'>>;
@@ -614,12 +615,13 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () =
 }));
 
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
-  TeamModelSelector: ({ value, onValueChange, onNormalizedValueChange }: {
+  TeamModelSelector: ({ value, onProviderChange, onValueChange }: {
     value: string;
-    onValueChange: (value: string) => void;
-    onNormalizedValueChange?: (value: string) => void;
+    onProviderChange: (value: TeamProviderId) => void;
+    onValueChange: (value: string, source?: 'normalized') => void;
   }) => {
-    modelAutoNormalizeMock.callback = onNormalizedValueChange ?? null;
+    modelAutoNormalizeMock.providerCallback = onProviderChange;
+    modelAutoNormalizeMock.callback = (value) => onValueChange(value, 'normalized');
     modelAutoNormalizeMock.manualCallback = onValueChange;
     return React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`);
   },
@@ -1057,15 +1059,8 @@ describe('LaunchTeamDialog', () => {
         });
         expect(updateSchedule).toHaveBeenCalledTimes(1);
         const config = updateSchedule.mock.calls[0]?.[1]?.launchConfig;
-        expect(config.model).toBe(
-          phase === 'confirmed'
-            ? 'gateway/project-default'
-            : phase === 'explicit'
-              ? 'gateway/explicit'
-              : phase === 'legacy'
-                ? 'catalog-fallback'
-                : undefined
-        );
+        // Edits to an existing schedule must not silently persist runtime catalog defaults.
+        expect(config.model).toBe(phase === 'explicit' ? 'gateway/explicit' : undefined);
         if (phase !== 'legacy' && phase !== 'initial-loading')
           expect(fetchCliProviderStatus).toHaveBeenCalledWith(
             'anthropic',
@@ -5271,7 +5266,10 @@ describe('LaunchTeamDialog', () => {
       await flushCustomFolderProbe();
       expect(modelAutoNormalizeMock.manualCallback).toBeTruthy();
       await act(async () => {
-        // The user explicitly picks a model in the visible Anthropic picker.
+        // The picker mock does not normalize Gemini automatically: simulate
+        // an explicit Anthropic provider choice before the model choice.
+        modelAutoNormalizeMock.providerCallback?.('anthropic');
+        await flush();
         modelAutoNormalizeMock.manualCallback?.('sonnet');
         await flush();
       });
