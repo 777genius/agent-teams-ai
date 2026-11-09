@@ -21,10 +21,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from '../dialogs/LaunchTeamDialogLoadingFallback';
 
+import { ScheduleAssignmentSummary } from './ScheduleAssignmentSummary';
 import { ScheduleEmptyState } from './ScheduleEmptyState';
 import { ScheduleRunLogDialog } from './ScheduleRunLogDialog';
 import { ScheduleRunRow } from './ScheduleRunRow';
 import { ScheduleStatusBadge } from './ScheduleStatusBadge';
+import { useScheduleActions } from './useScheduleActions';
 
 const LaunchTeamDialog = lazy(() =>
   import('../dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
@@ -85,6 +87,8 @@ const ScheduleRow = ({
           type="button"
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
+          aria-expanded={expanded}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression)}
         >
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
@@ -113,6 +117,7 @@ const ScheduleRow = ({
             </Tooltip>
             <span>{schedule.timezone}</span>
           </div>
+          <ScheduleAssignmentSummary schedule={schedule} />
         </div>
 
         {/* Actions */}
@@ -124,6 +129,7 @@ const ScheduleRow = ({
                 size="sm"
                 className="size-7 p-0"
                 onClick={() => onTriggerNow(schedule.id)}
+                aria-label={t('schedule.actions.runNow')}
                 disabled={schedule.status !== 'active'}
               >
                 <Zap className="size-3.5" />
@@ -134,7 +140,7 @@ const ScheduleRow = ({
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0">
+              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={t('schedule.actions.edit')}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>
@@ -217,17 +223,11 @@ const ScheduleRow = ({
 
 export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { schedules, pauseSchedule, resumeSchedule, deleteSchedule, triggerNow, fetchSchedules } =
-    useStore(
-      useShallow((s) => ({
-        schedules: s.schedules.filter((sch) => sch.teamName === teamName),
-        pauseSchedule: s.pauseSchedule,
-        resumeSchedule: s.resumeSchedule,
-        deleteSchedule: s.deleteSchedule,
-        triggerNow: s.triggerNow,
-        fetchSchedules: s.fetchSchedules,
-      }))
-    );
+  const { schedules, fetchSchedules } = useStore(useShallow((s) => ({
+    schedules: s.schedules.filter((sch) => sch.teamName === teamName),
+    fetchSchedules: s.fetchSchedules,
+  })));
+  const { feedback, act: actOnSchedule } = useScheduleActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
@@ -252,28 +252,6 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
     setEditingSchedule(null);
   }, []);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await deleteSchedule(id);
-      } catch (err) {
-        console.error('Failed to delete schedule:', err);
-      }
-    },
-    [deleteSchedule]
-  );
-
-  const handleTriggerNow = useCallback(
-    async (id: string) => {
-      try {
-        await triggerNow(id);
-      } catch (err) {
-        console.error('Failed to trigger schedule:', err);
-      }
-    },
-    [triggerNow]
-  );
-
   return (
     <div className="space-y-2 p-3">
       {/* Header with create button */}
@@ -292,6 +270,12 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
         </Button>
       </div>
 
+      {feedback ? (
+        <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={`rounded border px-2 py-1.5 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}>
+          {feedback.message}
+        </p>
+      ) : null}
+
       {/* Schedule list or empty state */}
       {schedules.length === 0 ? (
         <ScheduleEmptyState />
@@ -302,10 +286,10 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
               key={schedule.id}
               schedule={schedule}
               onEdit={handleEdit}
-              onDelete={(id) => void handleDelete(id)}
-              onPause={(id) => void pauseSchedule(id)}
-              onResume={(id) => void resumeSchedule(id)}
-              onTriggerNow={(id) => void handleTriggerNow(id)}
+              onDelete={(id) => void actOnSchedule('delete', id)}
+              onPause={(id) => void actOnSchedule('pause', id)}
+              onResume={(id) => void actOnSchedule('resume', id)}
+              onTriggerNow={(id) => void actOnSchedule('run', id)}
             />
           ))}
         </div>
