@@ -149,6 +149,48 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(await f.readAllowed(resolved.ledgerRecord, resolved.visibleReply)).toBe(true);
   });
 
+  it('repairs a recovered user-inbox receipt before closing a lead reply', async () => {
+    const f = await fixture({ text: 'Exact answer for the lead.' });
+    const messageId = buildPlainTextVisibleReplyMessageId(f.observed);
+    await f.deps.inboxWriter.sendMessage('team', {
+      member: 'user', from: 'worker', to: 'user', messageId,
+      text: 'A misplaced older message', relayOfMessageId: 'msg-lead', source: 'runtime_delivery',
+    });
+    const misleadingRecord = await f.ledger.applyDestinationProof({
+      id: f.observed.id, visibleReplyInbox: 'user', visibleReplyMessageId: messageId,
+      visibleReplyCorrelation: 'relayOfMessageId', semanticallySufficient: true, observedAt: ISO,
+    });
+    const mistaken = {
+      inboxName: 'user',
+      message: {
+        from: 'worker', to: 'user', text: 'A misplaced older message', timestamp: ISO,
+        read: false, messageId, relayOfMessageId: 'msg-lead', source: 'runtime_delivery' as const,
+      },
+    };
+    expect(await f.readAllowed(misleadingRecord, mistaken)).toBe(false);
+    const corrected = await f.service.materializePlainTextReplyIfNeeded({
+      ledger: f.ledger, ledgerRecord: misleadingRecord, teamName: 'team',
+      memberName: 'worker', visibleReply: mistaken,
+    });
+    expect(corrected.visibleReply?.inboxName).toBe('captain');
+    expect((await f.messages('captain')).map(msg => msg.text)).toEqual(['Exact answer for the lead.']);
+    expect(await f.readAllowed(corrected.ledgerRecord, corrected.visibleReply)).toBe(true);
+  });
+
+  it('preserves an already correlated tool delivery to the right lead inbox', async () => {
+    const f = await fixture();
+    const first = await f.materialize();
+    expect(first.visibleReply).not.toBeNull();
+    f.readExactAssistantText.mockClear();
+    const repeated = await f.service.materializePlainTextReplyIfNeeded({
+      ledger: f.ledger, ledgerRecord: first.ledgerRecord,
+      teamName: 'team', memberName: 'worker', visibleReply: first.visibleReply,
+    });
+    expect(repeated.visibleReply?.message.messageId).toBe(first.visibleReply?.message.messageId);
+    expect(f.readExactAssistantText).not.toHaveBeenCalled();
+    expect(await f.messages('captain')).toHaveLength(1);
+  });
+
   it.each([null, 'Already handled: msg-lead', 'ok'])(
     'keeps delivery retryable instead of silently marking a non-answer read (%s)',
     async (text) => {
