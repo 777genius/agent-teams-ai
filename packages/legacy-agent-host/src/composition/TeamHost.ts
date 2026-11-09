@@ -396,7 +396,7 @@ export function createTeamHost(
           }
           if (operation === 'snapshot') {
             const query = z.object({ cursor: z.string().min(1).max(128).optional() }).strict().parse(input.payload);
-            return { ok: true, value: connection.readSnapshot(query) };
+            return { ok: true, value: connection.readSnapshot(query.cursor ? { cursor: query.cursor } : {}) };
           }
           if (operation === 'messages.page')
             return {
