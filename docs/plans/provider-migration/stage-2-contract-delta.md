@@ -187,6 +187,17 @@ Exact reviewed sources:
   The existing synchronous `HostHttpConsumptionJournal.consume()` and
   `routeFirstWrite` first-byte lease must not be quietly replaced with an
   asynchronous SQL call. Production authority and reconciliation stay HOLD.
+  **Pending-claim contention (9 Nov 2026):** Runtime #260 [direct-HEAD
+  `e988aaf7`](https://github.com/agent-teams-ai/agent-runtime/commit/e988aaf7fdab00c8481c802bb9b551ba88920794)
+  proves on actual PG18 that a rival SQL backend receives lock-timeout
+  SQLSTATE `55P03` while the first admission transaction is uncommitted;
+  after COMMIT its attempt/request drift cannot reclaim the intent, while
+  original owner readback remains stable. [Node 24/26 native E2E
+  #42551873097](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873097)
+  each reports 33 PASS and the unchanged intentional M08 RED failure;
+  [full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873228)
+  and [Node compatibility](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873136)
+  completed SUCCESS. This qualifies TEST-only SQL contention, **not** a Host pre-effect fence.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
@@ -249,6 +260,17 @@ be invented. **M03 target parity therefore includes these observed, ordered
 product history fields**, not merely Task CRUD or final status; no new
 Orchestrator producer, public API or target E2E is inferred from this Desktop
 projection. Reuse the Stage 1 oracle; do not duplicate its tests.
+
+**Stage 1 oversized-history gate (9 Nov 2026, source
+[`a8585d94`](https://github.com/777genius/agent-teams-ai/commit/a8585d94c058d6f76ba3400bea8eb1c6ba46c4f1)):**
+`readChanges` now derives its bounded revision from authorized product state
+without serializing the whole history into the feed. Its original filesystem
+regression retains 120 inbox messages (>512 KiB), verifies foreign/revoked
+cursor rejection and preserves the full-snapshot 512 KiB guard. This is only a
+partial Stage 1 P1 fix: complete Owner/transport pages for messages, tasks and
+nested comments/history/work/reviews, Main projection and original oversized
+Host+UI E2E remain unqualified. New-core M03/M11 feed or history parity cannot
+use a bounded invalidation cursor as proof of complete product read pagination.
 
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution
