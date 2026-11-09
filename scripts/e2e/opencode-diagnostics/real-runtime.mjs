@@ -111,6 +111,97 @@ export function hasOneVisibleOpenCodeConnection(text) {
 }
 
 /**
+ * Qualify the initial Dashboard before visiting Settings. The old E2E only
+ * proved a count after Settings had already populated the directory cache.
+ */
+export async function verifyColdDashboardConnectedCount({ root, evaluate, send }) {
+  const started = performance.now();
+  const timeoutMs = 90_000;
+  let outcome = 'count_unavailable';
+  let connected = null;
+  while (performance.now() - started < timeoutMs) {
+    let view;
+    try {
+      view = await evaluate(`(() => ({
+        dashboard: Boolean(document.querySelector('[data-testid="dashboard-manage-providers"]')?.getClientRects().length),
+        settings: Boolean(document.querySelector('[data-testid="provider-settings-page"]')?.getClientRects().length),
+        count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
+      }))()`);
+    } catch {
+      // The renderer can replace its execution context while navigating.
+      // Retry only inside the original wall-clock budget, then write failure evidence.
+    }
+    if (view?.settings) {
+      outcome = 'settings_opened_before_dashboard_proof';
+      break;
+    }
+    if (view?.dashboard && hasOneVisibleOpenCodeConnection(view.count)) {
+      outcome = 'passed';
+      connected = 1;
+      break;
+    }
+    const remaining = timeoutMs - (performance.now() - started);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(500, remaining)));
+  }
+  const elapsedMs = Math.round(performance.now() - started);
+  await writeFile(path.join(root, 'cold-dashboard.json'), JSON.stringify({
+    schemaVersion: 1,
+    platform: process.platform,
+    result: outcome,
+    connected,
+    elapsedMs,
+    settingsVisited: false,
+    liveAccounts: false,
+    modelInferenceTested: false,
+  }, null, 2));
+  assert.equal(outcome, 'passed', 'Cold Dashboard did not show verified OpenCode connection count');
+  const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+  await writeFile(path.join(root, 'cold-dashboard.png'), Buffer.from(screenshot.data, 'base64'));
+  return { connected, elapsedMs };
+}
+
+/** Display proof is a numeric value, never Unknown, a spinner or an inferred zero. */
+export function hasExactVisibleOpenCodeCount(text, expected) {
+  if (typeof text !== 'string' || !text.trim().startsWith('OpenCode') ||
+      !Number.isSafeInteger(expected) || expected < 0) return false;
+  const values = text.match(/[0-9]+/g);
+  return values?.length === 1 && values[0] === String(expected);
+}
+
+/**
+ * Read-only connected identities; neither models nor native launch readiness.
+ * Reject partial, error-bearing, malformed, duplicate and unfiltered responses.
+ */
+export function verifyCompleteConnectedSourceSummary(response, expected) {
+  assert.equal(response?.schemaVersion, 1, 'Invalid provider response schema');
+  assert.equal(response.runtimeId, 'opencode');
+  assert(!response.error, 'Provider count summary failed');
+  const directory = response.directory;
+  assert.equal(directory?.runtimeId, 'opencode');
+  assert.equal(directory.filter, 'connected');
+  assert.equal(directory.query, null);
+  assert.equal(directory.cursor, null);
+  assert.equal(directory.nextCursor, null, 'Truncated connected summary');
+  assert(Number.isSafeInteger(directory.totalCount) && directory.totalCount >= 0);
+  assert.equal(directory.totalCount, directory.returnedCount);
+  assert.equal(directory.totalCount, directory.entries?.length);
+  assert(Array.isArray(directory.diagnostics));
+  assert(!directory.diagnostics.some((item) =>
+    typeof item !== 'string' || /timed?\s*out|timeout|partial|incomplete|probe failed|unavailable/i.test(item)
+  ), 'Incomplete or unavailable connected summary');
+  const ids = directory.entries.map((entry) => {
+    assert.equal(entry?.state, 'connected', 'Nonconnected source in filtered summary');
+    assert(typeof entry.providerId === 'string' && entry.providerId.trim());
+    const id = entry.providerId.trim().toLowerCase();
+    assert.notEqual(id, 'opencode', 'Aggregate host is not a connection');
+    return id;
+  });
+  assert.equal(new Set(ids).size, ids.length, 'Duplicate provider identity');
+  assert.equal(ids.length, expected, 'V2 connected source count mismatch');
+  return ids.length;
+}
+
+/**
  * Read-only desktop regression: each Settings → Providers Manage action opens
  * its own provider panel and closes without changing credentials.
  */
@@ -181,7 +272,7 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
   return verified;
 }
 
-export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) {
+export async function verifyRealRuntimeElectron({ root, data, evaluate, send, coldDashboard }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
   let header = '';
   const headerStarted = performance.now();
@@ -222,6 +313,8 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     realElectronIpc: true,
     connected: count,
     headerConnected: 1,
+    coldDashboardConnected: coldDashboard?.connected ?? null,
+    coldDashboardReadyMs: coldDashboard?.elapsedMs ?? null,
     headerReadyMs,
     ipcElapsedMs,
     fullCatalogReconciled: false,
