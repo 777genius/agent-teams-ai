@@ -112,6 +112,36 @@ describe('runtime status command diagnostics', () => {
     expect(status.detailMessage).not.toContain('secret-directory-error');
   });
 
+  it('checks selected CloudStorage project instead of the relocated Bun cwd', async () => {
+    execMock.mockRejectedValue(
+      Object.assign(new Error('Command failed'), {
+        code: 1,
+        stderr: 'error: An unknown error occurred (Unexpected)',
+      })
+    );
+    const home = '/Users/TEST';
+    const selectedProject = '/Users/TEST/Library/CloudStorage/Drive/My Portfolio';
+    const checkAccess = vi.fn(async (directory: string) => {
+      expect(directory).toBe(selectedProject);
+      throw Object.assign(new Error('private path should not be exposed'), { code: 'EPERM' });
+    });
+    const error = await readRuntimeStatusCommand(
+      binaryPath, [...args, '--project-path', selectedProject],
+      { cwd: home }, extractRuntimeStatusJsonObject, checkAccess, selectedProject
+    ).catch((caught: unknown) => caught);
+    const status = createRuntimeStatusErrorProviderStatus('opencode', error);
+    expect(execMock).toHaveBeenCalledWith(
+      binaryPath, [...args, '--project-path', selectedProject], { cwd: home }
+    );
+    expect(checkAccess).toHaveBeenCalledExactlyOnceWith(selectedProject);
+    expect(status).toMatchObject({
+      statusMessage: 'Project folder access denied',
+      capabilities: { teamLaunch: false },
+    });
+    expect(status.detailMessage).toContain('Project folder access denied (EPERM)');
+    expect(status.detailMessage).not.toContain('private path should not be exposed');
+  });
+
   it('prioritizes verified project access denial over an unrelated CLI timeout classification', async () => {
     execMock.mockRejectedValue(
       Object.assign(new Error('Command timed out after 30000ms'), {

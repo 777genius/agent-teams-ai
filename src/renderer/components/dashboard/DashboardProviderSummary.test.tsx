@@ -58,6 +58,7 @@ describe('DashboardProviderSummary (passive)', () => {
     state.cliStatus = null;
     state.cliStatusLoading = false;
     state.openCodeRuntimeStatusLoading = false;
+    state.cliProviderStatusLoading = {};
     state.countEvidence = null;
     state.appConfig.general.multimodelEnabled = true;
   });
@@ -106,6 +107,25 @@ describe('DashboardProviderSummary (passive)', () => {
         .toContain('runtimeProvider.badges.unknown');
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('ignores stale aggregate pending once individual checking has settled', async () => {
+    state.cliStatus = {
+      installed: true, flavor: 'agent_teams_orchestrator',
+      providers: [{ providerId: 'opencode', authenticated: false, verificationState: 'unknown', statusCheckOutcome: 'pending' }],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+      state.cliProviderStatusLoading = { opencode: true };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
     } finally {
       await act(async () => root.unmount());
     }

@@ -79,27 +79,81 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
         if (value.models) assert.equal(value.models.models[0].providerId, source);
       }
     }
-    // A real subprocess must obey the connected filter; previously the fixture
-    // accepted --filter but always returned filter=all, hiding this regression.
-    await writeFile(path.join(root, 'scenario'), 'connected-filter');
-    const directoryArgs = (filter) => [
+    // Real subprocess fixture contract: first 100/all, following page, then
+    // connected-only. The host is connected but excluded by the UI count policy.
+    await writeFile(path.join(root, 'scenario'), 'connected-summary');
+    const directoryArgs = [
       'runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
-      '--summary', '--filter', filter, '--limit', '100',
+      '--summary', '--filter', 'all', '--limit', '100',
     ];
-    const all = JSON.parse(run(directoryArgs('all')).stdout).directory;
-    const connected = JSON.parse(run(directoryArgs('connected')).stdout).directory;
-    assert.equal(all.filter, 'all');
-    assert.equal(all.totalCount, 4);
-    assert.equal(all.entries.find((entry) => entry.providerId === 'google')?.state, 'available');
-    assert.equal(connected.filter, 'connected');
-    assert.equal(connected.totalCount, 3);
-    assert.equal(connected.returnedCount, connected.entries.length);
-    assert.equal(connected.nextCursor, null);
-    assert(connected.entries.every((entry) => entry.state === 'connected'));
-    assert(!connected.entries.some((entry) => entry.providerId === 'google'));
-    assert.equal(run(directoryArgs('unknown')).status, 64);
-    await writeFile(path.join(root, 'scenario'), 'catalog-retry');
+    const firstPage = run(directoryArgs);
+    assert.equal(firstPage.status, 0, firstPage.stderr);
+    const first = JSON.parse(firstPage.stdout).directory;
+    assert.equal(first.totalCount, 105);
+    assert.equal(first.returnedCount, 100);
+    assert.equal(first.entries.length, 100);
+    assert.equal(first.filter, 'all');
+    assert.equal(first.cursor, null);
+    assert.equal(first.nextCursor, '100');
+    assert.equal(first.entries.filter((entry) => entry.state === 'connected').length, 0);
 
+    const secondPage = run([...directoryArgs, '--cursor', first.nextCursor]);
+    assert.equal(secondPage.status, 0, secondPage.stderr);
+    const second = JSON.parse(secondPage.stdout).directory;
+    assert.equal(second.totalCount, 105);
+    assert.equal(second.returnedCount, 5);
+    assert.equal(second.cursor, '100');
+    assert.equal(second.nextCursor, null);
+    assert.equal(second.entries.filter((entry) => entry.state === 'available').length, 0);
+    assert.equal(second.entries.filter((entry) => entry.state === 'connected').length, 5);
+    assert.deepEqual(
+      [...first.entries, ...second.entries].map((entry) => entry.providerId),
+      [
+        ...Array.from({ length: 100 }, (_, index) =>
+          `fixture-available-${String(index).padStart(3, '0')}`),
+        'opencode', 'anthropic', 'google', 'openrouter', 'fixture-connected',
+      ]
+    );
+
+    // The real Windows startup-cleanup path requests a 250-row summary.
+    // This is read-only and must not appear as a forbidden mutation.
+    const startupDirectory = run([
+      'runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+      '--summary', '--filter', 'all', '--limit', '250',
+    ]);
+    assert.equal(startupDirectory.status, 0, startupDirectory.stderr);
+    const startupPage = JSON.parse(startupDirectory.stdout).directory;
+    assert.equal(startupPage.totalCount, 105);
+    assert.equal(startupPage.returnedCount, 105);
+    assert.equal(startupPage.nextCursor, null);
+
+    const connectedPage = run([
+      'runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+      '--summary', '--filter', 'connected', '--limit', '100',
+    ]);
+    assert.equal(connectedPage.status, 0, connectedPage.stderr);
+    const connected = JSON.parse(connectedPage.stdout).directory;
+    assert.equal(connected.filter, 'connected');
+    assert.equal(connected.totalCount, 5);
+    assert.equal(connected.returnedCount, 5);
+    assert.equal(connected.cursor, null);
+    assert.equal(connected.nextCursor, null);
+    assert.deepEqual(connected.entries.map((entry) => entry.providerId), [
+      'opencode', 'anthropic', 'google', 'openrouter', 'fixture-connected',
+    ]);
+    assert(connected.entries.every((entry) => entry.state === 'connected'));
+
+    for (const invalid of [
+      [...directoryArgs, '--filter', 'connected'],
+      [...directoryArgs, '--cursor', '../not-a-cursor'],
+      [...directoryArgs, '--cursor', '01'],
+      ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+        '--filter', 'unknown'],
+      ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+        '--limit', '0'],
+      ['runtime', 'providers', 'directory', '--runtime', 'opencode', '--json',
+        '--limit', '251'],
+    ]) assert.equal(run(invalid).status, 64);
     for (const args of [
       ['runtime', 'status', '--json', '--summary', '--provider', 'opencode'],
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
@@ -150,19 +204,6 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
     await rm(root, { recursive: true, force: true });
   }
 });
-
-// Mock the separate read-only connected-summary IPC, not a model/launch request.
-function connectedSummaryProbe() {
-  return { done: true, value: {
-    schemaVersion: 1, runtimeId: 'opencode',
-    directory: {
-      runtimeId: 'opencode', filter: 'connected',
-      entries: ['opencode', 'anthropic', 'google', 'openrouter']
-        .map((providerId) => ({ providerId, state: 'connected' })),
-      totalCount: 4, returnedCount: 4, nextCursor: null,
-    },
-  } };
-}
 
 const catalogSources = ['opencode', 'anthropic', 'google', 'openrouter'];
 function refreshTimeline({
@@ -247,6 +288,32 @@ test('catalog completion requires its own summary then a complete fresh director
   }
 });
 
+test('filtered count requests cannot replace the fresh unfiltered catalog generation', () => {
+  const all = refreshTimeline({ summary: true });
+  const last = all.at(-1);
+  const filteredStart = {
+    event: 'start', scenario: 'delayed8s', pid: 200,
+    at: last.at + 1,
+    args: ['runtime', 'providers', 'directory', '--runtime', 'opencode',
+      '--json', '--summary', '--filter', 'connected', '--limit', '100'],
+  };
+  const filteredResponse = {
+    event: 'response', scenario: 'delayed8s', pid: 200,
+    at: last.at + 2, operation: 'directory', source: null, failed: false,
+    response: { directory: {
+      runtimeId: 'opencode', filter: 'connected', totalCount: 4,
+      returnedCount: 4, cursor: null, nextCursor: null,
+    } },
+  };
+  const evidence = catalogRefreshEvidence(
+    [...all, filteredStart, filteredResponse],
+    { requireSummary: true }
+  );
+  assert(evidence, 'Completed model catalog should survive a later count-only read');
+  assert.notEqual(evidence.directory.start.pid, 200);
+  assert.equal(evidence.models.length, 4);
+});
+
 test('catalog pairing uses the latest preceding start when Windows reuses a PID', () => {
   const calls = refreshTimeline();
   const model = calls.at(-2);
@@ -307,8 +374,6 @@ test('ready drains old requests then performs its own summary/catalog recovery b
         }
         if (expression === 'window.__catalogProbe')
           return { done: probe, value: { schemaVersion: 1 } };
-        if (expression.startsWith('window.__connectedSummaryProbe =')) return;
-        if (expression === 'window.__connectedSummaryProbe') return connectedSummaryProbe();
         throw new Error(`Unexpected expression: ${expression}`);
       },
     }).then(() => {
@@ -371,8 +436,6 @@ test('real catalog verifier waits past old models and unfinished summary for the
         }
         if (expression === 'window.__catalogProbe')
           return { done: probe, value: { schemaVersion: 1 } };
-        if (expression.startsWith('window.__connectedSummaryProbe =')) return;
-        if (expression === 'window.__connectedSummaryProbe') return connectedSummaryProbe();
         throw new Error(`Unexpected expression: ${expression}`);
       },
     });
@@ -492,8 +555,6 @@ test(
           if (expression === 'window.__catalogProbe')
             return { done: true, value: { schemaVersion: 1 } };
           if (expression.startsWith('window.__catalogProbe =')) return undefined;
-          if (expression.startsWith('window.__connectedSummaryProbe =')) return undefined;
-          if (expression === 'window.__connectedSummaryProbe') return connectedSummaryProbe();
           if (expression.includes('opencode-catalog-error')) return '';
           throw new Error(`Unexpected catalog probe: ${expression}`);
         },

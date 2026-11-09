@@ -22,13 +22,19 @@ describe('CreateTeamPageLoadingFallback', () => {
       })));
       const page = host.querySelector('[data-testid="create-team-page"]');
       expect(page?.getAttribute('aria-busy')).toBe('true');
-      expect(page?.querySelector('[role="status"]')).not.toBeNull();
+      expect(host.querySelector('[role="status"]')?.textContent).toBe('states.loading');
+      expect(page?.querySelector('[role="status"]')).toBeNull();
       expect(page?.querySelectorAll('[data-testid="create-team-loading-member"]')).toHaveLength(2);
       expect(page?.querySelector('.max-w-\\[24rem\\]')).not.toBeNull();
       expect(page?.querySelector('input,select,textarea')).toBeNull();
       const back = page?.querySelector<HTMLButtonElement>('button');
       await act(async () => back?.click());
       expect(onClose).toHaveBeenCalledOnce();
+      await act(async () => root.render(React.createElement(CreateTeamPageLoadingFallback, {
+        isCopy: true, onClose,
+      })));
+      expect(page?.querySelector('h1')?.textContent).toBe('create.title.copy');
+      expect(page?.querySelector('p')?.textContent).toBe('create.description.copy');
     } finally {
       await act(async () => root.unmount());
       host.remove();

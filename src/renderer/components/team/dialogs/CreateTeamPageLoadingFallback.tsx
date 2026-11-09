@@ -13,7 +13,9 @@ export const CreateTeamPageLoadingFallback = ({
   const { t } = useAppTranslation('team');
   const { t: common } = useAppTranslation('common');
   return (
-    <section
+    <>
+      <span role="status" className="sr-only">{common('states.loading')}</span>
+      <section
       data-testid="create-team-page"
       data-testid-loading="skeleton"
       aria-busy="true"
@@ -39,12 +41,7 @@ export const CreateTeamPageLoadingFallback = ({
           </p>
         </div>
       </header>
-      <div
-        role="status"
-        aria-label={common('states.loading')}
-        className="mx-auto w-full max-w-[64rem] min-w-0 space-y-5 px-4 pb-6 pt-4"
-      >
-        <span className="sr-only">{common('states.loading')}</span>
+      <div className="mx-auto w-full max-w-[64rem] min-w-0 space-y-5 px-4 pb-6 pt-4">
         <div aria-hidden="true" className="space-y-5">
           <div className="space-y-2">
             <div className="skeleton-shimmer h-3 w-24 rounded" />
@@ -97,6 +94,7 @@ export const CreateTeamPageLoadingFallback = ({
           </div>
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 };

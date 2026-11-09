@@ -316,20 +316,26 @@ export function publishRuntimeProviderDirectoryCache({
 export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: string | null): void {
   const scopeKey = getScopeKey(projectPath);
   generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
-  connectedCountEvidenceByScope.set(scopeKey, { observation: null, invalidated: true });
-  activeConnectionChecksByScope.delete(scopeKey);
+  connectedCountEvidenceByScope.set(scopeKey, {
+    observation: null,
+    invalidated: true,
+    checking: (activeConnectionChecksByScope.get(scopeKey)?.size ?? 0) > 0,
+  });
   notifyScope(scopeKey);
   if (scopeKey !== GLOBAL_SCOPE_KEY) return;
   // Fence even project requests that have not published a first snapshot.
   invalidationEpoch += 1;
-  activeConnectionChecksByScope.clear();
   mergedFallbackByScope.clear();
   for (const projectScope of new Set([
     ...snapshotsByScope.keys(),
     ...connectedCountEvidenceByScope.keys(),
     ...listenersByScope.keys(),
   ])) {
-    connectedCountEvidenceByScope.set(projectScope, { observation: null, invalidated: true });
+    connectedCountEvidenceByScope.set(projectScope, {
+      observation: null,
+      invalidated: true,
+      checking: (activeConnectionChecksByScope.get(projectScope)?.size ?? 0) > 0,
+    });
     notifyScope(projectScope);
   }
   for (const [projectScope, snapshot] of snapshotsByScope) {
@@ -400,7 +406,9 @@ export function beginRuntimeProviderConnectedCountCheck(
     if (pending.size === 0 && activeConnectionChecksByScope.get(scopeKey) === pending) {
       activeConnectionChecksByScope.delete(scopeKey);
       const current = getRuntimeProviderConnectedCountEvidence(projectPath);
-      connectedCountEvidenceByScope.set(scopeKey, { ...current, checking: false });
+      if (!current.observation && !current.invalidated)
+        connectedCountEvidenceByScope.delete(scopeKey);
+      else connectedCountEvidenceByScope.set(scopeKey, { ...current, checking: false });
       notifyScope(scopeKey);
     }
   };

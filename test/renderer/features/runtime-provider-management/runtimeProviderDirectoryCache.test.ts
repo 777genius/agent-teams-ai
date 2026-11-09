@@ -57,20 +57,27 @@ describe('runtimeProviderDirectoryCache', () => {
     stopFirst();
     expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
     stopSecond();
-    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBeUndefined();
     stopSecond();
 
     const stopStale = beginRuntimeProviderConnectedCountCheck(project, readToken);
     invalidateRuntimeProviderDirectoryScopeReads(project);
-    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBeUndefined();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
     stopStale();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
     const stopRejected = beginRuntimeProviderConnectedCountCheck(project, readToken);
-    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBeUndefined();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
     stopRejected();
     const stopCurrent = beginRuntimeProviderConnectedCountCheck(project);
     expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
     stopCurrent();
     expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+
+    const stopGlobal = beginRuntimeProviderConnectedCountCheck('/tmp/global-invalidation');
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(true);
+    stopGlobal();
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(false);
   });
 
   it('fences count-only observations across project switches, credential writes and global logout', () => {

@@ -40,11 +40,7 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     countEvidence?.checking ||
     openCodeRuntimeStatusLoading ||
     cliProviderStatusLoading?.opencode ||
-    openCodeRuntimeStatus?.state === 'checking' ||
-    (cliStatus?.flavor === 'agent_teams_orchestrator' &&
-      cliStatus.providers.some((provider) =>
-        provider.providerId === 'opencode' && provider.statusCheckOutcome === 'pending'
-      ))
+    openCodeRuntimeStatus?.state === 'checking'
   );
   const [expiryRevision, expire] = useState(0);
   useEffect(() => {
