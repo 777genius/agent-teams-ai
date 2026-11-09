@@ -1,4 +1,5 @@
 import { groupMutationSchema } from '../dist/group-chats/operations.js';
+import { createTeamGroupChatsFeature } from '../dist/group-chats/createTeamGroupChatsFeature.js';
 import {
   groupReceiptFingerprint,
   validateGroupCommandReceipt,
@@ -127,6 +128,40 @@ function fixture(t: TestContext, memberNames: string[] = ['lead', 'alice']) {
     outbox,
   };
 }
+test('NUL group messages and summaries are rejected before receipts or inbox writes', async (t) => {
+  const f = fixture(t);
+  await f.human.execute('TEST-create', f.create, guard);
+  const base = {
+    teamName: f.binding.teamName,
+    groupChatId: id,
+    messageId: postId,
+    text: 'ordinary',
+  };
+  const cases = [
+    { label: 'text', input: { ...base, text: 'hello\0world' } },
+    { label: 'summary', input: { ...base, summary: 'bad\0summary' } },
+  ];
+  // The native MCP and Host command schemas must refuse before recording any intent.
+  for (const { label, input } of cases) {
+    assert.equal(groupMutationSchema.safeParse({ operation: 'send', ...input }).success, false);
+    await assert.rejects(
+      f.human.execute('TEST-nul-' + label, { operation: 'send', ...input }, guard)
+    );
+    assert.equal(
+      f.store.fenced(() => f.store.read(teamCommandPath('TEST-nul-' + label))),
+      undefined
+    );
+  }
+
+  // The direct group service also has an admission fence when called without MCP.
+  const direct = createTeamGroupChatsFeature(
+    {} as Parameters<typeof createTeamGroupChatsFeature>[0],
+    {} as Parameters<typeof createTeamGroupChatsFeature>[1]
+  );
+  for (const { input } of cases)
+    await assert.rejects(direct.send(input), /Invalid message/);
+});
+
 test('Host groups use original receipts/outboxes, exact physical envelopes and canonical replay without fanout', async (t) => {
   const f = fixture(t);
   await f.human.execute('TEST-create', f.create, guard);

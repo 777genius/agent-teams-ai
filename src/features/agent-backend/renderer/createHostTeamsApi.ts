@@ -28,6 +28,7 @@ import {
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { readHostPagedSnapshot } from './readHostPagedSnapshot';
+import { readHostMessagesPage } from './readHostMessagesPage';
 import {
   assertMatchingConfiguration,
   readHostRosterConfiguration,
@@ -467,38 +468,7 @@ export function createHostTeamsApi(
       const check = captureScope();
       const bindings = await connections(check);
       const connection = await resolveConnection(key, check, bindings);
-      readOrder.capture(check);
-      const readFence = readOrder.readFence(connection.handle.handleId);
-      const result = await backend.invoke({
-        handle: connection.handle,
-        commandId: crypto.randomUUID(),
-        operation: 'team.messages.page',
-        payload: {
-          ...(options?.cursor == null ? {} : { cursor: options.cursor }),
-          ...(options?.limit === undefined ? {} : { limit: options.limit }),
-          ...(options?.groupChatId === undefined ? {} : { groupChatId: options.groupChatId }),
-        },
-      });
-      current(check);
-      readFence();
-      if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
-      const page = result.value;
-      if (
-        !page ||
-        typeof page !== 'object' ||
-        !('nextCursor' in page) ||
-        !('messages' in page) ||
-        !('revision' in page) ||
-        !('teamName' in page) ||
-        !('hasMore' in page)
-      )
-        throw new HostTeamOperationError('invalid-result', 'unknown');
-      return {
-        messages: remapHostCrossTeamMessages(page.messages, page.teamName, key, bindings),
-        nextCursor: page.nextCursor,
-        hasMore: page.hasMore,
-        feedRevision: page.revision,
-      };
+      return readHostMessagesPage(backend, connection, bindings, key, options, check, readOrder);
     },
   };
   const mutations = createHostTeamMutations({

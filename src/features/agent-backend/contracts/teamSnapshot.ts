@@ -12,6 +12,9 @@ export interface BackendTeamMessagesPage {
   messages: BackendTeamSnapshot['messages'];
   nextCursor: string | null;
   hasMore: boolean;
+  /** Present only while the Owner is sending a large message in bounded parts. */
+  messageTotal?: number;
+  messageParts?: { index: number; part: number; total: number }[];
 }
 
 export interface BackendTeamSnapshot {
