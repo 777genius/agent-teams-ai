@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { pageOwnerMessages } from './pageOwnerMessages.js';
 import { executeTeamCommand } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
@@ -93,6 +95,8 @@ export class TeamOwner {
   readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
+  /** Volatile key: continuation cursors expire on owner recreation. */
+  private readonly messagesPageKey = randomUUID();
   private readonly store: TeamStore;
   private readonly policy: TeamPolicyPort;
   private readonly binding: TeamBinding;
@@ -429,6 +433,8 @@ export class TeamOwner {
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
       readSnapshot: () => this.readSnapshot(principalId),
+      readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
+        this.readMessagesPage(principalId, options),
       readDeletedTasks: () => this.readDeletedTasks(principalId),
       ...(this.policy.reads
         ? {
@@ -586,14 +592,25 @@ export class TeamOwner {
     });
   }
 
+  /** Shared owner-authorized inbox and cross-team attribution, inside the existing fence. */
+  private productMessages(grant: TeamGrant, members: readonly { name: string }[]): JsonValue[] {
+    const recipients = grant.permissions.includes('admin')
+      ? [...members.map(({ name }) => name), 'user']
+      : [grant.memberName];
+    return projectCrossTeamMessages({
+      store: this.store,
+      policy: this.policy,
+      messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
+      actor: grant.memberName,
+      readAll: grant.permissions.includes('admin'),
+    });
+  }
+
   /** Product read under the current actor grant and the same fence as revoke/writes. */
   private collectProductState(principalId: string) {
     const grant = this.authorize(principalId, 'read');
     const state = this.state();
     const members = state.members.map(({ name, role }) => ({ name, role }));
-    const recipients = grant.permissions.includes('admin')
-      ? [...members.map(({ name }) => name), 'user']
-      : [grant.memberName];
     const snapshot = {
       teamName: this.binding.teamName,
       lifecycle: this.commandAccess.lifecycle(principalId).view(),
@@ -613,13 +630,7 @@ export class TeamOwner {
       members,
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),
-      messages: projectCrossTeamMessages({
-        store: this.store,
-        policy: this.policy,
-        messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
-        actor: grant.memberName,
-        readAll: grant.permissions.includes('admin'),
-      }),
+      messages: this.productMessages(grant, members),
       kanbanState: this.store.read('../kanban-state.json') ?? {
         teamName: this.binding.teamName,
         reviewers: [],
@@ -655,6 +666,25 @@ export class TeamOwner {
       // becomes oversized, without weakening the snapshot/transport size guards.
       const revision = digest(this.collectProductState(principalId));
       return json(this.productChanges.read(principalId, revision, cursor));
+    });
+  }
+
+
+  /** The existing Owner supplies grant, inbox records and the filesystem fence. */
+  private readMessagesPage(
+    principalId: string,
+    options: { cursor?: string; limit?: number; groupChatId?: string }
+  ): JsonValue {
+    return this.store.fenced(() => {
+      const grant = this.authorize(principalId, 'read');
+      return pageOwnerMessages({
+        principalId,
+        grant,
+        teamName: this.binding.teamName,
+        key: this.messagesPageKey,
+        messages: this.productMessages(grant, this.state().members),
+        ...options,
+      });
     });
   }
 

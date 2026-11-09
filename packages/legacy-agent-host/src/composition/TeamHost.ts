@@ -18,6 +18,7 @@ import { createTeamReviewComposition } from './TeamReviewComposition.js';
 import { createStoppedImportComposition } from './createStoppedImportComposition.js';
 import { createTeamAttachmentComposition } from './createTeamAttachmentComposition.js';
 import { z } from 'zod';
+import { parseMessagesPageQuery } from './parseMessagesPageQuery.js';
 
 import { acquireProfileWriterLease } from '../adapters/profile/ProfileWriterLease.js';
 import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeamOwner.js';
@@ -338,6 +339,7 @@ export function createTeamHost(
         | 'getTask'
         | 'listTasks'
         | 'snapshot'
+        | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
         | 'lead.activity'
@@ -396,6 +398,11 @@ export function createTeamHost(
             z.object({}).strict().parse(input.payload);
             return { ok: true, value: connection.readSnapshot() };
           }
+          if (operation === 'messages.page')
+            return {
+              ok: true,
+              value: connection.readMessagesPage(parseMessagesPageQuery(input.payload)),
+            };
           if (operation === 'lead.activity' || operation === 'lead.context') {
             z.object({}).strict().parse(input.payload);
             if (!runtime) throw new TeamOwnerError('hold');
@@ -687,6 +694,7 @@ export function createTeamHost(
       capabilities: [
         'team.task',
         'team.snapshot',
+        'team.messages.page',
         'team.roster',
         'team.product-changes',
         'team.message',
@@ -726,6 +734,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),
         'team.roster.replace': method('roster.replace'),

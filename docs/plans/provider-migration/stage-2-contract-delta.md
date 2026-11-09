@@ -262,15 +262,20 @@ Orchestrator producer, public API or target E2E is inferred from this Desktop
 projection. Reuse the Stage 1 oracle; do not duplicate its tests.
 
 **Stage 1 oversized-history gate (9 Nov 2026, source
-[`a8585d94`](https://github.com/777genius/agent-teams-ai/commit/a8585d94c058d6f76ba3400bea8eb1c6ba46c4f1)):**
-`readChanges` now derives its bounded revision from authorized product state
-without serializing the whole history into the feed. Its original filesystem
-regression retains 120 inbox messages (>512 KiB), verifies foreign/revoked
-cursor rejection and preserves the full-snapshot 512 KiB guard. This is only a
-partial Stage 1 P1 fix: complete Owner/transport pages for messages, tasks and
-nested comments/history/work/reviews, Main projection and original oversized
-Host+UI E2E remain unqualified. New-core M03/M11 feed or history parity cannot
-use a bounded invalidation cursor as proof of complete product read pagination.
+[`e48f383c`](https://github.com/777genius/agent-teams-ai/commit/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71)):**
+`readChanges` derives its bounded revision from authorized product state
+without serializing history, while the 512 KiB full-snapshot guard remains.
+The original Owner now has a **bounded `readMessagesPage` transport**:
+[`pageOwnerMessages.ts`](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/src/team/pageOwnerMessages.ts)
+enforces the captured principal/grant, page limit 1–100, a 384 KiB reply cap,
+revision-bound continuation and foreign/revoked cursor refusal. Its
+[filesystem regression](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/tests/team-snapshot.test.ts)
+recovers 120 messages across pages with no omissions. This is **source/test
+evidence, not completed Stage 1 P1 acceptance**: task and nested
+comment/history/work/review pagination, Main/renderer integration and original
+oversized Host+UI native E2E remain unqualified on this latest SHA.
+The existing owner message page is a behavioral oracle for target M04/M11,
+not an accepted new Orchestrator writer/feed or M03/M11 parity.
 
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution
