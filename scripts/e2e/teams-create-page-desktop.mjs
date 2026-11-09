@@ -623,17 +623,21 @@ async function main() {
     assert.equal(shot.dialogOpen, false, 'Create opened a dialog instead of a page');
     await captureScreenshot(cdp, fixture, 'opened');
 
-    log('enter team name with real Chromium keyboard events');
-    await cdp.fill('#team-name', unique);
-    await captureScreenshot(cdp, fixture, 'edited');
-
-    log('renaming a team preserves in-progress Advanced CLI overrides');
+    log('edit Advanced CLI before naming the team');
     await cdp.click(`Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.includes('Optional launch settings')
         && button.getBoundingClientRect().width > 0)`);
     await cdp.click(createButtonExpression('Advanced'));
     const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
     await cdp.fill(customArgsSelector, '--max-turns 5');
+
+    log('naming and renaming a team preserves in-progress Advanced CLI overrides');
+    await cdp.fill('#team-name', unique);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'unnamed Advanced CLI edits retained after naming the team'
+    );
+    await captureScreenshot(cdp, fixture, 'edited');
     await cdp.fill('#team-name', unique + '-renamed');
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
