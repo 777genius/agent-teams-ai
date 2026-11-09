@@ -2565,7 +2565,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         );
       }
       const results = await Promise.allSettled(checks);
-      if (results.some((result) => result.status === 'rejected')) {
+      if (results.some((result) => result.status === 'rejected' || !result.value)) {
         setProviderStatusRefreshError(true);
       }
       // The scoped catalog and local providers reload via scope revision.
