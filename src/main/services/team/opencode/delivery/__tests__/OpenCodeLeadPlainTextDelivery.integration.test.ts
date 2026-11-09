@@ -13,6 +13,7 @@ import {
 import {
   isOpenCodeDeliveryResponseReadCommitAllowed,
   isOpenCodeDeliveryRetryablePendingResponse,
+  getOpenCodeDeliveryPendingReason,
 } from '../OpenCodePromptDeliveryReadCommitPolicy';
 import { openCodeTaskRefsIncludeAll } from '../OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeVisibleReplyProofService } from '../OpenCodeVisibleReplyProofService';
@@ -247,6 +248,17 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       expect(await f.messages('captain')).toEqual([]);
     }
   );
+
+  it('keeps custom-lead delivery in proof-observation mode at the attempt limit', async () => {
+    const f = await fixture({ recipient: 'captain', text: null });
+    const capped = { ...f.observed, attempts: f.observed.maxAttempts };
+    expect(await f.readAllowed(capped, null)).toBe(false);
+    expect(getOpenCodeDeliveryPendingReason({
+      ledgerRecord: capped, responseState: 'responded_plain_text',
+      actionMode: capped.actionMode, taskRefs: capped.taskRefs,
+      visibleReply: null, taskRefsIncludeAll: openCodeTaskRefsIncludeAll,
+    })).toBe('plain_text_visible_reply_not_materialized_yet');
+  });
 
   it('keeps optional peer reports silent', async () => {
     const peer = await fixture({ recipient: 'another-member' });
