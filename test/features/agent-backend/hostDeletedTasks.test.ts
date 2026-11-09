@@ -217,8 +217,9 @@ it('retrieves complete >512 KiB deleted task history and restores it after all s
     operation: 'task.lifecycle',
     payload: { taskId, action: 'delete' },
   });
-  const persisted = f.human.getTask(taskId) as { comments: { text: string }[] };
-  expect(persisted.comments.map((row) => row.text)).toEqual(expected);
+  const persisted = f.human.getTask(taskId);
+  const retainedComments = persisted.comments as { text: string }[] | undefined;
+  expect(retainedComments?.map((row) => row.text)).toEqual(expected);
   const first = f.human.readDeletedTasks() as { nextCursor: string | null };
   expect(first.nextCursor).not.toBeNull();
   expect(Buffer.byteLength(JSON.stringify(first))).toBeLessThan(384 * 1024);
