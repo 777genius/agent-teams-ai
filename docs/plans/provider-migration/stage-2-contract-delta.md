@@ -299,6 +299,21 @@ negative test now mutates accepted messages rather than an unrelated Team
 snapshot revision. These are **source/test changes**, not a completed
 native Host+Electron proof or target-core M04/M05/M11 qualification.
 
+**Stage 1 retained removed-member inbox (9 Nov 2026, source
+[`826227a6`](https://github.com/777genius/agent-teams-ai/commit/826227a6d484bf2bb6a3888b3820e1e60b1b1917),
+test correction
+[`b95d266d`](https://github.com/777genius/agent-teams-ai/commit/b95d266dc553b38dbd9943224341468a4d024349)):**
+The existing Owner snapshot and `readMessagesPage` now include persisted
+`removedMembers` **only for authorized historical inbox projection**, not
+the active roster or delivery authority. The original filesystem regression
+checks that an admin can read the removed member's inbox after reopening,
+an active member sees only their own inbox, and the removed principal without
+a grant is denied. Its corrected bootstrap fixture does **not** independently
+prove every revoke transition. M04/M16 new-core parity must preserve that
+read-only history and per-principal denial without resurrecting a removed
+member, granting delivery, or migrating an active session. Native Host+UI
+and target-core E2E remain unqualified; reuse the Stage 1 test oracle.
+
 **Still open:** task/deleted-task and nested comment/history/work/review
 pages remain incomplete, and `list/getData/getAllTasks/getTask` can still
 depend on an over-512-KiB snapshot. Exact-head Stage 1 CI/CodeQL and the
