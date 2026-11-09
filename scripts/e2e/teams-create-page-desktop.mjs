@@ -691,6 +691,21 @@ async function main() {
       "document.querySelector('[data-testid=team-model-selector-manage-providers]')",
       'Manage providers action in Create Team model picker'
     );
+    const refreshControl = await cdp.evaluate(`(() => {
+      const refresh = document.querySelector('[data-testid=team-model-selector-refresh-providers]');
+      const manage = document.querySelector('[data-testid=team-model-selector-manage-providers]');
+      const refreshBox = refresh?.getBoundingClientRect();
+      const manageBox = manage?.getBoundingClientRect();
+      return {
+        label: refresh?.getAttribute('aria-label') ?? null,
+        visible: Boolean(refreshBox && refreshBox.width > 0 && refreshBox.height > 0),
+        besideManage: Boolean(refreshBox && manageBox && refreshBox.left >= manageBox.right - 1),
+      };
+    })()`);
+    assert(refreshControl.label, 'Provider refresh icon must be accessible');
+    assert.equal(refreshControl.visible, true, 'Provider refresh icon must be visible');
+    assert.equal(refreshControl.besideManage, true,
+      'Provider refresh icon must appear beside Manage Providers');
     await cdp.click("document.querySelector('[data-testid=team-model-selector-manage-providers]')");
     await cdp.waitFor(`(() => {
       const store = window.__agentTeamsDevStore.getState();
