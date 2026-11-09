@@ -76,5 +76,5 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     runtimeStatus: openCodeRuntimeStatus,
   });
 
-  return { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking };
+  return { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking, projectPath, openCodeRuntimeStatus };
 }

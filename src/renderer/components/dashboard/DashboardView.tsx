@@ -108,7 +108,7 @@ interface DashboardViewProps {
   isActive?: boolean;
 }
 
-export const DashboardView = ({ isActive: _isActive = true }: DashboardViewProps): React.JSX.Element => {
+export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);
@@ -124,7 +124,7 @@ export const DashboardView = ({ isActive: _isActive = true }: DashboardViewProps
         <WebPreviewBanner />
         <WindowsAdministratorBanner />
         <DashboardUpdateBanner />
-        <DashboardProviderSummary />
+        <DashboardProviderSummary isActive={isActive} />
         <TmuxStatusBanner />
 
         <div className="mb-12 flex flex-col items-stretch justify-center gap-2 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-0">
