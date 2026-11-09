@@ -700,7 +700,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   }
   await client.evaluate("document.documentElement.style.zoom = '2'");
   const zoomActionsVisible = await client.evaluate(`(() => {
-    const row = Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))
+    const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
       .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
         el.querySelector('button[aria-label="More actions"]'));
     const button = row?.querySelector('button[aria-label="More actions"]');
@@ -718,7 +718,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   try {
     await client.waitFor('window.innerWidth <= 700', 'narrow renderer viewport');
     const narrowActionsVisible = await client.evaluate(`(() => {
-      const row = Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))
+      const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
         .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
           el.querySelector('button[aria-label="More actions"]'));
       const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
@@ -731,7 +731,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   }
 
   log('edit the real schedule without migrating its task-first semantics');
-  const more = "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
+  const more = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('button[aria-label=\\\"More actions\\\"]'))" +
     "?.querySelector('button[aria-label=\\\"More actions\\\"]')";
@@ -750,7 +750,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
 
   log('run now and inspect the actual schedule run history');
-  const runNow = "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
+  const runNow = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('button[aria-label=\\\"Run now\\\"]'))" +
     "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
@@ -761,17 +761,17 @@ async function exerciseScheduleUx(client, fixture, log) {
   const createdRuns = await client.evaluate(
     'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');
   assert(createdRuns.length > 0, 'Run now created no persisted run');
-  const expand = "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
+  const expand = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('button[aria-expanded]'))?.querySelector('button[aria-expanded]')";
   await client.click(expand);
   await client.waitFor(
-    "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]')).some(row => " +
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
       "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
       "row.querySelector('div[role=button]'))",
     'run history row visible');
   await captureScreenshot(client, fixture, 'schedules-run-history');
-  await client.click("Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
+  await client.click("Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('div[role=button]'))?.querySelector('div[role=button]')");
   await client.waitFor(
@@ -795,7 +795,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   await client.click(createButtonExpression('Delete'));
   await client.click("document.querySelector('[role=dialog][aria-label=Delete] button[data-confirm-btn]')");
   await client.waitFor(
-    "!Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]')).some(row => " +
+    "!Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
       "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
       "row.querySelector('button[aria-label=\\\"More actions\\\"]'))",
     'confirmed schedule disappeared from UI', 45_000);
