@@ -59,7 +59,10 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
 
 
 /** Large accepted message text is split on Unicode codepoint boundaries. */
-function messageSegments(messages: JsonValue[], itemBudget: number): Segment[] {
+export function messageSegments(
+  messages: JsonValue[],
+  itemBudget: number
+): Extract<Segment, { kind: 'message' }>[] {
   const segments: Segment[] = [];
   for (const [index, value] of messages.entries()) {
     if (Buffer.byteLength(JSON.stringify(value)) + 2 <= itemBudget) {
