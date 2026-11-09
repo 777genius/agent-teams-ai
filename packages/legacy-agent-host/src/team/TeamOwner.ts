@@ -654,7 +654,6 @@ export class TeamOwner {
       return pageOwnerSnapshot({
         principalId,
         key: this.snapshotPageKey,
-        maxBytes: query.maxBytes,
         snapshot: json({
           ...state,
           revision,
