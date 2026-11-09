@@ -68,7 +68,7 @@ export async function readHostPagedSnapshot(
       kanbanState.tasks[taskId] = entry;
     }
     for (const [column, ids] of Object.entries(page.kanbanState.columnOrder ?? {})) {
-      const key = column as keyof NonNullable<BackendTeamSnapshot['kanbanState']['columnOrder']>;
+      const key = column;
       const original = kanbanState.columnOrder?.[key] ?? [];
       kanbanState.columnOrder ??= {};
       kanbanState.columnOrder[key] = [...original, ...ids];
