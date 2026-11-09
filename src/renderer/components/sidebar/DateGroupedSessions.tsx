@@ -526,7 +526,6 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
     sessionsHasMore,
   ]);
 
-  // Estimate item size based on type
   const estimateSize = useCallback(
     (index: number) => {
       const item = virtualItems[index];
@@ -557,7 +556,6 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
 
   useEffect(() => rowVirtualizer.measure(), [sessionHeight, rowVirtualizer]);
 
-  // Get virtual items for dependency tracking
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualRowsLength = virtualRows.length;
 
