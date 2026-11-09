@@ -1100,7 +1100,7 @@ export const CreateTeamDialog = ({
   ]);
 
   useEffect(() => {
-    if (submissionFence.busy) return;
+    if (submissionFence.busy || (open && !active)) return;
     if (
       !open ||
       !canCreate ||
@@ -1352,7 +1352,7 @@ export const CreateTeamDialog = ({
     });
     prepareIdleHandlesRef.current.add(idleHandle);
   }, [
-    open,
+    open, active,
     canCreate,
     launchTeam,
     prepareState,
