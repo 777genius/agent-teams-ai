@@ -111,7 +111,19 @@ export function isOpenCodeDirectUserPromptDelivery(
   return ledgerRecord?.replyRecipient?.trim().toLowerCase() === 'user';
 }
 
+function isOpenCodeConfiguredLeadReply(
+  record: OpenCodePromptDeliveryLedgerRecord | null | undefined,
+  configuredLeadName: string | null | undefined
+): boolean {
+  const recipient = record?.replyRecipient?.trim().toLowerCase();
+  return Boolean(
+    recipient && configuredLeadName?.trim() &&
+    recipient === configuredLeadName.trim().toLowerCase()
+  );
+}
+
 export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
+  configuredLeadName?: string | null;
   actionMode?: AgentActionMode;
   taskRefs?: TaskRef[];
   visibleReply?: OpenCodeVisibleReplyProof | null;
@@ -129,7 +141,27 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
       ) && input.taskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs)
     );
   }
-  const preview = input.ledgerRecord?.observedAssistantPreview?.trim();
+  const record = input.ledgerRecord;
+  if (
+    record &&
+    (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
+      isOpenCodeConfiguredLeadReply(record, input.configuredLeadName))
+  ) {
+    const destination = input.configuredLeadName?.trim().toLowerCase();
+    const proof = input.visibleReply;
+    return Boolean(
+      destination && proof &&
+      record.visibleReplyInbox?.trim().toLowerCase() === destination &&
+      record.visibleReplyMessageId?.trim() === proof.message.messageId &&
+      proof.inboxName.trim().toLowerCase() === destination &&
+      proof.message.to.trim().toLowerCase() === destination &&
+      proof.message.from.trim().toLowerCase() === record.memberName.trim().toLowerCase() &&
+      proof.message.relayOfMessageId === record.inboxMessageId &&
+      proof.message.source === 'runtime_delivery' &&
+      input.taskRefsIncludeAll(proof.message.taskRefs, input.taskRefs)
+    );
+  }
+  const preview = record?.observedAssistantPreview?.trim();
   if (!preview) {
     return true;
   }
@@ -185,6 +217,7 @@ function hasExactCompletedSilentChild(input: {
 }
 
 export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
+  configuredLeadName?: string | null;
   hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   teamName?: string;
   memberName?: string;
@@ -232,6 +265,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   if (
     record &&
     classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report' &&
+    !isOpenCodeConfiguredLeadReply(record, input.configuredLeadName) &&
     record.messageKind !== 'member_work_sync_nudge' &&
     record.runtimeSessionId?.trim() &&
     input.teamName === record.teamName &&
@@ -255,7 +289,10 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   // any assistant response fulfils them. Demanding progress proof or a
   // semantically sufficient answer here re-prompted members for messages that
   // asked nothing of them, and every retry cost another model turn.
-  if (isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient)) {
+  if (
+    isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient) &&
+    !isOpenCodeConfiguredLeadReply(input.ledgerRecord, input.configuredLeadName)
+  ) {
     return true;
   }
   if (state === 'responded_plain_text') {
