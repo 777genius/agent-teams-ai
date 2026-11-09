@@ -1446,6 +1446,51 @@ test('late executable alias during a suspended V2 native probe cannot renew auth
     }
   });
 
+test('native progress callback cannot expose a V2 lease before its own admission fence settles',
+  async () => {
+    const { captured, calls } = owner(true);
+    let provider!: ReturnType<typeof createOpenCodeV2MemberProvider>;
+    let driver: { checkpoint: () => unknown } | undefined;
+    const snapshots: Array<{ ready: boolean; evidence: boolean; checkpoint?: unknown }> = [];
+    const capturedContext = {
+      ...context(),
+      onProgress: () => {
+        // The callback is invoked after native attestations, but BEFORE the
+        // current probe removes its pending fence. It may synchronously re-enter
+        // public Host controls and must not observe an authorized native lease.
+        snapshots.push({
+          ready: provider.isReady(),
+          evidence: provider.initialContextEvidence?.() !== undefined,
+          ...(driver === undefined ? {} : { checkpoint: driver.checkpoint() }),
+        });
+      },
+    };
+    provider = createOpenCodeV2MemberProvider(capturedContext, captured);
+    const opened = await provider.factory.open(request());
+    driver = opened.driver;
+    try {
+      assert.deepEqual(snapshots, [{ ready: false, evidence: false }],
+        'a progress callback is not evidence of a completed initial admission');
+      assert.equal(provider.isReady(), true, 'readiness is visible after initial probe settles');
+      assert.notEqual(provider.initialContextEvidence?.(), undefined);
+
+      const check = await opened.driver.checkReadiness();
+      assert.equal(check.ok, true);
+      assert.deepEqual(snapshots[1], {
+        ready: false, evidence: false,
+        checkpoint: { ok: false, code: 'unavailable' },
+      }, 'a reentrant callback cannot checkpoint during a still-pending native re-attestation');
+      assert.equal(provider.isReady(), true, 'settled re-attestation restores the same owner');
+      assert.equal(snapshots.length, 2, 'only the original native probes can report progress');
+      assert.equal(calls.context, 1, 'no duplicate initial native context mutation');
+      assert.equal(calls.stop, 0, 'in-flight fencing alone must not kill the owned native process');
+    } finally {
+      assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+      assert.equal(await provider.cleanup(), true);
+      assert.equal(calls.stop, 1);
+    }
+  });
+
 test('pending native V2 re-attestation fences concurrent controls without retiring owner',
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);

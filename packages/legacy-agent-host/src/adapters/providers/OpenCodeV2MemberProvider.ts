@@ -158,6 +158,13 @@ export function createOpenCodeV2MemberProvider(
     return checking;
   };
 
+  // A successful probe callback is not yet an admitted Host lease: another
+  // native re-attestation can still be in flight, and onProgress can re-enter
+  // the public provider before the probe's finally block releases its fence.
+  // Never expose readiness, a checkpoint or a native mutation until ALL
+  // native readbacks for the captured owner have settled.
+  const admissionSettled = () => ready && pendingReattestations.size === 0;
+
   const factory = createOpenCodeV2DriverFactory({
     capabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'],
     readCheckpoint: (reference, request) => context.readCheckpoint(reference, request),
@@ -328,7 +335,7 @@ export function createOpenCodeV2MemberProvider(
                 // A leaked session handle must not submit after the Host
                 // revokes its generation/lease or seals the owned process.
                 const authorized = current();
-                if (!ready || !authorized) {
+                if (!admissionSettled() || !authorized) {
                   // A concurrent native re-attestation makes ready transiently false.
                   // Fence this operation, but never stop a healthy owned PID unless
                   // its actual Host authority has been revoked.
@@ -356,7 +363,7 @@ export function createOpenCodeV2MemberProvider(
                 // was already committed while effective policy was unproven.
                 // Quarantine this capture: UNKNOWN delivery must not silently
                 // become eligible for a later dispatch if readiness recovers.
-                if (reply.ok && (!ready || readinessEpoch !== dispatchedEpoch)) {
+                if (reply.ok && (!admissionSettled() || readinessEpoch !== dispatchedEpoch)) {
                   if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   return { ok: false as const, code: 'unknown' as const };
                 }
@@ -512,7 +519,7 @@ export function createOpenCodeV2MemberProvider(
                 // V2 permission replies are native mutations. Never let a
                 // retained driver handle grant after Host seal/lease loss.
                 const authorized = current();
-                if (!ready || !authorized) {
+                if (!admissionSettled() || !authorized) {
                   // A concurrent native re-attestation makes ready transiently false.
                   // Fence this operation, but never stop a healthy owned PID unless
                   // its actual Host authority has been revoked.
@@ -529,7 +536,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                   // A potentially applied permission during unproven
                   // re-attestation cannot be reopened for later dispatch.
-                  if (result.ok && (!ready || readinessEpoch !== dispatchedEpoch)) {
+                  if (result.ok && (!admissionSettled() || readinessEpoch !== dispatchedEpoch)) {
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                     return { ok: false as const, code: 'unknown' as const };
                   }
@@ -543,7 +550,7 @@ export function createOpenCodeV2MemberProvider(
               },
               interrupt: async (operation) => {
                 const authorized = current();
-                if (!ready || !authorized) {
+                if (!admissionSettled() || !authorized) {
                   // A concurrent native re-attestation makes ready transiently false.
                   // Fence this operation, but never stop a healthy owned PID unless
                   // its actual Host authority has been revoked.
@@ -561,7 +568,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                   // An interrupt ACK during re-attestation can be applied
                   // without a current policy proof: quarantine this capture.
-                  if (result.ok && (!ready || readinessEpoch !== dispatchedEpoch)) {
+                  if (result.ok && (!admissionSettled() || readinessEpoch !== dispatchedEpoch)) {
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                     return { ok: false as const, code: 'unknown' as const };
                   }
@@ -575,7 +582,7 @@ export function createOpenCodeV2MemberProvider(
               },
               checkReadiness: async () => {
                 const authorized = current();
-                if (!ready || !authorized) {
+                if (!admissionSettled() || !authorized) {
                   // A concurrent native re-attestation makes ready transiently false.
                   // Fence this operation, but never stop a healthy owned PID unless
                   // its actual Host authority has been revoked.
@@ -597,7 +604,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                   // A concurrent native re-attestation may have fenced this
                   // handle without revoking its captured process.
-                  if (!ready) return { ok: false as const, code: 'unavailable' as const };
+                  if (!admissionSettled()) return { ok: false as const, code: 'unavailable' as const };
                   if (!result.ok) {
                     if (!await finishOwned()) throw new Error('opencode.v2.owner-cleanup-unknown');
                   }
@@ -607,7 +614,7 @@ export function createOpenCodeV2MemberProvider(
                   throw error;
                 }
               },
-              checkpoint: () => ready && current() ? source.checkpoint() :
+              checkpoint: () => admissionSettled() && current() ? source.checkpoint() :
                 { ok: false as const, code: 'unavailable' as const },
               close: async () => {
                 // Retire the captured TEST-owned native process immediately.
@@ -636,8 +643,8 @@ export function createOpenCodeV2MemberProvider(
         }
       },
     },
-    isReady: () => ready && current(),
-    initialContextEvidence: () => ready && current() ? initialEvidence : undefined,
+    isReady: () => admissionSettled() && current(),
+    initialContextEvidence: () => admissionSettled() && current() ? initialEvidence : undefined,
     seal: () => {
       sealed = true;
       ready = false;
