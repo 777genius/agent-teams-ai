@@ -531,6 +531,38 @@ test('actual native custody must match captured executable, digest, protocol and
   }
 });
 
+test('a reused mutable custody readback cannot hide a native PID or binary swap', async () => {
+  // TEST owner accidentally returns the SAME object from both reads. A later
+  // mutation must not make the original identity comparison follow the swap.
+  for (const mutation of ['pid', 'binary'] as const) {
+    const { captured, calls } = owner(true);
+    const sharedReadback = { ...testNativeCustody() };
+    captured.readNativeCustody = async () => sharedReadback;
+    captured.readNativeEffectivePermissions = async () => {
+      calls.permissions++;
+      if (calls.permissions === 2) {
+        if (mutation === 'pid') {
+          sharedReadback.pid++;
+          sharedReadback.startIdentity = 'TEST-start-swapped';
+        } else {
+          sharedReadback.executableSha256 = 'b'.repeat(64);
+        }
+      }
+      return [{ action: 'external_directory', resource: '*', effect: 'deny' }];
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    await assert.rejects(() => provider.factory.open(request()),
+      /opencode.driver.dependency-unavailable/,
+      'a mutated owner readback must not admit an unpinned native engine');
+    assert.equal(calls.permissions, 2, 'mutation occurs after initial admission readback');
+    assert.equal(calls.context, 1, 'native context is never installed twice');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1, 'only this TEST owner is retired');
+    assert.equal(await provider.cleanup(), true);
+  }
+});
+
 test('V2 Host revokes a ready capture when the actual PID/start identity changes', async () => {
   const { captured, calls } = owner(true);
   let custody = testNativeCustody();

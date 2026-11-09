@@ -214,7 +214,19 @@ export function createOpenCodeV2MemberProvider(
                 (pinnedProcessIdentity !== undefined &&
                   (custody.pid !== pinnedProcessIdentity.pid ||
                    custody.startIdentity !== pinnedProcessIdentity.startIdentity))) return false;
-            pinnedProcessIdentity ??= { pid: custody.pid, startIdentity: custody.startIdentity };
+            // The owner may reuse a mutable readback object. Snapshot the
+            // admission values before further awaits so a process/hash swap
+            // cannot relabel the first custody read as the final one.
+            const admittedCustody = Object.freeze({
+              executablePath: custody.executablePath,
+              executableSha256: custody.executableSha256,
+              version: custody.version,
+              pid: custody.pid,
+              startIdentity: custody.startIdentity,
+            });
+            pinnedProcessIdentity ??= {
+              pid: admittedCustody.pid, startIdentity: admittedCustody.startIdentity,
+            };
             // Source-only candidate plus owner-supplied native readback. The
             // production owner still must prove genuine engine custody and
             // cannot claim qualification from a scripted TEST receipt.
@@ -249,11 +261,11 @@ export function createOpenCodeV2MemberProvider(
                 combined.aborted || !current()) return false;
             const finalCustody = await owned.readNativeCustody(combined);
             if (!finalCustody || combined.aborted || !current() ||
-                finalCustody.executablePath !== custody.executablePath ||
-                finalCustody.executableSha256 !== custody.executableSha256 ||
-                finalCustody.version !== custody.version ||
-                finalCustody.pid !== custody.pid ||
-                finalCustody.startIdentity !== custody.startIdentity) return false;
+                finalCustody.executablePath !== admittedCustody.executablePath ||
+                finalCustody.executableSha256 !== admittedCustody.executableSha256 ||
+                finalCustody.version !== admittedCustody.version ||
+                finalCustody.pid !== admittedCustody.pid ||
+                finalCustody.startIdentity !== admittedCustody.startIdentity) return false;
             initialEvidence = {
               kind: 'native-configuration', contextDigest,
               generation: context.endpoint.binding.generation,
