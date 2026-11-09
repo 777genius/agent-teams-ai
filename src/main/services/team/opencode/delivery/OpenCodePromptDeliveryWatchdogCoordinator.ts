@@ -135,8 +135,13 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     visibleReply?: OpenCodeVisibleReplyProof | null;
     ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
   }): Promise<boolean> {
+    const configuredLeadName =
+      input.teamName && input.ledgerRecord && !input.ledgerRecord.groupChatId
+        ? await this.ports.visibleReplyProofService.getConfiguredLeadName(input.teamName)
+        : null;
     return isOpenCodeDeliveryResponseReadCommitAllowed({
       ...input,
+      configuredLeadName,
       hasAcknowledgedInbound: this.ports.hasAcknowledgedInbound,
       hasAcceptedMemberWorkSyncReport: (report) =>
         this.ports.hasAcceptedMemberWorkSyncReport(report),
