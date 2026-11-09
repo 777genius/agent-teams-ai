@@ -63,7 +63,7 @@ export function messageSegments(
   messages: JsonValue[],
   itemBudget: number
 ): Extract<Segment, { kind: 'message' }>[] {
-  const segments: Segment[] = [];
+  const segments: Extract<Segment, { kind: 'message' }>[] = [];
   for (const [index, value] of messages.entries()) {
     if (Buffer.byteLength(JSON.stringify(value)) + 2 <= itemBudget) {
       segments.push({ kind: 'message', value, part: { index, part: 0, total: 1 } });
