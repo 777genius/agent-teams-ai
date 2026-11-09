@@ -686,6 +686,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${effectiveTeamName}`, value);
   };
+  // A hidden legacy runtime (e.g. Gemini) is displayed using the supported
+  // one-shot picker. Selecting a model/effort/fast mode is an explicit switch
+  // to that displayed provider, not a cross-provider model override.
+  const markDisplayedProviderAsEdited = (): void => {
+    if (isSchedule && isEditing && schedule?.launchConfig.providerId !== selectedProviderId) {
+      Object.assign(scheduleRuntimeEditedRef.current, {
+        provider: true, model: true, effort: true, fastMode: true,
+      });
+    }
+  };
   const setSelectedProviderId = (value: TeamProviderId): void => {
     hydrationRef.current.dirty = true;
     if (isSchedule) Object.assign(scheduleRuntimeEditedRef.current, {
@@ -712,6 +722,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
   };
   const setSelectedModel = (value: string): void => {
+    markDisplayedProviderAsEdited();
     hydrationRef.current.dirty = true;
     if (isSchedule) Object.assign(scheduleRuntimeEditedRef.current, { model: true, effort: true });
     const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
@@ -743,6 +754,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const setSelectedEffort = (value: string): void => {
     // Always an explicit user choice, including Default (''); programmatic clears
     // go through autoResetSelectedEffort instead.
+    markDisplayedProviderAsEdited();
     if (isSchedule) scheduleRuntimeEditedRef.current.effort = true;
     hydrationRef.current.dirty = true;
     setSelectedEffortRaw(value);
@@ -756,6 +768,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedFastMode = (value: TeamFastMode): void => {
+    markDisplayedProviderAsEdited();
     if (isSchedule) scheduleRuntimeEditedRef.current.fastMode = true;
     hydrationRef.current.dirty = true;
     setSelectedFastModeRaw(value);
