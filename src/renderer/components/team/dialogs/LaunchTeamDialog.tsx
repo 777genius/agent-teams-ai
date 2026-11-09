@@ -91,6 +91,7 @@ import {
   resolveScheduleLaunchConfig,
 } from '../schedule/resolveScheduleLaunchConfig';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
+import { useSavedPromptReview } from '../schedule/useSavedPromptReview';
 import { validateScheduleForm } from '../schedule/validateScheduleForm';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
@@ -398,7 +399,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const [scheduleTargetMember, setScheduleTargetMember] = useState('');
   const [scheduleFormTouched, setScheduleFormTouched] = useState(false);
-  const [savedPromptReview, setSavedPromptReview] = useState<{teamName: string; prompt: string; confirmed: boolean} | null>(null);
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
@@ -407,28 +407,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const scheduleRuntimeEditedRef = useRef({
     provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
   });
-  useEffect(() => setSavedPromptReview(null), [effectiveTeamName, schedule?.id, open]);
-  // Show existing one-time startup instructions before Save, not after a failed attempt.
-  useEffect(() => {
-    if (!open || !isTaskFirstSchedule || !effectiveTeamName) return;
-    let cancelled = false;
-    void api.teams.getSavedRequest(effectiveTeamName).then((saved) => {
-      if (cancelled) return;
-      const prompt = saved?.prompt?.trim() ?? '';
-      if (!prompt) {
-        setSavedPromptReview(null);
-        return;
-      }
-      setSavedPromptReview((current) =>
-        current?.teamName === effectiveTeamName && current.prompt === prompt
-          ? current
-          : { teamName: effectiveTeamName, prompt, confirmed: schedule?.reviewedSavedPrompt === true }
-      );
-    }).catch(() => {
-      // Submission still performs an authoritative read and reports failures.
-    });
-    return () => { cancelled = true; };
-  }, [effectiveTeamName, isTaskFirstSchedule, open, schedule?.reviewedSavedPrompt]);
+  const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({
+    open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,
+    scheduleId: schedule?.id, reviewed: schedule?.reviewedSavedPrompt === true,
+  });
   // A newly selected team must not inherit the former team's target member.
   useEffect(() => {
     if (isSchedule && !isEditing) setScheduleTargetMember('');
