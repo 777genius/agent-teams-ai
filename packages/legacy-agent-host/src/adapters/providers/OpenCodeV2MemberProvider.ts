@@ -81,8 +81,7 @@ export function createOpenCodeV2MemberProvider(
   const originalEndpointBinding = runtimeDigest(context.endpoint.binding);
   const originalProfile = runtimeDigest(context.profile);
   const capturedInstructions = context.instructions;
-  const profile = structuredClone(context.profile);
-  const selected = profile;
+  const selected = structuredClone(context.profile);
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
   const inheritedBinaryOverride = () => hasUntrustedOpenCodeBinaryOverride(process.env);
@@ -104,6 +103,9 @@ export function createOpenCodeV2MemberProvider(
       selected.mcpCatalogSource || selected.nativeOptions.toolApprovalMode !== undefined ||
       (selected.extraArgs?.length ?? 0) !== 0)
     throw new Error('OpenCode V2 requires a separate native profile and owner');
+
+  // Retain TS's discriminated V2 narrowing from the validated selection.
+  const profile = selected;
 
   // Capture the required product policy ONCE. A mutable owner object must
   // never turn an original external-directory deny into a later ask.
