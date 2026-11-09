@@ -200,6 +200,8 @@ const storeState = {
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
   fetchCliStatus: vi.fn().mockResolvedValue(undefined),
   invalidateCliStatus: vi.fn().mockResolvedValue(undefined),
+  invalidateOpenCodeRuntimeStatus: vi.fn().mockResolvedValue(undefined),
+  invalidateCodexRuntimeStatus: vi.fn().mockResolvedValue(undefined),
   openSettingsTab: vi.fn(),
   openCodeRuntimeStatus: null as OpenCodeRuntimeStatus | null,
   openCodeRuntimeStatusLoading: false,
@@ -359,6 +361,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
     expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
     expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCodexRuntimeStatus).toHaveBeenCalledTimes(1);
     expect(refresh?.disabled).toBe(true);
     await act(async () => refresh?.click());
     expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
@@ -703,6 +709,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.fetchCliProviderStatus.mockReset().mockResolvedValue(undefined);
     storeState.fetchCliStatus.mockReset().mockResolvedValue(undefined);
     storeState.invalidateCliStatus.mockReset().mockResolvedValue(undefined);
+    storeState.invalidateOpenCodeRuntimeStatus.mockReset().mockResolvedValue(undefined);
+    storeState.invalidateCodexRuntimeStatus.mockReset().mockResolvedValue(undefined);
     storeState.openSettingsTab.mockClear();
     storeState.openCodeRuntimeStatus = null;
     storeState.openCodeRuntimeStatusLoading = false;
