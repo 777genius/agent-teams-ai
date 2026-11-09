@@ -165,6 +165,8 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
       const text = await input.ports.readExactAssistantText?.({
         teamName: input.teamName, memberName: input.memberName, laneId: record.laneId,
         runId, sessionId, assistantMessageId,
+        expectedReplyRecipient: destination,
+        expectedRelayOfMessageId: record.inboxMessageId,
         ...(hasOpenCodeObservedMessageSendToolCall(record)
           ? {
               requireFailedMessageSendProof: true,

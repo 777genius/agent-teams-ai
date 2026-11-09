@@ -1,4 +1,4 @@
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadMember, isLeadNameAlias } from '@shared/utils/leadDetection';
 
 import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
 import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
@@ -37,6 +37,20 @@ function isOpenCodeMessageSendTool(name: string): boolean {
   return /(?:^|[_-])(message_send|group_chat_send)$/.test(name.toLowerCase());
 }
 
+/** A send to another explicit recipient/origin cannot satisfy this lead inbox. */
+function isUnrelatedOpenCodeSend(
+  input: Record<string, unknown>,
+  expectedRecipient?: string,
+  expectedRelayOfMessageId?: string
+): boolean {
+  const to = typeof input.to === 'string' ? input.to.trim().toLowerCase() : '';
+  const recipient = expectedRecipient?.trim().toLowerCase();
+  if (!to || !recipient) return false;
+  if (to !== recipient && !isLeadNameAlias(to)) return true;
+  const relay = typeof input.relayOfMessageId === 'string' ? input.relayOfMessageId.trim() : '';
+  return Boolean(relay && expectedRelayOfMessageId && relay !== expectedRelayOfMessageId);
+}
+
 /**
  * Ledger tool history may include older turns. For the exact accepted
  * prompt, require every message_send to have a correlated error result.
@@ -46,7 +60,9 @@ function hasNoPotentiallySuccessfulOpenCodeSends(
   messages: readonly OpenCodeRuntimeTranscriptLogMessage[],
   sessionId: string,
   promptMessageId: string,
-  assistantMessageId: string
+  assistantMessageId: string,
+  expectedRecipient?: string,
+  expectedRelayOfMessageId?: string
 ): boolean {
   const promptPositions = messages.flatMap((message, i) =>
     message.uuid === promptMessageId && message.sessionId === sessionId &&
@@ -72,6 +88,9 @@ function hasNoPotentiallySuccessfulOpenCodeSends(
       message.sessionId === sessionId)
     .flatMap(message => message.toolCalls
       .filter(call => isOpenCodeMessageSendTool(call.name))
+      .filter(call => !isUnrelatedOpenCodeSend(
+        call.input, expectedRecipient, expectedRelayOfMessageId
+      ))
       .map(call => ({ assistantId: message.uuid, callId: call.id.trim() })));
   // A stale ledger tool name must not block a newer text-only assistant turn.
   if (sends.length === 0) return true;
@@ -92,7 +111,12 @@ export function readOpenCodeExactAssistantText(
   transcript: Awaited<ReturnType<ClaudeMultimodelBridgeService['getOpenCodeTranscript']>>,
   sessionId: string,
   assistantMessageId: string,
-  options?: { requireFailedMessageSendProof?: boolean; runtimePromptMessageId?: string }
+  options?: {
+    requireFailedMessageSendProof?: boolean;
+    runtimePromptMessageId?: string;
+    expectedReplyRecipient?: string;
+    expectedRelayOfMessageId?: string;
+  }
 ): string | null {
   if (transcript?.sessionId !== sessionId) return null;
   const matches = (transcript.logProjection?.messages ?? []).filter(
@@ -107,7 +131,8 @@ export function readOpenCodeExactAssistantText(
   if (options?.requireFailedMessageSendProof) {
     const promptId = options.runtimePromptMessageId?.trim();
     if (!promptId || !hasNoPotentiallySuccessfulOpenCodeSends(
-      messages, sessionId, promptId, assistantMessageId
+      messages, sessionId, promptId, assistantMessageId,
+      options.expectedReplyRecipient, options.expectedRelayOfMessageId
     )) return null;
   } else if (hasSendInAnswer) {
     // A send without independently confirmed failure may have written the inbox.
@@ -140,6 +165,8 @@ export function createOpenCodeVisibleReplyProofServiceFromHost(
       return readOpenCodeExactAssistantText(transcript, input.sessionId, input.assistantMessageId, {
         requireFailedMessageSendProof: input.requireFailedMessageSendProof,
         runtimePromptMessageId: input.runtimePromptMessageId,
+        expectedReplyRecipient: input.expectedReplyRecipient,
+        expectedRelayOfMessageId: input.expectedRelayOfMessageId,
       });
     },
     sendGroupChatReply: options.sendGroupChatReply ?? service.sendGroupChatReply,

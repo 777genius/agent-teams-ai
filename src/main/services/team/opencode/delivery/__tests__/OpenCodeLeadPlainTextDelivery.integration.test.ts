@@ -402,6 +402,50 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       'ses-current', 'send-id')).toBeNull();
   });
 
+  it('allows a text answer to the lead after a separate peer message_send', () => {
+    const prompt = { ...transcriptMessage('prompt-lead', 'lead request'),
+      type: 'user' as const, role: 'user' };
+    const peerSend = {
+      ...transcriptMessage('peer-send', ''),
+      toolCalls: [{
+        id: 'call-peer', name: 'agent-teams_message_send', isTask: false,
+        input: { to: 'alice', relayOfMessageId: 'peer-origin' },
+      }],
+    };
+    const answer = transcriptMessage('answer-lead', 'Complete answer to captain.');
+    const projection = (messages: unknown[]) => ({
+      sessionId: 'ses-current', logProjection: { messages },
+    }) as OpenCodeRuntimeTranscriptResponse['transcript'];
+    const options = {
+      requireFailedMessageSendProof: true,
+      runtimePromptMessageId: 'prompt-lead',
+      expectedReplyRecipient: 'captain',
+      expectedRelayOfMessageId: 'msg-lead',
+    };
+    expect(readOpenCodeExactAssistantText(
+      projection([prompt, peerSend, answer]), 'ses-current', 'answer-lead', options
+    )).toBe('Complete answer to captain.');
+    // Without a recipient, a tool may have written to the lead. Fail closed.
+    const unknown = { ...peerSend, toolCalls: [{
+      ...peerSend.toolCalls[0], input: {},
+    }] };
+    expect(readOpenCodeExactAssistantText(
+      projection([prompt, unknown, answer]), 'ses-current', 'answer-lead', options
+    )).toBeNull();
+    const leadSend = { ...peerSend, toolCalls: [{
+      ...peerSend.toolCalls[0], input: { to: 'captain', relayOfMessageId: 'msg-lead' },
+    }] };
+    expect(readOpenCodeExactAssistantText(
+      projection([prompt, leadSend, answer]), 'ses-current', 'answer-lead', options
+    )).toBeNull();
+    const otherOrigin = { ...peerSend, toolCalls: [{
+      ...peerSend.toolCalls[0], input: { to: 'captain', relayOfMessageId: 'different-origin' },
+    }] };
+    expect(readOpenCodeExactAssistantText(
+      projection([prompt, otherOrigin, answer]), 'ses-current', 'answer-lead', options
+    )).toBe('Complete answer to captain.');
+  });
+
   it('does not confuse a stale ledger message_send with a send in the current turn', () => {
     const oldPrompt = { ...transcriptMessage('old-prompt', ''), type: 'user' as const, role: 'user' };
     const oldSend = {

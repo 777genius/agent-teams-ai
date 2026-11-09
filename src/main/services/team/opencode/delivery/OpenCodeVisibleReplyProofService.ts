@@ -62,9 +62,10 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
     runId: string;
     sessionId: string;
     assistantMessageId: string;
-    /** When a send was observed, never synthesize a second reply without an error receipt. */
     requireFailedMessageSendProof?: boolean;
     runtimePromptMessageId?: string;
+    expectedReplyRecipient?: string;
+    expectedRelayOfMessageId?: string;
   }) => Promise<string | null>;
   emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName: string, message: InboxMessage) => void;
   warn: (message: string) => void;
@@ -630,8 +631,7 @@ export class OpenCodeVisibleReplyProofService {
           ),
       });
     }
-    // Work-sync nudges require an accepted status/report tool receipt, not
-    // a synthesized chat answer. Keep their existing proof contract intact.
+    // Work-sync nudges need an accepted status/report receipt, never a chat echo.
     if (input.ledgerRecord.messageKind === 'member_work_sync_nudge') {
       return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply ?? null };
     }
