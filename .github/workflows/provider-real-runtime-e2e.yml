@@ -6,12 +6,18 @@ on:
     branches: [main]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
+      - 'scripts/e2e/opencode-diagnostics/run.mjs'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
+      - 'scripts/e2e/opencode-diagnostics/run.mjs'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
 
@@ -47,7 +53,7 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Verify pure provider-count contract
-        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts scripts/e2e/opencode-diagnostics/real-runtime.test.mjs
+        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts scripts/e2e/opencode-diagnostics/real-runtime.test.mjs scripts/e2e/opencode-diagnostics/startup-resources.test.mjs
       - name: Install genuine OpenCode V1 in runner-owned scratch
         shell: bash
         run: |
@@ -92,6 +98,14 @@ jobs:
           path: |
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
+      - name: Preserve owned startup resource samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-startup-resources-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/opencode-diagnostics-e2e-*/startup-resource-metrics.json
       - name: Preserve sanitized count and timing evidence
         if: always()
         uses: actions/upload-artifact@v4
