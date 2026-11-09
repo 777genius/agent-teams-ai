@@ -1144,6 +1144,8 @@ export class OpenCodeMemberMessageDeliveryService {
             send,
           }),
         sendMessage: async () => {
+          const knownPeerRecipient = (await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient?.(
+            teamName, input.replyRecipient ?? '')) ?? false;
           assertCurrentRun();
           admissionRequired = false;
           if (ledgerRecord?.groupChatId && ledger)
@@ -1151,9 +1153,7 @@ export class OpenCodeMemberMessageDeliveryService {
           assertCurrentRun();
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
-            knownPeerRecipient: (await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient?.(
-              teamName, input.replyRecipient ?? ''
-            )) ?? false,
+            knownPeerRecipient,
             deliveryAttemptId,
             fileParts: openCodeFileParts,
             controlUrl: controlUrl ?? undefined,
