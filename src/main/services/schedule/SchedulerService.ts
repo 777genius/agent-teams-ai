@@ -171,7 +171,6 @@ export class SchedulerService {
   // ===========================================================================
   // CRUD
   // ===========================================================================
-
   async listSchedules(): Promise<Schedule[]> {
     return this.repository.listSchedules();
   }
@@ -187,11 +186,15 @@ export class SchedulerService {
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
     assertSupportedScheduledTeam(input.teamName);
     await this.smartDispatcher?.assertCanSchedule(input);
+    if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
+      throw new Error('Task-first schedule requires agent or team executionMode');
+    }
     const now = new Date().toISOString();
     const schedule: Schedule = {
       id: randomUUID(),
       teamName: input.teamName,
       ...(input.executionMode && { executionMode: input.executionMode }),
+      ...(input.taskFirst && { taskFirst: true as const, reviewedSavedPrompt: input.reviewedSavedPrompt }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
       cronExpression: input.cronExpression,
@@ -206,10 +209,7 @@ export class SchedulerService {
       updatedAt: now,
       launchConfig: input.launchConfig,
     };
-
-    // Compute nextRunAt before saving
     schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
-
     await this.repository.saveSchedule(schedule);
     this.createCronJob(schedule);
 
@@ -230,11 +230,13 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
     assertSupportedScheduledTeam(existing.teamName);
+    if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
 
     const updated: Schedule = {
       ...existing,
       ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
       ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
+      ...(patch.reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
       ...(patch.label !== undefined && { label: patch.label }),
       ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
       ...(patch.timezone !== undefined && { timezone: patch.timezone }),
@@ -379,7 +381,6 @@ export class SchedulerService {
   // ===========================================================================
   // Trigger Now
   // ===========================================================================
-
   async triggerNow(id: string): Promise<ScheduleRun> {
     const schedule = await this.repository.getSchedule(id);
     if (!schedule) {
@@ -624,7 +625,7 @@ export class SchedulerService {
           };
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
-        await this.completeRun(run, outcome.kind, null, outcome.summary);
+        await this.completeRun(run, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
         if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
         const result = outcome.result;
@@ -674,7 +675,6 @@ export class SchedulerService {
       }
     }
   }
-
 
   /**
    * Handle a failed run. Returns `true` if a retry was dispatched
@@ -747,11 +747,12 @@ export class SchedulerService {
     status: ScheduleRunStatus,
     exitCode: number | null,
     summary?: string,
-    error?: string
+    error?: string,
+    linkedTaskId?: string
   ): Promise<void> {
     await completeScheduleRun(
       this.repository, (event) => this.emitChange(event),
-      run, status, exitCode, summary, error
+      run, status, exitCode, summary, error, linkedTaskId
     );
   }
 
@@ -830,7 +831,6 @@ export class SchedulerService {
   // ===========================================================================
   // Helpers
   // ===========================================================================
-
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);

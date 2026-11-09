@@ -201,7 +201,29 @@
           "system": "Systeem"
         }
       },
-      "title": "Weergave"
+      "title": "Weergave",
+      "customThemes": {
+        "label": "Aangepaste thema's",
+        "description": "JSON-kleurenpaletten met naam, gebaseerd op licht of donker.",
+        "none": "Ingebouwd thema",
+        "edit": "JSON bewerken",
+        "localOnly": "Thema's en schaal worden alleen op dit apparaat of in deze browser bewaard.",
+        "editor": {
+          "title": "Thema's bewerken (JSON)",
+          "description": "Bewerk maximaal 8 thema's. Kleuren moeten #RRGGBB zijn. Alleen geldige JSON wordt opgeslagen; een lege themes-lijst verwijdert alles.",
+          "cancel": "Annuleren",
+          "save": "Thema's opslaan",
+          "conflict": "Thema's zijn gewijzigd in een ander tabblad. Je JSON-concept blijft behouden; controleer het of overschrijf expliciet de nieuwste thema's.",
+          "overwrite": "Nieuwere thema's overschrijven",
+          "invalidJson": "Ongeldige JSON-syntaxis",
+          "invalidTheme": "Ongeldig themapalet. Controleer velden, kleuren en contrast."
+        }
+      },
+      "uiScale": {
+        "label": "Interfaceschaal",
+        "description": "Schaal de hele app zonder de browser- of systeemzoom te wijzigen.",
+        "reset": "Herstellen"
+      }
     },
     "browserAccess": {
       "serverMode": {

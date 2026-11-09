@@ -11,7 +11,8 @@ export async function completeScheduleRun(
   status: ScheduleRunStatus,
   exitCode: number | null,
   summary?: string,
-  error?: string
+  error?: string,
+  linkedTaskId?: string
 ): Promise<void> {
   const completedAt = new Date().toISOString();
   const durationMs = Date.now() - new Date(run.startedAt).getTime();
@@ -23,6 +24,7 @@ export async function completeScheduleRun(
     exitCode,
     summary: summary ?? run.summary,
     error: error ?? run.error,
+    ...(linkedTaskId ? { linkedTaskId } : {}),
   };
   await repository.saveRun(updatedRun);
   const eventType = status === 'completed' || status === 'dispatched' || status === 'skipped'

@@ -8,6 +8,7 @@
 
 /** IPC event channel emitted by main when zoom changes */
 export const WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL = 'window:zoom-factor-changed';
+export const WINDOW_SET_ZOOM_FACTOR_CHANNEL = 'window:set-zoom-factor';
 
 /** Base traffic-light origin at 100% zoom (native coordinates) */
 const MACOS_TRAFFIC_LIGHT_BASE_POSITION = { x: 12, y: 12 } as const;
