@@ -147,7 +147,7 @@ export const SmartScheduleFields = ({
                 className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${mode === option ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
                 onClick={() => onModeChange(option)}
               >
-                {t(option === 'agent' ? 'launch.schedule.oneAgent' : 'launch.schedule.wholeTeam')}
+                {t(option === 'agent' ? 'launch.schedule.oneAgent' : taskFirst ? 'launch.schedule.taskFirstWholeTeam' : 'launch.schedule.wholeTeam')}
               </button>
             ))}
           </div>

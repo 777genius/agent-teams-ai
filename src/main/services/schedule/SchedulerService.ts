@@ -8,6 +8,7 @@
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
@@ -122,7 +123,7 @@ export class SchedulerService {
     for (const schedule of schedules) {
       if (schedule.status === 'active' && !isHostTeamSelectionKey(schedule.teamName)) {
         this.createCronJob(schedule);
-        activeCount++;
+        if (this.cronJobs.has(schedule.id)) activeCount++;
       }
     }
 
@@ -184,6 +185,9 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    const cronExpression = input.cronExpression.trim();
+    const timezone = input.timezone.trim();
+    getValidScheduleNextRuns(cronExpression, timezone);
     assertSupportedScheduledTeam(input.teamName);
     await this.smartDispatcher?.assertCanSchedule(input);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
@@ -197,8 +201,8 @@ export class SchedulerService {
       ...(input.taskFirst && { taskFirst: true as const, reviewedSavedPrompt: input.reviewedSavedPrompt }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
-      cronExpression: input.cronExpression,
-      timezone: input.timezone,
+      cronExpression,
+      timezone,
       status: 'active',
       warmUpMinutes: input.warmUpMinutes ?? 15,
       maxConsecutiveFailures: 3,
@@ -210,36 +214,40 @@ export class SchedulerService {
       launchConfig: input.launchConfig,
     };
     schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
-    await this.repository.saveSchedule(schedule);
-    this.createCronJob(schedule);
-
+    const job = this.prepareCronJob(schedule);
+    try {
+      await this.repository.saveSchedule(schedule);
+    } catch (error) {
+      job.stop();
+      throw error;
+    }
+    this.activateCronJob(schedule, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: schedule.id,
       teamName: schedule.teamName,
       detail: 'created',
     });
-
     logger.info(`Schedule created: ${schedule.id} for team ${schedule.teamName}`);
     return schedule;
   }
 
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
     assertSupportedScheduledTeam(existing.teamName);
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
-
+    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
+    const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
+    const timezone = (patch.timezone ?? existing.timezone).trim();
+    if (cronChanged) getValidScheduleNextRuns(cronExpression, timezone);
     const updated: Schedule = {
       ...existing,
       ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
       ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
       ...(patch.reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
       ...(patch.label !== undefined && { label: patch.label }),
-      ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
-      ...(patch.timezone !== undefined && { timezone: patch.timezone }),
+      ...(cronChanged && { cronExpression, timezone }),
       ...(patch.warmUpMinutes !== undefined && { warmUpMinutes: patch.warmUpMinutes }),
       ...(patch.maxTurns !== undefined && { maxTurns: patch.maxTurns }),
       ...(patch.maxBudgetUsd !== undefined && { maxBudgetUsd: patch.maxBudgetUsd }),
@@ -248,22 +256,24 @@ export class SchedulerService {
       }),
       updatedAt: new Date().toISOString(),
     };
-
     await this.smartDispatcher?.assertCanSchedule(updated);
 
     // Reschedule cron job if expression or timezone changed
-    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
-
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
-    if (reschedule) {
-      this.removeCronJob(id);
-      if (updated.status === 'active') {
-        updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-        this.createCronJob(updated);
-      }
+    if (reschedule && updated.status === 'active') updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
+    const nextJob = reschedule && updated.status === 'active'
+      ? this.prepareCronJob(updated)
+      : null;
+    try {
+      await this.repository.saveSchedule(updated);
+    } catch (error) {
+      nextJob?.stop();
+      throw error;
     }
-
-    await this.repository.saveSchedule(updated);
+    if (reschedule) {
+      if (nextJob) this.activateCronJob(updated, nextJob);
+      else this.removeCronJob(id);
+    }
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: updated.id,
@@ -276,43 +286,25 @@ export class SchedulerService {
 
   async deleteSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
-
-    // Cancel active run if any
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
+    // Do not stop a live schedule unless the durable deletion succeeds.
+    await this.repository.deleteSchedule(id);
     const activeRun = this.activeRuns.get(id);
-    if (activeRun) {
-      this.executor.cancel(activeRun.id);
-    }
+    if (activeRun) this.executor.cancel(activeRun.id);
     this.removeCronJob(id);
     this.releaseRunLocks(id);
-
-    await this.repository.deleteSchedule(id);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
       teamName: existing.teamName,
       detail: 'deleted',
     });
-
     logger.info(`Schedule deleted: ${id}`);
   }
 
   async pauseSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
-
-    // Pause cron job
-    const job = this.cronJobs.get(id);
-    if (job) {
-      job.pause();
-    }
-
-    // Clear warm-up timer
-    this.clearWarmUpTimer(id);
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
 
     const updated: Schedule = {
       ...existing,
@@ -320,7 +312,10 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
 
+    // Persistence errors must not leave an active record without a live job.
     await this.repository.saveSchedule(updated);
+    this.cronJobs.get(id)?.pause();
+    this.clearWarmUpTimer(id);
     this.emitChange({
       type: 'schedule-paused',
       scheduleId: id,
@@ -332,16 +327,14 @@ export class SchedulerService {
 
   async resumeSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
 
     // A retained Host schedule cannot be armed against the legacy executor.
     assertSupportedScheduledTeam(existing.teamName);
     await this.smartDispatcher?.assertCanSchedule(existing);
-    // Remove old job and recreate to get fresh next-run timing
-    this.removeCronJob(id);
 
+    // A historic invalid schedule must be repaired before it can be resumed.
+    getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
     const updated: Schedule = {
       ...existing,
       status: 'active',
@@ -350,9 +343,14 @@ export class SchedulerService {
     };
 
     updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    this.createCronJob(updated);
-
-    await this.repository.saveSchedule(updated);
+    const job = this.prepareCronJob(updated);
+    try {
+      await this.repository.saveSchedule(updated);
+    } catch (error) {
+      job.stop();
+      throw error;
+    }
+    this.activateCronJob(updated, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
@@ -436,26 +434,28 @@ export class SchedulerService {
   // Cron Job Management
   // ===========================================================================
 
+  /** Prepare the replacement without touching the currently active cron timer. */
+  private prepareCronJob(schedule: Schedule): Cron {
+    return new Cron(schedule.cronExpression, { timezone: schedule.timezone, paused: true },
+      () => void this.onCronTick(schedule.id));
+  }
+
+  private activateCronJob(schedule: Schedule, job: Cron): void {
+    this.removeCronJob(schedule.id);
+    this.cronJobs.set(schedule.id, job);
+    job.resume();
+    this.scheduleWarmUp(schedule);
+    logger.info(`Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
+      `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`);
+  }
+
+  /** Historic records may be invalid: log and keep the rest of startup running. */
   private createCronJob(schedule: Schedule): void {
     if (isHostTeamSelectionKey(schedule.teamName)) return;
-    if (this.cronJobs.has(schedule.id)) {
-      this.removeCronJob(schedule.id);
-    }
-
     try {
-      const job = new Cron(schedule.cronExpression, { timezone: schedule.timezone }, () => {
-        void this.onCronTick(schedule.id);
-      });
-
-      this.cronJobs.set(schedule.id, job);
-
-      // Set warm-up timer for the next run
-      this.scheduleWarmUp(schedule);
-
-      logger.info(
-        `Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
-          `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`
-      );
+      getValidScheduleNextRuns(schedule.cronExpression, schedule.timezone);
+      const job = this.prepareCronJob(schedule);
+      this.activateCronJob(schedule, job);
     } catch (err) {
       logger.error(`Failed to create cron job for ${schedule.id}: ${err}`);
     }
@@ -784,14 +784,13 @@ export class SchedulerService {
 
     if (shouldAutoPause) {
       logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
-      const job = this.cronJobs.get(schedule.id);
-      if (job) job.pause();
-      this.clearWarmUpTimer(schedule.id);
     }
 
     await this.repository.saveSchedule(updated);
 
     if (shouldAutoPause) {
+      this.cronJobs.get(schedule.id)?.pause();
+      this.clearWarmUpTimer(schedule.id);
       this.emitChange({
         type: 'schedule-paused',
         scheduleId: schedule.id,
