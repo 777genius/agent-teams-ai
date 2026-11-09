@@ -70,6 +70,7 @@ interface LeadModelRowProps {
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  onManageProviders?: TeamModelSelectorProps['onManageProviders'];
   showAnthropicContextLimit?: boolean;
   disableAnthropicContextLimit?: boolean;
   projectPath?: string | null;
@@ -99,6 +100,7 @@ export const LeadModelRow = ({
   modelUnavailableReasonByValue,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  onManageProviders,
   showAnthropicContextLimit = providerId === 'anthropic',
   disableAnthropicContextLimit,
   projectPath,
@@ -304,6 +306,7 @@ export const LeadModelRow = ({
             modelUnavailableReasonByValue={modelUnavailableReasonByValue}
             onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
             onOpenProviderSettings={onOpenProviderSettings}
+            onManageProviders={onManageProviders}
           />
           <EffortLevelSelector
             value={effort ?? ''}

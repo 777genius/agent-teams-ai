@@ -848,7 +848,7 @@ const InstalledBanner = ({
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
-  const { summary: sharedConnectionSummary, multimodelEnabled } = useProviderConnectionSummary(cliStatus);
+  const { summary: sharedConnectionSummary, multimodelEnabled, openCodeIsChecking } = useProviderConnectionSummary(cliStatus);
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
@@ -1027,6 +1027,7 @@ const InstalledBanner = ({
                   cliStatus={cliStatus}
                   cliStatusLoading={cliStatusLoading}
                   multimodelEnabled={multimodelEnabled}
+                  openCodeIsChecking={openCodeIsChecking}
                 />
               ) : runtimeAuthSummary ? (
                 <span className="text-xs" style={{ color: 'var(--color-positive-text)' }}>

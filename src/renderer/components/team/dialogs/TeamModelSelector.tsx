@@ -75,6 +75,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  Settings2,
   Sparkles,
   Star,
   X,
@@ -161,7 +162,6 @@ export {
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
@@ -211,7 +211,6 @@ interface OpenCodeModelGroup {
 }
 type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
 type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
-
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
@@ -227,13 +226,11 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
 interface OpenCodeVirtualHeadingRow {
   kind: 'heading';
   key: string;
   group: OpenCodeModelGroup;
 }
-
 interface OpenCodeVirtualModelRow {
   kind: 'models';
   key: string;
@@ -242,24 +239,19 @@ interface OpenCodeVirtualModelRow {
 }
 type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
 type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
-
 interface OpenCodeModelCostRates {
   input: number | null;
   output: number | null;
   cacheRead: number | null;
   cacheWrite: number | null;
 }
-
 interface OpenCodeModelPricingInfo {
   free: boolean;
   summary: string | null;
   title: string | undefined;
 }
-
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
-
 const MODEL_GRID_RESPONSIVE_HEIGHT_CLASS = 'h-[clamp(320px,calc(100vh-300px),520px)]';
 const OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD = 80;
 const OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX = 38;
@@ -270,7 +262,6 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'codex', label: 'Codex', comingSoon: false },
   { id: 'opencode', label: 'OpenCode', comingSoon: false },
 ];
-
 const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'cursor-acp', label: 'Cursor' },
   { sourceId: 'github-copilot', label: 'GitHub Copilot' },
@@ -280,7 +271,6 @@ const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'zai-coding-plan', label: 'Z.AI' },
   { sourceId: 'minimax-coding-plan', label: 'MiniMax' },
 ] as const;
-
 const OPEN_CODE_ROUTE_FILTER_TAG_ORDER: readonly OpenCodeRouteFilterTag[] = [
   'local',
   'configured',
@@ -306,7 +296,6 @@ const OPEN_CODE_ROUTE_FILTER_TAG_STYLES: Record<
       'border-emerald-600/50 dark:border-emerald-300/50 bg-emerald-500/10 dark:bg-emerald-300/10 text-emerald-800 dark:text-emerald-100',
   },
 };
-
 function getCuratedOpenCodeProviderTab(
   sourceId: string
 ): { sourceId: string; label: string } | null {
@@ -1094,6 +1083,7 @@ export interface TeamModelSelectorProps {
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   onOpenProviderSettings?: (providerId: TeamProviderId) => void;
+  onManageProviders?: (providerId: TeamProviderId) => void;
   onOpenCodeProviderScopedStatusChange?: Parameters<
     typeof usePublishOpenCodeProviderScopedStatus
   >[0];
@@ -1117,10 +1107,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
   onOpenProviderSettings,
+  onManageProviders,
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
+  const { t: dashboardT } = useAppTranslation('dashboard');
   const creationPageActive = useContext(CreateTeamPageActivityContext);
+  const openSettingsTab = useStore((s) => s.openSettingsTab);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const selectedProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -3149,6 +3142,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               aria-label="Model providers"
               className="h-full min-h-full w-full flex-col items-stretch justify-start gap-1 overflow-visible rounded-none border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] p-2"
             >
+              <Button type="button" variant="outline" size="sm" data-testid="team-model-selector-manage-providers"
+                className="mb-1 h-8 w-full justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                onClick={() => { onManageProviders?.(providerId); openSettingsTab('providers'); }}>
+                <Settings2 className="size-4 shrink-0" aria-hidden="true" />
+                {dashboardT('cliStatus.actions.manageProviders')}
+              </Button>
               {PROVIDERS.map((provider) => {
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);
