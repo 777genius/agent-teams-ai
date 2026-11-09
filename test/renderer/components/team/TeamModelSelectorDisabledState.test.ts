@@ -424,6 +424,37 @@ describe('TeamModelSelector disabled Codex models', () => {
     await act(async () => root.unmount());
   });
 
+  it('keeps native CLI auth untouched instead of checking orchestrator providers', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'claude', installed: true, providers: [] };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+        projectPath: '/tmp/native-cli-refresh',
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus.mock.calls.filter(([, options]) =>
+      options?.checkReason === 'manual_refresh'
+    )).toHaveLength(0);
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
   it('reports a provider that resolves to an unsuccessful status check', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
