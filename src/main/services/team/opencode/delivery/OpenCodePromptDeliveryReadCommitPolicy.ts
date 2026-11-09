@@ -158,6 +158,10 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
       proof.message.from.trim().toLowerCase() === record.memberName.trim().toLowerCase() &&
       proof.message.relayOfMessageId === record.inboxMessageId &&
       proof.message.source === 'runtime_delivery' &&
+      isOpenCodeVisibleReplySemanticallySufficient({
+        actionMode: input.actionMode, taskRefs: input.taskRefs,
+        text: proof.message.text, summary: proof.message.summary,
+      }).sufficient &&
       input.taskRefsIncludeAll(proof.message.taskRefs, input.taskRefs)
     );
   }
