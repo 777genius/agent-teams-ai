@@ -15,6 +15,8 @@ on:
       - 'runtime.lock.json'
       - 'src/renderer/components/dashboard/ProviderConnectionCounts.tsx'
       - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
+      - 'src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.ts'
+      - 'src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts'
       - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
       - 'src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts'
 
