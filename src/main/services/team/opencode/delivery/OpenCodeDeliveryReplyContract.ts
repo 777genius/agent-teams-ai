@@ -78,3 +78,15 @@ export function isOpenCodeReplyOptionalDeliveryContract(
   const contract = classifyOpenCodeDeliveryReplyContract(replyRecipient);
   return contract === 'informational' || contract === 'teammate_report';
 }
+
+/** Resolve a configured lead independently of its display-name aliases. */
+export function isOpenCodeConfiguredLeadReply(
+  record: { replyRecipient?: string | null } | null | undefined,
+  configuredLeadName: string | null | undefined
+): boolean {
+  const recipient = record?.replyRecipient?.trim().toLowerCase();
+  return Boolean(
+    recipient && configuredLeadName?.trim() &&
+    recipient === configuredLeadName.trim().toLowerCase()
+  );
+}
