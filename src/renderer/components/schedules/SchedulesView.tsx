@@ -26,9 +26,11 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from '../team/dialogs/LaunchTeamDialogLoadingFallback';
+import { ScheduleAssignmentSummary } from '../team/schedule/ScheduleAssignmentSummary';
 import { ScheduleRunLogDialog } from '../team/schedule/ScheduleRunLogDialog';
 import { ScheduleRunRow } from '../team/schedule/ScheduleRunRow';
 import { ScheduleStatusBadge } from '../team/schedule/ScheduleStatusBadge';
+import { useScheduleActions } from '../team/schedule/useScheduleActions';
 
 import type { Schedule, ScheduleRun, ScheduleStatus } from '@shared/types';
 
@@ -98,6 +100,8 @@ const ScheduleListItem = ({
           type="button"
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
+          aria-expanded={expanded}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression)}
         >
           {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </button>
@@ -117,6 +121,7 @@ const ScheduleListItem = ({
               {getCronDescription(schedule.cronExpression)}
             </span>
           ) : null}
+          <ScheduleAssignmentSummary schedule={schedule} />
         </div>
 
         {/* Team badge */}
@@ -157,6 +162,7 @@ const ScheduleListItem = ({
                 size="sm"
                 className="size-7 p-0"
                 onClick={() => onTriggerNow(schedule.id)}
+                aria-label={t('schedules.actions.runNow')}
                 disabled={schedule.status !== 'active'}
               >
                 <Zap className="size-3.5" />
@@ -167,7 +173,7 @@ const ScheduleListItem = ({
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0">
+              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={t('actions.moreActions')}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>
@@ -254,10 +260,6 @@ export const SchedulesView = (): React.JSX.Element => {
     schedules,
     schedulesLoading,
     fetchSchedules,
-    pauseSchedule,
-    resumeSchedule,
-    deleteSchedule,
-    triggerNow,
     openTeamTab,
     teamByName,
   } = useStore(
@@ -265,10 +267,6 @@ export const SchedulesView = (): React.JSX.Element => {
       schedules: s.schedules,
       schedulesLoading: s.schedulesLoading,
       fetchSchedules: s.fetchSchedules,
-      pauseSchedule: s.pauseSchedule,
-      resumeSchedule: s.resumeSchedule,
-      deleteSchedule: s.deleteSchedule,
-      triggerNow: s.triggerNow,
       openTeamTab: s.openTeamTab,
       teamByName: s.teamByName,
     }))
@@ -289,6 +287,7 @@ export const SchedulesView = (): React.JSX.Element => {
   const [teamFilter, setTeamFilter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const { feedback, act: actOnSchedule } = useScheduleActions();
 
   // Fetch schedules on mount
   useEffect(() => {
@@ -367,28 +366,6 @@ export const SchedulesView = (): React.JSX.Element => {
     setDialogOpen(false);
     setEditingSchedule(null);
   }, []);
-
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await deleteSchedule(id);
-      } catch (err) {
-        console.error('Failed to delete schedule:', err);
-      }
-    },
-    [deleteSchedule]
-  );
-
-  const handleTriggerNow = useCallback(
-    async (id: string) => {
-      try {
-        await triggerNow(id);
-      } catch (err) {
-        console.error('Failed to trigger schedule:', err);
-      }
-    },
-    [triggerNow]
-  );
 
   const handleTeamClick = useCallback(
     (teamName: string) => {
@@ -528,6 +505,11 @@ export const SchedulesView = (): React.JSX.Element => {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
+        {feedback ? (
+          <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={`mb-3 rounded border px-3 py-2 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}>
+            {feedback.message}
+          </p>
+        ) : null}
         {schedulesLoading && schedules.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-sm text-[var(--color-text-muted)]">
             {t('schedules.loading')}
@@ -575,10 +557,10 @@ export const SchedulesView = (): React.JSX.Element => {
                 key={schedule.id}
                 schedule={schedule}
                 onEdit={handleEdit}
-                onDelete={(id) => void handleDelete(id)}
-                onPause={(id) => void pauseSchedule(id)}
-                onResume={(id) => void resumeSchedule(id)}
-                onTriggerNow={(id) => void handleTriggerNow(id)}
+                onDelete={(id) => void actOnSchedule('delete', id)}
+                onPause={(id) => void actOnSchedule('pause', id)}
+                onResume={(id) => void actOnSchedule('resume', id)}
+                onTriggerNow={(id) => void actOnSchedule('run', id)}
                 onTeamClick={handleTeamClick}
                 teamColor={getTeamColor(schedule.teamName)}
               />
