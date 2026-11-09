@@ -35,5 +35,6 @@ export {
   setCustomThemes,
   subscribeAppearance,
 } from './adapters/appearanceStore';
+export { listLocalFontFamilies } from './adapters/availableFonts';
 export { useAppearancePreferences, useAppearanceTypographyController, useAppearanceZoomController } from './hooks/useAppearance';
 export { ThemeJsonEditorDialog } from './ui/ThemeJsonEditorDialog';
