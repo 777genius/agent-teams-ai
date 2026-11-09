@@ -47,8 +47,27 @@ function response(input: {
       diagnostics: input.diagnostics ?? [],
       entries: Array.from({ length: count }, (_, i) => ({
         providerId: i === 0 ? 'deepinfra' : 'source-' + i,
+        displayName: i === 0 ? 'DeepInfra' : 'Test source ' + i,
         state: input.state ?? 'connected',
-      })) as NonNullable<RuntimeProviderManagementDirectoryResponse['directory']>['entries'],
+        connectedAuthHint: 'TEST-only-key',
+        setupKind: 'connected' as const,
+        ownership: [],
+        recommended: false,
+        modelCount: 0,
+        authMethods: ['api' as const],
+        defaultModelId: null,
+        sources: ['synthetic-test'],
+        sourceLabel: 'Test fixture',
+        providerSource: null,
+        detail: null,
+        actions: [],
+        metadata: {
+          hasKnownModels: false,
+          requiresManualConfig: false,
+          supportedInlineAuth: true,
+          configuredAuthless: false,
+        },
+      })),
     },
   };
 }
