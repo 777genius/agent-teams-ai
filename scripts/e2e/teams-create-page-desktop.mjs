@@ -552,10 +552,17 @@ async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
   await client.send('Runtime.enable');
   await client.send('Page.enable');
   try {
-    // Windows CI needs longer to reopen the *same* profile after taskkill.
-    // Keep real renderer and IPC readiness mandatory; never skip a failed boot.
-    await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
-      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 60_000);
+    // Slow macOS dev-server compilation and Windows process restarts can exceed a minute.
+    // Require actual native IPC and renderer-store readiness; never skip failed startup.
+    const rendererTimeoutMs =
+      process.platform === 'darwin' || (afterRestart && process.platform === 'win32')
+        ? 180_000
+        : 60_000;
+    await client.waitFor(
+      'window.electronAPI?.teams && window.__agentTeamsDevStore',
+      'native API and dev store',
+      rendererTimeoutMs
+    );
   } catch (error) {
     let startupStatus = null;
     try {
