@@ -173,11 +173,61 @@ test('V2 admission cannot accept forged permission readback swapped during owner
   assert.equal(await provider.cleanup(), true);
 });
 
+test('V2 owner method binding retains receiver but cannot launder mutable helper policy',
+  async () => {
+    // Binding protects the original method identity, NOT its receiver's
+    // mutable helpers. The native permission readback must still reject ALLOW.
+    type ReceiverOwner = OpenCodeV2OwnedSession & {
+      nativeEffect: 'allow' | 'deny';
+      nativePolicyHelper(): 'allow' | 'deny';
+    };
+    const { captured, calls } = owner(true);
+    const receiver = captured as ReceiverOwner;
+    receiver.nativeEffect = 'deny';
+    receiver.nativePolicyHelper = function (this: ReceiverOwner) {
+      return this.nativeEffect;
+    };
+    let forgedCalls = 0;
+    captured.readNativeEffectivePermissions = async function (this: OpenCodeV2OwnedSession) {
+      calls.permissions++;
+      return testNativePermissionReadback([
+        { action: 'external_directory', resource: '*',
+          effect: (this as ReceiverOwner).nativePolicyHelper() },
+      ]);
+    };
+    captured.probe = async function (this: OpenCodeV2OwnedSession) {
+      calls.probe++;
+      const originalReceiver = this as ReceiverOwner;
+      originalReceiver.nativeEffect = 'allow';
+      // A replacement method falsely claims DENY. The captured original
+      // reader must instead use its receiver's live helper and fail closed.
+      originalReceiver.readNativeEffectivePermissions = async () => {
+        forgedCalls++;
+        return testNativePermissionReadback([
+          { action: 'external_directory', resource: '*', effect: 'deny' },
+        ]);
+      };
+      return true;
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    await assert.rejects(() => provider.factory.open(request()),
+      /opencode.driver.dependency-unavailable/);
+    assert.equal(calls.probe, 1);
+    assert.equal(calls.permissions, 1, 'original receiver-bound reader runs');
+    assert.equal(forgedCalls, 0, 'swapped receiver method is never called');
+    assert.equal(calls.context, 0, 'mutable helper ALLOW cannot authorize instructions');
+    assert.equal(calls.password, 0, 'no credentials after unsafe native policy');
+    assert.equal(calls.stop, 1, 'only captured TEST owner is stopped');
+    assert.equal(await provider.cleanup(), true);
+  });
+
 test('V2 admission never follows a replaced native credential callback',
   { timeout: 10000 }, async () => {
     let requests = 0;
-    const server = createServer((_request, response) => {
+    const observedAuthorization: Array<string | undefined> = [];
+    const server = createServer((req, response) => {
       requests++;
+      observedAuthorization.push(req.headers.authorization);
       response.writeHead(503);
       response.end();
     });
@@ -209,6 +259,10 @@ test('V2 admission never follows a replaced native credential callback',
       assert.equal(forgedPasswordCalls, 0, 'transport never reads swapped owner credentials');
       assert.equal(calls.password, 1, 'original owner is read exactly once');
       assert.ok(requests >= 1, 'the original credential path reached the TEST HTTP peer');
+      const expectedAuthorization = 'Basic ' +
+        Buffer.from('opencode:TEST-only-password').toString('base64');
+      assert.deepEqual(observedAuthorization, Array(requests).fill(expectedAuthorization),
+        'all TEST HTTP requests use captured original owner credentials');
     } finally {
       await opened?.driver.close();
       await provider.cleanup();
