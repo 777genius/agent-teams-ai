@@ -6,7 +6,7 @@ import {
   materializeOpenCodeGroupReply,
   type OpenCodeGroupReplySender,
 } from './OpenCodeGroupVisibleReply';
-import { materializeOpenCodeLeadPlainTextReply } from './OpenCodeLeadPlainTextReply';
+import { isMisaddressedLeadPlainTextProof, materializeOpenCodeLeadPlainTextReply } from './OpenCodeLeadPlainTextReply';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
@@ -509,6 +509,8 @@ export class OpenCodeVisibleReplyProofService {
     if (!visibleReply) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
+    if (await isMisaddressedLeadPlainTextProof(input.ledgerRecord, input.teamName,
+      visibleReply, this.deps.getConfiguredLeadName)) return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     const enriched = await this.ensureVisibleReplyTaskRefs({
       checkpoint: () =>
         assertOpenCodePromptDeliveryNotCancelled(
