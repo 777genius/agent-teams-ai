@@ -467,7 +467,6 @@ export const CreateTeamDialog = ({
       setProviderSettingsProviderId(null);
     }
   }, [open]);
-
   useEffect(() => {
     if (!open) {
       setOrganizationPlacementError(null);
