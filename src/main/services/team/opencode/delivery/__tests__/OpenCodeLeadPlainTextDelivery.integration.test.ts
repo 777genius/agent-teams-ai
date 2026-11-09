@@ -366,6 +366,16 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(readOpenCodeExactAssistantText(projection([prompt, send, {
       ...result, toolResults: [{ ...result.toolResults[0], isError: false }],
     }, answer]), 'ses-current', 'answer-id', options)).toBeNull();
+    expect(readOpenCodeExactAssistantText(projection([
+      prompt, send, result, answer,
+      { ...send, uuid: 'later-send', toolCalls: [{
+        ...send.toolCalls[0], id: 'later-call-id',
+      }] },
+      {
+        ...result, uuid: 'later-send::tool_results', sourceToolAssistantUUID: 'later-send',
+        toolResults: [{ toolUseId: 'later-call-id', content: 'delivered', isError: false }],
+      },
+    ]), 'ses-current', 'answer-id', options)).toBeNull();
     expect(readOpenCodeExactAssistantText(projection([prompt, send, {
       ...result, sourceToolAssistantUUID: 'different-assistant',
     }, answer]), 'ses-current', 'answer-id', options)).toBeNull();
