@@ -191,9 +191,12 @@ describe('draft hydration ordering', () => {
 
   it('does not show Saved for a superseded create-team prompt write', async () => {
     let releaseSave!: () => void;
+    let releaseNewSave!: () => void;
     const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const newWrite = new Promise<void>((resolve) => { releaseNewSave = resolve; });
     const save = vi.spyOn(draftStorage, 'saveDraft')
       .mockImplementationOnce(() => oldWrite)
+      .mockImplementationOnce(() => newWrite)
       .mockResolvedValue(undefined);
     let draft!: ReturnType<typeof useDraftPersistence>;
     function Input(): ReactElement {
@@ -212,6 +215,10 @@ describe('draft hydration ordering', () => {
       expect(draft.value).toBe('newer prompt');
       expect(draft.isSaved).toBe(false);
       await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+      expect(save).toHaveBeenCalledTimes(2);
+      expect(save.mock.calls[1]?.slice(0, 2)).toEqual(['createTeam:prompt', 'newer prompt']);
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { releaseNewSave(); await Promise.resolve(); });
       expect(draft.isSaved).toBe(true);
     } finally {
       await act(async () => { root.unmount(); });
