@@ -23,7 +23,7 @@ import type { OpenCodeVisibleReplyProofServiceDependencies } from './OpenCodeVis
 
 type OpenCodeLeadPlainTextReplyPorts = Pick<
   OpenCodeVisibleReplyProofServiceDependencies,
-  'getConfiguredLeadName' | 'readExactAssistantText' | 'inboxWriter' |
+  'getConfiguredLeadName' | 'isConfiguredPeerRecipient' | 'readExactAssistantText' | 'inboxWriter' |
   'emitRuntimeDeliveryReplyAdvisoryRefresh' | 'warn' | 'getErrorMessage'
 > & {
   nowIso: () => string;
@@ -48,12 +48,14 @@ export async function isMisaddressedLeadPlainTextProof(
   record: OpenCodePromptDeliveryLedgerRecord,
   teamName: string,
   proof: OpenCodeVisibleReplyProof,
-  getConfiguredLeadName: (team: string) => Promise<string | null>
+  getConfiguredLeadName: (team: string) => Promise<string | null>,
+  isConfiguredPeerRecipient?: (team: string, recipient: string) => Promise<boolean>
 ): Promise<boolean> {
   if (record.groupChatId || record.responseState !== 'responded_plain_text' ||
     record.replyRecipient.trim().toLowerCase() === 'user') return false;
-  const lead = await getConfiguredLeadName(teamName);
   const recipient = record.replyRecipient.trim();
+  if (await isConfiguredPeerRecipient?.(teamName, recipient)) return false;
+  const lead = await getConfiguredLeadName(teamName);
   const isLead = classifyOpenCodeDeliveryReplyContract(recipient) === 'lead_reply' ||
     Boolean(lead && recipient.toLowerCase() === lead.trim().toLowerCase());
   if (!isLead) return false;
@@ -76,8 +78,11 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
     ports: OpenCodeLeadPlainTextReplyPorts;
   }): Promise<{ ledgerRecord: OpenCodePromptDeliveryLedgerRecord; visibleReply: OpenCodeVisibleReplyProof | null }> {
     const record = input.ledgerRecord;
-    const configuredLead = await input.ports.getConfiguredLeadName(input.teamName);
     const recipient = record.replyRecipient.trim();
+    if (await input.ports.isConfiguredPeerRecipient?.(input.teamName, recipient)) {
+      return { ledgerRecord: record, visibleReply: input.visibleReply ?? null };
+    }
+    const configuredLead = await input.ports.getConfiguredLeadName(input.teamName);
     const isLead = classifyOpenCodeDeliveryReplyContract(recipient) === 'lead_reply' ||
       Boolean(configuredLead?.trim() &&
         recipient.toLowerCase() === configuredLead.trim().toLowerCase());

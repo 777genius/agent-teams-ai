@@ -51,6 +51,7 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
   async function fixture(input: {
     recipient?: string;
     lead?: string | null;
+    peers?: string[];
     text?: string | null;
     observedToolCallNames?: string[];
     confirmedFailedSend?: boolean;
@@ -86,6 +87,8 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       inboxReader: reader,
       inboxWriter: writer,
       getConfiguredLeadName: vi.fn(async () => input.lead === undefined ? 'captain' : input.lead),
+      isConfiguredPeerRecipient: vi.fn(async (_team, recipient) =>
+        input.peers?.some(name => name.toLowerCase() === recipient.trim().toLowerCase()) ?? false),
       readExactAssistantText,
       emitRuntimeDeliveryReplyAdvisoryRefresh: vi.fn(),
       warn: vi.fn(),
@@ -100,6 +103,7 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     const readAllowed = async (record: OpenCodePromptDeliveryLedgerRecord, proof: OpenCodeVisibleReplyProof | null) =>
       isOpenCodeDeliveryResponseReadCommitAllowed({
         teamName: 'team', memberName: 'worker', configuredLeadName: input.lead === undefined ? 'captain' : input.lead,
+        knownPeerRecipient: input.peers?.some(name => name.toLowerCase() === observed.replyRecipient.trim().toLowerCase()) ?? false,
         ledgerRecord: record, responseState: record.responseState,
         actionMode: record.actionMode ?? undefined, taskRefs: record.taskRefs,
         visibleReply: proof, taskRefsIncludeAll: openCodeTaskRefsIncludeAll,
@@ -270,6 +274,16 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(attempted.visibleReply).toBeNull();
     expect(await f.readAllowed(attempted.ledgerRecord, null)).toBe(false);
     expect((await f.messages('user'))).toEqual([]);
+  });
+
+  it('does not misroute a real peer named team_lead to the configured captain', async () => {
+    const f = await fixture({ recipient: 'team_lead', peers: ['team_lead'] });
+    expect(await f.readAllowed(f.observed, null)).toBe(true);
+    const result = await f.materialize();
+    expect(result.visibleReply).toBeNull();
+    expect(result.ledgerRecord.visibleReplyMessageId).toBeNull();
+    expect(await f.messages('captain')).toEqual([]);
+    expect(await f.messages('team_lead')).toEqual([]);
   });
 
   it('keeps optional peer reports silent', async () => {

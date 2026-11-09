@@ -117,6 +117,7 @@ export function isOpenCodeDirectUserPromptDelivery(
 
 export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
   configuredLeadName?: string | null;
+  knownPeerRecipient?: boolean;
   actionMode?: AgentActionMode;
   taskRefs?: TaskRef[];
   visibleReply?: OpenCodeVisibleReplyProof | null;
@@ -132,7 +133,7 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
       input.taskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs));
   }
   const record = input.ledgerRecord;
-  if (isOpenCodeLeadReplyRecipient(record, input.configuredLeadName)) {
+  if (isOpenCodeLeadReplyRecipient(record, input.configuredLeadName, input.knownPeerRecipient)) {
     const proof = input.visibleReply;
     return Boolean(
       isOpenCodeLeadDestinationProof(record, input.configuredLeadName, proof) &&
@@ -199,6 +200,7 @@ function hasExactCompletedSilentChild(input: {
 
 export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   configuredLeadName?: string | null;
+  knownPeerRecipient?: boolean;
   hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   teamName?: string;
   memberName?: string;
@@ -245,7 +247,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   // child of this accepted prompt, never a merely idle or unanswered session.
   if (
     record &&
-    classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report' &&
+    classifyOpenCodeDeliveryReplyContract(record.replyRecipient, input.knownPeerRecipient) === 'teammate_report' &&
     !isOpenCodeConfiguredLeadReply(record, input.configuredLeadName) &&
     // An absent roster cannot prove the recipient is a peer, even for a
     // completed silent turn (which bypasses the responded-state branch below).
@@ -271,7 +273,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   }
   // A missing roster cannot distinguish a custom lead from an ordinary peer.
   if (
-    input.configuredLeadName === null && record?.replyRecipient?.trim() &&
+    input.configuredLeadName === null && !input.knownPeerRecipient && record?.replyRecipient?.trim() &&
     classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report'
   ) {
     return false;
@@ -281,7 +283,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   // semantically sufficient answer here re-prompted members for messages that
   // asked nothing of them, and every retry cost another model turn.
   if (
-    isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient) &&
+    isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient, input.knownPeerRecipient) &&
     !isOpenCodeConfiguredLeadReply(input.ledgerRecord, input.configuredLeadName)
   ) {
     return true;
@@ -291,7 +293,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   }
   if (state === 'responded_visible_message') {
     if (record && input.configuredLeadName !== undefined &&
-      isOpenCodeLeadReplyRecipient(record, input.configuredLeadName) &&
+      isOpenCodeLeadReplyRecipient(record, input.configuredLeadName, input.knownPeerRecipient) &&
       !isOpenCodeLeadDestinationProof(record, input.configuredLeadName, input.visibleReply)) return false;
     return (
       isOpenCodeVisibleReplyReadCommitAllowed({

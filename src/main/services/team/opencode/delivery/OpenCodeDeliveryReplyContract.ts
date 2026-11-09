@@ -1,4 +1,4 @@
-import { isLeadAgentType, isLeadNameAlias } from '@shared/utils/leadDetection';
+import { isLeadAgentType, isLeadMember, isLeadNameAlias } from '@shared/utils/leadDetection';
 
 /**
  * Reserved reply-recipient marker for informational system/task notifications.
@@ -29,8 +29,22 @@ export type OpenCodeDeliveryReplyContract =
   | 'teammate_report'
   | 'informational';
 
+/** Exact current roster peers outrank historical lead-name aliases. */
+export function isOpenCodeConfiguredPeerRecipient(
+  members: readonly { name?: unknown; agentType?: unknown; role?: unknown }[] | null | undefined,
+  replyRecipient: string
+): boolean {
+  const key = replyRecipient.trim().toLowerCase();
+  return Boolean(key && members?.some(member =>
+    typeof member.name === 'string' &&
+    member.name.trim().toLowerCase() === key &&
+    !isLeadMember(member)
+  ));
+}
+
 export function classifyOpenCodeDeliveryReplyContract(
-  replyRecipient: string | null | undefined
+  replyRecipient: string | null | undefined,
+  knownPeerRecipient = false
 ): OpenCodeDeliveryReplyContract {
   const recipient = typeof replyRecipient === 'string' ? replyRecipient.trim() : '';
   const lower = recipient.toLowerCase();
@@ -40,6 +54,7 @@ export function classifyOpenCodeDeliveryReplyContract(
   if (lower === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT) {
     return 'informational';
   }
+  if (knownPeerRecipient) return 'teammate_report';
   if (isLeadNameAlias(recipient) || isLeadAgentType(lower)) {
     return 'lead_reply';
   }
@@ -73,9 +88,10 @@ export function isOpenCodeAppAuthoredNoticeContract(
 }
 
 export function isOpenCodeReplyOptionalDeliveryContract(
-  replyRecipient: string | null | undefined
+  replyRecipient: string | null | undefined,
+  knownPeerRecipient = false
 ): boolean {
-  const contract = classifyOpenCodeDeliveryReplyContract(replyRecipient);
+  const contract = classifyOpenCodeDeliveryReplyContract(replyRecipient, knownPeerRecipient);
   return contract === 'informational' || contract === 'teammate_report';
 }
 
@@ -93,10 +109,11 @@ export function isOpenCodeConfiguredLeadReply(
 /** Concrete user/lead messages must not settle without a destination receipt. */
 export function isOpenCodeReplyRequiredDeliveryRecipient(
   recipient: string | null | undefined,
-  configuredLeadName?: string | null
+  configuredLeadName?: string | null,
+  knownPeerRecipient = false
 ): boolean {
   if (!recipient?.trim()) return false;
-  const replyContract = classifyOpenCodeDeliveryReplyContract(recipient);
+  const replyContract = classifyOpenCodeDeliveryReplyContract(recipient, knownPeerRecipient);
   return replyContract === 'user_reply' || replyContract === 'lead_reply' ||
     isOpenCodeConfiguredLeadReply({ replyRecipient: recipient }, configuredLeadName);
 }
@@ -135,9 +152,10 @@ export function isOpenCodeLeadDestinationProof(
 /** Lead role may be a legacy alias or the configured member's custom name. */
 export function isOpenCodeLeadReplyRecipient(
   record: { replyRecipient?: string | null } | null | undefined,
-  configuredLeadName: string | null | undefined
+  configuredLeadName: string | null | undefined,
+  knownPeerRecipient = false
 ): boolean {
-  return Boolean(record &&
+  return Boolean(record && !knownPeerRecipient &&
     (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
       isOpenCodeConfiguredLeadReply(record, configuredLeadName)));
 }

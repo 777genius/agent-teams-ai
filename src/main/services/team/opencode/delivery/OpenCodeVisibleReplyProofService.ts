@@ -54,6 +54,7 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
     'correlateRuntimeDeliveryReply' | 'mergeRuntimeDeliveryTaskRefs' | 'sendMessage'
   >;
   getConfiguredLeadName: (teamName: string) => Promise<string | null>;
+  isConfiguredPeerRecipient?: (teamName: string, recipient: string) => Promise<boolean>;
   readExactAssistantText?: (input: {
     teamName: string;
     memberName: string;
@@ -82,6 +83,9 @@ export class OpenCodeVisibleReplyProofService {
 
   async getConfiguredLeadName(teamName: string): Promise<string | null> {
     return this.deps.getConfiguredLeadName(teamName);
+  }
+  isConfiguredPeerRecipient(teamName: string, recipient: string): Promise<boolean> {
+    return this.deps.isConfiguredPeerRecipient?.(teamName, recipient) ?? Promise.resolve(false);
   }
 
   async findByRelayOfMessageId(input: {
@@ -355,6 +359,7 @@ export class OpenCodeVisibleReplyProofService {
     return getOpenCodeVisibleReplyInboxCandidates({
       replyRecipient: input.replyRecipient,
       configuredLeadName,
+      knownPeerRecipient: await this.isConfiguredPeerRecipient(input.teamName, input.replyRecipient ?? ''),
       includeUserFallbackForLeadRecipient: input.includeUserFallbackForLeadRecipient,
     });
   }
@@ -513,7 +518,7 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
     if (await isMisaddressedLeadPlainTextProof(input.ledgerRecord, input.teamName,
-      visibleReply, this.deps.getConfiguredLeadName)) return { ledgerRecord: input.ledgerRecord, visibleReply: null };
+      visibleReply, this.deps.getConfiguredLeadName, this.deps.isConfiguredPeerRecipient)) return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     const enriched = await this.ensureVisibleReplyTaskRefs({
       checkpoint: () =>
         assertOpenCodePromptDeliveryNotCancelled(
@@ -592,7 +597,6 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: error.record ?? input.ledgerRecord, visibleReply: null };
     }
   }
-
   private async materializePlainTextReplyIfNeededCurrent(input: {
     checkpoint?: () => void | Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -653,7 +657,6 @@ export class OpenCodeVisibleReplyProofService {
     ) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
-
     const text = input.ledgerRecord.observedAssistantPreview?.trim();
     if (!text) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
@@ -666,7 +669,6 @@ export class OpenCodeVisibleReplyProofService {
     if (!semantic.sufficient) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
-
     const messageId = buildPlainTextVisibleReplyMessageId(input.ledgerRecord);
     const existing = await this.findByRelayOfMessageId({
       teamName: input.teamName,
@@ -719,7 +721,6 @@ export class OpenCodeVisibleReplyProofService {
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, existingForProof.message);
       return { ledgerRecord, visibleReply: existingForProof };
     }
-
     const timestamp =
       input.ledgerRecord.respondedAt ??
       input.ledgerRecord.lastObservedAt ??
@@ -791,7 +792,6 @@ export class OpenCodeVisibleReplyProofService {
     }
   }
 }
-
 export type {
   OpenCodeVisibleReplyProofServiceHost,
   OpenCodeVisibleReplyProofServiceHostOptions,

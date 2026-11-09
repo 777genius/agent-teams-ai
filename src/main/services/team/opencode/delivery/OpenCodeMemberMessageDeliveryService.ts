@@ -84,7 +84,6 @@ import {
   readOpenCodeStalePendingTurnUsedTokens,
 } from './OpenCodeStalePendingObservationSignals';
 import { retireNeverSentOpenCodeWorkSyncDelivery } from './retireNeverSentOpenCodeWorkSyncDelivery';
-
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
   OpenCodeLeadTurnActivityNotification,
@@ -97,15 +96,12 @@ import type {
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
 import type { OpenCodeStalePendingResolution } from './OpenCodePromptDeliveryStalePendingPolicy';
-
 const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
-
 function nowIso(): string {
   return new Date().toISOString();
 }
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
-
   private async applyStalePendingResolution(input: {
     checkpoint: () => Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -162,7 +158,6 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     return null;
   }
-
   async deliver(
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
@@ -181,7 +176,6 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
   }
-
   private async deliverCurrent(
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
@@ -956,6 +950,9 @@ export class OpenCodeMemberMessageDeliveryService {
           observedDiagnostics: observed.diagnostics,
           turnActivity,
           hasExecutionEvidence,
+          knownPeerRecipient: await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient(
+            teamName, ledgerRecord.replyRecipient
+          ),
           nowMs: Date.now(),
           config: this.deps.openCodeStalePendingPolicyConfig,
         });
@@ -1154,6 +1151,9 @@ export class OpenCodeMemberMessageDeliveryService {
           assertCurrentRun();
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
+            knownPeerRecipient: await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient(
+              teamName, input.replyRecipient ?? ''
+            ),
             deliveryAttemptId,
             fileParts: openCodeFileParts,
             controlUrl: controlUrl ?? undefined,

@@ -3,6 +3,7 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
 import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
 
+import { isOpenCodeConfiguredPeerRecipient } from './OpenCodeDeliveryReplyContract';
 import { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 
 import type { OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';
@@ -151,6 +152,10 @@ export function createOpenCodeVisibleReplyProofServiceFromHost(
           (config) => config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null
         )
         .catch(() => null),
+    isConfiguredPeerRecipient: async (teamName, recipient) =>
+      service.configFacade.readConfigForObservation(teamName)
+        .then(config => isOpenCodeConfiguredPeerRecipient(config?.members, recipient))
+        .catch(() => false),
     emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName, message) =>
       service.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message),
     warn: options.warn,

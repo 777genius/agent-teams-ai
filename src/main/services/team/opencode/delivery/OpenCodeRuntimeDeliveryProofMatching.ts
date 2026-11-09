@@ -27,10 +27,12 @@ export function isOpenCodeLeadReplyRecipientAlias(value: string): boolean {
 export function getOpenCodeVisibleReplyInboxCandidates(input: {
   replyRecipient?: string | null;
   configuredLeadName?: string | null;
+  knownPeerRecipient?: boolean;
   includeUserFallbackForLeadRecipient?: boolean;
 }): string[] {
   const explicitRecipient = input.replyRecipient?.trim() || 'user';
   const candidates = [explicitRecipient];
+  if (input.knownPeerRecipient) return candidates;
   const configuredLeadName = input.configuredLeadName?.trim() || null;
   const isConfiguredLeadRecipient =
     Boolean(configuredLeadName) &&
