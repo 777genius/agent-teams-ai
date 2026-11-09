@@ -397,6 +397,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     'agent'
   );
   const [scheduleTargetMember, setScheduleTargetMember] = useState('');
+  const [scheduleFormTouched, setScheduleFormTouched] = useState(false);
   const [savedPromptReview, setSavedPromptReview] = useState<{teamName: string; prompt: string; confirmed: boolean} | null>(null);
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
@@ -899,6 +900,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
 
     setLocalError(null);
+    setScheduleFormTouched(false);
     setIsSubmitting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isSchedule, schedule?.id]);
@@ -2134,7 +2136,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [isLaunchMode, membersDrafts]);
 
   const provisioningError = isLaunchMode ? props.provisioningError : null;
-  const activeError = localError ?? validationErrors[0] ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
+  const activeError = localError ?? (!isSchedule || isEditing || scheduleFormTouched ? validationErrors[0] : null) ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
   const effectivePrepare = useMemo(
     () =>
       deriveEffectiveProvisioningPrepareState({
@@ -2556,7 +2558,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               <Combobox
                 options={teamOptions}
                 value={selectedTeamName}
-                onValueChange={setSelectedTeamName}
+                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); }}
                 placeholder={t('launch.schedule.selectTeam')}
                 searchPlaceholder={t('launch.schedule.searchTeams')}
                 emptyMessage={
@@ -2612,16 +2614,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onToggle={() => setSchedExpanded((value) => !value)}
               mode={scheduleExecutionMode}
               taskFirst={isTaskFirstSchedule}
-              onModeChange={setScheduleExecutionMode}
+              onModeChange={(mode) => { setScheduleExecutionMode(mode); setScheduleFormTouched(true); }}
               targetMember={scheduleTargetMember}
-              onTargetMemberChange={setScheduleTargetMember}
+              onTargetMemberChange={(name) => { setScheduleTargetMember(name); setScheduleFormTouched(true); }}
               team={teamByName[effectiveTeamName]}
               label={schedLabel}
               onLabelChange={setSchedLabel}
               cronExpression={cronExpression}
-              onCronExpressionChange={setCronExpression}
+              onCronExpressionChange={(expression) => { setCronExpression(expression); setScheduleFormTouched(true); }}
               timezone={timezone}
-              onTimezoneChange={setTimezone}
+              onTimezoneChange={(zone) => { setTimezone(zone); setScheduleFormTouched(true); }}
               warmUpMinutes={warmUpMinutes}
               onWarmUpMinutesChange={setWarmUpMinutes}
             />
@@ -2875,7 +2877,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   minRows={4}
                   maxRows={12}
                   value={promptDraft.value}
-                  onValueChange={promptDraft.setValue}
+                  onValueChange={(value) => { promptDraft.setValue(value); setScheduleFormTouched(true); }}
                   suggestions={mentionSuggestions}
                   projectPath={
                     usesSavedTeamRuntime
