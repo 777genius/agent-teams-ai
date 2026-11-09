@@ -26,6 +26,7 @@ const taskRef = z.strictObject({ taskId: identifier, displayId: identifier, team
 const refs = z.array(taskRef).max(100).optional();
 const command = { commandId: identifier };
 const task = { taskId: identifier };
+const pageCursor = z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/);
 const action = z.enum(['start', 'complete', 'delete', 'restore', 'pending']);
 
 /** Explicitly partial catalog: an absent group never routes to a legacy writer. */
@@ -216,9 +217,13 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
     ),
     define(
       'task_get',
-      'Read an existing task from this captured Team owner.',
-      z.strictObject(task),
-      ({ taskId }) => connection.getTask(taskId),
+      'Read an existing task from this captured Team owner. For large results, follow nextCursor and concatenate the returned JSON chunks in part order.',
+      z.strictObject({ ...task, cursor: pageCursor.optional() }),
+      ({ taskId, cursor }) => {
+        if (connection.readTaskPage) return connection.readTaskPage(taskId, cursor);
+        if (cursor !== undefined) throw new McpToolFailure('unsupported');
+        return connection.getTask(taskId);
+      },
       false
     ),
     define(
@@ -283,7 +288,7 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
   if (connection.readQueries) {
     const inventory = tools.findIndex((tool) => tool.definition.name === 'task_list');
     tools.splice(inventory, 1);
-    tools.push(...createReadMcpTools(connection.readQueries));
+    tools.push(...createReadMcpTools(connection.readQueries, connection.readKanbanPage));
   }
   const byName = new Map(tools.map((tool) => [tool.definition.name, tool]));
   return Object.freeze({

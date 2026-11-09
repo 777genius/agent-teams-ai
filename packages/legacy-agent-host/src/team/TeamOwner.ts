@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pageOwnerMessages } from './pageOwnerMessages.js';
+import { pageOwnerTaskDetail } from './pageOwnerTaskDetail.js';
+import { pageOwnerKanban } from './pageOwnerKanban.js';
 import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
 import { executeTeamCommand } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
@@ -433,6 +435,21 @@ export class TeamOwner {
       execute: (command: TeamCommand) => this.execute(principalId, command),
       lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
+      readTaskPage: (taskId: string, cursor?: string) => this.store.fenced(() => {
+        const grant = this.authorize(principalId, 'read');
+        safeSegment(taskId);
+        return pageOwnerTaskDetail({
+          principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
+          taskId, task: json(this.policy.taskBoard().getTask(taskId)), cursor,
+        });
+      }),
+      readKanbanPage: (cursor?: string) => this.store.fenced(() => {
+        const grant = this.authorize(principalId, 'read');
+        return pageOwnerKanban({
+          principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
+          board: this.policy.taskBoard().getKanbanState({ strict: true }), cursor,
+        });
+      }),
       listTasks: () => this.listTasks(principalId),
       readSnapshot: (query: { cursor?: string } = {}) => this.readSnapshot(principalId, query),
       readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
