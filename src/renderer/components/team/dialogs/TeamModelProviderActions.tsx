@@ -38,6 +38,10 @@ export function TeamModelProviderActions({
   const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
   const invalidateCodexRuntimeStatus = useStore((s) => s.invalidateCodexRuntimeStatus);
   const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
+  const invalidateOpenCodeRuntimeStatus = useStore((s) => s.invalidateOpenCodeRuntimeStatus);
+  const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
+  const invalidateCodexRuntimeStatus = useStore((s) => s.invalidateCodexRuntimeStatus);
+  const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
   const directory = useOpenCodeSourceDirectory(projectPath || null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
@@ -46,6 +50,18 @@ export function TeamModelProviderActions({
     if (refreshing) return;
     setRefreshing(true);
     setRefreshError(false);
+    // Runtime installation snapshots have their own caches and gate model discovery.
+    // Recheck them independently so one runtime failure cannot skip the other.
+    const runtimeChecks = Promise.allSettled([
+      (async () => {
+        await invalidateOpenCodeRuntimeStatus();
+        await fetchOpenCodeRuntimeStatus();
+      })(),
+      (async () => {
+        await invalidateCodexRuntimeStatus();
+        await fetchCodexRuntimeStatus();
+      })(),
+    ]);
     try {
       // Retire old scoped reads and bypass cached CLI metadata before checking providers.
       await invalidateCliStatus();
@@ -87,6 +103,15 @@ export function TeamModelProviderActions({
     } catch {
       setRefreshError(true);
     } finally {
+      const runtimeResults = await runtimeChecks;
+      const { openCodeRuntimeError, codexRuntimeError } = useStore.getState();
+      if (
+        runtimeResults.some((result) => result.status === 'rejected') ||
+        openCodeRuntimeError ||
+        codexRuntimeError
+      ) {
+        setRefreshError(true);
+      }
       setRefreshing(false);
     }
   };
