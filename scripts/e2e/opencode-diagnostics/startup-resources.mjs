@@ -39,6 +39,8 @@ export function parseUnixResourceRows(output) {
 export function parseWindowsResourceRows(output) {
   const raw = JSON.parse(output.replace(/^\uFEFF/, '').trim());
   return (Array.isArray(raw) ? raw : [raw]).map((row) => {
+    assert(row && row.pid != null && row.rssBytes != null && row.cpuTimeMs != null,
+      'Invalid Windows process resources');
     const pid = Number(row.pid);
     const rssBytes = Number(row.rssBytes);
     const cpuTimeMs = Number(row.cpuTimeMs);
@@ -55,6 +57,7 @@ function readResources(pids) {
   if (process.platform === 'win32') {
     const script = '$ids=@(' + pids.join(',') +
       '); @(Get-CimInstance Win32_Process | Where-Object { $ids -contains [int]$_.ProcessId } | ForEach-Object {' +
+      ' if ($null -eq $_.WorkingSetSize -or $null -eq $_.KernelModeTime -or $null -eq $_.UserModeTime) { throw "Missing process resource" };' +
       ' [pscustomobject]@{ pid=[int]$_.ProcessId; rssBytes=[double]$_.WorkingSetSize;' +
       ' cpuTimeMs=([double]$_.KernelModeTime + [double]$_.UserModeTime)/10000;' +
       ' name=[string]$_.Name } }) | ConvertTo-Json -Compress';

@@ -50,6 +50,8 @@ describe('isolated provider startup resource census', () => {
   it('rejects invalid resource numbers rather than recording a false zero', () => {
     assert.throws(() => parseUnixResourceRows('999 bad 00:01 opencode'), /Invalid/);
     assert.throws(() => parseWindowsResourceRows('{"pid":1,"rssBytes":-1,"cpuTimeMs":0,"name":"x"}'), /Invalid/);
+    assert.throws(() => parseWindowsResourceRows('{"pid":1,"rssBytes":null,"cpuTimeMs":0,"name":"x"}'), /Invalid/);
+    assert.throws(() => parseWindowsResourceRows('{"pid":1,"rssBytes":1024,"cpuTimeMs":null,"name":"x"}'), /Invalid/);
     assert.throws(() => summarizePhase('wrong', 0, [], [], 0));
   });
 });
