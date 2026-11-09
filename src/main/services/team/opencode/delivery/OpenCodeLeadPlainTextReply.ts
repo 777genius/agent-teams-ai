@@ -10,8 +10,8 @@ import {
   canMaterializeOpenCodePlainTextReply,
   hasOpenCodeObservedMessageSendToolCall,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
+import { classifyOpenCodeDeliveryReplyContract, isOpenCodeLeadDestinationProof } from './OpenCodeDeliveryReplyContract';
 import { openCodeTaskRefsIncludeAll } from './OpenCodeRuntimeDeliveryProofMatching';
-import { classifyOpenCodeDeliveryReplyContract } from './OpenCodeDeliveryReplyContract';
 import { isOpenCodeVisibleReplySemanticallySufficient } from './OpenCodePromptDeliveryWatchdog';
 
 import type { OpenCodePromptDeliveryLedgerRecord, OpenCodePromptDeliveryLedgerStore } from './OpenCodePromptDeliveryLedger';
@@ -75,15 +75,30 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
     const record = input.ledgerRecord;
     const configuredLead = await input.ports.getConfiguredLeadName(input.teamName);
     const recipient = record.replyRecipient.trim();
-    if (
-      !configuredLead?.trim() ||
-      (classifyOpenCodeDeliveryReplyContract(recipient) !== 'lead_reply' &&
-        recipient.toLowerCase() !== configuredLead.trim().toLowerCase()) ||
-      !canMaterializeOpenCodePlainTextReply(record)
-    ) {
-      return { ledgerRecord: record, visibleReply: input.visibleReply ?? null };
+    const isLead = classifyOpenCodeDeliveryReplyContract(recipient) === 'lead_reply' ||
+      Boolean(configuredLead?.trim() &&
+        recipient.toLowerCase() === configuredLead.trim().toLowerCase());
+    // This service also receives optional teammate reports: preserve their
+    // original destination proof, but never leak a wrong-inbox lead receipt.
+    if (!isLead) return { ledgerRecord: record, visibleReply: input.visibleReply ?? null };
+    const destination = configuredLead?.trim();
+    if (!destination) return { ledgerRecord: record, visibleReply: null };
+    const verifiedLeadProof = input.visibleReply ?? null;
+    if (isOpenCodeLeadDestinationProof(record, destination, verifiedLeadProof)) {
+      return { ledgerRecord: record, visibleReply: verifiedLeadProof };
     }
-    const destination = configuredLead.trim();
+    // A legacy/task-ref receipt may have been committed to the user inbox and
+    // relabelled the ledger "responded_visible_message". Recover only when the
+    // observed assistant/session/run identity is still bound to that request.
+    const misplacedReceipt =
+      record.responseState === 'responded_visible_message' &&
+      record.visibleReplyInbox?.trim().toLowerCase() !== destination.toLowerCase() &&
+      Boolean(record.visibleReplyInbox?.trim() && record.visibleReplyMessageId?.trim() &&
+        record.runtimeSessionId?.trim() && record.observedAssistantMessageId?.trim() &&
+        record.runId?.trim() && record.laneId?.trim());
+    if (!canMaterializeOpenCodePlainTextReply(record) && !misplacedReceipt) {
+      return { ledgerRecord: record, visibleReply: null };
+    }
     const messageId = buildPlainTextVisibleReplyMessageId(record);
     const validProof = (proof: OpenCodeVisibleReplyProof | null): proof is OpenCodeVisibleReplyProof =>
       Boolean(proof &&
@@ -99,11 +114,6 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
           text: proof.message.text, summary: proof.message.summary,
         }).sufficient);
 
-    if (validProof(input.visibleReply ?? null) &&
-      record.visibleReplyInbox?.trim().toLowerCase() === destination.toLowerCase() &&
-      record.visibleReplyMessageId === input.visibleReply?.message.messageId) {
-      return { ledgerRecord: record, visibleReply: input.visibleReply! };
-    }
     // Do not invent a new reply while a lead-bound tool receipt is unresolved.
     if (record.visibleReplyMessageId &&
       record.visibleReplyInbox?.trim().toLowerCase() === destination.toLowerCase()) {
