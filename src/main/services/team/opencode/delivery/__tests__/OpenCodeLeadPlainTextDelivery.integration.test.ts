@@ -53,6 +53,7 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     lead?: string | null;
     text?: string | null;
     observedToolCallNames?: string[];
+    confirmedFailedSend?: boolean;
   } = {}) {
     const ledger = createOpenCodePromptDeliveryLedgerStore({
       filePath: path.join(tempRoot, 'ledger.json'),
@@ -78,7 +79,9 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     });
     const reader = new TeamInboxReader();
     const writer = new TeamInboxWriter();
-    const readExactAssistantText = vi.fn(async () => input.text === undefined ? 'Full response.' : input.text);
+    const readExactAssistantText = vi.fn(async (request: { requireFailedMessageSendProof?: boolean }) =>
+      request.requireFailedMessageSendProof && !input.confirmedFailedSend
+        ? null : input.text === undefined ? 'Full response.' : input.text);
     const deps = {
       inboxReader: reader,
       inboxWriter: writer,
@@ -283,6 +286,21 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(await withTool.readAllowed(result.ledgerRecord, null)).toBe(false);
   });
 
+  it('persists the full lead reply only after a correlated message_send failure', async () => {
+    const f = await fixture({
+      observedToolCallNames: ['agent-teams_message_send'], confirmedFailedSend: true,
+    });
+    const result = await f.materialize();
+    expect(f.readExactAssistantText).toHaveBeenCalledWith(expect.objectContaining({
+      requireFailedMessageSendProof: true,
+      runtimePromptMessageId: 'msg-prompt',
+      assistantMessageId: 'msg-assistant',
+    }));
+    expect(result.visibleReply?.message.text).toBe('Full response.');
+    expect((await f.messages('captain'))).toHaveLength(1);
+    expect(await f.readAllowed(result.ledgerRecord, result.visibleReply)).toBe(true);
+  });
+
   it('preserves cancellation and never writes a reply for a stopped team', async () => {
     const f = await fixture();
     await f.ledger.cancelNonTerminalRecords({
@@ -314,6 +332,46 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     if (toolCall) {
       expect(readOpenCodeExactAssistantText(captured.transcript, toolCall.sessionId, toolCall.uuid)).toBeNull();
     }
+  });
+
+  it('requires matching failed tool results from this prompt before reading a fallback', () => {
+    const prompt = { ...transcriptMessage('prompt-id', 'prompt'), type: 'user' as const, role: 'user' };
+    const send = {
+      ...transcriptMessage('send-id', ''),
+      toolCalls: [{ id: 'call-id', name: 'agent-teams_message_send', input: {}, isTask: false }],
+    };
+    const result = {
+      ...transcriptMessage('send-id::tool_results', ''),
+      type: 'user' as const, role: 'user', isMeta: true,
+      sourceToolAssistantUUID: 'send-id',
+      toolResults: [{ toolUseId: 'call-id', content: 'tool not connected', isError: true }],
+    };
+    const answer = transcriptMessage('answer-id', 'Complete fallback after failed tool.');
+    const projection = (messages: unknown[]) => ({
+      sessionId: 'ses-current', logProjection: { messages },
+    }) as OpenCodeRuntimeTranscriptResponse['transcript'];
+    const options = { requireFailedMessageSendProof: true, runtimePromptMessageId: 'prompt-id' };
+    const transcript = projection([prompt, send, result, answer]);
+    expect(readOpenCodeExactAssistantText(transcript, 'ses-current', 'answer-id', options))
+      .toBe('Complete fallback after failed tool.');
+    expect(readOpenCodeExactAssistantText(transcript, 'ses-current', 'answer-id', {
+      ...options, runtimePromptMessageId: 'other-prompt',
+    })).toBeNull();
+    expect(readOpenCodeExactAssistantText(projection([prompt, send, answer]),
+      'ses-current', 'answer-id', options)).toBeNull();
+    expect(readOpenCodeExactAssistantText(projection([prompt, send, {
+      ...result, toolResults: [{ ...result.toolResults[0], isError: false }],
+    }, answer]), 'ses-current', 'answer-id', options)).toBeNull();
+    expect(readOpenCodeExactAssistantText(projection([prompt, send, {
+      ...result, sourceToolAssistantUUID: 'different-assistant',
+    }, answer]), 'ses-current', 'answer-id', options)).toBeNull();
+    const sameTurnAnswer = {
+      ...send, content: [{ type: 'text' as const, text: 'Answer next to failed send.' }],
+    };
+    expect(readOpenCodeExactAssistantText(projection([prompt, sameTurnAnswer, result]),
+      'ses-current', 'send-id', options)).toBe('Answer next to failed send.');
+    expect(readOpenCodeExactAssistantText(projection([prompt, sameTurnAnswer, result]),
+      'ses-current', 'send-id')).toBeNull();
   });
 
   it('preserves real newline separators between distinct assistant text blocks', () => {
