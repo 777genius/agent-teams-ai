@@ -175,18 +175,25 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
       if (!written.deliveredToInbox || written.messageId !== messageId) {
         throw new Error('OpenCode lead plain-text reply was not persisted');
       }
-      const visibleReply: OpenCodeVisibleReplyProof = {
-        inboxName: destination,
-        message: {
-          from: input.memberName, to: destination, text, timestamp, read: false,
-          summary: buildPlainTextVisibleReplySummary(text), messageId,
-          relayOfMessageId: record.inboxMessageId, source: 'runtime_delivery', taskRefs: record.taskRefs,
-        },
-      };
+      // The writer deduplicates some normalized runtime payloads. Only the
+      // actual committed inbox row (not a synthetic echo of the request) can
+      // prove the exact assistant response survived without alteration.
+      const persistedReply = await input.ports.findByRelayOfMessageId({
+        teamName: input.teamName,
+        replyRecipient: destination,
+        from: input.memberName,
+        relayOfMessageId: record.inboxMessageId,
+        expectedMessageId: messageId,
+      });
+      if (!validProof(persistedReply) || persistedReply.message.text !== text) {
+        throw new Error('OpenCode lead reply differs from the persisted inbox row');
+      }
+      const visibleReply = persistedReply;
       await assertOpenCodePromptDeliveryNotCancelled(input.ledger, record, input.checkpoint);
       const ledgerRecord = await input.ledger.applyDestinationProof({
         id: record.id, visibleReplyInbox: destination, visibleReplyMessageId: messageId,
-        visibleReplyCorrelation: 'plain_assistant_text', semanticallySufficient: true,
+        visibleReplyCorrelation: 'plain_assistant_text',
+        semanticallySufficient: openCodeTaskRefsIncludeAll(visibleReply.message.taskRefs, record.taskRefs),
         diagnostics: [
           written.deduplicated
             ? 'opencode_lead_plain_text_reply_materialized_deduplicated'
