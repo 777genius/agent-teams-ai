@@ -1453,6 +1453,50 @@ test('V2 cold checkpoint compatibility survives a new generation but never a for
     assert.equal(foreignOwner.calls.stop, 1);
   });
 
+test('V2 cold checkpoint rejects foreign tenant, project, account, workspace, backend and endpoint', async () => {
+  const originalOwner = owner(true);
+  const originalProvider = createOpenCodeV2MemberProvider(context(), originalOwner.captured);
+  const initial = await originalProvider.factory.open(request());
+  const saved = initial.driver.checkpoint();
+  assert.equal(saved.ok, true);
+  if (!saved.ok) throw new Error('missing original TEST checkpoint');
+  assert.deepEqual(await initial.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+
+  const baseRequest = { ...request(), generation: 2, checkpointRef: 'TEST-cold-foreign-checkpoint' };
+  const baseProfile = { ...v2Profile(), generation: 2 };
+  const cases: ReadonlyArray<{
+    name: string;
+    requestPatch?: Partial<OpenConfig>;
+    profilePatch?: Partial<ReturnType<typeof v2Profile>>;
+    backendId?: string;
+  }> = [
+    { name: 'tenant', requestPatch: { tenantId: 'test-other-tenant' } },
+    { name: 'project', requestPatch: { projectId: 'test-other-project' } },
+    { name: 'account', profilePatch: { accountBinding: 'TEST-other-account' } },
+    { name: 'workspace', profilePatch: { cwd: v2Profile().cwd + '-other' } },
+    { name: 'backend', backendId: 'test-other-backend' },
+    { name: 'native endpoint', profilePatch: { endpoint: 'http://127.0.0.1:14322' } },
+  ];
+  for (const candidate of cases) {
+    const nextRequest = { ...baseRequest, ...candidate.requestPatch };
+    const nextContext = context({ ...baseProfile, ...candidate.profilePatch }, nextRequest);
+    if (candidate.backendId) Object.assign(nextContext.endpoint.binding, { backendId: candidate.backendId });
+    let reads = 0;
+    nextContext.readCheckpoint = async () => { reads++; return saved.value; };
+    const owned = owner(true);
+    const provider = createOpenCodeV2MemberProvider(nextContext, owned.captured);
+    await assert.rejects(() => provider.factory.open(nextRequest),
+      /opencode.driver.checkpoint-incompatible/,
+      `foreign ${candidate.name} must not adopt a saved native V2 session`);
+    assert.equal(reads, 1, `foreign ${candidate.name} reads only the selected checkpoint`);
+    assert.equal(owned.calls.probe, 0, `foreign ${candidate.name} is rejected before native process probe`);
+    assert.equal(owned.calls.permissions, 0, 'no native permissions requested for a foreign checkpoint');
+    assert.equal(owned.calls.password, 0, 'no credentials accessed for a foreign checkpoint');
+    assert.equal(owned.calls.stop, 1, 'only the captured TEST owner is retired');
+    assert.equal(await provider.cleanup(), true);
+  }
+});
+
 test('V1 checkpoint identity is rejected before V2 native probe or permission readback', async () => {
   const { captured, calls } = owner(true);
   const restoredRequest = { ...request(), checkpointRef: 'cp1-TEST-v1' };
