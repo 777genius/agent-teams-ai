@@ -1,6 +1,7 @@
 import {
   classifyOpenCodeDeliveryReplyContract,
   isOpenCodeReplyOptionalDeliveryContract,
+  isOpenCodeConfiguredLeadReply,
 } from './OpenCodeDeliveryReplyContract';
 import {
   hasOpenCodeGroupAcknowledgement,
@@ -109,17 +110,6 @@ export function isOpenCodeDirectUserPromptDelivery(
   ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null
 ): boolean {
   return ledgerRecord?.replyRecipient?.trim().toLowerCase() === 'user';
-}
-
-function isOpenCodeConfiguredLeadReply(
-  record: OpenCodePromptDeliveryLedgerRecord | null | undefined,
-  configuredLeadName: string | null | undefined
-): boolean {
-  const recipient = record?.replyRecipient?.trim().toLowerCase();
-  return Boolean(
-    recipient && configuredLeadName?.trim() &&
-    recipient === configuredLeadName.trim().toLowerCase()
-  );
 }
 
 export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
