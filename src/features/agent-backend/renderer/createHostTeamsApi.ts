@@ -489,7 +489,8 @@ export function createHostTeamsApi(
         !('nextCursor' in page) ||
         !('messages' in page) ||
         !('revision' in page) ||
-        !('teamName' in page)
+        !('teamName' in page) ||
+        !('hasMore' in page)
       )
         throw new HostTeamOperationError('invalid-result', 'unknown');
       return {

@@ -640,7 +640,7 @@ describe('ordinary Host team read selection', () => {
       ...f.snapshot.tasks[0],
       id: '2',
       subject: 'Task from continued page',
-      status: 'done' as const,
+      status: 'in_progress' as const,
     };
     const first = {
       ...f.snapshot,
