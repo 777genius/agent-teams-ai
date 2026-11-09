@@ -16,7 +16,6 @@ describe('localized schedule relative times', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-09T12:00:00.000Z'));
     const future = new Date(Date.now() + 5 * 60_000).toISOString();
-    expect(formatNextRun(future, 'ru')).toContain('5');
-    expect(formatNextRun(future, 'ru')).not.toContain('in 5m');
+    expect(formatNextRun(future, 'ru')).toMatch(/через\s+5\b/i);
   });
 });

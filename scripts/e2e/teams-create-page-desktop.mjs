@@ -721,16 +721,22 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     await client.waitFor(
       'window.innerWidth < ' + JSON.stringify(initialViewportWidth * 0.7),
       'native Electron zoom narrowed the schedules viewport');
-    const zoomActionsVisible = await client.evaluate(`(() => {
+    const zoomGeometry = await client.evaluate(`(() => {
       const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
         .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
           el.querySelector('button[aria-label="More actions"]'));
-      const viewport = row?.closest('.overflow-y-auto')?.getBoundingClientRect();
+      const container = row?.closest('.overflow-y-auto');
+      const viewport = container?.getBoundingClientRect();
       const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
-      return !!rect && !!viewport && rect.width > 0 &&
-        rect.left >= viewport.left && rect.right <= viewport.right;
+      return { actionLeft: rect?.left, actionRight: rect?.right, actionWidth: rect?.width,
+        paneLeft: viewport?.left, paneRight: viewport?.right, paneWidth: viewport?.width,
+        paneScrollWidth: container?.scrollWidth, windowWidth: window.innerWidth };
     })()`);
-    assert(zoomActionsVisible, 'Schedule actions overflowed pane at native Electron 200% zoom');
+    assert(
+      zoomGeometry.actionWidth > 0 && zoomGeometry.actionLeft >= zoomGeometry.paneLeft &&
+        zoomGeometry.actionRight <= zoomGeometry.paneRight,
+      'Schedule actions overflowed pane at native Electron 200% zoom: ' + JSON.stringify(zoomGeometry)
+    );
     await captureScreenshot(client, fixture, 'schedules-list-native-electron-zoom-200');
   } finally {
     try {
@@ -788,7 +794,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
   await client.click(runNow);
   await client.waitFor(
-    "document.querySelector('[role=status]')?.textContent?.includes('Run requested')",
+    "Array.from(document.querySelectorAll('[role=status]')).some(el => el.textContent?.includes('Run requested'))",
     'run-now feedback visible', 45_000);
   const createdRuns = await client.evaluate(
     'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');
