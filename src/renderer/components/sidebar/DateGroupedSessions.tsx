@@ -555,10 +555,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
     overscan: OVERSCAN,
   });
 
-  // Invalidate cached row offsets when text size changes.
-  useEffect(() => {
-    rowVirtualizer.measure();
-  }, [sessionHeight, rowVirtualizer]);
+  useEffect(() => rowVirtualizer.measure(), [sessionHeight, rowVirtualizer]);
 
   // Get virtual items for dependency tracking
   const virtualRows = rowVirtualizer.getVirtualItems();
