@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -7,9 +7,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { MULTIMODEL_PROVIDER_IDS } from '@renderer/store/slices/cliInstallerSlice';
-import { cn } from '@renderer/lib/utils';
 import { RefreshCw, Settings2 } from 'lucide-react';
 
 import { useOpenCodeSourceDirectory } from './OpenCodeSourceDirectoryProvider';
