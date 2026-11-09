@@ -791,8 +791,6 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
   }
-
-
 }
 
 export type {
