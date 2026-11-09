@@ -160,6 +160,47 @@ export async function verifyColdDashboardConnectedCount({ root, evaluate, send }
   return { connected, elapsedMs };
 }
 
+/** Display proof is a numeric value, never Unknown, a spinner or an inferred zero. */
+export function hasExactVisibleOpenCodeCount(text, expected) {
+  if (typeof text !== 'string' || !text.trim().startsWith('OpenCode') ||
+      !Number.isSafeInteger(expected) || expected < 0) return false;
+  const values = text.match(/[0-9]+/g);
+  return values?.length === 1 && values[0] === String(expected);
+}
+
+/**
+ * Read-only connected identities; neither models nor native launch readiness.
+ * Reject partial, error-bearing, malformed, duplicate and unfiltered responses.
+ */
+export function verifyCompleteConnectedSourceSummary(response, expected) {
+  assert.equal(response?.schemaVersion, 1, 'Invalid provider response schema');
+  assert.equal(response.runtimeId, 'opencode');
+  assert(!response.error, 'Provider count summary failed');
+  const directory = response.directory;
+  assert.equal(directory?.runtimeId, 'opencode');
+  assert.equal(directory.filter, 'connected');
+  assert.equal(directory.query, null);
+  assert.equal(directory.cursor, null);
+  assert.equal(directory.nextCursor, null, 'Truncated connected summary');
+  assert(Number.isSafeInteger(directory.totalCount) && directory.totalCount >= 0);
+  assert.equal(directory.totalCount, directory.returnedCount);
+  assert.equal(directory.totalCount, directory.entries?.length);
+  assert(Array.isArray(directory.diagnostics));
+  assert(!directory.diagnostics.some((item) =>
+    typeof item !== 'string' || /timed?\s*out|timeout|partial|incomplete|probe failed|unavailable/i.test(item)
+  ), 'Incomplete or unavailable connected summary');
+  const ids = directory.entries.map((entry) => {
+    assert.equal(entry?.state, 'connected', 'Nonconnected source in filtered summary');
+    assert(typeof entry.providerId === 'string' && entry.providerId.trim());
+    const id = entry.providerId.trim().toLowerCase();
+    assert.notEqual(id, 'opencode', 'Aggregate host is not a connection');
+    return id;
+  });
+  assert.equal(new Set(ids).size, ids.length, 'Duplicate provider identity');
+  assert.equal(ids.length, expected, 'V2 connected source count mismatch');
+  return ids.length;
+}
+
 /**
  * Read-only desktop regression: each Settings → Providers Manage action opens
  * its own provider panel and closes without changing credentials.
