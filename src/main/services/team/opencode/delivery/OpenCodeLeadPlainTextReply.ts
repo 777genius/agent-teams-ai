@@ -79,8 +79,7 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
       !configuredLead?.trim() ||
       (classifyOpenCodeDeliveryReplyContract(recipient) !== 'lead_reply' &&
         recipient.toLowerCase() !== configuredLead.trim().toLowerCase()) ||
-      !canMaterializeOpenCodePlainTextReply(record) ||
-      (record.responseState !== 'tool_error' && hasOpenCodeObservedMessageSendToolCall(record))
+      !canMaterializeOpenCodePlainTextReply(record)
     ) {
       return { ledgerRecord: record, visibleReply: input.visibleReply ?? null };
     }
@@ -148,6 +147,13 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
       const text = await input.ports.readExactAssistantText?.({
         teamName: input.teamName, memberName: input.memberName, laneId: record.laneId,
         runId, sessionId, assistantMessageId,
+        ...(hasOpenCodeObservedMessageSendToolCall(record)
+          ? {
+              requireFailedMessageSendProof: true,
+              runtimePromptMessageId: record.lastRuntimePromptMessageId ??
+                record.runtimePromptMessageId ?? undefined,
+            }
+          : {}),
       });
       if (!text?.trim() || /^already handled\s*:/i.test(text.trim()) ||
         !isOpenCodeVisibleReplySemanticallySufficient({
