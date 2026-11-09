@@ -233,7 +233,8 @@
         "apply": "Zastosuj",
         "discover": "Pokaż zainstalowane czcionki",
         "loaded": "Zainstalowane czcionki dodano do listy.",
-        "unavailable": "Nie można tutaj odczytać listy czcionek. Wpisz nazwę ręcznie."
+        "unavailable": "Nie można tutaj odczytać listy czcionek. Wpisz nazwę ręcznie.",
+        "empty": "Nie znaleziono zainstalowanych czcionek. Wpisz nazwę ręcznie."
       },
       "textSize": {
         "label": "Rozmiar tekstu",

@@ -233,7 +233,8 @@
         "apply": "Gunakan",
         "discover": "Cari fon terpasang",
         "loaded": "Fon terpasang ditambah pada senarai.",
-        "unavailable": "Senarai fon tidak tersedia di sini. Masukkan nama secara manual."
+        "unavailable": "Senarai fon tidak tersedia di sini. Masukkan nama secara manual.",
+        "empty": "Tiada fon terpasang ditemui. Masukkan nama secara manual."
       },
       "textSize": {
         "label": "Saiz teks",

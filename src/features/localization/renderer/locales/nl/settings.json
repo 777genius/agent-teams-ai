@@ -233,7 +233,8 @@
         "apply": "Toepassen",
         "discover": "Geïnstalleerde lettertypen zoeken",
         "loaded": "Geïnstalleerde lettertypen toegevoegd aan de lijst.",
-        "unavailable": "Lettertypen kunnen hier niet worden opgevraagd. Voer de naam handmatig in."
+        "unavailable": "Lettertypen kunnen hier niet worden opgevraagd. Voer de naam handmatig in.",
+        "empty": "Geen geïnstalleerde lettertypen gevonden. Voer de naam handmatig in."
       },
       "textSize": {
         "label": "Tekstgrootte",

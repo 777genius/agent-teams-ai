@@ -233,7 +233,8 @@
         "apply": "Aplicar",
         "discover": "Buscar fontes instaladas",
         "loaded": "Fontes instaladas adicionadas à lista.",
-        "unavailable": "Não é possível listar fontes aqui. Digite o nome manualmente."
+        "unavailable": "Não é possível listar fontes aqui. Digite o nome manualmente.",
+        "empty": "Nenhuma fonte instalada foi encontrada. Digite o nome manualmente."
       },
       "textSize": {
         "label": "Tamanho do texto",
