@@ -713,31 +713,35 @@ describe('ordinary Host team read selection', () => {
     expect(f.legacy.getMessagesPage).not.toHaveBeenCalled();
   });
 
-  it('opens a retained deleted Host task via the captured owner with full comment/detail identity', async () => {
+  it('opens a retained deleted Host task via bounded same-owner Trash pages with full comment/detail identity', async () => {
     const f = fixture();
     const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
     vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
-      request.operation === 'task.get'
+      request.operation === 'tasks.list'
         ? {
             ok: true,
             value: {
-              id: 'retained-1',
-              subject: 'Retained detail',
-              description: 'Original deleted task description',
-              status: 'deleted',
-              comments: [{
-                id: 'comment-1',
-                author: 'alice',
-                text: 'Retained comment',
-                createdAt: '2026-01-03',
-                type: 'regular',
+              kind: 'deleted-tasks',
+              teamName: f.snapshot.teamName,
+              tasks: [{
+                id: 'retained-1',
+                subject: 'Retained detail',
+                description: 'Original deleted task description',
+                status: 'deleted',
+                comments: [{
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Retained comment',
+                  createdAt: '2026-01-03',
+                  type: 'regular',
+                }],
+                descriptionTaskRefs: [{
+                  taskId: '1',
+                  displayId: '1',
+                  teamName: 'same-display-team',
+                }],
+                privateRoot: '/SECRET',
               }],
-              descriptionTaskRefs: [{
-                taskId: '1',
-                displayId: '1',
-                teamName: 'same-display-team',
-              }],
-              privateRoot: '/SECRET',
             },
           }
         : invoke(request)
@@ -753,10 +757,13 @@ describe('ordinary Host team read selection', () => {
     expect(task?.descriptionTaskRefs?.[0].teamName).toBe(f.key);
     expect(JSON.stringify(task)).not.toContain('/SECRET');
     expect(f.backend.invoke).toHaveBeenCalledWith(expect.objectContaining({
-      operation: 'task.get',
+      operation: 'tasks.list',
       handle: { handleId: 'TEST-original-A' },
-      payload: { taskId: 'retained-1' },
+      payload: { deleted: true },
     }));
+    expect(f.backend.invoke).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'task.get' })
+    );
     expect(f.legacy.getTask).not.toHaveBeenCalled();
   });
 
@@ -766,15 +773,19 @@ describe('ordinary Host team read selection', () => {
       const f = fixture();
       const original = vi.mocked(f.backend.invoke).getMockImplementation()!;
       vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
-        if (request.operation !== 'task.get') return original(request);
+        if (request.operation !== 'tasks.list') return original(request);
         if (caseName === 'forbidden')
           return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
         return {
           ok: true,
           value: {
-            id: caseName === 'identity' ? 'foreign-task' : 'retained-1',
-            status: caseName === 'status' ? 'in_progress' : 'deleted',
-            subject: 'Not a valid retained task',
+            kind: 'deleted-tasks',
+            teamName: caseName === 'identity' ? 'foreign-team' : f.snapshot.teamName,
+            tasks: [{
+              id: 'retained-1',
+              status: caseName === 'status' ? 'in_progress' : 'deleted',
+              subject: 'Not a valid retained task',
+            }],
           },
         };
       });
