@@ -201,7 +201,29 @@
           "system": "Sistem"
         }
       },
-      "title": "Penampilan"
+      "title": "Penampilan",
+      "customThemes": {
+        "label": "Tema kustom",
+        "description": "Palet warna JSON bernama berdasarkan tema terang atau gelap.",
+        "none": "Tema bawaan",
+        "edit": "Edit JSON",
+        "localOnly": "Tema dan skala hanya disimpan di peramban atau perangkat ini.",
+        "editor": {
+          "title": "Edit tema (JSON)",
+          "description": "Maksimal 8 tema. Warna harus #RRGGBB. Hanya JSON yang valid diterapkan; larik themes kosong menghapus semua tema.",
+          "cancel": "Batal",
+          "save": "Simpan tema",
+          "conflict": "Tema di tab lain telah berubah. Draf JSON Anda tetap disimpan; periksa atau timpa tema terbaru secara sengaja.",
+          "overwrite": "Timpa tema terbaru",
+          "invalidJson": "Sintaks JSON tidak valid",
+          "invalidTheme": "Palet tema tidak valid. Periksa kolom, warna, dan kontras."
+        }
+      },
+      "uiScale": {
+        "label": "Skala antarmuka",
+        "description": "Ubah skala seluruh aplikasi tanpa mengubah zoom sistem atau peramban.",
+        "reset": "Atur ulang"
+      }
     },
     "browserAccess": {
       "serverMode": {

@@ -161,6 +161,29 @@ const reads: unknown[] = [];
 const diagnostics: unknown[] = [];
 let passed = false;
 let launchError: Error | undefined;
+/** Exercise Radix selectors with actual mouse input through Chromium CDP. */
+async function clickAppearanceControl(testId: string): Promise<void> {
+  assert(cdp, 'CDP must be connected before Appearance interactions');
+  const point = (await cdp.evaluate(`(() => {
+    const node = document.querySelector('[data-testid="${testId}"]');
+    if (!(node instanceof HTMLElement)) throw new Error('Appearance control missing: ${testId}');
+    node.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const bounds = node.getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0) throw new Error('Appearance control hidden: ${testId}');
+    return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+  })()`)) as { x: number; y: number };
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+}
+async function chooseAppearanceOption(triggerId: string, optionId: string): Promise<void> {
+  await clickAppearanceControl(triggerId);
+  await until(
+    () => cdp!.evaluate(`!!document.querySelector('[data-testid="${optionId}"]')`),
+    `Appearance option ${optionId} opens`
+  );
+  await clickAppearanceControl(optionId);
+}
 const receiptPath = join(root, 'electron-watcher-v7-' + sha.slice(0, 7) + '.json');
 async function receipt() {
   await writeFile(
@@ -441,6 +464,85 @@ try {
   await until(() => cdp!.evaluate(
     `(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===window.__taskTabsAppearanceInitialTheme;})()`
   ), 'Appearance restores fixture theme');
+  // Custom Appearance E2E: exercise the actual Electron renderer, IPC and persisted
+  // local preference store (never synthetic React props or fabricated E2E receipts).
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-125');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===125&&Math.abs(zoom-1.25)<0.02;})()"
+  ), 'Appearance applies and saves 125% through native Electron zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-125-desktop.png'));
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-200');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===200&&Math.abs(zoom-2)<0.02;})()"
+  ), 'Appearance applies and saves 200% through native Electron zoom');
+  await until(() => cdp!.evaluate(
+    "(()=>{const ids=['appearance-ui-scale','appearance-custom-theme-select','appearance-edit-custom-themes'];const visible=ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;const box=el.getBoundingClientRect();return box.width>0&&box.left>=0&&box.right<=window.innerWidth-4;});const sidebar=document.getElementById('sidebar-tasks-panel');return visible&&(!sidebar||sidebar.getClientRects().length===0);})()"
+  ), '200% Appearance controls remain onscreen without task sidebar overflow');
+  await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
+  // A 200% native scale halves the CSS viewport; editing must still work.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const dialog=document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');const editor=dialog?.querySelector('.cm-content');const save=dialog?.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(editor instanceof HTMLElement)||!(save instanceof HTMLElement))return false;const box=save.getBoundingClientRect();return box.bottom<=innerHeight-2&&box.top>=0&&box.width>0&&editor.getBoundingClientRect().height>20;})()"
+  ), '200% JSON editor keeps its Save control and editor visible');
+  await cdp.screenshot(join(root, 'settings-appearance-editor-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), '200% JSON editor cancels cleanly');
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-100');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===100&&Math.abs(zoom-1)<0.02;})()"
+  ), 'Appearance resets native scale to 100%');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme editor missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Appearance JSON editor opens with real CodeMirror');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme save missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const record=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return record?.themes?.some(t=>t.id==='my-theme')&&!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');})()"
+  ), 'Valid JSON theme is persisted and editor closes');
+  await chooseAppearanceOption('appearance-custom-theme-select', 'appearance-custom-theme-option-my-theme');
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#6366f1';})()"
+  ), 'Custom theme applies CSS semantic tokens on the real root');
+  await cdp.screenshot(join(root, 'settings-appearance-custom-theme-desktop.png'));
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-dark\"]');if(!(button instanceof HTMLButtonElement))throw Error('Built-in theme missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId===null&&!document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='';})()"
+  ), 'Returning to built-in themes fully clears custom CSS overrides');
+  // Regression: a rejected save must not leave an armed Overwrite action when
+  // the editor is closed and reopened for a new session.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Editor reopens for conflict recovery');
+  await cdp.evaluate(
+    "(()=>{const key='agent-teams-appearance-v1';const raw=localStorage.getItem(key);if(!raw)throw Error('Missing saved palette');window.__appearanceConflictFixture=raw;localStorage.setItem(key,JSON.stringify({...JSON.parse(raw),themes:[]}));document.querySelector('[data-testid=\"appearance-theme-json-save\"]').click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'Editor detects conflicting saved themes');
+  await cdp.evaluate(
+    "(()=>{document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click();const original=window.__appearanceConflictFixture;localStorage.setItem('agent-teams-appearance-v1',original);delete window.__appearanceConflictFixture;})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Cancelling a conflict closes the editor');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')&&!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'New editing session clears stale conflict and overwrite action');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Clean editor cancellation');
+  reads.push({ kind: 'appearance-custom-theme-and-zoom-real-electron', customJsonSaved: true, cssApplied: true, builtinsRestored: true, scales: [100,125,200] });
   reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
   }
 
