@@ -763,7 +763,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSelectedEffortRaw('');
     localStorage.setItem('team:lastSelectedEffort', '');
   };
-
   const setSelectedFastMode = (value: TeamFastMode): void => {
     markDisplayedProviderAsEdited();
     if (isSchedule) scheduleRuntimeEditedRef.current.fastMode = true;
@@ -771,29 +770,24 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSelectedFastModeRaw(value);
     localStorage.setItem('team:lastSelectedFastMode', value);
   };
-
   const setMembersDraftsFromUser = (nextMembers: MemberDraft[]): void => {
     hydrationRef.current.dirty = true;
     hydrationRef.current.rosterDirty = true;
     setMembersDrafts(nextMembers);
   };
-
   const setSyncModelsWithLeadFromUser = (value: boolean): void => {
     setRelaunchInheritedSync(value);
     relaunchSyncEditedRef.current = true;
     hydrationRef.current.dirty = true;
     setSyncModelsWithLead(value);
   };
-
   const setTeammateWorktreeDefaultFromUser = (value: boolean): void => {
     hydrationRef.current.dirty = true;
     setTeammateWorktreeDefault(value);
   };
-
   useEffect(() => {
     migrateLegacyLaunchDialogStorage();
   }, []);
-
   const resetFormState = (): void => {
     submissionFence.refreshPreparation(prepareRequestSeqRef);
     savedLaunchSource.reset();

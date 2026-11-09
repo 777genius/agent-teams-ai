@@ -430,18 +430,14 @@ export function createTeamHost(
             return { ok: true, value: receipt ? json(receipt) : null };
           }
           if (operation === 'listTasks') {
-            const query = z
-              .object({
-                deleted: z.literal(true).optional(),
-                cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
-              })
-              .strict()
-              .parse(input.payload ?? {});
+            const query = z.strictObject({
+              deleted: z.literal(true).optional(),
+              cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
+            }).parse(input.payload ?? {});
             if (query.cursor !== undefined && query.deleted !== true)
               throw new TeamOwnerError('invalid');
             return {
-              ok: true,
-              value: query.deleted
+              ok: true, value: query.deleted
                 ? connection.readDeletedTasks(query.cursor ? { cursor: query.cursor } : {})
                 : json(connection.listTasks()),
             };
