@@ -575,7 +575,6 @@ export class OpenCodeVisibleReplyProofService {
     }
     return { ledgerRecord, visibleReply: visibleReplyForProof };
   }
-
   async materializePlainTextReplyIfNeeded(
     input: Parameters<
       OpenCodeVisibleReplyProofService['materializePlainTextReplyIfNeededCurrent']
