@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
+import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -34,6 +35,23 @@ function rememberAppLog(chunk, stream) {
   }
   appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 200) appLogTail.splice(0, appLogTail.length - 200);
+}
+
+// Use an explicit, available port: electron-vite treats --inspect=0 as disabled.
+async function findFreeInspectorPort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        server.close();
+        reject(new Error('Could not allocate a loopback inspector port'));
+        return;
+      }
+      server.close((error) => error ? reject(error) : resolve(address.port));
+    });
+  });
 }
 
 async function json(file, value) {
@@ -228,9 +246,10 @@ async function startApp(fixture) {
   // Windows pnpm is a .cmd shim, which cannot be spawned as a POSIX executable.
   // Keep a known launcher PID for taskkill /T on teardown (including restart).
   const windows = process.platform === 'win32';
+  const inspectorPort = await findFreeInspectorPort();
   appProcess = spawn(
     windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
-    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp --inspect=0'] : ['dev:mcp', '--inspect=0', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
+    windows ? ['/d', '/s', '/c', `pnpm dev:mcp --inspect=${inspectorPort}`] : ['dev:mcp', `--inspect=${inspectorPort}`, ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
     {
       cwd: repoRoot,
       detached: !windows,
