@@ -117,42 +117,39 @@ export function hasOneVisibleOpenCodeConnection(text) {
 export async function verifyColdDashboardConnectedCount({ root, evaluate, send }) {
   const started = performance.now();
   let outcome = 'count_unavailable';
-  let result = null;
-  try {
-    for (let attempt = 0; attempt < 180; attempt++) {
-      const view = await evaluate(`(() => ({
-        dashboard: Boolean(document.querySelector('[data-testid="dashboard-manage-providers"]')?.getClientRects().length),
-        settings: Boolean(document.querySelector('[data-testid="provider-settings-page"]')?.getClientRects().length),
-        count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
-      }))()`);
-      if (view.settings) {
-        outcome = 'settings_opened_before_dashboard_proof';
-        break;
-      }
-      if (view.dashboard && hasOneVisibleOpenCodeConnection(view.count)) {
-        outcome = 'passed';
-        result = { connected: 1, elapsedMs: Math.round(performance.now() - started) };
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  let connected = null;
+  for (let attempt = 0; attempt < 180; attempt++) {
+    const view = await evaluate(`(() => ({
+      dashboard: Boolean(document.querySelector('[data-testid="dashboard-manage-providers"]')?.getClientRects().length),
+      settings: Boolean(document.querySelector('[data-testid="provider-settings-page"]')?.getClientRects().length),
+      count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
+    }))()`);
+    if (view.settings) {
+      outcome = 'settings_opened_before_dashboard_proof';
+      break;
     }
-    await writeFile(path.join(root, 'cold-dashboard.json'), JSON.stringify({
-      schemaVersion: 1,
-      platform: process.platform,
-      result: outcome,
-      connected: result?.connected ?? null,
-      elapsedMs: Math.round(performance.now() - started),
-      settingsVisited: false,
-      liveAccounts: false,
-      modelInferenceTested: false,
-    }, null, 2));
-    assert.equal(outcome, 'passed', 'Cold Dashboard did not show verified OpenCode connection count');
-    const screenshot = await send('Page.captureScreenshot', { format: 'png' });
-    await writeFile(path.join(root, 'cold-dashboard.png'), Buffer.from(screenshot.data, 'base64'));
-    return result;
-  } catch (error) {
-    throw error;
+    if (view.dashboard && hasOneVisibleOpenCodeConnection(view.count)) {
+      outcome = 'passed';
+      connected = 1;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
+  const elapsedMs = Math.round(performance.now() - started);
+  await writeFile(path.join(root, 'cold-dashboard.json'), JSON.stringify({
+    schemaVersion: 1,
+    platform: process.platform,
+    result: outcome,
+    connected,
+    elapsedMs,
+    settingsVisited: false,
+    liveAccounts: false,
+    modelInferenceTested: false,
+  }, null, 2));
+  assert.equal(outcome, 'passed', 'Cold Dashboard did not show verified OpenCode connection count');
+  const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+  await writeFile(path.join(root, 'cold-dashboard.png'), Buffer.from(screenshot.data, 'base64'));
+  return { connected, elapsedMs };
 }
 
 /**
