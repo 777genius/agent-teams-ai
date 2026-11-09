@@ -12342,7 +12342,9 @@ describe('TeamProvisioningService', () => {
         responseObservation: {
           state: 'responded_visible_message',
           deliveredUserMessageId: 'oc-user-1',
-          assistantMessageId: 'oc-assistant-1',
+          // This fixture has a user-directed tool receipt, not a canonical
+          // assistant transcript that can be safely replayed to the lead.
+          assistantMessageId: null,
           toolCallNames: ['message_send'],
           visibleMessageToolCallId: 'call-1',
           visibleReplyMessageId: 'reply-user-1',
