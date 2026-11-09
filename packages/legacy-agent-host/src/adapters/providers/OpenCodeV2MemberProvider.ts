@@ -170,11 +170,17 @@ export function createOpenCodeV2MemberProvider(
     throw new Error('OpenCode V2 requires an immutable Host capture');
   const capturedGeneration = context.endpoint.binding.generation;
   const capturedConfigRevision = context.request.configRevision;
+  // Checkpoint compatibility binds the stable member/session, NOT its
+  // ephemeral Host generation or Team runId. The complete endpoint/request
+  // snapshots and native PID still fence every live operation to this lease.
   const trustedBinding = runtimeDigest({
-    binding: context.endpoint.binding,
+    binding: {
+      backendId: context.endpoint.binding.backendId,
+      teamId: context.endpoint.binding.teamId,
+      memberId: context.endpoint.binding.memberId,
+    },
     memberId: profile.memberId,
     sessionId: profile.sessionId,
-    generation: profile.generation,
   });
   let sealed = false;
   let allocated = false;

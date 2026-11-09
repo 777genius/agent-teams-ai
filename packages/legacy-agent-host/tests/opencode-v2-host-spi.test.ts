@@ -1405,6 +1405,55 @@ test('V2 revoked Host lease cannot read a checkpoint after async configuration s
   assert.equal(await provider.cleanup(), true);
 });
 
+test('V2 cold checkpoint compatibility survives a new generation but never a foreign member',
+  async () => {
+    const firstOwner = owner(true);
+    const first = createOpenCodeV2MemberProvider(context(), firstOwner.captured);
+    const opened = await first.factory.open(request());
+    const checkpoint = opened.driver.checkpoint();
+    if (!checkpoint.ok) throw new Error('original TEST V2 checkpoint was not captured');
+    const original = checkpoint.value;
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+    assert.equal(firstOwner.calls.stop, 1, 'original native owner is physically retired');
+
+    // A Stage1 restore retains member/session identity but allocates a new
+    // generation, possibly with a different Team runId.
+    const next = { ...request(), generation: 2, checkpointRef: 'TEST-native-v2-checkpoint' };
+    const nextProfile = { ...v2Profile(), generation: 2 };
+    const nextContext = context(nextProfile, next);
+    nextContext.endpoint.binding = {
+      ...nextContext.endpoint.binding,
+      generation: 'test-generation-2', runId: 'test-new-run',
+    };
+    let checkpointReads = 0;
+    nextContext.readCheckpoint = async () => { checkpointReads++; return original; };
+    const nextOwner = owner(true);
+    const second = createOpenCodeV2MemberProvider(nextContext, nextOwner.captured);
+    const resumed = await second.factory.open(next);
+    assert.equal(second.isReady(), true, 'selected V2 checkpoint opens on a new Host generation');
+    assert.equal(checkpointReads, 1, 'read existing checkpoint only once');
+    assert.equal(nextOwner.calls.context, 1, 'new native context installed exactly once');
+    assert.equal(nextOwner.calls.password, 0, 'checkpoint never submits a model input');
+    assert.deepEqual(await resumed.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+    assert.equal(nextOwner.calls.stop, 1, 'only the new TEST owner is stopped');
+
+    const foreignContext = context({ ...nextProfile, memberId: 'test-foreign-member' }, next);
+    foreignContext.endpoint.binding = {
+      ...foreignContext.endpoint.binding, memberId: 'test-foreign-member',
+      generation: 'test-generation-2', runId: 'test-new-run',
+    };
+    foreignContext.readCheckpoint = async () => original;
+    const foreignOwner = owner(true);
+    const foreign = createOpenCodeV2MemberProvider(foreignContext, foreignOwner.captured);
+    await assert.rejects(() => foreign.factory.open(next),
+      /opencode.driver.checkpoint-incompatible/,
+      'native V2 checkpoint must not be adopted by another member');
+    assert.equal(foreignOwner.calls.probe, 0, 'reject foreign checkpoint before native probe');
+    assert.equal(foreignOwner.calls.password, 0, 'no credentials for foreign checkpoint');
+    assert.equal(await foreign.cleanup(), true);
+    assert.equal(foreignOwner.calls.stop, 1);
+  });
+
 test('V1 checkpoint identity is rejected before V2 native probe or permission readback', async () => {
   const { captured, calls } = owner(true);
   const restoredRequest = { ...request(), checkpointRef: 'cp1-TEST-v1' };
