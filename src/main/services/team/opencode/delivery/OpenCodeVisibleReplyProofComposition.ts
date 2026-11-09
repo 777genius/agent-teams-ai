@@ -1,9 +1,10 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
-import { ClaudeMultimodelBridgeService, type OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';
+import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
 
 import { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 
+import type { OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';
 import type { OpenCodeGroupReplySender } from './OpenCodeGroupVisibleReply';
 import type { OpenCodeVisibleReplyProofServiceDependencies } from './OpenCodeVisibleReplyProofService';
 import type { TeamCreateRequest } from '@shared/types/team';
