@@ -648,6 +648,24 @@ async function setBrowserWindowZoom(inspector, factor) {
 
 async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
   const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  log('reject invalid cron and timezone at the actual native IPC boundary');
+  for (const timing of [
+    { cronExpression: 'not a cron', timezone: 'UTC' },
+    { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' },
+  ]) {
+    const invalidInput = {
+      teamName: fixture.teamName,
+      ...timing,
+      launchConfig: { cwd: fixture.projectPath, prompt: 'No execution' },
+    };
+    const result = await client.evaluate(
+      'window.electronAPI.schedules.create(' + JSON.stringify(invalidInput) +
+        ').then(() => "UNEXPECTED_SUCCESS", error => String(error?.message ?? error))'
+    );
+    assert.notEqual(result, 'UNEXPECTED_SUCCESS', 'Native IPC accepted invalid schedule timing');
+    assert(/cron|timezone|schedule/i.test(result), 'Native IPC returned an unrelated error: ' + result);
+  }
+
   log('open real Schedules UI in isolated Electron');
   await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');
   await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);
@@ -701,6 +719,20 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     'New UI schedule did not persist its selected team and task-first mode');
   assert.equal(scheduled.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone,
     'Schedule changed the selected local IANA timezone');
+  const invalidEditResult = await client.evaluate(
+    'window.electronAPI.schedules.update(' + JSON.stringify(scheduled.id) +
+      ', { cronExpression: "not a cron" }).then(() => "UNEXPECTED_SUCCESS", ' +
+      'error => String(error?.message ?? error))'
+  );
+  assert.notEqual(invalidEditResult, 'UNEXPECTED_SUCCESS',
+    'Native IPC accepted invalid edit of an active schedule');
+  const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
+    'Rejected timing edit corrupted the saved active schedule');
+  assert.equal(afterRejectedEdit?.status, 'active',
+    'Rejected timing edit deactivated the saved schedule');
+
   log('exercise list presentation in dark/light and native Electron 200% zoom');
   for (const theme of ['light', 'dark']) {
     await client.evaluate(
@@ -786,6 +818,31 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     .find(s => s.id === scheduled.id);
   assert.equal(afterEdit?.cronExpression, '0 * * * *');
   assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
+
+  log('pause and resume the schedule through the real actions menu');
+  await client.click(more);
+  await client.click(createButtonExpression('Pause'));
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.textContent?.includes('Paused'))",
+    'schedule paused in the UI', 45_000);
+  const pausedRecord = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(pausedRecord?.status, 'paused', 'Pause action did not persist');
+  await captureScreenshot(client, fixture, 'schedules-paused');
+
+  await client.click(more);
+  await client.click(createButtonExpression('Resume'));
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.textContent?.includes('Active'))",
+    'schedule resumed in the UI', 45_000);
+  const resumedRecord = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(resumedRecord?.status, 'active', 'Resume action did not persist');
+  await captureScreenshot(client, fixture, 'schedules-resumed');
 
   log('run now and inspect the actual schedule run history');
   const runNow = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
