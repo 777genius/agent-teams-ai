@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppearancePreferences } from '@features/appearance/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -47,6 +48,9 @@ export const TaskTableView = memo(function TaskTableView({
   onTaskClick,
 }: TaskTableViewProps): React.JSX.Element {
   const { t, resolvedLanguage } = useAppTranslation('team');
+  const { fontSizePercent } = useAppearancePreferences();
+  // Fixed row heights must match the virtualizer estimate after text scaling.
+  const rowHeight = Math.ceil(ROW_HEIGHT * Math.max(1, fontSizePercent / 100));
   const storageKey = taskTablePreferenceKey(contextId, teamName);
   const initialPrefs = useMemo(() => loadTaskTablePreferences(storageKey), [storageKey]);
   const [visibility, setVisibility] = useState(initialPrefs.visibility);
@@ -126,10 +130,14 @@ export const TaskTableView = memo(function TaskTableView({
   const virtualizer = useVirtualizer({
     count: tableRows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 8,
     enabled: isActive,
   });
+  useEffect(() => {
+    // Invalidate cached offsets when Appearance typography changes.
+    virtualizer.measure();
+  }, [fontSizePercent, virtualizer]);
   const virtualRows = virtualizer.getVirtualItems();
   const paddingTop = virtualRows[0]?.start ?? 0;
   const paddingBottom =
@@ -313,15 +321,17 @@ export const TaskTableView = memo(function TaskTableView({
                   key={row.id}
                   data-task-id={row.original.task.id}
                   data-testid="team-task-table-row"
-                  className="group h-12 cursor-pointer border-b border-[var(--color-border)] text-[var(--color-text)] transition-colors focus-within:bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-raised)]"
+                  className="group cursor-pointer border-b border-[var(--color-border)] text-[var(--color-text)] transition-colors focus-within:bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-raised)]"
+                  style={{ height: rowHeight }}
                   onClick={() => onTaskClick?.(row.original.task)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
                       data-testid={'team-task-table-cell-' + cell.column.id}
+                      style={{ height: rowHeight }}
                       className={[
-                        'h-12 overflow-hidden whitespace-nowrap px-3 align-middle',
+                        'overflow-hidden whitespace-nowrap px-3 align-middle',
                         cell.column.id === 'task'
                           ? 'sticky start-0 z-[1] bg-[var(--color-surface)] transition-colors group-focus-within:bg-[var(--color-surface-raised)] group-hover:bg-[var(--color-surface-raised)]'
                           : '',

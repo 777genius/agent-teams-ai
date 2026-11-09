@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { AnnouncementHost } from '@features/announcements/renderer';
-import { useAppearanceZoomController } from '@features/appearance/renderer';
+import { useAppearanceTypographyController, useAppearanceZoomController } from '@features/appearance/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
@@ -41,6 +41,7 @@ export const App = (): React.JSX.Element => {
   // Initialize theme on app load
   useThemeController();
   useAppearanceZoomController();
+  useAppearanceTypographyController();
   const appConfig = useStore((s) => s.appConfig);
 
   useEffect(() => {

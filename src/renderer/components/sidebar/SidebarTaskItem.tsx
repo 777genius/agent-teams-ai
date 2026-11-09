@@ -263,7 +263,7 @@ const SidebarTaskItemContent = ({
                   onRenameCancel?.();
                 }
               }}
-              className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
+              className="min-w-0 flex-1 border-none bg-transparent p-0 text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight focus:outline-none"
               style={{ color: 'var(--color-text-muted)' }}
               onClick={(e) => e.stopPropagation()}
               onFocus={preloadGlobalTaskDetailDialog}
@@ -293,7 +293,7 @@ const SidebarTaskItemContent = ({
               <div className="w-full overflow-hidden">
                 <span
                   className={cn(
-                    'text-[13px] font-medium leading-tight',
+                    'text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight',
                     treeCard ? 'block' : 'line-clamp-2 break-words'
                   )}
                   style={{ color: 'var(--color-text-muted)' }}
