@@ -207,7 +207,7 @@
         "description": "Koyu veya açık temayı temel alan adlandırılmış JSON renk paletleri.",
         "none": "Yerleşik tema",
         "edit": "JSON düzenle",
-        "localOnly": "Temalar ve ölçek yalnızca bu tarayıcıda veya cihazda saklanır.",
+        "localOnly": "Temalar, yakınlaştırma ve yazı tipleri yalnızca bu cihazda veya tarayıcıda saklanır.",
         "editor": {
           "title": "Temaları düzenle (JSON)",
           "description": "En fazla 8 tema. Renkler #RRGGBB olmalı. Yalnızca geçerli JSON uygulanır; boş themes dizisi temaları siler.",
@@ -222,6 +222,22 @@
       "uiScale": {
         "label": "Arayüz ölçeği",
         "description": "Sistem veya tarayıcı yakınlaştırmasını değiştirmeden tüm uygulamayı ölçeklendirin.",
+        "reset": "Sıfırla"
+      },
+      "fontFamily": {
+        "label": "Arayüz yazı tipi",
+        "description": "Bu cihazda yüklü bir yazı tipi seçin. Düzenleyici ve terminalin yazı tipleri değişmez.",
+        "system": "Sistem varsayılanı",
+        "other": "Başka yazı tipi…",
+        "placeholder": "Yüklü yazı tipinin adı",
+        "apply": "Uygula",
+        "discover": "Yüklü yazı tiplerini bul",
+        "loaded": "Yüklü yazı tipleri listeye eklendi.",
+        "unavailable": "Yazı tipleri burada listelenemiyor. Adını elle girin."
+      },
+      "textSize": {
+        "label": "Metin boyutu",
+        "description": "Genel arayüz yakınlaştırmasını değiştirmeden metin boyutunu ayarlayın.",
         "reset": "Sıfırla"
       }
     },
