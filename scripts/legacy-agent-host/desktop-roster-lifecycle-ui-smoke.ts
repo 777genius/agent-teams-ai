@@ -28,6 +28,7 @@ export async function runDesktopRosterLifecycleUiSmoke(
   assert.equal(created.teamName, teamName);
   const teamSelection = hostTeamSelectionKey(String(record(created.binding).handleId));
   const teamSelector = `[data-team-name=${JSON.stringify(teamSelection)}]`;
+  const memberIdentitySelector = '[data-section-id="team"] [role="button"] span.font-medium';
   const team = join(root, 'hoststore/teams', teamName),
     ownerPath = join(team, '.host-owner/state.json');
   const witnessPath = join(root, 'hoststore/teams/test-desktop-backend/.host-owner/state.json');
