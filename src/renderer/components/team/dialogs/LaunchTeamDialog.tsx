@@ -86,11 +86,11 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { HistoricalPromptReview } from '../schedule/HistoricalPromptReview';
-import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 import {
   markScheduleProviderSwitch,
   resolveScheduleLaunchConfig,
 } from '../schedule/resolveScheduleLaunchConfig';
+import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 import { validateScheduleForm } from '../schedule/validateScheduleForm';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
@@ -2900,9 +2900,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onProviderChange={setSelectedProviderId}
                   value={selectedModel}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
-                  onValueChange={(value, source) =>
-                    source === 'normalized' ? setSelectedModelRaw(value) : setSelectedModel(value)
-                  }
+                  onValueChange={setSelectedModel}
+                  onNormalizedValueChange={setSelectedModelRaw}
                   projectPath={effectiveCwd || null}
                   id="dialog-model"
                   disableGeminiOption={isGeminiUiFrozen()}

@@ -615,13 +615,14 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () =
 }));
 
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
-  TeamModelSelector: ({ value, onProviderChange, onValueChange }: {
+  TeamModelSelector: ({ value, onProviderChange, onValueChange, onNormalizedValueChange }: {
     value: string;
     onProviderChange: (value: TeamProviderId) => void;
-    onValueChange: (value: string, source?: 'normalized') => void;
+    onValueChange: (value: string) => void;
+    onNormalizedValueChange?: (value: string) => void;
   }) => {
     modelAutoNormalizeMock.providerCallback = onProviderChange;
-    modelAutoNormalizeMock.callback = (value) => onValueChange(value, 'normalized');
+    modelAutoNormalizeMock.callback = onNormalizedValueChange ?? null;
     modelAutoNormalizeMock.manualCallback = onValueChange;
     return React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`);
   },
