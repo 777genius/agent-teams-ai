@@ -233,7 +233,8 @@
         "apply": "Terapkan",
         "discover": "Cari font terpasang",
         "loaded": "Font terpasang ditambahkan ke daftar.",
-        "unavailable": "Daftar font tidak tersedia di sini. Masukkan nama secara manual."
+        "unavailable": "Daftar font tidak tersedia di sini. Masukkan nama secara manual.",
+        "empty": "Tidak ada font terpasang yang ditemukan. Masukkan nama secara manual."
       },
       "textSize": {
         "label": "Ukuran teks",

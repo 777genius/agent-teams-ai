@@ -233,7 +233,8 @@
         "apply": "Applica",
         "discover": "Mostra caratteri installati",
         "loaded": "I caratteri installati sono stati aggiunti all’elenco.",
-        "unavailable": "Impossibile elencare i caratteri qui. Inserisci il nome manualmente."
+        "unavailable": "Impossibile elencare i caratteri qui. Inserisci il nome manualmente.",
+        "empty": "Nessun carattere installato trovato. Inserisci il nome manualmente."
       },
       "textSize": {
         "label": "Dimensione testo",

@@ -233,7 +233,8 @@
         "apply": "Appliquer",
         "discover": "Afficher les polices installées",
         "loaded": "Les polices installées ont été ajoutées à la liste.",
-        "unavailable": "Impossible de lister les polices ici. Saisissez le nom manuellement."
+        "unavailable": "Impossible de lister les polices ici. Saisissez le nom manuellement.",
+        "empty": "Aucune police installée trouvée. Saisissez le nom manuellement."
       },
       "textSize": {
         "label": "Taille du texte",

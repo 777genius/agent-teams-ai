@@ -233,7 +233,8 @@
         "apply": "Ilapat",
         "discover": "Hanapin ang mga naka-install na font",
         "loaded": "Naidagdag sa listahan ang mga naka-install na font.",
-        "unavailable": "Hindi maipakita ang mga font dito. Ilagay nang manu-mano ang pangalan."
+        "unavailable": "Hindi maipakita ang mga font dito. Ilagay nang manu-mano ang pangalan.",
+        "empty": "Walang nakitang naka-install na font. Ipasok nang manu-mano ang pangalan."
       },
       "textSize": {
         "label": "Laki ng teksto",
