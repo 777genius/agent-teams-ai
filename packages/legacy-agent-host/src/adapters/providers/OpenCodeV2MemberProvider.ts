@@ -189,8 +189,17 @@ export function createOpenCodeV2MemberProvider(
         },
         limits: profile.limits,
         readPassword: () => {
-          if (!current()) throw new Error('V2 native custody revoked');
-          return owned.readPassword();
+          // Native transports may request credentials after a submit started
+          // but while a different Host re-attestation is still unproven.
+          // The owner projection itself is also untrusted to preserve the
+          // inherited executable environment: recheck AFTER its callback so
+          // a synchronous override/revocation cannot authorize a network I/O.
+          if (!admissionSettled() || !current())
+            throw new Error('V2 native custody revoked');
+          const password = owned.readPassword();
+          if (!admissionSettled() || !current())
+            throw new Error('V2 native custody revoked');
+          return password;
         },
         probe: async (signal) => {
           if (qualificationRevoked) return false;

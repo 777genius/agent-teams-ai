@@ -453,6 +453,54 @@ test('lowercase inherited override appearing after readiness permanently retires
   assert.equal(calls.stopped, 1);
 });
 
+test('native V2 credentials cannot authorize a request after synchronous owner environment drift',
+  { timeout: 10000 }, async () => {
+    const previous = process.env.OPENCODE_BIN_PATH;
+    const profile = v2Profile();
+    let requests = 0;
+    const server = createServer((_request, response) => {
+      requests++;
+      response.writeHead(500);
+      response.end();
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    const { captured, calls } = owner(true);
+    captured.readPassword = () => {
+      calls.password++;
+      // Simulate a hostile inherited launcher override appearing DURING
+      // credential projection, after the transport already began admission.
+      process.env.OPENCODE_BIN_PATH = '/TEST-only/untrusted-native-override';
+      return 'TEST-only-password';
+    };
+    let opened: Awaited<ReturnType<ReturnType<typeof createOpenCodeV2MemberProvider>['factory']['open']>> | undefined;
+    try {
+      const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+      opened = await provider.factory.open(request());
+      assert.equal(provider.isReady(), true);
+      const response = await opened.driver.submit({
+        inputId: 'TEST-late-env', operationRef: 'TEST-late-env-op',
+        content: 'must not reach an external native HTTP peer',
+      });
+      assert.equal(response.ok, false, 'a late executable override must refuse submission');
+      assert.equal(requests, 0, 'a credential callback may not authorize even the first native GET');
+      assert.equal(calls.password, 1, 'do not retry credentials after the failed projection');
+      assert.equal(calls.stop, 1, 'only the original captured TEST-owned engine is stopped');
+      assert.equal(provider.isReady(), false);
+      assert.equal(await provider.cleanup(), true);
+    } finally {
+      await opened?.driver.close();
+      if (previous === undefined) delete process.env.OPENCODE_BIN_PATH;
+      else process.env.OPENCODE_BIN_PATH = previous;
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+
 test('V2 private SPI refuses mismatched request before native probe and credentials', async () => {
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(), captured);
