@@ -214,12 +214,27 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
     }
     assert(contentVisible, 'Manage ' + provider + ' settings panel content missing');
     reportStage(provider + ':close');
-    await clickControl(evaluate, send,
-      "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')");
+    const closeControl =
+      "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')";
+    // Codex account overlays can briefly cover the close target while its
+    // asynchronous status panel settles. Never dispatch a blind coordinate click.
+    let closeReady = false;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      closeReady = await evaluate("(() => { const button = " + closeControl +
+        "; if (!button?.isConnected || button.disabled || !button.getClientRects().length) return false;" +
+        " button.scrollIntoView({block:'nearest'});" +
+        " const r=button.getBoundingClientRect();" +
+        " const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+        " return hit===button || button.contains(hit); })()");
+      if (closeReady) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    assert(closeReady, 'Manage ' + provider + ' dialog close control obstructed');
+    await clickControl(evaluate, send, closeControl);
     let closed = false;
     for (let attempt = 0; attempt < 40; attempt++) {
       closed = await evaluate(
-        "document.querySelector('[role=\"dialog\"]') === null"
+        "document.querySelector('[role=\"dialog\"][data-state=\"open\"]') === null"
       );
       if (closed) break;
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -301,6 +316,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
       message.includes('Manage control missing') ? 'control_unavailable' :
       message.includes('different provider tab') ? 'wrong_provider_tab' :
       message.includes('settings panel content missing') ? 'provider_content_missing' :
+      message.includes('dialog close control obstructed') ? 'dialog_close_control_obstructed' :
       message.includes('dialog did not close') ? 'dialog_close_failed' :
       message.includes('Required desktop control unavailable') ? 'desktop_click_unavailable' :
       'other';
