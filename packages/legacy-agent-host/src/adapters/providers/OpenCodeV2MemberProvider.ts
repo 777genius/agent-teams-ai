@@ -72,14 +72,14 @@ export interface OpenCodeV2OwnedSession {
  * methods retain their original receiver.
  */
 function captureDataCallback<T extends object, K extends keyof T>(
-  receiver: T, name: K
+  receiver: T, name: K, callbackOwner: 'native owner' | 'Host authority' = 'native owner'
 ): T[K] {
   let prototype: object | null = receiver;
   while (prototype !== null) {
     const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
     if (descriptor) {
       if (typeof descriptor.value !== 'function')
-        throw new Error('OpenCode V2 requires data-property authority callbacks');
+        throw new Error(`OpenCode V2 requires data-property ${callbackOwner} callbacks`);
       // Function.prototype.bind reads target.name and target.length. Those
       // getters can replace another authority callback during capture.
       // Reflect.apply preserves original identity/receiver without metadata reads.
@@ -88,7 +88,7 @@ function captureDataCallback<T extends object, K extends keyof T>(
     }
     prototype = Object.getPrototypeOf(prototype);
   }
-  throw new Error('OpenCode V2 requires data-property authority callbacks');
+  throw new Error(`OpenCode V2 requires data-property ${callbackOwner} callbacks`);
 }
 
 /**
@@ -109,12 +109,12 @@ export function createOpenCodeV2MemberProvider(
   // Retain original Host authority before a native owner getter can swap
   // these callbacks. Binding via Function.prototype.bind itself invokes
   // attacker-controlled .name/.length getters during capture.
-  const capturedIsCurrent = captureDataCallback(context, 'isCurrent');
-  const capturedCanAllocate = captureDataCallback(context, 'canAllocate');
+  const capturedIsCurrent = captureDataCallback(context, 'isCurrent', 'Host authority');
+  const capturedCanAllocate = captureDataCallback(context, 'canAllocate', 'Host authority');
   // Preserve the selected Host storage/progress callbacks across native
   // policy getters, native probes and async checkpoint reads.
-  const capturedReadCheckpoint = captureDataCallback(context, 'readCheckpoint');
-  const capturedOnProgress = captureDataCallback(context, 'onProgress');
+  const capturedReadCheckpoint = captureDataCallback(context, 'readCheckpoint', 'Host authority');
+  const capturedOnProgress = captureDataCallback(context, 'onProgress', 'Host authority');
   const selected = structuredClone(context.profile);
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
