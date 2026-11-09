@@ -60,7 +60,7 @@ function fixture() {
             human.execute({ ...payload, commandId: request.commandId } as TeamCommand)
           );
         case 'team.snapshot':
-          return success(human.readSnapshot());
+          return success(human.readSnapshot(payload.cursor ? { cursor: payload.cursor as string } : {}));
         case 'team.tasks.list':
           return success(payload.deleted
             ? human.readDeletedTasks(payload.cursor ? { cursor: payload.cursor as string } : {})
@@ -212,11 +212,16 @@ it('retrieves >1 MiB deleted task history and details via bounded Trash pages be
       payload: { taskId, text },
     });
   }
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   f.human.execute({
     commandId: 'TEST-huge-trash-delete',
     operation: 'task.lifecycle',
     payload: { taskId, action: 'delete' },
   });
+  expect(warning).toHaveBeenCalledExactlyOnceWith(
+    `[tasks] retracted 181 queued notification(s) for deleted task ${taskId}`
+  );
+  warning.mockRestore();
   const persisted = f.human.getTask(taskId);
   const retainedComments = persisted.comments as { text: string }[] | undefined;
   expect(retainedComments?.map((row) => row.text)).toEqual(expected);

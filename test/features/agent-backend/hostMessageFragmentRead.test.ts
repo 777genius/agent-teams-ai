@@ -69,8 +69,10 @@ it('does not publish a mixed-revision message after canonical history changes be
     const originalInvoke = f.backend.invoke;
     let count = 0;
     f.backend.invoke = vi.fn<AgentBackendApi['invoke']>(async (request) => {
+      // Count attempted continuations, including Owner refusals on a stale revision.
+      const attempt = ++count;
       const result = await originalInvoke(request);
-      if (++count === 1) {
+      if (attempt === 1) {
         writeFileSync(f.inbox, JSON.stringify([
           { ...f.message, text: f.message.text + 'changed' },
         ]));

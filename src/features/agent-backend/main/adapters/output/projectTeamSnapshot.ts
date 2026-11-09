@@ -246,7 +246,11 @@ function kanban(value: unknown, teamName: string): KanbanState {
 
 
 /** Signed page offsets describe projected rows, never unvalidated raw payloads. */
-type PartIndex = { index: number; part: number; total: number };
+interface PartIndex {
+  index: number;
+  part: number;
+  total: number;
+}
 function readPartIndexes(
   source: Record<string, unknown>,
   totalKey: 'taskTotal' | 'messageTotal',
