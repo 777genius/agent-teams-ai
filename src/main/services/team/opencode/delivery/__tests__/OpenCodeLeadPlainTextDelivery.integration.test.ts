@@ -359,6 +359,10 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     })).toBeNull();
     expect(readOpenCodeExactAssistantText(projection([prompt, send, answer]),
       'ses-current', 'answer-id', options)).toBeNull();
+    expect(readOpenCodeExactAssistantText(projection([
+      prompt, send, result,
+      { ...prompt, uuid: 'later-user-prompt' }, answer,
+    ]), 'ses-current', 'answer-id', options)).toBeNull();
     expect(readOpenCodeExactAssistantText(projection([prompt, send, {
       ...result, toolResults: [{ ...result.toolResults[0], isError: false }],
     }, answer]), 'ses-current', 'answer-id', options)).toBeNull();
