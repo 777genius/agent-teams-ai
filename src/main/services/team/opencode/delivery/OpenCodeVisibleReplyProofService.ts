@@ -627,6 +627,11 @@ export class OpenCodeVisibleReplyProofService {
           ),
       });
     }
+    // Work-sync nudges require an accepted status/report tool receipt, not
+    // a synthesized chat answer. Keep their existing proof contract intact.
+    if (input.ledgerRecord.messageKind === 'member_work_sync_nudge') {
+      return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply ?? null };
+    }
     const materializedFromMessageSendToolError =
       input.ledgerRecord.responseState === 'tool_error' &&
       hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord);
