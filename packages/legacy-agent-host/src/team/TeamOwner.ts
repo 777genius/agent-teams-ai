@@ -587,7 +587,7 @@ export class TeamOwner {
   }
 
   /** Product read under the current actor grant and the same fence as revoke/writes. */
-  private productSnapshot(principalId: string) {
+  private collectProductState(principalId: string) {
     const grant = this.authorize(principalId, 'read');
     const state = this.state();
     const members = state.members.map(({ name, role }) => ({ name, role }));
@@ -626,6 +626,12 @@ export class TeamOwner {
         tasks: {},
       },
     };
+    return snapshot;
+  }
+
+  /** Full product snapshots retain the 512 KiB transport guard. */
+  private productSnapshot(principalId: string) {
+    const snapshot = this.collectProductState(principalId);
     if (Buffer.byteLength(JSON.stringify(snapshot)) > 512 * 1024) throw new TeamOwnerError('hold');
     return { ...snapshot, revision: digest(snapshot) };
   }
@@ -644,8 +650,11 @@ export class TeamOwner {
 
   private readChanges(principalId: string, cursor?: string): JsonValue {
     return this.store.fenced(() => {
-      const snapshot = this.productSnapshot(principalId);
-      return json(this.productChanges.read(principalId, snapshot.revision, cursor));
+      // A change-feed response contains only finite invalidation metadata, never
+      // unbounded task/inbox history. Keep it readable after a complete snapshot
+      // becomes oversized, without weakening the snapshot/transport size guards.
+      const revision = digest(this.collectProductState(principalId));
+      return json(this.productChanges.read(principalId, revision, cursor));
     });
   }
 
