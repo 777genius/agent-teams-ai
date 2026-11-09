@@ -115,19 +115,26 @@ export function hasOneVisibleOpenCodeConnection(text) {
  * Read-only desktop regression: each Settings → Providers Manage action opens
  * its own provider panel and closes without changing credentials.
  */
-export async function verifyProviderManageDialogs(evaluate, send) {
+export async function verifyProviderManageDialogs(evaluate, send, reportStage = () => {}) {
   const verified = [];
   for (const provider of ['anthropic', 'codex', 'opencode']) {
+    reportStage(provider + ':control');
     const control = "document.querySelector('[data-testid=\"runtime-manage-" + provider + "\"]')";
     let ready = false;
     for (let attempt = 0; attempt < 80; attempt++) {
       ready = await evaluate("(() => { const button = " + control +
-        "; return Boolean(button && !button.disabled && button.getClientRects().length); })()");
+        "; if (!button || button.disabled || !button.getClientRects().length) return false;" +
+        " button.scrollIntoView({block:'center',inline:'nearest'});" +
+        " const r=button.getBoundingClientRect();" +
+        " const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+        " return hit===button || button.contains(hit); })()");
       if (ready) break;
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     assert(ready, 'Settings Manage control missing or disabled: ' + provider);
+    reportStage(provider + ':click');
     await clickControl(evaluate, send, control);
+    reportStage(provider + ':panel');
     let selected = '';
     for (let attempt = 0; attempt < 80; attempt++) {
       selected = await evaluate("(() => {" +
@@ -139,17 +146,19 @@ export async function verifyProviderManageDialogs(evaluate, send) {
     }
     assert(selected.toLowerCase().includes(provider),
       'Manage ' + provider + ' opened a different provider panel: ' + selected);
+    reportStage(provider + ':close');
     await clickControl(evaluate, send,
       "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')");
     let closed = false;
     for (let attempt = 0; attempt < 40; attempt++) {
       closed = await evaluate(
-        "document.querySelector('[role=\"dialog\"][data-state=\"open\"]') === null"
+        "document.querySelector('[role=\"dialog\"]') === null"
       );
       if (closed) break;
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     assert(closed, 'Manage ' + provider + ' dialog did not close');
+    reportStage(provider + ':done');
     verified.push(provider);
   }
   return verified;
@@ -185,12 +194,9 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
   assert(!observed?.missingBridge, 'Runtime provider preload bridge unavailable');
   assert.equal(observed.error, null, 'Genuine runtime IPC directory request failed');
   const count = verifyRealProviderCountResponse(observed.directory);
-  const manageDialogsVerified = await verifyProviderManageDialogs(evaluate, send);
-  const screenshot = await send('Page.captureScreenshot', { format: 'png' });
-  assert(typeof screenshot.data === 'string');
-  await writeFile(path.join(root, 'real-connection.png'),
-    Buffer.from(screenshot.data, 'base64'));
-  await writeFile(path.join(root, 'real-connection.json'), JSON.stringify({
+  // Keep sanitized failure evidence even if an individual Manage control fails.
+  const receiptPath = path.join(root, 'real-connection.json');
+  const receipt = {
     schemaVersion: 1,
     platform: process.platform,
     runtimePin: data.runtimePin,
@@ -199,11 +205,38 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     realElectronIpc: true,
     connected: count,
     headerConnected: 1,
-    manageDialogsVerified,
     headerReadyMs,
     ipcElapsedMs,
     fullCatalogReconciled: false,
     modelInferenceTested: false,
-  }, null, 2));
+    manageStage: 'starting',
+    manageResult: 'pending',
+    manageDialogsVerified: [],
+  };
+  const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+  assert(typeof screenshot.data === 'string');
+  await writeFile(path.join(root, 'real-connection.png'),
+    Buffer.from(screenshot.data, 'base64'));
+  await writeFile(receiptPath, JSON.stringify(receipt, null, 2));
+  let manageStage = 'starting';
+  try {
+    receipt.manageDialogsVerified = await verifyProviderManageDialogs(evaluate, send,
+      (stage) => { manageStage = stage; });
+    receipt.manageStage = 'completed';
+    receipt.manageResult = 'passed';
+  } catch (error) {
+    receipt.manageStage = manageStage;
+    receipt.manageResult = 'failed';
+    const message = error instanceof Error ? error.message : '';
+    receipt.manageFailureCategory =
+      message.includes('Manage control missing') ? 'control_unavailable' :
+      message.includes('different provider panel') ? 'wrong_provider_panel' :
+      message.includes('dialog did not close') ? 'dialog_close_failed' :
+      message.includes('Required desktop control unavailable') ? 'desktop_click_unavailable' :
+      'other';
+    await writeFile(receiptPath, JSON.stringify(receipt, null, 2));
+    throw error;
+  }
+  await writeFile(receiptPath, JSON.stringify(receipt, null, 2));
   console.log('Real pinned CLI → Electron IPC → provider header: PASS (synthetic connected=1)');
 }
