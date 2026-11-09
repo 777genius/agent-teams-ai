@@ -611,7 +611,7 @@ if (mode === 'seed-packaged') {
       if (data.realRuntime) {
         // A CDP endpoint can exist before React mounts. Do not time a blank renderer.
         const mounted = await evaluate(
-          "Boolean(document.querySelector('[data-testid=\\\"dashboard-provider-summary\\\"]')?.getClientRects().length)"
+          "Boolean(document.querySelector('[data-testid=dashboard-provider-summary]')?.getClientRects().length)"
         );
         console.log('E2E_DASHBOARD_MOUNTED=' + mounted);
       }
