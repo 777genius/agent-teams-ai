@@ -23,11 +23,11 @@ interface TeamModelProviderActionsProps {
 }
 
 /** Explicitly rescan all providers when users change credentials or runtime settings. */
-export function TeamModelProviderActions({
+export const TeamModelProviderActions = ({
   providerId,
   projectPath,
   onManageProviders,
-}: Readonly<TeamModelProviderActionsProps>): JSX.Element {
+}: Readonly<TeamModelProviderActionsProps>): JSX.Element => {
   const { t: commonT } = useAppTranslation('common');
   const { t: dashboardT } = useAppTranslation('dashboard');
   const openSettingsTab = useStore((s) => s.openSettingsTab);
@@ -153,4 +153,4 @@ export function TeamModelProviderActions({
       ) : null}
     </div>
   );
-}
+};
