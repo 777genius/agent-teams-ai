@@ -55,13 +55,16 @@ function hasConfirmedFailedOpenCodeSends(
   );
   if (promptPositions.length !== 1 || answerPositions.length !== 1 ||
     promptPositions[0] >= answerPositions[0]) return false;
-  // A later user prompt starts another turn. Its failed tool cannot prove
-  // that this original lead request was answered without a successful send.
-  if (messages.slice(promptPositions[0] + 1, answerPositions[0])
-    .some(message => message.sessionId === sessionId && message.type === 'user' && !message.isMeta))
-    return false;
+  // An intervening real user prompt closes the turn. Include sends made
+  // AFTER the selected assistant text as well: they may still have succeeded.
+  const nextPrompt = messages.findIndex((message, i) =>
+    i > promptPositions[0] && message.sessionId === sessionId &&
+    message.type === 'user' && !message.isMeta
+  );
+  const turnEnd = nextPrompt < 0 ? messages.length : nextPrompt;
+  if (answerPositions[0] >= turnEnd) return false;
 
-  const sends = messages.slice(promptPositions[0] + 1, answerPositions[0] + 1)
+  const sends = messages.slice(promptPositions[0] + 1, turnEnd)
     .filter(message => message.type === 'assistant' && !message.isMeta &&
       message.sessionId === sessionId)
     .flatMap(message => message.toolCalls
