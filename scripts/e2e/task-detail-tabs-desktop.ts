@@ -433,6 +433,40 @@ try {
     "(()=>{const rows=[...document.querySelectorAll('[data-testid=\"team-task-table-row\"]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=500);})()"
   ), 'virtualizer reaches distant rows without mounting the whole table');
   await cdp.screenshot(join(root, 'kanban-table-1000-rows.png'));
+  // Real Electron regression: changing text size must resize the virtualized
+  // row estimate and actual rows together for long 1000+ task tables.
+  await cdp.evaluate(`(() => {
+    const key = 'agent-teams-appearance-v1';
+    const oldValue = localStorage.getItem(key);
+    window.__taskTablePriorAppearance = oldValue;
+    const existing = oldValue ? JSON.parse(oldValue) : {
+      version: 1, zoomPercent: 100, activeCustomThemeId: null, themes: [],
+    };
+    const newValue = JSON.stringify({ ...existing, fontSizePercent: 150 });
+    localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue }));
+  })()`);
+  await until(() => cdp!.evaluate(
+    "(()=>{const el=document.querySelector('[data-testid=team-task-table-row]');const scroller=document.querySelector('[data-testid=team-task-table-scroller]');return !!el&&!!scroller&&el.getBoundingClientRect().height>=71&&el.getBoundingClientRect().height<=74&&scroller.scrollHeight>70000;})()"
+  ), '150% text size updates real 1004-row virtualizer offsets and row geometry');
+  await cdp.evaluate("document.querySelector('[data-testid=team-task-table-scroller]').scrollTop=1000000");
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=[...document.querySelectorAll('[data-testid=team-task-table-row]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=900);})()"
+  ), '150% virtualized table still reaches distant tasks without skipping rows');
+  await cdp.screenshot(join(root, 'kanban-table-font-150-virtualized.png'));
+  await cdp.evaluate(`(() => {
+    const key = 'agent-teams-appearance-v1';
+    const oldValue = localStorage.getItem(key);
+    const newValue = window.__taskTablePriorAppearance;
+    if (newValue === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue }));
+    delete window.__taskTablePriorAppearance;
+  })()`);
+  await until(() => cdp!.evaluate(
+    "(()=>{const el=document.querySelector('[data-testid=team-task-table-row]');const scroller=document.querySelector('[data-testid=team-task-table-scroller]');return !!el&&!!scroller&&el.getBoundingClientRect().height<=49&&scroller.scrollHeight<60000;})()"
+  ), 'Reset text size also restores 48px row virtualization and scroll extents');
+  reads.push({ kind: 'task-table-typography-virtualization-real-electron', tasks: 1004, scales: [100,150], scrollToDistantTask: true });
   reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true, taskDetail: true, searchCounts: [0, 1, 50], virtualizedTasks: 1004 });
   // Qualify Appearance navigation and theme persistence in the same real Electron renderer.
   await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('appearance')");
