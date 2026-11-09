@@ -229,6 +229,39 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('reloads persisted valid cron jobs after a scheduler restart', async () => {
+    const first = createService();
+    const schedule = await first.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    await first.stop();
+
+    const restarted = createService();
+    await restarted.start();
+    const jobs = (restarted as unknown as { cronJobs: Map<string, unknown> }).cronJobs;
+    expect(jobs.has(schedule.id)).toBe(true);
+    expect(await restarted.getSchedule(schedule.id)).toEqual(schedule);
+    await restarted.stop();
+  });
+
+  it('ignores a malformed historic timezone without blocking other active jobs', async () => {
+    const valid = makeSchedule({ cronExpression: '0 9 * * *' });
+    const invalid = makeSchedule({ timezone: 'Mars/Olympus' });
+    await repo.saveSchedule(valid);
+    await repo.saveSchedule(invalid);
+
+    const service = createService();
+    await service.start();
+    const jobs = (service as unknown as { cronJobs: Map<string, unknown> }).cronJobs;
+    expect(jobs.has(valid.id)).toBe(true);
+    expect(jobs.has(invalid.id)).toBe(false);
+    expect((await service.getSchedule(invalid.id))?.status).toBe('active');
+    await service.stop();
+  });
+
   it('stop() cancels all active executions and clears state', async () => {
     const service = createService();
     await service.start();
