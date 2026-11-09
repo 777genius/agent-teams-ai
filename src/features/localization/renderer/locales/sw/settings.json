@@ -216,7 +216,29 @@
           "system": "Mfumo"
         }
       },
-      "title": "Muonekano"
+      "title": "Muonekano",
+      "customThemes": {
+        "label": "Mandhari maalum",
+        "description": "Paleti za rangi za JSON zenye majina kulingana na mandhari nyeusi au nyeupe.",
+        "none": "Mandhari ya kawaida",
+        "edit": "Hariri JSON",
+        "localOnly": "Mandhari na ukubwa huhifadhiwa kwenye kivinjari au kifaa hiki pekee.",
+        "editor": {
+          "title": "Hariri mandhari (JSON)",
+          "description": "Hadi mandhari 8. Rangi ziwe #RRGGBB. JSON halali pekee itatumika; orodha tupu ya themes hufuta mandhari zote.",
+          "cancel": "Ghairi",
+          "save": "Hifadhi mandhari",
+          "conflict": "Mandhari zimebadilishwa kwenye kichupo kingine. Rasimu yako ya JSON imehifadhiwa; ikague au chagua wazi kufuta mabadiliko mapya.",
+          "overwrite": "Batilisha mandhari mapya",
+          "invalidJson": "Sintaksia ya JSON si sahihi",
+          "invalidTheme": "Paleti ya mandhari si sahihi. Kagua sehemu, rangi na utofauti."
+        }
+      },
+      "uiScale": {
+        "label": "Ukubwa wa kiolesura",
+        "description": "Badilisha ukubwa wa programu nzima bila kubadili zoom ya mfumo au kivinjari.",
+        "reset": "Weka upya"
+      }
     },
     "browserAccess": {
       "serverMode": {

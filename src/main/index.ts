@@ -215,6 +215,7 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import { registerWindowZoomHandler } from '@features/appearance/main';
 import {
   bindMemberWorkSyncProvisioningRuntime,
   createDeferredWorkSyncStallObservation,
@@ -1255,6 +1256,7 @@ function registerAppStartupHandlers(): void {
   registerOpenCodeStartupCleanupHandlers(ipcMain);
   ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
   ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
+  registerWindowZoomHandler(ipcMain, () => mainWindow, syncTrafficLightPosition);
 }
 
 function cloneStartupSteps(): AppStartupStep[] {

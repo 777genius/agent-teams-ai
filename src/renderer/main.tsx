@@ -1,4 +1,5 @@
 import './index.css';
+import './customAppearance.css';
 import './positiveText.css';
 import './warningText.css';
 import 'react-grid-layout/css/styles.css';

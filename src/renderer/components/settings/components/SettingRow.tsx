@@ -8,6 +8,7 @@ interface SettingRowProps {
   readonly description?: string;
   readonly icon?: React.ReactNode;
   readonly children: React.ReactNode;
+  readonly wrapControls?: boolean;
 }
 
 export const SettingRow = ({
@@ -15,19 +16,20 @@ export const SettingRow = ({
   description,
   icon,
   children,
+  wrapControls = false,
 }: SettingRowProps): React.JSX.Element => {
   return (
     <div
-      className="flex items-center justify-between border-b py-3"
+      className={wrapControls ? "flex flex-wrap items-center justify-between gap-2 border-b py-3" : "flex items-center justify-between border-b py-3"}
       style={{ borderColor: 'var(--color-border-subtle)' }}
     >
-      <div className="flex items-start gap-2.5">
+      <div className={wrapControls ? "flex min-w-0 basis-44 flex-1 items-start gap-2.5" : "flex items-start gap-2.5"}>
         {icon ? (
           <div className="mt-0.5 shrink-0" style={{ color: 'var(--color-text-muted)' }}>
             {icon}
           </div>
         ) : null}
-        <div>
+        <div className={wrapControls ? "min-w-0 break-words" : undefined}>
           <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
             {label}
           </div>
@@ -38,7 +40,7 @@ export const SettingRow = ({
           )}
         </div>
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className={wrapControls ? "min-w-0 max-w-full" : "shrink-0"}>{children}</div>
     </div>
   );
 };

@@ -972,6 +972,7 @@ export interface ElectronAPI
 
   // Window zoom sync (for traffic-light-safe layout)
   getZoomFactor: () => Promise<number>;
+  setZoomFactor: (factor: number) => Promise<number>;
   onZoomFactorChanged: (callback: (zoomFactor: number) => void) => () => void;
 
   // File change events (real-time updates)
