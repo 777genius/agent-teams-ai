@@ -64,10 +64,14 @@ export const TeamModelProviderActions = ({
       await fetchCliStatus();
       // Metadata reads report errors in the store instead of rejecting.
       if (useStore.getState().cliStatusError) setRefreshError(true);
-      const checks = MULTIMODEL_PROVIDER_IDS.map((id) =>
+      // Native Claude CLI has its own auth snapshot; orchestrator-specific
+      // provider probes must never overwrite that native status.
+      const orchestratorActive =
+        useStore.getState().cliStatus?.flavor === 'agent_teams_orchestrator';
+      const checks = (orchestratorActive ? MULTIMODEL_PROVIDER_IDS : []).map((id) =>
         fetchCliProviderStatus(id, { checkReason: 'manual_refresh' })
       );
-      if (projectPath) {
+      if (orchestratorActive && projectPath) {
         // Both OpenCode model routes and the Claude default are project-sensitive.
         checks.push(
           fetchCliProviderStatus('opencode', {
