@@ -2695,7 +2695,8 @@ export default interface Resources {
           "apply": "Apply",
           "discover": "Find installed fonts",
           "loaded": "Installed fonts added to the menu.",
-          "unavailable": "Font discovery is unavailable here. Enter a font name manually."
+          "unavailable": "Font discovery is unavailable here. Enter a font name manually.",
+          "empty": "No installed fonts were found. Enter a font name manually."
         },
         "textSize": {
           "label": "Text size",
