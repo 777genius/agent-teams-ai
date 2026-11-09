@@ -538,6 +538,46 @@ test('V2 rejects foreign Host request and MCP endpoint capture before native own
   }, 'all foreign captures must fail before owner callbacks or native mutation');
 });
 
+test('V2 owner policy getter cannot replace validated Host request and profile', () => {
+  const ctx = context(nativeV2Profile());
+  const { captured, calls } = owner(true);
+  // The original code read the owner's property after validation but before
+  // cloning the profile or recording Host request identity.
+  Object.defineProperty(captured, 'requiredExternalDirectory', {
+    get() {
+      Object.assign(ctx.request, { generation: 2 });
+      Object.assign(ctx.profile, { protocolRevision: '2.1.4' });
+      return 'deny';
+    },
+  });
+  assert.throws(() => createOpenCodeV2MemberProvider(ctx, captured),
+    /immutable Host capture/,
+    'native owner callback must not relabel a validated V2 allocation');
+  assert.deepEqual(calls, {
+    probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0,
+  }, 'owner-driven profile drift must fail before native I/O');
+});
+
+test('ready V2 Host revokes on selected profile or initial instructions drift', async () => {
+  for (const mutate of [
+    (ctx: MemberProviderContext) => { Object.assign(ctx.profile, { protocolRevision: '2.1.4' }); },
+    (ctx: MemberProviderContext) => { ctx.instructions += ' TEST-injected-new-context'; },
+  ]) {
+    const ctx = context(nativeV2Profile());
+    const { captured, calls } = owner(true);
+    const provider = createOpenCodeV2MemberProvider(ctx, captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    mutate(ctx);
+    assert.equal(provider.isReady(), false, 'modified Host selection cannot retain native authority');
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(await provider.cleanup(), true);
+    assert.equal((await opened.driver.close()).cleanup, 'confirmed');
+    assert.equal(calls.stop, 1, 'only the original TEST-owned process can be stopped');
+    assert.equal(calls.password, 0, 'revoked capture never reads native credentials');
+  }
+});
+
 test('inherited OPENCODE_BIN_PATH refuses V2 admission before owner access', () => {
   const previous = process.env.OPENCODE_BIN_PATH;
   try {

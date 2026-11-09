@@ -75,7 +75,14 @@ export function createOpenCodeV2MemberProvider(
   context: MemberProviderContext,
   owned: OpenCodeV2OwnedSession
 ): MemberProvider {
-  const selected = context.profile;
+  // Capture Host identity BEFORE consulting the mutable native owner.
+  // A policy property getter must never relabel an already validated lease.
+  const originalRequest = runtimeDigest(context.request);
+  const originalEndpointBinding = runtimeDigest(context.endpoint.binding);
+  const originalProfile = runtimeDigest(context.profile);
+  const capturedInstructions = context.instructions;
+  const profile = structuredClone(context.profile);
+  const selected = profile;
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
   const inheritedBinaryOverride = () => hasUntrustedOpenCodeBinaryOverride(process.env);
@@ -103,14 +110,13 @@ export function createOpenCodeV2MemberProvider(
   const requiredExternalDirectory = owned.requiredExternalDirectory;
   if (requiredExternalDirectory !== 'ask' && requiredExternalDirectory !== 'deny')
     throw new Error('OpenCode V2 requires a captured out-of-project policy');
-  // This is the exact trusted Host selection. It is never a renderer/Runtime
-  // argument and must not be inferred from model ID or an executable on PATH.
-  const profile = structuredClone(selected);
-  const originalRequest = runtimeDigest(context.request);
-  const originalEndpointBinding = runtimeDigest(context.endpoint.binding);
-  // Host-provided objects are not immutable native certificates. Snapshot
-  // instruction and identity scalars before any owner/native callback.
-  const capturedInstructions = context.instructions;
+  // An owner policy getter must not make a previously validated Host
+  // selection, request, endpoint or instruction capture silently change.
+  if (runtimeDigest(context.profile) !== originalProfile ||
+      runtimeDigest(context.request) !== originalRequest ||
+      runtimeDigest(context.endpoint.binding) !== originalEndpointBinding ||
+      context.instructions !== capturedInstructions || inheritedBinaryOverride())
+    throw new Error('OpenCode V2 requires an immutable Host capture');
   const capturedGeneration = context.endpoint.binding.generation;
   const capturedConfigRevision = context.request.configRevision;
   const trustedBinding = runtimeDigest({
@@ -161,6 +167,8 @@ export function createOpenCodeV2MemberProvider(
       if (!inheritedBinaryOverride() && context.isCurrent() && context.canAllocate() &&
           runtimeDigest(context.request) === originalRequest &&
           runtimeDigest(context.endpoint.binding) === originalEndpointBinding &&
+          runtimeDigest(context.profile) === originalProfile &&
+          context.instructions === capturedInstructions &&
           !inheritedBinaryOverride()) return true;
     } catch {
       // A failed Host authority callback cannot grant an existing native
