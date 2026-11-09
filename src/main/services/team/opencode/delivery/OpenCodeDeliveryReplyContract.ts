@@ -134,3 +134,13 @@ export function isOpenCodeLeadDestinationProof(
     proof.message.relayOfMessageId?.trim() === record.inboxMessageId.trim()
   );
 }
+
+/** Lead role may be a legacy alias or the configured member's custom name. */
+export function isOpenCodeLeadReplyRecipient(
+  record: { replyRecipient?: string | null } | null | undefined,
+  configuredLeadName: string | null | undefined
+): boolean {
+  return Boolean(record &&
+    (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
+      isOpenCodeConfiguredLeadReply(record, configuredLeadName)));
+}
