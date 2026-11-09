@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  completeConnectedCount, connectedProviderIds, parseProviderDirectory,
+  assertStableConnectedProviders, completeConnectedCount, connectedProviderIds, parseProviderDirectory,
   validateConnectedSummary,
 } from './provider-real-runtime-policy.ts';
 
@@ -61,6 +61,23 @@ test('never report duplicated ids, a response error, or malformed JSON', () => {
   assert.throws(() => parseProviderDirectory(
     page('all', [{ providerId: 'OPENROUTER', state: 'connected' },
       { providerId: 'openrouter', state: 'connected' }]), 'all'));
+});
+
+test('warm connected identities reject substitution despite an unchanged count', () => {
+  const original = parseProviderDirectory(page('connected', [
+    { providerId: 'OpenRouter', state: 'connected' },
+  ]), 'connected');
+  const replacement = parseProviderDirectory(page('connected', [
+    { providerId: 'DeepInfra', state: 'connected' },
+  ]), 'connected');
+  assert.equal(completeConnectedCount(original), completeConnectedCount(replacement));
+  assert.throws(
+    () => assertStableConnectedProviders(original.entries, replacement.entries),
+    /Connected identities changed without a credential mutation/,
+  );
+  assert.doesNotThrow(() => assertStableConnectedProviders(original.entries, [
+    { providerId: ' openrouter ', state: 'connected' },
+  ]));
 });
 
 test('unfiltered native inventory may change while connected summary stays authoritative', () => {

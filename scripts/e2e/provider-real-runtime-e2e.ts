@@ -10,7 +10,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import {
-  connectedProviderIds, parseProviderDirectory, validateConnectedSummary,
+  assertStableConnectedProviders, connectedProviderIds, parseProviderDirectory, validateConnectedSummary,
 } from './provider-real-runtime-policy.ts';
 
 import type { ProviderDirectoryPage } from './provider-real-runtime-policy.ts';
@@ -251,6 +251,7 @@ async function checkScenario(name: 'clean' | 'ambient' | 'configured',
   const warmSummaryCount = validateConnectedSummary(warmAll, warmConnected);
   assert.equal(warmSummaryCount, summaryCount,
     'Connected summary changed without a credential mutation');
+  assertStableConnectedProviders(connected.entries, warmConnected.entries);
   // The full catalog is *not* required to establish a complete summary count.
   // The real V1 host may fail to start or return incomplete inventory in a
   // credential-free sandbox. Record that limitation rather than claiming its
