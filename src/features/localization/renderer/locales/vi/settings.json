@@ -233,7 +233,8 @@
         "apply": "Áp dụng",
         "discover": "Tìm phông chữ đã cài",
         "loaded": "Đã thêm các phông chữ đã cài vào danh sách.",
-        "unavailable": "Không thể liệt kê phông chữ ở đây. Hãy nhập tên thủ công."
+        "unavailable": "Không thể liệt kê phông chữ ở đây. Hãy nhập tên thủ công.",
+        "empty": "Không tìm thấy phông chữ đã cài đặt. Hãy nhập tên thủ công."
       },
       "textSize": {
         "label": "Cỡ chữ",

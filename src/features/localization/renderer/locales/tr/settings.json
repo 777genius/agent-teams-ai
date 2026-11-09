@@ -233,7 +233,8 @@
         "apply": "Uygula",
         "discover": "Yüklü yazı tiplerini bul",
         "loaded": "Yüklü yazı tipleri listeye eklendi.",
-        "unavailable": "Yazı tipleri burada listelenemiyor. Adını elle girin."
+        "unavailable": "Yazı tipleri burada listelenemiyor. Adını elle girin.",
+        "empty": "Yüklü yazı tipi bulunamadı. Adını elle girin."
       },
       "textSize": {
         "label": "Metin boyutu",
