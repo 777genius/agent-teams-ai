@@ -769,6 +769,29 @@ test('V2 Host snapshots request and endpoint identity across native admission ca
   }
 });
 
+
+test('V2 Host detects endpoint binding mutation even when native ACK echoes original capture', async () => {
+  const host = context();
+  const { captured, calls } = owner(true);
+  captured.installAndAttestInitialContext = async (capture) => {
+    calls.context++;
+    Object.assign(host.endpoint.binding, { generation: 'TEST-foreign-generation' });
+    // A valid-looking original ACK cannot authorize a mutated Host endpoint.
+    return { nativeSessionId: capture.nativeSessionId, contextDigest: capture.contextDigest,
+      generation: capture.generation, configRevision: capture.configRevision };
+  };
+  const provider = createOpenCodeV2MemberProvider(host, captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/);
+  assert.equal(calls.context, 1);
+  assert.equal(calls.password, 0);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1);
+  assert.equal(calls.stopped, 1);
+});
+
 test('native probe loss after initial Host readiness revokes the capture permanently', async () => {
   const { captured, calls } = owner(true);
   let available = true;
@@ -1325,6 +1348,38 @@ test('V2 owner cleanup never follows replaced process-stop or confirmation callb
     });
     assert.equal(calls.stop, 1, 'shutdown never repeats physical stop');
   });
+
+
+test('V2 owner cleanup callbacks remain pinned when swapped during native admission', async () => {
+  const { captured, calls } = owner(true);
+  // Capture an uncertain original termination BEFORE the owner callback can
+  // replace both methods. A forged confirmation must never turn it into PASS.
+  captured.confirmStopped = async () => { calls.stopped++; return false; };
+  let foreignStopCalls = 0;
+  let forgedConfirmCalls = 0;
+  captured.probe = async () => {
+    calls.probe++;
+    captured.stopOwned = async () => { foreignStopCalls++; return true; };
+    captured.confirmStopped = async () => { forgedConfirmCalls++; return true; };
+    return true;
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.equal(calls.probe, 1, 'method replacement occurred inside native admission');
+
+  provider.seal();
+  assert.equal(await provider.cleanup(), false, 'original physical custody is UNKNOWN');
+  assert.equal(calls.stop, 1, 'only the original TEST process stop is invoked');
+  assert.equal(calls.stopped, 1, 'readback remains bound to original TEST owner');
+  assert.equal(foreignStopCalls, 0, 'foreign owner cannot stop another process');
+  assert.equal(forgedConfirmCalls, 0, 'forged physical confirmation is never trusted');
+  assert.equal(provider.isReady(), false);
+  assert.deepEqual(await opened.driver.close(), {
+    logicallyClosed: true, cleanup: 'unknown',
+  });
+  assert.equal(calls.stop, 1, 'an unknown stop ACK is never replayed');
+});
 
 test('retained V2 controls surface UNKNOWN process custody, never re-signal', async () => {
   const { captured, calls } = owner(true);
