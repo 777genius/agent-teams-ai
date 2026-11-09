@@ -36,7 +36,10 @@ export function getOpenCodeVisibleReplyInboxCandidates(input: {
     Boolean(configuredLeadName) &&
     configuredLeadName?.toLowerCase() === explicitRecipient.toLowerCase();
 
-  if (classifyOpenCodeDeliveryReplyContract(explicitRecipient) === 'lead_reply' || isConfiguredLeadRecipient) {
+  if (
+    classifyOpenCodeDeliveryReplyContract(explicitRecipient) === 'lead_reply' ||
+    isOpenCodeLeadReplyRecipientAlias(explicitRecipient) || isConfiguredLeadRecipient
+  ) {
     if (configuredLeadName) {
       candidates.push(configuredLeadName);
     }
