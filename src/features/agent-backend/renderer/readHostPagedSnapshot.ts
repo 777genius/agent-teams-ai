@@ -25,6 +25,7 @@ export async function readHostPagedSnapshot(
   let first: BackendTeamSnapshot | undefined;
   const tasks: BackendTeamSnapshot['tasks'] = [];
   const messages: BackendTeamSnapshot['messages'] = [];
+  let kanbanState: BackendTeamSnapshot['kanbanState'] | undefined;
   const seen = new Set<string>();
 
   for (let index = 0; index < MAX_PAGES; index++) {
@@ -52,9 +53,38 @@ export async function readHostPagedSnapshot(
     }
     tasks.push(...page.tasks);
     messages.push(...page.messages);
+    // Page-local Kanban fragments are not a complete board. Reconstruct the
+    // original ordered map and column arrays before exposing any product view.
+    if (!kanbanState) kanbanState = {
+      ...page.kanbanState,
+      tasks: {},
+      reviewers: [],
+      ...(page.kanbanState.columnOrder ? { columnOrder: {} } : {}),
+    };
+    kanbanState.reviewers.push(...page.kanbanState.reviewers);
+    for (const [taskId, entry] of Object.entries(page.kanbanState.tasks)) {
+      if (Object.hasOwn(kanbanState.tasks, taskId))
+        throw new Error('Duplicate Host Kanban task across pages');
+      kanbanState.tasks[taskId] = entry;
+    }
+    for (const [column, ids] of Object.entries(page.kanbanState.columnOrder ?? {})) {
+      const key = column as keyof NonNullable<BackendTeamSnapshot['kanbanState']['columnOrder']>;
+      const original = kanbanState.columnOrder?.[key] ?? [];
+      kanbanState.columnOrder ??= {};
+      kanbanState.columnOrder[key] = [...original, ...ids];
+    }
 
     if (page.nextCursor === undefined || page.nextCursor === null) {
-      const data: BackendTeamSnapshot = { ...first, tasks, messages };
+      const fullTasks = tasks.map((task) => {
+        const board = kanbanState.tasks[task.id];
+        return board ? { ...task, kanbanColumn: board.column, reviewer: board.reviewer } : task;
+      });
+      const data: BackendTeamSnapshot = {
+        ...first,
+        tasks: fullTasks,
+        messages,
+        kanbanState,
+      };
       delete data.nextCursor;
       readOrder.acceptSnapshot(handleId, data);
       return {

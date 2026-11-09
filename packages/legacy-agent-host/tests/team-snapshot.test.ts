@@ -6,6 +6,7 @@ import { test } from 'node:test';
 
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
+import { pageOwnerSnapshot } from '../dist/team/pageOwnerSnapshot.js';
 
 test('snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-snapshot-')));
@@ -103,6 +104,69 @@ test('large retained task inventory stays readable through all bounded original 
   assert.deepEqual(new Set(observed.map((row) => row.subject)), expected);
   assert.ok(observed.every((row) => row.description.length > 6000));
   assert.equal(reader.readChanges() !== undefined, true);
+});
+
+test('Kanban entries and column ordering survive both Desktop and MCP page budgets', () => {
+  const ids = Array.from({ length: 6000 }, (_, index) => `TEST-task-${index}`);
+  const positions = Object.fromEntries(ids.map((id, index) => [id, {
+    column: index < 3000 ? 'review' : 'approved',
+    movedAt: '2026-01-01T00:00:00Z',
+  }]));
+  const board = {
+    teamName: 'TEST-team',
+    reviewers: ['alice'],
+    tasks: positions,
+    columnOrder: { review: ids.slice(0, 3000), approved: ids.slice(3000) },
+  };
+  const snapshot = {
+    teamName: 'TEST-team',
+    revision: 'a'.repeat(64),
+    members: [],
+    tasks: [],
+    messages: [],
+    kanbanState: board,
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(board)) > 384 * 1024);
+  const originalBytes = JSON.stringify(snapshot);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    let cursor: string | undefined;
+    const entries: Record<string, unknown> = {};
+    const reviewers: string[] = [];
+    const order = { review: [] as string[], approved: [] as string[] };
+    let pages = 0;
+    do {
+      const page = pageOwnerSnapshot({
+        principalId: 'TEST-authorized',
+        key: 'TEST-owned-cursor-key',
+        snapshot,
+        maxBytes,
+        ...(cursor ? { cursor } : {}),
+      }) as {
+        kanbanState: {
+          reviewers: string[];
+          tasks: Record<string, unknown>;
+          columnOrder: { review: string[]; approved: string[] };
+        };
+        nextCursor: string | null;
+      };
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      for (const [key, value] of Object.entries(page.kanbanState.tasks)) {
+        assert.equal(Object.hasOwn(entries, key), false);
+        entries[key] = value;
+      }
+      reviewers.push(...page.kanbanState.reviewers);
+      order.review.push(...page.kanbanState.columnOrder.review);
+      order.approved.push(...page.kanbanState.columnOrder.approved);
+      cursor = page.nextCursor ?? undefined;
+      pages++;
+      assert.ok(pages <= 128);
+    } while (cursor);
+    assert.ok(pages > 1);
+    assert.deepEqual(entries, positions);
+    assert.deepEqual(reviewers, board.reviewers);
+    assert.deepEqual(order, board.columnOrder);
+  }
+  assert.equal(JSON.stringify(snapshot), originalBytes);
 });
 
 test('large legitimate inbox history preserves bounded snapshots and authorized change feed', (t) => {
