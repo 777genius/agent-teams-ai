@@ -38,7 +38,7 @@ export function desktopTaskCommentInputExpression(handleId: string, taskId: stri
             submitPending:controller.session.submitPending,submitError:controller.session.submitError,
             ownerRevision:controller.session.ownerRevision,partRevisions:{commentText:controller.session.partRevisions.commentText,pendingAttachments:controller.session.partRevisions.pendingAttachments},
             pendingPreparationCount:controller.session.pendingAttachmentPreparationIds.length,canSubmit:controller.canSubmit,attachmentError:controller.attachmentError,
-            pendingAttachmentCount:controller.session.pendingAttachments.length,selector:'[role="dialog"] textarea[id='+JSON.stringify(input.id)+']'});
+            pendingAttachmentCount:controller.session.pendingAttachments.length,canEditNow:controller.canEditNow?.()===true,selector:'[role="dialog"] textarea[id='+JSON.stringify(input.id)+']'});
           break;
         }
       }
@@ -60,7 +60,7 @@ export function desktopTaskBoardAssignmentReadyExpression(
     const {isTeamDataRefreshPending}=await import('/store/slices/teamSlice.ts');
     const {captureTaskDetailReadScope,isTaskDetailTeamUnavailable}=await import('/store/team/taskDetailReadAuthority.ts');
     const owner=${desktopTaskCommentInputExpression(handleId, taskId)};
-    if(!owner||owner.identity.contextId!==${desktopJsLiteral(captured.contextId)}||owner.surfaceId!==${desktopJsLiteral(captured.surfaceId)})return null;
+    if(!owner||!owner.canEditNow||owner.identity.contextId!==${desktopJsLiteral(captured.contextId)}||owner.surfaceId!==${desktopJsLiteral(captured.surfaceId)})return null;
     const s=window.__agentTeamsDevStore.getState(),i=owner.identity;
     const detail=s.taskDetailById[JSON.stringify([i.contextId,i.teamName,i.taskId])];
     if(s.isContextSwitching||s.activeContextId!==i.contextId||s.selectedTeamName!==i.teamName||
