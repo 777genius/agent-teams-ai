@@ -57,8 +57,8 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
       (classifyOpenCodeDeliveryReplyContract(recipient) !== 'lead_reply' &&
         recipient.toLowerCase() !== configuredLead.trim().toLowerCase()) ||
       !canMaterializeOpenCodePlainTextReply(record) ||
-      record.visibleReplyMessageId ||
-      record.visibleReplyInbox ||
+      (record.visibleReplyMessageId &&
+        record.visibleReplyInbox?.trim().toLowerCase() === configuredLead.trim().toLowerCase()) ||
       (record.responseState !== 'tool_error' && hasOpenCodeObservedMessageSendToolCall(record))
     ) {
       return { ledgerRecord: record, visibleReply: null };
