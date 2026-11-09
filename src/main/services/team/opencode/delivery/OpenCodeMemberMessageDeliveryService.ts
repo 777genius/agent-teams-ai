@@ -84,6 +84,7 @@ import {
   readOpenCodeStalePendingTurnUsedTokens,
 } from './OpenCodeStalePendingObservationSignals';
 import { retireNeverSentOpenCodeWorkSyncDelivery } from './retireNeverSentOpenCodeWorkSyncDelivery';
+
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
   OpenCodeLeadTurnActivityNotification,
@@ -96,6 +97,7 @@ import type {
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
 import type { OpenCodeStalePendingResolution } from './OpenCodePromptDeliveryStalePendingPolicy';
+
 const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
 function nowIso(): string {
   return new Date().toISOString();
