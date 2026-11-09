@@ -30,6 +30,30 @@ export interface OpenCodeVisibleReplyProofServiceHostOptions
       >
     > {}
 
+/** Exact read-only proof; never substitute the latest assistant or a clipped preview. */
+export function readOpenCodeExactAssistantText(
+  transcript: Awaited<ReturnType<ClaudeMultimodelBridgeService['getOpenCodeTranscript']>>,
+  sessionId: string,
+  assistantMessageId: string
+): string | null {
+  if (transcript?.sessionId !== sessionId) return null;
+  const matches = (transcript.logProjection?.messages ?? []).filter(
+    (message) => message.uuid === assistantMessageId &&
+      message.type === 'assistant' && !message.isMeta &&
+      message.sessionId === sessionId
+  );
+  if (matches.length !== 1) return null;
+  const assistant = matches[0];
+  // An actual message_send tool call may still write the recipient inbox.
+  if (assistant.toolCalls.some((call) =>
+    /(?:^|[_-])(message_send|group_chat_send)$/.test(call.name.toLowerCase())
+  )) return null;
+  const content = assistant.content;
+  if (!Array.isArray(content)) return null;
+  const text = content.flatMap((block) => block.type === 'text' ? [block.text] : []).join('\n');
+  return text.trim() ? text : null;
+}
+
 export function createOpenCodeVisibleReplyProofServiceFromHost(
   service: OpenCodeVisibleReplyProofServiceHost,
   options: OpenCodeVisibleReplyProofServiceHostOptions
@@ -48,25 +72,7 @@ export function createOpenCodeVisibleReplyProofServiceFromHost(
         sessionId: input.sessionId,
         limit: 500,
       });
-      if (transcript?.sessionId !== input.sessionId) return null;
-      const matches = (transcript.logProjection?.messages ?? []).filter(
-        (message) => message.uuid === input.assistantMessageId &&
-          message.type === 'assistant' && !message.isMeta &&
-          message.sessionId === input.sessionId
-      );
-      if (matches.length !== 1) return null;
-      const assistant = matches[0];
-      // An actual message_send tool call may still write the recipient inbox.
-      // Never race it by echoing this assistant message as plain text.
-      if (assistant.toolCalls.some((call) =>
-        /(?:^|[_-])(message_send|group_chat_send)$/.test(call.name.toLowerCase())
-      )) return null;
-      const content = assistant.content;
-      if (!Array.isArray(content)) return null;
-      const text = content.flatMap((block) =>
-        block.type === 'text' ? [block.text] : []
-      ).join('\n');
-      return text.trim() ? text : null;
+      return readOpenCodeExactAssistantText(transcript, input.sessionId, input.assistantMessageId);
     },
     sendGroupChatReply: options.sendGroupChatReply ?? service.sendGroupChatReply,
     hasAcknowledgedInbound: options.hasAcknowledgedInbound,
