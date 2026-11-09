@@ -113,7 +113,7 @@ export class SchedulerService {
     for (const schedule of schedules) {
       if (schedule.status === 'active') {
         this.createCronJob(schedule);
-        activeCount++;
+        if (this.cronJobs.has(schedule.id)) activeCount++;
       }
     }
 
@@ -202,8 +202,14 @@ export class SchedulerService {
       launchConfig: input.launchConfig,
     };
     schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
-    await this.repository.saveSchedule(schedule);
-    this.createCronJob(schedule);
+    const job = this.prepareCronJob(schedule);
+    try {
+      await this.repository.saveSchedule(schedule);
+    } catch (error) {
+      job.stop();
+      throw error;
+    }
+    this.activateCronJob(schedule, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: schedule.id,
@@ -244,10 +250,18 @@ export class SchedulerService {
     if (reschedule && updated.status === 'active') {
       updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
     }
-    await this.repository.saveSchedule(updated);
+    const nextJob = reschedule && updated.status === 'active'
+      ? this.prepareCronJob(updated)
+      : null;
+    try {
+      await this.repository.saveSchedule(updated);
+    } catch (error) {
+      nextJob?.stop();
+      throw error;
+    }
     if (reschedule) {
-      this.removeCronJob(id);
-      if (updated.status === 'active') this.createCronJob(updated);
+      if (nextJob) this.activateCronJob(updated, nextJob);
+      else this.removeCronJob(id);
     }
     this.emitChange({
       type: 'schedule-updated',
@@ -321,9 +335,8 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
 
-    // Remove old job and recreate to get fresh next-run timing
-    this.removeCronJob(id);
-
+    // A historic invalid schedule must be repaired before it can be resumed.
+    getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
     const updated: Schedule = {
       ...existing,
       status: 'active',
@@ -332,9 +345,14 @@ export class SchedulerService {
     };
 
     updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    this.createCronJob(updated);
-
-    await this.repository.saveSchedule(updated);
+    const job = this.prepareCronJob(updated);
+    try {
+      await this.repository.saveSchedule(updated);
+    } catch (error) {
+      job.stop();
+      throw error;
+    }
+    this.activateCronJob(updated, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
@@ -415,25 +433,30 @@ export class SchedulerService {
   // Cron Job Management
   // ===========================================================================
 
+  /** Prepare the replacement without touching the currently active cron timer. */
+  private prepareCronJob(schedule: Schedule): Cron {
+    return new Cron(schedule.cronExpression, { timezone: schedule.timezone, paused: true }, () => {
+      void this.onCronTick(schedule.id);
+    });
+  }
+
+  private activateCronJob(schedule: Schedule, job: Cron): void {
+    this.removeCronJob(schedule.id);
+    this.cronJobs.set(schedule.id, job);
+    job.resume();
+    this.scheduleWarmUp(schedule);
+    logger.info(
+      `Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
+        `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`
+    );
+  }
+
+  /** Historic records may be invalid: log and keep the rest of startup running. */
   private createCronJob(schedule: Schedule): void {
-    if (this.cronJobs.has(schedule.id)) {
-      this.removeCronJob(schedule.id);
-    }
-
     try {
-      const job = new Cron(schedule.cronExpression, { timezone: schedule.timezone }, () => {
-        void this.onCronTick(schedule.id);
-      });
-
-      this.cronJobs.set(schedule.id, job);
-
-      // Set warm-up timer for the next run
-      this.scheduleWarmUp(schedule);
-
-      logger.info(
-        `Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
-          `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`
-      );
+      getValidScheduleNextRuns(schedule.cronExpression, schedule.timezone);
+      const job = this.prepareCronJob(schedule);
+      this.activateCronJob(schedule, job);
     } catch (err) {
       logger.error(`Failed to create cron job for ${schedule.id}: ${err}`);
     }

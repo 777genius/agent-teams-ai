@@ -312,6 +312,37 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('does not resume a paused historic schedule with invalid timing', async () => {
+    const service = createService();
+    const historic = makeSchedule({ status: 'paused', timezone: 'Invalid/Timezone' });
+    await repo.saveSchedule(historic);
+    const savedCount = vi.mocked(repo.saveSchedule).mock.calls.length;
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void
+    }, 'removeCronJob');
+
+    await expect(service.resumeSchedule(historic.id)).rejects.toThrow('Invalid schedule timezone');
+    expect(vi.mocked(repo.saveSchedule).mock.calls).toHaveLength(savedCount);
+    expect(await repo.getSchedule(historic.id)).toEqual(historic);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('keeps a paused schedule intact if resume persistence fails', async () => {
+    const service = createService();
+    const paused = makeSchedule({ status: 'paused' });
+    await repo.saveSchedule(paused);
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void
+    }, 'removeCronJob');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.resumeSchedule(paused.id)).rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(paused.id)).toEqual(paused);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
   it('createSchedule() saves and emits change event', async () => {
     const service = createService();
 
