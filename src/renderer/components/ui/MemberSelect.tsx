@@ -15,7 +15,7 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { Check, ChevronsUpDown, UserRound } from 'lucide-react';
 
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -149,6 +149,7 @@ export const MemberSelect = <T extends SelectableMember>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+      <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -200,6 +201,7 @@ export const MemberSelect = <T extends SelectableMember>({
           <TooltipContent side="top">{unavailableLabel}</TooltipContent>
         ) : null}
       </Tooltip>
+      </TooltipProvider>
       <PopoverContent
         className={cn(
           isAvatarTrigger ? 'w-56 p-0' : 'w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0'
