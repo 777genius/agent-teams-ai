@@ -413,11 +413,12 @@ test('oversized native mutation and lookup return the same bounded acknowledgeme
   const updated = await receipt(client, 'task_update', args);
   assert.equal(updated.value.phase, 'completed');
   assert.notEqual(updated.response.isError, true);
-  assert.equal(updated.value.effects.taskId, taskId);
   assert.equal((updated.value as unknown as { resultOmitted?: boolean }).resultOmitted, true);
   assert.ok(Buffer.byteLength(JSON.stringify(updated.value)) < 256 * 1024);
   const persisted = f.alice.lookup(args.commandId);
   assert.ok(persisted);
+  // Effect IDs are command-scoped, not aliases of the updated task ID.
+  assert.equal(updated.value.effects.taskId, persisted.effects.taskId);
   assert.ok(Buffer.byteLength(JSON.stringify(persisted)) > 256 * 1024);
   const before = f.taskBytes(taskId);
   assert.deepEqual((await receipt(client, 'task_update', args)).value, updated.value);
