@@ -78,7 +78,7 @@ function compactOversizedReceipt(value: unknown): unknown {
 }
 
 export function formatToolResult(value: unknown, mutation: boolean): CallToolResult {
-  let output = value ?? null;
+  let output: unknown = value ?? null;
   let serialized = JSON.stringify(output);
   if (Buffer.byteLength(serialized, 'utf8') > MAX_MCP_RESULT_BYTES) {
     output = compactOversizedReceipt(output);
