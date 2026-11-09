@@ -61,6 +61,9 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
     runId: string;
     sessionId: string;
     assistantMessageId: string;
+    /** When a send was observed, never synthesize a second reply without an error receipt. */
+    requireFailedMessageSendProof?: boolean;
+    runtimePromptMessageId?: string;
   }) => Promise<string | null>;
   emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName: string, message: InboxMessage) => void;
   warn: (message: string) => void;
