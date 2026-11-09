@@ -61,8 +61,11 @@ export function resolveScheduleLaunchConfig({
     model: taskFirst ? undefined : oldModel ? oldModel.model : proposed.model,
     effort: taskFirst ? undefined : oldEffort ? oldEffort.effort : proposed.effort,
     fastMode: taskFirst ? undefined : oldFastMode ? oldFastMode.fastMode : proposed.fastMode,
+    // An explicit model/provider/effort change can invalidate the previous
+    // Fast-mode eligibility. Keep the selected preference, not stale resolution.
     resolvedFastMode: taskFirst ? undefined
-      : oldFastMode ? oldFastMode.resolvedFastMode : proposed.resolvedFastMode,
+      : oldFastMode && !(edited.model || edited.provider || edited.effort || edited.fastMode)
+        ? oldFastMode.resolvedFastMode : proposed.resolvedFastMode,
     skipPermissions: taskFirst ? undefined
       : oldPermissions ? oldPermissions.skipPermissions : proposed.skipPermissions,
   };
