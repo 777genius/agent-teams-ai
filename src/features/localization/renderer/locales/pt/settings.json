@@ -207,7 +207,7 @@
         "description": "Paletas JSON com nomes baseadas no tema claro ou escuro.",
         "none": "Tema incorporado",
         "edit": "Editar JSON",
-        "localOnly": "Os temas e a escala são guardados apenas neste dispositivo ou navegador.",
+        "localOnly": "Temas, zoom e fontes ficam salvos apenas neste dispositivo ou navegador.",
         "editor": {
           "title": "Editar temas (JSON)",
           "description": "Até 8 temas. Cores no formato #RRGGBB. Só o JSON válido é aplicado; uma lista themes vazia remove os temas.",
@@ -223,6 +223,22 @@
         "label": "Escala da interface",
         "description": "Amplie toda a aplicação sem alterar o zoom do sistema ou do navegador.",
         "reset": "Repor"
+      },
+      "fontFamily": {
+        "label": "Fonte da interface",
+        "description": "Escolha uma fonte instalada neste dispositivo. O editor e o terminal mantêm suas fontes.",
+        "system": "Padrão do sistema",
+        "other": "Outra fonte…",
+        "placeholder": "Nome da fonte instalada",
+        "apply": "Aplicar",
+        "discover": "Buscar fontes instaladas",
+        "loaded": "Fontes instaladas adicionadas à lista.",
+        "unavailable": "Não é possível listar fontes aqui. Digite o nome manualmente."
+      },
+      "textSize": {
+        "label": "Tamanho do texto",
+        "description": "Altere o tamanho do texto sem alterar o zoom geral da interface.",
+        "reset": "Redefinir"
       }
     },
     "browserAccess": {

@@ -207,7 +207,7 @@
         "description": "Nazwane palety JSON oparte na jasnym lub ciemnym motywie.",
         "none": "Motyw wbudowany",
         "edit": "Edytuj JSON",
-        "localOnly": "Motywy i skala są zapisywane tylko w tej przeglądarce lub na urządzeniu.",
+        "localOnly": "Motywy, powiększenie i czcionki są zapisane tylko na tym urządzeniu lub w przeglądarce.",
         "editor": {
           "title": "Edytuj motywy (JSON)",
           "description": "Do 8 motywów. Kolory w formacie #RRGGBB. Zapisywany jest tylko poprawny JSON; pusta tablica themes usuwa motywy.",
@@ -222,6 +222,22 @@
       "uiScale": {
         "label": "Skala interfejsu",
         "description": "Skaluj całą aplikację niezależnie od powiększenia systemu lub przeglądarki.",
+        "reset": "Resetuj"
+      },
+      "fontFamily": {
+        "label": "Czcionka interfejsu",
+        "description": "Wybierz czcionkę zainstalowaną na urządzeniu. Edytor i terminal zachowują własne czcionki.",
+        "system": "Systemowa",
+        "other": "Inna czcionka…",
+        "placeholder": "Nazwa zainstalowanej czcionki",
+        "apply": "Zastosuj",
+        "discover": "Pokaż zainstalowane czcionki",
+        "loaded": "Zainstalowane czcionki dodano do listy.",
+        "unavailable": "Nie można tutaj odczytać listy czcionek. Wpisz nazwę ręcznie."
+      },
+      "textSize": {
+        "label": "Rozmiar tekstu",
+        "description": "Zmień rozmiar tekstu bez zmiany powiększenia całego interfejsu.",
         "reset": "Resetuj"
       }
     },

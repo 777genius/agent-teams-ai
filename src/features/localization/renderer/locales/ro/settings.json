@@ -222,7 +222,7 @@
         "description": "Palete JSON denumite, bazate pe tema întunecată sau luminoasă.",
         "none": "Temă implicită",
         "edit": "Editează JSON",
-        "localOnly": "Temele și scara se păstrează doar în acest browser sau pe acest dispozitiv.",
+        "localOnly": "Temele, zoomul și fonturile sunt salvate doar pe acest dispozitiv sau în browser.",
         "editor": {
           "title": "Editează temele (JSON)",
           "description": "Poți edita până la 8 teme. Culorile folosesc formatul #RRGGBB. Se aplică doar JSON valid; lista themes goală elimină toate temele.",
@@ -237,6 +237,22 @@
       "uiScale": {
         "label": "Scara interfeței",
         "description": "Modifică scara întregii aplicații fără a schimba scara sistemului sau a browserului.",
+        "reset": "Resetează"
+      },
+      "fontFamily": {
+        "label": "Fontul interfeței",
+        "description": "Alege un font instalat pe dispozitiv. Editorul și terminalul își păstrează fonturile.",
+        "system": "Implicit de sistem",
+        "other": "Alt font…",
+        "placeholder": "Numele fontului instalat",
+        "apply": "Aplică",
+        "discover": "Caută fonturile instalate",
+        "loaded": "Fonturile instalate au fost adăugate în listă.",
+        "unavailable": "Lista fonturilor nu este disponibilă aici. Introdu numele manual."
+      },
+      "textSize": {
+        "label": "Dimensiunea textului",
+        "description": "Modifică textul fără a schimba zoomul general al interfeței.",
         "reset": "Resetează"
       }
     },
