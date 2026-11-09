@@ -46,15 +46,20 @@ export function applyLaunchConfiguration(
   // Until native model/variant binding is attested, allow only an identical
   // model selection; never reinterpret V1 permission or effort choices as V2.
   if (base.provider === 'opencode' && base.nativeGeneration === 'v2') {
-    const prefix = `${base.nativeOptions.providerId}/`;
-    const requestedModel = selected.model?.startsWith(prefix)
-      ? selected.model.slice(prefix.length) : selected.model;
+    // A bare model can itself begin with the provider ID (e.g. foo/bar).
+    // Accept the exact captured model before considering its qualified form;
+    // never strip a prefix from the native capture or trust a rewritten model.
+    const qualifiedCapturedModel = `${base.nativeOptions.providerId}/${base.model}`;
     if (selected.permissions !== undefined || selected.effort !== undefined ||
-        (requestedModel !== undefined && requestedModel !== base.model))
+        (selected.model !== undefined && selected.model !== base.model &&
+          selected.model !== qualifiedCapturedModel))
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   }
   const profile = structuredClone(base);
-  if (selected.model !== undefined) {
+  // For V2, the selected native session has already fixed its model. Keep the
+  // captured identity exactly; a UI-qualified alias must not rewrite it.
+  if (selected.model !== undefined &&
+      !(profile.provider === 'opencode' && profile.nativeGeneration === 'v2')) {
     const prefix = profile.provider === 'opencode' ? `${profile.nativeOptions.providerId}/` : null;
     // App catalogs qualify OpenCode model IDs; private recipes may already contain
     // bare IDs with slashes. Only the captured provider's exact prefix is removed.

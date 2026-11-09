@@ -244,6 +244,27 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
     assert.equal(selected.nativeOptions.toolApprovalMode, undefined);
     assert.equal(selected.nativeOptions.variant, undefined);
   }
+  // Regression: a bare model name may itself start with the provider ID.
+  // Both the bare selection and its doubly-prefixed catalog alias must retain
+  // the exact captured native model instead of stripping the first segment.
+  const nestedBase = runtimeProfileSchema.parse({ members: [{
+    ...nativeV2Profile(), model: 'TEST-provider/TEST-model',
+  }] }).members[0]!;
+  for (const model of [
+    'TEST-provider/TEST-model',
+    'TEST-provider/TEST-provider/TEST-model',
+  ]) {
+    const selected = applyLaunchConfiguration(nestedBase, { model });
+    assert.equal(selected.model, nestedBase.model,
+      'V2 must preserve the previously selected native model identity');
+    assert.equal(selected.nativeOptions.variant, undefined);
+  }
+  assert.throws(
+    () => applyLaunchConfiguration(nestedBase, { model: 'TEST-provider/OTHER-model' }),
+    (error: unknown) => error instanceof Error && 'reason' in error &&
+      error.reason === 'launch-option-unsupported',
+    'a different model must still fail closed even with a provider prefix',
+  );
   const v1 = runtimeProfileSchema.parse({ members: [v1Profile()] }).members[0]!;
   const legacyChoice = applyLaunchConfiguration(v1, {
     model: 'TEST-next-model', effort: 'high', permissions: 'manual',
