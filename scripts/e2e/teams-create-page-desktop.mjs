@@ -22,6 +22,7 @@ const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
 let mainInspectorWebSocketUrl = null;
+let expectedMainInspectorPort = null;
 let cdp = null;
 let inputSelectAllDomFallbacks = 0;
 
@@ -30,8 +31,9 @@ function rememberAppLog(chunk, stream) {
   const lines = `${appLogRemainder[stream]}${text}`.split(/\r?\n/);
   appLogRemainder[stream] = lines.pop() ?? '';
   for (const line of lines) {
-    const target = line.match(/Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[a-z0-9-]+)/i);
-    if (target) mainInspectorWebSocketUrl = target[1];
+    const target = line.match(/Debugger listening on (ws:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)\/[a-z0-9-]+)/i);
+    if (target && Number(target[2]) === expectedMainInspectorPort)
+      mainInspectorWebSocketUrl = target[1];
   }
   appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 200) appLogTail.splice(0, appLogTail.length - 200);
@@ -247,6 +249,7 @@ async function startApp(fixture) {
   // Keep a known launcher PID for taskkill /T on teardown (including restart).
   const windows = process.platform === 'win32';
   const inspectorPort = await findFreeInspectorPort();
+  expectedMainInspectorPort = inspectorPort;
   appProcess = spawn(
     windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
     windows ? ['/d', '/s', '/c', `pnpm dev:mcp --inspect=${inspectorPort}`] : ['dev:mcp', `--inspect=${inspectorPort}`, ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
@@ -590,10 +593,11 @@ async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
   await client.send('Runtime.enable');
   await client.send('Page.enable');
   try {
-    // Windows CI needs longer to reopen the *same* profile after taskkill.
-    // Keep real renderer and IPC readiness mandatory; never skip a failed boot.
+    // Cold macOS CI may finish Vite's dev renderer bundle after 60s while
+    // Electron main/preload are ready. Wait boundedly for the actual renderer;
+    // keep real IPC/store readiness mandatory, never bypass failed startup.
     await client.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore',
-      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 60_000);
+      'native API and dev store', afterRestart && process.platform === 'win32' ? 180_000 : 150_000);
   } catch (error) {
     let startupStatus = null;
     try {

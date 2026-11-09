@@ -43,18 +43,76 @@ async function hashFile(filePath) {
   return digest.digest('hex');
 }
 
-async function downloadArchive(url, destination) {
-  const response = await fetch(url, {
-    headers: { 'user-agent': 'agent-teams-managed-git-stager', accept: 'application/octet-stream' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(180_000),
-  });
-  if (!response.ok || !response.body) {
-    throw new Error(`Could not download the pinned Git archive (HTTP ${response.status})`);
+const RETRYABLE_DOWNLOAD_HTTP = new Set([500, 502, 503, 504]);
+const RETRYABLE_DOWNLOAD_CODES = new Set([
+  'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT',
+]);
+
+/** Only a finite set of transient transport failures permits another pinned archive GET. */
+function isRetryableDownloadFailure(error) {
+  let cause = error;
+  for (let depth = 0; depth < 4 && cause && typeof cause === 'object'; depth += 1) {
+    if (typeof cause.httpStatus === 'number') {
+      return RETRYABLE_DOWNLOAD_HTTP.has(cause.httpStatus);
+    }
+    if (
+      cause.code === 'ERR_HTTP2_STREAM_ERROR' &&
+      (cause.http2ErrorCode === 7 ||
+        (typeof cause.message === 'string' && cause.message.includes('NGHTTP2_REFUSED_STREAM')))
+    ) {
+      return true; // Only a refused HTTP/2 GET stream is safe to retry.
+    }
+    if (RETRYABLE_DOWNLOAD_CODES.has(cause.code) || cause.name === 'TimeoutError') {
+      return true;
+    }
+    if (
+      cause instanceof AggregateError &&
+      cause.errors.some(
+        (entry) =>
+          entry && typeof entry === 'object' &&
+          (RETRYABLE_DOWNLOAD_CODES.has(entry.code) || entry.name === 'TimeoutError')
+      )
+    ) {
+      return true; // Node can aggregate an earlier refusal with a later timeout.
+    }
+    cause = cause.cause;
   }
-  await pipeline(Readable.fromWeb(response.body), (await import('node:fs')).createWriteStream(destination));
+  return false;
 }
 
+/** Retry transient transport failures only; SHA-256 and archive validation always follow. */
+export async function downloadArchive(
+  url,
+  destination,
+  { request = fetch, pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}
+) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    await rm(destination, { force: true }); // Never reuse a partial response.
+    try {
+      const response = await request(url, {
+        headers: { 'user-agent': 'agent-teams-managed-git-stager', accept: 'application/octet-stream' },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(180_000),
+      });
+      if (!response.ok || !response.body) {
+        const error = new Error('Could not download the pinned Git archive (HTTP ' + response.status + ')');
+        error.httpStatus = response.status;
+        throw error;
+      }
+      await pipeline(Readable.fromWeb(response.body), (await import('node:fs')).createWriteStream(destination));
+      return;
+    } catch (error) {
+      await rm(destination, { force: true });
+      if (attempt === maxAttempts || !isRetryableDownloadFailure(error)) throw error;
+      process.stderr.write(
+        '[managed-git] transient pinned archive transport failure; retry ' +
+          (attempt + 1) + '/' + maxAttempts + '\n'
+      );
+      await pause(attempt * 1_000);
+    }
+  }
+}
 async function validateLinks(root) {
   const pending = [root];
   while (pending.length > 0) {
