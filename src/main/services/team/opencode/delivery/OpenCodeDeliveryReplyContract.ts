@@ -1,4 +1,4 @@
-import { isLeadAgentType, isLeadMember, isLeadNameAlias } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isLeadAgentType, isLeadNameAlias } from '@shared/utils/leadDetection';
 
 /**
  * Reserved reply-recipient marker for informational system/task notifications.
@@ -31,15 +31,18 @@ export type OpenCodeDeliveryReplyContract =
 
 /** Exact current roster peers outrank historical lead-name aliases. */
 export function isOpenCodeConfiguredPeerRecipient(
-  members: readonly { name?: unknown; agentType?: unknown; role?: unknown }[] | null | undefined,
+  members: readonly { name?: unknown; agentType?: unknown; role?: unknown; removedAt?: unknown }[] | null | undefined,
   replyRecipient: string
 ): boolean {
   const key = replyRecipient.trim().toLowerCase();
-  return Boolean(key && members?.some(member =>
+  if (!key) return false;
+  const matches = members?.filter(member =>
+    !member.removedAt &&
     typeof member.name === 'string' &&
-    member.name.trim().toLowerCase() === key &&
-    !isLeadMember(member)
-  ));
+    member.name.trim().toLowerCase() === key
+  ) ?? [];
+  // Ambiguous, removed or role-only lead identities must never be inferred as peers.
+  return matches.length === 1 && !isCanonicalSettingsLeadMember(matches[0]);
 }
 
 export function classifyOpenCodeDeliveryReplyContract(
