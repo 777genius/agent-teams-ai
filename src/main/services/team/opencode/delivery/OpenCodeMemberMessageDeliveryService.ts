@@ -950,9 +950,9 @@ export class OpenCodeMemberMessageDeliveryService {
           observedDiagnostics: observed.diagnostics,
           turnActivity,
           hasExecutionEvidence,
-          knownPeerRecipient: await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient(
+          knownPeerRecipient: (await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient?.(
             teamName, ledgerRecord.replyRecipient
-          ),
+          )) ?? false,
           nowMs: Date.now(),
           config: this.deps.openCodeStalePendingPolicyConfig,
         });
@@ -1151,9 +1151,9 @@ export class OpenCodeMemberMessageDeliveryService {
           assertCurrentRun();
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
-            knownPeerRecipient: await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient(
+            knownPeerRecipient: (await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient?.(
               teamName, input.replyRecipient ?? ''
-            ),
+            )) ?? false,
             deliveryAttemptId,
             fileParts: openCodeFileParts,
             controlUrl: controlUrl ?? undefined,
