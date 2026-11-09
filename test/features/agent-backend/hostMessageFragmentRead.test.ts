@@ -7,11 +7,12 @@ import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/f
 import { expect, it, vi } from 'vitest';
 
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
-import { readHostPagedSnapshot } from '../../../src/features/agent-backend/renderer/readHostPagedSnapshot';
+import { assembleTaskParts, readHostPagedSnapshot } from '../../../src/features/agent-backend/renderer/readHostPagedSnapshot';
 import { TeamProductReadOrder } from '../../../src/features/agent-backend/renderer/TeamProductReadOrder';
 
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
+import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 
 function fixture() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-host-large-message-')));
@@ -86,4 +87,27 @@ it('does not publish a mixed-revision message after canonical history changes be
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }
+});
+
+it('reassembles projected oversized description and prompt only after all task parts', () => {
+  type Task = BackendTeamSnapshot['tasks'][number];
+  const fragment = (fields: Record<string, unknown>) => ({
+    id: 'TEST-large-task', subject: 'Large text', status: 'pending', ...fields,
+  }) as Task;
+  const groups = new Map([[0, {
+    total: 3,
+    values: new Map<number, Task>([
+      [0, fragment({ description: '', prompt: '' })],
+      [1, fragment({ description: '漢'.repeat(70_000), prompt: '🙂'.repeat(40_000) })],
+      [2, fragment({ description: '漢'.repeat(70_000), prompt: '🙂'.repeat(40_000) })],
+    ]),
+  }]]);
+  const complete = assembleTaskParts(groups, 1);
+  expect(complete).toHaveLength(1);
+  expect(complete[0]?.description).toBe('漢'.repeat(140_000));
+  expect(complete[0]?.prompt).toBe('🙂'.repeat(80_000));
+  const partial = new Map([[0, {
+    total: 3, values: new Map<number, Task>([[0, fragment({ description: '' })]]),
+  }]]);
+  expect(() => assembleTaskParts(partial, 1)).toThrow('Incomplete');
 });

@@ -271,6 +271,43 @@ test("team_get keeps canonical 90-comment task readable with taskParts continuat
   );
 });
 
+test("team_get retains an accepted oversized Unicode task description with signed fragments", (t) => {
+  const f = fixture(t);
+  const description = "漢".repeat(140_000);
+  const taskId = f.user.execute({
+    commandId: "TEST-large-task-description",
+    operation: "task.create",
+    payload: { subject: "Large valid description", description },
+  }).effects.taskId;
+  const tool = createTeamMcpTools(f.user);
+  let cursor: string | null = null;
+  let pageCount = 0;
+  const chunks = new Map<number, string>();
+  do {
+    const page = value(tool.call("team_get", cursor ? { cursor } : {})) as {
+      tasks: { id: string; description?: string }[];
+      taskParts?: { index: number; part: number; total: number }[];
+      nextCursor: string | null;
+    };
+    assert.ok(page.taskParts);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+    for (const [position, fragment] of page.tasks.entries()) {
+      if (fragment.id !== taskId || fragment.description === undefined) continue;
+      const marker = page.taskParts![position];
+      assert.ok(marker);
+      assert.equal(marker.index, 0);
+      assert.equal(chunks.has(marker.part), false);
+      chunks.set(marker.part, fragment.description);
+    }
+    cursor = page.nextCursor;
+    assert.ok(++pageCount < 128);
+  } while (cursor);
+  assert.ok(pageCount > 1);
+  assert.equal([...chunks.entries()].sort(([a], [b]) => a - b)
+    .map(([, value]) => value).join(""), description);
+  assert.equal(f.user.getTask(taskId).description, description);
+});
+
 test("team_get pages retained >256 KiB task history within MCP response limits", (t) => {
   const f = fixture(t);
   for (let index = 0; index < 100; index++) {

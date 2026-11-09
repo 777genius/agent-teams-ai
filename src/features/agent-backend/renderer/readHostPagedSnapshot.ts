@@ -7,6 +7,7 @@ type Connection = BackendConnectionSnapshot['bindings'][number];
 type CurrentScope = () => boolean;
 
 const MAX_PAGES = 128;
+const TASK_TEXT_FIELDS = ['description', 'prompt'] as const;
 const TASK_ARRAY_FIELDS = [
   'comments', 'historyEvents', 'workIntervals', 'reviewIntervals',
   'attachments', 'descriptionTaskRefs', 'promptTaskRefs',
@@ -41,6 +42,15 @@ export function assembleTaskParts(
         if (prior !== undefined && !Array.isArray(prior))
           throw new Error('Mismatched Host task history');
         merged[field] = [...(prior as unknown[] | undefined ?? []), ...items];
+      }
+      for (const field of TASK_TEXT_FIELDS) {
+        const chunk = extra[field];
+        if (chunk === undefined) continue;
+        const previous = merged[field];
+        if (typeof chunk !== 'string' ||
+            (previous !== undefined && typeof previous !== 'string'))
+          throw new Error('Mismatched Host task text fragment');
+        merged[field] = (previous ?? '') + chunk;
       }
     }
     tasks.push(merged as unknown as Task);
