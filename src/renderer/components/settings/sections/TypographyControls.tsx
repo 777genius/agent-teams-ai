@@ -40,7 +40,7 @@ export const TypographyControls = (): React.JSX.Element => {
     const query = fontQuery.trim().toLocaleLowerCase();
     const matches = query
       ? allFonts.filter((family) => family.toLocaleLowerCase().includes(query))
-      : [...FONT_SUGGESTIONS, ...allFonts];
+      : allFonts;
     return uniqueFontFamilies(matches.slice(0, MAX_VISIBLE_FONT_CHOICES), fontFamily);
   }, [allFonts, fontQuery, fontFamily]);
 
@@ -81,7 +81,7 @@ export const TypographyControls = (): React.JSX.Element => {
         description={t('general.appearance.fontFamily.description')}
       >
         <div className="flex min-w-0 max-w-full flex-col items-end gap-2">
-          {installedFonts.length > MAX_VISIBLE_FONT_CHOICES && (
+          {allFonts.length > MAX_VISIBLE_FONT_CHOICES && (
             <input
               type="search"
               data-testid="appearance-font-filter"
