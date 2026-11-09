@@ -392,7 +392,9 @@ try {
       }
     } finally {
       // Always delete the isolated test home, even if evidence writing fails.
-      fs.rmSync(testRoot, { recursive: true, force: true });
+      // Windows may retain a native OpenCode handle briefly after command completion.
+      // Retry bounded transient locks; a persistent failure still fails this E2E.
+      await fs.promises.rm(testRoot, { recursive: true, force: true, maxRetries: 8, retryDelay: 300 });
     }
   }
   console.log('real-runtime-provider-e2e: ' +
