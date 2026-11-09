@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@renderer/lib/utils';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
+import { TypographyControls } from './TypographyControls';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';
 import type { AppConfig } from '@shared/types/notifications';
@@ -184,6 +185,7 @@ export const AppearanceSection = ({
           </button>
         </div>
       </SettingRow>
+      <TypographyControls />
       {localError && (
         <p role="alert" className="my-2 text-xs text-red-400">{localError}</p>
       )}
