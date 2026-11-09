@@ -66,31 +66,29 @@ export interface OpenCodeV2OwnedSession {
   confirmStopped(): Promise<boolean>;
 }
 
-type OwnedCallback = Exclude<keyof OpenCodeV2OwnedSession, 'requiredExternalDirectory'>;
-
 /**
- * Read native owner method descriptors without invoking a mutable accessor.
- * Prototype methods (class owners) are supported; accessors are rejected
- * before they can swap permission, credential or physical-stop callbacks.
+ * Capture native owner and Host authority callbacks from data descriptors
+ * without executing accessors or function metadata getters. Prototype
+ * methods retain their original receiver.
  */
-function captureOwnedCallback<K extends OwnedCallback>(
-  owned: OpenCodeV2OwnedSession, name: K
-): OpenCodeV2OwnedSession[K] {
-  let prototype: object | null = owned;
+function captureDataCallback<T extends object, K extends keyof T>(
+  receiver: T, name: K
+): T[K] {
+  let prototype: object | null = receiver;
   while (prototype !== null) {
     const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
     if (descriptor) {
       if (typeof descriptor.value !== 'function')
-        throw new Error('OpenCode V2 requires data-property native owner callbacks');
-      // Function.prototype.bind reads target.name and target.length. An owner
-      // can use those getters to replace another callback during capture.
+        throw new Error('OpenCode V2 requires data-property authority callbacks');
+      // Function.prototype.bind reads target.name and target.length. Those
+      // getters can replace another authority callback during capture.
       // Reflect.apply preserves original identity/receiver without metadata reads.
       const original = descriptor.value as (...args: unknown[]) => unknown;
-      return ((...args: unknown[]) => Reflect.apply(original, owned, args)) as OpenCodeV2OwnedSession[K];
+      return ((...args: unknown[]) => Reflect.apply(original, receiver, args)) as unknown as T[K];
     }
     prototype = Object.getPrototypeOf(prototype);
   }
-  throw new Error('OpenCode V2 requires data-property native owner callbacks');
+  throw new Error('OpenCode V2 requires data-property authority callbacks');
 }
 
 /**
@@ -109,9 +107,10 @@ export function createOpenCodeV2MemberProvider(
   const originalProfile = runtimeDigest(context.profile);
   const capturedInstructions = context.instructions;
   // Retain original Host authority before a native owner getter can swap
-  // these callbacks to forge an always-current lease.
-  const capturedIsCurrent = Function.prototype.bind.call(context.isCurrent, context) as () => boolean;
-  const capturedCanAllocate = Function.prototype.bind.call(context.canAllocate, context) as () => boolean;
+  // these callbacks. Binding via Function.prototype.bind itself invokes
+  // attacker-controlled .name/.length getters during capture.
+  const capturedIsCurrent = captureDataCallback(context, 'isCurrent');
+  const capturedCanAllocate = captureDataCallback(context, 'canAllocate');
   const selected = structuredClone(context.profile);
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
@@ -148,13 +147,13 @@ export function createOpenCodeV2MemberProvider(
   // These method identities belong to the original TEST-owned engine. An
   // asynchronous native callback must not replace its custody, permission,
   // instruction or credential reader before the next Host admission check.
-  const capturedReadPassword = captureOwnedCallback(owned, 'readPassword');
-  const capturedProbe = captureOwnedCallback(owned, 'probe');
-  const capturedReadNativeCustody = captureOwnedCallback(owned, 'readNativeCustody');
-  const capturedReadNativeEffectivePermissions = captureOwnedCallback(owned, 'readNativeEffectivePermissions');
-  const capturedInstallAndAttestInitialContext = captureOwnedCallback(owned, 'installAndAttestInitialContext');
-  const capturedStopOwned = captureOwnedCallback(owned, 'stopOwned');
-  const capturedConfirmStopped = captureOwnedCallback(owned, 'confirmStopped');
+  const capturedReadPassword = captureDataCallback(owned, 'readPassword');
+  const capturedProbe = captureDataCallback(owned, 'probe');
+  const capturedReadNativeCustody = captureDataCallback(owned, 'readNativeCustody');
+  const capturedReadNativeEffectivePermissions = captureDataCallback(owned, 'readNativeEffectivePermissions');
+  const capturedInstallAndAttestInitialContext = captureDataCallback(owned, 'installAndAttestInitialContext');
+  const capturedStopOwned = captureDataCallback(owned, 'stopOwned');
+  const capturedConfirmStopped = captureDataCallback(owned, 'confirmStopped');
 
   // Capture the required product policy ONCE. A mutable owner object must
   // never turn an original external-directory deny into a later ask.

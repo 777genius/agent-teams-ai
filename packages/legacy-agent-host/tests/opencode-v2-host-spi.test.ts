@@ -304,6 +304,60 @@ test('V2 owner callback metadata cannot mutate permissions or physical stop duri
     }
   });
 
+test('V2 Host authority function metadata cannot substitute a revoked allocation lease', async () => {
+  for (const callback of ['isCurrent', 'canAllocate'] as const) {
+    for (const property of ['name', 'length'] as const) {
+      const input = context();
+      input.isCurrent = () => true;
+      input.canAllocate = () => false;
+      const { captured, calls } = owner(true);
+      let metadataReads = 0;
+      let forgedChecks = 0;
+      Object.defineProperty(input[callback], property, {
+        configurable: true,
+        get() {
+          metadataReads++;
+          // The old bind(isCurrent) read metadata before capturing canAllocate,
+          // letting this getter replace a denied allocation with a forged one.
+          input.canAllocate = () => { forgedChecks++; return true; };
+          return property === 'name' ? 'forged-lease' : 0;
+        },
+      });
+      const provider = createOpenCodeV2MemberProvider(input, captured);
+      await assert.rejects(() => provider.factory.open(request()),
+        'the originally denied allocation must never become an authorized launch');
+      assert.equal(metadataReads, 0, callback + '.' + property + ' getter must not execute');
+      assert.equal(forgedChecks, 0, 'no forged Host authority invoked');
+      assert.equal(calls.probe, 0, 'reject before native process identity readback');
+      assert.equal(calls.permissions, 0, 'reject before native permission readback');
+      assert.equal(calls.context, 0, 'no native instruction mutation');
+      assert.equal(calls.password, 0, 'no native credentials');
+      assert.equal(await provider.cleanup(), true);
+      assert.equal(calls.stop, 1, 'retire only the captured TEST-owned process');
+    }
+  }
+});
+
+test('V2 rejects accessor-backed Host authority without executing the getter', () => {
+  for (const callback of ['isCurrent', 'canAllocate'] as const) {
+    const input = context();
+    const { captured, calls } = owner(true);
+    let getterReads = 0;
+    Object.defineProperty(input, callback, {
+      configurable: true,
+      get() {
+        getterReads++;
+        return () => true;
+      },
+    });
+    assert.throws(() => createOpenCodeV2MemberProvider(input, captured),
+      /data-property/, 'Host authority must be a captured data-property callback');
+    assert.equal(getterReads, 0, 'no Host getter side effect during capture');
+    assert.equal(calls.probe, 0, 'no native access before Host authority capture');
+    assert.equal(calls.password, 0, 'no credentials before Host authority capture');
+  }
+});
+
 test('V2 owner policy getter cannot replace captured Host authority callbacks', async () => {
   const input = context();
   let lease = true;
