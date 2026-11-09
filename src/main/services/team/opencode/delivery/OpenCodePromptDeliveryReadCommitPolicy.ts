@@ -3,6 +3,7 @@ import {
   isOpenCodeReplyOptionalDeliveryContract,
   isOpenCodeConfiguredLeadReply,
   isOpenCodeLeadDestinationProof,
+  isOpenCodeLeadReplyRecipient,
   isOpenCodeReplyRequiredDeliveryRecipient,
 } from './OpenCodeDeliveryReplyContract';
 import {
@@ -126,19 +127,12 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
   ) => boolean;
 }): boolean {
   if (isOpenCodeDirectUserPromptDelivery(input.ledgerRecord)) {
-    return (
-      Boolean(
-        input.ledgerRecord?.visibleReplyInbox?.trim() &&
-        input.ledgerRecord?.visibleReplyMessageId?.trim()
-      ) && input.taskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs)
-    );
+    return Boolean(input.ledgerRecord?.visibleReplyInbox?.trim() &&
+      input.ledgerRecord?.visibleReplyMessageId?.trim() &&
+      input.taskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs));
   }
   const record = input.ledgerRecord;
-  if (
-    record &&
-    (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
-      isOpenCodeConfiguredLeadReply(record, input.configuredLeadName))
-  ) {
+  if (isOpenCodeLeadReplyRecipient(record, input.configuredLeadName)) {
     const proof = input.visibleReply;
     return Boolean(
       isOpenCodeLeadDestinationProof(record, input.configuredLeadName, proof) &&
@@ -151,9 +145,7 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
     );
   }
   const preview = record?.observedAssistantPreview?.trim();
-  if (!preview) {
-    return true;
-  }
+  if (!preview) return true;
   return isOpenCodeVisibleReplySemanticallySufficient({
     actionMode: input.actionMode,
     taskRefs: input.taskRefs,
@@ -298,13 +290,9 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     return isOpenCodePlainTextResponseReadCommitAllowed(input);
   }
   if (state === 'responded_visible_message') {
-    // A message in the user's inbox cannot satisfy a lead-directed reply.
     if (record && input.configuredLeadName !== undefined &&
-      (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
-        isOpenCodeConfiguredLeadReply(record, input.configuredLeadName)) &&
-      !isOpenCodeLeadDestinationProof(record, input.configuredLeadName, input.visibleReply)) {
-      return false;
-    }
+      isOpenCodeLeadReplyRecipient(record, input.configuredLeadName) &&
+      !isOpenCodeLeadDestinationProof(record, input.configuredLeadName, input.visibleReply)) return false;
     return (
       isOpenCodeVisibleReplyReadCommitAllowed({
         actionMode: input.actionMode,
