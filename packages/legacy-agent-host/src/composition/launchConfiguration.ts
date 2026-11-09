@@ -9,9 +9,12 @@ const id = z
   .min(1)
   .max(256)
   .refine((value) => !value.includes('\0'));
+// A V2 catalog alias can contain two independently captured 256-character IDs
+// plus a separator. Wider values are admitted only for that exact alias below.
+const launchModelId = z.string().min(1).max(513).refine((value) => !value.includes('\0'));
 const options = z
   .object({
-    model: id.optional(),
+    model: launchModelId.optional(),
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
       .optional(),
@@ -40,21 +43,25 @@ export function applyLaunchConfiguration(
   raw: unknown
 ): RuntimeMemberProfile {
   const selected = options.parse(raw);
-  // The owned V2 session was already captured with a native model/variant.
-  // Merely changing the Host profile cannot change that native session and
-  // would silently dispatch to a different model than the user's selection.
-  // Until native model/variant binding is attested, allow only the exact
-  // captured model and variant (including unchanged explicit selections).
-  // Never reinterpret V1 permission or effort choices as V2.
-  if (base.provider === 'opencode' && base.nativeGeneration === 'v2') {
-    // A bare model can itself begin with the provider ID (e.g. foo/bar).
-    // Accept the exact captured model before considering its qualified form;
-    // never strip a prefix from the native capture or trust a rewritten model.
-    const qualifiedCapturedModel = `${base.nativeOptions.providerId}/${base.model}`;
-    if (selected.permissions !== undefined ||
-        (selected.effort !== undefined && selected.effort !== base.nativeOptions.variant) ||
-        (selected.model !== undefined && selected.model !== base.model &&
-          selected.model !== qualifiedCapturedModel))
+  // The native V2 session already owns its model/variant. Host launch options
+  // cannot change it. Reject explicit effort until a separate native variant
+  // attestation exists; a matching captured string alone proves nothing.
+  const v2 = base.provider === 'opencode' && base.nativeGeneration === 'v2';
+  const qualifiedCapturedModel = v2
+    ? `${base.nativeOptions.providerId}/${base.model}`
+    : undefined;
+  if (selected.model !== undefined && selected.model.length > 256 &&
+      (!v2 || selected.model !== qualifiedCapturedModel))
+    throw new TeamLaunchError('invalid', 'launch-option-unsupported');
+  if (v2) {
+    const providerPrefix = `${base.nativeOptions.providerId}/`;
+    // E.g. captured foo/bar and UI-selected foo/bar can mean either bare
+    // "foo/bar" or provider foo's model "bar". With no provenance, fail closed.
+    // The explicitly qualified foo/foo/bar remains the unambiguous alias.
+    const modelMatches = selected.model === undefined ||
+      selected.model === qualifiedCapturedModel ||
+      (selected.model === base.model && !base.model.startsWith(providerPrefix));
+    if (selected.permissions !== undefined || selected.effort !== undefined || !modelMatches)
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   }
   const profile = structuredClone(base);

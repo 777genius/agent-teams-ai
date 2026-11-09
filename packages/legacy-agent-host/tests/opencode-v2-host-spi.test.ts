@@ -244,20 +244,42 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
     assert.equal(selected.nativeOptions.toolApprovalMode, undefined);
     assert.equal(selected.nativeOptions.variant, undefined);
   }
-  // Regression: a bare model name may itself start with the provider ID.
-  // Both the bare selection and its doubly-prefixed catalog alias must retain
-  // the exact captured native model instead of stripping the first segment.
+  // The raw selection is ambiguous: provider TEST-provider's model
+  // TEST-model has the same spelling as native model TEST-provider/TEST-model.
+  // Reject it without UI provenance; its doubly-qualified alias is distinct.
   const nestedBase = runtimeProfileSchema.parse({ members: [{
     ...nativeV2Profile(), model: 'TEST-provider/TEST-model',
   }] }).members[0]!;
-  for (const model of [
-    'TEST-provider/TEST-model',
-    'TEST-provider/TEST-provider/TEST-model',
-  ]) {
-    const selected = applyLaunchConfiguration(nestedBase, { model });
-    assert.equal(selected.model, nestedBase.model,
-      'V2 must preserve the previously selected native model identity');
-    assert.equal(selected.nativeOptions.variant, undefined);
+  assert.throws(() => applyLaunchConfiguration(nestedBase, {
+    model: 'TEST-provider/TEST-model',
+  }), (error: unknown) => error instanceof Error && 'reason' in error &&
+    error.reason === 'launch-option-unsupported',
+  'ambiguous model selections must fail closed');
+  const nestedSelected = applyLaunchConfiguration(nestedBase, {
+    model: 'TEST-provider/TEST-provider/TEST-model',
+  });
+  assert.equal(nestedSelected.model, nestedBase.model);
+  assert.equal(nestedSelected.nativeOptions.variant, undefined);
+  // A catalog alias may be longer than a single 256-character ID. Only the
+  // qualified alias of the ACTUAL captured V2 model is admitted at that size.
+  const longProvider = 'p'.repeat(180);
+  const longModel = 'm'.repeat(160);
+  const longBase = runtimeProfileSchema.parse({ members: [{
+    ...nativeV2Profile(), model: longModel,
+    nativeOptions: { ...nativeV2Profile().nativeOptions, providerId: longProvider },
+  }] }).members[0]!;
+  const longAlias = `${longProvider}/${longModel}`;
+  assert.ok(longAlias.length > 256);
+  assert.equal(applyLaunchConfiguration(longBase, { model: longAlias }).model, longModel);
+  for (const [profile, model] of [
+    [longBase, longAlias + '-different'],
+    [longBase, 'x'.repeat(350)],
+    [runtimeProfileSchema.parse({ members: [v1Profile()] }).members[0]!, longAlias],
+  ] as const) {
+    assert.throws(() => applyLaunchConfiguration(profile, { model }),
+      (error: unknown) => error instanceof Error && 'reason' in error &&
+        error.reason === 'launch-option-unsupported',
+      'an oversized model string must not broaden V1 or switch the captured V2 model');
   }
   assert.throws(
     () => applyLaunchConfiguration(nestedBase, { model: 'TEST-provider/OTHER-model' }),
@@ -265,16 +287,16 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
       error.reason === 'launch-option-unsupported',
     'a different model must still fail closed even with a provider prefix',
   );
-  // A saved V2 effort selection may explicitly repeat the captured native
-  // variant. It is not permission to switch variants or weaken the policy.
+  // A saved variant is not native proof. An explicit matching effort is
+  // unsupported until the owned engine's effective variant can be attested.
   const capturedVariantBase = runtimeProfileSchema.parse({ members: [{
     ...nativeV2Profile(),
     nativeOptions: { ...nativeV2Profile().nativeOptions, variant: 'high' },
   }] }).members[0]!;
   for (const choice of [
-    { effort: 'high' },
-    { model: 'TEST-model', effort: 'high' },
-    { model: 'TEST-provider/TEST-model', effort: 'high' },
+    {},
+    { model: 'TEST-model' },
+    { model: 'TEST-provider/TEST-model' },
   ]) {
     const selected = applyLaunchConfiguration(capturedVariantBase, choice);
     assert.equal(selected.provider, 'opencode');
@@ -282,12 +304,22 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
     assert.equal(selected.nativeGeneration, 'v2');
     assert.equal(selected.model, capturedVariantBase.model);
     assert.equal(selected.nativeOptions.variant, 'high',
-      'unchanged V2 effort must preserve the previously captured variant');
+      'implicit launch must preserve captured variant without changing it');
     assert.equal(selected.nativeOptions.toolApprovalMode, undefined,
-      'matching V2 effort must not inherit V1 auto/manual approvals');
+      'implicit launch must not inherit V1 auto/manual approvals');
     assert.deepEqual(selected.executable, capturedVariantBase.executable,
-      'matching effort cannot substitute the pinned native engine');
+      'implicit launch cannot substitute pinned native engine');
     assert.equal(selected.nativeSessionId, capturedVariantBase.nativeSessionId);
+  }
+  for (const choice of [
+    { effort: 'high' },
+    { model: 'TEST-model', effort: 'high' },
+    { model: 'TEST-provider/TEST-model', effort: 'high' },
+  ]) {
+    assert.throws(() => applyLaunchConfiguration(capturedVariantBase, choice),
+      (error: unknown) => error instanceof Error && 'reason' in error &&
+        error.reason === 'launch-option-unsupported',
+      'matching effort alone cannot attest actual native variant');
   }
   for (const choice of [
     { effort: 'low' },
