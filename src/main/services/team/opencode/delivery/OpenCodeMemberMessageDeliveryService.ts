@@ -941,9 +941,7 @@ export class OpenCodeMemberMessageDeliveryService {
         ) {
           notifyActivity('active');
         }
-        // Stale-pending guard: an accepted prompt the bridge keeps reporting as
-        // `pending` has no attempt budget, so bound it here. A lead plain-text
-        // turn end settles non-user messages; stale idle records go terminal.
+        // Bound accepted pending prompts; settle only confirmed turn ends.
         const hasExecutionEvidence = hasOpenCodeAcceptedPromptExecutionEvidence(ledgerRecord);
         const staleResolution = decideOpenCodeStalePendingResolution({
           record: ledgerRecord,
