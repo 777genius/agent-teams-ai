@@ -390,6 +390,40 @@ describe('TeamModelSelector disabled Codex models', () => {
     await act(async () => root.unmount());
   });
 
+  it('keeps checking Codex and CLI providers when OpenCode cache invalidation fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.fetchCliProviderStatus.mockResolvedValue(true);
+    storeState.invalidateOpenCodeRuntimeStatus.mockRejectedValueOnce(new Error('runtime offline'));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(storeState.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
+      checkReason: 'manual_refresh',
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    await act(async () => root.unmount());
+  });
+
   it('reports a provider that resolves to an unsuccessful status check', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
