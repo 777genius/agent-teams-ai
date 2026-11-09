@@ -260,6 +260,15 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     })).toBe('plain_text_visible_reply_not_materialized_yet');
   });
 
+  it('does not mark a custom lead reply read when the lead roster lookup is unavailable', async () => {
+    const f = await fixture({ recipient: 'captain', lead: null });
+    expect(await f.readAllowed(f.observed, null)).toBe(false);
+    const attempted = await f.materialize();
+    expect(attempted.visibleReply).toBeNull();
+    expect(await f.readAllowed(attempted.ledgerRecord, null)).toBe(false);
+    expect((await f.messages('user'))).toEqual([]);
+  });
+
   it('keeps optional peer reports silent', async () => {
     const peer = await fixture({ recipient: 'another-member' });
     const response = await peer.materialize();
