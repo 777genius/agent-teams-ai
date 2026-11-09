@@ -4,8 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
 import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
 import { createHostTeamsApi, hostTeamSelectionKey } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
+import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
 
 import type { BackendOwnerRouter } from '../../../src/features/agent-backend/main/application/BackendOwnerRouter';
+import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { TeamsAPI } from '../../../src/shared/types/api';
 
@@ -70,6 +72,65 @@ describe('captured Host message pages never require the oversized complete snaps
       handle, operation: 'team.messages.page', payload: { limit: 1 },
     }));
     expect(legacy.getMessagesPage).not.toHaveBeenCalled();
+  });
+
+  it('reassembles a valid 420 KiB Unicode message across original signed Owner pages', async () => {
+    const fullText = '漢'.repeat(140_000);
+    const snapshot = {
+      teamName: 'TEST-original-name',
+      messages: [{
+        from: 'alice', text: fullText, timestamp: '2026-11-09T01:00:00.000Z',
+        read: false, messageId: 'TEST-large-accepted',
+        privateSession: 'PRIVATE-cannot-publish',
+      }],
+    } as unknown as BackendTeamSnapshot;
+    let reads = 0;
+    const backend: AgentBackendApi = {
+      getConnections: vi.fn(async () => ({
+        state: 'ready' as const, bindings: [{ handle, label: 'TEST original', members: [] }],
+      })),
+      invoke: vi.fn(async (input) => {
+        expect(input.operation).toBe('team.messages.page');
+        reads++;
+        return mockOwnerMessagesPage(snapshot, input.payload);
+      }) as AgentBackendApi['invoke'],
+    };
+    const legacy = { getMessagesPage: vi.fn() } as unknown as TeamsAPI;
+    const teams = createHostTeamsApi(legacy, backend);
+    const result = await teams.getMessagesPage(key, { limit: 1 });
+    expect(reads).toBeGreaterThan(1);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]?.text).toBe(fullText);
+    expect(result.messages[0]?.messageId).toBe('TEST-large-accepted');
+    expect(result.nextCursor).toBeNull();
+    expect(result.hasMore).toBe(false);
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE|messageParts|messageTotal/);
+    expect(legacy.getMessagesPage).not.toHaveBeenCalled();
+  });
+
+  it('refuses stale Owner continuations after original message text changes', async () => {
+    const fullText = '漢'.repeat(140_000);
+    const snapshot = {
+      teamName: 'TEST-original-name',
+      messages: [{
+        from: 'alice', text: fullText, timestamp: '2026-11-09T01:00:00.000Z',
+        read: false, messageId: 'TEST-large-accepted',
+      }],
+    } as unknown as BackendTeamSnapshot;
+    let calls = 0;
+    const backend: AgentBackendApi = {
+      getConnections: vi.fn(async () => ({
+        state: 'ready' as const, bindings: [{ handle, label: 'TEST original', members: [] }],
+      })),
+      invoke: vi.fn(async (input) => {
+        const page = mockOwnerMessagesPage(snapshot, input.payload);
+        if (++calls === 1) snapshot.messages[0]!.text += 'changed';
+        return page;
+      }) as AgentBackendApi['invoke'],
+    };
+    const teams = createHostTeamsApi({ getMessagesPage: vi.fn() } as unknown as TeamsAPI, backend);
+    await expect(teams.getMessagesPage(key, { limit: 1 })).rejects.toThrow();
+    expect(calls).toBeGreaterThan(1);
   });
 
   it('rejects extra authority, oversized limit and cursor bypass before Host dispatch', () => {

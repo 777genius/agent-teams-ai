@@ -238,7 +238,7 @@ test("team_get keeps canonical 90-comment task readable with taskParts continuat
   // task_get is a separate native read and must return full retained history.
   const chunks: string[] = [];
   let taskCursor: string | null = null;
-  let revision: string | undefined;
+  let taskRevision: string | undefined;
   let taskPages = 0;
   do {
     const part = value(tools.call("task_get", {
@@ -249,8 +249,8 @@ test("team_get keeps canonical 90-comment task readable with taskParts continuat
     };
     assert.equal(part.kind, "task-detail-chunk");
     assert.equal(part.part, taskPages++);
-    assert.equal(revision === undefined || revision === part.revision, true);
-    revision = part.revision;
+    assert.equal(taskRevision === undefined || taskRevision === part.revision, true);
+    taskRevision = part.revision;
     chunks.push(part.chunk);
     taskCursor = part.nextCursor;
     assert.ok(taskPages < 128);
