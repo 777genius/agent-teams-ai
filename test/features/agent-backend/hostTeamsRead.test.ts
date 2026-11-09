@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
+import { createHostBackendRenderer } from '../../../src/features/agent-backend/renderer/createHostBackendRenderer';
 import {
   createHostTeamsApi,
   hostTeamSelectionKey,
@@ -656,6 +657,16 @@ describe('ordinary Host team read selection', () => {
       code: 'hold',
     });
   });
+  it('treats owner message pages as reads without crossing their own captured fence', async () => {
+    const f = fixture();
+    const { teams } = createHostBackendRenderer(f.legacy, f.backend, () => () => true);
+    const newest = await teams.getMessagesPage(f.key, { limit: 1 });
+    expect(newest.messages.map((message) => message.messageId)).toEqual(['m2']);
+    const older = await teams.getMessagesPage(f.key, { limit: 1, cursor: newest.nextCursor });
+    expect(older.messages.map((message) => message.messageId)).toEqual(['m1']);
+    expect(f.legacy.getMessagesPage).not.toHaveBeenCalled();
+  });
+
   it('opens a retained deleted Host task via the captured owner with full comment/detail identity', async () => {
     const f = fixture();
     const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
