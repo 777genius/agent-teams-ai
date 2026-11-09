@@ -77,8 +77,12 @@ export class OpenCodeVisibleReplyProofService {
     this.nowIso = deps.nowIso ?? (() => new Date().toISOString());
   }
 
+  async getConfiguredLeadName(teamName: string): Promise<string | null> {
+    return this.deps.getConfiguredLeadName(teamName);
+  }
+
   async isConfiguredLeadReplyRecipient(teamName: string, recipient: string): Promise<boolean> {
-    const configuredLead = await this.deps.getConfiguredLeadName(teamName);
+    const configuredLead = await this.getConfiguredLeadName(teamName);
     return Boolean(
       configuredLead?.trim() &&
       configuredLead.trim().toLowerCase() === recipient.trim().toLowerCase()
