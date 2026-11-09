@@ -13,6 +13,8 @@ export function pageOwnerSnapshot(options: {
   key: string;
   snapshot: JsonValue;
   cursor?: string;
+  /** Trusted composition may use a smaller envelope (for example MCP). */
+  maxBytes?: number;
 }): JsonValue {
   if (!options.snapshot || typeof options.snapshot !== 'object' || Array.isArray(options.snapshot))
     throw new TeamOwnerError('hold');
@@ -50,8 +52,11 @@ export function pageOwnerSnapshot(options: {
     messages: [] as JsonValue[],
     nextCursor: null as string | null,
   };
+  const maxBytes = options.maxBytes ?? MAX_PAGE_BYTES;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1024 || maxBytes > MAX_PAGE_BYTES)
+    throw new TeamOwnerError('invalid');
   // Reserve room for the signed continuation and transport envelope.
-  const budget = MAX_PAGE_BYTES - 256;
+  const budget = maxBytes - 256;
   let bytes = Buffer.byteLength(JSON.stringify(page));
   if (bytes > budget) throw new TeamOwnerError('hold');
   let end = offset;
@@ -69,7 +74,7 @@ export function pageOwnerSnapshot(options: {
     bytes += nextBytes;
   }
   page.nextCursor = end < total ? end + '.' + signature(end) : null;
-  if (Buffer.byteLength(JSON.stringify(page)) > MAX_PAGE_BYTES)
+  if (Buffer.byteLength(JSON.stringify(page)) > maxBytes)
     throw new TeamOwnerError('hold');
   return json(page);
 }

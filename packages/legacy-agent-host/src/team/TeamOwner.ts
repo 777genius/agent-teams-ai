@@ -447,7 +447,8 @@ export class TeamOwner {
                 grant: this.authorize(principalId, 'read'),
                 members: this.state().members,
               }),
-              getTeam: () => this.readSnapshot(principalId),
+              getTeam: (cursor?: string) =>
+                this.readSnapshot(principalId, { ...(cursor ? { cursor } : {}), maxBytes: 128 * 1024 }),
             }),
           }
         : {}),
@@ -643,13 +644,17 @@ export class TeamOwner {
   }
 
   /** Every page is grant-checked and revision-bound; no persisted history is discarded. */
-  private readSnapshot(principalId: string, query: { cursor?: string } = {}): JsonValue {
+  private readSnapshot(
+    principalId: string,
+    query: { cursor?: string; maxBytes?: number } = {}
+  ): JsonValue {
     return this.store.fenced(() => {
       const state = this.collectProductState(principalId);
       const revision = digest(state);
       return pageOwnerSnapshot({
         principalId,
         key: this.snapshotPageKey,
+        maxBytes: query.maxBytes,
         snapshot: json({
           ...state,
           revision,
