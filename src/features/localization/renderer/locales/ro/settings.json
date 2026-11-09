@@ -248,7 +248,8 @@
         "apply": "Aplică",
         "discover": "Caută fonturile instalate",
         "loaded": "Fonturile instalate au fost adăugate în listă.",
-        "unavailable": "Lista fonturilor nu este disponibilă aici. Introdu numele manual."
+        "unavailable": "Lista fonturilor nu este disponibilă aici. Introdu numele manual.",
+        "empty": "Nu s-au găsit fonturi instalate. Introdu numele manual."
       },
       "textSize": {
         "label": "Dimensiunea textului",

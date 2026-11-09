@@ -248,7 +248,8 @@
         "apply": "Tumia",
         "discover": "Tafuta fonti zilizosakinishwa",
         "loaded": "Fonti zilizosakinishwa zimeongezwa kwenye orodha.",
-        "unavailable": "Orodha ya fonti haipatikani hapa. Andika jina mwenyewe."
+        "unavailable": "Orodha ya fonti haipatikani hapa. Andika jina mwenyewe.",
+        "empty": "Hakuna fonti zilizosakinishwa zilizopatikana. Andika jina mwenyewe."
       },
       "textSize": {
         "label": "Ukubwa wa maandishi",
