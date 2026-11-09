@@ -258,11 +258,32 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
   await ui.click('button', 'reopen original mixed Launch before Submit', 'Launch');
   proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
-  await poll(
-    async () => modelRows.map((model) => model.probes.length),
-    (counts) => counts.every((count, index) => count > probesBeforeLaunch[index]! && count <= 8),
-    'all3 selected namespaces have actual bounded model preflights'
-  );
+  // Preserve a bounded, credential-free timing trace for each original provider
+  // preflight. All three native model checks and the original 90s deadline remain mandatory.
+  const preflightStartedAt = performance.now();
+  const preflightProbeTimeline: Array<{ elapsedMs: number; counts: number[] }> = [];
+  let previousProbeSignature = '';
+  let nextProbeSampleMs = 0;
+  try {
+    await poll(
+      async () => {
+        const counts = modelRows.map((model) => model.probes.length);
+        const elapsedMs = Math.round(performance.now() - preflightStartedAt);
+        const signature = counts.join(':');
+        if (signature !== previousProbeSignature || elapsedMs >= nextProbeSampleMs) {
+          preflightProbeTimeline.push({ elapsedMs, counts });
+          previousProbeSignature = signature;
+          nextProbeSampleMs = elapsedMs + 10_000;
+        }
+        return counts;
+      },
+      (counts) => counts.every((count, index) => count > probesBeforeLaunch[index]! && count <= 8),
+      'all3 selected namespaces have actual bounded model preflights'
+    );
+  } finally {
+    // Persist the original fixture's count-only timeline on PASS and INCOMPLETE.
+    proof.preflightProbeTimeline = preflightProbeTimeline;
+  }
   assert.equal(
     ((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0,
     0,
