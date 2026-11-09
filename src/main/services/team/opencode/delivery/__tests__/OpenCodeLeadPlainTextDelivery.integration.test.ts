@@ -163,12 +163,14 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     }
   );
 
-  it('keeps optional peer reports silent and blocks a pending successful message_send tool', async () => {
+  it('keeps optional peer reports silent', async () => {
     const peer = await fixture({ recipient: 'another-member' });
     const response = await peer.materialize();
     expect(response.visibleReply).toBeNull();
     expect(await peer.readAllowed(response.ledgerRecord, null)).toBe(true);
+  });
 
+  it('does not double-send an observed message_send tool reply', async () => {
     const withTool = await fixture({ observedToolCallNames: ['agent-teams_message_send'] });
     const result = await withTool.materialize();
     expect(result.visibleReply).toBeNull();
