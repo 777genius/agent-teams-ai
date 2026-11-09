@@ -397,21 +397,11 @@ export function createTeamHost(
             z.object({}).strict().parse(input.payload);
             return { ok: true, value: connection.readSnapshot() };
           }
-          if (operation === 'messages.page') {
-            const query = z.object({
-              cursor: z.string().min(1).max(128).optional(),
-              limit: z.number().int().min(1).max(100).optional(),
-              groupChatId: segment.optional(),
-            }).strict().parse(input.payload);
+          if (operation === 'messages.page')
             return {
               ok: true,
-              value: connection.readMessagesPage({
-                ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
-                ...(query.limit === undefined ? {} : { limit: query.limit }),
-                ...(query.groupChatId === undefined ? {} : { groupChatId: query.groupChatId }),
-              }),
+              value: connection.readMessagesPage(parseMessagesPageQuery(input.payload)),
             };
-          }
           if (operation === 'lead.activity' || operation === 'lead.context') {
             z.object({}).strict().parse(input.payload);
             if (!runtime) throw new TeamOwnerError('hold');
