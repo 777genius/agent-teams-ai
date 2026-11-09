@@ -45,6 +45,23 @@ Exact reviewed sources:
   [Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043161267),
   and [Dependency Review](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043160684).
   This fixture does **not** create or qualify a production Team/Task/Message API.
+  **M11 sandbox Activity validation (9 Nov 2026, not production):**
+  [Orchestrator Draft #100](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/100)
+  at exact HEAD [`300ccf92fd0e`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/300ccf92fd0ed93625b6010af1dc657ea56d66ae)
+  keeps the existing Activity read/ingress API fail-closed for uncloneable
+  authority contexts and request payloads (throwing accessors, revoked
+  proxies, functions and symbols) before authorization or storage effects.
+  The scoped [native PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42686737445)
+  passed all 4 jobs (Node 24/26 direct HEAD and merge-tree); the
+  [Architecture run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42686737248)
+  passed 4/4. Two Codex review invocations reported no major findings on
+  this SHA, but share a provider and are not full security certification.
+  Mandatory trusted Docs remains **FAILURE** because the EF 2.1.0 dependency
+  graph has no exact qualified five-package cohort
+  ([owning issue #415](https://github.com/agent-teams-ai/.github/issues/415));
+  parent Activity [#85](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/85)
+  is not mergeable with current main. This narrow sandbox proof does **not**
+  establish a production Activity/Team API or M11 parity.
 - Agent Runtime main `4e12b68b751d0b6fbb1e629235f789d01aa910b2`:
   [readiness register](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md)
   accepts an interactive contract but **not** a production Host or the required end-to-end interactive adapter.

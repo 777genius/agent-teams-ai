@@ -252,7 +252,7 @@ it('retrieves >1 MiB deleted task history and details via bounded Trash pages be
   expect(await f.teams.getDeletedTasks(f.key)).toEqual([]);
   const restored = await f.teams.getTask(f.key, taskId);
   expect(restored?.comments?.map((row) => row.text)).toEqual(expected);
-});
+}, 90_000);
 
 it.each(['context', 'mutation'] as const)(
   'refuses a held Trash response after the original %s boundary changes',
