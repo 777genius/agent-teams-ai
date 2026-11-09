@@ -29,7 +29,7 @@ function rememberAppLog(chunk, stream) {
   const lines = `${appLogRemainder[stream]}${text}`.split(/\r?\n/);
   appLogRemainder[stream] = lines.pop() ?? '';
   for (const line of lines) {
-    const target = line.match(/Debugger listening on (ws:\/\/127\.0\.0\.1:5858\/[a-z0-9-]+)/i);
+    const target = line.match(/Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[a-z0-9-]+)/i);
     if (target) mainInspectorWebSocketUrl = target[1];
   }
   appLogTail.push(...lines.filter(Boolean));
@@ -230,7 +230,7 @@ async function startApp(fixture) {
   const windows = process.platform === 'win32';
   appProcess = spawn(
     windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
-    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp --inspect=5858'] : ['dev:mcp', '--inspect=5858', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
+    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp --inspect=0'] : ['dev:mcp', '--inspect=0', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
     {
       cwd: repoRoot,
       detached: !windows,
@@ -725,9 +725,15 @@ async function main() {
         "window.innerWidth < " + JSON.stringify(zoomBaseline.innerWidth * 0.70),
         'actual Electron zoom narrowed layout viewport'
       );
-      const visibleAtZoom = await cdp.evaluate(
-        "document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')?.getBoundingClientRect().width > 0"
-      );
+      const visibleAtZoom = await cdp.evaluate(`(() => {
+        const back = document.querySelector('[data-testid=create-team-page] button[aria-label="Back to teams"]');
+        if (!back) return false;
+        const rect = back.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 &&
+          rect.right > 0 && rect.left < window.innerWidth &&
+          rect.bottom > 0 && rect.top < window.innerHeight &&
+          getComputedStyle(back).visibility === 'visible';
+      })()`);
       assert(visibleAtZoom, 'Back button disappeared at native Electron 200% zoom');
       await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
       assert(Math.abs((await setActualZoom(1)) - 1) <= 0.05,
