@@ -109,7 +109,7 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     return { ledger, observed, pending, service, deps, materialize, readAllowed, messages, readExactAssistantText };
   }
 
-  it.each(['team-lead', 'captain', 'orchestrator'])('persists the exact long reply in the configured lead inbox (%s)', async (recipient) => {
+  it.each(['team-lead', 'teamlead', 'team-leader', 'team_lead', 'captain', 'orchestrator'])('persists the exact long reply in the configured lead inbox (%s)', async (recipient) => {
     const text = 'Result:\n' + 'x'.repeat(20_000) + '\nLast line.';
     const f = await fixture({ recipient, text });
     expect(await f.readAllowed(f.observed, null)).toBe(false);
