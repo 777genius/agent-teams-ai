@@ -201,7 +201,29 @@
           "system": "시스템"
         }
       },
-      "title": "이름 *"
+      "title": "외관",
+      "customThemes": {
+        "label": "사용자 지정 테마",
+        "description": "라이트 또는 다크를 기반으로 한 이름 있는 JSON 색상 팔레트입니다.",
+        "none": "기본 테마",
+        "edit": "JSON 편집",
+        "localOnly": "테마와 배율은 이 브라우저 또는 기기에만 저장됩니다.",
+        "editor": {
+          "title": "테마 편집(JSON)",
+          "description": "테마는 최대 8개이며 색상은 #RRGGBB 형식입니다. 유효한 JSON만 적용됩니다. 빈 themes 배열은 모든 테마를 삭제합니다.",
+          "cancel": "취소",
+          "save": "테마 저장",
+          "conflict": "다른 탭에서 테마가 변경되었습니다. JSON 초안은 유지됩니다. 내용을 확인하거나 최신 테마를 명시적으로 덮어쓰세요.",
+          "overwrite": "최신 테마 덮어쓰기",
+          "invalidJson": "JSON 문법이 올바르지 않습니다",
+          "invalidTheme": "테마 팔레트가 유효하지 않습니다. 필드, 색상, 대비를 확인하세요."
+        }
+      },
+      "uiScale": {
+        "label": "인터페이스 배율",
+        "description": "운영체제나 브라우저 배율을 변경하지 않고 앱 전체 크기를 조정합니다.",
+        "reset": "초기화"
+      }
     },
     "browserAccess": {
       "serverMode": {
