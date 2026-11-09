@@ -196,14 +196,14 @@ it('restores a real canonical deleted Task through selected and global Trash wit
   );
 });
 
-it('retrieves complete >512 KiB deleted task history and restores it after all signed pages', async () => {
+it('retrieves >1 MiB deleted task history and details via bounded Trash pages before restoring', async () => {
   const f = fixture();
   const taskId = f.human.execute({
     commandId: 'TEST-huge-trash-create',
     operation: 'task.create',
     payload: { subject: 'Large retained Trash history', owner: 'team-lead' },
   }).effects.taskId;
-  const expected = Array.from({ length: 90 }, (_, index) =>
+  const expected = Array.from({ length: 180 }, (_, index) =>
     'TEST-trash-comment-' + index + '-' + 'x'.repeat(6000));
   for (const [index, text] of expected.entries()) {
     f.human.execute({
@@ -228,6 +228,13 @@ it('retrieves complete >512 KiB deleted task history and restores it after all s
   expect(trash).toHaveLength(1);
   expect(trash[0]?.id).toBe(taskId);
   expect(trash[0]?.comments?.map((row) => row.text)).toEqual(expected);
+  // A direct unpaged task.get would exceed the Host's 1 MiB response cap.
+  expect(await f.teams.getTask(f.key, taskId)).toMatchObject({ id: taskId, status: 'deleted' });
+  const detail = await f.teams.getTask(f.key, taskId);
+  expect(detail?.comments?.map((row) => row.text)).toEqual(expected);
+  expect(vi.mocked(f.backend.invoke).mock.calls.some(
+    ([request]) => request.operation === 'task.get'
+  )).toBe(false);
   const reads = vi.mocked(f.backend.invoke).mock.calls.filter(
     ([request]) => request.operation === 'tasks.list'
   );
