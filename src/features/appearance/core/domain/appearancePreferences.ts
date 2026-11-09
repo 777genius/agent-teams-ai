@@ -27,11 +27,28 @@ export interface CustomTheme {
 export interface AppearancePreferences {
   version: 1;
   zoomPercent: number;
+  fontFamily: string | null;
+  fontSizePercent: number;
   activeCustomThemeId: string | null;
   themes: CustomTheme[];
 }
 
 export const ZOOM_PRESETS = [80, 90, 100, 110, 125, 150, 175, 200] as const;
+export const FONT_SIZE_PRESETS = [80, 90, 100, 110, 125, 150] as const;
+export const MIN_FONT_SIZE_PERCENT = 80;
+export const MAX_FONT_SIZE_PERCENT = 150;
+const MAX_FONT_FAMILY_LENGTH = 80;
+// Reject CSS syntax and control characters; a family is one name, never a CSS expression.
+const UNSAFE_FONT_FAMILY = /[\u0000-\u001f\u007f;{}<>"\\]/u;
+
+export function normalizeFontFamily(value: string | null): string | null {
+  if (value === null) return null;
+  const family = value.trim();
+  if (!family || family.length > MAX_FONT_FAMILY_LENGTH || UNSAFE_FONT_FAMILY.test(family)) {
+    throw new Error('Font family must be a valid name of at most 80 characters');
+  }
+  return family;
+}
 const MAX_THEME_COUNT = 8;
 export const MAX_JSON_LENGTH = 16_384;
 export const MIN_ZOOM = 70;
@@ -63,6 +80,8 @@ export const EXAMPLE_THEME: CustomTheme = {
 export const DEFAULT_APPEARANCE: AppearancePreferences = {
   version: 1,
   zoomPercent: 100,
+  fontFamily: null,
+  fontSizePercent: 100,
   activeCustomThemeId: null,
   themes: [],
 };
@@ -181,6 +200,16 @@ export function parseAppearance(value: unknown): AppearancePreferences {
     themes.some((theme) => theme.id === value.activeCustomThemeId)
       ? value.activeCustomThemeId
       : null;
-  return { version: 1, zoomPercent, activeCustomThemeId, themes };
+  // Existing v1 records predate typography. Keep their themes and zoom unchanged.
+  let fontFamily: string | null = null;
+  try {
+    fontFamily = normalizeFontFamily(value.fontFamily === undefined ? null : value.fontFamily as string | null);
+  } catch {
+    // A malicious/malformed persisted family is never projected into CSS.
+  }
+  const size = value.fontSizePercent;
+  const fontSizePercent = typeof size === 'number' && Number.isInteger(size) &&
+    size >= MIN_FONT_SIZE_PERCENT && size <= MAX_FONT_SIZE_PERCENT ? size : 100;
+  return { version: 1, zoomPercent, fontFamily, fontSizePercent, activeCustomThemeId, themes };
 }
 

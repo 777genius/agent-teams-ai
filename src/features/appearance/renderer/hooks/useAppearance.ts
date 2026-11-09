@@ -3,6 +3,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { api, isElectronMode } from '@renderer/api';
 
 import {
+  applyAppearanceTypographyToRoot,
   getAppearanceSnapshot,
   reflectNativeAppearanceZoom,
   setAppearanceZoom,
@@ -12,6 +13,20 @@ import {
 /** One browser-local source of truth for Appearance state; no extra global store. */
 export function useAppearancePreferences() {
   return useSyncExternalStore(subscribeAppearance, getAppearanceSnapshot, getAppearanceSnapshot);
+}
+
+/** Changes normal UI text only, independently from native or browser zoom. */
+export function useAppearanceTypographyController(): void {
+  const { fontFamily, fontSizePercent } = useAppearancePreferences();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    applyAppearanceTypographyToRoot(root, { fontFamily, fontSizePercent });
+    return () => {
+      root.style.removeProperty('--appearance-font-family');
+      root.style.removeProperty('--appearance-text-scale');
+    };
+  }, [fontFamily, fontSizePercent]);
 }
 
 /** Applies scale at app root, keeping Electron traffic lights in native coordinates. */

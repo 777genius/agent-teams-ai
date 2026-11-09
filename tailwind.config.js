@@ -1,4 +1,17 @@
 /** @type {import('tailwindcss').Config} */
+const defaultFontSizes = require('tailwindcss/defaultTheme').fontSize;
+
+// Scale glyphs and line boxes, not rem-based layout spacing or Electron/browser zoom.
+const scaledFontSizes = Object.fromEntries(
+  Object.entries(defaultFontSizes).map(([name, [size, options]]) => [
+    name,
+    [
+      `calc(${size} * var(--appearance-text-scale, 1))`,
+      { ...options, lineHeight: `calc(${options.lineHeight} * var(--appearance-text-scale, 1))` },
+    ],
+  ])
+);
+
 module.exports = {
   darkMode: ['class'],
   content: [
@@ -10,6 +23,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontSize: scaledFontSizes,
+      fontFamily: {
+        sans: ['var(--appearance-font-family, ui-sans-serif, system-ui, sans-serif)'],
+      },
       colors: {
         // Theme-aware surface colors (use CSS variables)
         surface: {
