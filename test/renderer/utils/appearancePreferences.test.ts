@@ -3,15 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   APPEARANCE_STORAGE_KEY,
   applyCustomThemeToRoot,
+  applyAppearanceTypographyToRoot,
   DEFAULT_APPEARANCE,
   EXAMPLE_THEME,
   formatCustomThemesJson,
   getAppearanceSnapshot,
   getLatestAppearance,
+  normalizeFontFamily,
   parseCustomThemesJson,
   readAppearance,
   saveAppearance,
   setActiveCustomTheme,
+  setAppearanceFontFamily,
+  setAppearanceFontSize,
   setAppearanceZoom,
   setCustomThemes,
   reflectNativeAppearanceZoom,
@@ -214,6 +218,65 @@ describe('portable Appearance persistence', () => {
     const whiteAccent = example();
     whiteAccent.colors.accent = '#ffffff';
     expect(() => validateCustomThemes([whiteAccent])).toThrow(/accent/);
+  });
+
+  it('preserves old v1 palettes and zoom after adding typography preferences', () => {
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      version: 1, zoomPercent: 125, activeCustomThemeId: null, themes: [example()],
+    }));
+    const old = readAppearance(localStorage);
+    expect(old).toMatchObject({ fontFamily: null, fontSizePercent: 100, zoomPercent: 125 });
+    setAppearanceFontFamily('Georgia');
+    setAppearanceFontSize(125);
+    expect(readAppearance(localStorage)).toMatchObject({
+      fontFamily: 'Georgia', fontSizePercent: 125, zoomPercent: 125, themes: [example()],
+    });
+  });
+
+  it('validates the single CSS family name and text size before persisting', () => {
+    setAppearanceFontFamily('  Noto Sans  ');
+    setAppearanceFontSize(150);
+    expect(getAppearanceSnapshot()).toMatchObject({ fontFamily: 'Noto Sans', fontSizePercent: 150 });
+    for (const bad of ['a; background:red', 'x\\\\00', 'a"b', ' ', 'x'.repeat(81)]) {
+      expect(() => setAppearanceFontFamily(bad)).toThrow(/Font family/);
+    }
+    for (const invalid of [50, 151, 101.5, Number.NaN]) {
+      expect(() => setAppearanceFontSize(invalid)).toThrow(/between/);
+    }
+    expect(getAppearanceSnapshot()).toMatchObject({ fontFamily: 'Noto Sans', fontSizePercent: 150 });
+    expect(normalizeFontFamily('Noto Sans')).toBe('Noto Sans');
+
+    // Invalid stored fields are discarded without deleting valid user themes/zoom.
+    setCustomThemes([example()]);
+    const broken = { ...getAppearanceSnapshot(), fontFamily: 'url(evil)', fontSizePercent: 999 };
+    // An unknown family name is inert CSS, but CSS syntax is strictly blocked.
+    broken.fontFamily = 'font; color:red';
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(broken));
+    expect(readAppearance(localStorage)).toMatchObject({
+      fontFamily: null, fontSizePercent: 100, zoomPercent: 100, themes: [example()],
+    });
+  });
+
+  it('applies and removes typography CSS without touching palette or zoom', () => {
+    const root = document.createElement('div');
+    applyAppearanceTypographyToRoot(root, { fontFamily: 'Georgia', fontSizePercent: 125 });
+    expect(root.style.getPropertyValue('--appearance-font-family')).toContain('"Georgia"');
+    expect(root.style.getPropertyValue('--appearance-text-scale')).toBe('1.25');
+    expect(root.style.getPropertyValue('--color-surface')).toBe('');
+    applyAppearanceTypographyToRoot(root, { fontFamily: null, fontSizePercent: 100 });
+    expect(root.style.getPropertyValue('--appearance-font-family')).toBe('');
+    expect(root.style.getPropertyValue('--appearance-text-scale')).toBe('1');
+  });
+
+  it('merges a font edit with the latest saved theme and zoom from another tab', () => {
+    setAppearanceZoom(125);
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      ...readAppearance(localStorage), themes: [example()], zoomPercent: 175,
+    }));
+    setAppearanceFontFamily('Verdana');
+    expect(readAppearance(localStorage)).toMatchObject({
+      zoomPercent: 175, fontFamily: 'Verdana', fontSizePercent: 100, themes: [example()],
+    });
   });
 
   it('notifies subscribers for local theme and zoom selections', () => {
