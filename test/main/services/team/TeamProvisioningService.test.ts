@@ -10866,7 +10866,8 @@ describe('TeamProvisioningService', () => {
         responseObservation: {
           state: 'responded_plain_text',
           deliveredUserMessageId: 'oc-user-attachment',
-          assistantMessageId: 'oc-assistant-attachment',
+          // This fixture tests attachment transport, not a transcript-backed reply.
+          assistantMessageId: null,
           toolCallNames: [],
           visibleMessageToolCallId: null,
           visibleReplyMessageId: null,
