@@ -1,3 +1,4 @@
+import { classifyOpenCodeDeliveryReplyContract } from './OpenCodeDeliveryReplyContract';
 import {
   isOpenCodeVisibleReplySemanticallySufficient,
   type OpenCodeVisibleReplyProof,
@@ -35,7 +36,7 @@ export function getOpenCodeVisibleReplyInboxCandidates(input: {
     Boolean(configuredLeadName) &&
     configuredLeadName?.toLowerCase() === explicitRecipient.toLowerCase();
 
-  if (isOpenCodeLeadReplyRecipientAlias(explicitRecipient) || isConfiguredLeadRecipient) {
+  if (classifyOpenCodeDeliveryReplyContract(explicitRecipient) === 'lead_reply' || isConfiguredLeadRecipient) {
     if (configuredLeadName) {
       candidates.push(configuredLeadName);
     }
