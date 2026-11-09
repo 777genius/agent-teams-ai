@@ -36,11 +36,11 @@ function isOpenCodeMessageSendTool(name: string): boolean {
 }
 
 /**
- * Tool names on the ledger are not delivery evidence: a send may have
- * succeeded despite the overall turn failing. Require error results for
- * every send since THIS prompt, correlated to the exact call/assistant.
+ * Ledger tool history may include older turns. For the exact accepted
+ * prompt, require every message_send to have a correlated error result.
+ * No send in that prompt is also safe; an unproven send is never safe.
  */
-function hasConfirmedFailedOpenCodeSends(
+function hasNoPotentiallySuccessfulOpenCodeSends(
   messages: readonly OpenCodeRuntimeTranscriptLogMessage[],
   sessionId: string,
   promptMessageId: string,
@@ -71,7 +71,8 @@ function hasConfirmedFailedOpenCodeSends(
     .flatMap(message => message.toolCalls
       .filter(call => isOpenCodeMessageSendTool(call.name))
       .map(call => ({ assistantId: message.uuid, callId: call.id.trim() })));
-  if (sends.length === 0) return false;
+  // A stale ledger tool name must not block a newer text-only assistant turn.
+  if (sends.length === 0) return true;
   return sends.every(send => {
     if (!send.callId) return false;
     const results = messages.flatMap(message =>
@@ -103,7 +104,7 @@ export function readOpenCodeExactAssistantText(
   const hasSendInAnswer = assistant.toolCalls.some(call => isOpenCodeMessageSendTool(call.name));
   if (options?.requireFailedMessageSendProof) {
     const promptId = options.runtimePromptMessageId?.trim();
-    if (!promptId || !hasConfirmedFailedOpenCodeSends(
+    if (!promptId || !hasNoPotentiallySuccessfulOpenCodeSends(
       messages, sessionId, promptId, assistantMessageId
     )) return null;
   } else if (hasSendInAnswer) {
