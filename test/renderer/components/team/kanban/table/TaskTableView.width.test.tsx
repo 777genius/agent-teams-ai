@@ -13,7 +13,7 @@ vi.mock('@renderer/hooks/useRelativeTimeClock', () => ({
   useRelativeTimeClock: () => 0,
 }));
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: () => ({ getVirtualItems: () => [], getTotalSize: () => 0 }),
+  useVirtualizer: () => ({ getVirtualItems: () => [], getTotalSize: () => 0, measure: vi.fn() }),
 }));
 vi.mock('@renderer/components/ui/popover', () => ({
   Popover: ({ children }: React.PropsWithChildren) => <>{children}</>,

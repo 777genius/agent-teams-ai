@@ -26,9 +26,11 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from '../team/dialogs/LaunchTeamDialogLoadingFallback';
+import { ScheduleAssignmentSummary } from '../team/schedule/ScheduleAssignmentSummary';
 import { ScheduleRunLogDialog } from '../team/schedule/ScheduleRunLogDialog';
 import { ScheduleRunRow } from '../team/schedule/ScheduleRunRow';
 import { ScheduleStatusBadge } from '../team/schedule/ScheduleStatusBadge';
+import { useScheduleActions } from '../team/schedule/useScheduleActions';
 
 import type { Schedule, ScheduleRun, ScheduleStatus } from '@shared/types';
 
@@ -74,9 +76,10 @@ const ScheduleListItem = ({
   onTeamClick,
   teamColor,
 }: ScheduleListItemProps): React.JSX.Element => {
-  const { t } = useAppTranslation('common');
+  const { t, resolvedLanguage } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
   const runsLoading = useStore((s) => s.scheduleRunsLoading[schedule.id] ?? false);
   const fetchRunHistory = useStore((s) => s.fetchRunHistory);
@@ -90,14 +93,16 @@ const ScheduleListItem = ({
   }, [expanded, runs.length, runsLoading, fetchRunHistory, schedule.id]);
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div data-testid="schedule-list-item" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         {/* Expand toggle */}
         <button
           type="button"
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
+          aria-expanded={expanded}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
         >
           {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </button>
@@ -106,39 +111,40 @@ const ScheduleListItem = ({
         <ScheduleStatusBadge status={schedule.status} />
 
         {/* Label & cron description */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_15rem]">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-[var(--color-text)]">
-              {schedule.label || getCronDescription(schedule.cronExpression)}
+              {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
           </div>
           {schedule.label ? (
             <span className="text-xs text-[var(--color-text-muted)]">
-              {getCronDescription(schedule.cronExpression)}
+              {getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
           ) : null}
+          <ScheduleAssignmentSummary schedule={schedule} />
         </div>
 
         {/* Team badge */}
         <button
           type="button"
-          className="flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
+          className="flex min-w-0 max-w-full flex-[0_1_14rem] items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
           onClick={() => onTeamClick(schedule.teamName)}
         >
           <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: teamColor }} />
-          {schedule.teamName}
+          <span className="min-w-0 truncate">{schedule.teamName}</span>
         </button>
 
         {/* Next run */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="shrink-0 text-xs text-[var(--color-text-muted)]">
-              {t('schedules.item.nextRun', { value: formatNextRun(schedule.nextRunAt) })}
+              {t('schedules.item.nextRun', { value: formatNextRun(schedule.nextRunAt, resolvedLanguage) })}
             </span>
           </TooltipTrigger>
           {schedule.nextRunAt ? (
             <TooltipContent side="top" className="text-xs">
-              {new Date(schedule.nextRunAt).toLocaleString()}
+              {new Date(schedule.nextRunAt).toLocaleString(resolvedLanguage)}
             </TooltipContent>
           ) : null}
         </Tooltip>
@@ -149,7 +155,7 @@ const ScheduleListItem = ({
         </span>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -157,6 +163,7 @@ const ScheduleListItem = ({
                 size="sm"
                 className="size-7 p-0"
                 onClick={() => onTriggerNow(schedule.id)}
+                aria-label={t('schedules.actions.runNow')}
                 disabled={schedule.status !== 'active'}
               >
                 <Zap className="size-3.5" />
@@ -165,9 +172,9 @@ const ScheduleListItem = ({
             <TooltipContent side="top">{t('schedules.actions.runNow')}</TooltipContent>
           </Tooltip>
 
-          <Popover>
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0">
+              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={t('actions.moreActions')}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>
@@ -175,7 +182,7 @@ const ScheduleListItem = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onEdit(schedule)}
+                onClick={() => { setMenuOpen(false); onEdit(schedule); }}
               >
                 <Pencil className="mr-2 size-3.5" />
                 {t('schedules.actions.edit')}
@@ -184,7 +191,7 @@ const ScheduleListItem = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onPause(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onPause(schedule.id); }}
                 >
                   <Pause className="mr-2 size-3.5" />
                   {t('schedules.actions.pause')}
@@ -193,7 +200,7 @@ const ScheduleListItem = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onResume(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onResume(schedule.id); }}
                 >
                   <Play className="mr-2 size-3.5" />
                   {t('schedules.actions.resume')}
@@ -202,7 +209,7 @@ const ScheduleListItem = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-red-400 hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onDelete(schedule.id)}
+                onClick={() => { setMenuOpen(false); onDelete(schedule.id); }}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 {t('schedules.actions.delete')}
@@ -249,15 +256,11 @@ const ScheduleListItem = ({
 // =============================================================================
 
 export const SchedulesView = (): React.JSX.Element => {
-  const { t } = useAppTranslation('common');
+  const { t, resolvedLanguage } = useAppTranslation('common');
   const {
     schedules,
     schedulesLoading,
     fetchSchedules,
-    pauseSchedule,
-    resumeSchedule,
-    deleteSchedule,
-    triggerNow,
     openTeamTab,
     teamByName,
   } = useStore(
@@ -265,10 +268,6 @@ export const SchedulesView = (): React.JSX.Element => {
       schedules: s.schedules,
       schedulesLoading: s.schedulesLoading,
       fetchSchedules: s.fetchSchedules,
-      pauseSchedule: s.pauseSchedule,
-      resumeSchedule: s.resumeSchedule,
-      deleteSchedule: s.deleteSchedule,
-      triggerNow: s.triggerNow,
       openTeamTab: s.openTeamTab,
       teamByName: s.teamByName,
     }))
@@ -289,6 +288,7 @@ export const SchedulesView = (): React.JSX.Element => {
   const [teamFilter, setTeamFilter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const { feedback, act: actOnSchedule } = useScheduleActions();
 
   // Fetch schedules on mount
   useEffect(() => {
@@ -323,7 +323,7 @@ export const SchedulesView = (): React.JSX.Element => {
           (s.label ?? '').toLowerCase().includes(query) ||
           s.teamName.toLowerCase().includes(query) ||
           s.launchConfig.prompt.toLowerCase().includes(query) ||
-          getCronDescription(s.cronExpression).toLowerCase().includes(query)
+          getCronDescription(s.cronExpression, resolvedLanguage).toLowerCase().includes(query)
       );
     }
 
@@ -342,7 +342,7 @@ export const SchedulesView = (): React.JSX.Element => {
       if (b.nextRunAt) return 1;
       return 0;
     });
-  }, [schedules, statusFilter, teamFilter, searchQuery]);
+  }, [schedules, statusFilter, teamFilter, searchQuery, resolvedLanguage]);
 
   // Counts per status
   const statusCounts = useMemo(() => {
@@ -367,28 +367,6 @@ export const SchedulesView = (): React.JSX.Element => {
     setDialogOpen(false);
     setEditingSchedule(null);
   }, []);
-
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await deleteSchedule(id);
-      } catch (err) {
-        console.error('Failed to delete schedule:', err);
-      }
-    },
-    [deleteSchedule]
-  );
-
-  const handleTriggerNow = useCallback(
-    async (id: string) => {
-      try {
-        await triggerNow(id);
-      } catch (err) {
-        console.error('Failed to trigger schedule:', err);
-      }
-    },
-    [triggerNow]
-  );
 
   const handleTeamClick = useCallback(
     (teamName: string) => {
@@ -417,7 +395,7 @@ export const SchedulesView = (): React.JSX.Element => {
     <div className="flex h-full flex-col overflow-hidden bg-[var(--color-surface)]">
       {/* Header */}
       <div className="shrink-0 border-b border-[var(--color-border)] px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <Calendar className="size-5 text-[var(--color-text-muted)]" />
             <h1 className="text-lg font-semibold text-[var(--color-text)]">
@@ -437,9 +415,9 @@ export const SchedulesView = (): React.JSX.Element => {
 
         {/* Filters row */}
         {schedules.length > 0 && (
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             {/* Search */}
-            <div className="relative max-w-xs flex-1">
+            <div className="relative min-w-[12rem] max-w-xs flex-1">
               <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <Input
                 placeholder={t('schedules.searchPlaceholder')}
@@ -450,7 +428,7 @@ export const SchedulesView = (): React.JSX.Element => {
             </div>
 
             {/* Status filter chips */}
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               {STATUS_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -528,6 +506,11 @@ export const SchedulesView = (): React.JSX.Element => {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
+        {feedback ? (
+          <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={`mb-3 rounded border px-3 py-2 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}>
+            {feedback.message}
+          </p>
+        ) : null}
         {schedulesLoading && schedules.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-sm text-[var(--color-text-muted)]">
             {t('schedules.loading')}
@@ -575,10 +558,10 @@ export const SchedulesView = (): React.JSX.Element => {
                 key={schedule.id}
                 schedule={schedule}
                 onEdit={handleEdit}
-                onDelete={(id) => void handleDelete(id)}
-                onPause={(id) => void pauseSchedule(id)}
-                onResume={(id) => void resumeSchedule(id)}
-                onTriggerNow={(id) => void handleTriggerNow(id)}
+                onDelete={(id) => void actOnSchedule('delete', id)}
+                onPause={(id) => void actOnSchedule('pause', id)}
+                onResume={(id) => void actOnSchedule('resume', id)}
+                onTriggerNow={(id) => void actOnSchedule('run', id)}
                 onTeamClick={handleTeamClick}
                 teamColor={getTeamColor(schedule.teamName)}
               />

@@ -25,6 +25,12 @@ vi.mock('@renderer/api', () => ({
       invalidateStatus: vi.fn(),
       onProgress: vi.fn(() => vi.fn()),
     },
+    codexRuntime: {
+      getStatus: vi.fn(),
+      install: vi.fn(),
+      invalidateStatus: vi.fn(),
+      onProgress: vi.fn(() => vi.fn()),
+    },
     // Minimal stubs for other api methods referenced by store slices
     getProjects: vi.fn(() => Promise.resolve([])),
     getSessions: vi.fn(() => Promise.resolve([])),
@@ -81,6 +87,7 @@ import {
 } from '@shared/types/cliInstaller';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CliInstallationStatus } from '@shared/types';
 
 function createMultimodelProvider(
@@ -250,6 +257,9 @@ describe('cliInstallerSlice', () => {
       openCodeRuntimeStatus: null,
       openCodeRuntimeStatusLoading: false,
       openCodeRuntimeError: null,
+      codexRuntimeStatus: null,
+      codexRuntimeStatusLoading: false,
+      codexRuntimeError: null,
     });
   });
 
@@ -1836,6 +1846,50 @@ describe('cliInstallerSlice', () => {
         'openrouter/openai/gpt-oss-20b:free',
       ]);
       expect(opencode?.modelCatalog?.models).toHaveLength(3);
+    });
+  });
+
+  describe('Codex runtime status invalidation', () => {
+    it('retires a pending native read and publishes only the status fetched after invalidation', async () => {
+      const pendingOld = createDeferredValue<CodexRuntimeStatus>();
+      const pendingFresh = createDeferredValue<CodexRuntimeStatus>();
+      vi.mocked(api.codexRuntime.getStatus)
+        .mockReturnValueOnce(pendingOld.promise)
+        .mockReturnValueOnce(pendingFresh.promise);
+      vi.mocked(api.codexRuntime.invalidateStatus).mockResolvedValue(undefined);
+
+      const oldRead = useStore.getState().fetchCodexRuntimeStatus();
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(true);
+      await useStore.getState().invalidateCodexRuntimeStatus();
+      const freshRead = useStore.getState().fetchCodexRuntimeStatus();
+      expect(api.codexRuntime.invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(api.codexRuntime.getStatus).toHaveBeenCalledTimes(2);
+
+      const staleStatus: CodexRuntimeStatus = {
+        installed: false,
+        latestVersion: '0.1.0',
+        updateAvailable: true,
+        source: 'missing',
+        state: 'idle',
+      };
+      pendingOld.resolve(staleStatus);
+      await oldRead;
+      expect(useStore.getState().codexRuntimeStatus).toBeNull();
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(true);
+
+      const freshStatus: CodexRuntimeStatus = {
+        installed: true,
+        version: '0.2.0',
+        latestVersion: '0.2.0',
+        updateAvailable: false,
+        source: 'app-managed',
+        state: 'ready',
+      };
+      pendingFresh.resolve(freshStatus);
+      await freshRead;
+      expect(useStore.getState().codexRuntimeStatus).toEqual(freshStatus);
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(useStore.getState().codexRuntimeError).toBeNull();
     });
   });
 

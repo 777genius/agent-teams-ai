@@ -739,6 +739,282 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
+async function setBrowserWindowZoom(inspector, factor) {
+  return inspector.evaluate(
+    "(() => {" +
+    "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
+    "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
+    "const { BrowserWindow } = moduleRequire('electron');" +
+    "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
+    "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
+    "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
+    "return win.webContents.getZoomFactor();" +
+    "})()"
+  );
+}
+
+async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
+  const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  log('reject invalid cron and timezone at the actual native IPC boundary');
+  for (const { timing, expectedError } of [
+    { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },
+    { timing: { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' }, expectedError: /time ?zone/i },
+  ]) {
+    const invalidInput = {
+      teamName: fixture.teamName,
+      ...timing,
+      launchConfig: { cwd: fixture.projectPath, prompt: 'No execution' },
+    };
+    const result = await client.evaluate(
+      'window.electronAPI.schedules.create(' + JSON.stringify(invalidInput) +
+        ').then(() => "UNEXPECTED_SUCCESS", error => String(error?.message ?? error))'
+    );
+    assert.notEqual(result, 'UNEXPECTED_SUCCESS', 'Native IPC accepted invalid schedule timing');
+    assert(expectedError.test(result), 'Native IPC returned an unrelated error: ' + result);
+  }
+
+  log('open real Schedules UI in isolated Electron');
+  await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');
+  await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);
+  await client.click(createButtonExpression('Add Schedule'));
+  await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
+    'actual schedule editor loaded', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-editor-opened');
+  // The empty-state page also has a "Create Schedule" button behind the modal.
+  // Target the enabled dialog submit, not the background trigger.
+  const saveButton = "Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Create Schedule')";
+  await client.click(saveButton);
+  await client.waitFor(
+    "document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')",
+    'pristine form shows a reason after Save', 20_000);
+  await captureScreenshot(client, fixture, 'schedules-pristine-submit-validation');
+
+  log('select the fixture team and review its saved one-time startup prompt');
+  await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
+  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
+    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
+  await client.click(teamOption);
+  await client.waitFor(
+    "document.querySelector('#schedule-saved-prompt-reviewed')",
+    'saved prompt acknowledgement visible before Save', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
+
+  await client.fill('#schedule-label', scheduleLabel);
+  await client.fill('#dialog-prompt', 'Review the fixture project and write a short status update.');
+  log('invalid cron is field-level visible and blocks Save');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', 'not a cron');
+  await client.waitFor("(" + saveButton + ")?.disabled === true",
+    'invalid cron blocks the Create Schedule action');
+  await captureScreenshot(client, fixture, 'schedules-invalid-cron');
+  assert.equal(
+    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.label === scheduleLabel),
+    false, 'Invalid cron was persisted before Save'
+  );
+
+  await client.fill('input[placeholder="0 9 * * 1-5"]', '*/30 * * * *');
+  await client.click("document.querySelector('#schedule-saved-prompt-reviewed')");
+  await client.waitFor("(" + saveButton + ")?.disabled === false",
+    'valid schedule and reviewed old prompt allow Save', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-ready-to-create');
+  await client.click(saveButton);
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'schedule saved through the actual UI', 45_000);
+  const savedSchedules = await client.evaluate('window.electronAPI.schedules.list()');
+  const scheduled = savedSchedules.find(s => s.label === scheduleLabel);
+  assert(scheduled?.taskFirst === true && scheduled.teamName === fixture.teamName,
+    'New UI schedule did not persist its selected team and task-first mode');
+  assert.equal(scheduled.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone,
+    'Schedule changed the selected local IANA timezone');
+  const invalidEditResult = await client.evaluate(
+    'window.electronAPI.schedules.update(' + JSON.stringify(scheduled.id) +
+      ', { cronExpression: "not a cron" }).then(() => "UNEXPECTED_SUCCESS", ' +
+      'error => String(error?.message ?? error))'
+  );
+  assert.notEqual(invalidEditResult, 'UNEXPECTED_SUCCESS',
+    'Native IPC accepted invalid edit of an active schedule');
+  assert(/cron/i.test(invalidEditResult),
+    'Native IPC rejected invalid edit for the wrong reason: ' + invalidEditResult);
+  const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
+    'Rejected timing edit corrupted the saved active schedule');
+  assert.equal(afterRejectedEdit?.status, 'active',
+    'Rejected timing edit deactivated the saved schedule');
+
+  log('exercise list presentation in dark/light and native Electron 200% zoom');
+  for (const theme of ['light', 'dark']) {
+    await client.evaluate(
+      "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig?.general, theme: " +
+        JSON.stringify(theme) + " } } }))"
+    );
+    await client.waitFor(
+      "document.documentElement.classList.contains(" + JSON.stringify(theme) + ")",
+      'schedules ' + theme + ' theme applied');
+    await captureScreenshot(client, fixture, 'schedules-list-' + theme);
+  }
+  const initialViewportWidth = await client.evaluate('window.innerWidth');
+  const zoomInspector = await CdpClient.connect(inspectorWebSocketDebuggerUrl);
+  try {
+    await zoomInspector.send('Runtime.enable');
+    const factor = await setBrowserWindowZoom(zoomInspector, 2);
+    assert(Math.abs(factor - 2) <= 0.05, 'Schedule window did not accept native 200% zoom');
+    await client.waitFor(
+      'window.innerWidth < ' + JSON.stringify(initialViewportWidth * 0.7),
+      'native Electron zoom narrowed the schedules viewport');
+    const zoomGeometry = await client.evaluate(`(() => {
+      const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
+        .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+          el.querySelector('button[aria-label="More actions"]'));
+      const container = row?.closest('.overflow-y-auto');
+      const viewport = container?.getBoundingClientRect();
+      const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
+      return { actionLeft: rect?.left, actionRight: rect?.right, actionWidth: rect?.width,
+        paneLeft: viewport?.left, paneRight: viewport?.right, paneWidth: viewport?.width,
+        paneScrollWidth: container?.scrollWidth, windowWidth: window.innerWidth };
+    })()`);
+    assert(
+      zoomGeometry.actionWidth > 0 && zoomGeometry.actionLeft >= zoomGeometry.paneLeft &&
+        zoomGeometry.actionRight <= zoomGeometry.paneRight,
+      'Schedule actions overflowed pane at native Electron 200% zoom: ' + JSON.stringify(zoomGeometry)
+    );
+    await captureScreenshot(client, fixture, 'schedules-list-native-electron-zoom-200');
+  } finally {
+    try {
+      await setBrowserWindowZoom(zoomInspector, 1);
+    } finally {
+      zoomInspector.close();
+    }
+  }
+  await client.waitFor(
+    'window.innerWidth >= ' + JSON.stringify(initialViewportWidth * 0.95),
+    'schedules viewport restored after native zoom');
+
+  log('capture the schedule UI at a genuinely narrow viewport');
+  await client.send('Emulation.setDeviceMetricsOverride', {
+    width: 700, height: 760, deviceScaleFactor: 1, mobile: false,
+  });
+  try {
+    await client.waitFor('window.innerWidth <= 700', 'narrow renderer viewport');
+    const narrowActionsVisible = await client.evaluate(`(() => {
+      const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
+        .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+          el.querySelector('button[aria-label="More actions"]'));
+      const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
+      return !!rect && rect.width > 0 && rect.left >= 0 && rect.right <= window.innerWidth;
+    })()`);
+    assert(narrowActionsVisible, 'Schedule actions overflowed narrow viewport');
+    await captureScreenshot(client, fixture, 'schedules-list-narrow-700');
+  } finally {
+    await client.send('Emulation.clearDeviceMetricsOverride');
+  }
+
+  log('edit the real schedule without migrating its task-first semantics');
+  const more = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-label=\\\"More actions\\\"]'))" +
+    "?.querySelector('button[aria-label=\\\"More actions\\\"]')";
+  await client.click(more);
+  await client.click(createButtonExpression('Edit'));
+  await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
+    'existing schedule editor loaded', 45_000);
+  await client.fill('input[placeholder="0 9 * * 1-5"]', '0 * * * *');
+  await client.waitFor(createButtonExpression('Save Changes'), 'edited schedule can save');
+  await captureScreenshot(client, fixture, 'schedules-edit');
+  await client.click(createButtonExpression('Save Changes'));
+  await client.waitFor("!document.querySelector('[role=dialog]')", 'schedule edit persisted');
+  const afterEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(afterEdit?.cronExpression, '0 * * * *');
+  assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
+
+  log('pause and resume the schedule through the real actions menu');
+  await client.click(more);
+  await client.click(createButtonExpression('Pause'));
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.textContent?.includes('Paused'))",
+    'schedule paused in the UI', 45_000);
+  const pausedRecord = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(pausedRecord?.status, 'paused', 'Pause action did not persist');
+  await captureScreenshot(client, fixture, 'schedules-paused');
+
+  await client.click(more);
+  await client.click(createButtonExpression('Resume'));
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.textContent?.includes('Active'))",
+    'schedule resumed in the UI', 45_000);
+  const resumedRecord = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(resumedRecord?.status, 'active', 'Resume action did not persist');
+  await captureScreenshot(client, fixture, 'schedules-resumed');
+
+  log('run now and inspect the actual schedule run history');
+  const runNow = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-label=\\\"Run now\\\"]'))" +
+    "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
+  await client.click(runNow);
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[role=status]')).some(el => el.textContent?.includes('Run requested'))",
+    'run-now feedback visible', 45_000);
+  const createdRuns = await client.evaluate(
+    'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');
+  assert(createdRuns.length > 0, 'Run now created no persisted run');
+  const expand = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-expanded]'))?.querySelector('button[aria-expanded]')";
+  await client.click(expand);
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.querySelector('div[role=button]'))",
+    'run history row visible');
+  await captureScreenshot(client, fixture, 'schedules-run-history');
+  await client.click("Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('div[role=button]'))?.querySelector('div[role=button]')");
+  await client.waitFor(
+    "document.querySelector('[role=dialog]')?.textContent?.includes('Run Log')",
+    'run log dialog opened');
+  await captureScreenshot(client, fixture, 'schedules-run-log');
+  await client.click("Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Close')");
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'run log dialog closed');
+
+  log('destructive action demands confirmation and Cancel preserves the record');
+  await client.click(more);
+  await client.click(createButtonExpression('Delete'));
+  await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",
+    'schedule deletion confirmation');
+  await captureScreenshot(client, fixture, 'schedules-delete-confirm');
+  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
+  assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
+    'Cancel deleted a scheduled task');
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'delete confirmation closed');
+
+  await client.click(more);
+  await client.click(createButtonExpression('Delete'));
+  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button[data-confirm-btn]')");
+  await client.waitFor(
+    "!Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.querySelector('button[aria-label=\\\"More actions\\\"]'))",
+    'confirmed schedule disappeared from UI', 45_000);
+  assert.equal(
+    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
+    false, 'Confirmed deletion was not persisted'
+  );
+  await captureScreenshot(client, fixture, 'schedules-deleted');
+  return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -800,6 +1076,80 @@ async function main() {
       "document.querySelector('[data-testid=team-model-selector-manage-providers]')",
       'Manage providers action in Create Team model picker'
     );
+    const refreshControl = await cdp.evaluate(`(() => {
+      const refresh = document.querySelector('[data-testid=team-model-selector-refresh-providers]');
+      const manage = document.querySelector('[data-testid=team-model-selector-manage-providers]');
+      const refreshBox = refresh?.getBoundingClientRect();
+      const manageBox = manage?.getBoundingClientRect();
+      return {
+        label: refresh?.getAttribute('aria-label') ?? null,
+        visible: Boolean(refreshBox && refreshBox.width > 0 && refreshBox.height > 0),
+        besideManage: Boolean(refreshBox && manageBox && refreshBox.left >= manageBox.right - 1),
+      };
+    })()`);
+    assert(refreshControl.label, 'Provider refresh icon must be accessible');
+    assert.equal(refreshControl.visible, true, 'Provider refresh icon must be visible');
+    assert.equal(refreshControl.besideManage, true,
+      'Provider refresh icon must appear beside Manage Providers');
+
+    log('click provider refresh and verify native-store checks in the isolated Electron session');
+    // Observe real store actions without replacing their implementation or
+    // bypassing native IPC. The fixture runtime denies external provider commands.
+    await cdp.evaluate(`(() => {
+      const store = window.__agentTeamsDevStore;
+      const names = [
+        'invalidateCliStatus',
+        'invalidateOpenCodeRuntimeStatus',
+        'invalidateCodexRuntimeStatus',
+        'fetchCliProviderStatus',
+      ];
+      const original = Object.fromEntries(names.map(name => [name, store.getState()[name]]));
+      const probe = { calls: [], original };
+      window.__teamProviderRefreshProbe = probe;
+      store.setState(Object.fromEntries(names.map(name => [
+        name,
+        (...args) => {
+          probe.calls.push({ name, args });
+          return original[name](...args);
+        },
+      ])));
+    })()`);
+    await cdp.click("document.querySelector('[data-testid=team-model-selector-refresh-providers]')");
+    await cdp.waitFor(`(() => {
+      const calls = window.__teamProviderRefreshProbe?.calls ?? [];
+      return calls.some(call => call.name === 'invalidateCliStatus') &&
+        calls.some(call => call.name === 'invalidateOpenCodeRuntimeStatus') &&
+        calls.some(call => call.name === 'invalidateCodexRuntimeStatus');
+    })()`, 'manual provider refresh initiated all runtime invalidations');
+    await cdp.waitFor(`(() => {
+      const button = document.querySelector('[data-testid=team-model-selector-refresh-providers]');
+      const calls = window.__teamProviderRefreshProbe?.calls ?? [];
+      const checked = calls.filter(call =>
+        call.name === 'fetchCliProviderStatus' &&
+        call.args[1]?.checkReason === 'manual_refresh'
+      ).map(call => call.args[0]);
+      return button && !button.disabled &&
+        ['anthropic', 'codex', 'opencode'].every(id => checked.includes(id));
+    })()`, 'manual refresh completed with every enabled provider checked', 120_000);
+    const providerRefreshCalls = await cdp.evaluate(
+      'window.__teamProviderRefreshProbe.calls'
+    );
+    assert.equal(
+      providerRefreshCalls.filter(call => call.name === 'invalidateCliStatus').length, 1,
+      'One click must invalidate CLI status exactly once'
+    );
+    await cdp.evaluate(`(() => {
+      const store = window.__agentTeamsDevStore;
+      store.setState(window.__teamProviderRefreshProbe.original);
+      delete window.__teamProviderRefreshProbe;
+    })()`);
+    assert.equal(
+      await cdp.evaluate("document.querySelector('#team-name')?.value"),
+      unique,
+      'Manual provider refresh must preserve the unsaved Create Team draft'
+    );
+    await captureScreenshot(cdp, fixture, 'provider-refreshed');
+
     await cdp.click("document.querySelector('[data-testid=team-model-selector-manage-providers]')");
     await cdp.waitFor(`(() => {
       const store = window.__agentTeamsDevStore.getState();
@@ -849,19 +1199,7 @@ async function main() {
     // This local inspector is enabled only in the disposable E2E launch. It
     // changes a *real* BrowserWindow property, not CSS zoom or CDP pinch scale.
     const inspector = await CdpClient.connect(started.inspectorWebSocketDebuggerUrl);
-    const setActualZoom = async (factor) => {
-      return inspector.evaluate(
-        "(() => {" +
-        "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
-        "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
-        "const { BrowserWindow } = moduleRequire('electron');" +
-        "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
-        "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
-        "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
-        "return win.webContents.getZoomFactor();" +
-        "})()"
-      );
-    };
+    const setActualZoom = (factor) => setBrowserWindowZoom(inspector, factor);
     try {
       await inspector.send('Runtime.enable');
       const actualFactor = await setActualZoom(2);
@@ -1233,8 +1571,11 @@ async function main() {
     );
     await captureScreenshot(cdp, fixture, 'organization-created');
 
+    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
+
     qualifiedResult = {
       success: true,
+      scheduleUiEvidence,
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,

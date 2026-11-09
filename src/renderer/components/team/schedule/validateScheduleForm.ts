@@ -1,3 +1,4 @@
+import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 
 import type { TeamSummary } from '@shared/types';
@@ -11,6 +12,7 @@ interface ScheduleFormValidation {
   teamName: string;
   prompt: string;
   cronExpression: string;
+  timezone: string;
   cwd: string;
   selectedProjectPathDeleted: boolean;
   isCustomCwd: boolean;
@@ -53,7 +55,11 @@ export function validateScheduleForm(input: ScheduleFormValidation): string[] {
   if (input.isSchedule) {
     if (!input.teamName) errors.push('Team is required');
     if (!input.prompt.trim()) errors.push('Prompt is required');
-    if (!input.cronExpression.trim()) errors.push('Cron expression is required');
+    try {
+      getValidScheduleNextRuns(input.cronExpression, input.timezone);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : 'Invalid schedule timing');
+    }
   }
   return errors;
 }

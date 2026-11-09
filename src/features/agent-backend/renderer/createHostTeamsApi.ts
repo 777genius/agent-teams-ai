@@ -27,8 +27,8 @@ import {
 } from './hostTeamRouting';
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
-import { readHostPagedSnapshot } from './readHostPagedSnapshot';
 import { readHostMessagesPage } from './readHostMessagesPage';
+import { readHostPagedSnapshot } from './readHostPagedSnapshot';
 import {
   assertMatchingConfiguration,
   readHostRosterConfiguration,
@@ -48,7 +48,7 @@ import type { AgentBackendApi } from '../contracts/operations';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { HostActivityReadOptions } from './readHostActivityLogs';
 import type { TeamsAPI } from '@shared/types/api';
-import type { InboxMessage, TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
+import type { TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
 
 export { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 

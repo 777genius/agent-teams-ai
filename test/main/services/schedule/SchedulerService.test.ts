@@ -229,6 +229,43 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('reloads persisted valid cron jobs after a scheduler restart', async () => {
+    const first = createService();
+    const schedule = await first.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    await first.stop();
+
+    const restarted = createService();
+    await restarted.start();
+    const jobs = (restarted as unknown as { cronJobs: Map<string, unknown> }).cronJobs;
+    expect(jobs.has(schedule.id)).toBe(true);
+    expect(await restarted.getSchedule(schedule.id)).toEqual(schedule);
+    await restarted.stop();
+  });
+
+  it('ignores a malformed historic timezone without blocking other active jobs', async () => {
+    const valid = makeSchedule({ cronExpression: '0 9 * * *' });
+    const invalid = makeSchedule({ timezone: 'Mars/Olympus' });
+    await repo.saveSchedule(valid);
+    await repo.saveSchedule(invalid);
+
+    const service = createService();
+    await service.start();
+    const jobs = (service as unknown as { cronJobs: Map<string, unknown> }).cronJobs;
+    expect(jobs.has(valid.id)).toBe(true);
+    expect(jobs.has(invalid.id)).toBe(false);
+    expect((await service.getSchedule(invalid.id))?.status).toBe('active');
+    // Invalid historic data is reported, without aborting the valid cron jobs.
+    expect(vi.mocked(console.error).mock.calls.map((args) => args.map(String).join(' ')))
+      .toEqual([expect.stringContaining('Failed to create cron job')]);
+    vi.mocked(console.error).mockClear();
+    await service.stop();
+  });
+
   it('stop() cancels all active executions and clears state', async () => {
     const service = createService();
     await service.start();
@@ -238,6 +275,167 @@ describe('SchedulerService', () => {
   });
 
   // --- CRUD ---
+
+  it('does not create an active record with an unknown timezone', async () => {
+    const service = createService();
+    await expect(service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'Mars/Olympus',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    })).rejects.toThrow('Invalid schedule timezone');
+
+    expect(repo.saveSchedule).not.toHaveBeenCalled();
+    expect(events).toHaveLength(0);
+    await service.stop();
+  });
+
+  it('normalizes padded timing before persisting creation and edits', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: ' 0 9 * * * ',
+      timezone: ' UTC ',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    expect(schedule.cronExpression).toBe('0 9 * * *');
+    expect(schedule.timezone).toBe('UTC');
+    const updated = await service.updateSchedule(schedule.id, {
+      cronExpression: ' 0 10 * * * ',
+      timezone: ' Europe/Chisinau ',
+    });
+    expect(updated.cronExpression).toBe('0 10 * * *');
+    expect(updated.timezone).toBe('Europe/Chisinau');
+    await service.stop();
+  });
+
+  it('keeps the timer and record intact when persistence rejects a valid edit', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void
+    }, 'removeCronJob');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.updateSchedule(schedule.id, { cronExpression: '0 10 * * *' }))
+      .rejects.toThrow('storage unavailable');
+    expect(await service.getSchedule(schedule.id)).toEqual(schedule);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('keeps the previously active record unchanged when a timing edit fails', async () => {
+    const service = createService();
+    const previous = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const saveCount = vi.mocked(repo.saveSchedule).mock.calls.length;
+
+    await expect(service.updateSchedule(previous.id, {
+      label: 'should not persist',
+      timezone: 'Not/A_Real_Timezone',
+    })).rejects.toThrow('Invalid schedule timezone');
+
+    expect(vi.mocked(repo.saveSchedule).mock.calls).toHaveLength(saveCount);
+    expect(await service.getSchedule(previous.id)).toEqual(previous);
+    await service.stop();
+  });
+
+  it('does not resume a paused historic schedule with invalid timing', async () => {
+    const service = createService();
+    const historic = makeSchedule({ status: 'paused', timezone: 'Invalid/Timezone' });
+    await repo.saveSchedule(historic);
+    const savedCount = vi.mocked(repo.saveSchedule).mock.calls.length;
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void
+    }, 'removeCronJob');
+
+    await expect(service.resumeSchedule(historic.id)).rejects.toThrow('Invalid schedule timezone');
+    expect(vi.mocked(repo.saveSchedule).mock.calls).toHaveLength(savedCount);
+    expect(await repo.getSchedule(historic.id)).toEqual(historic);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('keeps a paused schedule intact if resume persistence fails', async () => {
+    const service = createService();
+    const paused = makeSchedule({ status: 'paused' });
+    await repo.saveSchedule(paused);
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void
+    }, 'removeCronJob');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.resumeSchedule(paused.id)).rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(paused.id)).toEqual(paused);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('keeps a live schedule running if pause persistence fails', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const jobs = (service as unknown as {
+      cronJobs: Map<string, { pause(): void }>;
+    }).cronJobs;
+    const liveJob = jobs.get(schedule.id);
+    expect(liveJob).toBeDefined();
+    const pauseJob = vi.spyOn(liveJob!, 'pause');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.pauseSchedule(schedule.id)).rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+    expect(pauseJob).not.toHaveBeenCalled();
+    expect(jobs.get(schedule.id)).toBe(liveJob);
+    await service.stop();
+  });
+
+  it('keeps a live schedule intact if deletion persistence fails', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void;
+    }, 'removeCronJob');
+    vi.mocked(repo.deleteSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.deleteSchedule(schedule.id)).rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('does not persist an active schedule when initial creation persistence fails', async () => {
+    const service = createService();
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    })).rejects.toThrow('storage unavailable');
+    expect(await repo.listSchedules()).toHaveLength(0);
+    expect((service as unknown as { cronJobs: Map<string, unknown> }).cronJobs.size).toBe(0);
+    await service.stop();
+  });
 
   it('createSchedule() saves and emits change event', async () => {
     const service = createService();
@@ -609,6 +807,36 @@ describe('SchedulerService', () => {
   });
 
   // --- Auto-Pause on Consecutive Failures ---
+
+  it('does not pause a live cron when automatic pause persistence fails', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const failing = { ...schedule, consecutiveFailures: 2, maxConsecutiveFailures: 3 };
+    await repo.saveSchedule(failing);
+    const cron = (service as unknown as {
+      cronJobs: Map<string, { pause(): void }>;
+    }).cronJobs.get(schedule.id);
+    expect(cron).toBeDefined();
+    const pauseSpy = vi.spyOn(cron!, 'pause');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    const subject = service as unknown as {
+      incrementConsecutiveFailures(input: Schedule): Promise<void>;
+    };
+    await expect(subject.incrementConsecutiveFailures(failing))
+      .rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(schedule.id)).toEqual(failing);
+    expect(pauseSpy).not.toHaveBeenCalled();
+    expect(vi.mocked(console.warn).mock.calls.map((args) => args.map(String).join(' ')))
+      .toEqual([expect.stringContaining('Auto-pausing after 3 consecutive failures')]);
+    vi.mocked(console.warn).mockClear();
+    await service.stop();
+  });
 
   it('auto-pauses schedule after maxConsecutiveFailures via retries', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

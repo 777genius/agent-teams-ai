@@ -75,7 +75,6 @@ import {
   RefreshCw,
   Search,
   Server,
-  Settings2,
   Sparkles,
   Star,
   X,
@@ -125,6 +124,7 @@ import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import { TeamModelProviderActions } from './TeamModelProviderActions';
 import {
   OpenCodeCatalogRefreshErrorCard,
   ProviderStatusPanel,
@@ -1114,9 +1114,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
-  const { t: dashboardT } = useAppTranslation('dashboard');
   const creationPageActive = useContext(CreateTeamPageActivityContext);
-  const openSettingsTab = useStore((s) => s.openSettingsTab);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const selectedProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -3142,12 +3140,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               aria-label="Model providers"
               className="h-full min-h-full w-full flex-col items-stretch justify-start gap-1 overflow-visible rounded-none border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] p-2"
             >
-              <Button type="button" variant="outline" size="sm" data-testid="team-model-selector-manage-providers"
-                className="mb-1 h-8 w-full justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                onClick={() => { onManageProviders?.(providerId); openSettingsTab('providers'); }}>
-                <Settings2 className="size-4 shrink-0" aria-hidden="true" />
-                {dashboardT('cliStatus.actions.manageProviders')}
-              </Button>
+              <TeamModelProviderActions
+                providerId={providerId}
+                projectPath={openCodeCatalogScopeKey}
+                onManageProviders={onManageProviders}
+              />
               {PROVIDERS.map((provider) => {
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);

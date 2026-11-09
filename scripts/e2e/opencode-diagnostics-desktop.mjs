@@ -22,6 +22,7 @@ import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import {
   prepareRealRuntimeFixture,
   realRuntimeEnvironment,
+  verifyColdDashboardConnectedCount,
   verifyRealRuntimeElectron,
 } from './opencode-diagnostics/real-runtime.mjs';
 import {
@@ -611,6 +612,10 @@ if (mode === 'seed-packaged') {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
+      // A real-runtime cold count must be proven before Settings can seed the cache.
+      const coldDashboard = scenario === 'real-connected'
+        ? await verifyColdDashboardConnectedCount({ root, evaluate, send })
+        : null;
       // Startup cleanup also needs the mounted Providers page: its Manage
       // control no longer lives on the passive Dashboard summary.
       try {
@@ -629,7 +634,7 @@ if (mode === 'seed-packaged') {
         throw navigationError;
       }
       if (scenario === 'real-connected') {
-        await verifyRealRuntimeElectron({ root, data, evaluate, send });
+        await verifyRealRuntimeElectron({ root, data, evaluate, send, coldDashboard });
       } else if (scenario === cleanupScenario) {
         await verifyStartupCleanup({ root, evaluate, send });
       } else if (catalogScenarios.includes(scenario)) {

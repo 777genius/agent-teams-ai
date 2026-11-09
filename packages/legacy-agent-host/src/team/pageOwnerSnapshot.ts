@@ -8,6 +8,7 @@ const MAX_PAGE_BYTES = 384 * 1024;
 const CURSOR = /^([1-9][0-9]{0,8})\.([a-f0-9]{64})$/;
 
 /** Collections which can legitimately grow inside a single retained task. */
+const TASK_TEXT_FIELDS = ['description', 'prompt'] as const;
 const TASK_ARRAY_FIELDS = [
   'comments', 'historyEvents', 'workIntervals', 'reviewIntervals',
   'attachments', 'descriptionTaskRefs', 'promptTaskRefs',
@@ -46,7 +47,32 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
       for (const item of items)
         parts.push({ id, subject, status, [field]: [item] });
     }
-    // A single oversized scalar or nested item cannot be made safe by array paging.
+    // Projected text fields may be larger than the MCP or Desktop page budget.
+    // Keep each fragment a valid task projection and reassemble only after all
+    // original signed pages have been received.
+    for (const field of TASK_TEXT_FIELDS) {
+      const value = task[field];
+      if (typeof value !== 'string') continue;
+      base[field] = '';
+      if (!value) continue;
+      const envelope = { id, subject, status, [field]: '' };
+      const maxBytes = itemBudget - Buffer.byteLength(JSON.stringify(envelope)) - 64;
+      if (maxBytes <= 0) throw new TeamOwnerError('hold');
+      let chunk = '', bytes = 0;
+      for (const character of value) {
+        const size = Buffer.byteLength(JSON.stringify(character)) - 2;
+        if (size > maxBytes) throw new TeamOwnerError('hold');
+        if (bytes + size > maxBytes) {
+          parts.push({ ...envelope, [field]: chunk });
+          chunk = '';
+          bytes = 0;
+        }
+        chunk += character;
+        bytes += size;
+      }
+      if (chunk) parts.push({ ...envelope, [field]: chunk });
+    }
+    // An unsupported oversized nested item still fails closed without data loss.
     if (parts.length === 1 || parts.some((part) =>
       Buffer.byteLength(JSON.stringify(part)) + 64 > itemBudget
     )) throw new TeamOwnerError('hold');
