@@ -239,6 +239,40 @@ describe('SchedulerService', () => {
 
   // --- CRUD ---
 
+  it('does not create an active record with an unknown timezone', async () => {
+    const service = createService();
+    await expect(service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'Mars/Olympus',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    })).rejects.toThrow('Invalid schedule timezone');
+
+    expect(repo.saveSchedule).not.toHaveBeenCalled();
+    expect(events).toHaveLength(0);
+    await service.stop();
+  });
+
+  it('keeps the previously active record unchanged when a timing edit fails', async () => {
+    const service = createService();
+    const previous = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const saveCount = vi.mocked(repo.saveSchedule).mock.calls.length;
+
+    await expect(service.updateSchedule(previous.id, {
+      label: 'should not persist',
+      timezone: 'Not/A_Real_Timezone',
+    })).rejects.toThrow('Invalid schedule timezone');
+
+    expect(vi.mocked(repo.saveSchedule).mock.calls).toHaveLength(saveCount);
+    expect(await service.getSchedule(previous.id)).toEqual(previous);
+    await service.stop();
+  });
+
   it('createSchedule() saves and emits change event', async () => {
     const service = createService();
 
