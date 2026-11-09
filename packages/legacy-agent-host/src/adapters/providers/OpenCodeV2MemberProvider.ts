@@ -111,6 +111,10 @@ export function createOpenCodeV2MemberProvider(
   // attacker-controlled .name/.length getters during capture.
   const capturedIsCurrent = captureDataCallback(context, 'isCurrent');
   const capturedCanAllocate = captureDataCallback(context, 'canAllocate');
+  // Preserve the selected Host storage/progress callbacks across native
+  // policy getters, native probes and async checkpoint reads.
+  const capturedReadCheckpoint = captureDataCallback(context, 'readCheckpoint');
+  const capturedOnProgress = captureDataCallback(context, 'onProgress');
   const selected = structuredClone(context.profile);
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
@@ -265,7 +269,7 @@ export function createOpenCodeV2MemberProvider(
     readCheckpoint: async (reference, request) => {
       if (!current() || runtimeDigest(request) !== originalRequest)
         throw new Error('OpenCode V2 checkpoint authority revoked');
-      const checkpoint = await context.readCheckpoint(reference, request);
+      const checkpoint = await capturedReadCheckpoint(reference, request);
       if (!current()) throw new Error('OpenCode V2 checkpoint authority revoked');
       return checkpoint;
     },
@@ -401,7 +405,7 @@ export function createOpenCodeV2MemberProvider(
               configRevision: capturedConfigRevision,
             };
             ready = true;
-            context.onProgress();
+            capturedOnProgress();
             // Progress callbacks may synchronously revoke the selected Host
             // lease/generation. Never return a positive native readiness ACK
             // from the first probe after that revocation.

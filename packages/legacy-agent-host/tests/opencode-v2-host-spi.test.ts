@@ -1459,6 +1459,68 @@ test('V2 revoked Host lease cannot read a checkpoint after async configuration s
   assert.equal(await provider.cleanup(), true);
 });
 
+test('V2 cold restore retains the original Host checkpoint reader across native policy mutation', async () => {
+  const firstOwner = owner(true);
+  const first = createOpenCodeV2MemberProvider(context(), firstOwner.captured);
+  const firstSession = await first.factory.open(request());
+  const checkpoint = firstSession.driver.checkpoint();
+  assert.equal(checkpoint.ok, true);
+  if (!checkpoint.ok) throw new Error('TEST original checkpoint was not captured');
+  assert.deepEqual(await firstSession.driver.close(),
+    { logicallyClosed: true, cleanup: 'confirmed' });
+
+  const next = { ...request(), generation: 2, checkpointRef: 'TEST-owned-resume' };
+  const nextContext = context({ ...v2Profile(), generation: 2 }, next);
+  Object.assign(nextContext.endpoint.binding, { generation: 'test-generation-2', runId: 'test-restart' });
+  let originalReads = 0;
+  let forgedReads = 0;
+  nextContext.readCheckpoint = async () => { originalReads++; return checkpoint.value; };
+  const secondOwner = owner(true);
+  Object.defineProperty(secondOwner.captured, 'requiredExternalDirectory', {
+    get() {
+      // This getter runs after Host capture but before the D driver requests
+      // storage. The native owner must not redirect the selected Host store.
+      nextContext.readCheckpoint = async () => { forgedReads++; return undefined; };
+      return 'deny';
+    },
+  });
+  const second = createOpenCodeV2MemberProvider(nextContext, secondOwner.captured);
+  const resumed = await second.factory.open(next);
+  assert.equal(originalReads, 1, 'only the original Host storage reader ran');
+  assert.equal(forgedReads, 0, 'no forged storage callback can replace it');
+  assert.equal(secondOwner.calls.probe, 1, 'legitimate cold resume reaches native probe');
+  assert.equal(secondOwner.calls.password, 0, 'cold restore never submits a model turn');
+  assert.deepEqual(await resumed.driver.close(),
+    { logicallyClosed: true, cleanup: 'confirmed' });
+  assert.equal(secondOwner.calls.stop, 1, 'only captured TEST-owned process retired');
+});
+
+test('V2 native probe cannot replace the captured Host progress revocation callback', async () => {
+  const input = context();
+  let authorized = true;
+  let originalProgress = 0;
+  let forgedProgress = 0;
+  input.isCurrent = () => authorized;
+  input.onProgress = () => { originalProgress++; authorized = false; };
+  const { captured, calls } = owner(true);
+  captured.probe = async () => {
+    calls.probe++;
+    input.onProgress = () => { forgedProgress++; };
+    return true;
+  };
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/,
+    'original progress-induced lease revocation must prevent a ready V2 engine');
+  assert.equal(originalProgress, 1, 'original captured callback must revoke lease');
+  assert.equal(forgedProgress, 0, 'replaced callback must not run');
+  assert.equal(provider.isReady(), false);
+  assert.equal(calls.context, 1, 'native initial context mutation is never retried');
+  assert.equal(calls.password, 0, 'no credentials after lost Host authority');
+  assert.equal(calls.stop, 1, 'stop only this captured TEST child');
+  assert.equal(await provider.cleanup(), true);
+});
+
 test('V2 cold checkpoint compatibility survives a new generation but never a foreign member',
   async () => {
     const firstOwner = owner(true);
