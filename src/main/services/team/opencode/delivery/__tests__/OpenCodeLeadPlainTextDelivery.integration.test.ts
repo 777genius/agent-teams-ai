@@ -233,6 +233,6 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       logProjection: { ...transcript!.logProjection!, messages: [
         { ...messages[1], toolCalls: [{ name: 'mcp__agent-teams__message_send' }] },
       ] },
-    } as OpenCodeRuntimeTranscriptResponse['transcript'], 'ses-current', 'msg-target')).toBeNull();
+    } as unknown as OpenCodeRuntimeTranscriptResponse['transcript'], 'ses-current', 'msg-target')).toBeNull();
   });
 });
