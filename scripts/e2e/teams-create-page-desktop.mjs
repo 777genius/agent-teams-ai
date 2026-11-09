@@ -632,6 +632,94 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
+async function exerciseScheduleUx(client, fixture, log) {
+  const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  log('open real Schedules UI in isolated Electron');
+  await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');
+  await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);
+  await client.click(createButtonExpression('Add Schedule'));
+  await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
+    'actual schedule editor loaded', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-editor-opened');
+
+  log('select the fixture team and review its saved one-time startup prompt');
+  await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
+  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
+    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
+  await client.click(teamOption);
+  await client.waitFor(
+    "document.querySelector('#schedule-saved-prompt-reviewed')",
+    'saved prompt acknowledgement visible before Save', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
+
+  await client.fill('#schedule-label', scheduleLabel);
+  await client.fill('#dialog-prompt', 'Review the fixture project and write a short status update.');
+  log('invalid cron is field-level visible and blocks Save');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', 'not a cron');
+  const saveButton = "Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Create Schedule')";
+  await client.waitFor("(" + saveButton + ")?.disabled === true",
+    'invalid cron blocks the Create Schedule action');
+  await captureScreenshot(client, fixture, 'schedules-invalid-cron');
+  assert.equal(
+    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.label === scheduleLabel),
+    false, 'Invalid cron was persisted before Save'
+  );
+
+  await client.fill('input[placeholder="0 9 * * 1-5"]', '*/30 * * * *');
+  await client.click("document.querySelector('#schedule-saved-prompt-reviewed')");
+  await client.waitFor("(" + saveButton + ")?.disabled === false",
+    'valid schedule and reviewed old prompt allow Save', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-ready-to-create');
+  await client.click(saveButton);
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'schedule saved through the actual UI', 45_000);
+  const savedSchedules = await client.evaluate('window.electronAPI.schedules.list()');
+  const scheduled = savedSchedules.find(s => s.label === scheduleLabel);
+  assert(scheduled?.taskFirst === true && scheduled.teamName === fixture.teamName,
+    'New UI schedule did not persist its selected team and task-first mode');
+  assert.equal(scheduled.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone,
+    'Schedule changed the selected local IANA timezone');
+  log('exercise list presentation in dark/light and CSS 200% layout');
+  for (const theme of ['light', 'dark']) {
+    await client.evaluate(
+      "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig?.general, theme: " +
+        JSON.stringify(theme) + " } } }))"
+    );
+    await client.waitFor(
+      "document.documentElement.classList.contains(" + JSON.stringify(theme) + ")",
+      'schedules ' + theme + ' theme applied');
+    await captureScreenshot(client, fixture, 'schedules-list-' + theme);
+  }
+  await client.evaluate("document.documentElement.style.zoom = '2'");
+  await captureScreenshot(client, fixture, 'schedules-list-css-zoom-200');
+  await client.evaluate("document.documentElement.style.zoom = ''");
+
+  log('destructive action demands confirmation and Cancel preserves the record');
+  const more = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-label=\"More actions\"]'))" +
+    "?.querySelector('button[aria-label=\"More actions\"]')";
+  await client.click(more);
+  await client.click(createButtonExpression('Delete'));
+  await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",
+    'schedule deletion confirmation');
+  await captureScreenshot(client, fixture, 'schedules-delete-confirm');
+  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
+  assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
+    'Cancel deleted a scheduled task');
+
+  await client.click(more);
+  await client.click(createButtonExpression('Delete'));
+  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button[data-confirm-btn]')");
+  await client.waitFor(
+    "window.electronAPI.schedules.list().then(rows => !rows.some(s => s.id === " +
+      JSON.stringify(scheduled.id) + "))",
+    'confirmed schedule deletion persisted', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-deleted');
+  return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -1124,8 +1212,11 @@ async function main() {
     );
     await captureScreenshot(cdp, fixture, 'organization-created');
 
+    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log);
+
     const results = {
       success: true,
+      scheduleUiEvidence,
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
