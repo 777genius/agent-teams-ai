@@ -600,7 +600,11 @@ export class OpenCodeVisibleReplyProofService {
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     visibleReply: OpenCodeVisibleReplyProof | null;
   }> {
-    if (input.visibleReply) {
+    if (
+      input.visibleReply &&
+      (input.ledgerRecord.groupChatId ||
+        isOpenCodeDirectUserPromptDelivery(input.ledgerRecord))
+    ) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply };
     }
     if (input.ledgerRecord.groupChatId) {
