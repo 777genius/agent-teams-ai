@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SettingRow } from '../components';
 
 const SYSTEM_FONT = '__system_font__';
-const OTHER_FONT = '__other_font__';
 const FONT_SUGGESTIONS = [
   'Arial', 'Consolas', 'Georgia', 'Inter', 'Menlo', 'Noto Sans',
   'Roboto', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Verdana',
@@ -69,10 +68,7 @@ export const TypographyControls = (): React.JSX.Element => {
             <Select
               value={fontFamily === null ? SYSTEM_FONT : `family:${fontFamily}`}
               onValueChange={(value) => {
-                if (value === OTHER_FONT) {
-                  setCustomFont(fontFamily ?? '');
-                  setCustomOpen(true);
-                } else if (save(() => setAppearanceFontFamily(
+                if (save(() => setAppearanceFontFamily(
                   value === SYSTEM_FONT ? null : value.slice('family:'.length)
                 ))) {
                   setCustomOpen(false);
@@ -99,11 +95,20 @@ export const TypographyControls = (): React.JSX.Element => {
                     {family}
                   </SelectItem>
                 ))}
-                <SelectItem value={OTHER_FONT} data-testid="appearance-font-option-other">
-                  {t('general.appearance.fontFamily.other')}
-                </SelectItem>
               </SelectContent>
             </Select>
+            <button
+              type="button"
+              data-testid="appearance-font-other"
+              onClick={() => {
+                setCustomFont(fontFamily ?? '');
+                setCustomOpen((open) => !open);
+              }}
+              aria-expanded={customOpen}
+              className="rounded border border-border px-2.5 py-1.5 text-xs text-text-secondary"
+            >
+              {t('general.appearance.fontFamily.other')}
+            </button>
             <button
               type="button"
               data-testid="appearance-font-discover"
