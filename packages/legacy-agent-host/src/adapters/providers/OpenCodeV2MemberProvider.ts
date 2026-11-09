@@ -122,6 +122,11 @@ export function createOpenCodeV2MemberProvider(
   let qualificationRevoked = false;
   let wasEverReady = false;
   let pinnedProcessIdentity: Readonly<{ pid: number; startIdentity: string }> | undefined;
+  // Process custody callbacks are part of the original captured owner. Never
+  // look them up again after a native callback could replace the methods and
+  // redirect physical cleanup or fabricate a stopped PID.
+  const capturedStopOwned = owned.stopOwned.bind(owned);
+  const capturedConfirmStopped = owned.confirmStopped.bind(owned);
   let stopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
   // Re-attestation may temporarily fence readiness without revoking Host authority.
@@ -168,10 +173,10 @@ export function createOpenCodeV2MemberProvider(
     abort.abort();
     // A stop with an uncertain ACK is never submitted twice. Subsequent
     // cleanup checks may ONLY read physical status for this same owned PID.
-    stopAttempt ??= Promise.resolve().then(() => owned.stopOwned()).catch(() => false);
+    stopAttempt ??= Promise.resolve().then(() => capturedStopOwned()).catch(() => false);
     await stopAttempt;
     if (physicallyStopped) return true;
-    checking ??= Promise.resolve().then(() => owned.confirmStopped())
+    checking ??= Promise.resolve().then(() => capturedConfirmStopped())
       .catch(() => false)
       .then((stopped) => {
         if (stopped) physicallyStopped = true;

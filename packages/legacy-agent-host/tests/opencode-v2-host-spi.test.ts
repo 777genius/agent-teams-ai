@@ -1297,6 +1297,35 @@ test('retained V2 driver handle cannot mutate or checkpoint after Host seal', as
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+
+test('V2 owner cleanup never follows replaced process-stop or confirmation callbacks',
+  async () => {
+    const { captured, calls } = owner(true);
+    // The original process has uncertain physical termination. A callback
+    // replacement must not turn that UNKNOWN custody into a false success,
+    // or dispatch a stop signal through a different process owner.
+    captured.confirmStopped = async () => { calls.stopped++; return false; };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+
+    let foreignStopCalls = 0;
+    let forgedConfirmCalls = 0;
+    captured.stopOwned = async () => { foreignStopCalls++; return true; };
+    captured.confirmStopped = async () => { forgedConfirmCalls++; return true; };
+    provider.seal();
+    assert.equal(await provider.cleanup(), false, 'original physical custody remains UNKNOWN');
+    assert.equal(calls.stop, 1, 'stop must use the original captured TEST owner');
+    assert.equal(calls.stopped, 1, 'readback must come from the original owner');
+    assert.equal(foreignStopCalls, 0, 'never invoke an externally swapped stop method');
+    assert.equal(forgedConfirmCalls, 0, 'never trust a swapped cleanup certificate');
+    assert.equal(provider.isReady(), false);
+    assert.deepEqual(await opened.driver.close(), {
+      logicallyClosed: true, cleanup: 'unknown',
+    });
+    assert.equal(calls.stop, 1, 'shutdown never repeats physical stop');
+  });
+
 test('retained V2 controls surface UNKNOWN process custody, never re-signal', async () => {
   const { captured, calls } = owner(true);
   captured.stopOwned = async () => { calls.stop++; return false; };
