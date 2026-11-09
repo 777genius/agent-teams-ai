@@ -302,7 +302,10 @@ export function createOpenCodeV2MemberProvider(
           if (!admissionSettled() || !current())
             throw new Error('V2 native custody revoked');
           const password = capturedReadPassword();
-          if (!admissionSettled() || !current())
+          // A native credential reader must return a primitive string. A boxed
+          // or forged value can execute toString() later in the HTTP Basic
+          // encoder, after Host authority was checked and before network I/O.
+          if (typeof password !== 'string' || !admissionSettled() || !current())
             throw new Error('V2 native custody revoked');
           return password;
         },

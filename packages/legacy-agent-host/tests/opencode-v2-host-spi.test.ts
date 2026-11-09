@@ -517,6 +517,61 @@ test('V2 admission never follows a replaced native credential callback',
     assert.equal(calls.stop, 1, 'only the captured TEST owner is stopped');
   });
 
+test('V2 never coerces an untrusted native credential into HTTP Basic authorization',
+  { timeout: 10000 }, async () => {
+    const server = createServer((_request, response) => {
+      requests++;
+      response.writeHead(500);
+      response.end();
+    });
+    let requests = 0;
+    let coerced = 0;
+    const profile = v2Profile();
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    const { captured, calls } = owner(true);
+    captured.readPassword = () => {
+      calls.password++;
+      return {
+        toString() {
+          coerced++;
+          return 'TEST-untrusted-credential';
+        },
+      } as unknown as string;
+    };
+    const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+    let opened: Awaited<ReturnType<typeof provider.factory.open>> | undefined;
+    try {
+      opened = await provider.factory.open(request());
+      assert.equal(provider.isReady(), true);
+      let accepted = false;
+      try {
+        accepted = (await opened.driver.submit({
+          inputId: 'TEST-untrusted-password', operationRef: 'TEST-untrusted-password-op',
+          content: 'TEST only, no model execution',
+        })).ok;
+      } catch {
+        // The Session SPI may reject an invalid owner credential outright.
+      }
+      assert.equal(accepted, false, 'an invalid credential cannot authorize a native POST');
+      assert.equal(coerced, 0, 'never invoke the forged credential toString');
+      assert.equal(requests, 0, 'no HTTP request can use an untrusted credential');
+      assert.equal(calls.password, 1, 'a failed credential projection is not retried');
+      assert.equal(provider.isReady(), false, 'the TEST owner is quarantined');
+      assert.equal(await provider.cleanup(), true);
+      assert.equal(calls.stop, 1, 'stop only the captured TEST-owned process');
+    } finally {
+      await opened?.driver.close();
+      await provider.cleanup();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+
 test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv or version', () => {
   const valid = nativeV2Profile();
   assert.equal(runtimeProfileSchema.safeParse({ members: [valid] }).success, true);
