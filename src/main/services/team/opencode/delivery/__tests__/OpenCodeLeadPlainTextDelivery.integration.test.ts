@@ -11,19 +11,19 @@ import {
   isOpenCodePromptDeliveryWatchdogTerminal,
 } from '../OpenCodePromptDeliveryLedger';
 import {
+  getOpenCodeDeliveryPendingReason,
   isOpenCodeDeliveryResponseReadCommitAllowed,
   isOpenCodeDeliveryRetryablePendingResponse,
-  getOpenCodeDeliveryPendingReason,
 } from '../OpenCodePromptDeliveryReadCommitPolicy';
 import { openCodeTaskRefsIncludeAll } from '../OpenCodeRuntimeDeliveryProofMatching';
-import { OpenCodeVisibleReplyProofService } from '../OpenCodeVisibleReplyProofService';
 import { readOpenCodeExactAssistantText } from '../OpenCodeVisibleReplyProofComposition';
+import { OpenCodeVisibleReplyProofService } from '../OpenCodeVisibleReplyProofService';
 
-import type { OpenCodePromptDeliveryLedgerRecord } from '../OpenCodePromptDeliveryLedger';
-import type { OpenCodeVisibleReplyProofServiceDependencies } from '../OpenCodeVisibleReplyProofService';
-import type { OpenCodeVisibleReplyProof } from '../OpenCodePromptDeliveryWatchdog';
-import type { OpenCodeRuntimeTranscriptResponse } from '../../../../runtime/ClaudeMultimodelBridgeService';
 import type * as PathDecoder from '@main/utils/pathDecoder';
+import type { OpenCodeRuntimeTranscriptResponse } from '../../../../runtime/ClaudeMultimodelBridgeService';
+import type { OpenCodePromptDeliveryLedgerRecord } from '../OpenCodePromptDeliveryLedger';
+import type { OpenCodeVisibleReplyProof } from '../OpenCodePromptDeliveryWatchdog';
+import type { OpenCodeVisibleReplyProofServiceDependencies } from '../OpenCodeVisibleReplyProofService';
 
 const ISO = '2026-11-09T10:00:00.000Z';
 const root = vi.hoisted(() => ({ teamsBase: '' }));
