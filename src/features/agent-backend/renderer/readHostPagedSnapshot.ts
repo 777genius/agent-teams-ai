@@ -42,7 +42,7 @@ function assembleTaskParts(
         merged[field] = [...(prior as unknown[] | undefined ?? []), ...items];
       }
     }
-    tasks.push(merged as Task);
+    tasks.push(merged as unknown as Task);
   }
   return tasks;
 }
@@ -79,7 +79,7 @@ export async function readHostPagedSnapshot(
     if (!result.ok) throw new Error('Host team read ' + result.code);
     if (!result.value || !('revision' in result.value) || !('kanbanState' in result.value))
       throw new Error('Invalid Host team snapshot');
-    const page = result.value as BackendTeamSnapshot;
+    const page = result.value;
     readFence();
     if (first) {
       if (
@@ -128,7 +128,7 @@ export async function readHostPagedSnapshot(
       kanbanState.tasks[taskId] = entry;
     }
     for (const [column, ids] of Object.entries(page.kanbanState.columnOrder ?? {})) {
-      const key = column;
+      const key = column as keyof NonNullable<BackendTeamSnapshot['kanbanState']['columnOrder']>;
       const original = kanbanState.columnOrder?.[key] ?? [];
       kanbanState.columnOrder ??= {};
       kanbanState.columnOrder[key] = [...original, ...ids];
