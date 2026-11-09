@@ -4,7 +4,6 @@ import { statSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { clickControl } from './catalog.mjs';
 
 const SYNTHETIC_KEY = 'TEST-nonsecret-local-catalog-only';
 const PROVIDER = 'deepinfra';
@@ -116,6 +115,8 @@ export function hasOneVisibleOpenCodeConnection(text) {
  * its own provider panel and closes without changing credentials.
  */
 export async function verifyProviderManageDialogs(evaluate, send, reportStage = () => {}) {
+  // Load only for real Electron verification: packaged candidate tests stub catalog.mjs.
+  const { clickControl } = await import('./catalog.mjs');
   const verified = [];
   for (const provider of ['anthropic', 'codex', 'opencode']) {
     reportStage(provider + ':control');
