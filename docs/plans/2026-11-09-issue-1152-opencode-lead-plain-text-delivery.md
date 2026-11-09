@@ -24,7 +24,8 @@ Status: research-only plan; implementation is in [app PR #1157](https://github.c
 | Case | Expected result |
 | --- | --- |
 | OpenCode text-only teammate replies to lead without tool call | Full answer appears once in lead inbox; original marked read after proof |
-| Tool-capable OpenCode replies with `message_send` | Existing tool reply wins; no duplicate plain-text message |
+| Tool-capable OpenCode replies with `message_send` | A successful send to the actual lead wins; no duplicate plain-text lead message |
+| Successful send to a different, explicit non-lead inbox followed by a text answer to the lead | Peer send stays intact; complete text is delivered once to lead; no unrelated send suppresses proof |
 | 10k+ character answer | No preview truncation |
 | Transcript contains older/later assistant messages | Only exact assistant ID is accepted |
 | Missing transcript, wrong session/run/recipient, not-yet-settled turn | No visible reply invented and no premature read commit |
@@ -51,7 +52,7 @@ A focused draft implementation PR (separate from this plan) has the precise read
 ## Review clarifications and implementation follow-through
 
 - **Legacy preview mismatch:** An existing inbox row containing only a clipped preview must not satisfy canonical reply proof. Re-read the physical row after a send or dedupe, compare its full text with the exact assistant transcript and leave the original unread on any mismatch. An eventual repair must use an explicitly verified new delivery identity; blindly editing or reusing a conflicting ID is unsafe.
-- **Message-send uncertainty:** Reinspect only tool outcomes in the same canonical runtime prompt turn. Any send lacking a correlated failure result can have succeeded; never synthesize a second delivery. An older tool call must not prevent a text-only response in a new, exact prompt turn.
+- **Message-send uncertainty:** Reinspect only tool outcomes in the same canonical runtime prompt turn. A send addressed to the canonical lead, its reserved aliases or an unknown recipient may have succeeded: require a correlated failure result before materializing another lead reply. A send to a provably different non-lead physical inbox cannot satisfy the lead request and must not suppress its plain-text answer. An older turn's tool call must not block a new, exact prompt turn.
 - **Roster priority:** An exact current roster peer named `team_lead` must override that historical alias. Keep the same decision in prompt instructions, destination candidate search, read-commit and advisory proof; a missing roster fails closed instead of inferring a recipient.
 - **Reserved identity:** `system` is a non-addressable notice token and a reserved teammate name. Preserve notice semantics; validate/reject conflicting persisted lead identity rather than silently treating app notices as user-authored lead messages.
 - **Cancellation limit:** The existing checkpoint before/after a physical inbox write is not an atomic cancellation/write lock. Distinguish the current guard from a future serialized fence, and never claim strict no-write-after-stop from checkpoints alone.
