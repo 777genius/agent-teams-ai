@@ -280,6 +280,16 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
       hasAcceptedMemberWorkSyncReport: input.hasAcceptedMemberWorkSyncReport,
     });
   }
+  // Null is an attempted but unsuccessful lead-config lookup; undefined is
+  // a caller that did not resolve team config (for example a pure unit test).
+  // Without a roster we cannot tell "captain" (the lead) from a peer, so
+  // never silently acknowledge a direct peer-looking reply on lookup failure.
+  if (
+    input.configuredLeadName === null && record?.replyRecipient?.trim() &&
+    classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report'
+  ) {
+    return false;
+  }
   // Informational notices and teammate reports never require a visible reply:
   // any assistant response fulfils them. Demanding progress proof or a
   // semantically sufficient answer here re-prompted members for messages that
