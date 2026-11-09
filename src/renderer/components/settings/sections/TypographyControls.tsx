@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   FONT_SIZE_PRESETS,
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SettingRow } from '../components';
 
 const SYSTEM_FONT = '__system_font__';
+const MAX_VISIBLE_FONT_CHOICES = 100;
 const FONT_SUGGESTIONS = [
   'Arial', 'Consolas', 'Georgia', 'Inter', 'Menlo', 'Noto Sans',
   'Roboto', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Verdana',
@@ -24,12 +25,24 @@ export const TypographyControls = (): React.JSX.Element => {
   const { t } = useAppTranslation('settings');
   const { fontFamily, fontSizePercent } = useAppearancePreferences();
   const [installedFonts, setInstalledFonts] = useState<string[]>([]);
+  const [fontQuery, setFontQuery] = useState('');
   const [discovery, setDiscovery] = useState<'idle' | 'loading' | 'loaded' | 'empty' | 'unavailable'>('idle');
   const [customOpen, setCustomOpen] = useState(false);
   const [customFont, setCustomFont] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const fonts = uniqueFontFamilies([...FONT_SUGGESTIONS, ...installedFonts], fontFamily);
+  // Avoid rendering thousands of Radix options on every Appearance interaction.
+  const allFonts = useMemo(
+    () => uniqueFontFamilies([...FONT_SUGGESTIONS, ...installedFonts], fontFamily),
+    [installedFonts, fontFamily]
+  );
+  const fonts = useMemo(() => {
+    const query = fontQuery.trim().toLocaleLowerCase();
+    const matches = query
+      ? allFonts.filter((family) => family.toLocaleLowerCase().includes(query))
+      : [...FONT_SUGGESTIONS, ...allFonts];
+    return uniqueFontFamilies(matches.slice(0, MAX_VISIBLE_FONT_CHOICES), fontFamily);
+  }, [allFonts, fontQuery, fontFamily]);
 
   const save = (action: () => void): boolean => {
     try {
@@ -44,15 +57,20 @@ export const TypographyControls = (): React.JSX.Element => {
 
   const discover = (): void => {
     setDiscovery('loading');
+    setFontQuery('');
     // Trigger permission only after explicit user interaction (never on mount).
     void listLocalFontFamilies().then((families) => {
       if (families === null) {
+        setInstalledFonts([]);
         setDiscovery('unavailable');
         return;
       }
       setInstalledFonts(families);
       setDiscovery(families.length === 0 ? 'empty' : 'loaded');
-    }).catch(() => setDiscovery('unavailable'));
+    }).catch(() => {
+      setInstalledFonts([]);
+      setDiscovery('unavailable');
+    });
   };
 
   return (
@@ -63,6 +81,17 @@ export const TypographyControls = (): React.JSX.Element => {
         description={t('general.appearance.fontFamily.description')}
       >
         <div className="flex min-w-0 max-w-full flex-col items-end gap-2">
+          {installedFonts.length > MAX_VISIBLE_FONT_CHOICES && (
+            <input
+              type="search"
+              data-testid="appearance-font-filter"
+              aria-label={t('general.appearance.fontFamily.placeholder')}
+              placeholder={t('general.appearance.fontFamily.placeholder')}
+              value={fontQuery}
+              onChange={(event) => setFontQuery(event.target.value)}
+              className="h-8 w-44 max-w-full rounded border border-border bg-surface-raised px-2 text-xs text-text"
+            />
+          )}
           <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
             <Select
               value={fontFamily === null ? SYSTEM_FONT : `family:${fontFamily}`}
