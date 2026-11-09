@@ -75,10 +75,10 @@ export function createTaskTableColumns(
                 onTaskClick?.(row.original.task);
               }}
             >
-              <span className="w-full truncate text-[13px] font-medium text-[var(--color-text)]">
+              <span className="w-full truncate text-[calc(13px*var(--appearance-text-scale,1))] font-medium text-[var(--color-text)]">
                 {row.original.subject}
               </span>
-              <span className="block w-full min-w-0 truncate whitespace-nowrap text-[10px] text-[var(--color-text-muted)]">
+              <span className="block w-full min-w-0 truncate whitespace-nowrap text-[calc(10px*var(--appearance-text-scale,1))] text-[var(--color-text-muted)]">
                 {formatTaskDisplayLabel(row.original.task)}
               </span>
             </button>
@@ -96,7 +96,7 @@ export function createTaskTableColumns(
       cell: ({ row }) => (
         <span className="flex min-w-0 items-center gap-1.5">
           <span className={
-            'inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-medium ' +
+            'inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[calc(11px*var(--appearance-text-scale,1))] font-medium ' +
             STATUS_CLASSES[row.original.status]
           }>
             {labels.statusNames[row.original.status]}
@@ -172,7 +172,7 @@ export function createTaskTableColumns(
               <time
                 dateTime={date.toISOString()}
                 tabIndex={0}
-                className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]"
+                className="whitespace-nowrap text-[calc(11px*var(--appearance-text-scale,1))] text-[var(--color-text-muted)]"
               >
                 {formatTaskUpdatedRelativeTime(date, language, nowMs)}
               </time>

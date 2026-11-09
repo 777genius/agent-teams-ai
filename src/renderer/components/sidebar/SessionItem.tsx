@@ -288,7 +288,7 @@ export const SessionItem = memo(function SessionItem({
                 {isHidden && <EyeOff className="size-2.5 shrink-0 text-zinc-500" />}
                 {isTeam ? (
                   <span
-                    className="flex items-center gap-1.5 truncate text-[13px] font-medium leading-tight"
+                    className="flex items-center gap-1.5 truncate text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight"
                     style={{ color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)' }}
                   >
                     <Users className="size-3 shrink-0 text-blue-400" />
@@ -296,7 +296,7 @@ export const SessionItem = memo(function SessionItem({
                   </span>
                 ) : (
                   <span
-                    className="line-clamp-2 text-[13px] font-medium leading-tight"
+                    className="line-clamp-2 text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight"
                     style={{ color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)' }}
                   >
                     {parsed.displayText}

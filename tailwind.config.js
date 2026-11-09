@@ -7,7 +7,12 @@ const scaledFontSizes = Object.fromEntries(
     name,
     [
       `calc(${size} * var(--appearance-text-scale, 1))`,
-      { ...options, lineHeight: `calc(${options.lineHeight} * var(--appearance-text-scale, 1))` },
+      {
+        ...options,
+        lineHeight: Number.isFinite(Number(options.lineHeight))
+          ? options.lineHeight
+          : `calc(${options.lineHeight} * var(--appearance-text-scale, 1))`,
+      },
     ],
   ])
 );

@@ -144,7 +144,7 @@ export const Sidebar = ({ hideOnNarrowSettings = false }: { hideOnNarrowSettings
             <PanelLeft className="size-3.5" />
           </button>
 
-          <span className="flex-1 text-[13px] font-semibold text-text">
+          <span className="flex-1 text-[calc(13px*var(--appearance-text-scale,1))] font-semibold text-text">
             {t('tasksPanel.title')}
           </span>
           <TaskFoldersHost
