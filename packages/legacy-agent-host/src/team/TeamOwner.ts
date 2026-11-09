@@ -630,7 +630,7 @@ export class TeamOwner {
       members,
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),
-      messages: this.productMessages(grant, members),
+      messages: this.productMessages(grant, [...members, ...(state.removedMembers ?? [])]),
       kanbanState: this.store.read('../kanban-state.json') ?? {
         teamName: this.binding.teamName,
         reviewers: [],
@@ -682,7 +682,10 @@ export class TeamOwner {
         grant,
         teamName: this.binding.teamName,
         key: this.messagesPageKey,
-        messages: this.productMessages(grant, this.state().members),
+        messages: this.productMessages(grant, [
+          ...this.state().members,
+          ...(this.state().removedMembers ?? []),
+        ]),
         ...options,
       });
     });
