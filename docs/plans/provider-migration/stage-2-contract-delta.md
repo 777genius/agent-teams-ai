@@ -289,16 +289,23 @@ reads and has a
 for the real Host transport pending cap. These qualify source/test
 increments only, **not** production target-core M04/M05/M11 parity.
 
-**Still open on latest Stage 1 SHA:** after a group receives another
-message, its revision-bound older-page cursor can become stale while the
-group consumer retains that cursor across head refreshes
-([reported P1](https://github.com/777genius/agent-teams-ai/pull/982));
-task/deleted-task and nested comment/history/work/review pages remain
-incomplete, and `list/getData/getAllTasks/getTask` can still depend on
-an over-512-KiB snapshot. Full original Host+Electron oversized-history
-E2E and exact-head CI/CodeQL are not qualified by the bounded page
-unit/transport tests. Preserve 512 KiB snapshot cap, captured owner,
-no-UNKNOWN-replay, fail-closed page revisions and read-only archive.
+**Stage 1 scoped group-pagination correction (9 Nov 2026,
+[source `4ac2dc70`](https://github.com/777genius/agent-teams-ai/commit/4ac2dc70af4d70d2835899ee5c3f2b2dfb339ecb)):**
+`useGroupChatHistory` now observes the Owner `feedRevision` on head
+refresh and replaces an older-page cursor when the authorized message
+revision changes. Its focused renderer fixture checks an append between
+pages and retention of 103 uniquely identified messages. The Owner cursor
+negative test now mutates accepted messages rather than an unrelated Team
+snapshot revision. These are **source/test changes**, not a completed
+native Host+Electron proof or target-core M04/M05/M11 qualification.
+
+**Still open:** task/deleted-task and nested comment/history/work/review
+pages remain incomplete, and `list/getData/getAllTasks/getTask` can still
+depend on an over-512-KiB snapshot. Exact-head Stage 1 CI/CodeQL and the
+full original Host+Electron oversized-history E2E must be judged from their
+own receipts, not inferred from the bounded tests. Preserve the 512 KiB
+snapshot cap, captured owner, no-UNKNOWN-replay, fail-closed page revisions
+and read-only archive.
 
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution

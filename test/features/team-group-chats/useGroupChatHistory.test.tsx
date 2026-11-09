@@ -36,6 +36,7 @@ describe('loaded group history lifetime', () => {
       messages: initial,
       nextCursor: 'older-page',
       hasMore: true,
+      feedRevision: 'same-feed',
     });
     let history: ReturnType<typeof useGroupChatHistory>;
     function Probe() {
@@ -62,6 +63,7 @@ describe('loaded group history lifetime', () => {
         messages: [message(36), { ...message(35), text: 'updated reply' }],
         nextCursor: 'new-head-cursor',
         hasMore: true,
+        feedRevision: 'same-feed',
       });
       await act(async () => {
         await history!.refresh();
@@ -78,6 +80,7 @@ describe('loaded group history lifetime', () => {
         messages: [message(0, 'older-b'), message(0, 'older-a')],
         nextCursor: null,
         hasMore: false,
+        feedRevision: 'same-feed',
       });
       await act(async () => {
         await history!.loadOlder();
@@ -97,6 +100,72 @@ describe('loaded group history lifetime', () => {
       expect(allRows.slice(0, 2).map((item) => item.messageId)).toEqual(['older-b', 'older-a']);
       expect(allRows.at(-1)?.messageId).toBe('36');
       expect(history!.hasMore).toBe(false);
+    } finally {
+      act(() => view.unmount());
+      vi.unstubAllGlobals();
+    }
+  });
+
+
+  it('recovers older pagination after the Owner head revision changes without losing retained rows', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const message = (position: number): InboxMessage => ({
+      from: 'alice',
+      to: 'user',
+      text: String(position),
+      timestamp: new Date(Date.UTC(2026, 9, 10, 10, 0, position)).toISOString(),
+      read: false,
+      messageId: String(position),
+      groupMessageId: String(position),
+      groupChatId: 'group',
+    });
+    ports.page.mockReset();
+    ports.page.mockResolvedValue({
+      messages: Array.from({ length: 100 }, (_, index) => message(102 - index)),
+      nextCursor: 'cursor-before-append',
+      hasMore: true,
+      feedRevision: 'revision-before',
+    });
+    let history: ReturnType<typeof useGroupChatHistory>;
+    function Probe() {
+      history = useGroupChatHistory('team', 'root', 'group');
+      return null;
+    }
+    const view = createRoot(document.createElement('div'));
+    try {
+      await act(async () => {
+        view.render(<Probe />);
+      });
+      expect(history!.messages).toHaveLength(100);
+      ports.page.mockResolvedValue({
+        messages: Array.from({ length: 100 }, (_, index) => message(103 - index)),
+        nextCursor: 'cursor-after-append',
+        hasMore: true,
+        feedRevision: 'revision-after',
+      });
+      await act(async () => {
+        await history!.refresh();
+      });
+      expect(history!.messages[0].messageId).toBe('103');
+      ports.page.mockResolvedValue({
+        messages: [message(3), message(2), message(1)],
+        nextCursor: null,
+        hasMore: false,
+        feedRevision: 'revision-after',
+      });
+      await act(async () => {
+        await history!.loadOlder();
+      });
+      expect(ports.page).toHaveBeenLastCalledWith('team', {
+        groupChatId: 'group',
+        limit: 100,
+        cursor: 'cursor-after-append',
+      });
+      expect(history!.messages.map((row) => row.messageId)).toEqual(
+        Array.from({ length: 103 }, (_, index) => String(103 - index))
+      );
+      expect(history!.hasMore).toBe(false);
+      expect(history!.error).toBeNull();
     } finally {
       act(() => view.unmount());
       vi.unstubAllGlobals();
