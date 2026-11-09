@@ -7,6 +7,7 @@ import {
   parseWindowsResourceRows,
   stableOwnedResources,
   summarizePhase,
+  safePriorResourceObservations,
 } from './startup-resources.mjs';
 
 describe('isolated provider startup resource census', () => {
@@ -45,6 +46,28 @@ describe('isolated provider startup resource census', () => {
     assert.equal(result.cliNamedAliveLowerBound, 1);
     assert(!JSON.stringify(result).includes('birth'));
     assert(!JSON.stringify(result).includes('opencode'));
+  });
+
+  it('preserves only validated public observations when a later phase fails', () => {
+    const phase = 'renderer-ready';
+    const report = summarizePhase(phase, 1, [
+      { pid: 10, birth: 'test', rssBytes: 1024, cpuTimeMs: 1, name: 'opencode' },
+    ], [], 100);
+    const safe = {
+      schemaVersion: 1, platform: process.platform, qualification: 'owned-process-sampled-only',
+      observations: [
+        { ...report, pid: 123, privateToken: 'must-not-persist' },
+        { ...report, phase: 'post-renderer-delay' },
+      ],
+    };
+    assert.deepEqual(safePriorResourceObservations(safe, 'post-renderer-delay'),
+      [{ ...report }]);
+    assert(!JSON.stringify(safePriorResourceObservations(safe, 'post-renderer-delay')).includes('123'));
+    assert.deepEqual(safePriorResourceObservations({ ...safe, observations: [
+      { ...report, rssWorkingSetBytesSum: null },
+    ]}, 'after-provider-settings'), []);
+    assert.deepEqual(safePriorResourceObservations({ ...safe, platform: 'other' },
+      'after-provider-settings'), []);
   });
 
   it('rejects invalid resource numbers rather than recording a false zero', () => {

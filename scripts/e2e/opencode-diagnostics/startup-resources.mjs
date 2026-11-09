@@ -140,13 +140,42 @@ async function capture(root, phase) {
   console.log('Startup resource sample: ' + phase + ' (' + stable.length + ' owned alive)');
 }
 
+/**
+ * A failed later sample retains only validated numeric fields from previously
+ * published samples. Never copy the private PID/birth snapshot into CI.
+ */
+export function safePriorResourceObservations(report, failedPhase) {
+  const fields = [
+    'elapsedSincePreviousMs', 'ownedProcessCount', 'resourceSampledProcessCount',
+    'rssWorkingSetBytesSum', 'cumulativeCpuTimeMsLive', 'cpuTimeMsSurvivorsDelta',
+    'comparableSurvivorCount', 'cliNamedAliveLowerBound',
+  ];
+  if (report?.schemaVersion !== 1 || report.qualification !== 'owned-process-sampled-only' ||
+      report.platform !== process.platform || !Array.isArray(report.observations) ||
+      report.observations.length > 3) return [];
+  const seen = new Set();
+  return report.observations.flatMap((row) => {
+    if (!row || !PHASES.has(row.phase) || row.phase === failedPhase || seen.has(row.phase) ||
+        !fields.every((key) => Number.isSafeInteger(row[key]) && row[key] >= 0)) return [];
+    seen.add(row.phase);
+    return [{ phase: row.phase, ...Object.fromEntries(fields.map((key) => [key, row[key]])) }];
+  });
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const phase = process.argv[3] ?? '';
   capture(process.argv[2], phase).catch(async () => {
     try {
-      await writeFile(path.join(process.argv[2], 'startup-resource-metrics.json'), JSON.stringify({
+      const evidenceFile = path.join(process.argv[2], 'startup-resource-metrics.json');
+      let observations = [];
+      try {
+        observations = safePriorResourceObservations(
+          JSON.parse(await readFile(evidenceFile, 'utf8')), phase
+        );
+      } catch { /* An unreadable prior report is not evidence. */ }
+      await writeFile(evidenceFile, JSON.stringify({
         schemaVersion: 1, platform: process.platform, complete: false,
-        failedPhase: phase, reason: 'measurement_unavailable',
+        failedPhase: phase, reason: 'measurement_unavailable', observations,
       }, null, 2));
     } catch { /* Preserve the failure exit code. */ }
     process.exitCode = 1;
