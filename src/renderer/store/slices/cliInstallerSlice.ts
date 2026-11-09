@@ -31,6 +31,7 @@ import {
   invalidateCliProviderScopeReads,
   setBoundedScopedProviderStatus,
 } from './cliProviderStatusScope';
+import { createCodexRuntimeStatusActions } from './codexRuntimeStatusActions';
 import { captureOpenCodeMetadataRead } from './openCodeMetadataPublication';
 import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
@@ -877,7 +878,6 @@ let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
-let codexRuntimeStatusInFlight: Promise<void> | null = null;
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -1571,28 +1571,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     () => clearCliProviderStatusInFlight('opencode')
   ),
 
-  fetchCodexRuntimeStatus: async () => {
-    if (!api.codexRuntime) return;
-    if (codexRuntimeStatusInFlight) return codexRuntimeStatusInFlight;
-
-    codexRuntimeStatusInFlight = (async () => {
-      set({ codexRuntimeStatusLoading: true, codexRuntimeError: null });
-      try {
-        const status = await api.codexRuntime.getStatus();
-        set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to check Codex runtime status';
-        logger.error('Failed to fetch Codex runtime status:', error);
-        set({ codexRuntimeError: message });
-      } finally {
-        set({ codexRuntimeStatusLoading: false });
-        codexRuntimeStatusInFlight = null;
-      }
-    })();
-
-    return codexRuntimeStatusInFlight;
-  },
+  ...createCodexRuntimeStatusActions(set),
 
   installCodexRuntime: async () => {
     if (!api.codexRuntime) return;
@@ -1642,8 +1621,4 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     }
   },
 
-  invalidateCodexRuntimeStatus: async () => {
-    await api.codexRuntime?.invalidateStatus();
-    set({ codexRuntimeStatus: null });
-  },
 });
