@@ -557,8 +557,23 @@ try {
   ), 'Clean editor cancellation');
   // Exercise the manual local font fallback, which works even when the experimental
   // browser installed-font API is unsupported or denied (e.g. opaque file origin).
-  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-system');
-  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-other');
+  // Exercise keyboard selection as well as pointer selection: long Radix menus
+  // may move when the pointer enters their scroll zone.
+  await clickAppearanceControl('appearance-font-select');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-option-system]')"
+  ), 'Font menu opens for keyboard selection');
+  await cdp.evaluate("(()=>{const item=document.querySelector('[data-testid=appearance-font-option-system]');if(!(item instanceof HTMLElement))throw Error('System option missing');item.focus();})()");
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null;})()"
+  ), 'System font selected through keyboard');
+  await clickAppearanceControl('appearance-font-other');
   await until(() => cdp!.evaluate(
     "!!document.querySelector('[data-testid=appearance-font-custom-input]')"
   ), 'Manual font field opens');
@@ -577,7 +592,17 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const font=document.querySelector('[data-testid=appearance-font-select]');const size=document.querySelector('[data-testid=appearance-text-size]');return !!font&&!!size&&font.textContent.includes('Noto Sans')&&size.textContent.includes('125%');})()"
   ), 'Typography selection survives Settings navigation');
-  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-system');
+  await clickAppearanceControl('appearance-font-select');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-option-system]')"
+  ), 'System font option opens for reset');
+  await cdp.evaluate("document.querySelector('[data-testid=appearance-font-option-system]')?.focus()");
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
   await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-100');
   await until(() => cdp!.evaluate(
     "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null&&v?.fontSizePercent===100&&document.documentElement.style.getPropertyValue('--appearance-font-family')===''&&document.documentElement.style.getPropertyValue('--appearance-text-scale')==='1';})()"
