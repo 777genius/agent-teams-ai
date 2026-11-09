@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   cliStatusError: null,
   cliProviderStatusLoading: {},
   openCodeRuntimeStatus: null,
+  openCodeRuntimeStatusLoading: false,
+  countEvidence: null as null | { checking: boolean; observation: null; invalidated: boolean },
   openSettingsTab: vi.fn(),
   openTab: vi.fn(),
   selectedProjectId: null,
@@ -28,7 +30,7 @@ vi.mock('@features/localization/renderer', () => ({
 }));
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   useRuntimeProviderDirectoryCache: () => state.directoryReads() ?? null,
-  useRuntimeProviderConnectedCount: () => null,
+  useRuntimeProviderConnectedCount: () => state.countEvidence,
 }));
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
@@ -55,6 +57,9 @@ describe('DashboardProviderSummary (passive)', () => {
     vi.clearAllMocks();
     state.cliStatus = null;
     state.cliStatusLoading = false;
+    state.openCodeRuntimeStatusLoading = false;
+    state.cliProviderStatusLoading = {};
+    state.countEvidence = null;
     state.appConfig.general.multimodelEnabled = true;
   });
   afterEach(() => {
@@ -81,6 +86,51 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.unmount());
     }
   });
+  it('shows a small OpenCode loader only while a real status or directory check is pending', async () => {
+    state.openCodeRuntimeStatusLoading = true;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      expect(host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent)
+        .not.toContain('runtimeProvider.badges.unknown');
+      state.openCodeRuntimeStatusLoading = false;
+      state.countEvidence = { checking: true, observation: null, invalidated: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      state.countEvidence = { checking: false, observation: null, invalidated: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+      expect(host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent)
+        .toContain('runtimeProvider.badges.unknown');
+      expect(state.loadProviderDirectory).not.toHaveBeenCalled();
+      expect(state.loadModels).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('ignores stale aggregate pending once individual checking has settled', async () => {
+    state.cliStatus = {
+      installed: true, flavor: 'agent_teams_orchestrator',
+      providers: [{ providerId: 'opencode', authenticated: false, verificationState: 'unknown', statusCheckOutcome: 'pending' }],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+      state.cliProviderStatusLoading = { opencode: true };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('reports a missing CLI instead of endlessly checking after discovery settles', async () => {
     state.cliStatus = { installed: false, flavor: 'agent_teams_orchestrator', providers: [] };
     const host = document.createElement('div');
