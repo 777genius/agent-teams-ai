@@ -207,7 +207,7 @@
         "description": "Palet warna JSON bernama berdasarkan tema terang atau gelap.",
         "none": "Tema bawaan",
         "edit": "Edit JSON",
-        "localOnly": "Tema dan skala hanya disimpan di peramban atau perangkat ini.",
+        "localOnly": "Tema, zoom, dan font hanya disimpan pada perangkat atau browser ini.",
         "editor": {
           "title": "Edit tema (JSON)",
           "description": "Maksimal 8 tema. Warna harus #RRGGBB. Hanya JSON yang valid diterapkan; larik themes kosong menghapus semua tema.",
@@ -222,6 +222,22 @@
       "uiScale": {
         "label": "Skala antarmuka",
         "description": "Ubah skala seluruh aplikasi tanpa mengubah zoom sistem atau peramban.",
+        "reset": "Atur ulang"
+      },
+      "fontFamily": {
+        "label": "Font antarmuka",
+        "description": "Pilih font yang terpasang di perangkat. Font editor dan terminal tidak berubah.",
+        "system": "Bawaan sistem",
+        "other": "Font lain…",
+        "placeholder": "Nama font terpasang",
+        "apply": "Terapkan",
+        "discover": "Cari font terpasang",
+        "loaded": "Font terpasang ditambahkan ke daftar.",
+        "unavailable": "Daftar font tidak tersedia di sini. Masukkan nama secara manual."
+      },
+      "textSize": {
+        "label": "Ukuran teks",
+        "description": "Ubah ukuran teks tanpa mengubah zoom antarmuka.",
         "reset": "Atur ulang"
       }
     },

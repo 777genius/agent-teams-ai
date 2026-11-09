@@ -207,7 +207,7 @@
         "description": "Palette JSON con nome basate sul tema scuro o chiaro.",
         "none": "Tema integrato",
         "edit": "Modifica JSON",
-        "localOnly": "Temi e scala vengono salvati solo in questo browser o dispositivo.",
+        "localOnly": "Temi, zoom e caratteri vengono salvati solo su questo dispositivo o browser.",
         "editor": {
           "title": "Modifica temi (JSON)",
           "description": "Fino a 8 temi. I colori devono essere #RRGGBB. Si applica solo JSON valido; un array themes vuoto elimina tutti i temi.",
@@ -222,6 +222,22 @@
       "uiScale": {
         "label": "Scala dell’interfaccia",
         "description": "Ridimensiona tutta l’app senza modificare lo zoom del sistema o del browser.",
+        "reset": "Ripristina"
+      },
+      "fontFamily": {
+        "label": "Carattere dell’interfaccia",
+        "description": "Scegli un carattere installato sul dispositivo. Editor e terminale mantengono i propri caratteri.",
+        "system": "Predefinito di sistema",
+        "other": "Altro carattere…",
+        "placeholder": "Nome del carattere installato",
+        "apply": "Applica",
+        "discover": "Mostra caratteri installati",
+        "loaded": "I caratteri installati sono stati aggiunti all’elenco.",
+        "unavailable": "Impossibile elencare i caratteri qui. Inserisci il nome manualmente."
+      },
+      "textSize": {
+        "label": "Dimensione testo",
+        "description": "Modifica il testo senza cambiare lo zoom dell’interfaccia.",
         "reset": "Ripristina"
       }
     },
