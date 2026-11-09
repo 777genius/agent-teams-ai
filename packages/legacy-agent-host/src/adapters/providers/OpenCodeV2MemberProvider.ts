@@ -107,6 +107,23 @@ export function createOpenCodeV2MemberProvider(
   // Retain TS's discriminated V2 narrowing from the validated selection.
   const profile = selected;
 
+  // Bind original native owner methods BEFORE accessing its policy getter.
+  // A policy getter must not be able to replace the effective permission,
+  // credential or physical-stop callbacks that this capture will trust.
+  // Process custody callbacks are part of the original captured owner. Never
+  // look them up again after a native callback could replace the methods and
+  // redirect physical cleanup or fabricate a stopped PID.
+  // These method identities belong to the original TEST-owned engine. An
+  // asynchronous native callback must not replace its custody, permission,
+  // instruction or credential reader before the next Host admission check.
+  const capturedReadPassword = owned.readPassword.bind(owned);
+  const capturedProbe = owned.probe.bind(owned);
+  const capturedReadNativeCustody = owned.readNativeCustody.bind(owned);
+  const capturedReadNativeEffectivePermissions = owned.readNativeEffectivePermissions.bind(owned);
+  const capturedInstallAndAttestInitialContext = owned.installAndAttestInitialContext.bind(owned);
+  const capturedStopOwned = owned.stopOwned.bind(owned);
+  const capturedConfirmStopped = owned.confirmStopped.bind(owned);
+
   // Capture the required product policy ONCE. A mutable owner object must
   // never turn an original external-directory deny into a later ask.
   const requiredExternalDirectory = owned.requiredExternalDirectory;
@@ -135,19 +152,6 @@ export function createOpenCodeV2MemberProvider(
   let qualificationRevoked = false;
   let wasEverReady = false;
   let pinnedProcessIdentity: Readonly<{ pid: number; startIdentity: string }> | undefined;
-  // Process custody callbacks are part of the original captured owner. Never
-  // look them up again after a native callback could replace the methods and
-  // redirect physical cleanup or fabricate a stopped PID.
-  // These method identities belong to the original TEST-owned engine. An
-  // asynchronous native callback must not replace its custody, permission,
-  // instruction or credential reader before the next Host admission check.
-  const capturedReadPassword = owned.readPassword.bind(owned);
-  const capturedProbe = owned.probe.bind(owned);
-  const capturedReadNativeCustody = owned.readNativeCustody.bind(owned);
-  const capturedReadNativeEffectivePermissions = owned.readNativeEffectivePermissions.bind(owned);
-  const capturedInstallAndAttestInitialContext = owned.installAndAttestInitialContext.bind(owned);
-  const capturedStopOwned = owned.stopOwned.bind(owned);
-  const capturedConfirmStopped = owned.confirmStopped.bind(owned);
   let stopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
   // Re-attestation may temporarily fence readiness without revoking Host authority.

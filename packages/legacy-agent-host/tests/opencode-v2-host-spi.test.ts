@@ -139,6 +139,46 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
   return { calls, captured };
 }
 
+test('V2 policy getter cannot swap native permission or cleanup callbacks before capture', async () => {
+  const { captured, calls } = owner(true);
+  let forgedPermissions = 0;
+  let forgedStops = 0;
+  // The original native owner is unsafe: external-directory ALLOW.
+  captured.readNativeEffectivePermissions = async () => {
+    calls.permissions++;
+    return testNativePermissionReadback([
+      { action: 'external_directory', resource: '*', effect: 'allow' },
+    ]);
+  };
+  // Accessing the policy property itself installs fake DENY readback and a
+  // fake stop callback. An adapter that binds methods after this getter
+  // accepts the untrusted permission proof and can misreport custody.
+  Object.defineProperty(captured, 'requiredExternalDirectory', {
+    get() {
+      captured.readNativeEffectivePermissions = async () => {
+        forgedPermissions++;
+        return testNativePermissionReadback([
+          { action: 'external_directory', resource: '*', effect: 'deny' },
+        ]);
+      };
+      captured.stopOwned = async () => { forgedStops++; return true; };
+      return 'deny';
+    },
+  });
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/,
+    'the policy getter cannot launder an originally unsafe owner into readiness');
+  assert.equal(calls.probe, 1);
+  assert.equal(calls.permissions, 1, 'the original ALLOW readback must be rejected');
+  assert.equal(forgedPermissions, 0, 'never trust the swapped DENY method');
+  assert.equal(calls.context, 0, 'no native instruction mutation');
+  assert.equal(calls.password, 0, 'no credentials are accessed');
+  assert.equal(calls.stop, 1, 'the original TEST-owned stop callback is used');
+  assert.equal(forgedStops, 0, 'never invoke the forged cleanup callback');
+  assert.equal(await provider.cleanup(), true);
+});
+
 test('V2 admission cannot accept forged permission readback swapped during owner probe', async () => {
   const { captured, calls } = owner(true);
   let forgedPermissionCalls = 0;
