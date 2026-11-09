@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { Clock } from 'lucide-react';
 
@@ -32,9 +34,9 @@ function formatDuration(ms: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-function formatTime(isoString: string): string {
+function formatTime(isoString: string, locale?: string): string {
   try {
-    return new Date(isoString).toLocaleString('en-US', {
+    return new Date(isoString).toLocaleString(locale, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -50,7 +52,9 @@ function formatTime(isoString: string): string {
 // Component
 // =============================================================================
 
-export const ScheduleRunRow = ({ run, onClick }: ScheduleRunRowProps): React.JSX.Element => (
+export const ScheduleRunRow = ({ run, onClick }: ScheduleRunRowProps): React.JSX.Element => {
+  const { resolvedLanguage } = useAppTranslation('team');
+  return (
   <div
     className={`flex items-center gap-2 border-t border-[var(--color-border)] px-2 py-1.5 text-[11px]${
       onClick ? 'cursor-pointer transition-colors hover:bg-[var(--color-surface-raised)]' : ''
@@ -73,7 +77,7 @@ export const ScheduleRunRow = ({ run, onClick }: ScheduleRunRowProps): React.JSX
 
     <span className="flex items-center gap-1 text-[var(--color-text-muted)]">
       <Clock className="size-3" />
-      {formatTime(run.startedAt)}
+      {formatTime(run.startedAt, resolvedLanguage)}
     </span>
 
     {run.durationMs != null ? (
@@ -104,4 +108,5 @@ export const ScheduleRunRow = ({ run, onClick }: ScheduleRunRowProps): React.JSX
       </Tooltip>
     ) : null}
   </div>
-);
+  );
+};

@@ -34,13 +34,21 @@ const TIMEZONE_PRESETS = [
   { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
 ] as const;
 
+const supportedTimezones = (): string[] => {
+  try {
+    return typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('timeZone')
+      : [];
+  } catch {
+    return [];
+  }
+};
+
 const TIMEZONE_OPTIONS = [
   ...TIMEZONE_PRESETS,
-  ...(typeof Intl.supportedValuesOf === 'function'
-    ? Intl.supportedValuesOf('timeZone')
-        .filter((zone) => !TIMEZONE_PRESETS.some((preset) => preset.value === zone))
-        .map((zone) => ({ value: zone, label: zone }))
-    : []),
+  ...supportedTimezones()
+    .filter((zone) => !TIMEZONE_PRESETS.some((preset) => preset.value === zone))
+    .map((zone) => ({ value: zone, label: zone })),
 ];
 
 const WARMUP_OPTIONS = [

@@ -144,7 +144,7 @@ const ScheduleListItem = ({
           </TooltipTrigger>
           {schedule.nextRunAt ? (
             <TooltipContent side="top" className="text-xs">
-              {new Date(schedule.nextRunAt).toLocaleString()}
+              {new Date(schedule.nextRunAt).toLocaleString(resolvedLanguage)}
             </TooltipContent>
           ) : null}
         </Tooltip>
