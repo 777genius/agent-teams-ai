@@ -67,7 +67,7 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
     const validProof = (proof: OpenCodeVisibleReplyProof | null): proof is OpenCodeVisibleReplyProof =>
       Boolean(proof &&
         proof.inboxName.toLowerCase() === destination.toLowerCase() &&
-        proof.message.to.trim().toLowerCase() === destination.toLowerCase() &&
+        proof.message.to?.trim().toLowerCase() === destination.toLowerCase() &&
         proof.message.from.trim().toLowerCase() === input.memberName.trim().toLowerCase() &&
         proof.message.relayOfMessageId === record.inboxMessageId &&
         proof.message.source === 'runtime_delivery' &&
