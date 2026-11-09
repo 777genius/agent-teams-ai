@@ -344,15 +344,34 @@ deleted-task detail** without reviving a task or changing its original owner.
 This is Stage 1 source-test evidence, **not** a new-core API or native
 Host+Electron qualification.
 
-**Still open:** bounded task/deleted-task lists, nested
-comment/history/work/review pages and full-snapshot consumers remain
-incomplete. The retained `getTask` fallback still selects the active
-snapshot first; `list/getData/getAllTasks/getTask` may therefore remain
-blocked by an over-512-KiB snapshot. Exact-head Stage 1 CI/CodeQL and the
-original Host+Electron oversized-history E2E must be judged from their own
-receipts, not inferred from source tests. Preserve the 512 KiB snapshot cap,
-captured owner, no-UNKNOWN-replay, fail-closed page revisions and read-only
-archive.
+**Stage 1 bounded full-Team snapshot pages (9 Nov 2026, current
+[source `2ad146ef`](https://github.com/777genius/agent-teams-ai/commit/2ad146ef410a8acc916d30290ffc827c5d005e17)):**
+The original Owner now provides signed, revision-bound `team.snapshot`
+continuation of tasks, messages, Kanban task entries, reviewers and column
+ordering, with a 384-KiB page ceiling. Desktop
+[`readHostPagedSnapshot`](https://github.com/777genius/agent-teams-ai/blob/2ad146ef410a8acc916d30290ffc827c5d005e17/src/features/agent-backend/renderer/readHostPagedSnapshot.ts)
+assembles up to 128 Owner pages under the **captured Host handle** and
+current-scope/read-order fences, rejects repeated cursors and changes to
+the Team revision or feed identity, and publishes the complete snapshot
+only after all fragments validate. The ordinary
+`list/getData/getAllTasks/getTask` Host reader now calls this path rather
+than requiring a single over-512-KiB product snapshot. The existing
+[`hostKanbanPagination.test.ts`](https://github.com/777genius/agent-teams-ai/blob/2ad146ef410a8acc916d30290ffc827c5d005e17/test/features/agent-backend/hostKanbanPagination.test.ts)
+and Owner [snapshot fixtures](https://github.com/777genius/agent-teams-ai/blob/2ad146ef410a8acc916d30290ffc827c5d005e17/packages/legacy-agent-host/tests/team-snapshot.test.ts)
+cover the bounded multi-page source behavior; do **not** count them as
+new-core or packaged native/Electron E2E.
+
+**Still open for M03/M04/M11/M16:** a single record exceeding the page
+budget fails closed; the finite 128-page reader budget, nested
+comment/history/work/review paging, and original packaged >512-KiB
+Host+UI receipts require separate qualification. The retained deleted-task
+`task.get` fallback still must preserve old owner and never revive a
+deleted task. New Team owners must prove paged completion, Kanban
+reconstruction, single-writer identity, cursor/revision invalidation and
+**no partially published product snapshot** when an intermediate page
+fails. This source improvement does **not** provide an Orchestrator
+writer, Runtime Host, stage-2 adapter or M01–M19 parity. Preserve
+captured owner, no-UNKNOWN-replay and read-only archive.
 
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution

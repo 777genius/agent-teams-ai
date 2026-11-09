@@ -6,6 +6,7 @@ import { test } from 'node:test';
 
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
+import { pageOwnerSnapshot } from '../dist/team/pageOwnerSnapshot.js';
 
 test('snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-snapshot-')));
@@ -57,7 +58,118 @@ test('snapshot reads persisted authority/roster/tasks/kanban and only permitted 
 });
 
 
-test('large legitimate inbox history preserves bounded authorized change feed, not full snapshot access', (t) => {
+test('large retained task inventory stays readable through all bounded original Owner pages', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-tasks-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({
+    root,
+    binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice', name: 'alice', role: 'member' }],
+    grants: [{ principalId: 'human', memberName: 'user',
+      permissions: ['read', 'admin', 'task.write'] }],
+  });
+  const reader = owner.connect('human');
+  const expected = new Set<string>();
+  for (let index = 0; index < 100; index++) {
+    const commandId = `TEST-task-${index}`;
+    const subject = `TEST inventory task ${index}`;
+    reader.execute({
+      commandId,
+      operation: 'task.create',
+      payload: { subject, description: `description-${index}-${'x'.repeat(6000)}` },
+    });
+    expected.add(subject);
+  }
+  const first = reader.readSnapshot() as {
+    tasks: { subject: string; description: string }[];
+    revision: string;
+    nextCursor: string | null;
+  };
+  assert.ok(first.nextCursor, 'large persisted task history must cross more than one page');
+  const observed = [...first.tasks];
+  let cursor: string | null = first.nextCursor;
+  let pages = 1;
+  assert.ok(Buffer.byteLength(JSON.stringify(first)) <= 384 * 1024);
+  while (cursor) {
+    const page = reader.readSnapshot({ cursor }) as typeof first;
+    assert.equal(page.revision, first.revision);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 384 * 1024);
+    observed.push(...page.tasks);
+    cursor = page.nextCursor;
+    pages++;
+    assert.ok(pages <= 128, 'continuation must terminate within bounded page limit');
+  }
+  assert.equal(observed.length, expected.size);
+  assert.equal(new Set(observed.map((row) => row.subject)).size, expected.size);
+  assert.deepEqual(new Set(observed.map((row) => row.subject)), expected);
+  assert.ok(observed.every((row) => row.description.length > 6000));
+  assert.equal(reader.readChanges() !== undefined, true);
+});
+
+test('Kanban entries and column ordering survive both Desktop and MCP page budgets', () => {
+  const ids = Array.from({ length: 6000 }, (_, index) => `TEST-task-${index}`);
+  const positions = Object.fromEntries(ids.map((id, index) => [id, {
+    column: index < 3000 ? 'review' : 'approved',
+    movedAt: '2026-01-01T00:00:00Z',
+  }]));
+  const board = {
+    teamName: 'TEST-team',
+    reviewers: ['alice'],
+    tasks: positions,
+    columnOrder: { review: ids.slice(0, 3000), approved: ids.slice(3000) },
+  };
+  const snapshot = {
+    teamName: 'TEST-team',
+    revision: 'a'.repeat(64),
+    members: [],
+    tasks: [],
+    messages: [],
+    kanbanState: board,
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(board)) > 384 * 1024);
+  const originalBytes = JSON.stringify(snapshot);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    let cursor: string | undefined;
+    const entries: Record<string, unknown> = {};
+    const reviewers: string[] = [];
+    const order = { review: [] as string[], approved: [] as string[] };
+    let pages = 0;
+    do {
+      const page = pageOwnerSnapshot({
+        principalId: 'TEST-authorized',
+        key: 'TEST-owned-cursor-key',
+        snapshot,
+        maxBytes,
+        ...(cursor ? { cursor } : {}),
+      }) as {
+        kanbanState: {
+          reviewers: string[];
+          tasks: Record<string, unknown>;
+          columnOrder: { review: string[]; approved: string[] };
+        };
+        nextCursor: string | null;
+      };
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      for (const [key, value] of Object.entries(page.kanbanState.tasks)) {
+        assert.equal(Object.hasOwn(entries, key), false);
+        entries[key] = value;
+      }
+      reviewers.push(...page.kanbanState.reviewers);
+      order.review.push(...page.kanbanState.columnOrder.review);
+      order.approved.push(...page.kanbanState.columnOrder.approved);
+      cursor = page.nextCursor ?? undefined;
+      pages++;
+      assert.ok(pages <= 128);
+    } while (cursor);
+    assert.ok(pages > 1);
+    assert.deepEqual(entries, positions);
+    assert.deepEqual(reviewers, board.reviewers);
+    assert.deepEqual(order, board.columnOrder);
+  }
+  assert.equal(JSON.stringify(snapshot), originalBytes);
+});
+
+test('large legitimate inbox history preserves bounded snapshots and authorized change feed', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-feed-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const owner = createFilesystemTeamOwner({
@@ -86,11 +198,31 @@ test('large legitimate inbox history preserves bounded authorized change feed, n
   }));
   writeFileSync(inbox, JSON.stringify(messages));
   assert.ok(Buffer.byteLength(JSON.stringify(messages)) > 512 * 1024);
-  assert.throws(
-    () => reader.readSnapshot(),
-    (error) => error instanceof TeamOwnerError && error.code === 'hold',
-    'the full snapshot cap is never bypassed'
-  );
+  const firstSnapshot = reader.readSnapshot() as {
+    revision: string;
+    messages: typeof messages;
+    nextCursor: string | null;
+  };
+  assert.ok(firstSnapshot.nextCursor, 'bounded initial page must offer continuation');
+  const collected = [...firstSnapshot.messages.map((row) => row.messageId)];
+  let continuation: string | null = firstSnapshot.nextCursor;
+  let pageCount = 1;
+  assert.ok(Buffer.byteLength(JSON.stringify(firstSnapshot)) < 384 * 1024);
+  while (continuation) {
+    const page = reader.readSnapshot({ cursor: continuation }) as typeof firstSnapshot;
+    assert.equal(page.revision, firstSnapshot.revision);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 384 * 1024);
+    collected.push(...page.messages.map((row) => row.messageId));
+    continuation = page.nextCursor;
+    pageCount++;
+  }
+  assert.ok(pageCount > 1);
+  assert.equal(collected.length, messages.length);
+  assert.equal(new Set(collected).size, messages.length);
+  assert.throws(() => other.readSnapshot({ cursor: firstSnapshot.nextCursor! }), (error) =>
+    error instanceof TeamOwnerError && error.code === 'hold');
+  assert.throws(() => reader.readSnapshot({ cursor: '1.' + '0'.repeat(64) }), (error) =>
+    error instanceof TeamOwnerError && error.code === 'hold');
   const initial = reader.readChanges() as {
     cursor: string;
     events: unknown[];
@@ -109,6 +241,8 @@ test('large legitimate inbox history preserves bounded authorized change feed, n
     read: false,
   });
   writeFileSync(inbox, JSON.stringify(messages));
+  assert.throws(() => reader.readSnapshot({ cursor: firstSnapshot.nextCursor! }), (error) =>
+    error instanceof TeamOwnerError && error.code === 'hold', 'stale cursor is rejected');
   const changed = reader.readChanges(initial.cursor) as {
     events: { kind: string }[];
     gap?: { reason: string };
@@ -152,8 +286,10 @@ test('owner-side pages retain every message beyond 512 KiB under revision and pr
   }));
   writeFileSync(inbox, JSON.stringify(messages));
   assert.ok(Buffer.byteLength(JSON.stringify(messages)) > 512 * 1024);
-  assert.throws(() => reader.readSnapshot(), (error) =>
-    error instanceof TeamOwnerError && error.code === 'hold');
+  const snapshotPage = reader.readSnapshot() as { messages: unknown[]; nextCursor: string | null };
+  assert.ok(snapshotPage.nextCursor);
+  assert.ok(snapshotPage.messages.length < messages.length);
+  assert.ok(Buffer.byteLength(JSON.stringify(snapshotPage)) < 384 * 1024);
   const first = reader.readMessagesPage({ limit: 20 }) as {
     revision: string; messages: typeof messages; nextCursor: string | null; hasMore: boolean;
   };

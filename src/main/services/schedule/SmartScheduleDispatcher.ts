@@ -5,7 +5,6 @@
  * Legacy schedules never reach this class.
  */
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
-
 import { isTeamTaskDeleted, isTeamTaskFinishedForDependency } from '@shared/utils/teamTaskState';
 
 import type { ExecutionRequest, ScheduledTaskResult } from './ScheduledTaskExecutor';

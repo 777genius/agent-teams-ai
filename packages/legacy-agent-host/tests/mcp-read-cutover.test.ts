@@ -185,6 +185,55 @@ test("bound canonical queues/comments/board reads survive reopen and produce no 
   );
 });
 
+test("team_get pages retained >256 KiB task history within MCP response limits", (t) => {
+  const f = fixture(t);
+  for (let index = 0; index < 100; index++) {
+    f.user.execute({
+      commandId: `TEST-page-task-${index}`,
+      operation: "task.create",
+      payload: {
+        subject: `Retained task ${index}`,
+        description: `desc-${index}-${"x".repeat(3500)}`,
+      },
+    });
+  }
+  const original = f.user.readSnapshot() as { tasks: unknown[]; nextCursor: string | null };
+  // The Owner page may itself have a continuation; MCP must remain smaller.
+  assert.ok(Buffer.byteLength(JSON.stringify(original)) > 256 * 1024);
+
+  const tools = createTeamMcpTools(f.user);
+  const first = value(tools.call("team_get", {})) as {
+    tasks: { subject: string }[];
+    nextCursor: string | null;
+  };
+  assert.ok(first.nextCursor, "MCP must expose continuation for large original history");
+  const all = [...first.tasks];
+  let cursor: string | null = first.nextCursor;
+  let pages = 1;
+  while (cursor) {
+    const page = value(tools.call("team_get", { cursor })) as typeof first;
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 128 * 1024);
+    all.push(...page.tasks);
+    cursor = page.nextCursor;
+    pages++;
+    assert.ok(pages <= 128);
+  }
+  assert.ok(pages > 1);
+  assert.equal(all.length, 100);
+  assert.equal(new Set(all.map((task) => task.subject)).size, 100);
+  assert.throws(() => tools.call("team_get", { cursor: "invalid" }));
+  const other = createTeamMcpTools(f.owner.connect("alice"));
+  assert.throws(() => other.call("team_get", { cursor: first.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold");
+  f.user.execute({
+    commandId: "TEST-later-task",
+    operation: "task.create",
+    payload: { subject: "later task invalidates original continuation" },
+  });
+  assert.throws(() => tools.call("team_get", { cursor: first.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold");
+});
+
 test("existing MCP create and owner-clear expose canonical payload and exact conjunctive inventory policy", async (t) => {
   const f = fixture(t);
   const tools = createTeamMcpTools(f.user);

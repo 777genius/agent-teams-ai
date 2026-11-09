@@ -251,6 +251,12 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
   const teamName = text(source.teamName);
   const revision = text(source.revision);
   if (!/^[a-f0-9]{64}$/.test(revision)) throw new Error('Invalid snapshot revision');
+  const nextCursor = source.nextCursor;
+  if (
+    nextCursor !== undefined &&
+    nextCursor !== null &&
+    (typeof nextCursor !== 'string' || !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(nextCursor))
+  ) throw new Error('Invalid snapshot page cursor');
   const configurationRevision = source.configurationRevision;
   if (
     configurationRevision !== undefined &&
@@ -263,6 +269,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
   return {
     teamName,
     revision,
+    ...(nextCursor === undefined ? {} : { nextCursor }),
     ...(source.runtimeNeverLaunched === true ? { runtimeNeverLaunched: true as const } : {}),
     ...(source.lifecycle === undefined
       ? {}

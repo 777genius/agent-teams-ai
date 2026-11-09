@@ -42,9 +42,11 @@ export function createReadMcpTools(
       : []),
     defineTool(
       "team_get",
-      "Read the current captured Team product snapshot.",
-      empty,
-      () => reads.getTeam(),
+      "Read a bounded page of this captured Team snapshot. Pass nextCursor as cursor to continue.",
+      z.strictObject({
+        cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
+      }),
+      ({ cursor }) => reads.getTeam(cursor),
       false,
     ),
     defineTool(

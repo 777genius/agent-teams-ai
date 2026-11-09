@@ -632,6 +632,52 @@ describe('ordinary Host team read selection', () => {
     );
     expect(await teams.getData('same-display-team')).toEqual({ legacy: true });
   });
+  it('assembles bounded owner pages before publishing teams and rejects torn revisions', async () => {
+    const f = fixture();
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    const cursor = '1.' + 'a'.repeat(64);
+    const secondTask = {
+      ...f.snapshot.tasks[0],
+      id: '2',
+      subject: 'Task from continued page',
+      status: 'in_progress' as const,
+    };
+    const first = {
+      ...f.snapshot,
+      tasks: f.snapshot.tasks,
+      messages: f.snapshot.messages.slice(0, 1),
+      nextCursor: cursor,
+    };
+    const second = {
+      ...f.snapshot,
+      tasks: [secondTask],
+      messages: f.snapshot.messages.slice(1, 2),
+      nextCursor: null,
+    };
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'team.snapshot'
+        ? { ok: true, value: request.payload.cursor ? second : first }
+        : invoke(request)
+    );
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    const data = await teams.getData(f.key);
+    expect(data.tasks.map((task) => task.subject)).toEqual([
+      'Actual task', 'Task from continued page',
+    ]);
+    expect(data.members[0]?.taskCount).toBe(2);
+    expect((await teams.getAllTasks()).map((task) => task.id)).toEqual(['1', '2']);
+    expect(f.backend.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'team.snapshot', payload: { cursor } })
+    );
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'team.snapshot'
+        ? { ok: true, value: request.payload.cursor ? { ...second, revision: 'b'.repeat(64) } : first }
+        : invoke(request)
+    );
+    await expect(teams.getData(f.key)).rejects.toThrow('Host team changed during paged read');
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
+
   it('keeps original owner-qualified refs, global board identity and cursor pages', async () => {
     const f = fixture();
     const teams = createHostTeamsApi(f.legacy, f.backend);
@@ -793,6 +839,9 @@ describe('ordinary Host team read selection', () => {
       ],
     };
     const projected = projectTeamSnapshot(raw);
+    const continuation = '1.' + 'a'.repeat(64);
+    expect(projectTeamSnapshot({ ...raw, nextCursor: continuation }).nextCursor).toBe(continuation);
+    expect(() => projectTeamSnapshot({ ...raw, nextCursor: 'invalid' })).toThrow('page cursor');
     expect(projected.messages[0]).toMatchObject({ summary: 'Read-only', actionMode: 'ask' });
     expect(projected.messages[0]!.attachments).toEqual([
       { id: 'TEST-image', filename: 'TEST-native-chat.png', mimeType: 'image/png', size: 90 },
