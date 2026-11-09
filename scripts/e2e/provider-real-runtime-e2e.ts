@@ -392,7 +392,9 @@ try {
       }
     } finally {
       // Always delete the isolated test home, even if evidence writing fails.
-      fs.rmSync(testRoot, { recursive: true, force: true });
+      // Windows may retain a released native OpenCode handle briefly after exit.
+      // Retry only bounded transient filesystem locks; never swallow cleanup failure.
+      fs.rmSync(testRoot, { recursive: true, force: true, maxRetries: 8, retryDelay: 300 });
     }
   }
   console.log('real-runtime-provider-e2e: ' +
