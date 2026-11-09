@@ -76,7 +76,7 @@ const ScheduleListItem = ({
   onTeamClick,
   teamColor,
 }: ScheduleListItemProps): React.JSX.Element => {
-  const { t } = useAppTranslation('common');
+  const { t, resolvedLanguage } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
@@ -101,7 +101,7 @@ const ScheduleListItem = ({
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
           aria-expanded={expanded}
-          aria-label={schedule.label || getCronDescription(schedule.cronExpression)}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
         >
           {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </button>
@@ -113,12 +113,12 @@ const ScheduleListItem = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-[var(--color-text)]">
-              {schedule.label || getCronDescription(schedule.cronExpression)}
+              {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
           </div>
           {schedule.label ? (
             <span className="text-xs text-[var(--color-text-muted)]">
-              {getCronDescription(schedule.cronExpression)}
+              {getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
           ) : null}
           <ScheduleAssignmentSummary schedule={schedule} />
@@ -138,7 +138,7 @@ const ScheduleListItem = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="shrink-0 text-xs text-[var(--color-text-muted)]">
-              {t('schedules.item.nextRun', { value: formatNextRun(schedule.nextRunAt) })}
+              {t('schedules.item.nextRun', { value: formatNextRun(schedule.nextRunAt, resolvedLanguage) })}
             </span>
           </TooltipTrigger>
           {schedule.nextRunAt ? (
@@ -255,7 +255,7 @@ const ScheduleListItem = ({
 // =============================================================================
 
 export const SchedulesView = (): React.JSX.Element => {
-  const { t } = useAppTranslation('common');
+  const { t, resolvedLanguage } = useAppTranslation('common');
   const {
     schedules,
     schedulesLoading,
@@ -322,7 +322,7 @@ export const SchedulesView = (): React.JSX.Element => {
           (s.label ?? '').toLowerCase().includes(query) ||
           s.teamName.toLowerCase().includes(query) ||
           s.launchConfig.prompt.toLowerCase().includes(query) ||
-          getCronDescription(s.cronExpression).toLowerCase().includes(query)
+          getCronDescription(s.cronExpression, resolvedLanguage).toLowerCase().includes(query)
       );
     }
 
@@ -341,7 +341,7 @@ export const SchedulesView = (): React.JSX.Element => {
       if (b.nextRunAt) return 1;
       return 0;
     });
-  }, [schedules, statusFilter, teamFilter, searchQuery]);
+  }, [schedules, statusFilter, teamFilter, searchQuery, resolvedLanguage]);
 
   // Counts per status
   const statusCounts = useMemo(() => {
