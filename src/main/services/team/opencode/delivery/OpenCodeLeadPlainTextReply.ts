@@ -78,7 +78,9 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
           text: proof.message.text, summary: proof.message.summary,
         }).sufficient);
 
-    if (validProof(input.visibleReply ?? null)) {
+    if (validProof(input.visibleReply ?? null) &&
+      record.visibleReplyInbox?.trim().toLowerCase() === destination.toLowerCase() &&
+      record.visibleReplyMessageId === input.visibleReply?.message.messageId) {
       return { ledgerRecord: record, visibleReply: input.visibleReply! };
     }
     // Do not invent a new reply while a lead-bound tool receipt is unresolved.
