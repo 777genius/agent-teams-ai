@@ -240,15 +240,14 @@ export class SchedulerService {
     // Reschedule cron job if expression or timezone changed
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
+    if (reschedule && updated.status === 'active') {
+      updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
+    }
+    await this.repository.saveSchedule(updated);
     if (reschedule) {
       this.removeCronJob(id);
-      if (updated.status === 'active') {
-        updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-        this.createCronJob(updated);
-      }
+      if (updated.status === 'active') this.createCronJob(updated);
     }
-
-    await this.repository.saveSchedule(updated);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: updated.id,

@@ -81,7 +81,7 @@ const ScheduleRow = ({
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Header row */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
         {/* Expand toggle */}
         <button
           type="button"
@@ -94,14 +94,14 @@ const ScheduleRow = ({
         </button>
 
         {/* Info */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_12rem]">
           <div className="flex items-center gap-2">
             <span className="truncate text-xs font-medium text-[var(--color-text)]">
               {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
             <ScheduleStatusBadge status={schedule.status} />
           </div>
-          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
             {schedule.label ? <span>{getCronDescription(schedule.cronExpression, resolvedLanguage)}</span> : null}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -121,7 +121,7 @@ const ScheduleRow = ({
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

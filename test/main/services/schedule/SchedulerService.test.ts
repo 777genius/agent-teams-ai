@@ -253,6 +253,26 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('keeps the timer and record intact when persistence rejects a valid edit', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void
+    }, 'removeCronJob');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.updateSchedule(schedule.id, { cronExpression: '0 10 * * *' }))
+      .rejects.toThrow('storage unavailable');
+    expect(await service.getSchedule(schedule.id)).toEqual(schedule);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
   it('keeps the previously active record unchanged when a timing edit fails', async () => {
     const service = createService();
     const previous = await service.createSchedule({

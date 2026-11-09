@@ -11,7 +11,13 @@ export function formatNextRun(isoString?: string, locale?: string): string {
     const now = Date.now();
     const diffMs = date.getTime() - now;
 
-    if (diffMs < 0) return 'overdue';
+    const relative = new Intl.RelativeTimeFormat(locale ?? 'en', {
+      numeric: 'always',
+      style: 'short',
+    });
+    if (diffMs < 0) {
+      return relative.format(Math.min(-1, Math.floor(diffMs / 60_000)), 'minute');
+    }
 
     const hours = Math.floor(diffMs / 3600_000);
     const minutes = Math.floor((diffMs % 3600_000) / 60_000);
@@ -25,9 +31,13 @@ export function formatNextRun(isoString?: string, locale?: string): string {
         hour12: false,
       });
     }
-    if (hours > 0) return `in ${hours}h ${minutes}m`;
-    if (minutes > 0) return `in ${minutes}m`;
-    return 'soon';
+    if (hours > 0) {
+      const remaining = minutes > 0
+        ? ` ${new Intl.NumberFormat(locale, { style: 'unit', unit: 'minute', unitDisplay: 'short' }).format(minutes)}`
+        : '';
+      return `${relative.format(hours, 'hour')}${remaining}`;
+    }
+    return relative.format(minutes, 'minute');
   } catch {
     return isoString;
   }

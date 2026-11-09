@@ -94,7 +94,7 @@ const ScheduleListItem = ({
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         {/* Expand toggle */}
         <button
           type="button"
@@ -110,7 +110,7 @@ const ScheduleListItem = ({
         <ScheduleStatusBadge status={schedule.status} />
 
         {/* Label & cron description */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_15rem]">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-[var(--color-text)]">
               {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
@@ -127,11 +127,11 @@ const ScheduleListItem = ({
         {/* Team badge */}
         <button
           type="button"
-          className="flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
+          className="flex min-w-0 max-w-full flex-[0_1_14rem] items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
           onClick={() => onTeamClick(schedule.teamName)}
         >
           <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: teamColor }} />
-          {schedule.teamName}
+          <span className="min-w-0 truncate">{schedule.teamName}</span>
         </button>
 
         {/* Next run */}
@@ -154,7 +154,7 @@ const ScheduleListItem = ({
         </span>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -394,7 +394,7 @@ export const SchedulesView = (): React.JSX.Element => {
     <div className="flex h-full flex-col overflow-hidden bg-[var(--color-surface)]">
       {/* Header */}
       <div className="shrink-0 border-b border-[var(--color-border)] px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <Calendar className="size-5 text-[var(--color-text-muted)]" />
             <h1 className="text-lg font-semibold text-[var(--color-text)]">
@@ -414,9 +414,9 @@ export const SchedulesView = (): React.JSX.Element => {
 
         {/* Filters row */}
         {schedules.length > 0 && (
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             {/* Search */}
-            <div className="relative max-w-xs flex-1">
+            <div className="relative min-w-[12rem] max-w-xs flex-1">
               <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <Input
                 placeholder={t('schedules.searchPlaceholder')}
@@ -427,7 +427,7 @@ export const SchedulesView = (): React.JSX.Element => {
             </div>
 
             {/* Status filter chips */}
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               {STATUS_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}

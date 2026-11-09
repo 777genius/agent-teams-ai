@@ -692,14 +692,70 @@ async function exerciseScheduleUx(client, fixture, log) {
     await captureScreenshot(client, fixture, 'schedules-list-' + theme);
   }
   await client.evaluate("document.documentElement.style.zoom = '2'");
+  const zoomActionsVisible = await client.evaluate(`(() => {
+    const row = Array.from(document.querySelectorAll('div.rounded-lg'))
+      .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+        el.querySelector('button[aria-label="More actions"]'));
+    const button = row?.querySelector('button[aria-label="More actions"]');
+    const r = button?.getBoundingClientRect();
+    return !!r && r.width > 0 && r.left >= 0 && r.right <= window.innerWidth;
+  })()`);
+  assert(zoomActionsVisible, 'Schedule actions overflowed viewport at 200% CSS zoom');
   await captureScreenshot(client, fixture, 'schedules-list-css-zoom-200');
   await client.evaluate("document.documentElement.style.zoom = ''");
 
-  log('destructive action demands confirmation and Cancel preserves the record');
+  log('edit the real schedule without migrating its task-first semantics');
   const more = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
-    "row.querySelector('button[aria-label=\"More actions\"]'))" +
-    "?.querySelector('button[aria-label=\"More actions\"]')";
+    "row.querySelector('button[aria-label=\\\"More actions\\\"]'))" +
+    "?.querySelector('button[aria-label=\\\"More actions\\\"]')";
+  await client.click(more);
+  await client.click(createButtonExpression('Edit'));
+  await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
+    'existing schedule editor loaded', 45_000);
+  await client.fill('input[placeholder="0 9 * * 1-5"]', '0 * * * *');
+  await client.waitFor(createButtonExpression('Save Changes'), 'edited schedule can save');
+  await captureScreenshot(client, fixture, 'schedules-edit');
+  await client.click(createButtonExpression('Save Changes'));
+  await client.waitFor("!document.querySelector('[role=dialog]')", 'schedule edit persisted');
+  const afterEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(afterEdit?.cronExpression, '0 * * * *');
+  assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
+
+  log('run now and inspect the actual schedule run history');
+  const runNow = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-label=\\\"Run now\\\"]'))" +
+    "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
+  await client.click(runNow);
+  await client.waitFor(
+    "document.querySelector('[role=status]')?.textContent?.includes('Run started')",
+    'run-now feedback visible', 45_000);
+  const createdRuns = await client.evaluate(
+    'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');
+  assert(createdRuns.length > 0, 'Run now created no persisted run');
+  const expand = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-expanded]'))?.querySelector('button[aria-expanded]')";
+  await client.click(expand);
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('div.rounded-lg')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.querySelector('div[role=button]'))",
+    'run history row visible');
+  await captureScreenshot(client, fixture, 'schedules-run-history');
+  await client.click("Array.from(document.querySelectorAll('div.rounded-lg'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('div[role=button]'))?.querySelector('div[role=button]')");
+  await client.waitFor(
+    "document.querySelector('[role=dialog]')?.textContent?.includes('Run Log')",
+    'run log dialog opened');
+  await captureScreenshot(client, fixture, 'schedules-run-log');
+  await client.click("Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Close')");
+
+  log('destructive action demands confirmation and Cancel preserves the record');
   await client.click(more);
   await client.click(createButtonExpression('Delete'));
   await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",

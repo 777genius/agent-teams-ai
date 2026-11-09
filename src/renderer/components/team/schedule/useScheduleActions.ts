@@ -12,6 +12,7 @@ export type ScheduleActionFeedback = { kind: 'error' | 'success'; message: strin
 /** Same deletion safety and visible failure semantics in both schedule lists. */
 export function useScheduleActions() {
   const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const { schedules, deleteSchedule, pauseSchedule, resumeSchedule, triggerNow } =
     useStore(useShallow((s) => ({
       schedules: s.schedules,
@@ -32,6 +33,7 @@ export function useScheduleActions() {
         title: t('schedule.actions.delete'),
         message: t('schedule.deleteConfirmation', { label }),
         confirmLabel: t('schedule.actions.delete'),
+        cancelLabel: tCommon('actions.cancel'),
         variant: 'danger',
       });
       if (!accepted) return;
