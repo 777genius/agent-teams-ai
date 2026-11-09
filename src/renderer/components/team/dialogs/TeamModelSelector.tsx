@@ -1070,6 +1070,8 @@ export interface TeamModelSelectorProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   value: string;
   onValueChange: (value: string) => void;
+  /** Automatic catalog changes never count as manual user edits. */
+  onNormalizedValueChange?: (value: string) => void;
   preserveSelectedModel?: boolean;
   limitContext?: boolean;
   projectPath?: string | null;
@@ -1094,6 +1096,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onProviderChange,
   value,
   onValueChange,
+  onNormalizedValueChange,
   preserveSelectedModel = false,
   limitContext = false,
   projectPath = null,
@@ -1711,19 +1714,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   ]);
 
   useEffect(() => {
-    if (isInspectingInactiveProvider) {
-      return;
-    }
-    if (shouldDeferModelNormalization) {
-      return;
-    }
+    if (isInspectingInactiveProvider) return;
+    if (shouldDeferModelNormalization) return;
     if (normalizedValue !== value) {
-      onValueChange(normalizedValue);
+      (onNormalizedValueChange ?? onValueChange)(normalizedValue);
     }
   }, [
     isInspectingInactiveProvider,
     normalizedValue,
     onValueChange,
+    onNormalizedValueChange,
     shouldDeferModelNormalization,
     value,
   ]);

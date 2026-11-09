@@ -1521,7 +1521,12 @@
       "leadDefault": "团队负责人（默认）",
       "agentDescription": "团队未运行时单独启动智能体；团队运行时创建并分配任务。",
       "teamDescription": "团队未运行时启动已保存的团队；运行时向负责人分配任务。使用已保存的提供商和项目设置。",
-      "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。"
+      "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。",
+      "taskFirstAgentDescription": "如有需要，先安全启动团队，再将看板任务交给所选队友。不会中断正在忙碌的智能体。",
+      "taskFirstTeamDescription": "如有需要，先安全启动团队，再将协调任务交给负责人。不会中断正在进行的工作。",
+      "taskFirstTarget": "分配给",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "我已检查保存的旧提示并分离长期指令。保留旧文本，但不要在定时任务中运行。"
     },
     "title": {
       "createSchedule": "创建计划任务",
@@ -2096,7 +2101,8 @@
       "stillRunning": "任务仍在运行…",
       "loadingLogs": "正在加载日志…",
       "errors": "错误",
-      "close": "关闭"
+      "close": "关闭",
+      "openTask": "打开任务"
     },
     "cron": {
       "expression": "克朗表达式",

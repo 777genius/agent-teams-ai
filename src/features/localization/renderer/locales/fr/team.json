@@ -1521,7 +1521,12 @@
       "leadDefault": "Responsable de l’équipe (par défaut)",
       "agentDescription": "Si l’équipe est arrêtée, lance un agent autonome ; sinon, attribue une tâche.",
       "teamDescription": "Si l’équipe est arrêtée, la démarre ; sinon, attribue une tâche au responsable. Utilise les paramètres enregistrés.",
-      "teamPathMissing": "Enregistrez le dossier du projet de l’équipe avant de planifier son démarrage."
+      "teamPathMissing": "Enregistrez le dossier du projet de l’équipe avant de planifier son démarrage.",
+      "taskFirstAgentDescription": "Le coéquipier choisi reçoit une tâche sur le tableau après le démarrage sécurisé de l'équipe, si nécessaire. Les agents occupés ne sont pas interrompus.",
+      "taskFirstTeamDescription": "Le responsable reçoit une tâche de coordination après le démarrage sécurisé de l'équipe, si nécessaire. Le travail en cours n'est pas interrompu.",
+      "taskFirstTarget": "Attribuer à",
+      "historicalPromptReviewRequired": "Vérifiez les anciennes instructions ponctuelles de l'équipe avant de planifier. Supprimez ou séparez d'abord l'ancien prompt de lancement.",
+      "historicalPromptAcknowledged": "J'ai vérifié l'ancien prompt et séparé les instructions durables. Conserver l'ancien texte sans l'exécuter pour cette planification."
     },
     "title": {
       "createSchedule": "Créer un calendrier",
@@ -2096,7 +2101,8 @@
       "stillRunning": "La tâche est toujours en cours...",
       "loadingLogs": "Chargement des journaux...",
       "errors": "Erreurs",
-      "close": "Fermer"
+      "close": "Fermer",
+      "openTask": "Ouvrir la tâche"
     },
     "cron": {
       "expression": "Expression de couronne",
