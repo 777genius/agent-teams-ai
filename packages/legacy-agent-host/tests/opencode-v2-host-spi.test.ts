@@ -1239,6 +1239,37 @@ test('V2 native-effective allow cannot satisfy captured deny, even after a succe
   assert.deepEqual(calls, { probe: 1, permissions: 1, context: 0, password: 0, stop: 1, stopped: 1 });
 });
 
+test('V2 revoked Host lease cannot read a checkpoint after async configuration selection', async () => {
+  const restored = { ...request(), checkpointRef: 'TEST-stale-checkpoint' };
+  const input = context(v2Profile(), restored);
+  const { captured, calls } = owner(true);
+  let authorized = true;
+  let revocationQueued = false;
+  let storageReads = 0;
+  input.isCurrent = () => authorized;
+  input.canAllocate = () => {
+    if (authorized && !revocationQueued) {
+      revocationQueued = true;
+      // Config resolution is async: native D reads the checkpoint only after
+      // this microtask. The previous Host bridge called storage without a
+      // fresh lease check, even though native admission later failed.
+      queueMicrotask(() => { authorized = false; });
+    }
+    return authorized;
+  };
+  input.readCheckpoint = async () => {
+    storageReads++;
+    return { version: 1, engine: 'opencode-v2' };
+  };
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  await assert.rejects(() => provider.factory.open(restored),
+    /opencode.driver.checkpoint-missing/);
+  assert.equal(revocationQueued, true, 'race must occur after config selection');
+  assert.equal(storageReads, 0, 'revoked Host lease must not read even invalid checkpoint bytes');
+  assert.deepEqual(calls, { probe: 0, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
+  assert.equal(await provider.cleanup(), true);
+});
+
 test('V1 checkpoint identity is rejected before V2 native probe or permission readback', async () => {
   const { captured, calls } = owner(true);
   const restoredRequest = { ...request(), checkpointRef: 'cp1-TEST-v1' };

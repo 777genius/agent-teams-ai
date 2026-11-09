@@ -245,7 +245,16 @@ export function createOpenCodeV2MemberProvider(
 
   const factory = createOpenCodeV2DriverFactory({
     capabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'],
-    readCheckpoint: (reference, request) => context.readCheckpoint(reference, request),
+    // Checkpoint recovery is a Host storage read. A lease can be revoked in
+    // the microtask between V2 config selection and the private D checkpoint
+    // lookup; do not disclose even an incompatible checkpoint after revocation.
+    readCheckpoint: async (reference, request) => {
+      if (!current() || runtimeDigest(request) !== originalRequest)
+        throw new Error('OpenCode V2 checkpoint authority revoked');
+      const checkpoint = await context.readCheckpoint(reference, request);
+      if (!current()) throw new Error('OpenCode V2 checkpoint authority revoked');
+      return checkpoint;
+    },
     resolveConfiguration: async (request): Promise<OpenCodeV2DriverConfig | undefined> => {
       if (allocated || !current() || runtimeDigest(request) !== originalRequest) return undefined;
       // The private D driver checks checkpoint identity BEFORE a native probe.
