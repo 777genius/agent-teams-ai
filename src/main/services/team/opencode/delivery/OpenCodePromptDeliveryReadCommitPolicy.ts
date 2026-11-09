@@ -247,6 +247,9 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     record &&
     classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report' &&
     !isOpenCodeConfiguredLeadReply(record, input.configuredLeadName) &&
+    // An absent roster cannot prove the recipient is a peer, even for a
+    // completed silent turn (which bypasses the responded-state branch below).
+    input.configuredLeadName !== null &&
     record.messageKind !== 'member_work_sync_nudge' &&
     record.runtimeSessionId?.trim() &&
     input.teamName === record.teamName &&
