@@ -192,6 +192,7 @@ function assignmentRuntime(stage?: 'in-progress-comment') {
     surfaceId: captured.surfaceId,
     isOwner: true,
     canSubmit: true,
+    canEditNow: () => true,
     attachmentError: null,
     session: {
       ownerSurfaceId: captured.surfaceId,
@@ -344,6 +345,7 @@ test('original in-progress Task comment prerequisite requires its exact stage wi
     (f: ReturnType<typeof commentRuntime>) => { f.detail.identity.taskId = 'foreign-task'; },
     (f: ReturnType<typeof commentRuntime>) => { f.controller.surfaceId = 'foreign-surface'; },
     (f: ReturnType<typeof commentRuntime>) => { f.controller.isOwner = false; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.canEditNow = () => false; },
   ]) {
     const f = commentRuntime();
     change(f);
@@ -553,6 +555,9 @@ test('original Task assignment prerequisite refuses receipt-only, pending and st
     'visible Task alone is not current accepted live authority'
   );
   f.work.teamUnavailable = false;
+  f.controller.canEditNow = () => false;
+  assert.equal(await f.evaluate(), null, 'original Task owner forbids editing');
+  f.controller.canEditNow = () => true;
   const result = await f.evaluate();
   assert.equal(result?.surfaceId, 'TEST-original-surface');
   assert.equal((result?.identity as { contextId: string }).contextId, 'TEST-context');
