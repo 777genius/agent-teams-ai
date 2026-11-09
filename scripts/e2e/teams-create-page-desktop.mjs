@@ -706,6 +706,65 @@ async function main() {
     assert.equal(refreshControl.visible, true, 'Provider refresh icon must be visible');
     assert.equal(refreshControl.besideManage, true,
       'Provider refresh icon must appear beside Manage Providers');
+
+    log('click provider refresh and verify native-store checks in the isolated Electron session');
+    // Observe real store actions without replacing their implementation or
+    // bypassing native IPC. The fixture runtime denies external provider commands.
+    await cdp.evaluate(`(() => {
+      const store = window.__agentTeamsDevStore;
+      const names = [
+        'invalidateCliStatus',
+        'invalidateOpenCodeRuntimeStatus',
+        'invalidateCodexRuntimeStatus',
+        'fetchCliProviderStatus',
+      ];
+      const original = Object.fromEntries(names.map(name => [name, store.getState()[name]]));
+      const probe = { calls: [], original };
+      window.__teamProviderRefreshProbe = probe;
+      store.setState(Object.fromEntries(names.map(name => [
+        name,
+        (...args) => {
+          probe.calls.push({ name, args });
+          return original[name](...args);
+        },
+      ])));
+    })()`);
+    await cdp.click("document.querySelector('[data-testid=team-model-selector-refresh-providers]')");
+    await cdp.waitFor(`(() => {
+      const calls = window.__teamProviderRefreshProbe?.calls ?? [];
+      return calls.some(call => call.name === 'invalidateCliStatus') &&
+        calls.some(call => call.name === 'invalidateOpenCodeRuntimeStatus') &&
+        calls.some(call => call.name === 'invalidateCodexRuntimeStatus');
+    })()`, 'manual provider refresh initiated all runtime invalidations');
+    await cdp.waitFor(`(() => {
+      const button = document.querySelector('[data-testid=team-model-selector-refresh-providers]');
+      const calls = window.__teamProviderRefreshProbe?.calls ?? [];
+      const checked = calls.filter(call =>
+        call.name === 'fetchCliProviderStatus' &&
+        call.args[1]?.checkReason === 'manual_refresh'
+      ).map(call => call.args[0]);
+      return button && !button.disabled &&
+        ['anthropic', 'codex', 'opencode'].every(id => checked.includes(id));
+    })()`, 'manual refresh completed with every enabled provider checked', 120_000);
+    const providerRefreshCalls = await cdp.evaluate(
+      'window.__teamProviderRefreshProbe.calls'
+    );
+    assert.equal(
+      providerRefreshCalls.filter(call => call.name === 'invalidateCliStatus').length, 1,
+      'One click must invalidate CLI status exactly once'
+    );
+    await cdp.evaluate(`(() => {
+      const store = window.__agentTeamsDevStore;
+      store.setState(window.__teamProviderRefreshProbe.original);
+      delete window.__teamProviderRefreshProbe;
+    })()`);
+    assert.equal(
+      await cdp.evaluate("document.querySelector('#team-name')?.value"),
+      unique,
+      'Manual provider refresh must preserve the unsaved Create Team draft'
+    );
+    await captureScreenshot(cdp, fixture, 'provider-refreshed');
+
     await cdp.click("document.querySelector('[data-testid=team-model-selector-manage-providers]')");
     await cdp.waitFor(`(() => {
       const store = window.__agentTeamsDevStore.getState();
