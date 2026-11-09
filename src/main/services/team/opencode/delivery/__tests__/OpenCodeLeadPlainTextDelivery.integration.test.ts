@@ -105,7 +105,7 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     return { ledger, observed, pending, service, deps, materialize, readAllowed, messages, readExactAssistantText };
   }
 
-  it.each(['team-lead', 'captain'])('persists the exact long reply in the configured lead inbox (%s)', async (recipient) => {
+  it.each(['team-lead', 'captain', 'orchestrator'])('persists the exact long reply in the configured lead inbox (%s)', async (recipient) => {
     const text = 'Result:\n' + 'x'.repeat(20_000) + '\nLast line.';
     const f = await fixture({ recipient, text });
     expect(await f.readAllowed(f.observed, null)).toBe(false);
@@ -208,6 +208,22 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     if (toolCall) {
       expect(readOpenCodeExactAssistantText(captured.transcript, toolCall.sessionId, toolCall.uuid)).toBeNull();
     }
+  });
+
+  it('preserves real newline separators between distinct assistant text blocks', () => {
+    const fullAssistant = {
+      ...transcriptMessage('msg-multiblock', 'unused'),
+      content: [
+        { type: 'text' as const, text: 'First paragraph.' },
+        { type: 'text' as const, text: 'Second paragraph.' },
+      ],
+    };
+    const transcript = {
+      sessionId: 'ses-current',
+      logProjection: { messages: [fullAssistant] },
+    } as unknown as OpenCodeRuntimeTranscriptResponse['transcript'];
+    expect(readOpenCodeExactAssistantText(transcript, 'ses-current', 'msg-multiblock'))
+      .toBe('First paragraph.\nSecond paragraph.');
   });
 
   it('matches the exact canonical assistant ID/session and never falls back to latest text', () => {
