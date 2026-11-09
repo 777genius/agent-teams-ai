@@ -36,8 +36,8 @@ import { projectTaskSubmission } from './projectTaskSubmission';
 import { projectTeamActivityLogs, projectTeamActivityStats } from './projectTeamActivity';
 import { projectTeamChanges } from './projectTeamChanges';
 import { projectTeamLifecycle } from './projectTeamLifecycle';
-import { projectTeamSnapshot } from './projectTeamSnapshot';
 import { projectTeamMessagesPage } from './projectTeamMessagesPage';
+import { projectTeamSnapshot } from './projectTeamSnapshot';
 import { projectInteractionPreview, projectToolApprovalSettings } from './projectToolApproval';
 
 import type {

@@ -19,6 +19,8 @@ import {
   parseTaskLinkHref,
 } from '../../../src/renderer/utils/taskReferenceUtils';
 
+import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
+
 import type { BackendLaunchSnapshot } from '../../../src/features/agent-backend/contracts/launch';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendRuntimeSnapshot } from '../../../src/features/agent-backend/contracts/operations';
@@ -95,15 +97,19 @@ function fixture() {
       state: 'ready',
       bindings: [{ handle: { handleId: 'TEST-original-A' }, label: 'Host', members: [] }],
     }),
-    invoke: vi.fn().mockImplementation(async (request) => ({
-      ok: true,
-      value:
-        request.operation === 'team.launch.read'
-          ? null
-          : request.operation === 'process.list'
-            ? structuredClone(snapshot.processes ?? [])
-            : structuredClone(snapshot),
-    })),
+    invoke: vi.fn().mockImplementation(async (request) =>
+      request.operation === 'team.messages.page'
+        ? mockOwnerMessagesPage(snapshot, request.payload)
+        : {
+            ok: true,
+            value:
+              request.operation === 'team.launch.read'
+                ? null
+                : request.operation === 'process.list'
+                  ? structuredClone(snapshot.processes ?? [])
+                  : structuredClone(snapshot),
+          }
+    ),
   };
   return { key, snapshot, legacy, backend };
 }

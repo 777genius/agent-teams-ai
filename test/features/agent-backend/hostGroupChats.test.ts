@@ -9,6 +9,8 @@ import {
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
 import { createEncodedTaskReference } from '../../../src/renderer/utils/taskReferenceUtils';
 
+import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
+
 import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
@@ -64,7 +66,11 @@ function fixture() {
       state: 'ready',
       bindings: [{ handle: { handleId: 'TEST-opaque' }, label: 'Team', members: [] }],
     }),
-    invoke: vi.fn().mockResolvedValue({ ok: true, value: snapshot }),
+    invoke: vi.fn<AgentBackendApi['invoke']>().mockImplementation(async (request) =>
+      request.operation === 'team.messages.page'
+        ? mockOwnerMessagesPage(snapshot, request.payload)
+        : { ok: true, value: snapshot }
+    ),
   };
   const legacy: TeamGroupChatsAPI = {
     list: vi.fn(),
@@ -224,7 +230,7 @@ it('snapshot/history preserve validated group envelopes, expose only logical gro
       groupChatId: '40000000-0000-4000-8000-000000000001',
       cursor: page.nextCursor,
     })
-  ).rejects.toThrow(/cursor expired/);
+  ).rejects.toMatchObject({ code: 'hold', outcome: 'unknown' });
   expect(legacyRead).not.toHaveBeenCalled();
 });
 
@@ -258,6 +264,8 @@ it('group Composer persists same-owner foreign Task refs as immutable metadata a
   vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
     if (request.operation === 'team.snapshot')
       return { ok: true, value: projectTeamSnapshot(f.snapshot) };
+    if (request.operation === 'team.messages.page')
+      return mockOwnerMessagesPage(f.snapshot, request.payload);
     if (request.operation !== 'group.send') throw new Error('Unexpected group effect');
     expect(request.handle).toEqual(bindings[0]!.handle);
     expect(request.payload.taskRefs).toEqual([{ ...reference, teamName: stored }]);
