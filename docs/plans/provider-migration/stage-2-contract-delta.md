@@ -261,21 +261,44 @@ product history fields**, not merely Task CRUD or final status; no new
 Orchestrator producer, public API or target E2E is inferred from this Desktop
 projection. Reuse the Stage 1 oracle; do not duplicate its tests.
 
-**Stage 1 oversized-history gate (9 Nov 2026, source
-[`e48f383c`](https://github.com/777genius/agent-teams-ai/commit/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71)):**
+**Stage 1 oversized-history gate (9 Nov 2026, Owner source
+[`e48f383c`](https://github.com/777genius/agent-teams-ai/commit/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71);
+latest consumer/test follow-through
+[`c6d33782`](https://github.com/777genius/agent-teams-ai/commit/c6d3378200cee8d5b08f3636b591cd1b522110cf)):**
 `readChanges` derives its bounded revision from authorized product state
-without serializing history, while the 512 KiB full-snapshot guard remains.
-The original Owner now has a **bounded `readMessagesPage` transport**:
-[`pageOwnerMessages.ts`](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/src/team/pageOwnerMessages.ts)
-enforces the captured principal/grant, page limit 1–100, a 384 KiB reply cap,
+without serializing history; the 512 KiB full-snapshot guard remains.
+The real Owner's
+[`readMessagesPage`](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/src/team/pageOwnerMessages.ts)
+enforces captured principal/grant, limits 1–100 messages and 384 KiB,
 revision-bound continuation and foreign/revoked cursor refusal. Its
 [filesystem regression](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/tests/team-snapshot.test.ts)
-recovers 120 messages across pages with no omissions. This is **source/test
-evidence, not completed Stage 1 P1 acceptance**: task and nested
-comment/history/work/review pagination, Main/renderer integration and original
-oversized Host+UI native E2E remain unqualified on this latest SHA.
-The existing owner message page is a behavioral oracle for target M04/M11,
-not an accepted new Orchestrator writer/feed or M03/M11 parity.
+recovers all 120 messages from an over-512-KiB history without omissions.
+
+**New Stage 1 Main/renderer source boundary:** `team.messages.page` now goes
+through the actual
+[Main allowlist projector](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/src/features/agent-backend/main/adapters/output/projectTeamMessagesPage.ts)
+and the captured
+[renderer Team API](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/src/features/agent-backend/renderer/createHostTeamsApi.ts),
+not an invented replacement owner. The
+[transport regression](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/test/features/agent-backend/hostMessagesPageTransport.test.ts)
+checks correct captured-handle routing, secret-field elision,
+invalid requested authority/limit/cursor refusal and bounded reply projection.
+The original cross-Team target API now serializes >32 same-owner snapshot
+reads and has a
+[41-target regression](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/test/features/agent-backend/hostCrossTeamTransport.test.ts)
+for the real Host transport pending cap. These qualify source/test
+increments only, **not** production target-core M04/M05/M11 parity.
+
+**Still open on latest Stage 1 SHA:** after a group receives another
+message, its revision-bound older-page cursor can become stale while the
+group consumer retains that cursor across head refreshes
+([reported P1](https://github.com/777genius/agent-teams-ai/pull/982));
+task/deleted-task and nested comment/history/work/review pages remain
+incomplete, and `list/getData/getAllTasks/getTask` can still depend on
+an over-512-KiB snapshot. Full original Host+Electron oversized-history
+E2E and exact-head CI/CodeQL are not qualified by the bounded page
+unit/transport tests. Preserve 512 KiB snapshot cap, captured owner,
+no-UNKNOWN-replay, fail-closed page revisions and read-only archive.
 
 M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
 cursor/gap projection and protected diagnostics to Orchestrator **Execution

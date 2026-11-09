@@ -11,6 +11,8 @@ import { __resetRetainedTaskSubmissionsForTests } from '../../../src/features/ag
 import { buildPreparedSendRequest } from '../../../src/renderer/components/team/messages/composerSendUtils';
 import { createEncodedTaskReference } from '../../../src/renderer/utils/taskReferenceUtils';
 
+import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
+
 import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
 import type {
   AgentBackendApi,
@@ -194,6 +196,8 @@ describe('ordinary Host Team mutation adapters', () => {
       invoke: vi.fn<AgentBackendApi['invoke']>(async (request) => {
         if (request.operation === 'team.snapshot')
           return { ok: true, value: projectTeamSnapshot(structuredClone(product)) };
+        if (request.operation === 'team.messages.page')
+          return mockOwnerMessagesPage(product, request.payload);
         const base = {
           commandId: request.commandId,
           phase: 'completed' as const,
