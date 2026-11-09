@@ -293,7 +293,8 @@ test("team_get retains an accepted oversized Unicode task description with signe
     assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
     for (const [position, fragment] of page.tasks.entries()) {
       if (fragment.id !== taskId || fragment.description === undefined) continue;
-      const marker = page.taskParts![position];
+      const marker: { index: number; part: number; total: number } | undefined =
+        page.taskParts?.[position];
       assert.ok(marker);
       assert.equal(marker.index, 0);
       assert.equal(chunks.has(marker.part), false);
