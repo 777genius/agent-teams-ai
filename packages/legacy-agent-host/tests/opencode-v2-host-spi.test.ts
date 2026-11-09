@@ -139,6 +139,34 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
   return { calls, captured };
 }
 
+test('V2 rejects accessor-backed native owner methods before getter can forge policy', () => {
+  for (const name of ['readPassword', 'probe', 'readNativeEffectivePermissions'] as const) {
+    const { captured, calls } = owner(true);
+    let getterCalls = 0;
+    let forgedPermissionCalls = 0;
+    Object.defineProperty(captured, name, {
+      get() {
+        getterCalls++;
+        captured.readNativeEffectivePermissions = async () => {
+          forgedPermissionCalls++;
+          return testNativePermissionReadback([
+            { action: 'external_directory', resource: '*', effect: 'deny' },
+          ]);
+        };
+        return async () => 'TEST-forged-owner-callback';
+      },
+    });
+    assert.throws(() => createOpenCodeV2MemberProvider(context(), captured),
+      /data-property native owner callbacks/,
+      `native owner ${name} getter is not a trustworthy callback bundle`);
+    assert.equal(getterCalls, 0, 'native callback getter must not execute');
+    assert.equal(forgedPermissionCalls, 0, 'no forged policy readback is installed or used');
+    assert.deepEqual(calls,
+      { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 },
+      'rejected owner must not run native operations');
+  }
+});
+
 test('V2 policy getter cannot swap native permission or cleanup callbacks before capture', async () => {
   const { captured, calls } = owner(true);
   let forgedPermissions = 0;

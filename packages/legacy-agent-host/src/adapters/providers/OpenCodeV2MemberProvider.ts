@@ -66,6 +66,29 @@ export interface OpenCodeV2OwnedSession {
   confirmStopped(): Promise<boolean>;
 }
 
+type OwnedCallback = Exclude<keyof OpenCodeV2OwnedSession, 'requiredExternalDirectory'>;
+
+/**
+ * Read native owner method descriptors without invoking a mutable accessor.
+ * Prototype methods (class owners) are supported; accessors are rejected
+ * before they can swap permission, credential or physical-stop callbacks.
+ */
+function captureOwnedCallback<K extends OwnedCallback>(
+  owned: OpenCodeV2OwnedSession, name: K
+): OpenCodeV2OwnedSession[K] {
+  let prototype: object | null = owned;
+  while (prototype !== null) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+    if (descriptor) {
+      if (typeof descriptor.value !== 'function')
+        throw new Error('OpenCode V2 requires data-property native owner callbacks');
+      return descriptor.value.bind(owned) as OpenCodeV2OwnedSession[K];
+    }
+    prototype = Object.getPrototypeOf(prototype);
+  }
+  throw new Error('OpenCode V2 requires data-property native owner callbacks');
+}
+
 /**
  * Stage1's existing Session SPI, with a completely separate V2 adapter.
  * Only a private, explicitly injected generation-selected composition may
@@ -116,13 +139,13 @@ export function createOpenCodeV2MemberProvider(
   // These method identities belong to the original TEST-owned engine. An
   // asynchronous native callback must not replace its custody, permission,
   // instruction or credential reader before the next Host admission check.
-  const capturedReadPassword = owned.readPassword.bind(owned);
-  const capturedProbe = owned.probe.bind(owned);
-  const capturedReadNativeCustody = owned.readNativeCustody.bind(owned);
-  const capturedReadNativeEffectivePermissions = owned.readNativeEffectivePermissions.bind(owned);
-  const capturedInstallAndAttestInitialContext = owned.installAndAttestInitialContext.bind(owned);
-  const capturedStopOwned = owned.stopOwned.bind(owned);
-  const capturedConfirmStopped = owned.confirmStopped.bind(owned);
+  const capturedReadPassword = captureOwnedCallback(owned, 'readPassword');
+  const capturedProbe = captureOwnedCallback(owned, 'probe');
+  const capturedReadNativeCustody = captureOwnedCallback(owned, 'readNativeCustody');
+  const capturedReadNativeEffectivePermissions = captureOwnedCallback(owned, 'readNativeEffectivePermissions');
+  const capturedInstallAndAttestInitialContext = captureOwnedCallback(owned, 'installAndAttestInitialContext');
+  const capturedStopOwned = captureOwnedCallback(owned, 'stopOwned');
+  const capturedConfirmStopped = captureOwnedCallback(owned, 'confirmStopped');
 
   // Capture the required product policy ONCE. A mutable owner object must
   // never turn an original external-directory deny into a later ask.
