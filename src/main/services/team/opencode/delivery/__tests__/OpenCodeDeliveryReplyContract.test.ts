@@ -35,6 +35,15 @@ describe('classifyOpenCodeDeliveryReplyContract', () => {
     ];
     expect(isOpenCodeConfiguredPeerRecipient(members, 'team_lead')).toBe(true);
     expect(isOpenCodeConfiguredPeerRecipient(members, 'captain')).toBe(false);
+    expect(isOpenCodeConfiguredPeerRecipient([
+      members[0], { ...members[1], removedAt: 123 },
+    ], 'team_lead')).toBe(false);
+    expect(isOpenCodeConfiguredPeerRecipient([
+      members[0], { name: 'team_lead', role: 'Team Lead' },
+    ], 'team_lead')).toBe(false);
+    expect(isOpenCodeConfiguredPeerRecipient([
+      ...members, { name: 'TEAM_LEAD', agentType: 'teammate' },
+    ], 'team_lead')).toBe(false);
     expect(classifyOpenCodeDeliveryReplyContract('team_lead', true)).toBe('teammate_report');
     expect(isOpenCodeReplyOptionalDeliveryContract('team_lead', true)).toBe(true);
     expect(classifyOpenCodeDeliveryReplyContract('team_lead')).toBe('lead_reply');
