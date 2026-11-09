@@ -111,6 +111,56 @@ export function hasOneVisibleOpenCodeConnection(text) {
 }
 
 /**
+ * Qualify the initial Dashboard before visiting Settings. The old E2E only
+ * proved a count after Settings had already populated the directory cache.
+ */
+export async function verifyColdDashboardConnectedCount({ root, evaluate, send }) {
+  const started = performance.now();
+  const timeoutMs = 90_000;
+  let outcome = 'count_unavailable';
+  let connected = null;
+  while (performance.now() - started < timeoutMs) {
+    let view;
+    try {
+      view = await evaluate(`(() => ({
+        dashboard: Boolean(document.querySelector('[data-testid="dashboard-manage-providers"]')?.getClientRects().length),
+        settings: Boolean(document.querySelector('[data-testid="provider-settings-page"]')?.getClientRects().length),
+        count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
+      }))()`);
+    } catch {
+      // The renderer can replace its execution context while navigating.
+      // Retry only inside the original wall-clock budget, then write failure evidence.
+    }
+    if (view?.settings) {
+      outcome = 'settings_opened_before_dashboard_proof';
+      break;
+    }
+    if (view?.dashboard && hasOneVisibleOpenCodeConnection(view.count)) {
+      outcome = 'passed';
+      connected = 1;
+      break;
+    }
+    const remaining = timeoutMs - (performance.now() - started);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(500, remaining)));
+  }
+  const elapsedMs = Math.round(performance.now() - started);
+  await writeFile(path.join(root, 'cold-dashboard.json'), JSON.stringify({
+    schemaVersion: 1,
+    platform: process.platform,
+    result: outcome,
+    connected,
+    elapsedMs,
+    settingsVisited: false,
+    liveAccounts: false,
+    modelInferenceTested: false,
+  }, null, 2));
+  assert.equal(outcome, 'passed', 'Cold Dashboard did not show verified OpenCode connection count');
+  const screenshot = await send('Page.captureScreenshot', { format: 'png' });
+  await writeFile(path.join(root, 'cold-dashboard.png'), Buffer.from(screenshot.data, 'base64'));
+  return { connected, elapsedMs };
+}
+
+/**
  * Read-only desktop regression: each Settings → Providers Manage action opens
  * its own provider panel and closes without changing credentials.
  */
@@ -181,7 +231,7 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
   return verified;
 }
 
-export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) {
+export async function verifyRealRuntimeElectron({ root, data, evaluate, send, coldDashboard }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
   let header = '';
   const headerStarted = performance.now();
@@ -222,6 +272,8 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     realElectronIpc: true,
     connected: count,
     headerConnected: 1,
+    coldDashboardConnected: coldDashboard?.connected ?? null,
+    coldDashboardReadyMs: coldDashboard?.elapsedMs ?? null,
     headerReadyMs,
     ipcElapsedMs,
     fullCatalogReconciled: false,
