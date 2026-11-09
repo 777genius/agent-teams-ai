@@ -197,6 +197,8 @@ const storeState = {
   cliProviderStatusScopeRevision: 0,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
+  fetchCliStatus: vi.fn().mockResolvedValue(undefined),
+  invalidateCliStatus: vi.fn().mockResolvedValue(undefined),
   openSettingsTab: vi.fn(),
   openCodeRuntimeStatus: null as OpenCodeRuntimeStatus | null,
   openCodeRuntimeStatusLoading: false,
@@ -263,7 +265,10 @@ import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
 import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
-import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
+import {
+  getCliProviderStatusScopeKey,
+  MULTIMODEL_PROVIDER_IDS,
+} from '@renderer/store/slices/cliInstallerSlice';
 
 /** Renders inside the Create/Launch roster, where OpenCode Default names its route. */
 const inMaterializingRoster = (element: React.ReactElement): React.ReactElement =>
@@ -303,6 +308,104 @@ describe('TeamModelSelector disabled Codex models', () => {
     await act(async () => manage?.click());
     expect(onManageProviders).toHaveBeenCalledExactlyOnceWith('anthropic');
     expect(storeState.openSettingsTab).toHaveBeenCalledExactlyOnceWith('providers');
+    await act(async () => root.unmount());
+  });
+
+  it('refreshes every provider and the selected project without editing the selected model', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [{
+        providerId: 'anthropic',
+        authenticated: true,
+        supported: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        models: ['sonnet'],
+        capabilities: { teamLaunch: true, oneShot: true },
+      }],
+    };
+    const projectPath = '/tmp/provider-refresh-project';
+    const metadataRead = createDeferred<void>();
+    storeState.fetchCliStatus.mockReturnValueOnce(metadataRead.promise);
+    storeState.fetchCliProviderStatus.mockResolvedValue(true);
+    const onProviderChange = vi.fn();
+    const onValueChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange,
+        value: '',
+        onValueChange,
+        projectPath,
+      }));
+      await Promise.resolve();
+    });
+    const refresh = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-refresh-providers"]'
+    );
+    expect(refresh).not.toBeNull();
+    expect(refresh?.getAttribute('aria-label')).toBe('Refresh');
+    await act(async () => {
+      refresh?.click();
+      await Promise.resolve();
+    });
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(refresh?.disabled).toBe(true);
+    await act(async () => refresh?.click());
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
+    expect(
+      storeState.fetchCliProviderStatus.mock.calls.filter(([, options]) =>
+        options?.checkReason === 'manual_refresh'
+      )
+    ).toHaveLength(0);
+
+    await resolveDeferred(metadataRead, undefined);
+    await vi.waitFor(() => expect(refresh?.disabled).toBe(false));
+    expect(
+      storeState.fetchCliProviderStatus.mock.calls.filter(([, options]) =>
+        options?.checkReason === 'manual_refresh'
+      )
+    ).toEqual([
+      ...MULTIMODEL_PROVIDER_IDS.map((id) => [id, { checkReason: 'manual_refresh' }]),
+      ['opencode', { checkReason: 'manual_refresh', projectPath }],
+      ['anthropic', { checkReason: 'manual_refresh', projectPath }],
+    ]);
+    expect(onProviderChange).not.toHaveBeenCalled();
+    expect(onValueChange).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it('keeps the refresh control usable after a status invalidation failure', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.invalidateCliStatus.mockRejectedValueOnce(new Error('unavailable'));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    const refresh = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-refresh-providers"]'
+    );
+    await act(async () => {
+      refresh?.click();
+      await Promise.resolve();
+    });
+    expect(refresh?.disabled).toBe(false);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    expect(storeState.fetchCliStatus).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
@@ -535,6 +638,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusScopeRevision = 0;
     storeState.fetchCliProviderStatus.mockReset().mockResolvedValue(undefined);
+    storeState.fetchCliStatus.mockReset().mockResolvedValue(undefined);
+    storeState.invalidateCliStatus.mockReset().mockResolvedValue(undefined);
     storeState.openSettingsTab.mockClear();
     storeState.openCodeRuntimeStatus = null;
     storeState.openCodeRuntimeStatusLoading = false;
