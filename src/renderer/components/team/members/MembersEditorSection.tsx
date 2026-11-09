@@ -657,7 +657,7 @@ export const MembersEditorSection = ({
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
                   onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                   onOpenProviderSettings={onOpenProviderSettings}
-                onManageProviders={onManageProviders}
+                  onManageProviders={onManageProviders}
                   providerReadyById={providerReadyById}
                   layoutVariant={layoutVariant}
                 />

@@ -306,7 +306,7 @@ export const LeadModelRow = ({
             modelUnavailableReasonByValue={modelUnavailableReasonByValue}
             onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
             onOpenProviderSettings={onOpenProviderSettings}
-                onManageProviders={onManageProviders}
+            onManageProviders={onManageProviders}
           />
           <EffortLevelSelector
             value={effort ?? ''}
