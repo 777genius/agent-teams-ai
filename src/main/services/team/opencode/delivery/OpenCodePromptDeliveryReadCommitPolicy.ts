@@ -411,11 +411,11 @@ export function getOpenCodeDeliveryPendingReason(input: {
     ) {
       return 'plain_text_ack_only_still_requires_answer';
     }
-    if (
-      isOpenCodeReplyRequiredDeliveryRecipient(record?.replyRecipient) &&
-      !record?.visibleReplyMessageId &&
-      !record?.inboxReadCommittedAt
-    ) {
+    // This reason is consumed only when the read policy denies the response.
+    // Do not infer "optional peer" from the raw recipient here: a custom lead
+    // (for example "captain") has no recognizable alias without team config.
+    // Even a recorded message ID may refer to the wrong inbox.
+    if (record && !record.groupChatId && !record.inboxReadCommittedAt) {
       return 'plain_text_visible_reply_not_materialized_yet';
     }
   }
