@@ -1,4 +1,6 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
+import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
 
 import { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 
@@ -32,8 +34,40 @@ export function createOpenCodeVisibleReplyProofServiceFromHost(
   service: OpenCodeVisibleReplyProofServiceHost,
   options: OpenCodeVisibleReplyProofServiceHostOptions
 ): OpenCodeVisibleReplyProofService {
+  const runtimeBridge = new ClaudeMultimodelBridgeService();
   return new OpenCodeVisibleReplyProofService({
     inboxReader: service.inboxReader,
+    readExactAssistantText: async (input) => {
+      const binaryPath = await ClaudeBinaryResolver.resolve();
+      if (!binaryPath) return null;
+      const transcript = await runtimeBridge.getOpenCodeTranscript(binaryPath, {
+        teamId: input.teamName,
+        memberName: input.memberName,
+        laneId: input.laneId,
+        runId: input.runId,
+        sessionId: input.sessionId,
+        limit: 500,
+      });
+      if (transcript?.sessionId !== input.sessionId) return null;
+      const matches = (transcript.logProjection?.messages ?? []).filter(
+        (message) => message.uuid === input.assistantMessageId &&
+          message.type === 'assistant' && !message.isMeta &&
+          message.sessionId === input.sessionId
+      );
+      if (matches.length !== 1) return null;
+      const assistant = matches[0];
+      // An actual message_send tool call may still write the recipient inbox.
+      // Never race it by echoing this assistant message as plain text.
+      if (assistant.toolCalls.some((call) =>
+        /(?:^|[_-])(message_send|group_chat_send)$/.test(call.name.toLowerCase())
+      )) return null;
+      const content = assistant.content;
+      if (!Array.isArray(content)) return null;
+      const text = content.flatMap((block) =>
+        block.type === 'text' ? [block.text] : []
+      ).join('\n');
+      return text.trim() ? text : null;
+    },
     sendGroupChatReply: options.sendGroupChatReply ?? service.sendGroupChatReply,
     hasAcknowledgedInbound: options.hasAcknowledgedInbound,
     inboxWriter: service.inboxWriter,
