@@ -122,7 +122,7 @@ describe('MemberSelect', () => {
     expect(button.getAttribute('aria-invalid')).toBe('true');
     expect(button.textContent).toContain('retired-member');
     expect(button.textContent).toContain('no longer available');
-    expect(button.title).toContain('no longer available');
+    expect(button.title).toBe(''); // Shared Radix Tooltip replaces native title help.
   });
 
   it('supports custom log-source labels, descriptions, search text, and selection', async () => {
