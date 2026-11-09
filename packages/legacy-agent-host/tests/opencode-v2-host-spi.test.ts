@@ -720,6 +720,22 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(calls.stopped, 1);
 });
 
+test('V2 rejects mutually matching malformed custody digests before native owner access', () => {
+  for (const sha256 of ['invalid', 'A'.repeat(64), 'g'.repeat(64)]) {
+    const profile = nativeV2Profile();
+    const { captured, calls } = owner(true);
+    captured.readNativeCustody = async () => ({
+      ...testNativeCustody(), executableSha256: sha256,
+    });
+    assert.throws(() => createOpenCodeV2MemberProvider(context({
+      ...profile, executable: { ...profile.executable, sha256 },
+    }), captured), /separate native profile and owner/);
+    assert.deepEqual(calls,
+      { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 },
+      'invalid matched digest must fail before any native owner access');
+  }
+});
+
 test('actual native custody must match captured executable, digest, protocol and physical PID', async () => {
   const original = testNativeCustody();
   for (const bad of [

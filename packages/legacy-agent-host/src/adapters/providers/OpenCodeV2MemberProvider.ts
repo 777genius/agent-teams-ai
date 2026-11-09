@@ -7,6 +7,10 @@ import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 
+// The native executable witness must be a canonical SHA-256, not merely two
+// equal strings supplied by a malformed private selection and owner.
+const nativeSha256Hex = /^[a-f0-9]{64}$/;
+
 /**
  * A separately selected, TEST-owned native V2 engine and session. The provider
  * does not launch a shared CLI, adopt a V1 session, read user configs, or
@@ -85,7 +89,8 @@ export function createOpenCodeV2MemberProvider(
       selected.configRevision !== context.request.configRevision ||
       selected.teamId !== context.endpoint.binding.teamId ||
       selected.memberId !== context.endpoint.binding.memberId ||
-      !selected.nativeSessionId || hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
+      !selected.nativeSessionId || !nativeSha256Hex.test(selected.executable.sha256) ||
+       hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
       selected.capturedMcpServers || selected.capturedMcpSource ||
@@ -258,7 +263,8 @@ export function createOpenCodeV2MemberProvider(
             const custody = await capturedReadNativeCustody(combined);
             if (!custody || combined.aborted || !current() ||
                 custody.executablePath !== profile.executable.path ||
-                custody.executableSha256 !== profile.executable.sha256 ||
+                (!nativeSha256Hex.test(custody.executableSha256) ||
+                  custody.executableSha256 !== profile.executable.sha256) ||
                 custody.version !== profile.protocolRevision ||
                 !Number.isSafeInteger(custody.pid) || custody.pid <= 0 ||
                 typeof custody.startIdentity !== 'string' ||
