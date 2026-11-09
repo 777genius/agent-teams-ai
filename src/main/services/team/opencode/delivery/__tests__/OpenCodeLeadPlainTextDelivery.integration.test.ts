@@ -40,6 +40,12 @@ function transcriptMessage(id: string, text: string) {
   };
 }
 
+/** Shared transcript fixture for correlated send/error regression cases. */
+function projection(messages: unknown[]): OpenCodeRuntimeTranscriptResponse['transcript'] {
+  return { sessionId: 'ses-current', logProjection: { messages } }
+    as OpenCodeRuntimeTranscriptResponse['transcript'];
+}
+
 describe('OpenCode lead plain-text reply persisted E2E', () => {
   let tempRoot: string;
   beforeEach(() => {
@@ -361,9 +367,6 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       toolResults: [{ toolUseId: 'call-id', content: 'tool not connected', isError: true }],
     };
     const answer = transcriptMessage('answer-id', 'Complete fallback after failed tool.');
-    const projection = (messages: unknown[]) => ({
-      sessionId: 'ses-current', logProjection: { messages },
-    }) as OpenCodeRuntimeTranscriptResponse['transcript'];
     const options = { requireFailedMessageSendProof: true, runtimePromptMessageId: 'prompt-id' };
     const transcript = projection([prompt, send, result, answer]);
     expect(readOpenCodeExactAssistantText(transcript, 'ses-current', 'answer-id', options))
@@ -413,9 +416,6 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       }],
     };
     const answer = transcriptMessage('answer-lead', 'Complete answer to captain.');
-    const projection = (messages: unknown[]) => ({
-      sessionId: 'ses-current', logProjection: { messages },
-    }) as OpenCodeRuntimeTranscriptResponse['transcript'];
     const options = {
       requireFailedMessageSendProof: true,
       runtimePromptMessageId: 'prompt-lead',
