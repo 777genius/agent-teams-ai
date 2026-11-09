@@ -1693,6 +1693,7 @@
       "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
       "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
       "taskFirstTarget": "Assign to",
+      "taskFirstWholeTeam": "Via team lead",
       "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
       "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work."
     },
@@ -2270,6 +2271,9 @@
     }
   },
   "schedule": {
+    "actionFailed": "Schedule action failed",
+    "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
+    "runRequested": "Run requested. Check history to see whether work was handed off.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",
     "count_other": "{{count}} schedules",
@@ -2304,6 +2308,8 @@
       "nextRuns": "Next runs:",
       "timezone": "Timezone",
       "selectTimezone": "Select timezone",
+      "searchTimezone": "Search timezones...",
+      "noTimezones": "No matching timezones",
       "warmUpTime": "Warm-up time",
       "warmUpDescription": "Prepares selected providers before scheduled execution",
       "errors": {

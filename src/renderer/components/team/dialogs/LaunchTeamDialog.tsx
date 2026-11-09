@@ -91,6 +91,7 @@ import {
   resolveScheduleLaunchConfig,
 } from '../schedule/resolveScheduleLaunchConfig';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
+import { useSavedPromptReview } from '../schedule/useSavedPromptReview';
 import { validateScheduleForm } from '../schedule/validateScheduleForm';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
@@ -397,16 +398,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     'agent'
   );
   const [scheduleTargetMember, setScheduleTargetMember] = useState('');
-  const [savedPromptReview, setSavedPromptReview] = useState<{teamName: string; prompt: string; confirmed: boolean} | null>(null);
+  const [scheduleFormTouched, setScheduleFormTouched] = useState(false);
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
-  // Hydration and catalog normalization are not user edits. Retain the exact
-  // persisted one-shot runtime fields until their controls are actually changed.
-  const scheduleRuntimeEditedRef = useRef({
-    provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
+  const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });
+  const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({
+    open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,
+    scheduleId: schedule?.id, reviewed: schedule?.reviewedSavedPrompt === true,
   });
-  useEffect(() => setSavedPromptReview(null), [effectiveTeamName, schedule?.id, open]);
   // A newly selected team must not inherit the former team's target member.
   useEffect(() => {
     if (isSchedule && !isEditing) setScheduleTargetMember('');
@@ -899,6 +899,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
 
     setLocalError(null);
+    setScheduleFormTouched(false);
     setIsSubmitting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isSchedule, schedule?.id]);
@@ -2064,6 +2065,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     teamName: effectiveTeamName,
     prompt: promptDraft.value,
     cronExpression,
+    timezone,
     cwd: effectiveCwd,
     selectedProjectPathDeleted,
     isCustomCwd: cwdMode === 'custom',
@@ -2133,7 +2135,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [isLaunchMode, membersDrafts]);
 
   const provisioningError = isLaunchMode ? props.provisioningError : null;
-  const activeError = localError ?? validationErrors[0] ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
+  const activeError = localError ?? (!isSchedule || isEditing || scheduleFormTouched ? validationErrors[0] : null) ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
   const effectivePrepare = useMemo(
     () =>
       deriveEffectiveProvisioningPrepareState({
@@ -2452,7 +2454,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
-    : isSubmitting || validationErrors.length > 0 || (!usesSavedTeamRuntime && !!modelValidationError);
+    : isSubmitting || ((isEditing || scheduleFormTouched) && validationErrors.length > 0) || (!usesSavedTeamRuntime && !!modelValidationError);
   const labelKeys = getLaunchDialogLabelKeys(isLaunchMode, isRelaunch, isEditing);
   const dialogTitle = t(labelKeys.title);
 
@@ -2555,7 +2557,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               <Combobox
                 options={teamOptions}
                 value={selectedTeamName}
-                onValueChange={setSelectedTeamName}
+                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); setLocalError(null); }}
                 placeholder={t('launch.schedule.selectTeam')}
                 searchPlaceholder={t('launch.schedule.searchTeams')}
                 emptyMessage={
@@ -2611,19 +2613,24 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onToggle={() => setSchedExpanded((value) => !value)}
               mode={scheduleExecutionMode}
               taskFirst={isTaskFirstSchedule}
-              onModeChange={setScheduleExecutionMode}
+              onModeChange={(mode) => { setScheduleExecutionMode(mode); setScheduleFormTouched(true); setLocalError(null); }}
               targetMember={scheduleTargetMember}
-              onTargetMemberChange={setScheduleTargetMember}
+              onTargetMemberChange={(name) => { setScheduleTargetMember(name); setScheduleFormTouched(true); setLocalError(null); }}
               team={teamByName[effectiveTeamName]}
               label={schedLabel}
               onLabelChange={setSchedLabel}
               cronExpression={cronExpression}
-              onCronExpressionChange={setCronExpression}
+              onCronExpressionChange={(expression) => { setCronExpression(expression); setScheduleFormTouched(true); setLocalError(null); }}
               timezone={timezone}
-              onTimezoneChange={setTimezone}
+              onTimezoneChange={(zone) => { setTimezone(zone); setScheduleFormTouched(true); setLocalError(null); }}
               warmUpMinutes={warmUpMinutes}
               onWarmUpMinutesChange={setWarmUpMinutes}
             />
+          ) : null}
+
+          {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
+            <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}
+              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
           ) : null}
 
           {!usesSavedTeamRuntime ? <ProjectPathSelector
@@ -2874,7 +2881,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   minRows={4}
                   maxRows={12}
                   value={promptDraft.value}
-                  onValueChange={promptDraft.setValue}
+                  onValueChange={(value) => { promptDraft.setValue(value); setScheduleFormTouched(true); setLocalError(null); }}
                   suggestions={mentionSuggestions}
                   projectPath={
                     usesSavedTeamRuntime
@@ -3016,10 +3023,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
         </div>
-        {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
-          <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}
-            onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
-        ) : null}
         {/* Error display */}
         {activeError ? (
           <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
