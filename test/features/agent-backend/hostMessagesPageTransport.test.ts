@@ -89,11 +89,13 @@ describe('captured Host message pages never require the oversized complete snaps
       getConnections: vi.fn(async () => ({
         state: 'ready' as const, bindings: [{ handle, label: 'TEST original', members: [] }],
       })),
-      invoke: vi.fn(async (input) => {
+      invoke: vi.fn<AgentBackendApi['invoke']>(async (input) => {
         expect(input.operation).toBe('team.messages.page');
         reads++;
-        return mockOwnerMessagesPage(snapshot, input.payload);
-      }) as AgentBackendApi['invoke'],
+        return mockOwnerMessagesPage(snapshot, input.payload as {
+          cursor?: string; limit?: number; groupChatId?: string;
+        });
+      }),
     };
     const legacy = { getMessagesPage: vi.fn() } as unknown as TeamsAPI;
     const teams = createHostTeamsApi(legacy, backend);
@@ -122,11 +124,13 @@ describe('captured Host message pages never require the oversized complete snaps
       getConnections: vi.fn(async () => ({
         state: 'ready' as const, bindings: [{ handle, label: 'TEST original', members: [] }],
       })),
-      invoke: vi.fn(async (input) => {
-        const page = mockOwnerMessagesPage(snapshot, input.payload);
+      invoke: vi.fn<AgentBackendApi['invoke']>(async (input) => {
+        const page = mockOwnerMessagesPage(snapshot, input.payload as {
+          cursor?: string; limit?: number; groupChatId?: string;
+        });
         if (++calls === 1) snapshot.messages[0]!.text += 'changed';
         return page;
-      }) as AgentBackendApi['invoke'],
+      }),
     };
     const teams = createHostTeamsApi({ getMessagesPage: vi.fn() } as unknown as TeamsAPI, backend);
     await expect(teams.getMessagesPage(key, { limit: 1 })).rejects.toThrow();
