@@ -57,6 +57,54 @@ test('snapshot reads persisted authority/roster/tasks/kanban and only permitted 
 });
 
 
+test('large retained task inventory stays readable through all bounded original Owner pages', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-tasks-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({
+    root,
+    binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice', name: 'alice', role: 'member' }],
+    grants: [{ principalId: 'human', memberName: 'user',
+      permissions: ['read', 'admin', 'task.write'] }],
+  });
+  const reader = owner.connect('human');
+  const expected = new Set<string>();
+  for (let index = 0; index < 100; index++) {
+    const commandId = `TEST-task-${index}`;
+    const subject = `TEST inventory task ${index}`;
+    reader.execute({
+      commandId,
+      operation: 'task.create',
+      payload: { subject, description: `description-${index}-${'x'.repeat(6000)}` },
+    });
+    expected.add(subject);
+  }
+  const first = reader.readSnapshot() as {
+    tasks: { subject: string; description: string }[];
+    revision: string;
+    nextCursor: string | null;
+  };
+  assert.ok(first.nextCursor, 'large persisted task history must cross more than one page');
+  const observed = [...first.tasks];
+  let cursor: string | null = first.nextCursor;
+  let pages = 1;
+  assert.ok(Buffer.byteLength(JSON.stringify(first)) <= 384 * 1024);
+  while (cursor) {
+    const page = reader.readSnapshot({ cursor }) as typeof first;
+    assert.equal(page.revision, first.revision);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 384 * 1024);
+    observed.push(...page.tasks);
+    cursor = page.nextCursor;
+    pages++;
+    assert.ok(pages <= 128, 'continuation must terminate within bounded page limit');
+  }
+  assert.equal(observed.length, expected.size);
+  assert.equal(new Set(observed.map((row) => row.subject)).size, expected.size);
+  assert.deepEqual(new Set(observed.map((row) => row.subject)), expected);
+  assert.ok(observed.every((row) => row.description.length > 6000));
+  assert.equal(reader.readChanges() !== undefined, true);
+});
+
 test('large legitimate inbox history preserves bounded snapshots and authorized change feed', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-feed-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -93,7 +141,7 @@ test('large legitimate inbox history preserves bounded snapshots and authorized 
   };
   assert.ok(firstSnapshot.nextCursor, 'bounded initial page must offer continuation');
   const collected = [...firstSnapshot.messages.map((row) => row.messageId)];
-  let continuation = firstSnapshot.nextCursor;
+  let continuation: string | null = firstSnapshot.nextCursor;
   let pageCount = 1;
   assert.ok(Buffer.byteLength(JSON.stringify(firstSnapshot)) < 384 * 1024);
   while (continuation) {
