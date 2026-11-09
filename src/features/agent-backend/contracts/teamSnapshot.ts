@@ -5,6 +5,15 @@ import type { BackendTeamLifecycle } from './teamLifecycle';
 import type { InboxMessage, KanbanState, TeamTaskWithKanban } from '@shared/types/team';
 
 /** Consumer-owned product read; runtime/process readiness is a separate conversation. */
+/** Original Owner-authorized page; cursor is opaque, signed and revision-bound. */
+export interface BackendTeamMessagesPage {
+  teamName: string;
+  revision: string;
+  messages: BackendTeamSnapshot['messages'];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export interface BackendTeamSnapshot {
   teamName: string;
   revision: string;

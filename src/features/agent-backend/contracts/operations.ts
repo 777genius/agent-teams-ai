@@ -55,7 +55,7 @@ import type {
 import type { StoppedTeamImportApi } from './stoppedImport';
 import type { BackendTeamChanges } from './teamChanges';
 import type { BackendTeamLifecyclePayloads, BackendTeamLifecycleValue } from './teamLifecycle';
-import type { BackendTeamSnapshot } from './teamSnapshot';
+import type { BackendTeamMessagesPage, BackendTeamSnapshot } from './teamSnapshot';
 import type {
   BackendInteractionPreview,
   BackendToolApprovalPayloads,
@@ -166,6 +166,7 @@ export interface BackendOperationPayloads
   'task.get': { taskId: string };
   'tasks.list': { deleted?: true };
   'team.snapshot': Record<string, never>;
+  'team.messages.page': { cursor?: string; limit?: number; groupChatId?: string };
   'team.changes.read': { cursor?: string };
   'team.roster.read': Record<string, never>;
   'team.roster.lookup': { expected?: BackendRosterReplacement };
@@ -443,6 +444,7 @@ export type BackendOperationResult =
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot
+        | BackendTeamMessagesPage
         | BackendRosterConfiguration
         | BackendRosterReceipt
         | BackendTeamChanges

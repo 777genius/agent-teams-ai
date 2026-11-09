@@ -174,7 +174,7 @@ function origin(value: unknown) {
     ...strings(r, ['fromHandleId', 'toHandleId']),
   };
 }
-function message(value: unknown): BackendTeamSnapshot['messages'][number] {
+export function projectTeamMessage(value: unknown): BackendTeamSnapshot['messages'][number] {
   const source = row(value);
   if (typeof source.read !== 'boolean') throw new Error('Invalid snapshot');
   return {
@@ -283,7 +283,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
           }
         : {}),
     })),
-    messages: array(source.messages, message),
+    messages: array(source.messages, projectTeamMessage),
     ...(source.processes === undefined
       ? {}
       : { processes: readBackendProcesses(source.processes) }),

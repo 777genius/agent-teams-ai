@@ -206,6 +206,19 @@ export function parseBackendTeamOperation(
         memberIds,
       };
     }
+    case 'team.messages.page': {
+      const p = object(value, ['cursor', 'limit', 'groupChatId']);
+      if (
+        p.limit !== undefined &&
+        (!Number.isSafeInteger(p.limit) || (p.limit as number) < 1 || (p.limit as number) > 100)
+      )
+        throw new InvalidBackendOperation();
+      return {
+        ...(p.cursor === undefined ? {} : { cursor: text(p.cursor, 128) }),
+        ...(p.limit === undefined ? {} : { limit: p.limit as number }),
+        ...(p.groupChatId === undefined ? {} : { groupChatId: text(p.groupChatId, 128) }),
+      };
+    }
     case 'team.changes.read': {
       const p = object(value, ['cursor']);
       return p.cursor === undefined ? {} : { cursor: text(p.cursor, 128) };
