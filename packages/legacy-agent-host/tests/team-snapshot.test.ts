@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
 import { pageOwnerSnapshot } from '../dist/team/pageOwnerSnapshot.js';
+import { boundProductCommandReceipt } from '../dist/team/boundProductCommandReceipt.js';
 
 test('snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-snapshot-')));
@@ -187,6 +188,56 @@ test('a 420 KiB Unicode message remains readable through signed Desktop and MCP 
       .map(([, text]) => text).join(''), message.text);
   }
   assert.equal(JSON.stringify(snapshot), original);
+});
+
+test('real committed task mutation keeps an under-1-MiB Host acknowledgement with full durable history', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-host-bounded-receipt-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({
+    root, binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice', name: 'alice', role: 'member' }],
+    grants: [{ principalId: 'human', memberName: 'user',
+      permissions: ['read', 'admin', 'task.write'] }],
+  });
+  const human = owner.connect('human');
+  const taskId = human.execute({
+    commandId: 'TEST-mutation-create', operation: 'task.create',
+    payload: { subject: 'Retained task' },
+  }).effects.taskId;
+  for (let index = 0; index < 180; index++) {
+    human.execute({
+      commandId: 'TEST-mutation-comment-' + index,
+      operation: 'task.comment',
+      payload: { taskId, text: 'retained-' + index + '-' + 'x'.repeat(6000) },
+    });
+  }
+  const receipt = human.execute({
+    commandId: 'TEST-mutation-update', operation: 'task.update',
+    payload: { taskId, subject: 'Updated retained task' },
+  });
+  assert.equal(receipt.phase, 'completed');
+  assert.ok(Buffer.byteLength(JSON.stringify({ ok: true, value: receipt })) > 1024 * 1024);
+  const projected = boundProductCommandReceipt(receipt) as unknown as {
+    commandId: string; phase: string; command: { operation: string };
+    result?: { id: string; status: string; subject: string; comments?: unknown[] };
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify({ ok: true, value: projected })) < 768 * 1024);
+  assert.equal(projected.commandId, receipt.commandId);
+  assert.equal(projected.phase, 'completed');
+  assert.equal(projected.command.operation, 'task.update');
+  assert.equal(projected.result?.id, taskId);
+  assert.equal(projected.result?.subject, 'Updated retained task');
+  assert.equal(projected.result?.comments, undefined);
+  const saved = human.lookup('TEST-mutation-update');
+  assert.deepEqual(saved, receipt, 'bounded response must never mutate the command ledger');
+  assert.equal(
+    (human.getTask(taskId).comments as unknown[]).length,
+    180,
+    'complete product history stays durable'
+  );
+  const original = JSON.stringify(receipt);
+  assert.deepEqual(boundProductCommandReceipt(receipt), projected);
+  assert.equal(JSON.stringify(receipt), original);
 });
 
 test('large retained task inventory stays readable through all bounded original Owner pages', (t) => {

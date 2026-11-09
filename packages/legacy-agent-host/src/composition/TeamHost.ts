@@ -19,7 +19,7 @@ import { createStoppedImportComposition } from './createStoppedImportComposition
 import { createTeamAttachmentComposition } from './createTeamAttachmentComposition.js';
 import { z } from 'zod';
 import { parseMessagesPageQuery } from './parseMessagesPageQuery.js';
-
+import { boundProductCommandReceipt } from '../team/boundProductCommandReceipt.js';
 import { acquireProfileWriterLease } from '../adapters/profile/ProfileWriterLease.js';
 import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeamOwner.js';
 import { admitRegistryTeamNamespace } from '../adapters/team-registry/admitRegistryTeamNamespace.js';
@@ -427,7 +427,7 @@ export function createTeamHost(
           }
           if (operation === 'lookup') {
             const receipt = connection.lookup(input.commandId);
-            return { ok: true, value: receipt ? json(receipt) : null };
+            return { ok: true, value: receipt ? boundProductCommandReceipt(receipt) : null };
           }
           if (operation === 'listTasks') {
             const query = z.strictObject({
@@ -471,7 +471,7 @@ export function createTeamHost(
           } finally {
             runtime?.kick();
           }
-          return { ok: true, value: json(receipt) };
+          return { ok: true, value: boundProductCommandReceipt(receipt) };
         } catch (error) {
           const code =
             error instanceof TeamOwnerError
