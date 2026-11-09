@@ -103,3 +103,34 @@ export function isOpenCodeReplyRequiredDeliveryRecipient(
   return replyContract === 'user_reply' || replyContract === 'lead_reply' ||
     isOpenCodeConfiguredLeadReply({ replyRecipient: recipient }, configuredLeadName);
 }
+
+/** The persisted recipient, reply ID and physical inbox must describe the same lead delivery. */
+export function isOpenCodeLeadDestinationProof(
+  record: {
+    memberName: string;
+    inboxMessageId: string;
+    visibleReplyInbox?: string | null;
+    visibleReplyMessageId?: string | null;
+  } | null | undefined,
+  configuredLeadName: string | null | undefined,
+  proof: {
+    inboxName: string;
+    message: {
+      messageId: string;
+      from: string;
+      to?: string;
+      relayOfMessageId?: string;
+    };
+  } | null | undefined
+): boolean {
+  const lead = configuredLeadName?.trim().toLowerCase();
+  return Boolean(
+    lead && record && proof &&
+    record.visibleReplyInbox?.trim().toLowerCase() === lead &&
+    record.visibleReplyMessageId?.trim() === proof.message.messageId.trim() &&
+    proof.inboxName.trim().toLowerCase() === lead &&
+    proof.message.to?.trim().toLowerCase() === lead &&
+    proof.message.from.trim().toLowerCase() === record.memberName.trim().toLowerCase() &&
+    proof.message.relayOfMessageId?.trim() === record.inboxMessageId.trim()
+  );
+}
