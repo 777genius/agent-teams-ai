@@ -88,6 +88,12 @@ export function createOpenCodeV2MemberProvider(
   // argument and must not be inferred from model ID or an executable on PATH.
   const profile = structuredClone(selected);
   const originalRequest = runtimeDigest(context.request);
+  const originalEndpointBinding = runtimeDigest(context.endpoint.binding);
+  // Host-provided objects are not immutable native certificates. Snapshot
+  // instruction and identity scalars before any owner/native callback.
+  const capturedInstructions = context.instructions;
+  const capturedGeneration = context.endpoint.binding.generation;
+  const capturedConfigRevision = context.request.configRevision;
   const trustedBinding = runtimeDigest({
     binding: context.endpoint.binding,
     memberId: profile.memberId,
@@ -114,13 +120,16 @@ export function createOpenCodeV2MemberProvider(
   // Installation may have taken effect even if its ACK was lost. Keep one
   // attempt for this owned session and never replay the native mutation.
   let initialContextAttempt: ReturnType<OpenCodeV2OwnedSession['installAndAttestInitialContext']> | undefined;
-  const contextDigest = initialContextDigest(context.instructions);
+  const contextDigest = initialContextDigest(capturedInstructions);
   const abort = new AbortController();
 
   const current = () => {
     if (sealed || qualificationRevoked) return false;
     try {
-      if (!inheritedBinaryOverride() && context.isCurrent() && context.canAllocate()) return true;
+      if (!inheritedBinaryOverride() && context.isCurrent() && context.canAllocate() &&
+          runtimeDigest(context.request) === originalRequest &&
+          runtimeDigest(context.endpoint.binding) === originalEndpointBinding &&
+          !inheritedBinaryOverride()) return true;
     } catch {
       // A failed Host authority callback cannot grant an existing native
       // process another turn. Treat errors as permanent lease revocation,
@@ -257,18 +266,18 @@ export function createOpenCodeV2MemberProvider(
               if (combined.aborted || !current()) return undefined;
               return owned.installAndAttestInitialContext(Object.freeze({
                 nativeSessionId: profile.nativeSessionId!,
-                instructions: context.instructions,
+                instructions: capturedInstructions,
                 contextDigest,
-                generation: context.endpoint.binding.generation,
-                configRevision: context.request.configRevision,
+                generation: capturedGeneration,
+                configRevision: capturedConfigRevision,
               }), combined);
             });
             const attested = await initialContextAttempt;
             if (!attested || combined.aborted || !current() ||
                 attested.nativeSessionId !== profile.nativeSessionId ||
                 attested.contextDigest !== contextDigest ||
-                attested.generation !== context.endpoint.binding.generation ||
-                attested.configRevision !== context.request.configRevision) return false;
+                attested.generation !== capturedGeneration ||
+                attested.configRevision !== capturedConfigRevision) return false;
             // A process or policy may change during the initial native PUT.
             // Re-attest both after the mutation; never retry a lost PUT ACK.
             const finalEffective = await owned.readNativeEffectivePermissions(combined);
@@ -284,8 +293,8 @@ export function createOpenCodeV2MemberProvider(
                 finalCustody.startIdentity !== admittedCustody.startIdentity) return false;
             initialEvidence = {
               kind: 'native-configuration', contextDigest,
-              generation: context.endpoint.binding.generation,
-              configRevision: context.request.configRevision,
+              generation: capturedGeneration,
+              configRevision: capturedConfigRevision,
             };
             ready = true;
             context.onProgress();

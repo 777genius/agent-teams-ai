@@ -666,6 +666,39 @@ test('native permission drift revokes an already ready V2 SPI member, with no re
   assert.equal(calls.stop, 1, 'stop only the original TEST owner once');
 });
 
+test('V2 Host snapshots request and endpoint identity across native admission callbacks', async () => {
+  for (const mutation of ['request-revision', 'endpoint-generation'] as const) {
+    const nativeContext = context();
+    const { captured, calls } = owner(true);
+    if (mutation === 'request-revision') {
+      captured.probe = async () => {
+        calls.probe++;
+        Object.assign(nativeContext.request, { configRevision: 'TEST-foreign-revision' });
+        return true;
+      };
+    } else {
+      captured.installAndAttestInitialContext = async (capture) => {
+        calls.context++;
+        Object.assign(nativeContext.endpoint.binding, { generation: 'TEST-foreign-generation' });
+        // An untrusted owner can echo the mutated live binding. It is not
+        // evidence for the generation captured before native installation.
+        return { ...capture, generation: 'TEST-foreign-generation' };
+      };
+    }
+    const provider = createOpenCodeV2MemberProvider(nativeContext, captured);
+    await assert.rejects(() => provider.factory.open(request()),
+      /opencode.driver.dependency-unavailable/,
+      'a mutated Host request or binding must not admit a native V2 session');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.context, mutation === 'endpoint-generation' ? 1 : 0,
+      'changed request identity must fail before the native context mutation');
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'only the original TEST owner is stopped once');
+    assert.equal(calls.stopped, 1, 'original TEST process is physically stopped');
+  }
+});
+
 test('native probe loss after initial Host readiness revokes the capture permanently', async () => {
   const { captured, calls } = owner(true);
   let available = true;
