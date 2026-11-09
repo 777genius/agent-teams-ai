@@ -35,7 +35,7 @@ describe('isolated provider startup resource census', () => {
       { pid: 10, birth: 'A' }, { pid: 20, birth: 'changed' },
     ]);
     assert.deepEqual(stable.map((row) => row.pid), [10]);
-    const result = summarizePhase('post-startup-idle', 3, stable, [
+    const result = summarizePhase('post-renderer-delay', 3, stable, [
       { pid: 10, birth: 'A', cpuTimeMs: 200 },
     ], 5000);
     assert.equal(result.ownedProcessCount, 3);

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ownedTree, powershell, processes } from './platform.mjs';
 
-const PHASES = new Set(['renderer-ready', 'post-startup-idle', 'after-provider-settings']);
+const PHASES = new Set(['renderer-ready', 'post-renderer-delay', 'after-provider-settings']);
 
 export function parseCpuTimeMs(value) {
   const match = /^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)$/.exec(value);
