@@ -279,15 +279,15 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
 
-    // Cancel active run if any
+    // Do not stop a live schedule unless the durable deletion succeeds.
+    await this.repository.deleteSchedule(id);
+
     const activeRun = this.activeRuns.get(id);
     if (activeRun) {
       this.executor.cancel(activeRun.id);
     }
     this.removeCronJob(id);
     this.releaseRunLocks(id);
-
-    await this.repository.deleteSchedule(id);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
@@ -304,22 +304,17 @@ export class SchedulerService {
       throw new Error(`Schedule not found: ${id}`);
     }
 
-    // Pause cron job
-    const job = this.cronJobs.get(id);
-    if (job) {
-      job.pause();
-    }
-
-    // Clear warm-up timer
-    this.clearWarmUpTimer(id);
-
     const updated: Schedule = {
       ...existing,
       status: 'paused',
       updatedAt: new Date().toISOString(),
     };
 
+    // Persistence errors must not leave an active record without a live job.
     await this.repository.saveSchedule(updated);
+    const job = this.cronJobs.get(id);
+    job?.pause();
+    this.clearWarmUpTimer(id);
     this.emitChange({
       type: 'schedule-paused',
       scheduleId: id,

@@ -343,6 +343,63 @@ describe('SchedulerService', () => {
     await service.stop();
   });
 
+  it('keeps a live schedule running if pause persistence fails', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const jobs = (service as unknown as {
+      cronJobs: Map<string, { pause(): void }>;
+    }).cronJobs;
+    const liveJob = jobs.get(schedule.id);
+    expect(liveJob).toBeDefined();
+    const pauseJob = vi.spyOn(liveJob!, 'pause');
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.pauseSchedule(schedule.id)).rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+    expect(pauseJob).not.toHaveBeenCalled();
+    expect(jobs.get(schedule.id)).toBe(liveJob);
+    await service.stop();
+  });
+
+  it('keeps a live schedule intact if deletion persistence fails', async () => {
+    const service = createService();
+    const schedule = await service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    });
+    const removeJob = vi.spyOn(service as unknown as {
+      removeCronJob(id: string): void;
+    }, 'removeCronJob');
+    vi.mocked(repo.deleteSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.deleteSchedule(schedule.id)).rejects.toThrow('storage unavailable');
+    expect(await repo.getSchedule(schedule.id)).toEqual(schedule);
+    expect(removeJob).not.toHaveBeenCalled();
+    await service.stop();
+  });
+
+  it('does not persist an active schedule when initial creation persistence fails', async () => {
+    const service = createService();
+    vi.mocked(repo.saveSchedule).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(service.createSchedule({
+      teamName: 'my-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'do stuff' },
+    })).rejects.toThrow('storage unavailable');
+    expect(await repo.listSchedules()).toHaveLength(0);
+    expect((service as unknown as { cronJobs: Map<string, unknown> }).cronJobs.size).toBe(0);
+    await service.stop();
+  });
+
   it('createSchedule() saves and emits change event', async () => {
     const service = createService();
 
