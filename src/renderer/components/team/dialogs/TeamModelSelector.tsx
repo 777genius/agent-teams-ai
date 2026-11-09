@@ -162,7 +162,6 @@ export {
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
@@ -297,7 +296,6 @@ const OPEN_CODE_ROUTE_FILTER_TAG_STYLES: Record<
       'border-emerald-600/50 dark:border-emerald-300/50 bg-emerald-500/10 dark:bg-emerald-300/10 text-emerald-800 dark:text-emerald-100',
   },
 };
-
 function getCuratedOpenCodeProviderTab(
   sourceId: string
 ): { sourceId: string; label: string } | null {
@@ -1085,6 +1083,7 @@ export interface TeamModelSelectorProps {
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   onOpenProviderSettings?: (providerId: TeamProviderId) => void;
+  onManageProviders?: (providerId: TeamProviderId) => void;
   onOpenCodeProviderScopedStatusChange?: Parameters<
     typeof usePublishOpenCodeProviderScopedStatus
   >[0];
@@ -1108,6 +1107,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
   onOpenProviderSettings,
+  onManageProviders,
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
@@ -3144,7 +3144,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             >
               <Button type="button" variant="outline" size="sm" data-testid="team-model-selector-manage-providers"
                 className="mb-1 h-8 w-full justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                onClick={() => openSettingsTab('providers')}>
+                onClick={() => { onManageProviders?.(providerId); openSettingsTab('providers'); }}>
                 <Settings2 className="size-4 shrink-0" aria-hidden="true" />
                 {dashboardT('cliStatus.actions.manageProviders')}
               </Button>

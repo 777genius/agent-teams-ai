@@ -122,6 +122,7 @@ interface MemberDraftRowProps {
   modelUnavailableReasonByProvider?: ModelReasonByProvider;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  onManageProviders?: TeamModelSelectorProps['onManageProviders'];
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
@@ -186,6 +187,7 @@ export const MemberDraftRow = ({
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  onManageProviders,
   preserveSelectedModel = false,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
@@ -755,6 +757,7 @@ export const MemberDraftRow = ({
                 }
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                 onOpenProviderSettings={onOpenProviderSettings}
+                onManageProviders={onManageProviders}
               />
               {/* Teammate gateway settings are temporarily hidden. Existing bindings are preserved. */}
               <EffortLevelSelector

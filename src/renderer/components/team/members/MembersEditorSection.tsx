@@ -122,6 +122,7 @@ export interface MembersEditorSectionProps {
   >;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  onManageProviders?: TeamModelSelectorProps['onManageProviders'];
   disableAddMember?: boolean;
   addMemberLockReason?: string;
   showWorktreeIsolationControls?: boolean;
@@ -181,6 +182,7 @@ export const MembersEditorSection = ({
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  onManageProviders,
   disableAddMember = false,
   addMemberLockReason,
   showWorktreeIsolationControls = false,
@@ -655,6 +657,7 @@ export const MembersEditorSection = ({
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
                   onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                   onOpenProviderSettings={onOpenProviderSettings}
+                onManageProviders={onManageProviders}
                   providerReadyById={providerReadyById}
                   layoutVariant={layoutVariant}
                 />

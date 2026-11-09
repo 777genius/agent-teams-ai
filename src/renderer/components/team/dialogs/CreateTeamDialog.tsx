@@ -223,7 +223,6 @@ const TEAM_COLOR_NAMES = [
 ] as const;
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
-
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
@@ -2521,6 +2520,7 @@ export const CreateTeamDialog = ({
               runtimeProviderStatusById={runtimeProviderStatusById}
               onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
               onOpenProviderSettings={setProviderSettingsProviderId}
+              onManageProviders={invalidatePrepareProvider}
               providerReadyById={providerReadyById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}

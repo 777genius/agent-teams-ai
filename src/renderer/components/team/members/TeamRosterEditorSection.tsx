@@ -75,6 +75,7 @@ interface TeamRosterEditorSectionProps {
   >;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  onManageProviders?: TeamModelSelectorProps['onManageProviders'];
   showWorktreeIsolationControls?: boolean;
   teammateWorktreeDefault?: boolean;
   worktreeIsolationDisabledReason?: string | null;
@@ -136,6 +137,7 @@ const TeamRosterEditorSectionImpl = ({
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  onManageProviders,
   showWorktreeIsolationControls = false,
   teammateWorktreeDefault = false,
   worktreeIsolationDisabledReason,
@@ -215,6 +217,7 @@ const TeamRosterEditorSectionImpl = ({
         modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
         onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
         onOpenProviderSettings={onOpenProviderSettings}
+        onManageProviders={onManageProviders}
         showWorktreeIsolationControls={showWorktreeIsolationControls}
         teammateWorktreeDefault={teammateWorktreeDefault}
         worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
@@ -245,6 +248,7 @@ const TeamRosterEditorSectionImpl = ({
               modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
               onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
               onOpenProviderSettings={onOpenProviderSettings}
+              onManageProviders={onManageProviders}
               showAnthropicContextLimit={hasAnthropicRuntime}
               disableAnthropicContextLimit={disableAnthropicContextLimit}
               layoutVariant="flat"

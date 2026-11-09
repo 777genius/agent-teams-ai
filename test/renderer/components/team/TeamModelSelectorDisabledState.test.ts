@@ -197,6 +197,7 @@ const storeState = {
   cliProviderStatusScopeRevision: 0,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
+  openSettingsTab: vi.fn(),
   openCodeRuntimeStatus: null as OpenCodeRuntimeStatus | null,
   openCodeRuntimeStatusLoading: false,
   openCodeRuntimeError: null as string | null,
@@ -273,6 +274,38 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('invalidates the selected Create Team preflight before opening provider Settings', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [{ providerId: 'anthropic', authenticated: true, supported: true,
+        verificationState: 'verified', statusCheckOutcome: 'authoritative',
+        models: ['sonnet'], capabilities: { teamLaunch: true, oneShot: true } }],
+    };
+    const onManageProviders = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+        onManageProviders,
+      }));
+      await Promise.resolve();
+    });
+    const manage = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-manage-providers"]'
+    );
+    expect(manage).not.toBeNull();
+    await act(async () => manage?.click());
+    expect(onManageProviders).toHaveBeenCalledExactlyOnceWith('anthropic');
+    expect(storeState.openSettingsTab).toHaveBeenCalledExactlyOnceWith('providers');
+    await act(async () => root.unmount());
+  });
+
   it('keeps legacy Anthropic status global without requesting a project scope', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -502,6 +535,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusScopeRevision = 0;
     storeState.fetchCliProviderStatus.mockReset().mockResolvedValue(undefined);
+    storeState.openSettingsTab.mockClear();
     storeState.openCodeRuntimeStatus = null;
     storeState.openCodeRuntimeStatusLoading = false;
     storeState.openCodeRuntimeError = null;
